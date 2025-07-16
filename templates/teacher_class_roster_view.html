@@ -1,0 +1,155 @@
+{% extends "dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
+    <h3 class="mb-2 mb-md-0"><i class="bi bi-people-fill me-2"></i>Class: {{ class_item.name }}</h3>
+    <a href="{{ url_for('teacher.my_classes') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Back to My Classes
+    </a>
+  </div>
+
+  <div class="row g-3 g-md-4">
+    <!-- Class Info & Announcements: Stack on mobile, side on desktop -->
+    <div class="col-12 col-lg-4">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Class Info</h5>
+        </div>
+        <div class="card-body">
+          <p class="mb-2"><strong>Subject:</strong> {{ class_item.subject }}</p>
+          <p class="mb-2"><strong>Grade Level:</strong> {{ class_item.grade_level }}</p>
+          <p class="mb-2"><strong>Room:</strong> {{ class_item.room_number if class_item.room_number else 'N/A' }}</p>
+          <p class="mb-2"><strong>Schedule:</strong> {{ class_item.schedule_info if class_item.schedule_info else 'TBD' }}</p>
+          <p class="mb-0"><strong>School Year:</strong> {{ class_item.school_year.name if class_item.school_year else 'N/A' }}</p>
+        </div>
+      </div>
+      <!-- Announcements Card -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-info text-white">
+          <h5 class="mb-0"><i class="bi bi-megaphone me-2"></i>Recent Announcements</h5>
+        </div>
+        <div class="card-body">
+          {% if announcements %}
+            <ul class="list-group list-group-flush">
+              {% for ann in announcements %}
+                <li class="list-group-item">
+                  <strong>{{ ann.title }}</strong><br>
+                  <small class="text-muted">{{ ann.timestamp.strftime('%b %d, %Y %I:%M %p') }}</small>
+                  <p class="mb-0">{{ ann.message[:80] }}{% if ann.message|length > 80 %}...{% endif %}</p>
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <span class="text-muted">No recent announcements.</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content: Students, Assignments, Attendance -->
+    <div class="col-12 col-lg-8">
+      <div class="row g-3 g-md-4">
+        <!-- Enrolled Students Card -->
+        <div class="col-12 col-md-6">
+          <div class="card shadow-sm h-100">
+            <div class="card-header bg-success text-white">
+              <h5 class="mb-0"><i class="bi bi-person-lines-fill me-2"></i>Enrolled Students ({{ enrolled_students|length }})</h5>
+            </div>
+            <div class="card-body p-0">
+              {% if enrolled_students %}
+                <ul class="list-group list-group-flush">
+                  {% for student in enrolled_students %}
+                  <li class="list-group-item d-flex align-items-center flex-wrap">
+                    {% if student.photo_filename %}
+                      <img src="{{ url_for('static', filename='uploads/' ~ student.photo_filename) }}" class="rounded-circle me-2" width="32" height="32" alt="Photo">
+                    {% else %}
+                      <span class="avatar me-2">{{ student.first_name[0] }}{{ student.last_name[0] }}</span>
+                    {% endif %}
+                    <span>{{ student.first_name }} {{ student.last_name }} <small class="text-muted">(ID: {{ student.student_id or 'N/A' }})</small></span>
+                  </li>
+                  {% endfor %}
+                </ul>
+              {% else %}
+                <div class="p-3 text-muted">No students are currently enrolled in this class.</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        <!-- Recent Assignments Card -->
+        <div class="col-12 col-md-6">
+          <div class="card shadow-sm h-100">
+            <div class="card-header bg-warning text-dark">
+              <h5 class="mb-0"><i class="bi bi-journal-text me-2"></i>Recent Assignments</h5>
+            </div>
+            <div class="card-body p-0">
+              {% if assignments %}
+                <ul class="list-group list-group-flush">
+                  {% for assignment in assignments %}
+                  <li class="list-group-item">
+                    <strong>{{ assignment.title }}</strong><br>
+                    <small class="text-muted">Due: {{ assignment.due_date.strftime('%b %d, %Y') }}</small>
+                    {% if assignment.description %}<br><span class="text-muted">{{ assignment.description[:60] }}{% if assignment.description|length > 60 %}...{% endif %}</span>{% endif %}
+                  </li>
+                  {% endfor %}
+                </ul>
+              {% else %}
+                <div class="p-3 text-muted">No recent assignments.</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Recent Attendance Card -->
+      <div class="card shadow-sm mt-4">
+        <div class="card-header bg-secondary text-white">
+          <h5 class="mb-0"><i class="bi bi-calendar-check me-2"></i>Recent Attendance (Last 7 Days)</h5>
+        </div>
+        <div class="card-body p-0">
+          {% if recent_attendance %}
+            <div class="table-responsive">
+              <table class="table table-sm mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th>Date</th>
+                    <th>Student</th>
+                    <th>Status</th>
+                    <th>Notes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for record in recent_attendance %}
+                  <tr>
+                    <td>{{ record.date.strftime('%b %d, %Y') }}</td>
+                    <td>{{ record.student.first_name }} {{ record.student.last_name }}</td>
+                    <td>
+                      {% set status = record.status %}
+                      {% if status == 'Present' %}
+                        <span class="badge bg-success">Present</span>
+                      {% elif status == 'Late' %}
+                        <span class="badge bg-purple">Late</span>
+                      {% elif status == 'Unexcused Absence' %}
+                        <span class="badge bg-secondary">Unexcused</span>
+                      {% elif status == 'Excused Absence' %}
+                        <span class="badge bg-warning text-dark">Excused</span>
+                      {% elif status == 'Suspended' %}
+                        <span class="badge bg-danger">Suspended</span>
+                      {% else %}
+                        <span class="badge bg-light text-dark">{{ status }}</span>
+                      {% endif %}
+                    </td>
+                    <td>{{ record.notes or '' }}</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <div class="p-3 text-muted">No recent attendance records.</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

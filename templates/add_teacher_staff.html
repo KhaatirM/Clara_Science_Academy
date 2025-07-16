@@ -1,0 +1,199 @@
+{% extends "dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+    <h3 class="mb-4">{% if edit_mode %}Update Teacher/Staff Information{% else %}Add New Teacher/Staff Member{% endif %}</h3>
+
+    <form method="POST" action="{{ url_for('management.add_teacher_staff') }}" enctype="multipart/form-data" class="needs-validation" novalidate>
+        <div class="row g-3">
+            <h4 class="mt-4 mb-3 border-bottom pb-2">Personal Information</h4>
+            <div class="col-12 col-md-5">
+                <label for="first_name" class="form-label">First Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="first_name" name="first_name"
+                       value="{{ staff_data.first_name if staff_data else '' }}" required>
+                <div class="invalid-feedback">First name is required.</div>
+            </div>
+            <div class="col-12 col-md-2">
+                <label for="middle_initial" class="form-label">M.I.</label>
+                <input type="text" class="form-control" id="middle_initial" name="middle_initial" maxlength="1"
+                       value="{{ staff_data.middle_initial if staff_data else '' }}">
+            </div>
+            <div class="col-12 col-md-5">
+                <label for="last_name" class="form-label">Last Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="last_name" name="last_name"
+                       value="{{ staff_data.last_name if staff_data else '' }}" required>
+                <div class="invalid-feedback">Last name is required.</div>
+            </div>
+
+            <div class="col-12 col-md-4">
+                <label for="dob" class="form-label">Date of Birth <span class="text-danger">*</span></label>
+                <input type="date" class="form-control" id="dob" name="dob"
+                       value="{{ staff_data.dob if staff_data else '' }}" required>
+                <div class="invalid-feedback">Date of birth is required.</div>
+            </div>
+            <div class="col-12 col-md-4">
+                <label for="phone" class="form-label">Phone Number <span class="text-danger">*</span></label>
+                <input type="tel" class="form-control" id="phone" name="phone"
+                       value="{{ staff_data.phone if staff_data else '' }}" required placeholder="e.g., 555-123-4567">
+                <div class="invalid-feedback">Phone number is required.</div>
+            </div>
+            <div class="col-12 col-md-4">
+                <label for="staff_ssn" class="form-label">Social Security Number</label>
+                <input type="text" class="form-control" id="staff_ssn" name="staff_ssn"
+                       value="{{ staff_data.ssn if staff_data else '' }}" placeholder="XXX-XX-XXXX">
+                <div class="form-text text-danger small">Warning: Handle SSN with extreme care.</div>
+            </div>
+
+            <div class="col-12">
+                <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
+                <input type="email" class="form-control" id="email" name="email" placeholder="you@example.com" value="{{ staff_data.email if staff_data else '' }}" required>
+                 <div class="invalid-feedback">A valid email address is required.</div>
+            </div>
+            
+            <h5 class="mt-4 mb-2 border-bottom pb-1">Address</h5>
+            <div class="col-12">
+                <label for="street_address" class="form-label">Street Address <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="street_address" name="street_address" placeholder="1234 Main St" value="{{ staff_data.street_address if staff_data else '' }}" required>
+                <div class="invalid-feedback">Street address is required.</div>
+            </div>
+            <div class="col-12">
+                <label for="apt_unit_suite" class="form-label">Apt, Unit, Suite, etc. <span class="text-muted">(Optional)</span></label>
+                <input type="text" class="form-control" id="apt_unit_suite" name="apt_unit_suite" placeholder="Apartment, studio, or floor" value="{{ staff_data.apt_unit_suite if staff_data else '' }}">
+            </div>
+            <div class="col-12 col-md-5">
+                <label for="city" class="form-label">City <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="city" name="city" value="{{ staff_data.city if staff_data else '' }}" required>
+                <div class="invalid-feedback">City is required.</div>
+            </div>
+            <div class="col-12 col-md-4">
+                <label for="state" class="form-label">State <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="state" name="state" value="{{ staff_data.state if staff_data else '' }}" required>
+                <div class="invalid-feedback">State is required.</div>
+            </div>
+            <div class="col-12 col-md-3">
+                <label for="zip_code" class="form-label">Zip Code <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="zip_code" name="zip_code" value="{{ staff_data.zip_code if staff_data else '' }}" required>
+                <div class="invalid-feedback">Zip code is required.</div>
+            </div>
+
+            <h5 class="mt-4 mb-2 border-bottom pb-1">Emergency Contact</h5>
+            <div class="col-12 col-md-5">
+                <label for="emergency_contact_name" class="form-label">Full Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="emergency_contact_name" name="emergency_contact_name"
+                       value="{{ staff_data.emergency_contact_name if staff_data else '' }}" required>
+                <div class="invalid-feedback">Emergency contact name is required.</div>
+            </div>
+            <div class="col-12 col-md-3">
+                <label for="emergency_contact_relationship" class="form-label">Relationship</label>
+                <select class="form-select" id="emergency_contact_relationship" name="emergency_contact_relationship">
+                    <option value="">Choose...</option>
+                    {% set relationships = ["Spouse", "Parent", "Sibling", "Partner", "Friend", "Other"] %}
+                    {% for rel in relationships %}
+                        <option value="{{ rel }}" {% if staff_data and staff_data.emergency_contact_relationship == rel %}selected{% endif %}>{{ rel }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12 col-md-4">
+                <label for="emergency_contact_phone" class="form-label">Phone Number <span class="text-danger">*</span></label>
+                <input type="tel" class="form-control" id="emergency_contact_phone" name="emergency_contact_phone"
+                       value="{{ staff_data.emergency_contact_phone if staff_data else '' }}" required placeholder="e.g., 555-123-4567">
+                <div class="invalid-feedback">Emergency contact phone is required.</div>
+            </div>
+
+            <div class="col-12 col-md-6 mt-3">
+                <label for="staff_image" class="form-label">Image Upload</label>
+                <input class="form-control" type="file" id="staff_image" name="staff_image" accept="image/*">
+                 {% if edit_mode and staff_data and staff_data.image and staff_data.image not in ['teacher_default_m.jpg', 'teacher_default_f.jpg'] %}
+                    <div class="form-text mt-1">Current image: <strong>{{ staff_data.image }}</strong>. Upload new to replace.</div>
+                    <img src="{{ url_for('static', filename='uploads/' + staff_data.image) }}" alt="Current Staff Image" class="img-thumbnail mt-2" style="max-width: 100px; max-height: 100px;">
+                {% elif edit_mode and staff_data and staff_data.image %}
+                     <div class="form-text mt-1">Currently using: <strong>{{ staff_data.image }}</strong>. Upload new to replace.</div>
+                     <img src="{{ url_for('static', filename='uploads/' + staff_data.image) }}" alt="Staff Image" class="img-thumbnail mt-2" style="max-width: 100px; max-height: 100px;">
+                {% endif %}
+            </div>
+            
+            <h4 class="mt-5 mb-3 border-bottom pb-2">Professional Information</h4>
+            <div class="col-12 col-md-6">
+                <label for="assigned_role" class="form-label">Assigned Role <span class="text-danger">*</span></label>
+                <select class="form-select" id="assigned_role" name="assigned_role" required>
+                    <option value="">Choose role...</option>
+                    {% set roles = ["Director", "School Administrator", "Math Teacher", "Physics Teacher", "English Language Arts Teacher", "History Teacher", "Science Teacher", "Substitute Teacher", "School Counselor", "Librarian", "IT Support", "Other Staff"] %}
+                    {% for role_option in roles %}
+                    <option value="{{ role_option }}" {% if staff_data and staff_data.assigned_role == role_option %}selected{% endif %}>{{ role_option }}</option>
+                    {% endfor %}
+                </select>
+                <div class="invalid-feedback">Please select an assigned role.</div>
+            </div>
+            <div class="col-12 col-md-6">
+                <label for="subject" class="form-label">Primary Subject(s) Taught</label>
+                <input type="text" class="form-control" id="subject" name="subject"
+                       value="{{ staff_data.subject if staff_data else '' }}" placeholder="e.g., Algebra I, Chemistry">
+                <div class="form-text">Relevant if teaching role is selected.</div>
+            </div>
+
+            <div class="col-12 col-md-6">
+                <label class="form-label d-block">Employment Type <span class="text-danger">*</span></label>
+                {% set emp_types = ["Full Time", "Part Time"] %}
+                {% for emp_type in emp_types %}
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="employment_type" id="emp_{{ emp_type|lower|replace(' ', '_') }}"
+                           value="{{ emp_type }}" {% if staff_data and staff_data.employment_type == emp_type %}checked{% endif %} required>
+                    <label class="form-check-label" for="emp_{{ emp_type|lower|replace(' ', '_') }}">{{ emp_type }}</label>
+                </div>
+                {% endfor %}
+                 <div class="invalid-feedback d-block">Please select employment type.</div>
+            </div>
+
+            <div class="col-12 col-md-6">
+                <label for="resume" class="form-label">Resume (PDF, DOC, DOCX)</label>
+                <input class="form-control" type="file" id="resume" name="resume" accept=".pdf,.doc,.docx">
+                {% if edit_mode and staff_data and staff_data.resume_filename %}
+                    <div class="form-text mt-1">Current resume: <a href="{{ url_for('static', filename='uploads/' + staff_data.resume_filename) }}" target="_blank">{{ staff_data.resume_filename }}</a>. Upload new to replace.</div>
+                {% endif %}
+            </div>
+            
+            <div class="col-12">
+                <label class="form-label d-block">Grade(s) Taught/Overseeing</label>
+                <div class="row g-2 px-2">
+                    {% set grades = ["Kindergarten", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th", "11th", "12th", "N/A - Staff"] %}
+                    {% for grade_option in grades %}
+                    <div class="col-6 col-sm-4 col-md-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="grades_taught" value="{{ grade_option }}"
+                                   id="grade_teach_{{ grade_option|replace(' ', '_')|replace('(', '')|replace(')', '')|replace('/', '_') }}"
+                                   {% if staff_data and staff_data.grade_taught and grade_option in staff_data.grade_taught %}checked{% endif %}>
+                            <label class="form-check-label" for="grade_teach_{{ grade_option|replace(' ', '_')|replace('(', '')|replace(')', '')|replace('/', '_') }}">{{ grade_option }}</label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="form-text">Select all applicable grades. Select "N/A - Staff" for non-teaching roles.</div>
+            </div>
+
+            <div class="col-12 mt-3">
+                <label for="other_document" class="form-label">Other Relevant Documents</label>
+                <input class="form-control" type="file" id="other_document" name="other_document" accept=".pdf,.doc,.docx,image/*">
+                {% if edit_mode and staff_data and staff_data.other_document_filename %}
+                    <div class="form-text mt-1">Current document: <a href="{{ url_for('static', filename='uploads/' + staff_data.other_document_filename) }}" target="_blank">{{ staff_data.other_document_filename }}</a>. Upload new to replace.</div>
+                {% endif %}
+                <div class="form-text">E.g., Certifications, Portfolio. Combine multiple into one PDF/ZIP if needed.</div>
+            </div>
+            </div>
+
+        <hr class="my-4">
+
+        <div class="d-flex flex-column flex-md-row gap-2">
+            <button class="btn btn-primary btn-lg" type="submit">
+                {% if edit_mode %}Update{% else %}Add Teacher/Staff{% endif %}
+            </button>
+            <a href="{{ url_for('management.teachers') }}" class="btn btn-secondary btn-lg">
+                {% if edit_mode %}Cancel{% else %}Discard{% endif %}
+            </a>
+        </div>
+    </form>
+
+    <script>
+    (function () { 'use strict'; var forms = document.querySelectorAll('.needs-validation'); Array.prototype.slice.call(forms).forEach(function (form) { form.addEventListener('submit', function (event) { if (!form.checkValidity()) { event.preventDefault(); event.stopPropagation(); } form.classList.add('was-validated'); }, false); }); })();
+    </script>
+</div>
+{% endblock %}

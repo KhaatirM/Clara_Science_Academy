@@ -1,0 +1,274 @@
+{% extends "dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
+        <h3 class="mb-2 mb-md-0">School Calendar - {{ month_name }} {{ year }}</h3>
+        <div class="d-flex flex-wrap gap-2">
+            {% if current_user.role == 'Teacher' %}
+                <a href="{{ url_for('teacher.calendar', month=prev_month.month, year=prev_month.year) }}" class="btn btn-outline-primary">
+                    <i class="bi bi-chevron-left me-1"></i>Previous Month
+                </a>
+                <a href="{{ url_for('teacher.calendar', month=next_month.month, year=next_month.year) }}" class="btn btn-outline-primary">
+                    Next Month<i class="bi bi-chevron-right ms-1"></i>
+                </a>
+            {% elif current_user.role == 'Student' %}
+                <a href="{{ url_for('student.student_school_calendar', month=prev_month.month, year=prev_month.year) }}" class="btn btn-outline-secondary">&lt; Previous</a>
+                <a href="{{ url_for('student.student_school_calendar', month=next_month.month, year=next_month.year) }}" class="btn btn-outline-secondary">Next &gt;</a>
+            {% else %}
+                <a href="{{ url_for(request.endpoint, month=prev_month.month, year=prev_month.year) }}" class="btn btn-outline-secondary">&lt; Previous</a>
+                <a href="{{ url_for(request.endpoint, month=next_month.month, year=next_month.year) }}" class="btn btn-outline-secondary">Next &gt;</a>
+            {% endif %}
+            {% if current_user.role in ['Director', 'School Administrator'] %}
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEventModal">
+                    <i class="bi bi-plus-circle me-1"></i> Add Event
+                </button>
+            {% endif %}
+            <button class="btn btn-secondary" onclick="window.history.back()">
+                <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
+            </button>
+        </div>
+    </div>
+    {% if current_user.role == 'Teacher' %}
+        <!-- Teacher Calendar Layout -->
+        <div class="card">
+            <div class="card-body">
+                <div class="calendar-container">
+                    <div class="calendar-header">
+                        <div class="row text-center">
+                            <div class="col">Mon</div>
+                            <div class="col">Tue</div>
+                            <div class="col">Wed</div>
+                            <div class="col">Thu</div>
+                            <div class="col">Fri</div>
+                            <div class="col">Sat</div>
+                            <div class="col">Sun</div>
+                        </div>
+                    </div>
+                    <div class="calendar-body">
+                        {% for week in calendar_data %}
+                            <div class="row calendar-week">
+                                {% for day in week %}
+                                    <div class="col calendar-day {% if day == 0 %}empty{% endif %}">
+                                        {% if day != 0 %}
+                                            <div class="day-number">{{ day }}</div>
+                                            <div class="day-events">
+                                                <!-- Events would be displayed here -->
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row g-3 g-md-4 mt-4">
+            <div class="col-12 col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Upcoming Events</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <p>No upcoming events scheduled.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Quick Actions</h5>
+                    </div>
+                    <div class="card-body">
+                        <button class="btn btn-outline-primary btn-sm me-2 mb-2">
+                            <i class="bi bi-plus-circle me-1"></i>Add Event
+                        </button>
+                        <button class="btn btn-outline-success btn-sm me-2 mb-2">
+                            <i class="bi bi-download me-1"></i>Export Calendar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <!-- Student/Management Calendar Layout -->
+        <h4>{{ calendar_data.month_name }} {{ calendar_data.year }}</h4>
+        <div class="table-responsive">
+            <table class="calendar table table-bordered">
+                <thead>
+                    <tr>
+                        {% for day in calendar_data.weekdays %}
+                            <th>{{ day }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for week in calendar_data.weeks %}
+                        <tr>
+                            {% for day in week %}
+                                <td class="{{ 'other-month' if not day.is_current_month else '' }} {{ 'today' if day.is_today else '' }}">
+                                    <div class="calendar-day">{{ day.day_num }}</div>
+                                    {% for event in day.events %}
+                                    <div class="event event-{{ event.category|lower|replace(' ', '_') }} {% if 'No School' in event.title %}event-no-school{% endif %}">
+                                        {{ event.title }}
+                                        {% if current_user.role in ['Director', 'School Administrator'] %}
+                                        <form action="{{ url_for('management.delete_calendar_event', event_id=event.id) }}" method="POST" style="display: inline;">
+                                            <button type="submit" class="event-delete-btn" onclick="return confirm('Are you sure?')">&times;</button>
+                                        </form>
+                                        {% endif %}
+                                    </div>
+                                    {% endfor %}
+                                </td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+</div>
+
+{% if current_user.role in ['Director', 'School Administrator'] %}
+<!-- Add Event Modal -->
+<div class="modal fade" id="addEventModal" tabindex="-1" aria-labelledby="addEventModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addEventModalLabel">Add New Calendar Event</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('management.add_calendar_event') }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Event Title</label>
+                        <input type="text" class="form-control" id="title" name="title" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="date" class="form-label">Date</label>
+                        <input type="date" class="form-control" id="date" name="date" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="category" class="form-label">Category</label>
+                        <select class="form-select" id="category" name="category" required>
+                            <option value="Holiday">Holiday</option>
+                            <option value="School Event">School Event</option>
+                            <option value="Exam">Exam</option>
+                            <option value="Work Day">Teacher Work Day</option>
+                            <option value="First/Last Day">First/Last Day of School</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description (Optional)</label>
+                        <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Add Event</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<style>
+.calendar-container {
+    font-family: Arial, sans-serif;
+}
+
+.calendar-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    font-weight: bold;
+}
+
+.calendar-week {
+    border-bottom: 1px solid #dee2e6;
+}
+
+.calendar-day {
+    min-height: 100px;
+    border-right: 1px solid #dee2e6;
+    padding: 5px;
+}
+
+.calendar-day:last-child {
+    border-right: none;
+}
+
+.calendar-day.empty {
+    background-color: #f8f9fa;
+}
+
+.day-number {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.day-events {
+    font-size: 0.8em;
+}
+
+.event {
+    font-size: 0.8em;
+    padding: 2px 4px;
+    margin: 1px 0;
+    border-radius: 3px;
+    background-color: #e3f2fd;
+    border-left: 3px solid #2196f3;
+}
+
+.event-holiday {
+    background-color: #fff3e0;
+    border-left-color: #ff9800;
+}
+
+.event-school_event {
+    background-color: #e8f5e8;
+    border-left-color: #4caf50;
+}
+
+.event-exam {
+    background-color: #fce4ec;
+    border-left-color: #e91e63;
+}
+
+.event-work_day {
+    background-color: #f3e5f5;
+    border-left-color: #9c27b0;
+}
+
+.event-first_last_day {
+    background-color: #e0f2f1;
+    border-left-color: #009688;
+}
+
+.event-no-school {
+    background-color: #ffebee;
+    border-left-color: #f44336;
+}
+
+.event-delete-btn {
+    background: none;
+    border: none;
+    color: #f44336;
+    font-weight: bold;
+    cursor: pointer;
+    float: right;
+    margin-left: 5px;
+}
+
+.other-month {
+    color: #ccc;
+}
+
+.today {
+    background-color: #fff3cd;
+    font-weight: bold;
+}
+</style>
+{% endblock %} 

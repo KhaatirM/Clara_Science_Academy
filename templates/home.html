@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Welcome - Clara Science Academy
+{% endblock %}
+
+{% block content %}
+<!-- This template no longer needs its own <link> tag as it's handled by base.html -->
+
+<!-- Hero Section -->
+<div class="hero-section">
+    <div class="container hero-content">
+        <h1 class="display-4 display-md-3 text-success">Empowering Minds, Shaping Futures</h1>
+        <p class="lead">
+            Welcome to Clara Science Academy's student management portal. <br class="d-none d-md-block">
+            A centralized hub for academic excellence and seamless administration.
+        </p>
+        <hr class="my-4" style="border-color: rgba(255,255,255,0.5);">
+        
+        {% if current_user.is_authenticated %}
+            {% set role_name = current_user.role|lower|replace(' ', '_') %}
+            {% if role_name == 'school_administrator' %}
+                {% set dashboard_url = url_for('management.management_dashboard') %}
+            {% elif role_name == 'director' %}
+                {% set dashboard_url = url_for('management.management_dashboard') %}
+            {% elif role_name == 'teacher' %}
+                {% set dashboard_url = url_for('teacher.teacher_dashboard') %}
+            {% elif role_name == 'student' %}
+                {% set dashboard_url = url_for('student.student_dashboard') %}
+            {% elif role_name == 'tech' %}
+                {% set dashboard_url = url_for('tech.tech_dashboard') %}
+            {% else %}
+                {% set dashboard_url = url_for('auth.dashboard') %}
+            {% endif %}
+            <p class="mb-4">You are logged in as {{ current_user.role }}.</p>
+            <a class="btn btn-primary btn-lg" href="{{ dashboard_url }}" role="button">
+                <i class="fas fa-tachometer-alt me-2"></i>Go to Your Dashboard
+            </a>
+        {% else %}
+            <p class="mb-4">Please log in to access your dashboard and tools.</p>
+            <a class="btn btn-primary btn-lg" href="{{ url_for('auth.login') }}" role="button">
+                <i class="fas fa-sign-in-alt me-2"></i>Secure Login
+            </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Features Section -->
+<div class="features-section">
+    <div class="container">
+        <div class="row text-center g-4">
+            <!-- Feature 1: Student Management -->
+            <div class="col-12 col-md-4">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-user-graduate"></i>
+                    </div>
+                    <h3>Student Management</h3>
+                    <p class="text-muted">Easily manage student records, enrollment, and academic progress all in one place.</p>
+                </div>
+            </div>
+            <!-- Feature 2: Teacher & Class Tools -->
+            <div class="col-12 col-md-4">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-chalkboard-teacher"></i>
+                    </div>
+                    <h3>Teacher & Class Tools</h3>
+                    <p class="text-muted">Empower teachers with tools for class management, assignments, and grading.</p>
+                </div>
+            </div>
+            <!-- Feature 3: Comprehensive Reporting -->
+            <div class="col-12 col-md-4">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-chart-pie"></i>
+                    </div>
+                    <h3>Comprehensive Reporting</h3>
+                    <p class="text-muted">Generate detailed reports for attendance, grades, and overall school performance.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

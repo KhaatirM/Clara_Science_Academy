@@ -1,0 +1,179 @@
+{% extends "dashboard_layout.html" %}
+
+{% block title %}View Class - {{ class_info.name }}{% endblock %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
+        <h3 class="mb-2 mb-md-0"><i class="bi bi-house-door-fill me-2"></i>Class Details: {{ class_info.name }}</h3>
+        <div class="d-flex flex-column flex-md-row gap-2">
+            <a href="{{ url_for('management.edit_class', class_id=class_info.id) }}" class="btn btn-primary btn-sm">
+                <i class="bi bi-pencil-fill me-1"></i> Edit Class
+            </a>
+            <a href="{{ url_for('management.manage_class_roster', class_id=class_info.id) }}" class="btn btn-info btn-sm">
+                <i class="bi bi-people-fill me-1"></i> Manage Roster
+            </a>
+            <a href="{{ url_for('management.classes') }}" class="btn btn-secondary btn-sm">
+                <i class="bi bi-arrow-left me-1"></i> Back to Classes
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-3 g-md-4">
+        <!-- Class Information -->
+        <div class="col-12 col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-info-circle-fill me-2"></i>Class Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-2">
+                        <div class="col-sm-4"><strong>Class Name:</strong></div>
+                        <div class="col-sm-8">{{ class_info.name }}</div>
+                    </div>
+                    <hr>
+                    <div class="row mb-2">
+                        <div class="col-sm-4"><strong>Subject:</strong></div>
+                        <div class="col-sm-8">{{ class_info.subject or 'N/A' }}</div>
+                    </div>
+                    <hr>
+                    <div class="row mb-2">
+                        <div class="col-sm-4"><strong>Teacher:</strong></div>
+                        <div class="col-sm-8">
+                            {% if teacher %}
+                                {{ teacher.first_name }} {{ teacher.last_name }}
+                                {% if teacher.email %}
+                                    <br><small class="text-muted">{{ teacher.email }}</small>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">Not Assigned</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row mb-2">
+                        <div class="col-sm-4"><strong>School Year:</strong></div>
+                        <div class="col-sm-8">
+                            {% if class_info.school_year %}
+                                {{ class_info.school_year.name }}
+                            {% else %}
+                                <span class="text-muted">Not Set</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Enrolled Students -->
+        <div class="col-12 col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-people-fill me-2"></i>Enrolled Students</h5>
+                </div>
+                <div class="card-body">
+                    {% if enrolled_students %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Grade Level</th>
+                                        <th>Student ID</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for student in enrolled_students %}
+                                    <tr>
+                                        <td>{{ student.first_name }} {{ student.last_name }}</td>
+                                        <td>{{ student.grade_level }}</td>
+                                        <td>{{ student.student_id }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            No students are currently enrolled in this class.
+                            <br>
+                            <a href="{{ url_for('management.manage_class_roster', class_id=class_info.id) }}" class="btn btn-sm btn-primary mt-2">
+                                <i class="bi bi-plus-circle"></i> Add Students
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assignments -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
+                        <h5 class="mb-0"><i class="bi bi-journal-check me-2"></i>Class Assignments</h5>
+                        <a href="{{ url_for('management.add_assignment') }}" class="btn btn-light btn-sm">
+                            <i class="bi bi-plus-circle me-1"></i> Add Assignment
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if assignments %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Title</th>
+                                        <th>Due Date</th>
+                                        <th>Quarter</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for assignment in assignments %}
+                                    <tr>
+                                        <td>{{ assignment.title }}</td>
+                                        <td>{{ assignment.due_date.strftime('%Y-%m-%d') if assignment.due_date else 'N/A' }}</td>
+                                        <td>Q{{ assignment.quarter if assignment.quarter else 'N/A' }}</td>
+                                        <td>
+                                            {% if assignment.due_date %}
+                                                {% if assignment.due_date < today %}
+                                                    <span class="badge bg-danger">Past Due</span>
+                                                {% else %}
+                                                    <span class="badge bg-success">Active</span>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="badge bg-secondary">No Due Date</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="d-flex gap-1">
+                                                <a href="{{ url_for('management.view_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-primary btn-sm">View</a>
+                                                <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-secondary btn-sm">Edit</a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            No assignments have been created for this class yet.
+                            <br>
+                            <a href="{{ url_for('management.add_assignment') }}" class="btn btn-sm btn-primary mt-2">
+                                <i class="bi bi-plus-circle"></i> Create First Assignment
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

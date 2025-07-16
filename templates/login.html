@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center mt-3 mt-md-5 login-page">
+  <div class="col-12 col-sm-8 col-md-6 col-lg-5">
+    <div class="card shadow-sm">
+      <div class="card-body p-3 p-md-4">
+        <h2 class="text-center mb-4">Login</h2>
+        <form method="POST">
+          <div class="mb-3">
+            <label for="username" class="form-label">Username</label>
+            <input type="text" name="username" id="username" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label for="password" class="form-label">Password</label>
+            <input type="password" name="password" id="password" class="form-control" required>
+          </div>
+          <div class="mb-3" id="id_input_group">
+            <label for="user_id" class="form-label">ID# <span class="text-muted small">(Required for Directors)</span></label>
+            <input type="text" name="user_id" id="user_id" class="form-control">
+          </div>
+          <div class="mb-3 p-3 bg-light border rounded">
+            <p class="text-center mb-2 small text-muted">Select Your Role</p>
+            
+            <!-- Desktop: Button group for larger screens -->
+            <div class="btn-group w-100 d-none d-md-flex" role="group" aria-label="User role">
+              <input type="radio" class="btn-check" name="role_desktop" id="student_desktop" value="Student" autocomplete="off">
+              <label class="btn btn-outline-secondary" for="student_desktop">Student</label>
+
+              <input type="radio" class="btn-check" name="role_desktop" id="teacher_desktop" value="Teacher" autocomplete="off">
+              <label class="btn btn-outline-secondary" for="teacher_desktop">Teacher</label>
+
+              <input type="radio" class="btn-check" name="role_desktop" id="admin_desktop" value="School Administrator" autocomplete="off">
+              <label class="btn btn-outline-secondary" for="admin_desktop">Administrator</label>
+
+              <input type="radio" class="btn-check" name="role_desktop" id="director_desktop" value="Director" autocomplete="off">
+              <label class="btn btn-outline-secondary" for="director_desktop">Director</label>
+
+              <input type="radio" class="btn-check" name="role_desktop" id="tech_desktop" value="IT" autocomplete="off">
+              <label class="btn btn-outline-secondary" for="tech_desktop">Tech</label>
+            </div>
+
+            <!-- Mobile: Dropdown for smaller screens -->
+            <select class="form-select d-md-none" name="role_mobile" aria-label="Select user role mobile" style="font-size: 16px;">
+                <option selected disabled>Choose a role...</option>
+                <option value="Student">Student</option>
+                <option value="Teacher">Teacher</option>
+                <option value="School Administrator">Administrator</option>
+                <option value="Director">Director</option>
+                <option value="IT">Tech</option>
+            </select>
+
+          </div>
+          <input type="hidden" name="role" id="role_hidden">
+          <button type="submit" class="btn btn-primary w-100">Login</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="mobileWarningModal" tabindex="-1" aria-labelledby="mobileWarningModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="mobileWarningModalLabel">Compatibility Notice</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>For the best experience, we recommend using a desktop or laptop computer. This site is not fully optimized for mobile devices (Version 1.0.1).</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">I Understand</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Mobile warning popup logic
+    if (window.innerWidth < 768) {
+        var myModal = new bootstrap.Modal(document.getElementById('mobileWarningModal'), {
+            keyboard: false
+        });
+        myModal.show();
+    }
+
+    const roleRadios = document.querySelectorAll('input[name="role_desktop"]');
+    const roleSelect = document.querySelector('select[name="role_mobile"]');
+    const hiddenRoleInput = document.getElementById('role_hidden');
+    const userIdInput = document.getElementById('user_id');
+    const form = document.querySelector('form');
+
+    function getSelectedRole() {
+        // Check which control is visible
+        if (window.getComputedStyle(roleSelect).display !== 'none') {
+            return roleSelect.value;
+        } else {
+            const checkedRadio = document.querySelector('input[name="role_desktop"]:checked');
+            return checkedRadio ? checkedRadio.value : null;
+        }
+    }
+
+    function toggleUserIdInput() {
+      const selectedRole = getSelectedRole();
+      
+      if (selectedRole) {
+        if (selectedRole === 'Director') {
+          userIdInput.removeAttribute('disabled');
+          userIdInput.setAttribute('required', 'required');
+        } else if (selectedRole === 'IT') {
+          userIdInput.value = '';
+          userIdInput.setAttribute('disabled', 'disabled');
+          userIdInput.removeAttribute('required');
+        } else {
+          userIdInput.removeAttribute('disabled');
+          userIdInput.removeAttribute('required');
+        }
+      } else {
+        userIdInput.removeAttribute('disabled');
+        userIdInput.removeAttribute('required');
+      }
+    }
+
+    // Add event listeners to both desktop and mobile controls
+    roleRadios.forEach(radio => radio.addEventListener('change', toggleUserIdInput));
+    roleSelect.addEventListener('change', toggleUserIdInput);
+
+    // Set the hidden input's value before submitting the form
+    form.addEventListener('submit', function(e) {
+        const role = getSelectedRole();
+        if (role) {
+            hiddenRoleInput.value = role;
+        } else {
+            // Prevent submission if no role is selected
+            alert('Please select a role.');
+            e.preventDefault();
+        }
+    });
+
+    // Initial check on page load
+    toggleUserIdInput();
+  });
+</script>
+{% endblock %}

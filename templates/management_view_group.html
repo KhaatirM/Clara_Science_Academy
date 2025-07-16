@@ -1,0 +1,140 @@
+{% extends "dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+    <div class="row g-3 g-md-4">
+        <!-- Sidebar -->
+        <div class="col-12 col-lg-3">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-people-fill me-2"></i>{{ group.name }}</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        <a href="{{ url_for('management.management_groups') }}" 
+                           class="list-group-item list-group-item-action">
+                            <i class="bi bi-arrow-left me-2"></i>Back to Groups
+                        </a>
+                        <a href="{{ url_for('management.communications') }}" 
+                           class="list-group-item list-group-item-action">
+                            <i class="bi bi-chat-dots me-2"></i>Communications Hub
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Group Info -->
+            <div class="card shadow-sm mt-4">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Group Info</h6>
+                </div>
+                <div class="card-body">
+                    <p class="mb-2"><strong>Description:</strong></p>
+                    <p class="text-muted small">{{ group.description or 'No description' }}</p>
+                    <hr>
+                    <p class="mb-1"><strong>Members:</strong> {{ members|length }}</p>
+                    <p class="mb-1"><strong>Created:</strong> {{ group.created_at.strftime('%m/%d/%Y') if group.created_at else 'N/A' }}</p>
+                    {% if membership.role == 'admin' %}
+                        <span class="badge bg-primary">You are Admin</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Members List -->
+            <div class="card shadow-sm mt-4">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="mb-0"><i class="bi bi-person-lines-fill me-2"></i>Members</h6>
+                </div>
+                <div class="card-body">
+                    {% for member in members %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div>
+                                <strong>{{ member.user.username }}</strong>
+                                {% if member.role == 'admin' %}
+                                    <span class="badge bg-primary ms-1">Admin</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-12 col-lg-9">
+            <!-- Group Messages -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
+                        <h5 class="mb-2 mb-md-0"><i class="bi bi-chat-dots me-2"></i>Group Messages</h5>
+                        <span class="badge bg-success">{{ messages|length }} messages</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        <div class="messages-container" style="max-height: 400px; overflow-y: auto;">
+                            {% for message in messages %}
+                                <div class="border-start border-primary ps-3 mb-3">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <strong class="text-primary">{{ message.sender.username if message.sender else 'Unknown' }}</strong>
+                                                <small class="text-muted">{{ message.created_at.strftime('%m/%d %H:%M') if message.created_at else 'N/A' }}</small>
+                                            </div>
+                                            <p class="mb-0">{{ message.content }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="bi bi-chat-dots display-4 text-muted"></i>
+                            <h5 class="text-muted mt-3">No Messages Yet</h5>
+                            <p class="text-muted">Start the conversation by sending a message to the group.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Send Message to Group -->
+            <div class="card shadow-sm mt-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-send me-2"></i>Send Message to Group</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('management.management_send_group_message', group_id=group.id) }}">
+                        <div class="mb-3">
+                            <label for="content" class="form-label">Message</label>
+                            <textarea class="form-control" id="content" name="content" rows="4" 
+                                      placeholder="Type your message to the group..." required></textarea>
+                        </div>
+                        <div class="d-flex flex-column flex-md-row justify-content-between gap-2">
+                            <a href="{{ url_for('management.management_groups') }}" class="btn btn-secondary">
+                                <i class="bi bi-x-circle me-1"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-send me-1"></i>Send to Group
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-resize textarea
+document.getElementById('content').addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = this.scrollHeight + 'px';
+});
+
+// Scroll to bottom of messages container
+const messagesContainer = document.querySelector('.messages-container');
+if (messagesContainer) {
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+</script>
+{% endblock %} 

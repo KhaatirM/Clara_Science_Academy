@@ -1,0 +1,257 @@
+{% extends "dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+    <div class="row g-3 g-md-4">
+        <!-- Sidebar for Communications Navigation -->
+        <div class="col-12 col-lg-3">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-chat-dots-fill me-2"></i>Communications Hub</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        <a href="{{ url_for('management.communications') }}" 
+                           class="list-group-item list-group-item-action {% if active_tab == 'communications' %}active{% endif %}">
+                            <i class="bi bi-inbox-fill me-2"></i>Unified Inbox
+                        </a>
+                        <a href="{{ url_for('management.management_messages') }}" 
+                           class="list-group-item list-group-item-action {% if active_tab == 'messages' %}active{% endif %}">
+                            <i class="bi bi-envelope-fill me-2"></i>Messages
+                            {% if messages and messages|selectattr('is_read', 'equalto', false)|list|length > 0 %}
+                                <span class="badge bg-danger float-end">{{ messages|selectattr('is_read', 'equalto', false)|list|length }}</span>
+                            {% endif %}
+                        </a>
+                        <a href="{{ url_for('management.management_groups') }}" 
+                           class="list-group-item list-group-item-action {% if active_tab == 'groups' %}active{% endif %}">
+                            <i class="bi bi-people-fill me-2"></i>Groups
+                        </a>
+                        <a href="{{ url_for('management.management_create_announcement') }}" 
+                           class="list-group-item list-group-item-action">
+                            <i class="bi bi-megaphone-fill me-2"></i>Create Announcement
+                        </a>
+                        <a href="{{ url_for('management.management_schedule_announcement') }}" 
+                           class="list-group-item list-group-item-action">
+                            <i class="bi bi-calendar-event-fill me-2"></i>Schedule Announcement
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="card shadow-sm mt-4">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="bi bi-graph-up me-2"></i>Quick Stats</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <h5 class="text-primary">{{ messages|length if messages else 0 }}</h5>
+                            <small class="text-muted">Total Messages</small>
+                        </div>
+                        <div class="col-6">
+                            <h5 class="text-success">{{ announcements|length if announcements else 0 }}</h5>
+                            <small class="text-muted">Announcements</small>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <h5 class="text-warning">{{ groups|length if groups else 0 }}</h5>
+                            <small class="text-muted">Active Groups</small>
+                        </div>
+                        <div class="col-6">
+                            <h5 class="text-info">{{ scheduled|length if scheduled else 0 }}</h5>
+                            <small class="text-muted">Scheduled</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="col-12 col-lg-9">
+            <!-- Unified Inbox View -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
+                        <h5 class="mb-2 mb-md-0"><i class="bi bi-inbox-fill me-2"></i>Unified Inbox</h5>
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="filterMessages('all')">All</button>
+                            <button type="button" class="btn btn-outline-success btn-sm" onclick="filterMessages('messages')">Messages</button>
+                            <button type="button" class="btn btn-outline-warning btn-sm" onclick="filterMessages('announcements')">Announcements</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Messages Section -->
+                    <div id="messages-section" class="mb-4">
+                        <h6 class="text-primary mb-3"><i class="bi bi-envelope-fill me-2"></i>Recent Messages</h6>
+                        {% if messages %}
+                            <div class="list-group">
+                                {% for message in messages[:5] %}
+                                    <div class="list-group-item list-group-item-action">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div class="flex-grow-1">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <h6 class="mb-1">
+                                                        {% if message.sender_id == current_user.id %}
+                                                            <span class="text-muted">To: {{ message.recipient.username if message.recipient else 'Unknown' }}</span>
+                                                        {% else %}
+                                                            <span class="text-primary">{{ message.sender.username if message.sender else 'Unknown' }}</span>
+                                                        {% endif %}
+                                                    </h6>
+                                                    <small class="text-muted">{{ message.created_at.strftime('%m/%d %H:%M') if message.created_at else 'N/A' }}</small>
+                                                </div>
+                                                <p class="mb-1">{{ message.subject or 'No Subject' }}</p>
+                                                <small class="text-muted">{{ message.content[:100] }}{% if message.content|length > 100 %}...{% endif %}</small>
+                                                {% if not message.is_read and message.recipient_id == current_user.id %}
+                                                    <span class="badge bg-danger ms-2">New</span>
+                                                {% endif %}
+                                            </div>
+                                            <div class="btn-group" role="group">
+                                                <a href="{{ url_for('management.management_view_message', message_id=message.id) }}" 
+                                                   class="btn btn-sm btn-outline-primary">View</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            {% if messages|length > 5 %}
+                                <div class="text-center mt-3">
+                                    <a href="{{ url_for('management.management_messages') }}" class="btn btn-outline-primary btn-sm">View All Messages</a>
+                                </div>
+                            {% endif %}
+                        {% else %}
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle me-2"></i>No messages yet. Start a conversation!
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Announcements Section -->
+                    <div id="announcements-section" class="mb-4">
+                        <h6 class="text-warning mb-3"><i class="bi bi-megaphone-fill me-2"></i>Recent Announcements</h6>
+                        {% if announcements %}
+                            <div class="list-group">
+                                {% for announcement in announcements[:5] %}
+                                    <div class="list-group-item">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div class="flex-grow-1">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <h6 class="mb-1">{{ announcement.title }}</h6>
+                                                    <small class="text-muted">{{ announcement.timestamp.strftime('%m/%d %H:%M') if announcement.timestamp else 'N/A' }}</small>
+                                                </div>
+                                                <p class="mb-1">{{ announcement.message[:150] }}{% if announcement.message|length > 150 %}...{% endif %}</p>
+                                                <small class="text-muted">
+                                                    Target: {{ announcement.target_group.replace('_', ' ').title() }}
+                                                    {% if announcement.is_important %}
+                                                        <span class="badge bg-danger ms-2">Important</span>
+                                                    {% endif %}
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle me-2"></i>No announcements yet. Create one to get started!
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Groups Section -->
+                    <div id="groups-section">
+                        <h6 class="text-success mb-3"><i class="bi bi-people-fill me-2"></i>Active Groups</h6>
+                        {% if groups %}
+                            <div class="row g-3 g-md-4">
+                                {% for group in groups[:3] %}
+                                    <div class="col-12 col-md-4">
+                                        <div class="card h-100">
+                                            <div class="card-body">
+                                                <h6 class="card-title">{{ group.name }}</h6>
+                                                <p class="card-text small">{{ group.description[:50] }}{% if group.description|length > 50 %}...{% endif %}</p>
+                                                <a href="{{ url_for('management.management_view_group', group_id=group.id) }}" 
+                                                   class="btn btn-sm btn-outline-primary">View Group</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            {% if groups|length > 3 %}
+                                <div class="text-center mt-3">
+                                    <a href="{{ url_for('management.management_groups') }}" class="btn btn-outline-success btn-sm">View All Groups</a>
+                                </div>
+                            {% endif %}
+                        {% else %}
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle me-2"></i>No active groups. Create one to start collaborating!
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-success text-white">
+                            <h6 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Quick Actions</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-grid gap-2">
+                                <a href="{{ url_for('management.management_send_message') }}" class="btn btn-outline-primary">
+                                    <i class="bi bi-envelope-plus me-2"></i>Send Message
+                                </a>
+                                <a href="{{ url_for('management.management_create_announcement') }}" class="btn btn-outline-warning">
+                                    <i class="bi bi-megaphone me-2"></i>Create Announcement
+                                </a>
+                                <a href="{{ url_for('management.management_create_group') }}" class="btn btn-outline-success">
+                                    <i class="bi bi-people me-2"></i>Create Group
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-info text-white">
+                            <h6 class="mb-0"><i class="bi bi-clock me-2"></i>Scheduled Items</h6>
+                        </div>
+                        <div class="card-body">
+                            {% if scheduled %}
+                                <div class="list-group list-group-flush">
+                                    {% for item in scheduled[:3] %}
+                                        <div class="list-group-item">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <h6 class="mb-1">{{ item.title }}</h6>
+                                                    <small class="text-muted">{{ item.scheduled_for.strftime('%m/%d %H:%M') if item.scheduled_for else 'N/A' }}</small>
+                                                </div>
+                                                <span class="badge bg-warning">Scheduled</span>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <p class="text-muted mb-0">No scheduled items.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function filterMessages(type) {
+    // Simple filter functionality - can be enhanced with AJAX
+    console.log('Filtering by:', type);
+    // This would typically make AJAX calls to filter content
+}
+</script>
+{% endblock %} 

@@ -1,0 +1,176 @@
+{% set TEACHER_ROLES = [
+    'History Teacher',
+    'Science Teacher',
+    'Physics Teacher',
+    'English Language Arts Teacher',
+    'Math Teacher',
+    'Substitute Teacher'
+] %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ dashboard_title or 'Dashboard' }} - Clara Science Academy</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="dashboard-flex-wrapper d-flex flex-row">
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-toggle" onclick="toggleSidebar()">
+                <div class="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+            <h3 class="sidebar-heading text-center">{{ dashboard_title or current_user.role }}</h3>
+            <ul class="nav flex-column">
+                
+                {# --- DIRECTOR TABS --- #}
+                {% if current_user.role == 'Director' %}
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.management_dashboard' %}active{% endif %}" href="{{ url_for('management.management_dashboard') }}"><i class="bi bi-grid-1x2-fill"></i><span> Home</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.students' %}active{% endif %}" href="{{ url_for('management.students') }}"><i class="bi bi-people-fill"></i><span> Students</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.teachers' %}active{% endif %}" href="{{ url_for('management.teachers') }}"><i class="bi bi-person-badge-fill"></i><span> Teachers & Staff</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.classes' %}active{% endif %}" href="{{ url_for('management.classes') }}"><i class="bi bi-house-door-fill"></i><span> Classes</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.assignments' %}active{% endif %}" href="{{ url_for('management.assignments') }}"><i class="bi bi-journal-check"></i><span> Assignments</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.attendance' %}active{% endif %}" href="{{ url_for('management.attendance') }}"><i class="bi bi-calendar-check-fill"></i><span> Attendance</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.attendance_reports' %}active{% endif %}" href="{{ url_for('management.attendance_reports') }}"><i class="bi bi-file-earmark-bar-graph-fill"></i><span> Attendance Reports</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.report_cards' %}active{% endif %}" href="{{ url_for('management.report_cards') }}"><i class="bi bi-mortarboard-fill"></i><span> Report Cards</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.admissions' %}active{% endif %}" href="{{ url_for('management.admissions') }}"><i class="bi bi-person-plus-fill"></i><span> Admissions</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.billing' %}active{% endif %}" href="{{ url_for('management.billing') }}"><i class="bi bi-currency-dollar"></i><span> Billing & Financials</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.calendar' %}active{% endif %}" href="{{ url_for('management.calendar') }}"><i class="bi bi-calendar-event-fill"></i><span> School Calendar</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.communications' %}active{% endif %}" href="{{ url_for('management.communications') }}"><i class="bi bi-chat-dots-fill"></i><span> Communications</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.settings' %}active{% endif %}" href="{{ url_for('management.settings') }}"><i class="bi bi-gear-fill"></i><span> Settings</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.school_years' %}active{% endif %}" href="{{ url_for('management.school_years') }}"><i class="bi bi-calendar-range-fill"></i><span> School Years</span></a></li>
+
+                {# --- SCHOOL ADMINISTRATOR TABS --- #}
+                {% elif current_user.role == 'School Administrator' %}
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.management_dashboard' %}active{% endif %}" href="{{ url_for('management.management_dashboard') }}"><i class="bi bi-grid-1x2-fill"></i><span> Home</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.students' %}active{% endif %}" href="{{ url_for('management.students') }}"><i class="bi bi-people-fill"></i><span> Students</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.teachers' %}active{% endif %}" href="{{ url_for('management.teachers') }}"><i class="bi bi-person-badge-fill"></i><span> Teachers & Staff</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.classes' %}active{% endif %}" href="{{ url_for('management.classes') }}"><i class="bi bi-house-door-fill"></i><span> Classes</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.assignments' %}active{% endif %}" href="{{ url_for('management.assignments') }}"><i class="bi bi-journal-check"></i><span> Assignments</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.attendance' %}active{% endif %}" href="{{ url_for('management.attendance') }}"><i class="bi bi-calendar-check-fill"></i><span> Attendance</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.attendance_reports' %}active{% endif %}" href="{{ url_for('management.attendance_reports') }}"><i class="bi bi-file-earmark-bar-graph-fill"></i><span> Attendance Reports</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.report_cards' %}active{% endif %}" href="{{ url_for('management.report_cards') }}"><i class="bi bi-mortarboard-fill"></i><span> Report Cards</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.admissions' %}active{% endif %}" href="{{ url_for('management.admissions') }}"><i class="bi bi-person-plus-fill"></i><span> Admissions</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.calendar' %}active{% endif %}" href="{{ url_for('management.calendar') }}"><i class="bi bi-calendar-event-fill"></i><span> School Calendar</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.communications' %}active{% endif %}" href="{{ url_for('management.communications') }}"><i class="bi bi-chat-dots-fill"></i><span> Communications</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.settings' %}active{% endif %}" href="{{ url_for('management.settings') }}"><i class="bi bi-gear-fill"></i><span> Settings</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.school_years' %}active{% endif %}" href="{{ url_for('management.school_years') }}"><i class="bi bi-calendar-range-fill"></i><span> School Years</span></a></li>
+
+                {# --- TEACHER TABS --- #}
+                {% elif current_user.role in TEACHER_ROLES %}
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'teacher.teacher_dashboard' %}active{% endif %}" href="{{ url_for('teacher.teacher_dashboard') }}"><i class="bi bi-grid-1x2-fill"></i><span> Home</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'teacher.my_classes' %}active{% endif %}" href="{{ url_for('teacher.my_classes') }}"><i class="bi bi-house-door-fill"></i><span> My Classes</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'teacher.my_assignments' %}active{% endif %}" href="{{ url_for('teacher.my_assignments') }}"><i class="bi bi-journal-check"></i><span> Assignments</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'teacher.my_grades' %}active{% endif %}" href="{{ url_for('teacher.my_grades') }}"><i class="bi bi-mortarboard-fill"></i><span> Grades</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'teacher.attendance' %}active{% endif %}" href="{{ url_for('teacher.attendance') }}"><i class="bi bi-calendar-check-fill"></i><span> Attendance</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'teacher.students_directory' %}active{% endif %}" href="{{ url_for('teacher.students_directory') }}"><i class="bi bi-people-fill"></i><span> Students Directory</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'teacher.teachers_staff_directory' %}active{% endif %}" href="{{ url_for('teacher.teachers_staff_directory') }}"><i class="bi bi-person-badge-fill"></i><span> Teachers & Staff Dir</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'teacher.calendar' %}active{% endif %}" href="{{ url_for('teacher.calendar') }}"><i class="bi bi-calendar-event-fill"></i><span> School Calendar</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'teacher.teacher_communications' %}active{% endif %}" href="{{ url_for('teacher.teacher_communications') }}"><i class="bi bi-chat-dots-fill"></i><span> Communications</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'teacher.settings' %}active{% endif %}" href="{{ url_for('teacher.settings') }}"><i class="bi bi-gear-fill"></i><span> Settings</span></a></li>
+                    
+                {# --- STUDENT TABS --- #}
+                {% elif current_user.role == 'Student' %}
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'student.student_dashboard' %}active{% endif %}" href="{{ url_for('student.student_dashboard') }}"><i class="bi bi-house-door-fill"></i><span> Home</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'student.student_assignments' %}active{% endif %}" href="{{ url_for('student.student_assignments') }}"><i class="bi bi-file-earmark-text-fill"></i><span> Assignments</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'student.student_classes' %}active{% endif %}" href="{{ url_for('student.student_classes') }}"><i class="bi bi-journal-bookmark-fill"></i><span> Classes</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'student.student_grades' %}active{% endif %}" href="{{ url_for('student.student_grades') }}"><i class="bi bi-card-checklist"></i><span> Grades</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'student.student_schedule' %}active{% endif %}" href="{{ url_for('student.student_schedule') }}"><i class="bi bi-calendar-week-fill"></i><span> Schedule</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'student.student_school_calendar' %}active{% endif %}" href="{{ url_for('student.student_school_calendar') }}"><i class="bi bi-calendar-event-fill"></i><span> School Calendar</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'student.student_communications' %}active{% endif %}" href="{{ url_for('student.student_communications') }}"><i class="bi bi-chat-dots-fill"></i><span> Communications</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'student.student_settings' %}active{% endif %}" href="{{ url_for('student.student_settings') }}"><i class="bi bi-gear-fill"></i><span> Settings</span></a></li>
+
+                {# --- IT TABS --- #}
+                {% elif current_user.role == 'Tech' %}
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'tech.tech_dashboard' %}active{% endif %}" href="{{ url_for('tech.tech_dashboard') }}"><i class="bi bi-grid-1x2-fill"></i><span> Home</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'tech.activity_log' %}active{% endif %}" href="{{ url_for('tech.activity_log') }}"><i class="bi bi-list-check"></i><span> Activity Log</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'tech.error_reports' %}active{% endif %}" href="{{ url_for('tech.error_reports') }}"><i class="bi bi-bug-fill"></i><span> Error/Bug Log</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'tech.system_status' %}active{% endif %}" href="{{ url_for('tech.system_status') }}"><i class="bi bi-arrow-up-circle-fill"></i><span> System Status</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'tech.system_config' %}active{% endif %}" href="{{ url_for('tech.system_config') }}"><i class="bi bi-gear-fill"></i><span> System Config</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'tech.maintenance_control' %}active{% endif %}" href="{{ url_for('tech.maintenance_control') }}"><i class="bi bi-tools"></i><span> Maintenance</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'tech.user_management' %}active{% endif %}" href="{{ url_for('tech.user_management') }}"><i class="bi bi-people-fill"></i><span> User Management</span></a></li>
+                {% endif %}
+            </ul>
+            <div class="logout-btn-container">
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-danger w-100">
+                    <i class="bi bi-box-arrow-right"></i><span> Logout</span>
+                </a>
+            </div>
+        </div>
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Impersonation Banner -->
+            {% if session.get('original_user_id') %}
+            <div class="alert alert-warning alert-dismissible fade show m-2 m-md-3" role="alert">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
+                    <div>
+                        <i class="bi bi-person-check-fill"></i>
+                        <strong>Impersonating:</strong> {{ session.get('impersonating_username') }} 
+                        <span class="badge bg-secondary">{{ current_user.role }}</span>
+                    </div>
+                    <a href="{{ url_for('tech.stop_impersonating') }}" class="btn btn-sm btn-outline-danger">
+                        <i class="bi bi-person-x"></i> Stop Impersonating
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show m-2 m-md-3" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            {% block dashboard_content %}{% endblock %}
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.querySelector('.main-content');
+            
+            sidebar.classList.toggle('collapsed');
+            mainContent.classList.toggle('collapsed');
+            
+            // Save state to localStorage
+            const isCollapsed = sidebar.classList.contains('collapsed');
+            localStorage.setItem('sidebarCollapsed', isCollapsed);
+        }
+        
+        // Always collapse sidebar on mobile
+        function forceSidebarCollapsedOnMobile() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.querySelector('.main-content');
+            if (window.innerWidth <= 768) {
+                sidebar.classList.add('collapsed');
+                mainContent.classList.add('collapsed');
+            } else {
+                // Restore from localStorage for desktop
+                const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+                if (isCollapsed) {
+                    sidebar.classList.add('collapsed');
+                    mainContent.classList.add('collapsed');
+                } else {
+                    sidebar.classList.remove('collapsed');
+                    mainContent.classList.remove('collapsed');
+                }
+            }
+        }
+        document.addEventListener('DOMContentLoaded', forceSidebarCollapsedOnMobile);
+        window.addEventListener('resize', forceSidebarCollapsedOnMobile);
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

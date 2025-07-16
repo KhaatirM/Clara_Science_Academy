@@ -1,0 +1,124 @@
+{% extends "dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4 mt-4">
+    <div class="row g-3 g-md-4">
+        <div class="col-12">
+            <h1 class="mb-4">System Configuration</h1>
+            <div class="alert alert-info">
+                <h5>System Settings Management</h5>
+                <p>View and modify system configuration settings.</p>
+            </div>
+        </div>
+    </div>
+    <div class="row g-3 g-md-4">
+        <div class="col-12 col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Current Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('tech.update_system_config') }}">
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <div class="mb-3">
+                                    <label for="debug_mode" class="form-label">Debug Mode</label>
+                                    <select class="form-select" id="debug_mode" name="debug_mode">
+                                        <option value="Development Server" {% if config.debug_mode == 'Development Server' %}selected{% endif %}>Development Server</option>
+                                        <option value="Production Server" {% if config.debug_mode == 'Production Server' %}selected{% endif %}>Production Server</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="database_path" class="form-label">Database Path</label>
+                                    <input type="text" class="form-control" id="database_path" name="database_path" value="{{ config.database_path }}" readonly>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="max_upload_size" class="form-label">Max Upload Size</label>
+                                    <select class="form-select" id="max_upload_size" name="max_upload_size">
+                                        <option value="8 MB" {% if config.max_upload_size == '8 MB' %}selected{% endif %}>8 MB</option>
+                                        <option value="16 MB" {% if config.max_upload_size == '16 MB' %}selected{% endif %}>16 MB</option>
+                                        <option value="32 MB" {% if config.max_upload_size == '32 MB' %}selected{% endif %}>32 MB</option>
+                                        <option value="64 MB" {% if config.max_upload_size == '64 MB' %}selected{% endif %}>64 MB</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <div class="mb-3">
+                                    <label for="session_timeout" class="form-label">Session Timeout</label>
+                                    <select class="form-select" id="session_timeout" name="session_timeout">
+                                        <option value="1 hour" {% if config.session_timeout == '1 hour' %}selected{% endif %}>1 hour</option>
+                                        <option value="4 hours" {% if config.session_timeout == '4 hours' %}selected{% endif %}>4 hours</option>
+                                        <option value="8 hours" {% if config.session_timeout == '8 hours' %}selected{% endif %}>8 hours</option>
+                                        <option value="24 hours" {% if config.session_timeout == '24 hours' %}selected{% endif %}>24 hours</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="backup_location" class="form-label">Backup Location</label>
+                                    <input type="text" class="form-control" id="backup_location" name="backup_location" value="{{ config.backup_location }}">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="log_level" class="form-label">Log Level</label>
+                                    <select class="form-select" id="log_level" name="log_level">
+                                        <option value="DEBUG" {% if config.log_level == 'DEBUG' %}selected{% endif %}>DEBUG</option>
+                                        <option value="INFO" {% if config.log_level == 'INFO' %}selected{% endif %}>INFO</option>
+                                        <option value="WARNING" {% if config.log_level == 'WARNING' %}selected{% endif %}>WARNING</option>
+                                        <option value="ERROR" {% if config.log_level == 'ERROR' %}selected{% endif %}>ERROR</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-end">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save"></i> Save Configuration
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">System Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Python Version:</strong>
+                        <span class="badge bg-info">3.13</span>
+                    </div>
+                    <div class="mb-3">
+                        <strong>Flask Version:</strong>
+                        <span class="badge bg-info">3.0</span>
+                    </div>
+                    <div class="mb-3">
+                        <strong>Database:</strong>
+                        <span class="badge bg-success">SQLite</span>
+                    </div>
+                    <div class="mb-3">
+                        <strong>Server:</strong>
+                        <span class="badge bg-warning">Development</span>
+                    </div>
+                </div>
+            </div>
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-primary" onclick="alert('Restart server - functionality to be implemented')">
+                            <i class="bi bi-arrow-clockwise"></i> Restart Server
+                        </button>
+                        <button class="btn btn-outline-info" onclick="alert('View system logs - functionality to be implemented')">
+                            <i class="bi bi-file-text"></i> View Logs
+                        </button>
+                        <button class="btn btn-outline-warning" onclick="alert('Clear all caches - functionality to be implemented')">
+                            <i class="bi bi-trash"></i> Clear All Caches
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

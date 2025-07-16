@@ -1,0 +1,158 @@
+{% extends "dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-3 gap-2 gap-md-0">
+        <h3 class="mb-2 mb-md-0">Assignments</h3>
+        {% if current_user.role in ['Director', 'School Administrator', 'Teacher'] %}
+            <a href="{{ url_for('management.add_assignment') }}" class="btn btn-primary btn-sm">
+                <i class="bi bi-plus-circle-fill me-1 me-md-2"></i>Add New Assignment
+            </a>
+        {% endif %}
+    </div>
+
+    <!-- Filter Section -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-12 col-sm-6 col-md-3">
+                    <label for="class_filter" class="form-label">Filter by Class</label>
+                    <select class="form-select" id="class_filter" name="class_id">
+                        <option value="">All Classes</option>
+                        {% for class in classes %}
+                            <option value="{{ class.id }}" {% if selected_class_id == class.id %}selected{% endif %}>
+                                {{ class.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12 col-sm-6 col-md-3">
+                    <label for="status_filter" class="form-label">Filter by Status</label>
+                    <select class="form-select" id="status_filter" name="status">
+                        <option value="">All Statuses</option>
+                        <option value="active" {% if selected_status == 'active' %}selected{% endif %}>Active</option>
+                        <option value="completed" {% if selected_status == 'completed' %}selected{% endif %}>Completed</option>
+                        <option value="overdue" {% if selected_status == 'overdue' %}selected{% endif %}>Overdue</option>
+                    </select>
+                </div>
+                <div class="col-12 col-sm-6 col-md-3">
+                    <label for="due_date_filter" class="form-label">Due Date</label>
+                    <input type="date" class="form-control" id="due_date_filter" name="due_date" value="{{ selected_due_date }}">
+                </div>
+                <div class="col-12 col-sm-6 col-md-3 d-flex align-items-end gap-2">
+                    <button type="submit" class="btn btn-outline-primary flex-fill">Filter</button>
+                    <a href="{{ request.path }}" class="btn btn-outline-secondary flex-fill">Clear</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Assignments List -->
+    <div class="row g-3 g-md-4">
+        <div class="col-12">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover align-middle assignments-table">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Due Date</th>
+                            <th>Assignment Title</th>
+                            <th>Class</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for assignment in assignments %}
+                            <tr>
+                                <td data-label="Due Date">{{ assignment.due_date.strftime('%Y-%m-%d') if assignment.due_date else 'N/A' }}</td>
+                                <td data-label="Assignment Title">{{ assignment.title }}</td>
+                                <td data-label="Class">{{ assignment.class.name if assignment.class else 'N/A' }}</td>
+                                <td data-label="Status">{{ assignment.status|title }}</td>
+                                <td data-label="Actions">
+                                    {% if current_user.role in ['Director', 'School Administrator'] %}
+                                        <div class="d-flex gap-1">
+                                            <a href="{{ url_for('management.view_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-primary flex-fill">View Details</a>
+                                            <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-warning flex-fill">Edit</a>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-outline-danger remove-assignment-btn" 
+                                                data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}">Remove</button>
+                                    {% elif current_user.role == 'Teacher' %}
+                                        <div class="d-flex gap-1">
+                                            <a href="{{ url_for('management.view_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-primary flex-fill">View Details</a>
+                                            <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-warning flex-fill">Edit</a>
+                                        </div>
+                                        <a href="#" class="btn btn-sm btn-outline-success">View Submissions</a>
+                                    {% elif current_user.role == 'Student' %}
+                                        <div class="d-flex gap-1">
+                                            <a href="#" class="btn btn-sm btn-outline-primary flex-fill">View Details</a>
+                                            {% if assignment.status == 'active' %}
+                                                <a href="#" class="btn btn-sm btn-outline-success flex-fill">Submit Work</a>
+                                            {% endif %}
+                                        </div>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12">
+            <div class="alert alert-info">
+                <h5>No Assignments Found</h5>
+                <p>There are currently no assignments matching your criteria.</p>
+                {% if current_user.role in ['Director', 'School Administrator', 'Teacher'] %}
+                    <a href="{{ url_for('management.add_assignment') }}" class="btn btn-primary">Add First Assignment</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if total_pages > 1 %}
+    <nav aria-label="Assignments navigation" class="mt-4">
+        <ul class="pagination pagination-sm justify-content-center">
+            <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+                <a class="page-link" href="{{ url_for(request.endpoint, page=page-1, **request.args) }}">Previous</a>
+            </li>
+            {% for p in range(1, total_pages + 1) %}
+                <li class="page-item {% if p == page %}active{% endif %}">
+                    <a class="page-link" href="{{ url_for(request.endpoint, page=p, **request.args) }}">{{ p }}</a>
+                </li>
+            {% endfor %}
+            <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+                <a class="page-link" href="{{ url_for(request.endpoint, page=page+1, **request.args) }}">Next</a>
+            </li>
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const removeButtons = document.querySelectorAll('.remove-assignment-btn');
+    const userRole = '{{ current_user.role }}';
+    
+    removeButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const assignmentId = this.dataset.assignmentId;
+            const assignmentTitle = this.dataset.assignmentTitle;
+            
+            if (confirm(`Are you sure you want to remove "${assignmentTitle}"? This action cannot be undone.`)) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                
+                if (userRole === 'Director' || userRole === 'School Administrator' || userRole === 'Teacher') {
+                    form.action = `{{ url_for('management.remove_assignment', assignment_id=0) }}`.replace('0', assignmentId);
+                }
+                
+                document.body.appendChild(form);
+                form.submit();
+            }
+        });
+    });
+});
+</script>
+{% endblock %} 

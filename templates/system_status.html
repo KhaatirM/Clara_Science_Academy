@@ -1,0 +1,142 @@
+{% extends "dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4 mt-4">
+    <div class="row g-3 g-md-4">
+        <div class="col-12">
+            <h1 class="mb-4">System Status</h1>
+            <div class="alert alert-info">
+                <h5>System Health Overview</h5>
+                <p>Current system status and performance metrics.</p>
+            </div>
+        </div>
+    </div>
+    <div class="row g-3 g-md-4">
+        <div class="col-12 col-md-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">User Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <h6>Total Users</h6>
+                            <p class="h3 text-primary">{{ total_users }}</p>
+                        </div>
+                        <div class="col-6">
+                            <h6>Active Sessions</h6>
+                            <p class="h3 text-success">N/A</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Student Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <h6>Total Students</h6>
+                            <p class="h3 text-info">{{ total_students }}</p>
+                        </div>
+                        <div class="col-6">
+                            <h6>Enrolled</h6>
+                            <p class="h3 text-success">{{ total_students }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Staff Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <h6>Total Teachers</h6>
+                            <p class="h3 text-warning">{{ total_teachers }}</p>
+                        </div>
+                        <div class="col-6">
+                            <h6>Active</h6>
+                            <p class="h3 text-success">{{ total_teachers }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row g-3 g-md-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">System Performance</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-6 col-md-3">
+                            <h6>Database Status</h6>
+                            <span class="badge bg-success">Online</span>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <h6>Application Status</h6>
+                            <span class="badge bg-success">Running</span>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <h6>Memory Usage</h6>
+                            <span class="badge bg-info">Normal</span>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <h6>CPU Usage</h6>
+                            <span class="badge bg-info">Normal</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row g-3 g-md-4 mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Recent System Events</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Event</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>{{ now.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                    <td>System startup</td>
+                                    <td><span class="badge bg-success">Success</span></td>
+                                </tr>
+                                <tr>
+                                    <td>{{ (now - timedelta(hours=1)).strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                    <td>Database backup</td>
+                                    <td><span class="badge bg-success">Success</span></td>
+                                </tr>
+                                <tr>
+                                    <td>{{ (now - timedelta(hours=2)).strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                    <td>User authentication</td>
+                                    <td><span class="badge bg-success">Success</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

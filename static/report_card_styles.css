@@ -1,0 +1,296 @@
+/* --- Report Card & Transcript PDF Styles --- */
+
+/* General Body and Font Styling */
+body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    margin: 0.1in;
+    font-size: 9pt;
+    line-height: 1.1;
+    color: #333333;
+}
+
+/* Header: Main 3-Column Table */
+.pdf-header-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 0.5cm;
+    border: none;
+}
+
+.pdf-header-table td {
+    padding: 0;
+    vertical-align: top;
+    border: none;
+    box-sizing: border-box;
+}
+
+/* Header: Column Widths */
+.student-column {
+    width: 33%;
+    border: 1px solid black;
+    border-right: none;
+    padding: 0;
+}
+
+.central-column {
+    width: 34%;
+    text-align: center;
+    padding: 8px 0;
+    position: relative;
+    border-top: 1px solid black;
+    border-bottom: 1px solid black;
+}
+
+.school-column {
+    width: 33%;
+    border: 1px solid black;
+    border-left: none;
+    padding: 0;
+}
+
+/* Header: Central Column Content (Logo & Title) */
+.central-column h1 {
+    font-size: 14pt;
+    font-weight: bold;
+    margin: 0;
+    color: #000;
+    padding-bottom: 5px;
+    text-decoration: underline;
+}
+
+.logo-overlay-container {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin: 0 auto;
+    display: block;
+}
+
+.logo-overlay-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    opacity: 1;
+    z-index: 0;
+}
+
+.logo-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-45deg);
+    font-size: 18pt;
+    font-weight: bold;
+    color: #d9534f;
+    background-color: rgba(255, 255, 255, 0);
+    padding: 5px 10px;
+    border: 3px solid #d9534f;
+    border-radius: 8px;
+    white-space: nowrap;
+    z-index: 1;
+}
+
+/* Header: Student & School Info Grid Tables */
+.info-grid-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8.5pt;
+}
+
+.info-grid-table td {
+    border: none;
+    padding: 4px 6px;
+    vertical-align: middle;
+    height: auto;
+    box-sizing: border-box;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+/* Specific Border and Style Rules for Info Grid Cells */
+.info-grid-table .student-name-label,
+.info-grid-table .id-label-cell,
+.info-grid-table .state-id-label-cell,
+.info-grid-table .dob-label-cell,
+.info-grid-table .grade-label-cell,
+.info-grid-table .gender-label-cell {
+    border-top: 1px solid black;
+    border-left: 1px solid black;
+    font-weight: normal;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+.info-grid-table .student-name-label,
+.info-grid-table .state-id-label-cell,
+.info-grid-table .gender-label-cell {
+    border-right: 1px solid black;
+}
+
+.info-grid-table .student-name-value,
+.info-grid-table .id-value-cell,
+.info-grid-table .state-id-value-cell,
+.info-grid-table .dob-value-cell,
+.info-grid-table .grade-value-cell,
+.info-grid-table .gender-value-cell {
+    border-left: 1px solid black;
+    border-bottom: 1px solid black;
+    font-weight: bold;
+    padding-top: 0;
+}
+.info-grid-table .student-name-value,
+.info-grid-table .state-id-value-cell,
+.info-grid-table .gender-value-cell {
+    border-right: 1px solid black;
+}
+
+.info-grid-table .address-label-cell {
+    border-left: 1px solid black;
+    border-right: 1px solid black;
+    font-weight: normal;
+    vertical-align: top;
+    padding-bottom: 0;
+}
+
+.info-grid-table .address-value-cell {
+    border-left: 1px solid black;
+    border-right: 1px solid black;
+    border-bottom: 1px solid black;
+    font-weight: bold;
+    vertical-align: top;
+    white-space: normal;
+    height: auto;
+    padding-top: 0;
+}
+
+/* School Info Container (Right Column) */
+.school-info-container {
+    padding: 6px;
+    font-size: 8.5pt;
+    height: 100%;
+    box-sizing: border-box;
+}
+
+.school-info-container .info-line {
+    line-height: 1.2;
+    margin-bottom: 2px;
+    font-weight: normal;
+}
+
+.school-info-container .info-label {
+    font-weight: bold;
+}
+
+.school-info-container .school-name-address {
+    margin-bottom: 5px;
+    font-weight: normal;
+}
+
+.school-info-container .phone-line {
+    margin-top: 5px;
+    display: block;
+}
+
+.school-info-container hr {
+    border: none;
+    border-top: 1px solid black;
+    margin: 5px 0;
+}
+
+/* General Content Styling */
+.report-period-line {
+    margin-top: 0.5cm;
+    text-align: left;
+    font-weight: bold;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 0.8cm;
+}
+
+th, td {
+    border: 1px solid #cccccc;
+    padding: 6px;
+    text-align: left;
+    vertical-align: top;
+}
+
+th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+}
+
+.section-title {
+    font-size: 11pt;
+    font-weight: bold;
+    margin-top: 0.8cm;
+    margin-bottom: 0.4cm;
+    border-bottom: 1px solid #000;
+    padding-bottom: 3px;
+}
+
+.sub-section-title {
+    font-size: 10pt;
+    font-weight: bold;
+    margin-top: 0.5cm;
+    margin-bottom: 0.2cm;
+}
+
+.comments-box {
+    border: 1px solid #ccc;
+    padding: 10px;
+    min-height: 80px;
+    margin-bottom: 1cm;
+}
+
+.footer {
+    text-align: center;
+    margin-top: 1cm;
+    font-size: 8pt;
+}
+
+/* Layout for Grading Scale and Text (Grades 4-8, Transcript) */
+.grades-layout-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 2%;
+    margin-top: 0.4cm;
+    margin-bottom: 0.8cm;
+}
+
+.grades-text {
+    width: 58%;
+}
+
+.grades-text p {
+    margin: 0 0 1em 0;
+    text-align: justify;
+    line-height: 1.2;
+}
+
+.grading-scale {
+    width: 40%;
+    border: 1px solid #ccc;
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+.grading-scale h6 {
+    margin-top: 0;
+    font-size: 10pt;
+}
+
+.grading-scale table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 0;
+}
+
+.grading-scale th,
+.grading-scale td {
+    border: 1px solid #ccc;
+    padding: 3px;
+    text-align: left;
+}

@@ -1,0 +1,212 @@
+{% extends "dashboard_layout.html" %}
+
+{% block dashboard_content %}
+  {% if form_type == 'grade_assignment' %}
+    {# Grade Assignment Form #}
+    <h3 class="mb-4">Grade Assignment for {{ student.name }}</h3>
+    <div class="container-fluid py-3">
+      <div class="card mb-3">
+        <div class="card-header">
+          Assignment: <strong>{{ assignment.title }}</strong>
+        </div>
+        <div class="card-body">
+          <p class="card-text"><strong>Class:</strong> {{ assignment.class_assigned.name }}</p>
+          <p class="card-text"><strong>Due Date:</strong> {{ assignment.due_date.strftime('%Y-%m-%d %I:%M %p') }}</p>
+          {% if assignment.description %}
+            <p class="card-text"><strong>Description:</strong> {{ assignment.description|nl2br }}</p>
+          {% endif %}
+          {% if assignment.attached_file_path %}
+            <p class="card-text"><strong>Original Assignment Attachment:</strong> 
+                <a href="{{ url_for('static', filename='uploads/' + assignment.attached_file_path) }}" target="_blank">
+                    View Attachment
+                </a>
+            </p>
+          {% endif %}
+        </div>
+      </div>
+
+      <form method="POST" action="{{ form_action }}" enctype="multipart/form-data" class="needs-validation" novalidate>
+        <div class="row g-3">
+          <div class="col-12 col-md-4">
+            <label for="grade" class="form-label">Grade</label>
+            <input type="text" class="form-control" id="grade" name="grade" 
+                   value="{{ submission.grade if submission and submission.grade else '' }}">
+            <div class="form-text">E.g., A+, 95, 8/10, Complete</div>
+          </div>
+
+          <div class="col-12">
+            <label for="feedback" class="form-label">Feedback</label>
+            <textarea class="form-control" id="feedback" name="feedback" rows="5">{{ submission.feedback if submission and submission.feedback else '' }}</textarea>
+          </div>
+          
+          <div class="col-12">
+            <label for="scanned_work" class="form-label">Upload Scanned Work (Optional)</label>
+            <input class="form-control" type="file" id="scanned_work" name="scanned_work" accept=".pdf,.png,.jpg,.jpeg,.txt,.doc,.docx">
+            {% if submission and submission.submitted_file_path %}
+              <div class="form-text mt-1">
+                Current scanned work: 
+                <a href="{{ url_for('static', filename='uploads/' + submission.submitted_file_path) }}" target="_blank">
+                    View Current Scan
+                </a>. 
+                Uploading a new file will replace it.
+              </div>
+            {% endif %}
+            <div class="form-text">Allowed types: PDF, DOC(X), TXT, PNG, JPG, JPEG.</div>
+          </div>
+           <div class="col-12">
+             <p class="form-text text-muted small">
+                 Current Status: 
+                 <span class="badge {% if submission and submission.status == 'Graded' %}bg-success{% elif submission and submission.status == 'Received' %}bg-info text-dark{% else %}bg-secondary{% endif %}">
+                     {{ submission.status if submission else 'Pending Submission' }}
+                 </span>
+             </p>
+           </div>
+        </div>
+
+        <hr class="my-4">
+
+        <button class="btn btn-primary btn-lg" type="submit">Save Grade</button>
+        <a href="{{ url_for(role_prefix ~ 'view_assignment_submissions', assignment_id=assignment.id) }}" class="btn btn-secondary btn-lg ms-2" role="button">
+          Cancel
+        </a>
+      </form>
+    </div>
+
+  {% elif form_type == 'view_submissions' %}
+    {# View Assignment Submissions #}
+    <h2 class="mb-4">Submissions for: {{ assignment.title }}</h2>
+
+    <!-- Assignment Management Controls -->
+    <div class="container-fluid py-3">
+      <div class="card shadow-sm mb-4">
+          <div class="card-header">
+              <h5 class="mb-0">Assignment Controls</h5>
+          </div>
+          <div class="card-body">
+              <div class="row align-items-center">
+                  <!-- Lock/Unlock Form -->
+                  <div class="col-12 col-md-3 mb-2 mb-md-0">
+                      <form action="{{ url_for(role_prefix + 'toggle_assignment_lock', assignment_id=assignment.id) }}" method="POST">
+                          {% if assignment.submissions_locked %}
+                              <button type="submit" class="btn btn-success w-100"><i class="bi bi-unlock-fill me-2"></i>Unlock Submissions</button>
+                          {% else %}
+                              <button type="submit" class="btn btn-danger w-100"><i class="bi bi-lock-fill me-2"></i>Lock Submissions</button>
+                          {% endif %}
+                      </form>
+                  </div>
+                  <!-- Extend Deadline Form -->
+                  <div class="col-12 col-md-5 mb-2 mb-md-0">
+                      <form action="{{ url_for(role_prefix + 'extend_deadline', assignment_id=assignment.id) }}" method="POST" class="d-flex flex-wrap">
+                          <input type="date" name="new_due_date" class="form-control me-2 mb-2 mb-md-0" value="{{ assignment.due_date.strftime('%Y-%m-%d') }}">
+                          <button type="submit" class="btn btn-info text-white">Extend Deadline</button>
+                      </form>
+                  </div>
+                  <!-- Manage Exemptions Button -->
+                  <div class="col-12 col-md-4 text-md-end">
+                       <button type="button" class="btn btn-secondary w-100 w-md-auto" data-bs-toggle="modal" data-bs-target="#exemptionsModal">
+                          <i class="bi bi-person-check-fill me-2"></i>Manage Exemptions
+                      </button>
+                  </div>
+              </div>
+          </div>
+      </div>
+      <!-- Submissions Table -->
+      <div class="card shadow-sm">
+          <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Student Name</th>
+                            <th>Status</th>
+                            <th>Submitted Date</th>
+                            <th>Grade</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for info in student_submissions_info %}
+                        <tr class="{{ 'table-secondary' if info.submission and info.submission.is_exempt else '' }}">
+                            <td>{{ info.student.name }}</td>
+                            <td>
+                                {% if info.submission %}
+                                    {% if info.submission.is_exempt %}
+                                        <span class="badge bg-secondary">Exempt</span>
+                                    {% elif info.submission.status == 'Graded' %}
+                                        <span class="badge bg-success">Graded</span>
+                                    {% else %}
+                                        <span class="badge bg-info">{{ info.submission.status }}</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="badge bg-warning text-dark">Pending Submission</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ info.submission.submission_date.strftime('%Y-%m-%d %I:%M %p') if info.submission and info.submission.submission_date else 'N/A' }}</td>
+                            <td>{{ info.submission.grade if info.submission and info.submission.grade else 'N/A' }}</td>
+                            <td>
+                                <a href="{{ url_for(role_prefix + 'grade_student_assignment', assignment_id=assignment.id, student_id=info.student.id) }}" class="btn btn-sm btn-primary">Grade / View</a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted">No students in this class.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+              </div>
+          </div>
+      </div>
+    </div>
+
+    <!-- Exemptions Modal -->
+    <div class="modal fade" id="exemptionsModal" tabindex="-1" aria-labelledby="exemptionsModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="exemptionsModalLabel">Manage Exemptions for {{ assignment.title }}</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <form action="{{ url_for(role_prefix + 'manage_exemptions', assignment_id=assignment.id) }}" method="POST">
+              <div class="modal-body">
+                <p class="text-muted">Select students to exempt from this assignment. Their grade for this assignment will not be counted.</p>
+                <ul class="list-group">
+                    {% for info in student_submissions_info %}
+                        <li class="list-group-item">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="exempt_students" value="{{ info.student.id }}" id="student-{{ info.student.id }}" {% if info.submission and info.submission.is_exempt %}checked{% endif %}>
+                                <label class="form-check-label" for="student-{{ info.student.id }}">
+                                    {{ info.student.name }}
+                                </label>
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-success">Save Exemptions</button>
+              </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+  {% else %}
+    {# Default fallback #}
+    <div class="alert alert-info" role="alert">
+      <h4>Teacher Forms</h4>
+      <p>This template supports the following form types:</p>
+      <ul>
+        <li><code>grade_assignment</code> - Grade student assignments</li>
+        <li><code>view_submissions</code> - View and manage assignment submissions</li>
+      </ul>
+      <p>Please specify a valid <code>form_type</code> parameter.</p>
+    </div>
+  {% endif %}
+
+<script>
+// Bootstrap validation script (for grade assignment form)
+(function () { 'use strict'; var forms = document.querySelectorAll('.needs-validation'); Array.prototype.slice.call(forms).forEach(function (form) { form.addEventListener('submit', function (event) { if (!form.checkValidity()) { event.preventDefault(); event.stopPropagation(); } form.classList.add('was-validated'); }, false); }); })();
+</script>
+{% endblock %} 

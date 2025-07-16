@@ -1,0 +1,169 @@
+{% extends "dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+    <div class="row g-3 g-md-4">
+        <!-- Sidebar -->
+        <div class="col-12 col-lg-3">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-envelope-open me-2"></i>View Message</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        <a href="{{ url_for('management.management_messages') }}" 
+                           class="list-group-item list-group-item-action">
+                            <i class="bi bi-arrow-left me-2"></i>Back to Messages
+                        </a>
+                        <a href="{{ url_for('management.communications') }}" 
+                           class="list-group-item list-group-item-action">
+                            <i class="bi bi-chat-dots me-2"></i>Communications Hub
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-12 col-lg-9">
+            <!-- Message Details -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light">
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
+                        <h5 class="mb-2 mb-md-0">
+                            <i class="bi bi-envelope-open me-2"></i>
+                            {{ message.subject or 'No Subject' }}
+                        </h5>
+                        <div class="btn-group" role="group">
+                            {% if not message.is_read and message.recipient_id == current_user.id %}
+                                <form method="POST" action="{{ url_for('management.management_mark_message_read', message_id=message.id) }}" 
+                                      style="display: inline;">
+                                    <button type="submit" class="btn btn-sm btn-outline-success">
+                                        <i class="bi bi-check-circle me-1"></i>Mark Read
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-12 col-md-6">
+                            <strong>From:</strong> 
+                            <span class="text-primary">{{ message.sender.username if message.sender else 'Unknown' }}</span>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <strong>To:</strong> 
+                            <span class="text-muted">{{ message.recipient.username if message.recipient else 'Unknown' }}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-12 col-md-6">
+                            <strong>Date:</strong> 
+                            <span class="text-muted">{{ message.created_at.strftime('%B %d, %Y at %I:%M %p') if message.created_at else 'N/A' }}</span>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <strong>Status:</strong> 
+                            {% if message.is_read %}
+                                <span class="badge bg-success">Read</span>
+                                {% if message.read_at %}
+                                    <small class="text-muted">({{ message.read_at.strftime('%m/%d %H:%M') }})</small>
+                                {% endif %}
+                            {% else %}
+                                <span class="badge bg-danger">Unread</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="message-content">
+                        <h6>Message:</h6>
+                        <div class="border rounded p-3 bg-light">
+                            {{ message.content|nl2br }}
+                        </div>
+                    </div>
+
+                    {% if message.attachments %}
+                        <div class="mt-3">
+                            <h6>Attachments:</h6>
+                            <div class="list-group">
+                                {% for attachment in message.attachments %}
+                                    <div class="list-group-item">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <i class="bi bi-paperclip me-2"></i>
+                                                {{ attachment.original_filename }}
+                                            </div>
+                                            <a href="#" class="btn btn-sm btn-outline-primary">Download</a>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Reply Section -->
+            {% if message.recipient_id == current_user.id %}
+                <div class="card shadow-sm">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="bi bi-reply me-2"></i>Reply to Message</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ url_for('management.management_reply_to_message', message_id=message.id) }}">
+                            <div class="mb-3">
+                                <label for="reply_content" class="form-label">Your Reply</label>
+                                <textarea class="form-control" id="reply_content" name="content" rows="6" 
+                                          placeholder="Type your reply here..." required></textarea>
+                            </div>
+                            <div class="d-flex flex-column flex-md-row justify-content-between gap-2">
+                                <a href="{{ url_for('management.management_messages') }}" class="btn btn-secondary">
+                                    <i class="bi bi-x-circle me-1"></i>Cancel
+                                </a>
+                                <button type="submit" class="btn btn-success">
+                                    <i class="bi bi-send me-1"></i>Send Reply
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Message Thread (if any replies) -->
+            {% if message.replies %}
+                <div class="card shadow-sm mt-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="bi bi-chat-dots me-2"></i>Message Thread</h5>
+                    </div>
+                    <div class="card-body">
+                        {% for reply in message.replies %}
+                            <div class="border-start border-primary ps-3 mb-3">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <strong class="text-primary">{{ reply.sender.username if reply.sender else 'Unknown' }}</strong>
+                                            <small class="text-muted">{{ reply.created_at.strftime('%m/%d %H:%M') if reply.created_at else 'N/A' }}</small>
+                                        </div>
+                                        <p class="mb-0">{{ reply.content }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-resize textarea for reply
+document.getElementById('reply_content').addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = this.scrollHeight + 'px';
+});
+</script>
+{% endblock %} 

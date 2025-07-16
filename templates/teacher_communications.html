@@ -1,0 +1,306 @@
+{% extends "dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+    <div class="row g-3 g-md-4">
+        <!-- Left Sidebar - Message List -->
+        <div class="col-12 col-lg-4 col-xl-3">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="bi bi-inbox-fill me-2"></i>Unified Inbox</h5>
+                        <div class="dropdown">
+                            <button class="btn btn-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-funnel"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="?type=all">All Messages</a></li>
+                                <li><a class="dropdown-item" href="?type=direct">Direct Messages</a></li>
+                                <li><a class="dropdown-item" href="?type=group">Group Messages</a></li>
+                                <li><a class="dropdown-item" href="?type=announcement">Announcements</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="?status=unread">Unread Only</a></li>
+                                <li><a class="dropdown-item" href="?status=read">Read Only</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <!-- Quick Actions -->
+                    <div class="p-3 border-bottom">
+                        <div class="d-grid gap-2">
+                            <a href="{{ url_for('teacher.send_message') }}" class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-pencil-square me-1"></i>New Message
+                            </a>
+                            <a href="{{ url_for('teacher.create_announcement') }}" class="btn btn-outline-success btn-sm">
+                                <i class="bi bi-megaphone me-1"></i>New Announcement
+                            </a>
+                            <a href="{{ url_for('teacher.create_group') }}" class="btn btn-outline-info btn-sm">
+                                <i class="bi bi-people me-1"></i>Create Group
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Message List -->
+                    <div class="list-group list-group-flush" style="max-height: 600px; overflow-y: auto;">
+                        {% if messages %}
+                            {% for message in messages %}
+                                <a href="{{ url_for('teacher.view_message', message_id=message.id) }}" 
+                                   class="list-group-item list-group-item-action {% if not message.is_read %}list-group-item-primary{% endif %}">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1">
+                                                {% if message.sender_id == current_user.id %}
+                                                    <i class="bi bi-arrow-up-right text-success"></i>
+                                                {% else %}
+                                                    <i class="bi bi-arrow-down-left text-primary"></i>
+                                                {% endif %}
+                                                {{ message.sender.username if message.sender else 'System' }}
+                                            </h6>
+                                            <p class="mb-1 text-truncate">{{ message.subject or message.content[:50] }}</p>
+                                            <small class="text-muted">{{ message.created_at.strftime('%b %d, %H:%M') }}</small>
+                                        </div>
+                                        <div class="ms-2">
+                                            {% if not message.is_read and message.recipient_id == current_user.id %}
+                                                <span class="badge bg-primary">New</span>
+                                            {% endif %}
+                                            {% if message.message_type == 'group' %}
+                                                <span class="badge bg-info">Group</span>
+                                            {% elif message.message_type == 'announcement' %}
+                                                <span class="badge bg-warning">Announcement</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </a>
+                            {% endfor %}
+                        {% else %}
+                            <div class="list-group-item text-center text-muted py-4">
+                                <i class="bi bi-inbox fs-1"></i>
+                                <p class="mt-2">No messages yet</p>
+                                <small>Start a conversation or create an announcement</small>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="col-12 col-lg-8 col-xl-9">
+            <!-- Statistics Cards -->
+            <div class="row g-3 g-md-4 mb-4">
+                <div class="col-6 col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body text-center">
+                            <i class="bi bi-envelope-fill fs-1"></i>
+                            <h4 class="mt-2">{{ messages|length }}</h4>
+                            <small>Total Messages</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="card bg-warning text-dark">
+                        <div class="card-body text-center">
+                            <i class="bi bi-exclamation-circle-fill fs-1"></i>
+                            <h4 class="mt-2">{{ unread_messages }}</h4>
+                            <small>Unread Messages</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body text-center">
+                            <i class="bi bi-megaphone-fill fs-1"></i>
+                            <h4 class="mt-2">{{ announcements|length }}</h4>
+                            <small>Announcements</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body text-center">
+                            <i class="bi bi-people-fill fs-1"></i>
+                            <h4 class="mt-2">{{ groups|length }}</h4>
+                            <small>Message Groups</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity Tabs -->
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <ul class="nav nav-tabs card-header-tabs flex-column flex-md-row" id="communicationsTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="announcements-tab" data-bs-toggle="tab" data-bs-target="#announcements" type="button" role="tab">
+                                <i class="bi bi-megaphone me-1"></i>Announcements
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="notifications-tab" data-bs-toggle="tab" data-bs-target="#notifications" type="button" role="tab">
+                                <i class="bi bi-bell me-1"></i>Notifications
+                                {% if unread_notifications > 0 %}
+                                    <span class="badge bg-danger ms-1">{{ unread_notifications }}</span>
+                                {% endif %}
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="groups-tab" data-bs-toggle="tab" data-bs-target="#groups" type="button" role="tab">
+                                <i class="bi bi-people me-1"></i>Groups
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-body">
+                    <div class="tab-content" id="communicationsTabContent">
+                        <!-- Announcements Tab -->
+                        <div class="tab-pane fade show active" id="announcements" role="tabpanel">
+                            <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-3 gap-2">
+                                <h5 class="mb-0">Recent Announcements</h5>
+                                <a href="{{ url_for('teacher.create_announcement') }}" class="btn btn-primary btn-sm">
+                                    <i class="bi bi-plus-circle me-1"></i>Create Announcement
+                                </a>
+                            </div>
+                            
+                            {% if announcements %}
+                                <div class="list-group">
+                                    {% for announcement in announcements[:5] %}
+                                        <div class="list-group-item">
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <div class="flex-grow-1">
+                                                    <h6 class="mb-1">
+                                                        {{ announcement.title }}
+                                                        {% if announcement.is_important %}
+                                                            <span class="badge bg-danger ms-1">Important</span>
+                                                        {% endif %}
+                                                    </h6>
+                                                    <p class="mb-1">{{ announcement.message[:100] }}{% if announcement.message|length > 100 %}...{% endif %}</p>
+                                                    <small class="text-muted">
+                                                        From: {{ announcement.sender.username if announcement.sender else 'Admin' }} | 
+                                                        {{ announcement.timestamp.strftime('%b %d, %Y %I:%M %p') }}
+                                                    </small>
+                                                </div>
+                                                <div class="ms-2">
+                                                    <span class="badge bg-secondary">{{ announcement.target_group.replace('_', ' ').title() }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                {% if announcements|length > 5 %}
+                                    <div class="text-center mt-3">
+                                        <a href="#" class="btn btn-outline-primary btn-sm">View All Announcements</a>
+                                    </div>
+                                {% endif %}
+                            {% else %}
+                                <div class="text-center text-muted py-4">
+                                    <i class="bi bi-megaphone fs-1"></i>
+                                    <p class="mt-2">No announcements yet</p>
+                                    <small>Create an announcement to get started</small>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Notifications Tab -->
+                        <div class="tab-pane fade" id="notifications" role="tabpanel">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="mb-0">System Notifications</h5>
+                                <button class="btn btn-outline-secondary btn-sm" onclick="markAllNotificationsRead()">
+                                    <i class="bi bi-check-all me-1"></i>Mark All Read
+                                </button>
+                            </div>
+                            
+                            {% if notifications %}
+                                <div class="list-group">
+                                    {% for notification in notifications[:10] %}
+                                        <div class="list-group-item {% if not notification.is_read %}list-group-item-primary{% endif %}">
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <div class="flex-grow-1">
+                                                    <h6 class="mb-1">{{ notification.title }}</h6>
+                                                    <p class="mb-1">{{ notification.message }}</p>
+                                                    <small class="text-muted">{{ notification.timestamp.strftime('%b %d, %Y %I:%M %p') }}</small>
+                                                </div>
+                                                <div class="ms-2">
+                                                    {% if not notification.is_read %}
+                                                        <span class="badge bg-primary">New</span>
+                                                    {% endif %}
+                                                    <span class="badge bg-secondary">{{ notification.type }}</span>
+                                                </div>
+                                            </div>
+                                            {% if not notification.is_read %}
+                                                <div class="mt-2">
+                                                    <form method="POST" action="{{ url_for('teacher.mark_notification_read', notification_id=notification.id) }}" style="display: inline;">
+                                                        <button type="submit" class="btn btn-sm btn-outline-primary">Mark as Read</button>
+                                                    </form>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="text-center text-muted py-4">
+                                    <i class="bi bi-bell fs-1"></i>
+                                    <p class="mt-2">No notifications</p>
+                                    <small>You're all caught up!</small>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Groups Tab -->
+                        <div class="tab-pane fade" id="groups" role="tabpanel">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="mb-0">Message Groups</h5>
+                                <a href="{{ url_for('teacher.create_group') }}" class="btn btn-primary btn-sm">
+                                    <i class="bi bi-plus-circle me-1"></i>Create Group
+                                </a>
+                            </div>
+                            
+                            {% if groups %}
+                                <div class="row">
+                                    {% for group in groups %}
+                                        <div class="col-md-6 col-lg-4 mb-3">
+                                            <div class="card h-100">
+                                                <div class="card-body">
+                                                    <h6 class="card-title">{{ group.name }}</h6>
+                                                    <p class="card-text text-muted">{{ group.description or 'No description' }}</p>
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <span class="badge bg-info">{{ group.group_type.title() }}</span>
+                                                        <a href="{{ url_for('teacher.view_group', group_id=group.id) }}" class="btn btn-outline-primary btn-sm">
+                                                            <i class="bi bi-chat me-1"></i>Open
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="text-center text-muted py-4">
+                                    <i class="bi bi-people fs-1"></i>
+                                    <p class="mt-2">No message groups</p>
+                                    <small>Create a group to start collaborative messaging</small>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function markAllNotificationsRead() {
+    // Implementation for marking all notifications as read
+    if (confirm('Mark all notifications as read?')) {
+        // Add AJAX call here to mark all notifications as read
+        location.reload();
+    }
+}
+
+// Auto-refresh notifications every 30 seconds
+setInterval(function() {
+    // Add AJAX call to refresh notifications
+}, 30000);
+</script>
+{% endblock %} 

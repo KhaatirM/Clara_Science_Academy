@@ -1,0 +1,101 @@
+{% extends "dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-3 gap-2 gap-md-0">
+        <h3 class="mb-2 mb-md-0">Students</h3>
+        {% if current_user.role in ['Director', 'School Administrator'] %}
+            <a href="{{ url_for('management.add_student') }}" class="btn btn-primary btn-sm">
+                <i class="bi bi-plus-circle-fill me-1 me-md-2"></i>Add New Student
+            </a>
+        {% endif %}
+    </div>
+
+    <div class="row g-3 g-md-4">
+        <!-- Student Grid -->
+        <div class="col-12 col-lg-7">
+            <div class="card">
+                <div class="card-header">
+                    All Students
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for student in students %}
+                            {% set image_path = 'uploads/' ~ student.photo_filename if student.photo_filename else 'img/default_avatar.png' %}
+                            <div class="student-card text-center"
+                                 data-id="{{ student.id }}"
+                                 data-name="{{ student.first_name }} {{ student.last_name }}"
+                                 data-dob="{% if current_user.role == 'Director' %}{{ student.dob if student.dob else 'N/A' }}{% else %}{{ student.date_of_birth.strftime('%Y-%m-%d') if student.date_of_birth else 'N/A' }}{% endif %}"
+                                 data-grade="{{ student.grade_level }}"
+                                 data-state-id="{{ student.state_id or 'N/A' }}"
+                                 data-address="{{ student.address or 'N/A' }}"
+                                 data-image="{{ url_for('static', filename=image_path) }}">
+                                
+                                <img src="{{ url_for('static', filename=image_path) }}" alt="Photo of {{ student.first_name }}" class="student-img img-fluid rounded-circle mb-2">
+                                
+                                <div class="name-tag">{{ student.first_name }} {{ student.last_name }}</div>
+                            </div>
+                        {% else %}
+                            <p>No students found.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Details Panel -->
+        <div class="col-12 col-lg-5">
+            <div class="card">
+                <div class="card-header">
+                    Student Details
+                </div>
+                <div id="details-panel" class="card-body">
+                    <p class="text-muted">Select a student to see their details.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const detailsPanel = document.getElementById('details-panel');
+    const defaultText = '<p class="text-muted">Select a student to see their details.</p>';
+
+    document.querySelectorAll('.student-card').forEach(card => {
+        card.addEventListener('click', function() {
+            // Update details panel
+            const student = this.dataset;
+            detailsPanel.innerHTML = `
+                <div class="text-center mb-3">
+                    <img src="${student.image}" alt="Photo of ${student.name}" class="img-fluid rounded-circle" style="width: 120px; height: 120px; object-fit: cover;">
+                </div>
+                <h5>${student.name}</h5>
+                <hr>
+                <p><strong>DOB:</strong> ${student.dob}</p>
+                <p><strong>Grade:</strong> ${student.grade}</p>
+                <p><strong>State ID:</strong> ${student.stateId}</p>
+                <p><strong>Address:</strong> ${student.address}</p>
+                <hr>
+                <div class="d-grid gap-2">
+                    <a href="/student/${student.id}/grades" class="btn btn-sm btn-outline-primary">View Grades</a>
+                    <a href="/student/${student.id}/attendance" class="btn btn-sm btn-outline-secondary">View Attendance</a>
+                </div>
+            `;
+
+            // Highlight selected card
+            document.querySelectorAll('.student-card').forEach(c => c.classList.remove('border-primary', 'shadow'));
+            this.classList.add('border-primary', 'shadow');
+        });
+    });
+});
+</script>
+{% endblock %} 
+
+<style>
+@media (max-width: 768px) {
+  .card-body, .card-text, .card-title, .list-group-item, td, th {
+    word-break: break-word;
+  }
+}
+</style> 

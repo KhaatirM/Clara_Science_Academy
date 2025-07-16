@@ -1,0 +1,1413 @@
+{% extends "dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+    <!-- DEBUG: Current section is "{{ section }}" -->
+    {% if section == 'home' %}
+        <!-- Home Dashboard -->
+        <h2 class="mb-4">Student Dashboard <span class="text-muted fs-6">(Student View)</span></h2>
+
+        <!-- GPA and Academic Overview -->
+        <div class="row g-3 g-md-4 mb-4">
+            <div class="col-12 col-md-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Academic Overview</h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <h2 class="display-4 text-primary">{{ "%.2f"|format(gpa) }}</h2>
+                        <p class="text-muted mb-0">Current GPA</p>
+                        <div class="mt-3">
+                            <span class="badge bg-success">On Track</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-12 col-md-8">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="bi bi-calendar-check me-2"></i>Today's Schedule</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if today_schedule %}
+                            <div class="list-group list-group-flush">
+                                {% for item in today_schedule %}
+                                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-1">{{ item.class.name }}</h6>
+                                            <small class="text-muted">{{ item.teacher }}</small>
+                                        </div>
+                                        <div class="text-end">
+                                            <div class="fw-bold">{{ item.time }}</div>
+                                            <small class="text-muted">{{ item.room }}</small>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="text-muted mb-0">No classes scheduled for today.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3 g-md-4">
+            <!-- Left Column -->
+            <div class="col-12 col-lg-5">
+                <!-- Student Information Card -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="bi bi-person-fill me-2"></i>Student Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <strong>Name:</strong>
+                                <span>{{ student.first_name }} {{ student.last_name }}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <strong>Grade:</strong>
+                                <span>{{ student.grade_level or 'N/A' }}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <strong>Date of Birth:</strong>
+                                <span>{{ student.dob or 'N/A' }}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <strong>Student ID:</strong>
+                                <span>{{ student.state_id or 'N/A' }}</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Academic Goals Card -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0"><i class="bi bi-target me-2"></i>Academic Goals</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if student.enrollments %}
+                            {% set active_enrollments = student.enrollments|selectattr('is_active')|list %}
+                            {% for enrollment in active_enrollments[:5] %}
+                                {% set class = enrollment.class_info %}
+                                {% set goal = goals.get(class.id) %}
+                                {% set current_grade = grades.get(class.name, 0) %}
+                                <div class="mb-3">
+                                    <h6>{{ class.name }}</h6>
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span>Current: {{ "%.1f"|format(current_grade) }}%</span>
+                                        {% if goal %}
+                                            <span>Goal: {{ "%.1f"|format(goal.target_grade) }}%</span>
+                                        {% endif %}
+                                    </div>
+                                    {% if goal %}
+                                        <div class="progress mb-2">
+                                            {% set progress = (current_grade / goal.target_grade * 100) if goal.target_grade > 0 else 0 %}
+                                            <div class="progress-bar {% if progress >= 100 %}bg-success{% elif progress >= 80 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                                 style="width: {{ [progress, 100]|min }}%">
+                                                {{ "%.1f"|format(progress) }}%
+                                            </div>
+                                        </div>
+                                        <form method="POST" action="{{ url_for('student.delete_goal', goal_id=goal.id) }}" 
+                                              style="display: inline;" onsubmit="return confirm('Delete this goal?')">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">Remove Goal</button>
+                                        </form>
+                                    {% else %}
+                                        <form method="POST" action="{{ url_for('student.set_goal') }}" class="d-inline">
+                                            <input type="hidden" name="class_id" value="{{ class.id }}">
+                                            <div class="input-group input-group-sm">
+                                                <input type="number" name="target_grade" class="form-control" 
+                                                       placeholder="Target %" min="0" max="100" step="0.1" required>
+                                                <button type="submit" class="btn btn-outline-primary">Set Goal</button>
+                                            </div>
+                                        </form>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted">You are not yet enrolled in any classes.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Quick Links Card -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="bi bi-link-45deg me-2"></i>Quick Links</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            {% if student.enrollments %}
+                                {% set active_enrollments = student.enrollments|selectattr('is_active')|list %}
+                                {% for enrollment in active_enrollments[:5] %}
+                                    {% set class = enrollment.class_info %}
+                                    <a href="{{ url_for('student.view_class', class_id=class.id) }}" class="btn btn-outline-success">{{ class.name }}</a>
+                                {% endfor %}
+                            {% else %}
+                                <p class="text-muted">You are not yet enrolled in any classes.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column -->
+            <div class="col-12 col-lg-7">
+                <!-- Grade Trends Card -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Grade Trends</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if grade_trends %}
+                            {% for class_id, trends in grade_trends.items() %}
+                                {% if trends %}
+                                    <h6>{{ trends[0].assignment.split(' - ')[0] if trends else 'Class' }}</h6>
+                                    <canvas id="gradeChart{{ class_id }}" width="400" height="200"></canvas>
+                                    <script>
+                                        const ctx{{ class_id }} = document.getElementById('gradeChart{{ class_id }}').getContext('2d');
+                                        new Chart(ctx{{ class_id }}, {
+                                            type: 'line',
+                                            data: {
+                                                labels: [{% for trend in trends %}'{{ trend.date }}'{% if not loop.last %}, {% endif %}{% endfor %}],
+                                                datasets: [{
+                                                    label: 'Grade %',
+                                                    data: [{% for trend in trends %}{{ trend.grade }}{% if not loop.last %}, {% endif %}{% endfor %}],
+                                                    borderColor: 'rgb(75, 192, 192)',
+                                                    tension: 0.1
+                                                }]
+                                            },
+                                            options: {
+                                                responsive: true,
+                                                scales: {
+                                                    y: {
+                                                        beginAtZero: true,
+                                                        max: 100
+                                                    }
+                                                }
+                                            }
+                                        });
+                                    </script>
+                                {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted">No grade trends available yet.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Notifications Card -->
+                <div class="card shadow-sm mb-4">
+                     <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="bi bi-bell-fill me-2"></i>Notifications</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if notifications and notifications|length > 0 %}
+                            <div class="list-group mb-3">
+                                {% for notification in notifications %}
+                                    <div class="list-group-item list-group-item-action {% if not notification.is_read %}list-group-item-primary{% endif %}">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div class="flex-grow-1">
+                                                <strong>{{ notification.title }}</strong>
+                                                <p class="mb-1">{{ notification.message }}</p>
+                                                <small class="text-muted">{{ notification.timestamp.strftime('%b %d, %Y %I:%M %p') }}</small>
+                                            </div>
+                                            <div class="ms-2">
+                                                {% if not notification.is_read %}
+                                                    <span class="badge bg-primary">New</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="mt-2">
+                                            {% if notification.link %}
+                                                <a href="{{ notification.link }}" class="btn btn-sm btn-outline-primary me-2">View Details</a>
+                                            {% endif %}
+                                            {% if not notification.is_read %}
+                                                <form method="POST" action="{{ url_for('student.mark_notification_read', notification_id=notification.id) }}" style="display: inline;">
+                                                    <button type="submit" class="btn btn-sm btn-outline-secondary">Mark as Read</button>
+                                                </form>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        {% if announcements and announcements|length > 0 %}
+                            <h6 class="text-primary">Announcements</h6>
+                            <div class="list-group mb-3">
+                                {% for ann in announcements %}
+                                    <div class="list-group-item list-group-item-action">
+                                        <strong>{{ ann.title }}</strong>
+                                        <p class="mb-1">{{ ann.message }}</p>
+                                        <small class="text-muted">From: {{ ann.sender.username if ann.sender else 'Admin' }} | {{ ann.timestamp.strftime('%b %d, %Y %I:%M %p') }}</small>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        {% if past_due_assignments %}
+                            <h6 class="text-danger">Past Due Assignments</h6>
+                            <div class="list-group mb-3">
+                                {% for assignment in past_due_assignments %}
+                                    <a href="#" class="list-group-item list-group-item-action list-group-item-danger">
+                                        <strong>{{ assignment.title }}</strong> ({{ assignment.class_info.name }})
+                                        <small class="d-block">Due: {{ assignment.due_date.strftime('%b %d, %Y') }}</small>
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        {% if upcoming_assignments %}
+                            <h6 class="text-warning">Upcoming Assignments</h6>
+                            <div class="list-group">
+                                {% for assignment in upcoming_assignments %}
+                                     <a href="#" class="list-group-item list-group-item-action list-group-item-warning">
+                                        <strong>{{ assignment.title }}</strong> ({{ assignment.class_info.name }})
+                                        <small class="d-block">Due: {{ assignment.due_date.strftime('%b %d, %Y') }}</small>
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        {% if not notifications and not announcements and not past_due_assignments and not upcoming_assignments %}
+                            <div class="alert alert-success" role="alert">
+                                <i class="bi bi-check-circle-fill me-2"></i>You have no immediate notifications. Great job staying on top of your work!
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Recent Grades Card -->
+                <div class="card shadow-sm">
+                     <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0"><i class="bi bi-check2-circle me-2"></i>Recent Grades</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Assignment</th>
+                                    <th>Class</th>
+                                    <th>Grade</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if recent_grades %}
+                                    {% for submission in recent_grades %}
+                                    <tr>
+                                        <td>{{ submission.assignment.title }}</td>
+                                        <td>{{ submission.assignment.class_assigned.name }}</td>
+                                        <td><strong>{{ submission.grade }}</strong></td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted">No grades have been posted recently.</td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    {% elif section == 'classes' %}
+        <!-- My Classes View -->
+        <h2 class="mb-4">My Enrolled Classes <span class="text-muted fs-6">(Student View)</span></h2>
+
+        <div class="row">
+            {% for class in my_classes %}
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ class.name }}</h5>
+                            <h6 class="card-subtitle mb-2 text-muted">{{ class.subject }} - Grade {{ class.grade_level }}</h6>
+                            <p class="card-text">
+                                <strong>Teacher:</strong> {{ class.teacher.first_name }} {{ class.teacher.last_name if class.teacher else 'N/A' }}<br>
+                                <strong>Subject:</strong> {{ class.subject or 'N/A' }}
+                            </p>
+                            <a href="#" class="btn btn-primary">View Class</a>
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+                <div class="col">
+                    <div class="alert alert-info">
+                        You are not currently enrolled in any classes.
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+    {% elif section == 'grades' %}
+        <!-- Grades View -->
+        <h2 class="mb-4">My Grades</h2>
+
+        {% if grades_by_class %}
+            <div class="accordion" id="gradesAccordion">
+            {% for class_name, data in grades_by_class.items() %}
+            <div class="accordion-item mb-3 shadow-sm">
+                <h2 class="accordion-header" id="heading-{{ loop.index }}">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ loop.index }}" aria-expanded="false" aria-controls="collapse-{{ loop.index }}">
+                        <div class="d-flex justify-content-between w-100 me-3">
+                            <span class="fs-5">{{ class_name }}</span>
+                            <span class="fs-5">Final Grade: <span class="fw-bold">{{ data.final_grade.letter }} ({{ data.final_grade.percentage }}%)</span></span>
+                        </div>
+                    </button>
+                </h2>
+                <div id="collapse-{{ loop.index }}" class="accordion-collapse collapse" aria-labelledby="heading-{{ loop.index }}" data-bs-parent="#gradesAccordion">
+                    <div class="accordion-body p-0">
+                        <table class="table table-striped table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th scope="col" style="width: 25%;">Marking Period</th>
+                                    <th scope="col" style="width: 25%;">Letter Grade</th>
+                                    <th scope="col" style="width: 25%;">Percentage</th>
+                                    <th scope="col" style="width: 25%;">Details</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for quarter in ['Q1', 'Q2', 'Q3', 'Q4'] %}
+                                {% set grade_info = data.grades[quarter] %}
+                                <tr>
+                                    <th scope="row">Quarter {{ loop.index }}: MP{{ loop.index }}</th>
+                                    <td>
+                                        {% if grade_info and grade_info.overall_percentage is not none %}
+                                            <span class="badge fs-6 
+                                                {% if grade_info.overall_letter == 'A' %} bg-success
+                                                {% elif grade_info.overall_letter == 'B' %} bg-primary
+                                                {% elif grade_info.overall_letter == 'C' %} bg-info text-dark
+                                                {% elif grade_info.overall_letter == 'D' %} bg-warning text-dark
+                                                {% else %} bg-danger
+                                                {% endif %}">{{ grade_info.overall_letter }}</span>
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ grade_info.overall_percentage if grade_info and grade_info.overall_percentage is not none else 'N/A' }}%</td>
+                                    <td>
+                                        {% if grade_info and grade_info.grade_details %}
+                                            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#details-{{ loop.index }}-{{ quarter }}" aria-expanded="false">
+                                                View Details
+                                            </button>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% if grade_info and grade_info.grade_details %}
+                                <tr class="collapse" id="details-{{ loop.index }}-{{ quarter }}">
+                                    <td colspan="4" class="p-0">
+                                        <div class="p-3 bg-white">
+                                            <h6 class="text-muted">Assignment Breakdown for {{ quarter }}</h6>
+                                            <ul class="list-group">
+                                                {% for assignment_title, assignment_grade in grade_info.grade_details.items() %}
+                                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                    {{ assignment_title }}
+                                                    <span class="badge bg-dark rounded-pill">{{ assignment_grade }}</span>
+                                                </li>
+                                                {% endfor %}
+                                            </ul>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            </div>
+        {% else %}
+            <div class="alert alert-info">
+                You do not have any grades recorded yet.
+            </div>
+        {% endif %}
+
+    {% elif section == 'assignments' %}
+        <!-- Assignments List View -->
+        <h2 class="mb-4">My Assignments</h2>
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Due Date</th>
+                            <th>Assignment Title</th>
+                            <th>Class</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for assignment, submission in assignments_with_status %}
+                            <tr>
+                                <td>{{ assignment.due_date.strftime('%Y-%m-%d') }}</td>
+                                <td>
+                                    <div>
+                                        <strong>{{ assignment.title }}</strong>
+                                        {% if assignment.attachment_filename %}
+                                            <br><small class="text-primary">
+                                                <i class="bi bi-paperclip me-1"></i>
+                                                <a href="{{ url_for('download_assignment_file', assignment_id=assignment.id) }}" class="text-decoration-none">
+                                                    {{ assignment.attachment_original_filename }}
+                                                </a>
+                                            </small>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>{{ assignment.class_assigned.name }}</td>
+                                <td>
+                                    {% if submission %}
+                                        {% if submission.status == 'Graded' %}
+                                            <span class="badge bg-success">Graded ({{ submission.grade }})</span>
+                                        {% elif submission.status in ['Received', 'Late Submission'] %}
+                                            <span class="badge bg-info">Submitted</span>
+                                        {% else %}
+                                             <span class="badge bg-secondary">{{ submission.status }}</span>
+                                        {% endif %}
+                                    {% else %}
+                                        {% if assignment.due_date < today %}
+                                            <span class="badge bg-danger">Past Due</span>
+                                        {% else %}
+                                            <span class="badge bg-warning text-dark">Not Submitted</span>
+                                        {% endif %}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('submit_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-primary">
+                                        {% if submission %}View / Resubmit{% else %}Submit{% endif %}
+                                    </a>
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">You have no assignments.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    {% elif section == 'schedule' %}
+        <!-- Schedule View -->
+        <h2 class="mb-4">My Schedule</h2>
+        
+        <div class="alert alert-info">
+            <h5><i class="bi bi-calendar-week-fill me-2"></i>Class Schedule</h5>
+            <p>Your class schedule will be displayed here. This feature is currently under development.</p>
+        </div>
+
+    {% elif section == 'school-calendar' %}
+        <!-- School Calendar View -->
+        <h2 class="mb-4">School Calendar</h2>
+        
+        {% if calendar_data %}
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">{{ calendar_data.month_name }} {{ calendar_data.year }}</h5>
+                        <div>
+                            <a href="?month={{ prev_month.month }}&year={{ prev_month.year }}" class="btn btn-sm btn-outline-light me-2">
+                                <i class="bi bi-chevron-left"></i> Previous
+                            </a>
+                            <a href="?month={{ next_month.month }}&year={{ next_month.year }}" class="btn btn-sm btn-outline-light">
+                                Next <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="calendar-container">
+                        <div class="calendar-header">
+                            {% for day in calendar_data.weekdays %}
+                                <div class="calendar-day-header">{{ day }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="calendar-body">
+                            {% for week in calendar_data.weeks %}
+                                <div class="calendar-week">
+                                    {% for day in week %}
+                                        <div class="calendar-day {% if day.is_today %}today{% endif %} {% if not day.is_current_month %}other-month{% endif %}">
+                                            {% if day.day_num %}
+                                                <div class="day-number">{{ day.day_num }}</div>
+                                                {% if day.events %}
+                                                    <div class="day-events">
+                                                        {% for event in day.events %}
+                                                            <div class="event-item holiday">
+                                                                <small>{{ event.title }}</small>
+                                                            </div>
+                                                        {% endfor %}
+                                                    </div>
+                                                {% endif %}
+                                            {% endif %}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="alert alert-warning">
+                <h5><i class="bi bi-exclamation-triangle me-2"></i>Calendar Unavailable</h5>
+                <p>The school calendar is currently unavailable. Please check back later.</p>
+            </div>
+        {% endif %}
+
+    {% elif section == 'communications' %}
+        <!-- Communications Hub for Students -->
+        <h2 class="mb-4">Communications Center</h2>
+
+        <div class="alert alert-info">
+            <h5><i class="bi bi-chat-dots-fill me-2"></i>Student Communications</h5>
+            <p>Send messages, create groups, and communicate with other students and teachers.</p>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="bi bi-envelope-fill me-2"></i>Quick Actions</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <a href="{{ url_for('student.student_send_message') }}" class="btn btn-outline-primary">
+                                <i class="bi bi-envelope-plus me-2"></i>Send New Message
+                            </a>
+                            <a href="{{ url_for('student.student_create_group') }}" class="btn btn-outline-info">
+                                <i class="bi bi-people-plus me-2"></i>Create New Group
+                            </a>
+                            <a href="{{ url_for('student.student_sent_messages') }}" class="btn btn-outline-secondary">
+                                <i class="bi bi-envelope-check me-2"></i>View Sent Messages
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Messaging Features</h5>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-unstyled mb-0">
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Send direct messages to students and teachers</li>
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Create study groups and social groups</li>
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Send messages to groups</li>
+                            <li><i class="bi bi-check-circle text-success me-2"></i>View message history and sent messages</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Messages Section -->
+            <div class="col-md-6 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="bi bi-envelope-fill me-2"></i>Recent Messages</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if messages %}
+                            <div class="list-group list-group-flush">
+                                {% for message in messages[:5] %}
+                                    <div class="list-group-item">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div class="flex-grow-1">
+                                                <h6 class="mb-1">{{ message.subject or 'No Subject' }}</h6>
+                                                <small class="text-muted">From: {{ message.sender.username }}</small>
+                                                <p class="mb-1 text-truncate">{{ message.content[:100] }}{% if message.content|length > 100 %}...{% endif %}</p>
+                                                <small class="text-muted">{{ message.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                            </div>
+                                            <div class="ms-2">
+                                                {% if not message.is_read %}
+                                                    <span class="badge bg-danger">New</span>
+                                                {% endif %}
+                                                <a href="{{ url_for('student.student_view_message', message_id=message.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            <div class="mt-3">
+                                <a href="{{ url_for('student.student_messages') }}" class="btn btn-outline-primary">View All Messages</a>
+                            </div>
+                        {% else %}
+                            <p class="text-muted mb-0">No messages to display.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Announcements Section -->
+            <div class="col-md-6 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="bi bi-megaphone-fill me-2"></i>Recent Announcements</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if announcements %}
+                            <div class="list-group list-group-flush">
+                                {% for announcement in announcements[:5] %}
+                                    <div class="list-group-item">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div class="flex-grow-1">
+                                                <h6 class="mb-1">{{ announcement.title }}</h6>
+                                                <small class="text-muted">From: {{ announcement.sender.username }}</small>
+                                                <p class="mb-1 text-truncate">{{ announcement.message[:100] }}{% if announcement.message|length > 100 %}...{% endif %}</p>
+                                                <small class="text-muted">{{ announcement.timestamp.strftime('%Y-%m-%d %H:%M') }}</small>
+                                            </div>
+                                            <div class="ms-2">
+                                                {% if announcement.is_important %}
+                                                    <span class="badge bg-warning">Important</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            <div class="mt-3">
+                                <a href="{{ url_for('student.student_announcements') }}" class="btn btn-outline-success">View All Announcements</a>
+                            </div>
+                        {% else %}
+                            <p class="text-muted mb-0">No announcements to display.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Groups Section -->
+            <div class="col-md-6 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="bi bi-people-fill me-2"></i>Message Groups</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if groups %}
+                            <div class="list-group list-group-flush">
+                                {% for group in groups[:5] %}
+                                    <div class="list-group-item">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <h6 class="mb-1">{{ group.name }}</h6>
+                                                <small class="text-muted">{{ group.description or 'No description' }}</small>
+                                            </div>
+                                            <a href="{{ url_for('student.student_view_group', group_id=group.id) }}" class="btn btn-sm btn-outline-info">View</a>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            <div class="mt-3">
+                                <a href="{{ url_for('student.student_groups') }}" class="btn btn-outline-info">View All Groups</a>
+                            </div>
+                        {% else %}
+                            <p class="text-muted mb-0">You are not a member of any message groups.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notifications Section -->
+            <div class="col-md-6 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0"><i class="bi bi-bell-fill me-2"></i>Recent Notifications</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if notifications %}
+                            <div class="list-group list-group-flush">
+                                {% for notification in notifications[:5] %}
+                                    <div class="list-group-item">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div class="flex-grow-1">
+                                                <h6 class="mb-1">{{ notification.title }}</h6>
+                                                <p class="mb-1 text-truncate">{{ notification.message[:100] }}{% if notification.message|length > 100 %}...{% endif %}</p>
+                                                <small class="text-muted">{{ notification.timestamp.strftime('%Y-%m-%d %H:%M') }}</small>
+                                            </div>
+                                            <div class="ms-2">
+                                                {% if not notification.is_read %}
+                                                    <span class="badge bg-danger">New</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="text-muted mb-0">No notifications to display.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    {% elif section == 'messages' %}
+        <!-- Messages List View -->
+        <h2 class="mb-4">All Messages</h2>
+
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-envelope-fill me-2"></i>Messages</h5>
+                    <a href="{{ url_for('student.student_send_message') }}" class="btn btn-light btn-sm">
+                        <i class="bi bi-plus-circle me-1"></i>Send Message
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if messages %}
+                    <div class="list-group list-group-flush">
+                        {% for message in messages %}
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1">{{ message.subject or 'No Subject' }}</h6>
+                                        <small class="text-muted">From: {{ message.sender.username }}</small>
+                                        <p class="mb-1 text-truncate">{{ message.content[:150] }}{% if message.content|length > 150 %}...{% endif %}</p>
+                                        <small class="text-muted">{{ message.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                    </div>
+                                    <div class="ms-2">
+                                        {% if not message.is_read %}
+                                            <span class="badge bg-danger">New</span>
+                                        {% endif %}
+                                        <a href="{{ url_for('student.student_view_message', message_id=message.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-envelope text-muted" style="font-size: 3rem;"></i>
+                        <p class="text-muted mt-3">No messages to display.</p>
+                        <a href="{{ url_for('student.student_send_message') }}" class="btn btn-primary">
+                            <i class="bi bi-envelope-plus me-2"></i>Send Your First Message
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+    {% elif section == 'view_message' %}
+        <!-- View Specific Message -->
+        <h2 class="mb-4">View Message</h2>
+
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-envelope-fill me-2"></i>Message Details</h5>
+            </div>
+            <div class="card-body">
+                {% if message %}
+                    <div class="mb-3">
+                        <h5>{{ message.subject or 'No Subject' }}</h5>
+                        <div class="text-muted mb-2">
+                            <strong>From:</strong> {{ message.sender.username }}<br>
+                            <strong>Date:</strong> {{ message.created_at.strftime('%Y-%m-%d %H:%M') }}<br>
+                            {% if message.is_read %}
+                                <strong>Read:</strong> {{ message.read_at.strftime('%Y-%m-%d %H:%M') if message.read_at else 'Unknown' }}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <h6>Message Content:</h6>
+                        <div class="border rounded p-3 bg-light">
+                            {{ message.content|nl2br }}
+                        </div>
+                    </div>
+                    {% if message.attachments %}
+                        <div class="mb-3">
+                            <h6>Attachments:</h6>
+                            <ul class="list-group">
+                                {% for attachment in message.attachments %}
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span>{{ attachment.original_filename }}</span>
+                                        <small class="text-muted">{{ attachment.file_size }} bytes</small>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+                    <div class="mt-3">
+                        <a href="{{ url_for('student.student_messages') }}" class="btn btn-outline-secondary">Back to Messages</a>
+                    </div>
+                {% else %}
+                    <p class="text-muted">Message not found.</p>
+                {% endif %}
+            </div>
+        </div>
+
+    {% elif section == 'groups' %}
+        <!-- Groups List View -->
+        <h2 class="mb-4">Message Groups</h2>
+
+        <div class="card shadow-sm">
+            <div class="card-header bg-info text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-people-fill me-2"></i>Your Groups</h5>
+                    <a href="{{ url_for('student.student_create_group') }}" class="btn btn-light btn-sm">
+                        <i class="bi bi-plus-circle me-1"></i>Create Group
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if groups %}
+                    <div class="row">
+                        {% for group in groups %}
+                            <div class="col-md-6 mb-3">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="card-title">{{ group.name }}</h6>
+                                        <p class="card-text text-muted">{{ group.description or 'No description' }}</p>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <small class="text-muted">Type: {{ group.group_type }}</small>
+                                            <a href="{{ url_for('student.student_view_group', group_id=group.id) }}" class="btn btn-sm btn-outline-info">View</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-people-fill text-muted" style="font-size: 3rem;"></i>
+                        <p class="text-muted mt-3">You are not a member of any message groups.</p>
+                        <a href="{{ url_for('student.student_create_group') }}" class="btn btn-info">
+                            <i class="bi bi-plus-circle me-2"></i>Create Your First Group
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+    {% elif section == 'view_group' %}
+        <!-- View Specific Group -->
+        <h2 class="mb-4">Group: {{ group.name }}</h2>
+
+        <div class="row">
+            <!-- Group Information and Messages -->
+            <div class="col-md-8">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="bi bi-people-fill me-2"></i>Group Messages</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if group %}
+                            <div class="mb-3">
+                                <h6>Group Information:</h6>
+                                <p><strong>Name:</strong> {{ group.name }}</p>
+                                <p><strong>Description:</strong> {{ group.description or 'No description' }}</p>
+                                <p><strong>Type:</strong> {{ group.group_type }}</p>
+                            </div>
+                            
+                            {% if messages %}
+                                <h6>Messages:</h6>
+                                <div class="list-group">
+                                    {% for message in messages %}
+                                        <div class="list-group-item">
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <div class="flex-grow-1">
+                                                    <h6 class="mb-1">{{ message.subject or 'No Subject' }}</h6>
+                                                    <small class="text-muted">From: {{ message.sender.username }}</small>
+                                                    <p class="mb-1">{{ message.content[:200] }}{% if message.content|length > 200 %}...{% endif %}</p>
+                                                    <small class="text-muted">{{ message.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <p class="text-muted">No messages in this group.</p>
+                            {% endif %}
+                        {% else %}
+                            <p class="text-muted">Group not found.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Send Message to Group -->
+            <div class="col-md-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="bi bi-envelope-fill me-2"></i>Send Message</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ url_for('student.student_send_group_message', group_id=group.id) }}">
+                            <div class="mb-3">
+                                <label for="subject" class="form-label">Subject (Optional)</label>
+                                <input type="text" class="form-control" id="subject" name="subject" placeholder="Message subject">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="content" class="form-label">Message</label>
+                                <textarea class="form-control" id="content" name="content" rows="4" placeholder="Type your message..." required></textarea>
+                            </div>
+                            
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary">Send to Group</button>
+                            </div>
+                        </form>
+                        
+                        <hr>
+                        
+                        <div class="d-grid gap-2">
+                            <a href="{{ url_for('student.student_groups') }}" class="btn btn-outline-secondary">Back to Groups</a>
+                            {% if group and group.created_by != current_user.id %}
+                                <form method="POST" action="{{ url_for('student.student_leave_group', group_id=group.id) }}" 
+                                      onsubmit="return confirm('Are you sure you want to leave this group?')">
+                                    <button type="submit" class="btn btn-outline-danger">Leave Group</button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    {% elif section == 'announcements' %}
+        <!-- Announcements List View -->
+        <h2 class="mb-4">Announcements</h2>
+
+        <div class="card shadow-sm">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-megaphone-fill me-2"></i>All Announcements</h5>
+            </div>
+            <div class="card-body">
+                {% if announcements %}
+                    <div class="list-group list-group-flush">
+                        {% for announcement in announcements %}
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1">{{ announcement.title }}</h6>
+                                        <small class="text-muted">From: {{ announcement.sender.username }}</small>
+                                        <p class="mb-1">{{ announcement.message }}</p>
+                                        <small class="text-muted">{{ announcement.timestamp.strftime('%Y-%m-%d %H:%M') }}</small>
+                                    </div>
+                                    <div class="ms-2">
+                                        {% if announcement.is_important %}
+                                            <span class="badge bg-warning">Important</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">No announcements to display.</p>
+                {% endif %}
+            </div>
+        </div>
+
+    {% elif section == 'send_message' %}
+        <!-- Send Message View -->
+        <h2 class="mb-4">Send Message</h2>
+
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-envelope-fill me-2"></i>Compose New Message</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('student.student_send_message') }}">
+                    <div class="mb-3">
+                        <label for="recipient_id" class="form-label">Recipient</label>
+                        <select class="form-select" id="recipient_id" name="recipient_id" required>
+                            <option value="">Choose a recipient...</option>
+                            
+                            <!-- Students Section -->
+                            <optgroup label="Students">
+                                {% for student in students %}
+                                    {% if student.user %}
+                                        <option value="{{ student.user.id }}">{{ student.first_name }} {{ student.last_name }} (Student)</option>
+                                    {% endif %}
+                                {% endfor %}
+                            </optgroup>
+                            
+                            <!-- Teachers Section -->
+                            <optgroup label="Teachers & Staff">
+                                {% for teacher in teachers %}
+                                    {% if teacher.user %}
+                                        <option value="{{ teacher.user.id }}">{{ teacher.first_name }} {{ teacher.last_name }} ({{ teacher.role }})</option>
+                                    {% endif %}
+                                {% endfor %}
+                            </optgroup>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="subject" class="form-label">Subject (Optional)</label>
+                        <input type="text" class="form-control" id="subject" name="subject" placeholder="Message subject">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="content" class="form-label">Message Content</label>
+                        <textarea class="form-control" id="content" name="content" rows="6" placeholder="Type your message here..." required></textarea>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('student.student_messages') }}" class="btn btn-outline-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Send Message</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    {% elif section == 'create_group' %}
+        <!-- Create Group View -->
+        <h2 class="mb-4">Create New Group</h2>
+
+        <div class="card shadow-sm">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-people-fill me-2"></i>Create Message Group</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('student.student_create_group') }}">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Group Name</label>
+                        <input type="text" class="form-control" id="name" name="name" placeholder="Enter group name" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description (Optional)</label>
+                        <textarea class="form-control" id="description" name="description" rows="3" placeholder="Describe the group's purpose"></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="group_type" class="form-label">Group Type</label>
+                        <select class="form-select" id="group_type" name="group_type">
+                            <option value="student">Student Group</option>
+                            <option value="study">Study Group</option>
+                            <option value="social">Social Group</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Add Members</label>
+                        <div class="border rounded p-3" style="max-height: 200px; overflow-y: auto;">
+                            {% for student in students %}
+                                {% if student.user and student.user.id != current_user.id %}
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="members" value="{{ student.user.id }}" id="member_{{ student.user.id }}">
+                                        <label class="form-check-label" for="member_{{ student.user.id }}">
+                                            {{ student.first_name }} {{ student.last_name }}
+                                        </label>
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        <small class="text-muted">Select the students you want to add to this group.</small>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('student.student_groups') }}" class="btn btn-outline-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-info">Create Group</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    {% elif section == 'sent_messages' %}
+        <!-- Sent Messages View -->
+        <h2 class="mb-4">Sent Messages</h2>
+
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-envelope-fill me-2"></i>Messages You've Sent</h5>
+            </div>
+            <div class="card-body">
+                {% if sent_messages %}
+                    <div class="list-group list-group-flush">
+                        {% for message in sent_messages %}
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1">{{ message.subject or 'No Subject' }}</h6>
+                                        <small class="text-muted">
+                                            To: 
+                                            {% if message.recipient %}
+                                                {{ message.recipient.username }}
+                                            {% elif message.group %}
+                                                {{ message.group.name }} (Group)
+                                            {% else %}
+                                                Unknown
+                                            {% endif %}
+                                        </small>
+                                        <p class="mb-1 text-truncate">{{ message.content[:150] }}{% if message.content|length > 150 %}...{% endif %}</p>
+                                        <small class="text-muted">{{ message.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                    </div>
+                                    <div class="ms-2">
+                                        {% if message.message_type == 'group' %}
+                                            <span class="badge bg-info">Group</span>
+                                        {% else %}
+                                            <span class="badge bg-primary">Direct</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">You haven't sent any messages yet.</p>
+                {% endif %}
+            </div>
+        </div>
+
+    {% elif section == 'settings' %}
+        <!-- Settings Section -->
+        <h2 class="mb-4">Settings <span class="text-muted fs-6">(Student View)</span></h2>
+
+        <div class="row">
+            <div class="col-lg-8">
+                <!-- Account Information -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="bi bi-person-fill me-2"></i>Account Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Username</label>
+                                    <input type="text" class="form-control" value="{{ current_user.username }}" readonly>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Student ID</label>
+                                    <input type="text" class="form-control" value="{{ student.state_id or 'N/A' }}" readonly>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Full Name</label>
+                                    <input type="text" class="form-control" value="{{ student.first_name }} {{ student.last_name }}" readonly>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Grade Level</label>
+                                    <input type="text" class="form-control" value="{{ student.grade_level or 'N/A' }}" readonly>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Preferences -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="bi bi-gear-fill me-2"></i>Preferences</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="notification_preferences" class="form-label">Notification Preferences</label>
+                                    <select class="form-select" id="notification_preferences">
+                                        <option value="all">All Notifications</option>
+                                        <option value="important">Important Only</option>
+                                        <option value="none">No Notifications</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="theme_preference" class="form-label">Theme</label>
+                                    <select class="form-select" id="theme_preference">
+                                        <option value="light">Light Theme</option>
+                                        <option value="dark">Dark Theme</option>
+                                        <option value="auto">Auto (System)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-info" onclick="savePreferences()">
+                            <i class="bi bi-check-circle me-2"></i>Save Preferences
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Bug Report -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-danger text-white">
+                        <h5 class="mb-0"><i class="bi bi-bug-fill me-2"></i>Report a Bug</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="studentBugReportForm">
+                            <div class="mb-3">
+                                <label for="student_bug_title" class="form-label">Bug Title:</label>
+                                <input type="text" class="form-control" id="student_bug_title" name="title" placeholder="Brief description of the issue..." required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="student_bug_description" class="form-label">Detailed Description:</label>
+                                <textarea class="form-control" id="student_bug_description" name="description" rows="5" placeholder="Please describe the bug you encountered in detail..." required></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="student_bug_severity" class="form-label">Severity Level:</label>
+                                <select class="form-select" id="student_bug_severity" name="severity">
+                                    <option value="low">Low - Minor issue, doesn't affect functionality</option>
+                                    <option value="medium" selected>Medium - Some functionality affected</option>
+                                    <option value="high">High - Major functionality broken</option>
+                                    <option value="critical">Critical - System unusable</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="student_contact_email" class="form-label">Your Email (Optional):</label>
+                                <input type="email" class="form-control" id="student_contact_email" name="contact_email" placeholder="Enter your email for follow-up">
+                            </div>
+                            <input type="hidden" name="page_url" value="{{ request.url }}">
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-send me-2"></i>Submit Bug Report
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <!-- Quick Actions -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="bi bi-lightning-fill me-2"></i>Quick Actions</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-outline-primary" onclick="exportData()">
+                                <i class="bi bi-download me-2"></i>Export My Data
+                            </button>
+                            <button class="btn btn-outline-info" onclick="viewActivityLog()">
+                                <i class="bi bi-clock-history me-2"></i>View Activity Log
+                            </button>
+                            <button class="btn btn-outline-warning" onclick="changePassword()">
+                                <i class="bi bi-key me-2"></i>Change Password
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Information -->
+                <div class="card shadow-sm">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>System Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <small class="text-muted">
+                            <p><strong>Last Login:</strong> <span id="lastLogin">Loading...</span></p>
+                            <p><strong>Account Created:</strong> <span id="accountCreated">Loading...</span></p>
+                            <p><strong>Version:</strong> 1.0.0</p>
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle student bug report form submission
+            const studentBugReportForm = document.getElementById('studentBugReportForm');
+            if (studentBugReportForm) {
+                studentBugReportForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    const formData = new FormData(studentBugReportForm);
+                    const submitButton = studentBugReportForm.querySelector('button[type="submit"]');
+                    const originalText = submitButton.innerHTML;
+                    
+                    // Disable button and show loading state
+                    submitButton.disabled = true;
+                    submitButton.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Submitting...';
+                    
+                    fetch('{{ url_for("auth.submit_bug_report") }}', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Show success message
+                            const alertDiv = document.createElement('div');
+                            alertDiv.className = 'alert alert-success alert-dismissible fade show';
+                            alertDiv.innerHTML = `
+                                <i class="bi bi-check-circle-fill me-2"></i>${data.message}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            `;
+                            studentBugReportForm.parentNode.insertBefore(alertDiv, studentBugReportForm);
+                            
+                            // Reset form
+                            studentBugReportForm.reset();
+                        } else {
+                            // Show error message
+                            const alertDiv = document.createElement('div');
+                            alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+                            alertDiv.innerHTML = `
+                                <i class="bi bi-exclamation-triangle-fill me-2"></i>${data.message}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            `;
+                            studentBugReportForm.parentNode.insertBefore(alertDiv, studentBugReportForm);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        const alertDiv = document.createElement('div');
+                        alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+                        alertDiv.innerHTML = `
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>An error occurred while submitting the bug report. Please try again.
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        `;
+                        studentBugReportForm.parentNode.insertBefore(alertDiv, studentBugReportForm);
+                    })
+                    .finally(() => {
+                        // Re-enable button
+                        submitButton.disabled = false;
+                        submitButton.innerHTML = originalText;
+                    });
+                });
+            }
+        });
+
+        function savePreferences() {
+            alert('Preferences saved successfully!');
+        }
+
+        function exportData() {
+            alert('Export functionality will be implemented here.');
+        }
+
+        function viewActivityLog() {
+            alert('Activity log functionality will be implemented here.');
+        }
+
+        function changePassword() {
+            alert('Password change functionality will be implemented here.');
+        }
+        </script>
+
+    {% else %}
+        <!-- Generic fallback content for other sections -->
+        <div class="alert alert-warning">
+            <h4>Debug Information:</h4>
+            <p><strong>Section:</strong> "{{ section }}"</p>
+            <p><strong>Active Tab:</strong> "{{ active_tab }}"</p>
+            <p><strong>Student:</strong> {{ student.first_name }} {{ student.last_name if student else 'NONE' }}</p>
+            <hr>
+            <p>Content for the '{{ section }}' section for students is currently under development. Please check back later!</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %} 

@@ -1,0 +1,152 @@
+{% extends "dashboard_layout.html" %}
+
+{% block dashboard_content %}
+  {% if form_type == 'create_assignment' %}
+    {# Create/Edit Assignment Form #}
+    <div class="container-fluid py-3">
+        <h2 class="mb-4">{% if edit_mode %}Edit Assignment{% else %}Create New Assignment{% endif %}</h2>
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">For Class: {{ class_item.name }}</h5>
+                <hr>
+                <form method="POST" action="{{ form_action }}" enctype="multipart/form-data">
+                    
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Assignment Title <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="title" name="title" value="{{ assignment_data.title if assignment_data else '' }}" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="5">{{ assignment_data.description if assignment_data else '' }}</textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12 col-md-4 mb-3">
+                            <label for="due_date" class="form-label">Due Date <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="due_date" name="due_date" value="{{ assignment_data.due_date if assignment_data else '' }}" required>
+                        </div>
+                        <div class="col-12 col-md-4 mb-3">
+                            <label for="points_possible" class="form-label">Points Possible</label>
+                            <input type="number" class="form-control" id="points_possible" name="points_possible" value="{{ assignment_data.points_possible if assignment_data else '100' }}">
+                        </div>
+                        <div class="col-12 col-md-4 mb-3">
+                            <label for="marking_period" class="form-label">Marking Period <span class="text-danger">*</span></label>
+                            <select class="form-select" id="marking_period" name="marking_period" required>
+                                <option value="" disabled {% if not assignment_data or not assignment_data.marking_period %}selected{% endif %}>Choose...</option>
+                                {% for quarter in quarters %}
+                                <option value="{{ quarter }}" {% if assignment_data and assignment_data.marking_period == quarter %}selected{% endif %}>{{ quarter }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="attached_file" class="form-label">Attach File</label>
+                        <input class="form-control" type="file" id="attached_file" name="attached_file">
+                        {% if assignment_data and assignment_data.attached_file_path %}
+                            <div class="form-text mt-2">
+                                Current file: <a href="{{ url_for('static', filename='uploads/' + assignment_data.attached_file_path) }}" target="_blank">{{ assignment_data.attached_file_path|regex_replace('^assign_attach_\\d+_', '') }}</a>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <hr>
+                    <div class="d-flex justify-content-end flex-wrap gap-2">
+                        <a href="{{ cancel_url_override or url_for('teacher_dashboard_section', section='assignments') }}" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">{% if edit_mode %}Save Changes{% else %}Create Assignment{% endif %}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+  {% elif form_type == 'grade_assignment' %}
+    {# Grade Assignment Form #}
+    <h3 class="mb-4">Grade Assignment for {{ student.name }}</h3>
+    
+    <div class="card mb-3">
+      <div class="card-header">
+        Assignment: <strong>{{ assignment.title }}</strong>
+      </div>
+      <div class="card-body">
+        <p class="card-text"><strong>Class:</strong> {{ assignment.class_assigned.name }}</p>
+        <p class="card-text"><strong>Due Date:</strong> {{ assignment.due_date.strftime('%Y-%m-%d %I:%M %p') }}</p>
+        {% if assignment.description %}
+          <p class="card-text"><strong>Description:</strong> {{ assignment.description|nl2br }}</p>
+        {% endif %}
+        {% if assignment.attached_file_path %}
+          <p class="card-text"><strong>Original Assignment Attachment:</strong> 
+              <a href="{{ url_for('static', filename='uploads/' + assignment.attached_file_path) }}" target="_blank">
+                  View Attachment
+              </a>
+          </p>
+        {% endif %}
+      </div>
+    </div>
+
+    <form method="POST" action="{{ form_action }}" enctype="multipart/form-data" class="needs-validation" novalidate>
+      <div class="row g-3">
+        <div class="col-12 col-md-4">
+          <label for="grade" class="form-label">Grade</label>
+          <input type="text" class="form-control" id="grade" name="grade" 
+                 value="{{ submission.grade if submission and submission.grade else '' }}">
+          <div class="form-text">E.g., A+, 95, 8/10, Complete</div>
+        </div>
+
+        <div class="col-12">
+          <label for="feedback" class="form-label">Feedback</label>
+          <textarea class="form-control" id="feedback" name="feedback" rows="5">{{ submission.feedback if submission and submission.feedback else '' }}</textarea>
+        </div>
+        
+        <div class="col-12">
+          <label for="scanned_work" class="form-label">Upload Scanned Work (Optional)</label>
+          <input class="form-control" type="file" id="scanned_work" name="scanned_work" accept=".pdf,.png,.jpg,.jpeg,.txt,.doc,.docx">
+          {% if submission and submission.submitted_file_path %}
+            <div class="form-text mt-1">
+              Current scanned work: 
+              <a href="{{ url_for('static', filename='uploads/' + submission.submitted_file_path) }}" target="_blank">
+                  View Current Scan
+              </a>. 
+              Uploading a new file will replace it.
+            </div>
+          {% endif %}
+          <div class="form-text">Allowed types: PDF, DOC(X), TXT, PNG, JPG, JPEG.</div>
+        </div>
+         <div class="col-12">
+           <p class="form-text text-muted small">
+               Current Status: 
+               <span class="badge {% if submission and submission.status == 'Graded' %}bg-success{% elif submission and submission.status == 'Received' %}bg-info text-dark{% else %}bg-secondary{% endif %}">
+                   {{ submission.status if submission else 'Pending Submission' }}
+               </span>
+           </p>
+         </div>
+      </div>
+
+      <hr class="my-4">
+
+      <button class="btn btn-primary btn-lg" type="submit">Save Grade</button>
+      <a href="{{ url_for(role_prefix ~ 'view_assignment_submissions', assignment_id=assignment.id) }}" class="btn btn-secondary btn-lg ms-2" role="button">
+        Cancel
+      </a>
+    </form>
+
+  {% else %}
+    {# Default fallback #}
+    <div class="alert alert-info" role="alert">
+      <h4>Assignment Forms</h4>
+      <p>This template supports the following form types:</p>
+      <ul>
+        <li><code>create_assignment</code> - Create or edit assignments</li>
+        <li><code>grade_assignment</code> - Grade student assignments</li>
+      </ul>
+      <p>Please specify a valid <code>form_type</code> parameter.</p>
+    </div>
+  {% endif %}
+
+<script>
+// Bootstrap validation script (for forms that need it)
+(function () { 'use strict'; var forms = document.querySelectorAll('.needs-validation'); Array.prototype.slice.call(forms).forEach(function (form) { form.addEventListener('submit', function (event) { if (!form.checkValidity()) { event.preventDefault(); event.stopPropagation(); } form.classList.add('was-validated'); }, false); }); })();
+</script>
+{% endblock %} 

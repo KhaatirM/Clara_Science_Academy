@@ -1,0 +1,163 @@
+{% extends "dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Add New Assignment</h3>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label for="title" class="form-label">Assignment Title</label>
+                                <input type="text" class="form-control" id="title" name="title" required>
+                            </div>
+                            
+                            <div class="col-12">
+                                <label for="description" class="form-label">Description</label>
+                                <textarea class="form-control" id="description" name="description" rows="3" required></textarea>
+                            </div>
+                            
+                            <div class="col-12 col-md-6">
+                                <label for="class_id" class="form-label">Class</label>
+                                <select class="form-control" id="class_id" name="class_id" required>
+                                    <option value="">Select a class</option>
+                                    {% for class in classes %}
+                                    <option value="{{ class.id }}">{{ class.name }} - {{ class.subject }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="col-12 col-md-6">
+                                <label for="due_date" class="form-label">Due Date</label>
+                                <input type="datetime-local" class="form-control" id="due_date" name="due_date" required>
+                            </div>
+                            
+                            <div class="col-12 col-md-6">
+                                <label for="quarter" class="form-label">Quarter</label>
+                                <select class="form-control" id="quarter" name="quarter" required>
+                                    <option value="">Select Quarter</option>
+                                    <option value="1">Quarter 1</option>
+                                    <option value="2">Quarter 2</option>
+                                    <option value="3">Quarter 3</option>
+                                    <option value="4">Quarter 4</option>
+                                </select>
+                            </div>
+                            
+                            <!-- File Upload Section -->
+                            <div class="col-12">
+                                <label for="assignment_file" class="form-label">Assignment File (Optional)</label>
+                                <input type="file" class="form-control" id="assignment_file" name="assignment_file" accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.xls,.xlsx,.ppt,.pptx">
+                                <div class="form-text">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    Supported formats: PDF, DOC(X), TXT, JPG, PNG, GIF, XLS(X), PPT(X)
+                                    <br>
+                                    <small class="text-muted">Maximum file size: 16 MB</small>
+                                </div>
+                            </div>
+                            
+                            <!-- File Preview Section -->
+                            <div class="col-12">
+                                <div id="filePreview" class="mb-3" style="display: none;">
+                                    <div class="card border-primary">
+                                        <div class="card-header bg-primary text-white">
+                                            <h6 class="mb-0"><i class="bi bi-file-earmark me-2"></i>File Preview</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div id="fileInfo">
+                                                <p class="mb-1"><strong>Filename:</strong> <span id="fileName"></span></p>
+                                                <p class="mb-1"><strong>Size:</strong> <span id="fileSize"></span></p>
+                                                <p class="mb-0"><strong>Type:</strong> <span id="fileType"></span></p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-12">
+                                <div class="d-flex flex-column flex-md-row justify-content-between gap-2">
+                                    <a href="{{ url_for('management.management_dashboard') }}" class="btn btn-secondary">Cancel</a>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-plus-circle me-2"></i>Add Assignment
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.getElementById('assignment_file');
+    const filePreview = document.getElementById('filePreview');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+    const fileType = document.getElementById('fileType');
+    
+    fileInput.addEventListener('change', function() {
+        const file = this.files[0];
+        if (file) {
+            // Show file preview
+            fileName.textContent = file.name;
+            fileSize.textContent = formatFileSize(file.size);
+            fileType.textContent = file.type || 'Unknown';
+            filePreview.style.display = 'block';
+            
+            // Validate file size (16 MB limit)
+            if (file.size > 16 * 1024 * 1024) {
+                alert('File size exceeds 16 MB limit. Please choose a smaller file.');
+                this.value = '';
+                filePreview.style.display = 'none';
+                return;
+            }
+            
+            // Validate file type
+            const allowedTypes = [
+                'application/pdf',
+                'application/msword',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'text/plain',
+                'image/jpeg',
+                'image/jpg',
+                'image/png',
+                'image/gif',
+                'application/vnd.ms-excel',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'application/vnd.ms-powerpoint',
+                'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+            ];
+            
+            if (!allowedTypes.includes(file.type) && file.type !== '') {
+                alert('File type not supported. Please choose a different file.');
+                this.value = '';
+                filePreview.style.display = 'none';
+                return;
+            }
+        } else {
+            filePreview.style.display = 'none';
+        }
+    });
+    
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+    
+    // Set default due date to tomorrow at 11:59 PM
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(23, 59, 0, 0);
+    document.getElementById('due_date').value = tomorrow.toISOString().slice(0, 16);
+});
+</script>
+{% endblock %} 

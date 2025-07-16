@@ -1,0 +1,7 @@
+Flask
+Flask-Login
+Flask-SQLAlchemy
+gunicorn
+python-dotenv
+psycopg2-binary
+pdfkit 

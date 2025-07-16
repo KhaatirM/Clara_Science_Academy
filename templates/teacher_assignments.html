@@ -1,0 +1,130 @@
+{% extends "dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2 gap-md-0">
+        <h3 class="mb-2 mb-md-0">My Assignments</h3>
+        <div>
+            <button class="btn btn-primary btn-sm" onclick="window.history.back()">
+                <i class="bi bi-arrow-left me-1 me-md-2"></i>Back to Dashboard
+            </button>
+        </div>
+    </div>
+
+    {% if assignments %}
+        <div class="table-responsive">
+            <table class="table table-striped table-hover align-middle assignments-table">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Due Date</th>
+                        <th>Assignment Title</th>
+                        <th>Class</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for assignment in assignments %}
+                        <tr>
+                            <td data-label="Due Date">{{ assignment.due_date.strftime('%m/%d/%Y %I:%M %p') }}</td>
+                            <td data-label="Assignment Title">
+                                <strong>{{ assignment.title }}</strong>
+                                {% if assignment.description %}
+                                    <br><small class="text-muted">{{ assignment.description[:100] }}{% if assignment.description|length > 100 %}...{% endif %}</small>
+                                {% endif %}
+                                {% if assignment.attachment_filename %}
+                                    <br><small class="text-primary">
+                                        <i class="bi bi-paperclip me-1"></i>
+                                        <a href="{{ url_for('download_assignment_file', assignment_id=assignment.id) }}" class="text-decoration-none">
+                                            {{ assignment.attachment_original_filename }}
+                                        </a>
+                                    </small>
+                                {% endif %}
+                            </td>
+                            <td data-label="Class">{{ assignment.class_info.name }}</td>
+                            <td data-label="Status">
+                                {% if assignment.due_date > now %}
+                                    <span class="badge bg-success">Active</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Past Due</span>
+                                {% endif %}
+                            </td>
+                            <td data-label="Actions">
+                                <div class="d-flex flex-column flex-sm-row gap-1">
+                                    <a href="{{ url_for('teacher.grade_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-primary btn-sm">
+                                        <i class="bi bi-pencil me-1"></i>Grade
+                                    </a>
+                                    <a href="{{ url_for('teacher.view_class', class_id=assignment.class_id) }}" class="btn btn-outline-info btn-sm">
+                                        <i class="bi bi-eye me-1"></i>View Class
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            <h5>No Assignments Created</h5>
+            <p>You haven't created any assignments yet. Create assignments for your classes to get started.</p>
+            {% if classes %}
+                <div class="mt-3">
+                    <h6>Create an assignment for one of your classes:</h6>
+                    <div class="row g-2">
+                        {% for class in classes %}
+                            <div class="col-12 col-sm-6 col-md-4">
+                                <a href="{{ url_for('teacher.add_assignment', class_id=class.id) }}" class="btn btn-outline-primary btn-sm w-100">
+                                    <i class="bi bi-plus-circle me-1"></i>{{ class.name }}
+                                </a>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+<style>
+/* Responsive Table for Assignments */
+@media (max-width: 768px) {
+  .assignments-table {
+    border: 0;
+  }
+  .assignments-table thead {
+    border: none;
+    clip: rect(0 0 0 0);
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    padding: 0;
+    position: absolute;
+    width: 1px;
+  }
+  .assignments-table tr {
+    border-bottom: 3px solid #ddd;
+    display: block;
+    margin-bottom: .625em;
+    background-color: #f8f9fa;
+    border-radius: .25rem;
+    padding: .5rem;
+  }
+  .assignments-table td {
+    border-bottom: 1px solid #ddd;
+    display: block;
+    font-size: .8em;
+    text-align: right;
+  }
+  .assignments-table td::before {
+    content: attr(data-label);
+    float: left;
+    font-weight: bold;
+    text-transform: uppercase;
+  }
+  .assignments-table td:last-child {
+    border-bottom: 0;
+  }
+}
+</style> 

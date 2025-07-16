@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Unofficial 1st-2nd Grade Progress Report - Clara Science Academy</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='report_card_styles.css', _external=True) }}">
+</head>
+<body>
+    {% set header_title = "UNOFFICIAL STUDENT TRANSCRIPT" %}
+    {% set show_unofficial_watermark = True %}
+    {% include '_report_card_header.html' %}
+
+    <p class="report-period-line"><strong>Report Period:</strong> {{ report_card.quarter }} - {{ report_card.generated_date.strftime('%B %d, %Y') }}</p>
+
+    <div class="section-title">ATTENDANCE:</div>
+    <table>
+        <thead>
+            <tr>
+                <th>&nbsp;</th>
+                <th>1st Q</th>
+                <th>2nd Q</th>
+                <th>3rd Q</th>
+                <th>4th Q</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td>Excused Absences</td><td></td><td></td><td></td><td></td></tr>
+            <tr><td>Unexcused Absences</td><td></td><td></td><td></td><td></td></tr>
+        </tbody>
+    </table>
+
+    <div class="section-title">Academic Standards:</div>
+    <p>The Clara Science Academy (CSA) reports student performance quarterly. This 1st/2nd grade progress report lists the skills outlined by the NC Department of Education Standards. This framework provides guidance about what a 1st/2nd grade student should know or be able to do. The K12 curriculum is the core set of courses used by CSA to help 1st/2nd grade students meet these standards. Individualized goals are set for each student. The teacher and learning coach determine the percentage of course completion necessary to meet the academic goals for the first/second-grade student based on the standards and anchors. The year-to-date course progress reflects the progress towards meeting standards as well as academic goals related to course completion. The decision to promote a student to the next level is determined by the teacher.</p>
+
+    <div class="section-title">Year-to-date Course Progress:</div>
+    <table>
+        <thead>
+            <tr>
+                <th>Course</th>
+                <th>Comment(s)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>{{ report_card.class_obj.name }} ({{ report_card.class_obj.subject }})</td>
+                <td>Overall performance in this subject for the quarter: {{ report_card.overall_grade_letter }} ({{ report_card.overall_grade_percentage }}%)</td>
+            </tr>
+            <tr><td>Writing</td><td></td></tr>
+            <tr><td>Language Arts 1</td><td></td></tr>
+            <tr><td>Math 1</td><td></td></tr>
+            <tr><td>Science 1</td><td></td></tr>
+            <tr><td>Social Studies</td><td></td></tr>
+            <tr><td>Art/Music 1</td><td></td></tr>
+            <tr><td>Physical Education 1</td><td></td></tr>
+        </tbody>
+    </table>
+
+    <div class="section-title">Standards Checklist:</div>
+    <p>M: Met academic standard | NA: Not Assessed during this semester | W: Working towards meeting academic standard | UA: Unable to Assess during this semester</p>
+
+    <div class="section-title">Language Arts</div>
+    <table>
+        <thead>
+            <tr>
+                <th>Standard Description</th>
+                <th>1st Q</th>
+                <th>2nd Q</th>
+                <th>3rd Q</th>
+                <th>4th Q</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr class="sub-section-title"><td colspan="5">LEARNING TO READ INDEPENDENTLY</td></tr>
+            <tr>
+                <td>Demonstrate concept of print, how print is organized and used in reading and writing tasks...</td>
+                <td>{{ cumulative_grades.per_quarter_results.Q1.overall_letter if cumulative_grades.per_quarter_results.Q1 else 'N/A'}}</td>
+                <td>{{ cumulative_grades.per_quarter_results.Q2.overall_letter if cumulative_grades.per_quarter_results.Q2 else 'N/A'}}</td>
+                <td>{{ cumulative_grades.per_quarter_results.Q3.overall_letter if cumulative_grades.per_quarter_results.Q3 else 'N/A'}}</td>
+                <td>{{ cumulative_grades.per_quarter_results.Q4.overall_letter if cumulative_grades.per_quarter_results.Q4 else 'N/A'}}</td>
+            </tr>
+            <tr>
+                <td>Demonstrate phonemic awareness, the ability to hear and manipulate sounds in spoken words...</td>
+                <td></td><td></td><td></td><td></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="section-title">Teacher Comments:</div>
+    <div class="comments-box">
+        <p>{{ report_card.comments|nl2br }}</p>
+    </div>
+
+    <div class="footer">
+        <p>*** UNOFFICIAL DOCUMENT ***</p>
+    </div>
+</body>
+</html>

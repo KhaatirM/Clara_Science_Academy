@@ -1,0 +1,62 @@
+{% extends "dashboard_layout.html" %}
+
+{% block dashboard_content %}
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="mb-0">Report Card Detail</h3>
+    <div>
+      {# FIX: Ensure back button correctly uses role_prefix with underscore #}
+      <a href="{{ url_for(role_prefix ~ 'dashboard_section', section='report_cards') }}" class="btn btn-outline-secondary btn-sm me-2">Back to Report Cards List</a>
+      {# The "Generate PDF" button was removed from here as per user request #}
+    </div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header">
+      Report Card for {{ report_card.student.name }}
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-6">
+          <p><strong>Student:</strong> {{ report_card.student.name }} (ID: {{ report_card.student.student_id_formatted }})</p>
+          <p><strong>Class:</strong> {{ report_card.class_obj.name }} ({{ report_card.class_obj.subject }})</p>
+          <p><strong>Teacher:</strong> {{ report_card.teacher_obj.name if report_card.teacher_obj else 'N/A' }}</p>
+        </div>
+        <div class="col-md-6 text-md-end">
+          <p><strong>School Year:</strong> {{ report_card.school_year }}</p>
+          <p><strong>Quarter:</strong> {{ report_card.quarter }}</p>
+          <p><strong>Generated On:</strong> {{ report_card.generated_date.strftime('%Y-%m-%d %I:%M %p') }} by {{ report_card.generator_obj.name if report_card.generator_obj else 'System' }}</p>
+        </div>
+      </div>
+      <hr>
+      <h5 class="mb-3">Overall Grade: 
+        <span class="badge bg-{% if report_card.overall_grade_percentage >= 90 %}success{% elif report_card.overall_grade_percentage >= 80 %}primary{% elif report_card.overall_grade_percentage >= 70 %}info{% elif report_card.overall_grade_percentage >= 60 %}warning{% else %}danger{% endif %}"> {# Corrected attribute name here #}
+          {{ report_card.overall_grade_letter }} ({{ report_card.overall_grade_percentage }}%)
+        </span>
+      </h5>
+      
+      <h6 class="mt-4">Assignment Grades:</h6>
+      {% if report_card.grade_summary %}
+        <ul class="list-group list-group-flush">
+          {% for assignment_title, grade in report_card.grade_summary.items() %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              {{ assignment_title }}
+              <span>{{ grade }}</span>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p>No individual assignment grades recorded for this report card.</p>
+      {% endif %}
+
+      <h6 class="mt-4">Comments:</h6>
+      <div class="card card-body bg-light">
+        {% if report_card.comments %}
+          <p class="card-text">{{ report_card.comments|nl2br }}</p>
+        {% else %}
+          <p class="text-muted">No comments provided for this quarter.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+{% endblock %}

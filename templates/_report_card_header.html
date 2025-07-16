@@ -1,0 +1,58 @@
+<table class="pdf-header-table">
+    <tr>
+        <td class="student-column">
+            <table class="info-grid-table">
+                <tr>
+                    <td class="student-name-label" colspan="3">Student Name:</td>
+                </tr>
+                <tr>
+                    <td class="student-name-value" colspan="3">{{ student.name }}</td>
+                </tr>
+                <tr>
+                    <td class="id-label-cell">Student ID #:</td>
+                    <td class="state-id-label-cell" colspan="2">State Student ID</td>
+                </tr>
+                <tr>
+                    <td class="id-value-cell">{{ student.student_id_formatted }}</td>
+                    <td class="state-id-value-cell" colspan="2">{{ student.ssn if student.ssn else 'N/A' }}</td>
+                </tr>
+                <tr>
+                    <td class="dob-label-cell">DOB:</td>
+                    <td class="grade-label-cell">Grade:</td>
+                    <td class="gender-label-cell">Gender:</td>
+                </tr>
+                <tr>
+                    <td class="dob-value-cell">{{ student.dob }}</td>
+                    <td class="grade-value-cell">{{ student.grade }}</td>
+                    <td class="gender-value-cell">{{ student.gender }}</td>
+                </tr>
+                <tr>
+                    <td class="address-label-cell" colspan="3">Address:</td>
+                </tr>
+                <tr>
+                    <td class="address-value-cell" colspan="3">{{ student.address|nl2br }}<br>{{ student.phone if student.phone else '' }}</td>
+                </tr>
+            </table>
+        </td>
+
+        <td class="central-column">
+            <div class="logo-overlay-container">
+                <img src="{{ url_for('static', filename='img/clara_logo.png', _external=True) }}" alt="Clara Science Academy Logo">
+                {% if template_prefix == 'unofficial' %}
+                <span class="logo-text">UNOFFICIAL</span>
+                {% endif %}
+            </div>
+            <h1>STUDENT TRANSCRIPT</h1>
+        </td>
+
+        <td class="school-column">
+            <div class="school-info-container">
+                <div class="info-line"><span class="info-label" style="font-weight: bold;">School Name & Address:</span></div>
+                <div class="school-name-address">Clara Science Academy<br>2812 East Bessemer Ave.<br>Greensboro, NC 27405<br><span class="phone-line" style="font-weight: number;">Ph: 866-728-2751</span></div>
+                <hr> <div class="info-line"><span class="info-label">CEEB:</span> <span style="font-weight: normal;">N/A</span></div>
+                <div class="info-line"><span class="info-label">Entrance Date:</span> <span style="font-weight: normal;">N/A</span></div>
+                <div class="info-line"><span class="info-label">Expected to Graduate:</span> <span style="font-weight: normal;">N/A</span></div>
+            </div>
+        </td>
+    </tr>
+</table>

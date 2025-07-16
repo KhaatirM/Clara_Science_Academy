@@ -9,7 +9,8 @@ class User(db.Model, UserMixin):
     """
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(100), unique=True, nullable=False)
-    password_hash = db.Column(db.String(128), nullable=False)
+    # Increase the length of the password_hash column
+    password_hash = db.Column(db.String(256), nullable=False)
     role = db.Column(db.String(50), nullable=False) # e.g., 'Student', 'Teacher', 'Director'
 
     # This links the User model to a specific student or teacher record.

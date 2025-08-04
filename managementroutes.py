@@ -223,6 +223,24 @@ def add_teacher_staff():
         last_name = request.form.get('last_name', '').strip()
         email = request.form.get('email', '').strip()
         role = request.form.get('assigned_role', 'Teacher').strip()
+        hire_date = request.form.get('hire_date', '').strip()
+        department = request.form.get('department', '').strip()
+        position = request.form.get('position', '').strip()
+        
+        # Address fields
+        street = request.form.get('street_address', '').strip()
+        apt_unit = request.form.get('apt_unit_suite', '').strip()
+        city = request.form.get('city', '').strip()
+        state = request.form.get('state', '').strip()
+        zip_code = request.form.get('zip_code', '').strip()
+        phone = request.form.get('phone', '').strip()
+        
+        # Emergency contact fields
+        emergency_first_name = request.form.get('emergency_contact_name', '').strip()
+        emergency_last_name = request.form.get('emergency_contact_last_name', '').strip()
+        emergency_email = request.form.get('emergency_contact_email', '').strip()
+        emergency_phone = request.form.get('emergency_contact_phone', '').strip()
+        emergency_relationship = request.form.get('emergency_contact_relationship', '').strip()
         
         # Validate required fields
         if not all([first_name, last_name, email]):
@@ -260,9 +278,30 @@ def add_teacher_staff():
             teacher_staff.first_name = first_name
             teacher_staff.last_name = last_name
             teacher_staff.email = email
+            teacher_staff.hire_date = hire_date
+            teacher_staff.department = department
+            teacher_staff.position = position
+            
+            # Address fields
+            teacher_staff.street = street
+            teacher_staff.apt_unit = apt_unit
+            teacher_staff.city = city
+            teacher_staff.state = state
+            teacher_staff.zip_code = zip_code
+            teacher_staff.phone = phone
+            
+            # Emergency contact fields
+            teacher_staff.emergency_first_name = emergency_first_name
+            teacher_staff.emergency_last_name = emergency_last_name
+            teacher_staff.emergency_email = emergency_email
+            teacher_staff.emergency_phone = emergency_phone
+            teacher_staff.emergency_relationship = emergency_relationship
             
             db.session.add(teacher_staff)
             db.session.flush()  # Get the teacher_staff ID
+            
+            # Generate staff ID
+            teacher_staff.staff_id = teacher_staff.generate_staff_id()
             
             # Create user account
             user = User()
@@ -275,7 +314,7 @@ def add_teacher_staff():
             db.session.commit()
             
             # Show success message with credentials
-            flash(f'{role} added successfully! Username: {username}, Password: {password}', 'success')
+            flash(f'{role} added successfully! Username: {username}, Password: {password}, Staff ID: {teacher_staff.staff_id}', 'success')
             return redirect(url_for('management.teachers'))
             
         except Exception as e:
@@ -1421,21 +1460,51 @@ def view_teacher(teacher_id):
     # Get role from user account
     role = teacher.user.role if teacher.user else "No Account"
     
-    # Placeholder data for emergency contact
-    emergency_contact = "Not available"  # Would need to be added to TeacherStaff model
+    # Format emergency contact information
+    emergency_contact = "Not available"
+    if teacher.emergency_first_name and teacher.emergency_last_name:
+        emergency_contact = f"{teacher.emergency_first_name} {teacher.emergency_last_name}"
+        if teacher.emergency_relationship:
+            emergency_contact += f" ({teacher.emergency_relationship})"
+        if teacher.emergency_phone:
+            emergency_contact += f" - {teacher.emergency_phone}"
+        if teacher.emergency_email:
+            emergency_contact += f" - {teacher.emergency_email}"
+    
+    # Format address information
+    address = "Not available"
+    if teacher.street:
+        address_parts = [teacher.street]
+        if teacher.apt_unit:
+            address_parts.append(teacher.apt_unit)
+        if teacher.city and teacher.state:
+            address_parts.append(f"{teacher.city}, {teacher.state}")
+        elif teacher.city:
+            address_parts.append(teacher.city)
+        elif teacher.state:
+            address_parts.append(teacher.state)
+        if teacher.zip_code:
+            address_parts.append(teacher.zip_code)
+        address = ", ".join(address_parts)
     
     return jsonify({
         'id': teacher.id,
         'first_name': teacher.first_name,
         'last_name': teacher.last_name,
+        'staff_id': teacher.staff_id,
         'age': None,  # Not available for teachers
         'dob': None,  # Not available for teachers
         'role': role,
         'email': teacher.email,
         'username': teacher.user.username if teacher.user else None,
+        'department': teacher.department,
+        'position': teacher.position,
+        'hire_date': teacher.hire_date,
+        'phone': teacher.phone,
+        'address': address,
+        'emergency_contact': emergency_contact,
         'assigned_classes': [{'id': c.id, 'name': c.name, 'subject': c.subject} for c in assigned_classes],
-        'total_students': total_students,
-        'emergency_contact': emergency_contact
+        'total_students': total_students
     })
 
 @management_blueprint.route('/edit-teacher/<int:teacher_id>', methods=['POST'])
@@ -1445,11 +1514,34 @@ def edit_teacher(teacher_id):
     """Edit teacher/staff information via AJAX modal"""
     teacher = TeacherStaff.query.get_or_404(teacher_id)
     try:
+        # Basic information
         teacher.first_name = request.form.get('first_name', teacher.first_name)
         teacher.last_name = request.form.get('last_name', teacher.last_name)
         teacher.email = request.form.get('email', teacher.email)
-        teacher.role = request.form.get('role', teacher.role)
-        # Add more fields as needed
+        teacher.phone = request.form.get('phone', teacher.phone)
+        
+        # Role and department
+        teacher.position = request.form.get('position', teacher.position)
+        teacher.department = request.form.get('department', teacher.department)
+        
+        # Address information
+        teacher.street = request.form.get('street', teacher.street)
+        teacher.apt_unit = request.form.get('apt_unit', teacher.apt_unit)
+        teacher.city = request.form.get('city', teacher.city)
+        teacher.state = request.form.get('state', teacher.state)
+        teacher.zip_code = request.form.get('zip_code', teacher.zip_code)
+        
+        # Emergency contact information
+        teacher.emergency_first_name = request.form.get('emergency_first_name', teacher.emergency_first_name)
+        teacher.emergency_last_name = request.form.get('emergency_last_name', teacher.emergency_last_name)
+        teacher.emergency_email = request.form.get('emergency_email', teacher.emergency_email)
+        teacher.emergency_phone = request.form.get('emergency_phone', teacher.emergency_phone)
+        teacher.emergency_relationship = request.form.get('emergency_relationship', teacher.emergency_relationship)
+        
+        # Update user role if user account exists
+        if teacher.user:
+            teacher.user.role = request.form.get('role', teacher.user.role)
+        
         db.session.commit()
         return jsonify({'success': True, 'message': 'Teacher/Staff updated successfully.'})
     except Exception as e:
@@ -1716,3 +1808,21 @@ def manage_class_roster(class_id):
                          enrolled_students=enrolled_students,
                          available_teachers=available_teachers,
                          today=datetime.now().date())
+
+@management_blueprint.route('/remove-student/<int:student_id>', methods=['POST'])
+@login_required
+@management_required
+def remove_student(student_id):
+    """Remove a student"""
+    student = Student.query.get_or_404(student_id)
+    
+    # Delete associated user account if it exists
+    if student.user:
+        db.session.delete(student.user)
+    
+    # Delete the student
+    db.session.delete(student)
+    db.session.commit()
+    
+    flash('Student removed successfully.', 'success')
+    return redirect(url_for('management.students'))

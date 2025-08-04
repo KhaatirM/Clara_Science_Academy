@@ -296,6 +296,7 @@
                                         <div class="btn-group" role="group">
                                             <button type="button" class="btn btn-sm btn-outline-primary" onclick="viewStudent({{ student.id }})">View</button>
                                             <button type="button" class="btn btn-sm btn-outline-secondary" onclick="editStudent({{ student.id }})">Edit</button>
+                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeStudent({{ student.id }}, '{{ student.first_name }} {{ student.last_name }}')">Remove</button>
                                         </div>
                                     </td>
                                 </tr>
@@ -369,6 +370,7 @@
                                         <div class="btn-group" role="group">
                                             <button type="button" class="btn btn-sm btn-outline-primary" onclick="viewTeacher({{ teacher.id }})">View</button>
                                             <button type="button" class="btn btn-sm btn-outline-secondary" onclick="editTeacher({{ teacher.id }})">Edit</button>
+                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeTeacher({{ teacher.id }}, '{{ teacher.first_name }} {{ teacher.last_name }}')">Remove</button>
                                         </div>
                                     </td>
                                 </tr>
@@ -1069,36 +1071,46 @@
     {% endif %}
     <!-- Student/Teacher View Modal -->
     <div class="modal fade" id="profileViewModal" tabindex="-1" aria-labelledby="profileViewModalLabel" aria-hidden="true">
-      <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="profileViewModalLabel">Profile Details</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <div class="modal-header bg-primary text-white">
+            <h5 class="modal-title" id="profileViewModalLabel">
+              <i class="bi bi-person-circle me-2"></i>Profile Details
+            </h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
-          <div class="modal-body" id="profileViewModalBody">
+          <div class="modal-body" id="profileViewModalBody" style="max-height: 70vh; overflow-y: auto;">
             <!-- Content will be loaded by JS -->
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+              <i class="bi bi-x-circle me-1"></i>Close
+            </button>
           </div>
         </div>
       </div>
     </div>
     <!-- Student/Teacher Edit Modal -->
     <div class="modal fade" id="profileEditModal" tabindex="-1" aria-labelledby="profileEditModalLabel" aria-hidden="true">
-      <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="profileEditModalLabel">Edit Profile</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <div class="modal-header bg-primary text-white">
+            <h5 class="modal-title" id="profileEditModalLabel">
+              <i class="bi bi-pencil-square me-2"></i>Edit Profile
+            </h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <form id="profileEditForm">
-            <div class="modal-body" id="profileEditModalBody">
+            <div class="modal-body" id="profileEditModalBody" style="max-height: 70vh; overflow-y: auto;">
               <!-- Form fields will be loaded by JS -->
             </div>
             <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-              <button type="submit" class="btn btn-primary">Save Changes</button>
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                <i class="bi bi-x-circle me-1"></i>Cancel
+              </button>
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-circle me-1"></i>Save Changes
+              </button>
             </div>
           </form>
         </div>
@@ -1115,27 +1127,78 @@
             .then(response => response.json())
             .then(data => {
                 let safeData = data || {};
-                let classes = (safeData.assigned_classes || []).map(c => `<li>${c.name} (${c.subject})</li>`).join('');
+                let classes = (safeData.assigned_classes || []).map(c => `<li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-book me-2"></i>${c.name || 'Unknown'}</span>
+                    <span class="badge bg-primary rounded-pill">${c.subject || 'Unknown'}</span>
+                  </li>`).join('');
                 let photo = safeData.photo_filename ? `<img src='/static/uploads/${safeData.photo_filename}' class='rounded mx-auto d-block mb-3' style='max-width:120px;'>` : '';
                 
                 // Format parent information
                 let parent1Info = '';
                 if (safeData.parent1_first_name || safeData.parent1_last_name) {
                     parent1Info = `
-                        <div class='col-md-6'><strong>Parent 1:</strong> ${safeData.parent1_first_name || ''} ${safeData.parent1_last_name || ''}</div>
-                        <div class='col-md-6'><strong>Relationship:</strong> ${safeData.parent1_relationship || 'N/A'}</div>
-                        <div class='col-md-6'><strong>Email:</strong> ${safeData.parent1_email || 'N/A'}</div>
-                        <div class='col-md-6'><strong>Phone:</strong> ${safeData.parent1_phone || 'N/A'}</div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-person me-2 text-muted"></i>
+                                <strong>Parent 1:</strong>
+                                <span class="ms-2">${safeData.parent1_first_name || ''} ${safeData.parent1_last_name || ''}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-heart me-2 text-muted"></i>
+                                <strong>Relationship:</strong>
+                                <span class="ms-2">${safeData.parent1_relationship || 'N/A'}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-envelope me-2 text-muted"></i>
+                                <strong>Email:</strong>
+                                <span class="ms-2">${safeData.parent1_email || 'N/A'}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-telephone me-2 text-muted"></i>
+                                <strong>Phone:</strong>
+                                <span class="ms-2">${safeData.parent1_phone || 'N/A'}</span>
+                            </div>
+                        </div>
                     `;
                 }
                 
                 let parent2Info = '';
                 if (safeData.parent2_first_name || safeData.parent2_last_name) {
                     parent2Info = `
-                        <div class='col-md-6'><strong>Parent 2:</strong> ${safeData.parent2_first_name || ''} ${safeData.parent2_last_name || ''}</div>
-                        <div class='col-md-6'><strong>Relationship:</strong> ${safeData.parent2_relationship || 'N/A'}</div>
-                        <div class='col-md-6'><strong>Email:</strong> ${safeData.parent2_email || 'N/A'}</div>
-                        <div class='col-md-6'><strong>Phone:</strong> ${safeData.parent2_phone || 'N/A'}</div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-person me-2 text-muted"></i>
+                                <strong>Parent 2:</strong>
+                                <span class="ms-2">${safeData.parent2_first_name || ''} ${safeData.parent2_last_name || ''}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-heart me-2 text-muted"></i>
+                                <strong>Relationship:</strong>
+                                <span class="ms-2">${safeData.parent2_relationship || 'N/A'}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-envelope me-2 text-muted"></i>
+                                <strong>Email:</strong>
+                                <span class="ms-2">${safeData.parent2_email || 'N/A'}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-telephone me-2 text-muted"></i>
+                                <strong>Phone:</strong>
+                                <span class="ms-2">${safeData.parent2_phone || 'N/A'}</span>
+                            </div>
+                        </div>
                     `;
                 }
                 
@@ -1143,10 +1206,34 @@
                 let emergencyInfo = '';
                 if (safeData.emergency_first_name || safeData.emergency_last_name) {
                     emergencyInfo = `
-                        <div class='col-md-6'><strong>Emergency Contact:</strong> ${safeData.emergency_first_name || ''} ${safeData.emergency_last_name || ''}</div>
-                        <div class='col-md-6'><strong>Relationship:</strong> ${safeData.emergency_relationship || 'N/A'}</div>
-                        <div class='col-md-6'><strong>Email:</strong> ${safeData.emergency_email || 'N/A'}</div>
-                        <div class='col-md-6'><strong>Phone:</strong> ${safeData.emergency_phone || 'N/A'}</div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-exclamation-triangle me-2 text-warning"></i>
+                                <strong>Emergency Contact:</strong>
+                                <span class="ms-2">${safeData.emergency_first_name || ''} ${safeData.emergency_last_name || ''}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-heart me-2 text-muted"></i>
+                                <strong>Relationship:</strong>
+                                <span class="ms-2">${safeData.emergency_relationship || 'N/A'}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-envelope me-2 text-muted"></i>
+                                <strong>Email:</strong>
+                                <span class="ms-2">${safeData.emergency_email || 'N/A'}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-telephone me-2 text-muted"></i>
+                                <strong>Phone:</strong>
+                                <span class="ms-2">${safeData.emergency_phone || 'N/A'}</span>
+                            </div>
+                        </div>
                     `;
                 }
                 
@@ -1163,31 +1250,137 @@
                         if (safeData.zip_code) cityStateZip.push(safeData.zip_code);
                         fullAddress.push(cityStateZip.join(', '));
                     }
-                    addressInfo = `<div class='col-md-12'><strong>Address:</strong> ${fullAddress.join(', ')}</div>`;
+                    addressInfo = `<div class="col-12">
+                        <div class="d-flex align-items-start">
+                            <i class="bi bi-geo-alt me-2 text-muted mt-1"></i>
+                            <div>
+                                <strong>Address:</strong>
+                                <div class="ms-2">${fullAddress.join(', ')}</div>
+                            </div>
+                        </div>
+                    </div>`;
                 }
                 
                 let html = `
-                    ${photo}
-                    <div class='row'>
-                      <div class='col-md-6'><strong>Age:</strong> ${safeData.age || 'N/A'}</div>
-                      <div class='col-md-6'><strong>DOB:</strong> ${safeData.dob || 'N/A'}</div>
-                      <div class='col-md-6'><strong>ID:</strong> ${safeData.id}</div>
-                      <div class='col-md-6'><strong>Grade:</strong> ${safeData.grade_level || 'N/A'}</div>
-                      <div class='col-md-6'><strong>Student ID:</strong> ${safeData.student_id || 'N/A'}</div>
-                      <div class='col-md-6'><strong>GPA:</strong> ${safeData.gpa || 'N/A'}</div>
-                      ${addressInfo}
+                    <div class="container-fluid">
+                        <!-- Header Section -->
+                        <div class="row mb-4">
+                            <div class="col-12 text-center">
+                                ${photo}
+                                <div class="position-relative d-inline-block">
+                                    <i class="bi bi-person-circle text-primary" style="font-size: 4rem;"></i>
+                                    <div class="position-absolute top-0 start-100 translate-middle">
+                                        <span class="badge bg-success rounded-pill">Active</span>
+                                    </div>
+                                </div>
+                                <h4 class="mt-2 mb-0">${safeData.first_name || ''} ${safeData.last_name || ''}</h4>
+                                <p class="text-muted mb-0">Grade ${safeData.grade_level || 'N/A'}</p>
+                            </div>
+                        </div>
+
+                        <!-- Basic Information Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="border-bottom pb-2 mb-3">
+                                    <i class="bi bi-info-circle me-2 text-primary"></i>Basic Information
+                                </h6>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-card-text me-2 text-muted"></i>
+                                            <strong>Student ID:</strong>
+                                            <span class="ms-2 badge bg-secondary">${safeData.student_id || 'N/A'}</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-calendar-event me-2 text-muted"></i>
+                                            <strong>Date of Birth:</strong>
+                                            <span class="ms-2">${safeData.dob || 'N/A'}</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-person-badge me-2 text-muted"></i>
+                                            <strong>Age:</strong>
+                                            <span class="ms-2">${safeData.age || 'N/A'}</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-star me-2 text-muted"></i>
+                                            <strong>GPA:</strong>
+                                            <span class="ms-2 badge bg-success">${safeData.gpa || 'N/A'}</span>
+                                        </div>
+                                    </div>
+                                    ${addressInfo}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Academic Information Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="border-bottom pb-2 mb-3">
+                                    <i class="bi bi-book me-2 text-primary"></i>Academic Information
+                                </h6>
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <div class="d-flex align-items-start">
+                                            <i class="bi bi-book me-2 text-muted mt-1"></i>
+                                            <div>
+                                                <strong>Assigned Classes:</strong>
+                                                ${classes ? `<ul class="list-group list-group-flush mt-2">${classes}</ul>` : '<p class="text-muted mt-2"><i class="bi bi-info-circle me-2"></i>No classes assigned</p>'}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        ${parent1Info ? `
+                        <!-- Parent 1 Information Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="border-bottom pb-2 mb-3">
+                                    <i class="bi bi-person-heart me-2 text-primary"></i>Parent 1 Information
+                                </h6>
+                                <div class="row g-3">
+                                    ${parent1Info}
+                                </div>
+                            </div>
+                        </div>
+                        ` : ''}
+
+                        ${parent2Info ? `
+                        <!-- Parent 2 Information Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="border-bottom pb-2 mb-3">
+                                    <i class="bi bi-person-heart me-2 text-primary"></i>Parent 2 Information
+                                </h6>
+                                <div class="row g-3">
+                                    ${parent2Info}
+                                </div>
+                            </div>
+                        </div>
+                        ` : ''}
+
+                        ${emergencyInfo ? `
+                        <!-- Emergency Contact Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="border-bottom pb-2 mb-3">
+                                    <i class="bi bi-exclamation-triangle me-2 text-warning"></i>Emergency Contact
+                                </h6>
+                                <div class="alert alert-warning mb-0">
+                                    <i class="bi bi-person-heart me-2"></i>
+                                    ${safeData.emergency_first_name || ''} ${safeData.emergency_last_name || ''} (${safeData.emergency_relationship || 'N/A'})
+                                </div>
+                            </div>
+                        </div>
+                        ` : ''}
                     </div>
-                    
-                    <div class='row mt-3'>
-                      <div class='col-md-12'>
-                        <strong>Assigned Classes:</strong>
-                        ${classes ? `<ul class='list-unstyled mt-2'>${classes}</ul>` : '<p class="text-muted">No classes assigned</p>'}
-                      </div>
-                    </div>
-                    
-                    ${parent1Info ? `<div class='row mt-3'>${parent1Info}</div>` : ''}
-                    ${parent2Info ? `<div class='row mt-3'>${parent2Info}</div>` : ''}
-                    ${emergencyInfo ? `<div class='row mt-3'>${emergencyInfo}</div>` : ''}
                 `;
                 
                 document.getElementById('profileViewModalLabel').innerText = 'Student Details';
@@ -1217,24 +1410,160 @@
                     total_students: data.total_students || 'N/A',
                     username: data.username || 'N/A',
                     emergency_contact: data.emergency_contact || 'N/A',
-                    assigned_classes: data.assigned_classes || []
+                    assigned_classes: data.assigned_classes || [],
+                    staff_id: data.staff_id || 'N/A',
+                    department: data.department || 'N/A',
+                    position: data.position || 'N/A',
+                    hire_date: data.hire_date || 'N/A',
+                    email: data.email || 'N/A',
+                    phone: data.phone || 'N/A',
+                    address: data.address || 'N/A'
                 };
                 
                 let classes = safeData.assigned_classes.length > 0 
-                    ? safeData.assigned_classes.map(c => `<li>${c.name || 'Unknown'} (${c.subject || 'Unknown'})</li>`).join('')
-                    : '<li>None</li>';
+                    ? safeData.assigned_classes.map(c => `<li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-book me-2"></i>${c.name || 'Unknown'}</span>
+                        <span class="badge bg-primary rounded-pill">${c.subject || 'Unknown'}</span>
+                      </li>`).join('')
+                    : '<li class="list-group-item text-muted"><i class="bi bi-info-circle me-2"></i>No classes assigned</li>';
                     
                 let html = `
-                    <div class='row'>
-                      <div class='col-md-12 text-center'><i class='bi bi-person-circle' style='font-size:4rem;'></i></div>
-                      <div class='col-md-6'><strong>Age:</strong> ${safeData.age}</div>
-                      <div class='col-md-6'><strong>DOB:</strong> ${safeData.dob}</div>
-                      <div class='col-md-6'><strong>ID:</strong> ${safeData.id}</div>
-                      <div class='col-md-6'><strong>Role:</strong> ${safeData.role}</div>
-                      <div class='col-md-12'><strong>Assigned Class(s):</strong><ul>${classes}</ul></div>
-                      <div class='col-md-6'><strong>Number of Student(s):</strong> ${safeData.total_students}</div>
-                      <div class='col-md-6'><strong>Username:</strong> ${safeData.username}</div>
-                      <div class='col-md-12'><strong>Emergency Contact:</strong> ${safeData.emergency_contact}</div>
+                    <div class="container-fluid">
+                        <!-- Header Section -->
+                        <div class="row mb-4">
+                            <div class="col-12 text-center">
+                                <div class="position-relative d-inline-block">
+                                    <i class="bi bi-person-circle text-primary" style="font-size: 4rem;"></i>
+                                    <div class="position-absolute top-0 start-100 translate-middle">
+                                        <span class="badge bg-success rounded-pill">Active</span>
+                                    </div>
+                                </div>
+                                <h4 class="mt-2 mb-0">${safeData.first_name} ${safeData.last_name}</h4>
+                                <p class="text-muted mb-0">${safeData.position || 'Staff Member'}</p>
+                            </div>
+                        </div>
+
+                        <!-- Basic Information Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="border-bottom pb-2 mb-3">
+                                    <i class="bi bi-info-circle me-2 text-primary"></i>Basic Information
+                                </h6>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-card-text me-2 text-muted"></i>
+                                            <strong>Staff ID:</strong>
+                                            <span class="ms-2 badge bg-secondary">${safeData.staff_id}</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-person-badge me-2 text-muted"></i>
+                                            <strong>Role:</strong>
+                                            <span class="ms-2 badge bg-info">${safeData.role}</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-building me-2 text-muted"></i>
+                                            <strong>Department:</strong>
+                                            <span class="ms-2">${safeData.department}</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-calendar-event me-2 text-muted"></i>
+                                            <strong>Hire Date:</strong>
+                                            <span class="ms-2">${safeData.hire_date}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Contact Information Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="border-bottom pb-2 mb-3">
+                                    <i class="bi bi-envelope me-2 text-primary"></i>Contact Information
+                                </h6>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-envelope me-2 text-muted"></i>
+                                            <strong>Email:</strong>
+                                            <span class="ms-2">${safeData.email}</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-telephone me-2 text-muted"></i>
+                                            <strong>Phone:</strong>
+                                            <span class="ms-2">${safeData.phone}</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-person me-2 text-muted"></i>
+                                            <strong>Username:</strong>
+                                            <span class="ms-2 badge bg-light text-dark">${safeData.username}</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="d-flex align-items-start">
+                                            <i class="bi bi-geo-alt me-2 text-muted mt-1"></i>
+                                            <div>
+                                                <strong>Address:</strong>
+                                                <div class="ms-2">${safeData.address}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Emergency Contact Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="border-bottom pb-2 mb-3">
+                                    <i class="bi bi-exclamation-triangle me-2 text-warning"></i>Emergency Contact
+                                </h6>
+                                <div class="alert alert-info mb-0">
+                                    <i class="bi bi-person-heart me-2"></i>
+                                    ${safeData.emergency_contact}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Professional Information Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="border-bottom pb-2 mb-3">
+                                    <i class="bi bi-briefcase me-2 text-primary"></i>Professional Information
+                                </h6>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-people me-2 text-muted"></i>
+                                            <strong>Students:</strong>
+                                            <span class="ms-2 badge bg-success">${safeData.total_students}</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="d-flex align-items-start">
+                                            <i class="bi bi-book me-2 text-muted mt-1"></i>
+                                            <div>
+                                                <strong>Assigned Classes:</strong>
+                                                <ul class="list-group list-group-flush mt-2">
+                                                    ${classes}
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 `;
                 document.getElementById('profileViewModalLabel').innerText = `${safeData.first_name} ${safeData.last_name} (Teacher/Staff)`;
@@ -1420,51 +1749,264 @@
                 let form = document.getElementById('profileEditForm');
                 let body = document.getElementById('profileEditModalBody');
                 body.innerHTML = `
-                  <div class='row'>
-                    <div class='col-md-6 mb-3'>
-                      <label>First Name</label>
-                      <input type='text' class='form-control' name='first_name' value='${data.first_name || ''}' disabled>
+                    <div class="container-fluid">
+                        <!-- Basic Information Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="border-bottom pb-2 mb-3">
+                                    <i class="bi bi-info-circle me-2 text-primary"></i>Basic Information
+                                </h6>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">First Name <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" name="first_name" value="${data.first_name || ''}" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Last Name <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" name="last_name" value="${data.last_name || ''}" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Email <span class="text-danger">*</span></label>
+                                        <input type="email" class="form-control" name="email" value="${data.email || ''}" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Phone Number</label>
+                                        <input type="tel" class="form-control" name="phone" value="${data.phone || ''}" placeholder="e.g., 555-123-4567">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Professional Information Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="border-bottom pb-2 mb-3">
+                                    <i class="bi bi-briefcase me-2 text-primary"></i>Professional Information
+                                </h6>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Role</label>
+                                        <select class="form-select" name="role">
+                                            <option value="Teacher" ${(data.role || '') === 'Teacher' ? 'selected' : ''}>Teacher</option>
+                                            <option value="School Administrator" ${(data.role || '') === 'School Administrator' ? 'selected' : ''}>School Administrator</option>
+                                            <option value="Director" ${(data.role || '') === 'Director' ? 'selected' : ''}>Director</option>
+                                            <option value="Staff" ${(data.role || '') === 'Staff' ? 'selected' : ''}>Staff</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Department</label>
+                                        <select class="form-select" name="department">
+                                            <option value="">Choose department...</option>
+                                            <option value="Mathematics" ${(data.department || '') === 'Mathematics' ? 'selected' : ''}>Mathematics</option>
+                                            <option value="Science" ${(data.department || '') === 'Science' ? 'selected' : ''}>Science</option>
+                                            <option value="English" ${(data.department || '') === 'English' ? 'selected' : ''}>English</option>
+                                            <option value="History" ${(data.department || '') === 'History' ? 'selected' : ''}>History</option>
+                                            <option value="Physical Education" ${(data.department || '') === 'Physical Education' ? 'selected' : ''}>Physical Education</option>
+                                            <option value="Art" ${(data.department || '') === 'Art' ? 'selected' : ''}>Art</option>
+                                            <option value="Music" ${(data.department || '') === 'Music' ? 'selected' : ''}>Music</option>
+                                            <option value="Technology" ${(data.department || '') === 'Technology' ? 'selected' : ''}>Technology</option>
+                                            <option value="Administration" ${(data.department || '') === 'Administration' ? 'selected' : ''}>Administration</option>
+                                            <option value="Counseling" ${(data.department || '') === 'Counseling' ? 'selected' : ''}>Counseling</option>
+                                            <option value="Library" ${(data.department || '') === 'Library' ? 'selected' : ''}>Library</option>
+                                            <option value="Special Education" ${(data.department || '') === 'Special Education' ? 'selected' : ''}>Special Education</option>
+                                            <option value="Foreign Language" ${(data.department || '') === 'Foreign Language' ? 'selected' : ''}>Foreign Language</option>
+                                            <option value="Computer Science" ${(data.department || '') === 'Computer Science' ? 'selected' : ''}>Computer Science</option>
+                                            <option value="Business" ${(data.department || '') === 'Business' ? 'selected' : ''}>Business</option>
+                                            <option value="Health" ${(data.department || '') === 'Health' ? 'selected' : ''}>Health</option>
+                                            <option value="Social Studies" ${(data.department || '') === 'Social Studies' ? 'selected' : ''}>Social Studies</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Position</label>
+                                        <input type="text" class="form-control" name="position" value="${data.position || ''}" placeholder="e.g., Lead Teacher, Assistant Principal">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Address Information Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="border-bottom pb-2 mb-3">
+                                    <i class="bi bi-geo-alt me-2 text-primary"></i>Address Information
+                                </h6>
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <label class="form-label">Street Address</label>
+                                        <input type="text" class="form-control" name="street" value="${data.street || ''}" placeholder="123 Main Street">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Apt, Unit, Suite, etc.</label>
+                                        <input type="text" class="form-control" name="apt_unit" value="${data.apt_unit || ''}" placeholder="Apt 4B">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">City</label>
+                                        <input type="text" class="form-control" name="city" value="${data.city || ''}" placeholder="Springfield">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">State</label>
+                                        <select class="form-select" name="state">
+                                            <option value="">Choose state...</option>
+                                            <option value="AL" ${(data.state || '') === 'AL' ? 'selected' : ''}>Alabama</option>
+                                            <option value="AK" ${(data.state || '') === 'AK' ? 'selected' : ''}>Alaska</option>
+                                            <option value="AZ" ${(data.state || '') === 'AZ' ? 'selected' : ''}>Arizona</option>
+                                            <option value="AR" ${(data.state || '') === 'AR' ? 'selected' : ''}>Arkansas</option>
+                                            <option value="CA" ${(data.state || '') === 'CA' ? 'selected' : ''}>California</option>
+                                            <option value="CO" ${(data.state || '') === 'CO' ? 'selected' : ''}>Colorado</option>
+                                            <option value="CT" ${(data.state || '') === 'CT' ? 'selected' : ''}>Connecticut</option>
+                                            <option value="DE" ${(data.state || '') === 'DE' ? 'selected' : ''}>Delaware</option>
+                                            <option value="FL" ${(data.state || '') === 'FL' ? 'selected' : ''}>Florida</option>
+                                            <option value="GA" ${(data.state || '') === 'GA' ? 'selected' : ''}>Georgia</option>
+                                            <option value="HI" ${(data.state || '') === 'HI' ? 'selected' : ''}>Hawaii</option>
+                                            <option value="ID" ${(data.state || '') === 'ID' ? 'selected' : ''}>Idaho</option>
+                                            <option value="IL" ${(data.state || '') === 'IL' ? 'selected' : ''}>Illinois</option>
+                                            <option value="IN" ${(data.state || '') === 'IN' ? 'selected' : ''}>Indiana</option>
+                                            <option value="IA" ${(data.state || '') === 'IA' ? 'selected' : ''}>Iowa</option>
+                                            <option value="KS" ${(data.state || '') === 'KS' ? 'selected' : ''}>Kansas</option>
+                                            <option value="KY" ${(data.state || '') === 'KY' ? 'selected' : ''}>Kentucky</option>
+                                            <option value="LA" ${(data.state || '') === 'LA' ? 'selected' : ''}>Louisiana</option>
+                                            <option value="ME" ${(data.state || '') === 'ME' ? 'selected' : ''}>Maine</option>
+                                            <option value="MD" ${(data.state || '') === 'MD' ? 'selected' : ''}>Maryland</option>
+                                            <option value="MA" ${(data.state || '') === 'MA' ? 'selected' : ''}>Massachusetts</option>
+                                            <option value="MI" ${(data.state || '') === 'MI' ? 'selected' : ''}>Michigan</option>
+                                            <option value="MN" ${(data.state || '') === 'MN' ? 'selected' : ''}>Minnesota</option>
+                                            <option value="MS" ${(data.state || '') === 'MS' ? 'selected' : ''}>Mississippi</option>
+                                            <option value="MO" ${(data.state || '') === 'MO' ? 'selected' : ''}>Missouri</option>
+                                            <option value="MT" ${(data.state || '') === 'MT' ? 'selected' : ''}>Montana</option>
+                                            <option value="NE" ${(data.state || '') === 'NE' ? 'selected' : ''}>Nebraska</option>
+                                            <option value="NV" ${(data.state || '') === 'NV' ? 'selected' : ''}>Nevada</option>
+                                            <option value="NH" ${(data.state || '') === 'NH' ? 'selected' : ''}>New Hampshire</option>
+                                            <option value="NJ" ${(data.state || '') === 'NJ' ? 'selected' : ''}>New Jersey</option>
+                                            <option value="NM" ${(data.state || '') === 'NM' ? 'selected' : ''}>New Mexico</option>
+                                            <option value="NY" ${(data.state || '') === 'NY' ? 'selected' : ''}>New York</option>
+                                            <option value="NC" ${(data.state || '') === 'NC' ? 'selected' : ''}>North Carolina</option>
+                                            <option value="ND" ${(data.state || '') === 'ND' ? 'selected' : ''}>North Dakota</option>
+                                            <option value="OH" ${(data.state || '') === 'OH' ? 'selected' : ''}>Ohio</option>
+                                            <option value="OK" ${(data.state || '') === 'OK' ? 'selected' : ''}>Oklahoma</option>
+                                            <option value="OR" ${(data.state || '') === 'OR' ? 'selected' : ''}>Oregon</option>
+                                            <option value="PA" ${(data.state || '') === 'PA' ? 'selected' : ''}>Pennsylvania</option>
+                                            <option value="RI" ${(data.state || '') === 'RI' ? 'selected' : ''}>Rhode Island</option>
+                                            <option value="SC" ${(data.state || '') === 'SC' ? 'selected' : ''}>South Carolina</option>
+                                            <option value="SD" ${(data.state || '') === 'SD' ? 'selected' : ''}>South Dakota</option>
+                                            <option value="TN" ${(data.state || '') === 'TN' ? 'selected' : ''}>Tennessee</option>
+                                            <option value="TX" ${(data.state || '') === 'TX' ? 'selected' : ''}>Texas</option>
+                                            <option value="UT" ${(data.state || '') === 'UT' ? 'selected' : ''}>Utah</option>
+                                            <option value="VT" ${(data.state || '') === 'VT' ? 'selected' : ''}>Vermont</option>
+                                            <option value="VA" ${(data.state || '') === 'VA' ? 'selected' : ''}>Virginia</option>
+                                            <option value="WA" ${(data.state || '') === 'WA' ? 'selected' : ''}>Washington</option>
+                                            <option value="WV" ${(data.state || '') === 'WV' ? 'selected' : ''}>West Virginia</option>
+                                            <option value="WI" ${(data.state || '') === 'WI' ? 'selected' : ''}>Wisconsin</option>
+                                            <option value="WY" ${(data.state || '') === 'WY' ? 'selected' : ''}>Wyoming</option>
+                                            <option value="DC" ${(data.state || '') === 'DC' ? 'selected' : ''}>District of Columbia</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Zip Code</label>
+                                        <input type="text" class="form-control" name="zip_code" value="${data.zip_code || ''}" placeholder="62701">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Emergency Contact Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="border-bottom pb-2 mb-3">
+                                    <i class="bi bi-exclamation-triangle me-2 text-warning"></i>Emergency Contact
+                                </h6>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">First Name <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" name="emergency_first_name" value="${data.emergency_first_name || ''}" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Last Name <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" name="emergency_last_name" value="${data.emergency_last_name || ''}" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Relationship</label>
+                                        <select class="form-select" name="emergency_relationship">
+                                            <option value="">Choose relationship...</option>
+                                            <option value="Spouse" ${(data.emergency_relationship || '') === 'Spouse' ? 'selected' : ''}>Spouse</option>
+                                            <option value="Parent" ${(data.emergency_relationship || '') === 'Parent' ? 'selected' : ''}>Parent</option>
+                                            <option value="Sibling" ${(data.emergency_relationship || '') === 'Sibling' ? 'selected' : ''}>Sibling</option>
+                                            <option value="Partner" ${(data.emergency_relationship || '') === 'Partner' ? 'selected' : ''}>Partner</option>
+                                            <option value="Friend" ${(data.emergency_relationship || '') === 'Friend' ? 'selected' : ''}>Friend</option>
+                                            <option value="Other" ${(data.emergency_relationship || '') === 'Other' ? 'selected' : ''}>Other</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Phone Number <span class="text-danger">*</span></label>
+                                        <input type="tel" class="form-control" name="emergency_phone" value="${data.emergency_phone || ''}" required placeholder="e.g., 555-123-4567">
+                                    </div>
+                                    <div class="col-md-12">
+                                        <label class="form-label">Email</label>
+                                        <input type="email" class="form-control" name="emergency_email" value="${data.emergency_email || ''}" placeholder="emergency@example.com">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class='col-md-6 mb-3'>
-                      <label>Last Name</label>
-                      <input type='text' class='form-control' name='last_name' value='${data.last_name || ''}' disabled>
-                    </div>
-                    <div class='col-md-6 mb-3'>
-                      <label>Email</label>
-                      <input type='email' class='form-control' name='email' value='${data.email || ''}'>
-                    </div>
-                    <div class='col-md-6 mb-3'>
-                      <label>Role</label>
-                      <select class='form-control' name='role'>
-                        <option value='Teacher' ${(data.role || '') === 'Teacher' ? 'selected' : ''}>Teacher</option>
-                        <option value='School Administrator' ${(data.role || '') === 'School Administrator' ? 'selected' : ''}>School Administrator</option>
-                        <option value='Director' ${(data.role || '') === 'Director' ? 'selected' : ''}>Director</option>
-                        <option value='Staff' ${(data.role || '') === 'Staff' ? 'selected' : ''}>Staff</option>
-                      </select>
-                    </div>
-                  </div>
                 `;
                 form.onsubmit = function(e) {
-                  e.preventDefault();
-                  let formData = new FormData(form);
-                  fetch(`/management/edit-teacher/${teacherId}`, {
-                    method: 'POST',
-                    body: formData
-                  })
-                  .then(response => response.json())
-                  .then(result => {
-                    if (result.success) {
-                      location.reload();
-                    } else {
-                      alert('Error: ' + result.message);
-                    }
-                  })
-                  .catch(() => alert('Could not update teacher/staff.'));
+                    e.preventDefault();
+                    let formData = new FormData(form);
+                    fetch(`/management/edit-teacher/${teacherId}`, {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(result => {
+                        if (result.success) {
+                            location.reload();
+                        } else {
+                            alert('Error: ' + result.message);
+                        }
+                    })
+                    .catch(() => alert('Could not update teacher/staff.'));
                 };
                 var modal = new bootstrap.Modal(document.getElementById('profileEditModal'));
                 modal.show();
             })
             .catch(() => alert('Could not load teacher details.'));
+    }
+
+    function removeTeacher(teacherId, teacherName) {
+        if (confirm(`Are you sure you want to remove ${teacherName}? This action cannot be undone.`)) {
+            fetch(`/management/remove-teacher-staff/${teacherId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    location.reload();
+                } else {
+                    alert('Error removing teacher/staff member.');
+                }
+            })
+            .catch(() => alert('Could not remove teacher/staff member.'));
+        }
+    }
+
+    function removeStudent(studentId, studentName) {
+        if (confirm(`Are you sure you want to remove ${studentName}? This action cannot be undone.`)) {
+            fetch(`/management/remove-student/${studentId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    location.reload();
+                } else {
+                    alert('Error removing student.');
+                }
+            })
+            .catch(() => alert('Could not remove student.'));
+        }
     }
     </script>
 {% endblock %} 

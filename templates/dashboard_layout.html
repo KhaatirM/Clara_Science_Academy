@@ -18,7 +18,7 @@
 </head>
 <body>
     <div class="dashboard-flex-wrapper d-flex flex-row">
-        <div class="sidebar" id="sidebar">
+        <div class="sidebar" id="sidebar" style="display: flex; flex-direction: column; height: 100vh;">
             <div class="sidebar-toggle" onclick="toggleSidebar()">
                 <div class="hamburger">
                     <span></span>
@@ -27,7 +27,7 @@
                 </div>
             </div>
             <h3 class="sidebar-heading text-center">{{ dashboard_title or current_user.role }}</h3>
-            <ul class="nav flex-column">
+            <ul class="nav flex-column" style="flex: 1 1 auto; overflow-y: auto;">
                 
                 {# --- DIRECTOR TABS --- #}
                 {% if current_user.role == 'Director' %}
@@ -97,7 +97,7 @@
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'tech.user_management' %}active{% endif %}" href="{{ url_for('tech.user_management') }}"><i class="bi bi-people-fill"></i><span> User Management</span></a></li>
                 {% endif %}
             </ul>
-            <div class="logout-btn-container">
+            <div class="logout-btn-container" style="position: static; margin-top: auto; padding-bottom: 20px;">
                 <a href="{{ url_for('auth.logout') }}" class="btn btn-danger w-100">
                     <i class="bi bi-box-arrow-right"></i><span> Logout</span>
                 </a>

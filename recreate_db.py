@@ -7,45 +7,46 @@ This will delete the existing database and create a fresh one with all tables.
 import os
 from app import create_app
 from extensions import db
-from models import *
+from models import db, User, Student, TeacherStaff, SchoolYear, Class, Assignment, Submission, Grade, ReportCard, Announcement, Notification, MaintenanceMode, ActivityLog, StudentGoal, Message, MessageGroup, MessageGroupMember, MessageAttachment, AnnouncementReadReceipt, ScheduledAnnouncement, Enrollment, BugReport, Attendance
+from werkzeug.security import generate_password_hash
+from datetime import datetime, date
 
 def recreate_database():
-    """Recreate the database with all current models."""
-    
-    # Create the app instance
+    """Recreate the database with all tables"""
     app = create_app()
     
-    # Get the database file path
-    db_path = os.path.join(app.instance_path, 'app.db')
-    
-    # Remove existing database file if it exists
-    if os.path.exists(db_path):
-        print(f"Removing existing database: {db_path}")
-        os.remove(db_path)
-    
-    # Create the database directory if it doesn't exist
-    os.makedirs(app.instance_path, exist_ok=True)
-    
-    # Create all tables
-    print("Creating database tables...")
     with app.app_context():
-        db.create_all()
-        print("Database tables created successfully!")
+        # Drop all tables
+        db.drop_all()
+        print("Dropped all tables")
         
-        # Verify all tables were created
-        inspector = db.inspect(db.engine)
-        tables = inspector.get_table_names()
-        print(f"Created tables: {', '.join(tables)}")
+        # Create all tables
+        db.create_all()
+        print("Created all tables")
+        
+        # Create a default school year
+        current_year = datetime.now().year
+        school_year = SchoolYear(
+            name=f"{current_year}-{current_year + 1}",
+            start_date=date(current_year, 8, 1),
+            end_date=date(current_year + 1, 6, 30),
+            is_active=True
+        )
+        db.session.add(school_year)
+        db.session.commit()
+        print(f"Created school year: {school_year.name}")
+        
+        # Create a default director user
+        director_user = User(
+            username='director',
+            password_hash=generate_password_hash('director123'),
+            role='Director'
+        )
+        db.session.add(director_user)
+        db.session.commit()
+        print("Created director user")
+        
+        print("Database recreation completed successfully!")
 
 if __name__ == '__main__':
-    print("=== Database Recreation Script ===")
-    print("This will DELETE the existing database and create a fresh one.")
-    print("All existing data will be lost!")
-    
-    response = input("Are you sure you want to continue? (yes/no): ")
-    if response.lower() in ['yes', 'y']:
-        recreate_database()
-        print("\n=== Database recreation complete! ===")
-        print("You may need to run add_test_users.py to add test users again.")
-    else:
-        print("Database recreation cancelled.") 
+    recreate_database() 

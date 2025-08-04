@@ -124,9 +124,67 @@ class TeacherStaff(db.Model):
     first_name = db.Column(db.String(100), nullable=False)
     last_name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
+    staff_id = db.Column(db.String(50), nullable=True, unique=True)
+    
+    # Additional fields for staff ID generation
+    hire_date = db.Column(db.String(20), nullable=True)  # Storing as string like DOB
+    department = db.Column(db.String(100), nullable=True)
+    position = db.Column(db.String(100), nullable=True)
+    
+    # Emergency contact information
+    emergency_first_name = db.Column(db.String(100), nullable=True)
+    emergency_last_name = db.Column(db.String(100), nullable=True)
+    emergency_email = db.Column(db.String(120), nullable=True)
+    emergency_phone = db.Column(db.String(20), nullable=True)
+    emergency_relationship = db.Column(db.String(50), nullable=True)  # Spouse, Parent, etc.
+    
+    # Address fields
+    street = db.Column(db.String(200), nullable=True)
+    apt_unit = db.Column(db.String(50), nullable=True)
+    city = db.Column(db.String(100), nullable=True)
+    state = db.Column(db.String(50), nullable=True)
+    zip_code = db.Column(db.String(20), nullable=True)
+    phone = db.Column(db.String(20), nullable=True)
     
     # Relationship to the User model
     user = db.relationship('User', backref='teacher_staff_profile', uselist=False)
+
+    def generate_staff_id(self):
+        """Generate Staff ID based on department abbreviation and hire date"""
+        if not self.department or not self.hire_date:
+            return None
+        
+        # Department abbreviation mapping
+        department_abbreviations = {
+            'Mathematics': 'MATH', 'Science': 'SCI', 'English': 'ENG', 'History': 'HIST',
+            'Physical Education': 'PE', 'Art': 'ART', 'Music': 'MUSIC', 'Technology': 'TECH',
+            'Administration': 'ADMIN', 'Counseling': 'COUNSEL', 'Library': 'LIB',
+            'Special Education': 'SPED', 'Foreign Language': 'LANG', 'Computer Science': 'CS',
+            'Business': 'BUS', 'Health': 'HEALTH', 'Social Studies': 'SOCST',
+            'Teacher': 'TCH', 'Staff': 'STAFF', 'Director': 'DIR', 'School Administrator': 'ADMIN'
+        }
+        
+        # Get department abbreviation
+        dept_abbr = department_abbreviations.get(self.department, self.department[:4].upper())
+        
+        # Parse hire date (handle both MM/DD/YYYY and YYYY-MM-DD)
+        try:
+            from datetime import datetime
+            hire_date = self.hire_date
+            if '-' in hire_date:
+                # Format: YYYY-MM-DD
+                dt = datetime.strptime(hire_date, '%Y-%m-%d')
+            elif '/' in hire_date:
+                # Format: MM/DD/YYYY
+                dt = datetime.strptime(hire_date, '%m/%d/%Y')
+            else:
+                return None
+            month = str(dt.month).zfill(2)
+            day = str(dt.day).zfill(2)
+            year = str(dt.year)[-2:]
+            return f"{dept_abbr}{month}{day}{year}"
+        except Exception as e:
+            return None
 
     def __repr__(self):
         return f"TeacherStaff('{self.first_name} {self.last_name}')"

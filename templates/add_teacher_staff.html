@@ -67,7 +67,60 @@
             </div>
             <div class="col-12 col-md-4">
                 <label for="state" class="form-label">State <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" id="state" name="state" value="{{ staff_data.state if staff_data else '' }}" required>
+                <select class="form-select" id="state" name="state" required>
+                    <option value="">Choose state...</option>
+                    <option value="AL" {% if staff_data and staff_data.state == 'AL' %}selected{% endif %}>Alabama</option>
+                    <option value="AK" {% if staff_data and staff_data.state == 'AK' %}selected{% endif %}>Alaska</option>
+                    <option value="AZ" {% if staff_data and staff_data.state == 'AZ' %}selected{% endif %}>Arizona</option>
+                    <option value="AR" {% if staff_data and staff_data.state == 'AR' %}selected{% endif %}>Arkansas</option>
+                    <option value="CA" {% if staff_data and staff_data.state == 'CA' %}selected{% endif %}>California</option>
+                    <option value="CO" {% if staff_data and staff_data.state == 'CO' %}selected{% endif %}>Colorado</option>
+                    <option value="CT" {% if staff_data and staff_data.state == 'CT' %}selected{% endif %}>Connecticut</option>
+                    <option value="DE" {% if staff_data and staff_data.state == 'DE' %}selected{% endif %}>Delaware</option>
+                    <option value="FL" {% if staff_data and staff_data.state == 'FL' %}selected{% endif %}>Florida</option>
+                    <option value="GA" {% if staff_data and staff_data.state == 'GA' %}selected{% endif %}>Georgia</option>
+                    <option value="HI" {% if staff_data and staff_data.state == 'HI' %}selected{% endif %}>Hawaii</option>
+                    <option value="ID" {% if staff_data and staff_data.state == 'ID' %}selected{% endif %}>Idaho</option>
+                    <option value="IL" {% if staff_data and staff_data.state == 'IL' %}selected{% endif %}>Illinois</option>
+                    <option value="IN" {% if staff_data and staff_data.state == 'IN' %}selected{% endif %}>Indiana</option>
+                    <option value="IA" {% if staff_data and staff_data.state == 'IA' %}selected{% endif %}>Iowa</option>
+                    <option value="KS" {% if staff_data and staff_data.state == 'KS' %}selected{% endif %}>Kansas</option>
+                    <option value="KY" {% if staff_data and staff_data.state == 'KY' %}selected{% endif %}>Kentucky</option>
+                    <option value="LA" {% if staff_data and staff_data.state == 'LA' %}selected{% endif %}>Louisiana</option>
+                    <option value="ME" {% if staff_data and staff_data.state == 'ME' %}selected{% endif %}>Maine</option>
+                    <option value="MD" {% if staff_data and staff_data.state == 'MD' %}selected{% endif %}>Maryland</option>
+                    <option value="MA" {% if staff_data and staff_data.state == 'MA' %}selected{% endif %}>Massachusetts</option>
+                    <option value="MI" {% if staff_data and staff_data.state == 'MI' %}selected{% endif %}>Michigan</option>
+                    <option value="MN" {% if staff_data and staff_data.state == 'MN' %}selected{% endif %}>Minnesota</option>
+                    <option value="MS" {% if staff_data and staff_data.state == 'MS' %}selected{% endif %}>Mississippi</option>
+                    <option value="MO" {% if staff_data and staff_data.state == 'MO' %}selected{% endif %}>Missouri</option>
+                    <option value="MT" {% if staff_data and staff_data.state == 'MT' %}selected{% endif %}>Montana</option>
+                    <option value="NE" {% if staff_data and staff_data.state == 'NE' %}selected{% endif %}>Nebraska</option>
+                    <option value="NV" {% if staff_data and staff_data.state == 'NV' %}selected{% endif %}>Nevada</option>
+                    <option value="NH" {% if staff_data and staff_data.state == 'NH' %}selected{% endif %}>New Hampshire</option>
+                    <option value="NJ" {% if staff_data and staff_data.state == 'NJ' %}selected{% endif %}>New Jersey</option>
+                    <option value="NM" {% if staff_data and staff_data.state == 'NM' %}selected{% endif %}>New Mexico</option>
+                    <option value="NY" {% if staff_data and staff_data.state == 'NY' %}selected{% endif %}>New York</option>
+                    <option value="NC" {% if staff_data and staff_data.state == 'NC' %}selected{% endif %}>North Carolina</option>
+                    <option value="ND" {% if staff_data and staff_data.state == 'ND' %}selected{% endif %}>North Dakota</option>
+                    <option value="OH" {% if staff_data and staff_data.state == 'OH' %}selected{% endif %}>Ohio</option>
+                    <option value="OK" {% if staff_data and staff_data.state == 'OK' %}selected{% endif %}>Oklahoma</option>
+                    <option value="OR" {% if staff_data and staff_data.state == 'OR' %}selected{% endif %}>Oregon</option>
+                    <option value="PA" {% if staff_data and staff_data.state == 'PA' %}selected{% endif %}>Pennsylvania</option>
+                    <option value="RI" {% if staff_data and staff_data.state == 'RI' %}selected{% endif %}>Rhode Island</option>
+                    <option value="SC" {% if staff_data and staff_data.state == 'SC' %}selected{% endif %}>South Carolina</option>
+                    <option value="SD" {% if staff_data and staff_data.state == 'SD' %}selected{% endif %}>South Dakota</option>
+                    <option value="TN" {% if staff_data and staff_data.state == 'TN' %}selected{% endif %}>Tennessee</option>
+                    <option value="TX" {% if staff_data and staff_data.state == 'TX' %}selected{% endif %}>Texas</option>
+                    <option value="UT" {% if staff_data and staff_data.state == 'UT' %}selected{% endif %}>Utah</option>
+                    <option value="VT" {% if staff_data and staff_data.state == 'VT' %}selected{% endif %}>Vermont</option>
+                    <option value="VA" {% if staff_data and staff_data.state == 'VA' %}selected{% endif %}>Virginia</option>
+                    <option value="WA" {% if staff_data and staff_data.state == 'WA' %}selected{% endif %}>Washington</option>
+                    <option value="WV" {% if staff_data and staff_data.state == 'WV' %}selected{% endif %}>West Virginia</option>
+                    <option value="WI" {% if staff_data and staff_data.state == 'WI' %}selected{% endif %}>Wisconsin</option>
+                    <option value="WY" {% if staff_data and staff_data.state == 'WY' %}selected{% endif %}>Wyoming</option>
+                    <option value="DC" {% if staff_data and staff_data.state == 'DC' %}selected{% endif %}>District of Columbia</option>
+                </select>
                 <div class="invalid-feedback">State is required.</div>
             </div>
             <div class="col-12 col-md-3">
@@ -78,12 +131,18 @@
 
             <h5 class="mt-4 mb-2 border-bottom pb-1">Emergency Contact</h5>
             <div class="col-12 col-md-5">
-                <label for="emergency_contact_name" class="form-label">Full Name <span class="text-danger">*</span></label>
+                <label for="emergency_contact_name" class="form-label">First Name <span class="text-danger">*</span></label>
                 <input type="text" class="form-control" id="emergency_contact_name" name="emergency_contact_name"
                        value="{{ staff_data.emergency_contact_name if staff_data else '' }}" required>
-                <div class="invalid-feedback">Emergency contact name is required.</div>
+                <div class="invalid-feedback">Emergency contact first name is required.</div>
             </div>
-            <div class="col-12 col-md-3">
+            <div class="col-12 col-md-5">
+                <label for="emergency_contact_last_name" class="form-label">Last Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="emergency_contact_last_name" name="emergency_contact_last_name"
+                       value="{{ staff_data.emergency_contact_last_name if staff_data else '' }}" required>
+                <div class="invalid-feedback">Emergency contact last name is required.</div>
+            </div>
+            <div class="col-12 col-md-2">
                 <label for="emergency_contact_relationship" class="form-label">Relationship</label>
                 <select class="form-select" id="emergency_contact_relationship" name="emergency_contact_relationship">
                     <option value="">Choose...</option>
@@ -98,6 +157,12 @@
                 <input type="tel" class="form-control" id="emergency_contact_phone" name="emergency_contact_phone"
                        value="{{ staff_data.emergency_contact_phone if staff_data else '' }}" required placeholder="e.g., 555-123-4567">
                 <div class="invalid-feedback">Emergency contact phone is required.</div>
+            </div>
+            <div class="col-12 col-md-4">
+                <label for="emergency_contact_email" class="form-label">Email</label>
+                <input type="email" class="form-control" id="emergency_contact_email" name="emergency_contact_email"
+                       value="{{ staff_data.emergency_contact_email if staff_data else '' }}" placeholder="emergency@example.com">
+                <div class="form-text">Optional email for emergency contact.</div>
             </div>
 
             <div class="col-12 col-md-6 mt-3">
@@ -124,6 +189,31 @@
                 </select>
                 <div class="invalid-feedback">Please select an assigned role.</div>
             </div>
+            <div class="col-12 col-md-6">
+                <label for="hire_date" class="form-label">Hire Date <span class="text-danger">*</span></label>
+                <input type="date" class="form-control" id="hire_date" name="hire_date"
+                       value="{{ staff_data.hire_date if staff_data else '' }}" required>
+                <div class="invalid-feedback">Hire date is required for staff ID generation.</div>
+            </div>
+            
+            <div class="col-12 col-md-6">
+                <label for="department" class="form-label">Department <span class="text-danger">*</span></label>
+                <select class="form-select" id="department" name="department" required>
+                    <option value="">Choose department...</option>
+                    {% set departments = ["Mathematics", "Science", "English", "History", "Physical Education", "Art", "Music", "Technology", "Administration", "Counseling", "Library", "Special Education", "Foreign Language", "Computer Science", "Business", "Health", "Social Studies", "Teacher", "Staff", "Director", "School Administrator"] %}
+                    {% for dept in departments %}
+                    <option value="{{ dept }}" {% if staff_data and staff_data.department == dept %}selected{% endif %}>{{ dept }}</option>
+                    {% endfor %}
+                </select>
+                <div class="invalid-feedback">Please select a department.</div>
+            </div>
+            <div class="col-12 col-md-6">
+                <label for="position" class="form-label">Position</label>
+                <input type="text" class="form-control" id="position" name="position"
+                       value="{{ staff_data.position if staff_data else '' }}" placeholder="e.g., Lead Teacher, Assistant Principal">
+                <div class="form-text">Optional position title within the department.</div>
+            </div>
+            
             <div class="col-12 col-md-6">
                 <label for="subject" class="form-label">Primary Subject(s) Taught</label>
                 <input type="text" class="form-control" id="subject" name="subject"

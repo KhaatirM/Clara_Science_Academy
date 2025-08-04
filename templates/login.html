@@ -13,7 +13,13 @@
           </div>
           <div class="mb-3">
             <label for="password" class="form-label">Password</label>
-            <input type="password" name="password" id="password" class="form-control" required>
+            <div class="input-group">
+              <input type="password" name="password" id="password" class="form-control" required>
+              <button class="btn btn-outline-secondary" type="button" id="togglePassword" 
+                      data-bs-toggle="tooltip" data-bs-placement="top" title="Show Password">
+                <i class="bi bi-eye" id="passwordIcon"></i>
+              </button>
+            </div>
           </div>
           <div class="mb-3" id="id_input_group">
             <label for="user_id" class="form-label">ID# <span class="text-muted small">(Required for Directors)</span></label>
@@ -67,7 +73,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <p>For the best experience, we recommend using a desktop or laptop computer. This site is not fully optimized for mobile devices (Version 1.0.1).</p>
+        <p>For the best experience, we recommend using a desktop or laptop computer. This site is not fully optimized for mobile devices (Version 1.03).</p>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-primary" data-bs-dismiss="modal">I Understand</button>
@@ -78,6 +84,35 @@
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+      return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    // Password visibility toggle functionality
+    const togglePassword = document.getElementById('togglePassword');
+    const password = document.getElementById('password');
+    const passwordIcon = document.getElementById('passwordIcon');
+    const tooltip = bootstrap.Tooltip.getInstance(togglePassword);
+
+    togglePassword.addEventListener('click', function() {
+      // Toggle password visibility
+      const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
+      password.setAttribute('type', type);
+      
+      // Toggle icon
+      if (type === 'text') {
+        passwordIcon.classList.remove('bi-eye');
+        passwordIcon.classList.add('bi-eye-slash');
+        tooltip.setContent({ '.tooltip-inner': 'Hide Password' });
+      } else {
+        passwordIcon.classList.remove('bi-eye-slash');
+        passwordIcon.classList.add('bi-eye');
+        tooltip.setContent({ '.tooltip-inner': 'Show Password' });
+      }
+    });
+
     // Mobile warning popup logic
     if (window.innerWidth < 768) {
         var myModal = new bootstrap.Modal(document.getElementById('mobileWarningModal'), {

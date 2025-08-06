@@ -170,10 +170,10 @@
                 <input class="form-control" type="file" id="staff_image" name="staff_image" accept="image/*">
                  {% if edit_mode and staff_data and staff_data.image and staff_data.image not in ['teacher_default_m.jpg', 'teacher_default_f.jpg'] %}
                     <div class="form-text mt-1">Current image: <strong>{{ staff_data.image }}</strong>. Upload new to replace.</div>
-                    <img src="{{ url_for('static', filename='uploads/' + staff_data.image) }}" alt="Current Staff Image" class="img-thumbnail mt-2" style="max-width: 100px; max-height: 100px;">
+                    <img src="{{ url_for('static', filename='uploads/' + staff_data.image) }}" alt="Current Staff Image" class="img-thumbnail mt-2 max-width-100" style="max-height: 100px;">
                 {% elif edit_mode and staff_data and staff_data.image %}
                      <div class="form-text mt-1">Currently using: <strong>{{ staff_data.image }}</strong>. Upload new to replace.</div>
-                     <img src="{{ url_for('static', filename='uploads/' + staff_data.image) }}" alt="Staff Image" class="img-thumbnail mt-2" style="max-width: 100px; max-height: 100px;">
+                     <img src="{{ url_for('static', filename='uploads/' + staff_data.image) }}" alt="Staff Image" class="img-thumbnail mt-2 max-width-100" style="max-height: 100px;">
                 {% endif %}
             </div>
             

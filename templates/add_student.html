@@ -61,10 +61,10 @@
                 <input class="form-control" type="file" id="student_image" name="student_image" accept="image/*">
                 {% if edit_mode and student_data and student_data.image and student_data.image != 'default.jpg' %}
                     <div class="form-text mt-1">Current image: <strong>{{ student_data.image }}</strong>. Upload a new file to replace it.</div>
-                    <img src="{{ url_for('static', filename='uploads/' + student_data.image) }}" alt="Current Student Image" class="img-thumbnail mt-2" style="max-width: 100px; max-height: 100px;">
+                    <img src="{{ url_for('static', filename='uploads/' + student_data.image) }}" alt="Current Student Image" class="img-thumbnail mt-2 max-width-100" style="max-height: 100px;">
                 {% elif edit_mode and student_data and student_data.image == 'default.jpg' %}
                      <div class="form-text mt-1">Currently using default image. Upload a new file to replace it.</div>
-                     <img src="{{ url_for('static', filename='uploads/' + student_data.image) }}" alt="Default Student Image" class="img-thumbnail mt-2" style="max-width: 100px; max-height: 100px;">
+                     <img src="{{ url_for('static', filename='uploads/' + student_data.image) }}" alt="Default Student Image" class="img-thumbnail mt-2 max-width-100" style="max-height: 100px;">
                 {% else %}
                     <div class="form-text">Upload a clear photo of the student.</div>
                 {% endif %}

@@ -110,12 +110,12 @@
                             <h6>Database Operations</h6>
                             <ul class="list-unstyled">
                                 <li class="mb-2">
-                                    <form method="POST" action="{{ url_for('tech.backup_database') }}" style="display: inline;">
+                                    <form method="POST" action="{{ url_for('tech.backup_database') }}" class="display-inline">
                                         <button type="submit" class="btn btn-link text-decoration-none p-0">Backup Database</button>
                                     </form>
                                 </li>
                                 <li class="mb-2">
-                                    <form method="POST" action="{{ url_for('tech.check_database_integrity') }}" style="display: inline;">
+                                    <form method="POST" action="{{ url_for('tech.check_database_integrity') }}" class="display-inline">
                                         <button type="submit" class="btn btn-link text-decoration-none p-0">Check Database Integrity</button>
                                     </form>
                                 </li>
@@ -126,7 +126,7 @@
                             <h6>System Maintenance</h6>
                             <ul class="list-unstyled">
                                 <li class="mb-2">
-                                    <form method="POST" action="{{ url_for('tech.clear_cache') }}" style="display: inline;">
+                                    <form method="POST" action="{{ url_for('tech.clear_cache') }}" class="display-inline">
                                         <button type="submit" class="btn btn-link text-decoration-none p-0">Clear Cache</button>
                                     </form>
                                 </li>

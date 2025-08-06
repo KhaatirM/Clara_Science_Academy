@@ -15,7 +15,7 @@
             Welcome to Clara Science Academy's student management portal. <br class="d-none d-md-block">
             A centralized hub for academic excellence and seamless administration.
         </p>
-        <hr class="my-4" style="border-color: rgba(255,255,255,0.5);">
+        <hr class="my-4 border-color-white-50">
         
         {% if current_user.is_authenticated %}
             {% set role_name = current_user.role|lower|replace(' ', '_') %}

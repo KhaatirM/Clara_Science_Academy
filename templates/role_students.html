@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const student = this.dataset;
             detailsPanel.innerHTML = `
                 <div class="text-center mb-3">
-                    <img src="${student.image}" alt="Photo of ${student.name}" class="img-fluid rounded-circle" style="width: 120px; height: 120px; object-fit: cover;">
+                    <img src="${student.image}" alt="Photo of ${student.name}" class="img-fluid rounded-circle max-width-120 object-fit-cover" style="height: 120px;">
                 </div>
                 <h5>${student.name}</h5>
                 <hr>

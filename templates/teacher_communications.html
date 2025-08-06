@@ -42,7 +42,7 @@
                     </div>
 
                     <!-- Message List -->
-                    <div class="list-group list-group-flush" style="max-height: 600px; overflow-y: auto;">
+                    <div class="list-group list-group-flush max-height-600">
                         {% if messages %}
                             {% for message in messages %}
                                 <a href="{{ url_for('teacher.view_message', message_id=message.id) }}" 
@@ -229,7 +229,7 @@
                                             </div>
                                             {% if not notification.is_read %}
                                                 <div class="mt-2">
-                                                    <form method="POST" action="{{ url_for('teacher.mark_notification_read', notification_id=notification.id) }}" style="display: inline;">
+                                                    <form method="POST" action="{{ url_for('teacher.mark_notification_read', notification_id=notification.id) }}" class="display-inline">
                                                         <button type="submit" class="btn btn-sm btn-outline-primary">Mark as Read</button>
                                                     </form>
                                                 </div>

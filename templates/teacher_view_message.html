@@ -47,7 +47,7 @@
                         <div class="col-12 col-md-4 text-md-end">
                             <div class="btn-group" role="group">
                                 {% if message.recipient_id == current_user.id and not message.is_read %}
-                                    <form method="POST" action="{{ url_for('teacher.mark_message_read', message_id=message.id) }}" style="display: inline;">
+                                    <form method="POST" action="{{ url_for('teacher.mark_message_read', message_id=message.id) }}" class="display-inline">
                                         <button type="submit" class="btn btn-outline-primary btn-sm">
                                             <i class="bi bi-check me-1"></i>Mark Read
                                         </button>
@@ -133,7 +133,7 @@
                                         <button type="button" class="btn btn-outline-secondary btn-sm me-2" onclick="addAttachment()">
                                             <i class="bi bi-paperclip me-1"></i>Add Attachment
                                         </button>
-                                        <input type="file" id="attachment" name="attachments" multiple style="display: none;" 
+                                        <input type="file" id="attachment" name="attachments" multiple class="display-none" 
                                                accept=".txt,.pdf,.png,.jpg,.jpeg,.gif,.doc,.docx,.xls,.xlsx,.ppt,.pptx">
                                     </div>
                                     <button type="submit" class="btn btn-primary">
@@ -254,15 +254,5 @@ if (replyTextarea) {
 }
 </script>
 
-<style>
-@media print {
-    .btn, .card-header, .sidebar {
-        display: none !important;
-    }
-    .message-content {
-        border: none !important;
-        background: white !important;
-    }
-}
-</style>
+
 {% endblock %} 

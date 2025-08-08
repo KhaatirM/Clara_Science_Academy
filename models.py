@@ -33,6 +33,11 @@ class Student(db.Model):
     student_id = db.Column(db.String(50), nullable=True, unique=True)
     address = db.Column(db.Text, nullable=True)
     photo_filename = db.Column(db.String(255), nullable=True)
+    transcript_filename = db.Column(db.String(255), nullable=True)
+    previous_school = db.Column(db.String(200), nullable=True)
+    email = db.Column(db.String(120), nullable=True)
+    medical_concerns = db.Column(db.Text, nullable=True)
+    notes = db.Column(db.Text, nullable=True)
     
     # Parent 1 information
     parent1_first_name = db.Column(db.String(100), nullable=True)
@@ -156,12 +161,11 @@ class TeacherStaff(db.Model):
         
         # Department abbreviation mapping
         department_abbreviations = {
-            'Mathematics': 'MATH', 'Science': 'SCI', 'English': 'ENG', 'History': 'HIST',
-            'Physical Education': 'PE', 'Art': 'ART', 'Music': 'MUSIC', 'Technology': 'TECH',
-            'Administration': 'ADMIN', 'Counseling': 'COUNSEL', 'Library': 'LIB',
-            'Special Education': 'SPED', 'Foreign Language': 'LANG', 'Computer Science': 'CS',
-            'Business': 'BUS', 'Health': 'HEALTH', 'Social Studies': 'SOCST',
-            'Teacher': 'TCH', 'Staff': 'STAFF', 'Director': 'DIR', 'School Administrator': 'ADMIN'
+            'Mathematics': 'MATH', 'Science': 'SCI', 'English': 'ENG', 'History & Social Studies': 'HIST',
+            'Physical Education & Health': 'PE', 'Music & Arts': 'ARTS', 'Computer Science & Technology': 'TECH',
+            'Administration': 'ADMIN', 'Counseling': 'COUNSEL',
+            'Special Education': 'SPED', 'Foreign Language': 'LANG',
+            'Business': 'BUS', 'Director': 'DIR', 'School Administrator': 'ADMIN'
         }
         
         # Get department abbreviation
@@ -594,4 +598,50 @@ class Attendance(db.Model):
 
     def __repr__(self):
         return f"Attendance(Student: {self.student_id}, Class: {self.class_id}, Date: {self.date}, Status: {self.status})"
+
+
+class SystemConfig(db.Model):
+    """
+    Model for storing system configuration settings.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(100), unique=True, nullable=False)
+    value = db.Column(db.Text, nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    category = db.Column(db.String(50), nullable=False)  # 'general', 'security', 'performance', 'backup'
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    
+    updater = db.relationship('User', backref='config_updates')
+    
+    def __repr__(self):
+        return f"SystemConfig('{self.key}': '{self.value}')"
+    
+    @classmethod
+    def get_value(cls, key, default=None):
+        """Get a configuration value by key."""
+        config = cls.query.filter_by(key=key).first()
+        return config.value if config else default
+    
+    @classmethod
+    def set_value(cls, key, value, description=None, category='general', user_id=None):
+        """Set a configuration value by key."""
+        config = cls.query.filter_by(key=key).first()
+        if config:
+            config.value = value
+            config.description = description
+            config.category = category
+            config.updated_by = user_id
+        else:
+            config = cls(
+                key=key,
+                value=value,
+                description=description,
+                category=category,
+                updated_by=user_id
+            )
+            db.session.add(config)
+        
+        db.session.commit()
+        return config
 

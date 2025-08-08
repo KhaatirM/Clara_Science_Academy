@@ -1,7 +1,9 @@
 Flask
 Flask-Login
 Flask-SQLAlchemy
+Flask-Migrate
 gunicorn
 python-dotenv
 psycopg2-binary
-pdfkit 
+pdfkit
+psutil 

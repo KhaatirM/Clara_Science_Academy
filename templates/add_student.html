@@ -104,16 +104,70 @@
                 <input type="text" class="form-control" id="apt_unit_suite" name="apt_unit_suite" placeholder="Apartment, studio, or floor" value="{{ student_data.apt_unit_suite if student_data else '' }}">
             </div>
 
-            <div class="col-12 col-md-5">
-                <label for="city" class="form-label">City <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" id="city" name="city" value="{{ student_data.city if student_data else '' }}" required>
-                <div class="invalid-feedback">City is required.</div>
-            </div>
-            
             <div class="col-12 col-md-4">
                 <label for="state" class="form-label">State <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" id="state" name="state" value="{{ student_data.state if student_data else '' }}" required>
-                <div class="invalid-feedback">State is required.</div>
+                <select class="form-select" id="state" name="state" required>
+                    <option value="">Choose State...</option>
+                    <option value="AL" {% if student_data and student_data.state == 'AL' %}selected{% endif %}>Alabama</option>
+                    <option value="AK" {% if student_data and student_data.state == 'AK' %}selected{% endif %}>Alaska</option>
+                    <option value="AZ" {% if student_data and student_data.state == 'AZ' %}selected{% endif %}>Arizona</option>
+                    <option value="AR" {% if student_data and student_data.state == 'AR' %}selected{% endif %}>Arkansas</option>
+                    <option value="CA" {% if student_data and student_data.state == 'CA' %}selected{% endif %}>California</option>
+                    <option value="CO" {% if student_data and student_data.state == 'CO' %}selected{% endif %}>Colorado</option>
+                    <option value="CT" {% if student_data and student_data.state == 'CT' %}selected{% endif %}>Connecticut</option>
+                    <option value="DE" {% if student_data and student_data.state == 'DE' %}selected{% endif %}>Delaware</option>
+                    <option value="FL" {% if student_data and student_data.state == 'FL' %}selected{% endif %}>Florida</option>
+                    <option value="GA" {% if student_data and student_data.state == 'GA' %}selected{% endif %}>Georgia</option>
+                    <option value="HI" {% if student_data and student_data.state == 'HI' %}selected{% endif %}>Hawaii</option>
+                    <option value="ID" {% if student_data and student_data.state == 'ID' %}selected{% endif %}>Idaho</option>
+                    <option value="IL" {% if student_data and student_data.state == 'IL' %}selected{% endif %}>Illinois</option>
+                    <option value="IN" {% if student_data and student_data.state == 'IN' %}selected{% endif %}>Indiana</option>
+                    <option value="IA" {% if student_data and student_data.state == 'IA' %}selected{% endif %}>Iowa</option>
+                    <option value="KS" {% if student_data and student_data.state == 'KS' %}selected{% endif %}>Kansas</option>
+                    <option value="KY" {% if student_data and student_data.state == 'KY' %}selected{% endif %}>Kentucky</option>
+                    <option value="LA" {% if student_data and student_data.state == 'LA' %}selected{% endif %}>Louisiana</option>
+                    <option value="ME" {% if student_data and student_data.state == 'ME' %}selected{% endif %}>Maine</option>
+                    <option value="MD" {% if student_data and student_data.state == 'MD' %}selected{% endif %}>Maryland</option>
+                    <option value="MA" {% if student_data and student_data.state == 'MA' %}selected{% endif %}>Massachusetts</option>
+                    <option value="MI" {% if student_data and student_data.state == 'MI' %}selected{% endif %}>Michigan</option>
+                    <option value="MN" {% if student_data and student_data.state == 'MN' %}selected{% endif %}>Minnesota</option>
+                    <option value="MS" {% if student_data and student_data.state == 'MS' %}selected{% endif %}>Mississippi</option>
+                    <option value="MO" {% if student_data and student_data.state == 'MO' %}selected{% endif %}>Missouri</option>
+                    <option value="MT" {% if student_data and student_data.state == 'MT' %}selected{% endif %}>Montana</option>
+                    <option value="NE" {% if student_data and student_data.state == 'NE' %}selected{% endif %}>Nebraska</option>
+                    <option value="NV" {% if student_data and student_data.state == 'NV' %}selected{% endif %}>Nevada</option>
+                    <option value="NH" {% if student_data and student_data.state == 'NH' %}selected{% endif %}>New Hampshire</option>
+                    <option value="NJ" {% if student_data and student_data.state == 'NJ' %}selected{% endif %}>New Jersey</option>
+                    <option value="NM" {% if student_data and student_data.state == 'NM' %}selected{% endif %}>New Mexico</option>
+                    <option value="NY" {% if student_data and student_data.state == 'NY' %}selected{% endif %}>New York</option>
+                    <option value="NC" {% if student_data and student_data.state == 'NC' %}selected{% endif %}>North Carolina</option>
+                    <option value="ND" {% if student_data and student_data.state == 'ND' %}selected{% endif %}>North Dakota</option>
+                    <option value="OH" {% if student_data and student_data.state == 'OH' %}selected{% endif %}>Ohio</option>
+                    <option value="OK" {% if student_data and student_data.state == 'OK' %}selected{% endif %}>Oklahoma</option>
+                    <option value="OR" {% if student_data and student_data.state == 'OR' %}selected{% endif %}>Oregon</option>
+                    <option value="PA" {% if student_data and student_data.state == 'PA' %}selected{% endif %}>Pennsylvania</option>
+                    <option value="RI" {% if student_data and student_data.state == 'RI' %}selected{% endif %}>Rhode Island</option>
+                    <option value="SC" {% if student_data and student_data.state == 'SC' %}selected{% endif %}>South Carolina</option>
+                    <option value="SD" {% if student_data and student_data.state == 'SD' %}selected{% endif %}>South Dakota</option>
+                    <option value="TN" {% if student_data and student_data.state == 'TN' %}selected{% endif %}>Tennessee</option>
+                    <option value="TX" {% if student_data and student_data.state == 'TX' %}selected{% endif %}>Texas</option>
+                    <option value="UT" {% if student_data and student_data.state == 'UT' %}selected{% endif %}>Utah</option>
+                    <option value="VT" {% if student_data and student_data.state == 'VT' %}selected{% endif %}>Vermont</option>
+                    <option value="VA" {% if student_data and student_data.state == 'VA' %}selected{% endif %}>Virginia</option>
+                    <option value="WA" {% if student_data and student_data.state == 'WA' %}selected{% endif %}>Washington</option>
+                    <option value="WV" {% if student_data and student_data.state == 'WV' %}selected{% endif %}>West Virginia</option>
+                    <option value="WI" {% if student_data and student_data.state == 'WI' %}selected{% endif %}>Wisconsin</option>
+                    <option value="WY" {% if student_data and student_data.state == 'WY' %}selected{% endif %}>Wyoming</option>
+                </select>
+                <div class="invalid-feedback">Please select a state.</div>
+            </div>
+
+            <div class="col-12 col-md-5">
+                <label for="city" class="form-label">City <span class="text-danger">*</span></label>
+                <select class="form-select" id="city" name="city" required>
+                    <option value="">Choose State First...</option>
+                </select>
+                <div class="invalid-feedback">Please select a city.</div>
             </div>
 
             <div class="col-12 col-md-3">
@@ -264,6 +318,109 @@
           }, false)
         })
     })()
+
+    // State and City dropdown functionality
+    const stateCityData = {
+        'AL': ['Birmingham', 'Montgomery', 'Huntsville', 'Mobile', 'Tuscaloosa', 'Auburn', 'Dothan', 'Decatur', 'Madison', 'Florence'],
+        'AK': ['Anchorage', 'Fairbanks', 'Juneau', 'Sitka', 'Ketchikan', 'Kodiak', 'Bethel', 'Kotzebue', 'Nome', 'Barrow'],
+        'AZ': ['Phoenix', 'Tucson', 'Mesa', 'Chandler', 'Scottsdale', 'Glendale', 'Gilbert', 'Tempe', 'Peoria', 'Surprise'],
+        'AR': ['Little Rock', 'Fort Smith', 'Fayetteville', 'Springdale', 'Jonesboro', 'North Little Rock', 'Conway', 'Rogers', 'Pine Bluff', 'Bentonville'],
+        'CA': ['Los Angeles', 'San Diego', 'San Jose', 'San Francisco', 'Fresno', 'Sacramento', 'Long Beach', 'Oakland', 'Bakersfield', 'Anaheim'],
+        'CO': ['Denver', 'Colorado Springs', 'Aurora', 'Fort Collins', 'Lakewood', 'Thornton', 'Arvada', 'Westminster', 'Pueblo', 'Boulder'],
+        'CT': ['Bridgeport', 'New Haven', 'Stamford', 'Hartford', 'Waterbury', 'Norwalk', 'Danbury', 'New Britain', 'Bristol', 'Meriden'],
+        'DE': ['Wilmington', 'Dover', 'Newark', 'Middletown', 'Smyrna', 'Milford', 'Seaford', 'Georgetown', 'Elsmere', 'New Castle'],
+        'FL': ['Jacksonville', 'Miami', 'Tampa', 'Orlando', 'St. Petersburg', 'Hialeah', 'Tallahassee', 'Fort Lauderdale', 'Port St. Lucie', 'Cape Coral'],
+        'GA': ['Atlanta', 'Augusta', 'Columbus', 'Macon', 'Savannah', 'Athens', 'Sandy Springs', 'Roswell', 'Albany', 'Johns Creek'],
+        'HI': ['Honolulu', 'Hilo', 'Kailua', 'Kapolei', 'Kaneohe', 'Mililani Town', 'Ewa Gentry', 'Kihei', 'Makaha', 'Wahiawa'],
+        'ID': ['Boise', 'Meridian', 'Nampa', 'Idaho Falls', 'Pocatello', 'Caldwell', 'Coeur d\'Alene', 'Twin Falls', 'Lewiston', 'Post Falls'],
+        'IL': ['Chicago', 'Aurora', 'Rockford', 'Joliet', 'Naperville', 'Springfield', 'Peoria', 'Elgin', 'Waukegan', 'Champaign'],
+        'IN': ['Indianapolis', 'Fort Wayne', 'Evansville', 'South Bend', 'Carmel', 'Bloomington', 'Fishers', 'Hammond', 'Gary', 'Lafayette'],
+        'IA': ['Des Moines', 'Cedar Rapids', 'Davenport', 'Sioux City', 'Iowa City', 'Waterloo', 'Ames', 'West Des Moines', 'Council Bluffs', 'Dubuque'],
+        'KS': ['Wichita', 'Overland Park', 'Kansas City', 'Olathe', 'Topeka', 'Lawrence', 'Shawnee', 'Manhattan', 'Lenexa', 'Salina'],
+        'KY': ['Louisville', 'Lexington', 'Bowling Green', 'Owensboro', 'Covington', 'Richmond', 'Georgetown', 'Florence', 'Elizabethtown', 'Nicholasville'],
+        'LA': ['New Orleans', 'Baton Rouge', 'Shreveport', 'Lafayette', 'Lake Charles', 'Kenner', 'Bossier City', 'Monroe', 'Alexandria', 'Houma'],
+        'ME': ['Portland', 'Lewiston', 'Bangor', 'Auburn', 'Biddeford', 'Sanford', 'Brunswick', 'Augusta', 'Scarborough', 'Gorham'],
+        'MD': ['Baltimore', 'Frederick', 'Rockville', 'Gaithersburg', 'Bowie', 'Hagerstown', 'Annapolis', 'College Park', 'Salisbury', 'Laurel'],
+        'MA': ['Boston', 'Worcester', 'Springfield', 'Lowell', 'Cambridge', 'New Bedford', 'Brockton', 'Quincy', 'Lynn', 'Fall River'],
+        'MI': ['Detroit', 'Grand Rapids', 'Warren', 'Sterling Heights', 'Lansing', 'Ann Arbor', 'Flint', 'Dearborn', 'Livonia', 'Westland'],
+        'MN': ['Minneapolis', 'Saint Paul', 'Rochester', 'Duluth', 'Bloomington', 'Brooklyn Park', 'Plymouth', 'St. Cloud', 'Eagan', 'Woodbury'],
+        'MS': ['Jackson', 'Gulfport', 'Southaven', 'Hattiesburg', 'Biloxi', 'Meridian', 'Tupelo', 'Greenville', 'Horn Lake', 'Greenwood'],
+        'MO': ['Kansas City', 'St. Louis', 'Springfield', 'Columbia', 'Independence', 'Lee\'s Summit', 'O\'Fallon', 'St. Joseph', 'St. Charles', 'St. Peters'],
+        'MT': ['Billings', 'Missoula', 'Great Falls', 'Bozeman', 'Butte', 'Helena', 'Kalispell', 'Havre', 'Anaconda', 'Miles City'],
+        'NE': ['Omaha', 'Lincoln', 'Bellevue', 'Grand Island', 'Kearney', 'Fremont', 'Norfolk', 'Columbus', 'Hastings', 'North Platte'],
+        'NV': ['Las Vegas', 'Henderson', 'Reno', 'North Las Vegas', 'Sparks', 'Carson City', 'Fernley', 'Elko', 'Mesquite', 'Boulder City'],
+        'NH': ['Manchester', 'Nashua', 'Concord', 'Dover', 'Rochester', 'Keene', 'Derry', 'Portsmouth', 'Laconia', 'Lebanon'],
+        'NJ': ['Newark', 'Jersey City', 'Paterson', 'Elizabeth', 'Edison', 'Woodbridge', 'Lakewood', 'Toms River', 'Hamilton', 'Trenton'],
+        'NM': ['Albuquerque', 'Las Cruces', 'Rio Rancho', 'Santa Fe', 'Roswell', 'Farmington', 'South Valley', 'Clovis', 'Hobbs', 'Alamogordo'],
+        'NY': ['New York City', 'Buffalo', 'Rochester', 'Yonkers', 'Syracuse', 'Albany', 'New Rochelle', 'Mount Vernon', 'Schenectady', 'Utica'],
+        'NC': ['Charlotte', 'Raleigh', 'Greensboro', 'Durham', 'Winston-Salem', 'Fayetteville', 'Cary', 'Wilmington', 'High Point', 'Greenville'],
+        'ND': ['Fargo', 'Bismarck', 'Grand Forks', 'Minot', 'West Fargo', 'Williston', 'Dickinson', 'Mandan', 'Jamestown', 'Wahpeton'],
+        'OH': ['Columbus', 'Cleveland', 'Cincinnati', 'Toledo', 'Akron', 'Dayton', 'Parma', 'Canton', 'Lorain', 'Hamilton'],
+        'OK': ['Oklahoma City', 'Tulsa', 'Norman', 'Broken Arrow', 'Lawton', 'Edmond', 'Moore', 'Midwest City', 'Enid', 'Stillwater'],
+        'OR': ['Portland', 'Salem', 'Eugene', 'Gresham', 'Hillsboro', 'Beaverton', 'Bend', 'Medford', 'Springfield', 'Corvallis'],
+        'PA': ['Philadelphia', 'Pittsburgh', 'Allentown', 'Erie', 'Reading', 'Scranton', 'Bethlehem', 'Lancaster', 'Harrisburg', 'Altoona'],
+        'RI': ['Providence', 'Warwick', 'Cranston', 'Pawtucket', 'East Providence', 'Woonsocket', 'Coventry', 'Cumberland', 'North Providence', 'West Warwick'],
+        'SC': ['Columbia', 'Charleston', 'North Charleston', 'Mount Pleasant', 'Rock Hill', 'Greenville', 'Summerville', 'Sumter', 'Hilton Head Island', 'Florence'],
+        'SD': ['Sioux Falls', 'Rapid City', 'Aberdeen', 'Brookings', 'Watertown', 'Mitchell', 'Yankton', 'Pierre', 'Huron', 'Vermillion'],
+        'TN': ['Nashville', 'Memphis', 'Knoxville', 'Chattanooga', 'Clarksville', 'Murfreesboro', 'Franklin', 'Jackson', 'Johnson City', 'Hendersonville'],
+        'TX': ['Houston', 'San Antonio', 'Dallas', 'Austin', 'Fort Worth', 'El Paso', 'Arlington', 'Corpus Christi', 'Plano', 'Laredo'],
+        'UT': ['Salt Lake City', 'West Valley City', 'Provo', 'West Jordan', 'Orem', 'Sandy', 'Ogden', 'St. George', 'Layton', 'South Jordan'],
+        'VT': ['Burlington', 'South Burlington', 'Rutland', 'Barre', 'Montpelier', 'Winooski', 'St. Albans', 'Newport', 'Vergennes', 'Middlebury'],
+        'VA': ['Virginia Beach', 'Norfolk', 'Arlington', 'Richmond', 'Newport News', 'Alexandria', 'Hampton', 'Roanoke', 'Portsmouth', 'Suffolk'],
+        'WA': ['Seattle', 'Spokane', 'Tacoma', 'Vancouver', 'Bellevue', 'Kent', 'Everett', 'Renton', 'Yakima', 'Federal Way'],
+        'WV': ['Charleston', 'Huntington', 'Parkersburg', 'Morgantown', 'Wheeling', 'Weirton', 'Fairmont', 'Martinsburg', 'Beckley', 'Clarksburg'],
+        'WI': ['Milwaukee', 'Madison', 'Green Bay', 'Kenosha', 'Racine', 'Appleton', 'Waukesha', 'Oshkosh', 'Eau Claire', 'Janesville'],
+        'WY': ['Cheyenne', 'Casper', 'Laramie', 'Gillette', 'Rock Springs', 'Sheridan', 'Green River', 'Evanston', 'Riverton', 'Cody']
+    };
+
+    // Function to populate city dropdown based on selected state
+    function updateCityDropdown() {
+        const stateSelect = document.getElementById('state');
+        const citySelect = document.getElementById('city');
+        const selectedState = stateSelect.value;
+        
+        // Clear current city options
+        citySelect.innerHTML = '<option value="">Choose City...</option>';
+        
+        if (selectedState && stateCityData[selectedState]) {
+            // Add cities for selected state
+            stateCityData[selectedState].forEach(city => {
+                const option = document.createElement('option');
+                option.value = city;
+                option.textContent = city;
+                citySelect.appendChild(option);
+            });
+            
+            // Enable city dropdown
+            citySelect.disabled = false;
+        } else {
+            // Disable city dropdown if no state selected
+            citySelect.disabled = true;
+        }
+    }
+
+    // Add event listener to state dropdown
+    document.addEventListener('DOMContentLoaded', function() {
+        const stateSelect = document.getElementById('state');
+        if (stateSelect) {
+            stateSelect.addEventListener('change', updateCityDropdown);
+            
+            // If editing existing student data, populate city dropdown
+            const citySelect = document.getElementById('city');
+            if (stateSelect.value && citySelect) {
+                updateCityDropdown();
+                
+                // Set the current city value if editing
+                const currentCity = '{{ student_data.city if student_data else "" }}';
+                if (currentCity) {
+                    // Wait a moment for the dropdown to populate, then set the value
+                    setTimeout(() => {
+                        citySelect.value = currentCity;
+                    }, 100);
+                }
+            }
+        }
+    });
     </script>
 </div>
 {% endblock %}

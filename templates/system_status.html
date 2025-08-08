@@ -5,13 +5,113 @@
     <div class="row g-3 g-md-4">
         <div class="col-12">
             <h1 class="mb-4">System Status</h1>
-            <div class="alert alert-info">
-                <h5>System Health Overview</h5>
-                <p>Current system status and performance metrics.</p>
+            <div class="alert alert-info d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="mb-1">System Health Overview</h5>
+                    <p class="mb-0">Live system status and performance metrics. Auto-refreshes every 30 seconds.</p>
+                </div>
+                <div>
+                    <button class="btn btn-sm btn-outline-primary" onclick="refreshData()">
+                        <i class="bi bi-arrow-clockwise"></i> Refresh Now
+                    </button>
+                    <span class="badge bg-success ms-2" id="last-update">
+                        Last updated: {{ now.strftime('%H:%M:%S') }}
+                    </span>
+                </div>
             </div>
         </div>
     </div>
-    <div class="row g-3 g-md-4">
+    
+    <!-- System Performance Cards -->
+    <div class="row g-4 g-md-5">
+        <div class="col-12 col-md-3">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">CPU Usage</h5>
+                </div>
+                <div class="card-body text-center">
+                    <div class="progress mb-3" style="height: 20px;">
+                        <div class="progress-bar {% if cpu_percent != 'N/A' and cpu_percent > 80 %}bg-danger{% elif cpu_percent != 'N/A' and cpu_percent > 60 %}bg-warning{% else %}bg-success{% endif %}" 
+                             role="progressbar" 
+                             style="width: {{ cpu_percent if cpu_percent != 'N/A' else 0 }}%"
+                             aria-valuenow="{{ cpu_percent if cpu_percent != 'N/A' else 0 }}" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100">
+                            {{ cpu_percent if cpu_percent != 'N/A' else 'N/A' }}%
+                        </div>
+                    </div>
+                    <small class="text-muted">System processor utilization</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-12 col-md-3">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Memory Usage</h5>
+                </div>
+                <div class="card-body text-center">
+                    <div class="progress mb-3" style="height: 20px;">
+                        <div class="progress-bar {% if memory_percent != 'N/A' and memory_percent > 80 %}bg-danger{% elif memory_percent != 'N/A' and memory_percent > 60 %}bg-warning{% else %}bg-success{% endif %}" 
+                             role="progressbar" 
+                             style="width: {{ memory_percent if memory_percent != 'N/A' else 0 }}%"
+                             aria-valuenow="{{ memory_percent if memory_percent != 'N/A' else 0 }}" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100">
+                            {{ memory_percent if memory_percent != 'N/A' else 'N/A' }}%
+                        </div>
+                    </div>
+                    <small class="text-muted">
+                        {{ memory_used_gb if memory_used_gb != 'N/A' else 'N/A' }} GB / {{ memory_total_gb if memory_total_gb != 'N/A' else 'N/A' }} GB
+                    </small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-12 col-md-3">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Disk Usage</h5>
+                </div>
+                <div class="card-body text-center">
+                    <div class="progress mb-3" style="height: 20px;">
+                        <div class="progress-bar {% if disk_percent != 'N/A' and disk_percent > 80 %}bg-danger{% elif disk_percent != 'N/A' and disk_percent > 60 %}bg-warning{% else %}bg-success{% endif %}" 
+                             role="progressbar" 
+                             style="width: {{ disk_percent if disk_percent != 'N/A' else 0 }}%"
+                             aria-valuenow="{{ disk_percent if disk_percent != 'N/A' else 0 }}" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100">
+                            {{ disk_percent if disk_percent != 'N/A' else 'N/A' }}%
+                        </div>
+                    </div>
+                    <small class="text-muted">
+                        {{ disk_used_gb if disk_used_gb != 'N/A' else 'N/A' }} GB / {{ disk_total_gb if disk_total_gb != 'N/A' else 'N/A' }} GB
+                    </small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-12 col-md-3">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">System Uptime</h5>
+                </div>
+                <div class="card-body text-center">
+                    <h3 class="text-primary" id="uptime-display">
+                        {% if uptime != 'N/A' %}
+                            {{ uptime.days }}d {{ uptime.seconds // 3600 }}h {{ (uptime.seconds % 3600) // 60 }}m
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </h3>
+                    <small class="text-muted">System running time</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- User Statistics -->
+    <div class="row g-4 g-md-5 mt-5">
         <div class="col-12 col-md-4">
             <div class="card h-100">
                 <div class="card-header">
@@ -25,12 +125,18 @@
                         </div>
                         <div class="col-6">
                             <h6>Active Sessions</h6>
-                            <p class="h3 text-success">N/A</p>
+                            <p class="h3 text-success">{{ active_sessions }}</p>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <small class="text-muted">Based on activity in last 30 minutes</small>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+        
         <div class="col-12 col-md-4">
             <div class="card h-100">
                 <div class="card-header">
@@ -50,6 +156,7 @@
                 </div>
             </div>
         </div>
+        
         <div class="col-12 col-md-4">
             <div class="card h-100">
                 <div class="card-header">
@@ -70,36 +177,74 @@
             </div>
         </div>
     </div>
-    <div class="row g-3 g-md-4">
-        <div class="col-12">
+    
+    <!-- System Status and Network -->
+    <div class="row g-4 g-md-5 mt-5">
+        <div class="col-12 col-md-6">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="card-title mb-0">System Performance</h5>
+                    <h5 class="card-title mb-0">System Status</h5>
                 </div>
                 <div class="card-body">
                     <div class="row g-3">
-                        <div class="col-6 col-md-3">
+                        <div class="col-6">
                             <h6>Database Status</h6>
                             <span class="badge bg-success">Online</span>
                         </div>
-                        <div class="col-6 col-md-3">
+                        <div class="col-6">
                             <h6>Application Status</h6>
                             <span class="badge bg-success">Running</span>
                         </div>
-                        <div class="col-6 col-md-3">
-                            <h6>Memory Usage</h6>
-                            <span class="badge bg-info">Normal</span>
+                        <div class="col-6">
+                            <h6>Maintenance Mode</h6>
+                            <span class="badge {% if is_maintenance_mode %}bg-warning{% else %}bg-success{% endif %}">
+                                {% if is_maintenance_mode %}Active{% else %}Inactive{% endif %}
+                            </span>
                         </div>
-                        <div class="col-6 col-md-3">
-                            <h6>CPU Usage</h6>
-                            <span class="badge bg-info">Normal</span>
+                        <div class="col-6">
+                            <h6>Error Rate (24h)</h6>
+                            <span class="badge {% if recent_errors > 10 %}bg-danger{% elif recent_errors > 5 %}bg-warning{% else %}bg-success{% endif %}">
+                                {{ recent_errors }} errors
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-12 col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Network & Activity</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <h6>Network Sent</h6>
+                            <span class="text-info">{{ "%.2f"|format(network_bytes_sent / (1024**3)) if network_bytes_sent != 'N/A' else 'N/A' }} GB</span>
+                        </div>
+                        <div class="col-6">
+                            <h6>Network Received</h6>
+                            <span class="text-info">{{ "%.2f"|format(network_bytes_recv / (1024**3)) if network_bytes_recv != 'N/A' else 'N/A' }} GB</span>
+                        </div>
+                        <div class="col-6">
+                            <h6>Recent Activities (24h)</h6>
+                            <span class="text-primary">{{ recent_activities }}</span>
+                        </div>
+                        <div class="col-6">
+                            <h6>Open Bug Reports</h6>
+                            <span class="badge {% if open_bugs > 5 %}bg-danger{% elif open_bugs > 2 %}bg-warning{% else %}bg-success{% endif %}">
+                                {{ open_bugs }} / {{ total_bugs }}
+                            </span>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    <div class="row g-3 g-md-4 mt-4">
+    
+    <!-- Recent System Events -->
+    <div class="row g-4 g-md-5 mt-5">
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
@@ -118,7 +263,7 @@
                             <tbody>
                                 <tr>
                                     <td>{{ now.strftime('%Y-%m-%d %H:%M:%S') }}</td>
-                                    <td>System startup</td>
+                                    <td>System status check</td>
                                     <td><span class="badge bg-success">Success</span></td>
                                 </tr>
                                 <tr>
@@ -131,6 +276,13 @@
                                     <td>User authentication</td>
                                     <td><span class="badge bg-success">Success</span></td>
                                 </tr>
+                                {% if error %}
+                                <tr class="table-warning">
+                                    <td>{{ now.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                    <td>System monitoring error</td>
+                                    <td><span class="badge bg-warning">{{ error }}</span></td>
+                                </tr>
+                                {% endif %}
                             </tbody>
                         </table>
                     </div>
@@ -139,4 +291,65 @@
         </div>
     </div>
 </div>
+
+
+
+<script>
+// Auto-refresh functionality
+let refreshInterval;
+
+function startAutoRefresh() {
+    refreshInterval = setInterval(function() {
+        refreshData();
+    }, 30000); // Refresh every 30 seconds
+}
+
+function refreshData() {
+    fetch(window.location.href)
+        .then(response => response.text())
+        .then(html => {
+            // Create a temporary div to parse the new HTML
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = html;
+            
+            // Update the main content
+            const newContent = tempDiv.querySelector('.container-fluid');
+            const currentContent = document.querySelector('.container-fluid');
+            currentContent.innerHTML = newContent.innerHTML;
+            
+            // Update the last update timestamp
+            const now = new Date();
+            document.getElementById('last-update').textContent = 
+                'Last updated: ' + now.toLocaleTimeString();
+        })
+        .catch(error => {
+            console.error('Error refreshing data:', error);
+        });
+}
+
+function stopAutoRefresh() {
+    if (refreshInterval) {
+        clearInterval(refreshInterval);
+    }
+}
+
+// Start auto-refresh when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    startAutoRefresh();
+});
+
+// Stop auto-refresh when page is hidden
+document.addEventListener('visibilitychange', function() {
+    if (document.hidden) {
+        stopAutoRefresh();
+    } else {
+        startAutoRefresh();
+    }
+});
+
+// Manual refresh function
+function refreshData() {
+    location.reload();
+}
+</script>
 {% endblock %} 

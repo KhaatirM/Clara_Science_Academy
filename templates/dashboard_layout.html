@@ -88,7 +88,7 @@
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'student.student_settings' %}active{% endif %}" href="{{ url_for('student.student_settings') }}"><i class="bi bi-gear-fill"></i><span> Settings</span></a></li>
 
                 {# --- IT TABS --- #}
-                {% elif current_user.role == 'Tech' %}
+                {% elif current_user.role in ['Tech', 'IT Support'] %}
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'tech.tech_dashboard' %}active{% endif %}" href="{{ url_for('tech.tech_dashboard') }}"><i class="bi bi-grid-1x2-fill"></i><span> Home</span></a></li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'tech.activity_log' %}active{% endif %}" href="{{ url_for('tech.activity_log') }}"><i class="bi bi-list-check"></i><span> Activity Log</span></a></li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'tech.error_reports' %}active{% endif %}" href="{{ url_for('tech.error_reports') }}"><i class="bi bi-bug-fill"></i><span> Error/Bug Log</span></a></li>

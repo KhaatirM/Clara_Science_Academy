@@ -9,6 +9,7 @@ from datetime import datetime
 
 # Import extensions to avoid circular imports
 from extensions import db, login_manager
+from flask_migrate import Migrate
 
 # Import models here to avoid circular imports
 from models import User, Student, Grade, SchoolYear, ReportCard, Assignment, Notification, MaintenanceMode, ActivityLog
@@ -319,6 +320,7 @@ def create_app(config_class=Config):
 
     # Initialize extensions with the app
     db.init_app(app)
+    migrate = Migrate(app, db)
     login_manager.init_app(app)
 
     # User loader function for Flask-Login

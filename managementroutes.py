@@ -120,6 +120,52 @@ def add_student():
         emergency_phone = request.form.get('emergency_phone', '').strip()
         emergency_relationship = request.form.get('emergency_relationship', '').strip()
         
+        # Additional fields
+        previous_school = request.form.get('previous_school', '').strip()
+        email = request.form.get('email', '').strip()
+        medical_concerns = request.form.get('medical_concerns', '').strip()
+        notes = request.form.get('notes', '').strip()
+        
+        # Handle image upload
+        photo_filename = None
+        if 'student_image' in request.files:
+            file = request.files['student_image']
+            if file and file.filename != '':
+                if allowed_file(file.filename):
+                    # Generate unique filename
+                    import uuid
+                    file_extension = file.filename.rsplit('.', 1)[1].lower()
+                    photo_filename = f"student_{uuid.uuid4().hex}.{file_extension}"
+                    
+                    # Save file
+                    upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
+                    os.makedirs(upload_folder, exist_ok=True)
+                    file_path = os.path.join(upload_folder, photo_filename)
+                    file.save(file_path)
+                else:
+                    flash('Invalid file type. Please upload an image file (jpg, jpeg, png, gif).', 'danger')
+                    return redirect(request.url)
+        
+        # Handle transcript upload
+        transcript_filename = None
+        if 'transcript' in request.files:
+            file = request.files['transcript']
+            if file and file.filename != '':
+                if allowed_file(file.filename):
+                    # Generate unique filename
+                    import uuid
+                    file_extension = file.filename.rsplit('.', 1)[1].lower()
+                    transcript_filename = f"transcript_{uuid.uuid4().hex}.{file_extension}"
+                    
+                    # Save file
+                    upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
+                    os.makedirs(upload_folder, exist_ok=True)
+                    file_path = os.path.join(upload_folder, transcript_filename)
+                    file.save(file_path)
+                else:
+                    flash('Invalid file type for transcript. Please upload a valid document.', 'danger')
+                    return redirect(request.url)
+        
         # Convert grade level string to integer
         grade_level = None
         if grade_level_str:
@@ -156,6 +202,8 @@ def add_student():
             student.last_name = last_name
             student.dob = dob
             student.grade_level = grade_level
+            student.photo_filename = photo_filename
+            student.transcript_filename = transcript_filename
             
             # Address fields
             student.street = street
@@ -163,6 +211,12 @@ def add_student():
             student.city = city
             student.state = state
             student.zip_code = zip_code
+            
+            # Additional fields
+            student.previous_school = previous_school
+            student.email = email
+            student.medical_concerns = medical_concerns
+            student.notes = notes
             
             # Parent 1 information
             student.parent1_first_name = parent1_first_name
@@ -224,8 +278,15 @@ def add_teacher_staff():
         email = request.form.get('email', '').strip()
         role = request.form.get('assigned_role', 'Teacher').strip()
         hire_date = request.form.get('hire_date', '').strip()
-        department = request.form.get('department', '').strip()
+        # Handle multiple department selections
+        departments = request.form.getlist('department')
+        department = ', '.join(departments) if departments else ''
         position = request.form.get('position', '').strip()
+        
+        # Auto-assign role and department for Tech users
+        if current_user.role in ['Tech', 'IT Support']:
+            role = 'IT Support'
+            department = 'Administration'
         
         # Address fields
         street = request.form.get('street_address', '').strip()
@@ -1522,7 +1583,13 @@ def edit_teacher(teacher_id):
         
         # Role and department
         teacher.position = request.form.get('position', teacher.position)
-        teacher.department = request.form.get('department', teacher.department)
+        # Handle multiple department selections
+        departments = request.form.getlist('department')
+        teacher.department = ', '.join(departments) if departments else teacher.department
+        
+        # Auto-assign role and department for Tech users
+        if current_user.role in ['Tech', 'IT Support']:
+            teacher.department = 'Administration'
         
         # Address information
         teacher.street = request.form.get('street', teacher.street)
@@ -1540,7 +1607,11 @@ def edit_teacher(teacher_id):
         
         # Update user role if user account exists
         if teacher.user:
-            teacher.user.role = request.form.get('role', teacher.user.role)
+            # Auto-assign role for Tech users
+            if current_user.role in ['Tech', 'IT Support']:
+                teacher.user.role = 'IT Support'
+            else:
+                teacher.user.role = request.form.get('role', teacher.user.role)
         
         db.session.commit()
         return jsonify({'success': True, 'message': 'Teacher/Staff updated successfully.'})

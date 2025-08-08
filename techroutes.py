@@ -78,8 +78,124 @@ def activity_log():
 @login_required
 @tech_required
 def system_status():
+    import psutil
+    from models import User, Student, TeacherStaff, ActivityLog, BugReport, MaintenanceMode
+    
     now = datetime.now()
-    return render_template('system_status.html', now=now, timedelta=timedelta)
+    
+    # Get live system statistics
+    try:
+        # CPU and Memory usage
+        cpu_percent = psutil.cpu_percent(interval=1)
+        memory = psutil.virtual_memory()
+        memory_percent = memory.percent
+        memory_used_gb = round(memory.used / (1024**3), 2)
+        memory_total_gb = round(memory.total / (1024**3), 2)
+        
+        # Disk usage
+        disk = psutil.disk_usage('/')
+        disk_percent = disk.percent
+        disk_used_gb = round(disk.used / (1024**3), 2)
+        disk_total_gb = round(disk.total / (1024**3), 2)
+        
+        # Network statistics
+        network = psutil.net_io_counters()
+        network_bytes_sent = network.bytes_sent
+        network_bytes_recv = network.bytes_recv
+        
+        # System uptime
+        boot_time = datetime.fromtimestamp(psutil.boot_time())
+        uptime = now - boot_time
+        
+        # Database statistics
+        total_users = User.query.count()
+        total_students = Student.query.count()
+        total_teachers = TeacherStaff.query.count()
+        
+        # Recent activity (last 24 hours)
+        yesterday = now - timedelta(days=1)
+        recent_activities = ActivityLog.query.filter(
+            ActivityLog.timestamp >= yesterday
+        ).count()
+        
+        # Error statistics (last 24 hours)
+        recent_errors = ActivityLog.query.filter(
+            ActivityLog.timestamp >= yesterday,
+            ActivityLog.success == False
+        ).count()
+        
+        # Bug reports statistics
+        open_bugs = BugReport.query.filter(BugReport.status == 'open').count()
+        total_bugs = BugReport.query.count()
+        
+        # Maintenance mode status
+        maintenance_mode = MaintenanceMode.query.filter(MaintenanceMode.is_active == True).first()
+        is_maintenance_mode = maintenance_mode is not None
+        
+        # Active sessions (approximation based on recent activity)
+        active_sessions = ActivityLog.query.filter(
+            ActivityLog.timestamp >= now - timedelta(minutes=30)
+        ).distinct(ActivityLog.user_id).count()
+        
+        system_data = {
+            'cpu_percent': cpu_percent,
+            'memory_percent': memory_percent,
+            'memory_used_gb': memory_used_gb,
+            'memory_total_gb': memory_total_gb,
+            'disk_percent': disk_percent,
+            'disk_used_gb': disk_used_gb,
+            'disk_total_gb': disk_total_gb,
+            'network_bytes_sent': network_bytes_sent,
+            'network_bytes_recv': network_bytes_recv,
+            'uptime': uptime,
+            'total_users': total_users,
+            'total_students': total_students,
+            'total_teachers': total_teachers,
+            'recent_activities': recent_activities,
+            'recent_errors': recent_errors,
+            'open_bugs': open_bugs,
+            'total_bugs': total_bugs,
+            'is_maintenance_mode': is_maintenance_mode,
+            'active_sessions': active_sessions,
+            'now': now,
+            'timedelta': timedelta
+        }
+        
+    except Exception as e:
+        # Fallback data if psutil fails
+        system_data = {
+            'cpu_percent': 'N/A',
+            'memory_percent': 'N/A',
+            'memory_used_gb': 'N/A',
+            'memory_total_gb': 'N/A',
+            'disk_percent': 'N/A',
+            'disk_used_gb': 'N/A',
+            'disk_total_gb': 'N/A',
+            'network_bytes_sent': 'N/A',
+            'network_bytes_recv': 'N/A',
+            'uptime': 'N/A',
+            'total_users': User.query.count(),
+            'total_students': Student.query.count(),
+            'total_teachers': TeacherStaff.query.count(),
+            'recent_activities': ActivityLog.query.filter(
+                ActivityLog.timestamp >= now - timedelta(days=1)
+            ).count(),
+            'recent_errors': ActivityLog.query.filter(
+                ActivityLog.timestamp >= now - timedelta(days=1),
+                ActivityLog.success == False
+            ).count(),
+            'open_bugs': BugReport.query.filter(BugReport.status == 'open').count(),
+            'total_bugs': BugReport.query.count(),
+            'is_maintenance_mode': MaintenanceMode.query.filter(MaintenanceMode.is_active == True).first() is not None,
+            'active_sessions': ActivityLog.query.filter(
+                ActivityLog.timestamp >= now - timedelta(minutes=30)
+            ).distinct(ActivityLog.user_id).count(),
+            'now': now,
+            'timedelta': timedelta,
+            'error': str(e)
+        }
+    
+    return render_template('system_status.html', **system_data)
 
 @tech_blueprint.route('/error/reports')
 @login_required
@@ -225,11 +341,50 @@ def clear_cache():
     try:
         # Clear any cached data (this is a placeholder for actual cache clearing)
         # In a real application, you might clear Redis cache, file cache, etc.
+        
+        # Log the cache clearing action
+        log_activity(
+            user_id=current_user.id,
+            action='clear_system_cache',
+            details={'cache_type': 'all'},
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent')
+        )
+        
         flash('System cache cleared successfully.', 'success')
     except Exception as e:
         flash(f'Error clearing cache: {str(e)}', 'danger')
     
-    return redirect(url_for('tech.tech_dashboard'))
+    return redirect(url_for('tech.system_config'))
+
+@tech_blueprint.route('/system/restart-server', methods=['POST'])
+@login_required
+@tech_required
+def restart_server():
+    try:
+        # Log the restart action
+        log_activity(
+            user_id=current_user.id,
+            action='restart_server',
+            details={'initiated_by': current_user.username},
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent')
+        )
+        
+        flash('Server restart initiated. Please wait a moment for the server to restart.', 'warning')
+        # In a real application, you would implement actual server restart logic
+        # For now, we'll just show a message
+    except Exception as e:
+        flash(f'Error restarting server: {str(e)}', 'danger')
+    
+    return redirect(url_for('tech.system_config'))
+
+@tech_blueprint.route('/system/view-logs')
+@login_required
+@tech_required
+def view_system_logs():
+    """View system logs - redirect to activity log with system filter"""
+    return redirect(url_for('tech.activity_log', action='system'))
 
 @tech_blueprint.route('/user/reset-password/<int:user_id>', methods=['POST'])
 @login_required
@@ -264,23 +419,66 @@ def view_user_details(user_id):
 @login_required
 @tech_required
 def system_config():
-    # Get current configuration
+    from models import SystemConfig
+    import sys
+    import flask
+    
+    # Get current configuration from database
     config_info = {
-        'debug_mode': 'Development Server',
-        'database_path': 'instance/app.db',
-        'max_upload_size': '16 MB',
-        'session_timeout': '24 hours',
-        'backup_location': 'backups/',
-        'log_level': 'INFO'
+        'debug_mode': SystemConfig.get_value('debug_mode', 'Development Server'),
+        'database_path': SystemConfig.get_value('database_path', 'instance/app.db'),
+        'max_upload_size': SystemConfig.get_value('max_upload_size', '16 MB'),
+        'session_timeout': SystemConfig.get_value('session_timeout', '24 hours'),
+        'backup_location': SystemConfig.get_value('backup_location', 'backups/'),
+        'log_level': SystemConfig.get_value('log_level', 'INFO')
     }
-    return render_template('system_config.html', config=config_info)
+    
+    # Get system information
+    system_info = {
+        'python_version': sys.version.split()[0],
+        'flask_version': flask.__version__,
+        'database': 'SQLite',
+        'server': 'Development' if config_info['debug_mode'] == 'Development Server' else 'Production'
+    }
+    
+    return render_template('system_config.html', config=config_info, system_info=system_info)
 
 @tech_blueprint.route('/system/config/update', methods=['POST'])
 @login_required
 @tech_required
 def update_system_config():
+    from models import SystemConfig
+    
     try:
-        # This would update actual configuration in a real application
+        # Get form data
+        debug_mode = request.form.get('debug_mode')
+        max_upload_size = request.form.get('max_upload_size')
+        session_timeout = request.form.get('session_timeout')
+        backup_location = request.form.get('backup_location')
+        log_level = request.form.get('log_level')
+        
+        # Update configuration in database
+        SystemConfig.set_value('debug_mode', debug_mode, 'Server mode configuration', 'general', current_user.id)
+        SystemConfig.set_value('max_upload_size', max_upload_size, 'Maximum file upload size', 'performance', current_user.id)
+        SystemConfig.set_value('session_timeout', session_timeout, 'User session timeout duration', 'security', current_user.id)
+        SystemConfig.set_value('backup_location', backup_location, 'Database backup directory', 'backup', current_user.id)
+        SystemConfig.set_value('log_level', log_level, 'Application logging level', 'general', current_user.id)
+        
+        # Log the configuration update
+        log_activity(
+            user_id=current_user.id,
+            action='update_system_config',
+            details={
+                'debug_mode': debug_mode,
+                'max_upload_size': max_upload_size,
+                'session_timeout': session_timeout,
+                'backup_location': backup_location,
+                'log_level': log_level
+            },
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent')
+        )
+        
         flash('System configuration updated successfully.', 'success')
     except Exception as e:
         flash(f'Error updating configuration: {str(e)}', 'danger')

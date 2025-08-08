@@ -84,19 +84,19 @@
                 <div class="card-body">
                     <div class="mb-3">
                         <strong>Python Version:</strong>
-                        <span class="badge bg-info">3.13</span>
+                        <span class="badge bg-info">{{ system_info.python_version }}</span>
                     </div>
                     <div class="mb-3">
                         <strong>Flask Version:</strong>
-                        <span class="badge bg-info">3.0</span>
+                        <span class="badge bg-info">{{ system_info.flask_version }}</span>
                     </div>
                     <div class="mb-3">
                         <strong>Database:</strong>
-                        <span class="badge bg-success">SQLite</span>
+                        <span class="badge bg-success">{{ system_info.database }}</span>
                     </div>
                     <div class="mb-3">
                         <strong>Server:</strong>
-                        <span class="badge bg-warning">Development</span>
+                        <span class="badge {% if system_info.server == 'Development' %}bg-warning{% else %}bg-success{% endif %}">{{ system_info.server }}</span>
                     </div>
                 </div>
             </div>
@@ -106,15 +106,19 @@
                 </div>
                 <div class="card-body">
                     <div class="d-grid gap-2">
-                        <button class="btn btn-outline-primary" onclick="alert('Restart server - functionality to be implemented')">
-                            <i class="bi bi-arrow-clockwise"></i> Restart Server
-                        </button>
-                        <button class="btn btn-outline-info" onclick="alert('View system logs - functionality to be implemented')">
+                        <form method="POST" action="{{ url_for('tech.restart_server') }}" style="display: inline;">
+                            <button type="submit" class="btn btn-outline-primary w-100" onclick="return confirm('Are you sure you want to restart the server?')">
+                                <i class="bi bi-arrow-clockwise"></i> Restart Server
+                            </button>
+                        </form>
+                        <a href="{{ url_for('tech.view_system_logs') }}" class="btn btn-outline-info">
                             <i class="bi bi-file-text"></i> View Logs
-                        </button>
-                        <button class="btn btn-outline-warning" onclick="alert('Clear all caches - functionality to be implemented')">
-                            <i class="bi bi-trash"></i> Clear All Caches
-                        </button>
+                        </a>
+                        <form method="POST" action="{{ url_for('tech.clear_cache') }}" style="display: inline;">
+                            <button type="submit" class="btn btn-outline-warning w-100" onclick="return confirm('Are you sure you want to clear all caches?')">
+                                <i class="bi bi-trash"></i> Clear All Caches
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>

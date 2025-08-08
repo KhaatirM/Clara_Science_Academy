@@ -132,7 +132,7 @@ def dashboard():
         return redirect(url_for('teacher.teacher_dashboard'))
     elif current_user.role in ['School Administrator', 'Director']:
         return redirect(url_for('management.management_dashboard'))
-    elif current_user.role == 'Tech':
+    elif current_user.role in ['Tech', 'IT Support']:
         return redirect(url_for('tech.tech_dashboard'))
     else:
         # Fallback for unknown roles

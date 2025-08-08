@@ -182,7 +182,7 @@
                 <label for="assigned_role" class="form-label">Assigned Role <span class="text-danger">*</span></label>
                 <select class="form-select" id="assigned_role" name="assigned_role" required>
                     <option value="">Choose role...</option>
-                    {% set roles = ["Director", "School Administrator", "Math Teacher", "Physics Teacher", "English Language Arts Teacher", "History Teacher", "Science Teacher", "Substitute Teacher", "School Counselor", "Librarian", "IT Support", "Other Staff"] %}
+                    {% set roles = ["Director", "School Administrator", "Math Teacher", "Physics Teacher", "English Language Arts Teacher", "History Teacher", "Science Teacher", "Substitute Teacher", "School Counselor", "IT Support", "Other Staff"] %}
                     {% for role_option in roles %}
                     <option value="{{ role_option }}" {% if staff_data and staff_data.assigned_role == role_option %}selected{% endif %}>{{ role_option }}</option>
                     {% endfor %}
@@ -196,16 +196,23 @@
                 <div class="invalid-feedback">Hire date is required for staff ID generation.</div>
             </div>
             
-            <div class="col-12 col-md-6">
-                <label for="department" class="form-label">Department <span class="text-danger">*</span></label>
-                <select class="form-select" id="department" name="department" required>
-                    <option value="">Choose department...</option>
-                    {% set departments = ["Mathematics", "Science", "English", "History", "Physical Education", "Art", "Music", "Technology", "Administration", "Counseling", "Library", "Special Education", "Foreign Language", "Computer Science", "Business", "Health", "Social Studies", "Teacher", "Staff", "Director", "School Administrator"] %}
+            <div class="col-12">
+                <label class="form-label d-block">Department(s) <span class="text-danger">*</span></label>
+                <div class="row g-3 px-2">
+                    {% set departments = ["Mathematics", "Science", "English", "History & Social Studies", "Physical Education & Health", "Music & Arts", "Computer Science & Technology", "Administration", "Counseling", "Special Education", "Foreign Language", "Business"] %}
                     {% for dept in departments %}
-                    <option value="{{ dept }}" {% if staff_data and staff_data.department == dept %}selected{% endif %}>{{ dept }}</option>
+                    <div class="col-6 col-sm-4 col-md-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="department" value="{{ dept }}"
+                                   id="dept_{{ dept|replace(' ', '_')|replace('&', 'and')|replace('(', '')|replace(')', '')|replace('/', '_') }}"
+                                   {% if staff_data and staff_data.department and dept in staff_data.department.split(', ') %}checked{% endif %}>
+                            <label class="form-check-label" for="dept_{{ dept|replace(' ', '_')|replace('&', 'and')|replace('(', '')|replace(')', '')|replace('/', '_') }}">{{ dept }}</label>
+                        </div>
+                    </div>
                     {% endfor %}
-                </select>
-                <div class="invalid-feedback">Please select a department.</div>
+                </div>
+                <div class="form-text">Select all applicable departments</div>
+                <div class="invalid-feedback">Please select at least one department.</div>
             </div>
             <div class="col-12 col-md-6">
                 <label for="position" class="form-label">Position</label>
@@ -284,6 +291,48 @@
 
     <script>
     (function () { 'use strict'; var forms = document.querySelectorAll('.needs-validation'); Array.prototype.slice.call(forms).forEach(function (form) { form.addEventListener('submit', function (event) { if (!form.checkValidity()) { event.preventDefault(); event.stopPropagation(); } form.classList.add('was-validated'); }, false); }); })();
+    
+    // Auto-assign role and department for Tech users
+    document.addEventListener('DOMContentLoaded', function() {
+        // Check if current user is Tech role
+                       const isTechUser = {{ 'true' if current_user.role in ['Tech', 'IT Support'] else 'false' }};
+        
+        if (isTechUser) {
+            // Auto-select IT Support role
+            const roleSelect = document.getElementById('assigned_role');
+            if (roleSelect) {
+                roleSelect.value = 'IT Support';
+            }
+            
+            // Auto-check Administration department
+            const adminDeptCheckbox = document.getElementById('dept_Administration');
+            if (adminDeptCheckbox) {
+                adminDeptCheckbox.checked = true;
+            }
+            
+            // Disable role selection for Tech users
+            if (roleSelect) {
+                roleSelect.disabled = true;
+                roleSelect.style.backgroundColor = '#f8f9fa';
+            }
+            
+            // Disable department checkboxes for Tech users
+            const deptCheckboxes = document.querySelectorAll('input[name="department"]');
+            deptCheckboxes.forEach(checkbox => {
+                checkbox.disabled = true;
+                checkbox.style.backgroundColor = '#f8f9fa';
+            });
+            
+            // Show info message
+            const roleLabel = document.querySelector('label[for="assigned_role"]');
+            if (roleLabel) {
+                const infoDiv = document.createElement('div');
+                infoDiv.className = 'alert alert-info mt-2';
+                infoDiv.innerHTML = '<i class="bi bi-info-circle"></i> Tech users are automatically assigned IT Support role and Administration department.';
+                roleLabel.parentNode.appendChild(infoDiv);
+            }
+        }
+    });
     </script>
 </div>
 {% endblock %}

@@ -21,7 +21,7 @@
                 {% elif current_user.role == 'Student' %}
                     <h5>Welcome, Student!</h5>
                     <p>View your classes, assignments, grades, and academic progress.</p>
-                {% elif current_user.role == 'Tech' %}
+                {% elif current_user.role in ['Tech', 'IT Support'] %}
                     <h5>Welcome, Tech Support!</h5>
                     <p>Manage system maintenance, user accounts, and technical support.</p>
                 {% endif %}
@@ -122,7 +122,7 @@
                             </div>
                         </div>
                     </div>
-                {% elif current_user.role == 'Tech' %}
+                {% elif current_user.role in ['Tech', 'IT Support'] %}
                     <div class="col-12 col-sm-6 col-lg-4">
                         <div class="card text-white bg-danger h-100">
                             <div class="card-body text-center">
@@ -177,7 +177,7 @@
                                     <a href="{{ url_for('student.student_assignments') }}" class="btn btn-outline-success">View Assignments</a>
                                     <a href="{{ url_for('student.student_dashboard') }}" class="btn btn-outline-info">View My Grades</a>
                                     <a href="{{ url_for('student.student_dashboard') }}" class="btn btn-outline-warning">Submit Work</a>
-                                {% elif current_user.role == 'Tech' %}
+                                {% elif current_user.role in ['Tech', 'IT Support'] %}
                                     <a href="{{ url_for('tech.error_reports') }}" class="btn btn-outline-danger">View Error Reports</a>
                                     <a href="{{ url_for('tech.system_status') }}" class="btn btn-outline-warning">System Status</a>
                                     <a href="{{ url_for('tech.user_management') }}" class="btn btn-outline-info">User Management</a>
@@ -239,7 +239,7 @@
                                 <p><strong>Assignments Due:</strong> {{ student_data.due_assignments if student_data else 0 }}</p>
                                 <p><strong>Completed Assignments:</strong> {{ student_data.completed_assignments if student_data else 0 }}</p>
                                 <p><strong>Attendance Rate:</strong> {{ student_data.attendance_rate if student_data else 'N/A' }}%</p>
-                            {% elif current_user.role == 'Tech' %}
+                            {% elif current_user.role in ['Tech', 'IT Support'] %}
                                 <p><strong>System Status:</strong> <span class="badge bg-success">Online</span></p>
                                 <p><strong>Last Backup:</strong> {{ tech_data.last_backup if tech_data else 'N/A' }}</p>
                                 <p><strong>Active Users:</strong> {{ tech_data.active_users if tech_data else 0 }}</p>
@@ -1465,10 +1465,14 @@
                                         </div>
                                     </div>
                                     <div class="col-md-6">
-                                        <div class="d-flex align-items-center">
-                                            <i class="bi bi-building me-2 text-muted"></i>
-                                            <strong>Department:</strong>
-                                            <span class="ms-2">${safeData.department}</span>
+                                        <div class="d-flex align-items-start">
+                                            <i class="bi bi-building me-2 text-muted mt-1"></i>
+                                            <div>
+                                                <strong>Department(s):</strong>
+                                                <div class="ms-2" id="department-badges">
+                                                    ${safeData.department || 'N/A'}
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
@@ -1570,6 +1574,18 @@
                 document.getElementById('profileViewModalBody').innerHTML = html;
                 var modal = new bootstrap.Modal(document.getElementById('profileViewModal'));
                 modal.show();
+                
+                // Process department badges after modal is shown
+                setTimeout(() => {
+                    const departmentBadges = document.getElementById('department-badges');
+                    if (departmentBadges && safeData.department && safeData.department !== 'N/A') {
+                        const departments = safeData.department.split(', ');
+                        const badgeHtml = departments.map(dept => 
+                            `<span class="badge bg-primary me-1 mb-1">${dept.trim()}</span>`
+                        ).join('');
+                        departmentBadges.innerHTML = badgeHtml;
+                    }
+                }, 100);
             })
             .catch(err => {
                 console.error('Error fetching teacher:', err);

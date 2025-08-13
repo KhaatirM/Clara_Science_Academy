@@ -2,7 +2,7 @@ import os
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, abort, jsonify
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
-from models import db, Student, Class, Assignment, Submission, Grade, SchoolYear, Announcement, Notification, StudentGoal, Message, MessageGroup, MessageGroupMember, TeacherStaff, User
+from models import db, Student, Class, Assignment, Submission, Grade, SchoolYear, Announcement, Notification, StudentGoal, Message, MessageGroup, MessageGroupMember, TeacherStaff, User, Enrollment, ClassSchedule, Attendance, AcademicPeriod
 from decorators import student_required
 import json
 from datetime import datetime, timedelta
@@ -41,22 +41,78 @@ def calculate_gpa(grades):
 
 def get_grade_trends(student_id, class_id, limit=10):
     """Get grade trends for a specific class."""
-    submissions = Submission.query.filter_by(
-        student_id=student_id
-    ).join(Assignment).filter(
+    # Get grades directly from the Grade model
+    grades = Grade.query.join(Assignment).filter(
+        Grade.student_id == student_id,
         Assignment.class_id == class_id
-    ).order_by(Submission.submitted_at.desc()).limit(limit).all()
+    ).order_by(Grade.graded_at.desc()).limit(limit).all()
     
     trends = []
-    for submission in reversed(submissions):  # Reverse to show chronological order
-        if submission.grade:
+    for grade in reversed(grades):  # Reverse to show chronological order
+        grade_data = json.loads(grade.grade_data)
+        if 'score' in grade_data:
             trends.append({
-                'assignment': submission.assignment.title,
-                'grade': submission.grade,
-                'date': submission.submitted_at.strftime('%Y-%m-%d')
+                'assignment': grade.assignment.title,
+                'grade': grade_data['score'],
+                'date': grade.graded_at.strftime('%Y-%m-%d')
             })
     
     return trends
+
+def get_letter_grade(percentage):
+    """Convert percentage to letter grade."""
+    if percentage >= 93:
+        return 'A'
+    elif percentage >= 90:
+        return 'A-'
+    elif percentage >= 87:
+        return 'B+'
+    elif percentage >= 83:
+        return 'B'
+    elif percentage >= 80:
+        return 'B-'
+    elif percentage >= 77:
+        return 'C+'
+    elif percentage >= 73:
+        return 'C'
+    elif percentage >= 70:
+        return 'C-'
+    elif percentage >= 67:
+        return 'D+'
+    elif percentage >= 63:
+        return 'D'
+    elif percentage >= 60:
+        return 'D-'
+    else:
+        return 'F'
+
+def create_template_context(student, section, active_tab, **kwargs):
+    """Helper function to create common template context."""
+    base_context = {
+        'student': student,
+        'classes': kwargs.get('classes', []),
+        'grades': kwargs.get('grades', {}),
+        'attendance_summary': kwargs.get('attendance_summary', {}),
+        'grades_by_class': kwargs.get('grades_by_class', {}),
+        'gpa': kwargs.get('gpa', 0.0),
+        'grade_trends': kwargs.get('grade_trends', {}),
+        'today_schedule': kwargs.get('today_schedule', []),
+        'goals': kwargs.get('goals', {}),
+        'announcements': kwargs.get('announcements', []),
+        'notifications': kwargs.get('notifications', []),
+        'past_due_assignments': kwargs.get('past_due_assignments', []),
+        'upcoming_assignments': kwargs.get('upcoming_assignments', []),
+        'recent_grades': kwargs.get('recent_grades', []),
+        'section': section,
+        'active_tab': active_tab,
+        'get_letter_grade': get_letter_grade,
+        'calculate_gpa': calculate_gpa
+    }
+    
+    # Add any additional kwargs to the context
+    base_context.update(kwargs)
+    
+    return base_context
 
 @student_blueprint.route('/dashboard')
 @login_required
@@ -69,24 +125,17 @@ def student_dashboard():
     if not current_school_year:
         flash("No active school year found.", "warning")
         return render_template('role_student_dashboard.html', 
-                             student=student, 
-                             classes=[], 
-                             grades={}, 
-                             attendance_summary={},
-                             notifications=[],
-                             gpa=0.0,
-                             grade_trends={},
-                             today_schedule=[],
-                             goals={},
-                             announcements=[],
-                             past_due_assignments=[],
-                             upcoming_assignments=[],
-                             recent_grades=[],
-                             section='home',
-                             active_tab='home')
+                             **create_template_context(student, 'home', 'home'))
 
-    # Get student's classes - simplified for now since Enrollment model doesn't exist
-    classes = Class.query.all()  # Simplified - should filter by enrollment
+    # Get student's enrolled classes using the Enrollment model
+    enrollments = Enrollment.query.filter_by(
+        student_id=student.id,
+        is_active=True
+    ).join(Class).filter(
+        Class.school_year_id == current_school_year.id
+    ).all()
+    
+    classes = [enrollment.class_info for enrollment in enrollments]
 
     # Get grades for each class and calculate GPA
     grades = {}
@@ -124,26 +173,42 @@ def student_dashboard():
     goals = StudentGoal.query.filter_by(student_id=student.id).all()
     goals_dict = {goal.class_id: goal for goal in goals}
     
-    # Get today's schedule (simplified - would come from actual schedule data)
+    # Get today's schedule using real ClassSchedule data
     today = datetime.now()
+    today_weekday = today.weekday()  # 0=Monday, 1=Tuesday, etc.
     today_schedule = []
-    for c in classes:
-        # Simplified schedule - in real app, this would come from a Schedule model
-        today_schedule.append({
-            'class': c,
-            'time': '9:00 AM',  # Placeholder
-            'room': 'Room 101',  # Placeholder
-            'teacher': c.teacher.first_name + ' ' + c.teacher.last_name if c.teacher else 'TBD'
-        })
     
-    # Sort by time (placeholder sorting)
-    today_schedule.sort(key=lambda x: x['time'])
+    for c in classes:
+        # Get schedule for this class on today's weekday
+        schedule = ClassSchedule.query.filter_by(
+            class_id=c.id,
+            day_of_week=today_weekday,
+            is_active=True
+        ).first()
+        
+        if schedule:
+            today_schedule.append({
+                'class': c,
+                'time': f"{schedule.start_time.strftime('%I:%M %p')} - {schedule.end_time.strftime('%I:%M %p')}",
+                'room': schedule.room or 'TBD',
+                'teacher': c.teacher.first_name + ' ' + c.teacher.last_name if c.teacher else 'TBD'
+            })
+    
+    # Sort by start time
+    today_schedule.sort(key=lambda x: x['class'].id)  # Sort by class ID for now
 
-    # Get attendance summary - simplified since Attendance model doesn't exist
+    # Get real attendance summary from Attendance model
+    attendance_records = Attendance.query.filter_by(
+        student_id=student.id
+    ).filter(
+        Attendance.date >= current_school_year.start_date,
+        Attendance.date <= current_school_year.end_date
+    ).all()
+    
     attendance_summary = {
-        'Present': 0,  # Placeholder - would be calculated from Attendance model
-        'Tardy': 0,
-        'Absent': 0,
+        'Present': len([r for r in attendance_records if r.status == 'Present']),
+        'Tardy': len([r for r in attendance_records if r.status == 'Tardy']),
+        'Absent': len([r for r in attendance_records if r.status == 'Absent']),
     }
 
     # Get notifications for the current user
@@ -151,8 +216,13 @@ def student_dashboard():
         user_id=current_user.id
     ).order_by(Notification.timestamp.desc()).limit(10).all()
 
-    # Get assignments for notifications (simplified)
-    assignments = Assignment.query.all()
+    # Get assignments for the student's enrolled classes only
+    class_ids = [c.id for c in classes]
+    assignments = Assignment.query.filter(
+        Assignment.class_id.in_(class_ids),
+        Assignment.school_year_id == current_school_year.id
+    ).all()
+    
     past_due_assignments = []
     upcoming_assignments = []
     recent_grades = []
@@ -165,36 +235,41 @@ def student_dashboard():
         elif assignment.due_date and assignment.due_date <= today + timedelta(days=7):
             upcoming_assignments.append(assignment)
     
-    # Get recent grades (simplified)
-    submissions = Submission.query.filter_by(student_id=student.id).limit(5).all()
-    for submission in submissions:
-        if submission.grade:
-            recent_grades.append(submission)
+    # Get recent grades for enrolled classes only
+    recent_grades_raw = Grade.query.filter_by(student_id=student.id).join(Assignment).filter(
+        Assignment.class_id.in_(class_ids)
+    ).order_by(Grade.graded_at.desc()).limit(5).all()
+    
+    # Format recent grades for template
+    recent_grades = []
+    for grade in recent_grades_raw:
+        grade_data = json.loads(grade.grade_data)
+        recent_grades.append({
+            'assignment': grade.assignment,
+            'class_name': grade.assignment.class_info.name,
+            'score': grade_data.get('score', 'N/A')
+        })
     
     # Announcements: all students, all, or for any of their classes
-    class_ids = [c.id for c in classes]
     announcements = Announcement.query.filter(
         (Announcement.target_group.in_(['all_students', 'all'])) |
         ((Announcement.target_group == 'class') & (Announcement.class_id.in_(class_ids)))
     ).order_by(Announcement.timestamp.desc()).all()
 
     return render_template('role_student_dashboard.html', 
-                         student=student, 
-                         classes=classes, 
-                         grades=grades, 
-                         attendance_summary=attendance_summary, 
-                         announcements=announcements,
-                         notifications=notifications,
-                         school_year=current_school_year,
-                         past_due_assignments=past_due_assignments,
-                         upcoming_assignments=upcoming_assignments,
-                         recent_grades=recent_grades,
-                         gpa=gpa,
-                         grade_trends=grade_trends,
-                         today_schedule=today_schedule,
-                         goals=goals_dict,
-                         section='home',
-                         active_tab='home')
+                         **create_template_context(student, 'home', 'home',
+                             grades=grades, 
+                             attendance_summary=attendance_summary, 
+                             announcements=announcements,
+                             notifications=notifications,
+                             school_year=current_school_year,
+                             past_due_assignments=past_due_assignments,
+                             upcoming_assignments=upcoming_assignments,
+                             recent_grades=recent_grades,
+                             gpa=gpa,
+                             grade_trends=grade_trends,
+                             today_schedule=today_schedule,
+                             goals=goals_dict))
 
 @student_blueprint.route('/assignments')
 @login_required
@@ -218,23 +293,9 @@ def student_assignments():
         assignments_with_status.append((assignment, submission))
     
     return render_template('role_student_dashboard.html', 
-                         student=student, 
-                         classes=[], 
-                         grades={}, 
-                         attendance_summary={},
-                         assignments_with_status=assignments_with_status,
-                         today=datetime.now(),
-                         gpa=0.0,
-                         grade_trends={},
-                         today_schedule=[],
-                         goals={},
-                         announcements=[],
-                         notifications=[],
-                         past_due_assignments=[],
-                         upcoming_assignments=[],
-                         recent_grades=[],
-                         section='assignments',
-                         active_tab='assignments')
+                         **create_template_context(student, 'assignments', 'assignments',
+                             assignments_with_status=assignments_with_status,
+                             today=datetime.now()))
 
 @student_blueprint.route('/classes')
 @login_required
@@ -243,22 +304,8 @@ def student_classes():
     student = Student.query.get_or_404(current_user.student_id)
     classes = Class.query.all()  # Simplified - should filter by enrollment
     return render_template('role_student_dashboard.html', 
-                         student=student, 
-                         classes=[], 
-                         grades={}, 
-                         attendance_summary={},
-                         my_classes=classes,  # Template expects 'my_classes'
-                         gpa=0.0,
-                         grade_trends={},
-                         today_schedule=[],
-                         goals={},
-                         announcements=[],
-                         notifications=[],
-                         past_due_assignments=[],
-                         upcoming_assignments=[],
-                         recent_grades=[],
-                         section='classes',
-                         active_tab='classes')
+                         **create_template_context(student, 'classes', 'classes',
+                             my_classes=classes))  # Template expects 'my_classes'
 
 @student_blueprint.route('/grades')
 @login_required
@@ -266,45 +313,175 @@ def student_classes():
 def student_grades():
     student = Student.query.get_or_404(current_user.student_id)
     
-    # Create sample grades data for demonstration
-    grades_by_class = {
-        'Mathematics': {
-            'final_grade': {'letter': 'A', 'percentage': 92},
-            'grades': {
-                'Q1': {'overall_letter': 'A', 'overall_percentage': 90, 'grade_details': {'Quiz 1': '95%', 'Homework 1': '85%'}},
-                'Q2': {'overall_letter': 'A', 'overall_percentage': 94, 'grade_details': {'Quiz 2': '98%', 'Homework 2': '90%'}},
-                'Q3': {'overall_letter': 'A', 'overall_percentage': 91, 'grade_details': {'Quiz 3': '92%', 'Homework 3': '90%'}},
-                'Q4': {'overall_letter': 'A', 'overall_percentage': 93, 'grade_details': {'Quiz 4': '95%', 'Homework 4': '91%'}}
+    # Get active school year
+    school_year = SchoolYear.query.filter_by(is_active=True).first()
+    if not school_year:
+        flash('No active school year found.', 'error')
+        return redirect(url_for('student.student_dashboard'))
+    
+    # Get academic periods for this school year
+    academic_periods = AcademicPeriod.query.filter_by(
+        school_year_id=school_year.id,
+        is_active=True
+    ).order_by(AcademicPeriod.start_date).all()
+    
+    # Organize periods by type
+    quarters = [p for p in academic_periods if p.period_type == 'quarter']
+    semesters = [p for p in academic_periods if p.period_type == 'semester']
+    
+    # Get student's enrolled classes for current school year
+    enrollments = Enrollment.query.filter_by(
+        student_id=student.id,
+        is_active=True
+    ).join(Class).filter(
+        Class.school_year_id == school_year.id
+    ).all()
+    
+    if not enrollments:
+        flash('No classes found for current school year.', 'info')
+        return render_template('role_student_dashboard.html', 
+                             **create_template_context(student, 'grades', 'grades'))
+    
+    # Calculate grades for each class organized by quarters and semesters
+    grades_by_class = {}
+    all_class_averages = []
+    
+    for enrollment in enrollments:
+        class_info = enrollment.class_info
+        
+        # Get all assignments for this class
+        assignments = Assignment.query.filter(
+            Assignment.class_id == class_info.id,
+            Assignment.school_year_id == school_year.id
+        ).all()
+        
+        if not assignments:
+            continue
+        
+        # Get all grades for this student in this class
+        grades = Grade.query.join(Assignment).filter(
+            Grade.student_id == student.id,
+            Assignment.class_id == class_info.id,
+            Assignment.school_year_id == school_year.id
+        ).order_by(Grade.graded_at.desc()).all()
+        
+        if not grades:
+            continue
+        
+        # Calculate individual assignment grades
+        assignment_grades = {}
+        total_score = 0
+        valid_grades = 0
+        
+        for grade in grades:
+            grade_data = json.loads(grade.grade_data)
+            if 'score' in grade_data:
+                score = grade_data['score']
+                assignment_grades[grade.assignment.title] = f"{score}%"
+                total_score += score
+                valid_grades += 1
+        
+        if valid_grades > 0:
+            class_average = round(total_score / valid_grades, 2)
+            all_class_averages.append(class_average)
+            
+            # Convert percentage to letter grade
+            letter_grade = get_letter_grade(class_average)
+            
+            # Get recent grades (last 3 assignments)
+            recent_assignments = []
+            for grade in grades[:3]:  # Get last 3 graded assignments
+                grade_data = json.loads(grade.grade_data)
+                if 'score' in grade_data:
+                    recent_assignments.append({
+                        'title': grade.assignment.title,
+                        'score': grade_data['score'],
+                        'letter': get_letter_grade(grade_data['score']),
+                        'graded_at': grade.graded_at.strftime('%b %d, %Y')
+                    })
+            
+            # Calculate class GPA (convert percentage to 4.0 scale)
+            class_gpa = calculate_gpa([class_average])
+            
+            # Organize grades by quarters and semesters
+            quarter_grades = {}
+            semester_grades = {}
+            
+            # Calculate grades for each quarter
+            for quarter in quarters:
+                quarter_assignments = [a for a in assignments if a.quarter == quarter.name]
+                quarter_grades_list = []
+                
+                for assignment in quarter_assignments:
+                    grade = next((g for g in grades if g.assignment_id == assignment.id), None)
+                    if grade:
+                        grade_data = json.loads(grade.grade_data)
+                        if 'score' in grade_data:
+                            quarter_grades_list.append(grade_data['score'])
+                
+                if quarter_grades_list:
+                    quarter_avg = round(sum(quarter_grades_list) / len(quarter_grades_list), 2)
+                    quarter_grades[quarter.name] = {
+                        'average': quarter_avg,
+                        'letter': get_letter_grade(quarter_avg),
+                        'gpa': calculate_gpa([quarter_avg]),
+                        'assignments': len(quarter_grades_list)
+                    }
+            
+            # Calculate grades for each semester
+            for semester in semesters:
+                semester_assignments = []
+                for assignment in assignments:
+                    # Determine which semester this assignment belongs to
+                    if semester.name == 'S1' and assignment.due_date.date() <= semester.end_date:
+                        semester_assignments.append(assignment)
+                    elif semester.name == 'S2' and assignment.due_date.date() > semester.start_date:
+                        semester_assignments.append(assignment)
+                
+                semester_grades_list = []
+                for assignment in semester_assignments:
+                    grade = next((g for g in grades if g.assignment_id == assignment.id), None)
+                    if grade:
+                        grade_data = json.loads(grade.grade_data)
+                        if 'score' in grade_data:
+                            semester_grades_list.append(grade_data['score'])
+                
+                if semester_grades_list:
+                    semester_avg = round(sum(semester_grades_list) / len(semester_grades_list), 2)
+                    semester_grades[semester.name] = {
+                        'average': semester_avg,
+                        'letter': get_letter_grade(semester_avg),
+                        'gpa': calculate_gpa([semester_avg]),
+                        'assignments': len(semester_grades_list)
+                    }
+            
+            grades_by_class[class_info.name] = {
+                'final_grade': {
+                    'letter': letter_grade,
+                    'percentage': class_average
+                },
+                'class_gpa': class_gpa,
+                'recent_assignments': recent_assignments,
+                'quarter_grades': quarter_grades,
+                'semester_grades': semester_grades,
+                'grades': {
+                    'Current': {
+                        'overall_letter': letter_grade,
+                        'overall_percentage': class_average,
+                        'grade_details': assignment_grades
+                    }
+                }
             }
-        },
-        'Science': {
-            'final_grade': {'letter': 'B+', 'percentage': 87},
-            'grades': {
-                'Q1': {'overall_letter': 'B', 'overall_percentage': 85, 'grade_details': {'Lab Report 1': '88%', 'Quiz 1': '82%'}},
-                'Q2': {'overall_letter': 'B+', 'overall_percentage': 87, 'grade_details': {'Lab Report 2': '90%', 'Quiz 2': '84%'}},
-                'Q3': {'overall_letter': 'B+', 'overall_percentage': 88, 'grade_details': {'Lab Report 3': '89%', 'Quiz 3': '87%'}},
-                'Q4': {'overall_letter': 'B+', 'overall_percentage': 88, 'grade_details': {'Lab Report 4': '91%', 'Quiz 4': '85%'}}
-            }
-        }
-    }
+    
+    # Calculate overall GPA
+    gpa = calculate_gpa(all_class_averages) if all_class_averages else 0.0
     
     return render_template('role_student_dashboard.html', 
-                         student=student, 
-                         classes=[], 
-                         grades={}, 
-                         attendance_summary={},
-                         grades_by_class=grades_by_class,
-                         gpa=0.0,
-                         grade_trends={},
-                         today_schedule=[],
-                         goals={},
-                         announcements=[],
-                         notifications=[],
-                         past_due_assignments=[],
-                         upcoming_assignments=[],
-                         recent_grades=[],
-                         section='grades',
-                         active_tab='grades')
+                         **create_template_context(student, 'grades', 'grades',
+                             grades_by_class=grades_by_class,
+                             gpa=gpa,
+                             quarters=quarters,
+                             semesters=semesters))
                          
 @student_blueprint.route('/schedule')
 @login_required
@@ -312,21 +489,7 @@ def student_grades():
 def student_schedule():
     student = Student.query.get_or_404(current_user.student_id)
     return render_template('role_student_dashboard.html', 
-                         student=student, 
-                         classes=[], 
-                         grades={}, 
-                         attendance_summary={},
-                         gpa=0.0,
-                         grade_trends={},
-                         today_schedule=[],
-                         goals={},
-                         announcements=[],
-                         notifications=[],
-                         past_due_assignments=[],
-                         upcoming_assignments=[],
-                         recent_grades=[],
-                         section='schedule',
-                         active_tab='schedule')
+                         **create_template_context(student, 'schedule', 'schedule'))
 
 @student_blueprint.route('/school-calendar')
 @login_required
@@ -401,6 +564,46 @@ def student_school_calendar():
         if hol_date.month == month:
             holidays_this_month.append((hol_date.day, hol_name))
     
+    # Get academic dates from the database
+    academic_dates = []
+    active_year = SchoolYear.query.filter_by(is_active=True).first()
+    if active_year:
+        # Get academic periods for this month
+        start_of_month = date(year, month, 1)
+        if month == 12:
+            end_of_month = date(year + 1, 1, 1) - timedelta(days=1)
+        else:
+            end_of_month = date(year, month + 1, 1) - timedelta(days=1)
+        
+        # Get academic periods that overlap with this month
+        from models import AcademicPeriod
+        academic_periods = AcademicPeriod.query.filter(
+            AcademicPeriod.school_year_id == active_year.id,
+            AcademicPeriod.start_date <= end_of_month,
+            AcademicPeriod.end_date >= start_of_month
+        ).all()
+        
+        for period in academic_periods:
+            # Add start date event
+            if period.start_date.month == month:
+                academic_dates.append((period.start_date.day, f"{period.name} Start", 'Academic Period'))
+            
+            # Add end date event
+            if period.end_date.month == month:
+                academic_dates.append((period.end_date.day, f"{period.name} End", 'Academic Period'))
+        
+        # Get calendar events for this month
+        from models import CalendarEvent
+        calendar_events = CalendarEvent.query.filter(
+            CalendarEvent.school_year_id == active_year.id,
+            CalendarEvent.start_date <= end_of_month,
+            CalendarEvent.end_date >= start_of_month
+        ).all()
+        
+        for event in calendar_events:
+            if event.start_date.month == month:
+                academic_dates.append((event.start_date.day, event.name, event.event_type.replace('_', ' ').title()))
+    
     # Add US Federal holidays with "No School" for weekdays during school year
     school_year_start = date(year, 8, 1)  # August 1st
     school_year_end = date(year, 6, 30)   # June 30th
@@ -429,6 +632,12 @@ def student_school_calendar():
         for day in week:
             events = []
             if day != 0:
+                # Add academic dates
+                for acad_day, acad_name, acad_category in academic_dates:
+                    if day == acad_day:
+                        events.append({'title': acad_name, 'category': acad_category})
+                
+                # Add holidays
                 for hol_day, hol_name in holidays_this_month:
                     if day == hol_day:
                         events.append({'title': hol_name, 'category': 'Holiday'})
@@ -440,24 +649,20 @@ def student_school_calendar():
         calendar_data['weeks'].append(week_data)
 
     return render_template('role_student_dashboard.html', 
-                         student=student, 
-                         classes=[], 
-                         grades={}, 
-                         attendance_summary={},
-                         calendar_data=calendar_data,
-                         prev_month=prev_month,
-                         next_month=next_month,
-                         gpa=0.0,
-                         grade_trends={},
-                         today_schedule=[],
-                         goals={},
-                         announcements=[],
-                         notifications=[],
-                         past_due_assignments=[],
-                         upcoming_assignments=[],
-                         recent_grades=[],
-                         section='school-calendar',
-                         active_tab='school-calendar')
+                         **create_template_context(student, 'school-calendar', 'school-calendar',
+                             calendar_data=calendar_data,
+                             prev_month=prev_month,
+                             next_month=next_month,
+                             gpa=0.0,
+                             grade_trends={},
+                             today_schedule=[],
+                             goals={},
+                             announcements=[],
+                             notifications=[],
+                             past_due_assignments=[],
+                             upcoming_assignments=[],
+                             recent_grades=[],
+                             get_letter_grade=get_letter_grade))
 
 @student_blueprint.route('/settings')
 @login_required
@@ -465,21 +670,7 @@ def student_school_calendar():
 def student_settings():
     student = Student.query.get_or_404(current_user.student_id)
     return render_template('role_student_dashboard.html', 
-                         student=student, 
-                         classes=[], 
-                         grades={}, 
-                         attendance_summary={},
-                         gpa=0.0,
-                         grade_trends={},
-                         today_schedule=[],
-                         goals={},
-                         announcements=[],
-                         notifications=[],
-                         past_due_assignments=[],
-                         upcoming_assignments=[],
-                         recent_grades=[],
-                         section='settings',
-                         active_tab='settings')
+                         **create_template_context(student, 'settings', 'settings'))
 
 @student_blueprint.route('/class/<int:class_id>')
 @login_required
@@ -660,23 +851,20 @@ def student_communications():
     ).all()
     
     return render_template('role_student_dashboard.html',
-                         student=student,
-                         classes=classes,
-                         grades={},
-                         attendance_summary={},
-                         gpa=0.0,
-                         grade_trends={},
-                         today_schedule=[],
-                         goals={},
-                         announcements=announcements,
-                         notifications=notifications,
-                         past_due_assignments=[],
-                         upcoming_assignments=[],
-                         recent_grades=[],
-                         messages=messages,
-                         groups=groups,
-                         section='communications',
-                         active_tab='communications')
+                         **create_template_context(student, 'communications', 'communications',
+                             grades={},
+                             attendance_summary={},
+                             gpa=0.0,
+                             grade_trends={},
+                             today_schedule=[],
+                             goals={},
+                             announcements=announcements,
+                             notifications=notifications,
+                             past_due_assignments=[],
+                             upcoming_assignments=[],
+                             recent_grades=[],
+                             messages=messages,
+                             groups=groups))
 
 @student_blueprint.route('/communications/messages')
 @login_required
@@ -689,22 +877,19 @@ def student_messages():
     messages = Message.query.filter_by(recipient_id=current_user.id).order_by(Message.created_at.desc()).all()
     
     return render_template('role_student_dashboard.html',
-                         student=student,
-                         classes=[],
-                         grades={},
-                         attendance_summary={},
-                         gpa=0.0,
-                         grade_trends={},
-                         today_schedule=[],
-                         goals={},
-                         announcements=[],
-                         notifications=[],
-                         past_due_assignments=[],
-                         upcoming_assignments=[],
-                         recent_grades=[],
-                         messages=messages,
-                         section='messages',
-                         active_tab='communications')
+                         **create_template_context(student, 'messages', 'communications',
+                             grades={},
+                             attendance_summary={},
+                             gpa=0.0,
+                             grade_trends={},
+                             today_schedule=[],
+                             goals={},
+                             announcements=[],
+                             notifications=[],
+                             past_due_assignments=[],
+                             upcoming_assignments=[],
+                             recent_grades=[],
+                             messages=messages))
 
 @student_blueprint.route('/communications/message/<int:message_id>')
 @login_required
@@ -724,22 +909,19 @@ def student_view_message(message_id):
         db.session.commit()
     
     return render_template('role_student_dashboard.html',
-                         student=student,
-                         classes=[],
-                         grades={},
-                         attendance_summary={},
-                         gpa=0.0,
-                         grade_trends={},
-                         today_schedule=[],
-                         goals={},
-                         announcements=[],
-                         notifications=[],
-                         past_due_assignments=[],
-                         upcoming_assignments=[],
-                         recent_grades=[],
-                         message=message,
-                         section='view_message',
-                         active_tab='communications')
+                         **create_template_context(student, 'view_message', 'communications',
+                             grades={},
+                             attendance_summary={},
+                             gpa=0.0,
+                             grade_trends={},
+                             today_schedule=[],
+                             goals={},
+                             announcements=[],
+                             notifications=[],
+                             past_due_assignments=[],
+                             upcoming_assignments=[],
+                             recent_grades=[],
+                             message=message))
 
 @student_blueprint.route('/communications/groups')
 @login_required
@@ -754,22 +936,19 @@ def student_groups():
     ).all()
     
     return render_template('role_student_dashboard.html',
-                         student=student,
-                         classes=[],
-                         grades={},
-                         attendance_summary={},
-                         gpa=0.0,
-                         grade_trends={},
-                         today_schedule=[],
-                         goals={},
-                         announcements=[],
-                         notifications=[],
-                         past_due_assignments=[],
-                         upcoming_assignments=[],
-                         recent_grades=[],
-                         groups=groups,
-                         section='groups',
-                         active_tab='communications')
+                         **create_template_context(student, 'groups', 'communications',
+                             grades={},
+                             attendance_summary={},
+                             gpa=0.0,
+                             grade_trends={},
+                             today_schedule=[],
+                             goals={},
+                             announcements=[],
+                             notifications=[],
+                             past_due_assignments=[],
+                             upcoming_assignments=[],
+                             recent_grades=[],
+                             groups=groups))
 
 @student_blueprint.route('/communications/group/<int:group_id>')
 @login_required
@@ -792,23 +971,20 @@ def student_view_group(group_id):
     messages = Message.query.filter_by(group_id=group_id).order_by(Message.created_at.desc()).all()
     
     return render_template('role_student_dashboard.html',
-                         student=student,
-                         classes=[],
-                         grades={},
-                         attendance_summary={},
-                         gpa=0.0,
-                         grade_trends={},
-                         today_schedule=[],
-                         goals={},
-                         announcements=[],
-                         notifications=[],
-                         past_due_assignments=[],
-                         upcoming_assignments=[],
-                         recent_grades=[],
-                         group=group,
-                         messages=messages,
-                         section='view_group',
-                         active_tab='communications')
+                         **create_template_context(student, 'view_group', 'communications',
+                             grades={},
+                             attendance_summary={},
+                             gpa=0.0,
+                             grade_trends={},
+                             today_schedule=[],
+                             goals={},
+                             announcements=[],
+                             notifications=[],
+                             past_due_assignments=[],
+                             upcoming_assignments=[],
+                             recent_grades=[],
+                             group=group,
+                             messages=messages))
 
 @student_blueprint.route('/communications/announcements')
 @login_required
@@ -828,21 +1004,19 @@ def student_announcements():
     ).order_by(Announcement.timestamp.desc()).all()
     
     return render_template('role_student_dashboard.html',
-                         student=student,
-                         classes=[],
-                         grades={},
-                         attendance_summary={},
-                         gpa=0.0,
-                         grade_trends={},
-                         today_schedule=[],
-                         goals={},
-                         announcements=announcements,
-                         notifications=[],
-                         past_due_assignments=[],
-                         upcoming_assignments=[],
-                         recent_grades=[],
-                         section='announcements',
-                         active_tab='communications')
+                         **create_template_context(student, 'announcements', 'communications',
+                             grades={},
+                             attendance_summary={},
+                             gpa=0.0,
+                             grade_trends={},
+                             today_schedule=[],
+                             goals={},
+                             announcements=announcements,
+                             notifications=[],
+                             past_due_assignments=[],
+                             upcoming_assignments=[],
+                             recent_grades=[],
+                             get_letter_grade=get_letter_grade))
 
 # New routes for student messaging capabilities
 @student_blueprint.route('/communications/send-message', methods=['GET', 'POST'])
@@ -887,23 +1061,20 @@ def student_send_message():
     teachers = TeacherStaff.query.all()
     
     return render_template('role_student_dashboard.html',
-                         student=student,
-                         classes=[],
-                         grades={},
-                         attendance_summary={},
-                         gpa=0.0,
-                         grade_trends={},
-                         today_schedule=[],
-                         goals={},
-                         announcements=[],
-                         notifications=[],
-                         past_due_assignments=[],
-                         upcoming_assignments=[],
-                         recent_grades=[],
-                         students=students,
-                         teachers=teachers,
-                         section='send_message',
-                         active_tab='communications')
+                         **create_template_context(student, 'send_message', 'communications',
+                             grades={},
+                             attendance_summary={},
+                             gpa=0.0,
+                             grade_trends={},
+                             today_schedule=[],
+                             goals={},
+                             announcements=[],
+                             notifications=[],
+                             past_due_assignments=[],
+                             upcoming_assignments=[],
+                             recent_grades=[],
+                             students=students,
+                             teachers=teachers))
 
 @student_blueprint.route('/communications/create-group', methods=['GET', 'POST'])
 @login_required
@@ -959,22 +1130,19 @@ def student_create_group():
     students = Student.query.filter(Student.id != student.id).all()
     
     return render_template('role_student_dashboard.html',
-                         student=student,
-                         classes=[],
-                         grades={},
-                         attendance_summary={},
-                         gpa=0.0,
-                         grade_trends={},
-                         today_schedule=[],
-                         goals={},
-                         announcements=[],
-                         notifications=[],
-                         past_due_assignments=[],
-                         upcoming_assignments=[],
-                         recent_grades=[],
-                         students=students,
-                         section='create_group',
-                         active_tab='communications')
+                         **create_template_context(student, 'create_group', 'communications',
+                             grades={},
+                             attendance_summary={},
+                             gpa=0.0,
+                             grade_trends={},
+                             today_schedule=[],
+                             goals={},
+                             announcements=[],
+                             notifications=[],
+                             past_due_assignments=[],
+                             upcoming_assignments=[],
+                             recent_grades=[],
+                             students=students))
 
 @student_blueprint.route('/communications/group/<int:group_id>/send-message', methods=['POST'])
 @login_required
@@ -1027,22 +1195,19 @@ def student_sent_messages():
     sent_messages = Message.query.filter_by(sender_id=current_user.id).order_by(Message.created_at.desc()).all()
     
     return render_template('role_student_dashboard.html',
-                         student=student,
-                         classes=[],
-                         grades={},
-                         attendance_summary={},
-                         gpa=0.0,
-                         grade_trends={},
-                         today_schedule=[],
-                         goals={},
-                         announcements=[],
-                         notifications=[],
-                         past_due_assignments=[],
-                         upcoming_assignments=[],
-                         recent_grades=[],
-                         sent_messages=sent_messages,
-                         section='sent_messages',
-                         active_tab='communications')
+                         **create_template_context(student, 'sent_messages', 'communications',
+                             grades={},
+                             attendance_summary={},
+                             gpa=0.0,
+                             grade_trends={},
+                             today_schedule=[],
+                             goals={},
+                             announcements=[],
+                             notifications=[],
+                             past_due_assignments=[],
+                             upcoming_assignments=[],
+                             recent_grades=[],
+                             sent_messages=sent_messages))
 
 @student_blueprint.route('/communications/group/<int:group_id>/leave', methods=['POST'])
 @login_required

@@ -92,20 +92,36 @@ def system_status():
         memory_used_gb = round(memory.used / (1024**3), 2)
         memory_total_gb = round(memory.total / (1024**3), 2)
         
-        # Disk usage
-        disk = psutil.disk_usage('/')
-        disk_percent = disk.percent
-        disk_used_gb = round(disk.used / (1024**3), 2)
-        disk_total_gb = round(disk.total / (1024**3), 2)
+        # Disk usage - handle different operating systems
+        try:
+            if os.name == 'nt':  # Windows
+                disk = psutil.disk_usage('C:\\')
+            else:  # Unix/Linux/Mac
+                disk = psutil.disk_usage('/')
+            disk_percent = disk.percent
+            disk_used_gb = round(disk.used / (1024**3), 2)
+            disk_total_gb = round(disk.total / (1024**3), 2)
+        except Exception:
+            # Fallback if disk usage fails
+            disk_percent = 'N/A'
+            disk_used_gb = 'N/A'
+            disk_total_gb = 'N/A'
         
         # Network statistics
-        network = psutil.net_io_counters()
-        network_bytes_sent = network.bytes_sent
-        network_bytes_recv = network.bytes_recv
+        try:
+            network = psutil.net_io_counters()
+            network_bytes_sent = network.bytes_sent
+            network_bytes_recv = network.bytes_recv
+        except Exception:
+            network_bytes_sent = 'N/A'
+            network_bytes_recv = 'N/A'
         
         # System uptime
-        boot_time = datetime.fromtimestamp(psutil.boot_time())
-        uptime = now - boot_time
+        try:
+            boot_time = datetime.fromtimestamp(psutil.boot_time())
+            uptime = now - boot_time
+        except Exception:
+            uptime = 'N/A'
         
         # Database statistics
         total_users = User.query.count()
@@ -288,8 +304,16 @@ def error_reports():
 @tech_required
 def backup_database():
     try:
-        # Get the database file path
-        db_path = os.path.join(os.getcwd(), 'instance', 'app.db')
+        # Get the database file path - handle different operating systems
+        if os.name == 'nt':  # Windows
+            db_path = os.path.join(os.getcwd(), 'instance', 'app.db')
+        else:  # Unix/Linux/Mac
+            db_path = os.path.join(os.getcwd(), 'instance', 'app.db')
+        
+        # Check if database file exists
+        if not os.path.exists(db_path):
+            flash('Database file not found. Cannot create backup.', 'danger')
+            return redirect(url_for('tech.tech_dashboard'))
         
         # Create backup directory if it doesn't exist
         backup_dir = os.path.join(os.getcwd(), 'backups')
@@ -303,9 +327,32 @@ def backup_database():
         # Copy the database file
         shutil.copy2(db_path, backup_path)
         
+        # Verify backup was created successfully
+        if not os.path.exists(backup_path):
+            raise Exception("Backup file was not created successfully")
+        
+        # Log the backup action
+        log_activity(
+            user_id=current_user.id,
+            action='database_backup',
+            details={'backup_file': backup_filename, 'backup_size': os.path.getsize(backup_path)},
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent')
+        )
+        
         flash(f'Database backup created successfully: {backup_filename}', 'success')
     except Exception as e:
         flash(f'Error creating database backup: {str(e)}', 'danger')
+        # Log the error
+        log_activity(
+            user_id=current_user.id,
+            action='database_backup_failed',
+            details={'error': str(e)},
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent'),
+            success=False,
+            error_message=str(e)
+        )
     
     return redirect(url_for('tech.tech_dashboard'))
 
@@ -314,9 +361,23 @@ def backup_database():
 @tech_required
 def check_database_integrity():
     try:
-        # Simple integrity check - try to query all tables
-        tables = ['user', 'student', 'teacher_staff', 'school_year', 'class', 'assignment', 'submission', 'grade', 'report_card', 'announcement', 'notification']
+        # Get list of tables that actually exist in the database
+        existing_tables = []
+        try:
+            result = db.session.execute(db.text("SELECT name FROM sqlite_master WHERE type='table'"))
+            existing_tables = [row[0] for row in result.fetchall()]
+        except Exception as e:
+            flash(f'Error getting table list: {str(e)}', 'danger')
+            return redirect(url_for('tech.tech_dashboard'))
+        
+        # Define tables to check (only those that exist)
+        tables_to_check = ['user', 'student', 'teacher_staff', 'school_year', 'class', 'assignment', 'submission', 'grade', 'report_card', 'announcement', 'notification', 'maintenance_mode', 'activity_log', 'bug_report', 'attendance', 'system_config']
+        
+        # Filter to only check existing tables
+        tables = [table for table in tables_to_check if table in existing_tables]
+        
         results = {}
+        errors_found = 0
         
         for table in tables:
             try:
@@ -326,11 +387,34 @@ def check_database_integrity():
                 results[table] = {'status': 'OK', 'count': count}
             except Exception as e:
                 results[table] = {'status': 'ERROR', 'error': str(e)}
+                errors_found += 1
         
-        flash('Database integrity check completed. All tables accessible.', 'success')
-        # You could store results in session for display
+        # Log the integrity check
+        log_activity(
+            user_id=current_user.id,
+            action='database_integrity_check',
+            details={'tables_checked': len(tables), 'errors_found': errors_found, 'results': results},
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent')
+        )
+        
+        if errors_found == 0:
+            flash(f'Database integrity check completed successfully. {len(tables)} tables checked and accessible.', 'success')
+        else:
+            flash(f'Database integrity check completed with {errors_found} errors. Check logs for details.', 'warning')
+            
     except Exception as e:
         flash(f'Error checking database integrity: {str(e)}', 'danger')
+        # Log the error
+        log_activity(
+            user_id=current_user.id,
+            action='database_integrity_check_failed',
+            details={'error': str(e)},
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent'),
+            success=False,
+            error_message=str(e)
+        )
     
     return redirect(url_for('tech.tech_dashboard'))
 
@@ -355,7 +439,7 @@ def clear_cache():
     except Exception as e:
         flash(f'Error clearing cache: {str(e)}', 'danger')
     
-    return redirect(url_for('tech.system_config'))
+    return redirect(url_for('tech.tech_dashboard'))
 
 @tech_blueprint.route('/system/restart-server', methods=['POST'])
 @login_required
@@ -385,6 +469,59 @@ def restart_server():
 def view_system_logs():
     """View system logs - redirect to activity log with system filter"""
     return redirect(url_for('tech.activity_log', action='system'))
+
+@tech_blueprint.route('/database/logs')
+@login_required
+@tech_required
+def view_database_logs():
+    """View database-specific logs and operations"""
+    try:
+        # Get recent database operations from activity log
+        db_logs = get_user_activity_log(
+            action='database',
+            limit=50
+        )
+        
+        # Get database statistics
+        from models import User, Student, TeacherStaff, Class, Assignment, Grade, ReportCard
+        db_stats = {
+            'users': User.query.count(),
+            'students': Student.query.count(),
+            'teachers': TeacherStaff.query.count(),
+            'classes': Class.query.count(),
+            'assignments': Assignment.query.count(),
+            'grades': Grade.query.count(),
+            'report_cards': ReportCard.query.count()
+        }
+        
+        return render_template('database_logs.html', logs=db_logs, stats=db_stats)
+    except Exception as e:
+        flash(f'Error viewing database logs: {str(e)}', 'danger')
+        return redirect(url_for('tech.tech_dashboard'))
+
+@tech_blueprint.route('/system/update', methods=['POST'])
+@login_required
+@tech_required
+def update_system():
+    """Initiate system update process"""
+    try:
+        # Log the update action
+        log_activity(
+            user_id=current_user.id,
+            action='initiate_system_update',
+            details={'timestamp': datetime.now().isoformat()},
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent')
+        )
+        
+        # In a real application, this would trigger an actual update process
+        # For now, we'll simulate the update process
+        flash('System update initiated. This is a simulation - no actual update will occur.', 'info')
+        
+    except Exception as e:
+        flash(f'Error initiating system update: {str(e)}', 'danger')
+    
+    return redirect(url_for('tech.tech_dashboard'))
 
 @tech_blueprint.route('/user/reset-password/<int:user_id>', methods=['POST'])
 @login_required

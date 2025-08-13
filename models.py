@@ -208,6 +208,88 @@ class SchoolYear(db.Model):
         return f"SchoolYear('{self.name}')"
 
 
+class AcademicPeriod(db.Model):
+    """
+    Model for storing academic periods (quarters and semesters).
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    school_year_id = db.Column(db.Integer, db.ForeignKey('school_year.id'), nullable=False)
+    name = db.Column(db.String(20), nullable=False)  # e.g., 'Q1', 'Q2', 'Q3', 'Q4', 'S1', 'S2'
+    period_type = db.Column(db.String(10), nullable=False)  # 'quarter' or 'semester'
+    start_date = db.Column(db.Date, nullable=False)
+    end_date = db.Column(db.Date, nullable=False)
+    is_active = db.Column(db.Boolean, default=True)
+    
+    # Relationships
+    school_year = db.relationship('SchoolYear', backref='academic_periods', lazy=True)
+    
+    def __repr__(self):
+        return f"AcademicPeriod('{self.name}' - {self.period_type})"
+
+
+class CalendarEvent(db.Model):
+    """
+    Model for storing calendar events extracted from uploaded PDFs.
+    """
+    __tablename__ = 'calendar_events'
+    id = db.Column(db.Integer, primary_key=True)
+    school_year_id = db.Column(db.Integer, db.ForeignKey('school_year.id'), nullable=False)
+    event_type = db.Column(db.String(50), nullable=False)  # 'holiday', 'break', 'professional_development', etc.
+    name = db.Column(db.String(100), nullable=False)
+    start_date = db.Column(db.Date, nullable=False)
+    end_date = db.Column(db.Date, nullable=True)  # For single-day events, same as start_date
+    description = db.Column(db.Text, nullable=True)
+    pdf_filename = db.Column(db.String(255), nullable=True)  # Original PDF filename
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    school_year = db.relationship('SchoolYear', backref='calendar_events', lazy=True)
+    
+    def __repr__(self):
+        return f"CalendarEvent('{self.name}' - {self.event_type} on {self.start_date})"
+
+
+class TeacherWorkDay(db.Model):
+    """
+    Model for storing teacher work days with attendance requirements.
+    """
+    __tablename__ = 'teacher_work_days'
+    id = db.Column(db.Integer, primary_key=True)
+    school_year_id = db.Column(db.Integer, db.ForeignKey('school_year.id'), nullable=False)
+    date = db.Column(db.Date, nullable=False)
+    title = db.Column(db.String(100), nullable=False)
+    attendance_requirement = db.Column(db.String(20), nullable=False, default='Mandatory')  # 'Mandatory', 'Optional'
+    description = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    school_year = db.relationship('SchoolYear', backref='teacher_work_days', lazy=True)
+    
+    def __repr__(self):
+        return f"TeacherWorkDay('{self.title}' - {self.attendance_requirement} on {self.date})"
+
+
+class SchoolBreak(db.Model):
+    """
+    Model for storing school breaks and vacations.
+    """
+    __tablename__ = 'school_breaks'
+    id = db.Column(db.Integer, primary_key=True)
+    school_year_id = db.Column(db.Integer, db.ForeignKey('school_year.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    start_date = db.Column(db.Date, nullable=False)
+    end_date = db.Column(db.Date, nullable=False)
+    break_type = db.Column(db.String(50), nullable=False, default='Vacation')  # 'Vacation', 'Holiday', 'Professional Development'
+    description = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    school_year = db.relationship('SchoolYear', backref='school_breaks', lazy=True)
+    
+    def __repr__(self):
+        return f"SchoolBreak('{self.name}' - {self.break_type} from {self.start_date} to {self.end_date})"
+
+
 class Class(db.Model):
     """
     Model for storing class information.
@@ -225,6 +307,24 @@ class Class(db.Model):
         return f"Class('{self.name}', Subject: '{self.subject}')"
 
 
+class ClassSchedule(db.Model):
+    """
+    Model for storing class schedule information.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    class_id = db.Column(db.Integer, db.ForeignKey('class.id'), nullable=False)
+    day_of_week = db.Column(db.Integer, nullable=False)  # 0=Monday, 1=Tuesday, etc.
+    start_time = db.Column(db.Time, nullable=False)
+    end_time = db.Column(db.Time, nullable=False)
+    room = db.Column(db.String(50), nullable=True)
+    is_active = db.Column(db.Boolean, default=True)
+    
+    class_info = db.relationship('Class', backref='schedules')
+    
+    def __repr__(self):
+        return f"ClassSchedule(Class: {self.class_id}, Day: {self.day_of_week}, Time: {self.start_time}-{self.end_time})"
+
+
 class Assignment(db.Model):
     """
     Model for storing assignment information.
@@ -235,6 +335,8 @@ class Assignment(db.Model):
     class_id = db.Column(db.Integer, db.ForeignKey('class.id'), nullable=False)
     due_date = db.Column(db.DateTime, nullable=False)
     quarter = db.Column(db.String(10), nullable=False)
+    semester = db.Column(db.String(10), nullable=True)  # S1 or S2
+    academic_period_id = db.Column(db.Integer, db.ForeignKey('academic_period.id'), nullable=True)
     school_year_id = db.Column(db.Integer, db.ForeignKey('school_year.id'), nullable=False)
     is_locked = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -248,6 +350,7 @@ class Assignment(db.Model):
 
     class_info = db.relationship('Class', backref='assignments', lazy=True)
     school_year = db.relationship('SchoolYear', backref='assignments', lazy=True)
+    academic_period = db.relationship('AcademicPeriod', backref='assignments', lazy=True)
 
     def __repr__(self):
         return f"Assignment('{self.title}', Class: {self.class_id})"

@@ -111,8 +111,8 @@
                                                 {{ "%.1f"|format(progress) }}%
                                             </div>
                                         </div>
-                                        <form method="POST" action="{{ url_for('student.delete_goal', goal_id=goal.id) }}" 
-                                              style="display: inline;" onsubmit="return confirm('Delete this goal?')">
+                                                        <form method="POST" action="{{ url_for('student.delete_goal', goal_id=goal.id) }}"
+                      style="display: inline;" onsubmit="return confirm('Delete this goal?')">
                                             <button type="submit" class="btn btn-sm btn-outline-danger">Remove Goal</button>
                                         </form>
                                     {% else %}
@@ -297,11 +297,11 @@
                             </thead>
                             <tbody>
                                 {% if recent_grades %}
-                                    {% for submission in recent_grades %}
+                                    {% for grade in recent_grades %}
                                     <tr>
-                                        <td>{{ submission.assignment.title }}</td>
-                                        <td>{{ submission.assignment.class_assigned.name }}</td>
-                                        <td><strong>{{ submission.grade }}</strong></td>
+                                        <td>{{ grade.assignment.title }}</td>
+                                        <td>{{ grade.class_name }}</td>
+                                        <td><strong>{{ grade.score }}%</strong></td>
                                     </tr>
                                     {% endfor %}
                                 {% else %}
@@ -346,86 +346,358 @@
 
     {% elif section == 'grades' %}
         <!-- Grades View -->
-        <h2 class="mb-4">My Grades</h2>
-
-        {% if grades_by_class %}
-            <div class="accordion" id="gradesAccordion">
-            {% for class_name, data in grades_by_class.items() %}
-            <div class="accordion-item mb-3 shadow-sm">
-                <h2 class="accordion-header" id="heading-{{ loop.index }}">
-                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ loop.index }}" aria-expanded="false" aria-controls="collapse-{{ loop.index }}">
-                        <div class="d-flex justify-content-between w-100 me-3">
-                            <span class="fs-5">{{ class_name }}</span>
-                            <span class="fs-5">Final Grade: <span class="fw-bold">{{ data.final_grade.letter }} ({{ data.final_grade.percentage }}%)</span></span>
-                        </div>
-                    </button>
+        <div class="row mb-4">
+            <div class="col-12">
+                <h2 class="mb-3">
+                    <i class="bi bi-graph-up-arrow text-primary me-2"></i>
+                    My Academic Performance
                 </h2>
-                <div id="collapse-{{ loop.index }}" class="accordion-collapse collapse" aria-labelledby="heading-{{ loop.index }}" data-bs-parent="#gradesAccordion">
-                    <div class="accordion-body p-0">
-                        <table class="table table-striped table-hover mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th scope="col" style="width: 25%;">Marking Period</th>
-                                    <th scope="col" style="width: 25%;">Letter Grade</th>
-                                    <th scope="col" style="width: 25%;">Percentage</th>
-                                    <th scope="col" style="width: 25%;">Details</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for quarter in ['Q1', 'Q2', 'Q3', 'Q4'] %}
-                                {% set grade_info = data.grades[quarter] %}
-                                <tr>
-                                    <th scope="row">Quarter {{ loop.index }}: MP{{ loop.index }}</th>
-                                    <td>
-                                        {% if grade_info and grade_info.overall_percentage is not none %}
-                                            <span class="badge fs-6 
-                                                {% if grade_info.overall_letter == 'A' %} bg-success
-                                                {% elif grade_info.overall_letter == 'B' %} bg-primary
-                                                {% elif grade_info.overall_letter == 'C' %} bg-info text-dark
-                                                {% elif grade_info.overall_letter == 'D' %} bg-warning text-dark
-                                                {% else %} bg-danger
-                                                {% endif %}">{{ grade_info.overall_letter }}</span>
-                                        {% else %}
-                                            N/A
-                                        {% endif %}
-                                    </td>
-                                    <td>{{ grade_info.overall_percentage if grade_info and grade_info.overall_percentage is not none else 'N/A' }}%</td>
-                                    <td>
-                                        {% if grade_info and grade_info.grade_details %}
-                                            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#details-{{ loop.index }}-{{ quarter }}" aria-expanded="false">
-                                                View Details
-                                            </button>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% if grade_info and grade_info.grade_details %}
-                                <tr class="collapse" id="details-{{ loop.index }}-{{ quarter }}">
-                                    <td colspan="4" class="p-0">
-                                        <div class="p-3 bg-white">
-                                            <h6 class="text-muted">Assignment Breakdown for {{ quarter }}</h6>
-                                            <ul class="list-group">
-                                                {% for assignment_title, assignment_grade in grade_info.grade_details.items() %}
-                                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                                    {{ assignment_title }}
-                                                    <span class="badge bg-dark rounded-pill">{{ assignment_grade }}</span>
-                                                </li>
-                                                {% endfor %}
-                                            </ul>
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% endif %}
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                
+                <!-- Overall GPA Summary Card -->
+                <div class="card bg-gradient-primary text-white shadow-lg mb-4 gpa-display">
+                    <div class="card-body text-center py-4">
+                        <h3 class="card-title mb-2">
+                            <i class="bi bi-star-fill me-2"></i>
+                            Overall Academic Standing
+                        </h3>
+                        <div class="display-4 fw-bold mb-2">{{ "%.2f"|format(gpa) }}</div>
+                        <p class="card-text fs-5 mb-0">Collective GPA</p>
+                        <div class="mt-3">
+                            {% if gpa >= 3.5 %}
+                                <span class="badge bg-success fs-6 px-3 py-2 academic-status-badge">
+                                    <i class="bi bi-award me-1"></i>Honor Roll
+                                </span>
+                            {% elif gpa >= 3.0 %}
+                                <span class="badge bg-primary fs-6 px-3 py-2 academic-status-badge">
+                                    <i class="bi bi-check-circle me-1"></i>Good Standing
+                                </span>
+                            {% elif gpa >= 2.0 %}
+                                <span class="badge bg-warning text-dark fs-6 px-3 py-2 academic-status-badge">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>Needs Improvement
+                                </span>
+                            {% else %}
+                                <span class="badge bg-danger fs-6 px-3 py-2 academic-status-badge">
+                                    <i class="bi bi-x-circle me-1"></i>Academic Warning
+                                </span>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
             </div>
-            {% endfor %}
+        </div>
+
+        {% if grades_by_class %}
+            <!-- Academic Period Summary -->
+            <div class="row g-4 mb-4">
+                <!-- Quarters Summary -->
+                {% if quarters %}
+                <div class="col-12 col-lg-6">
+                    <div class="card shadow-sm border-0">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0">
+                                <i class="bi bi-calendar-week me-2"></i>
+                                Quarter Performance Summary
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                {% for quarter in quarters %}
+                                <div class="col-6">
+                                    <div class="text-center p-3 border rounded">
+                                        <h6 class="text-muted mb-2">{{ quarter.name }}</h6>
+                                        {% set quarter_grades = [] %}
+                                        {% for class_name, data in grades_by_class.items() %}
+                                            {% if data.quarter_grades and data.quarter_grades.get(quarter.name) %}
+                                                {% set _ = quarter_grades.append(data.quarter_grades[quarter.name].average) %}
+                                            {% endif %}
+                                        {% endfor %}
+                                        {% if quarter_grades %}
+                                            {% set quarter_avg = (quarter_grades | sum) / (quarter_grades | length) %}
+                                            {% set quarter_gpa = calculate_gpa(quarter_grades) %}
+                                            <div class="h4 fw-bold 
+                                                {% if quarter_avg >= 90 %}text-success
+                                                {% elif quarter_avg >= 80 %}text-primary
+                                                {% elif quarter_avg >= 70 %}text-warning
+                                                {% else %}text-danger{% endif %}">
+                                                {{ "%.1f"|format(quarter_avg) }}%
+                                            </div>
+                                            <div class="small text-muted">GPA: {{ "%.2f"|format(quarter_gpa) }}</div>
+                                            <div class="small text-muted">{{ quarter_grades | length }} classes</div>
+                                        {% else %}
+                                            <div class="h4 text-muted">N/A</div>
+                                            <div class="small text-muted">No grades</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Semesters Summary -->
+                {% if semesters %}
+                <div class="col-12 col-lg-6">
+                    <div class="card shadow-sm border-0">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0">
+                                <i class="bi bi-calendar-month me-2"></i>
+                                Semester Performance Summary
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                {% for semester in semesters %}
+                                <div class="col-6">
+                                    <div class="text-center p-3 border rounded">
+                                        <h6 class="text-muted mb-2">{{ semester.name }}</h6>
+                                        {% set semester_grades = [] %}
+                                        {% for class_name, data in grades_by_class.items() %}
+                                            {% if data.semester_grades and data.semester_grades.get(semester.name) %}
+                                                {% set _ = semester_grades.append(data.semester_grades[semester.name].average) %}
+                                            {% endif %}
+                                        {% endfor %}
+                                        {% if semester_grades %}
+                                            {% set semester_avg = (semester_grades | sum) / (semester_grades | length) %}
+                                            {% set semester_gpa = calculate_gpa(semester_grades) %}
+                                            <div class="h4 fw-bold 
+                                                {% if semester_avg >= 90 %}text-success
+                                                {% elif semester_avg >= 80 %}text-primary
+                                                {% elif semester_avg >= 70 %}text-warning
+                                                {% else %}text-danger{% endif %}">
+                                                {{ "%.1f"|format(semester_avg) }}%
+                                            </div>
+                                            <div class="small text-muted">GPA: {{ "%.2f"|format(semester_gpa) }}</div>
+                                            <div class="small text-muted">{{ semester_grades | length }} classes</div>
+                                        {% else %}
+                                            <div class="h4 text-muted">N/A</div>
+                                            <div class="small text-muted">No grades</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="row g-4">
+                {% for class_name, data in grades_by_class.items() %}
+                <div class="col-12 col-lg-6 col-xl-4">
+                    <div class="card h-100 shadow-sm border-0 grade-card performance-indicator">
+                        <div class="card-header bg-gradient-{{ 'success' if data.final_grade.percentage >= 90 else 'primary' if data.final_grade.percentage >= 80 else 'warning' if data.final_grade.percentage >= 70 else 'danger' }} text-white">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0 fw-bold">
+                                    <i class="bi bi-book me-2"></i>{{ class_name }}
+                                </h5>
+                                <span class="badge bg-white text-dark fs-6 px-2 py-1">
+                                    {{ data.final_grade.letter }}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="card-body">
+                            <!-- Class GPA and Overall Grade -->
+                            <div class="row text-center mb-3">
+                                <div class="col-6">
+                                    <div class="border-end">
+                                        <div class="h4 text-primary fw-bold mb-1 gpa-display">{{ "%.2f"|format(data.class_gpa) }}</div>
+                                        <small class="text-muted">Class GPA</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="h4 fw-bold mb-1 
+                                        {% if data.final_grade.percentage >= 90 %}text-success
+                                        {% elif data.final_grade.percentage >= 80 %}text-primary
+                                        {% elif data.final_grade.percentage >= 70 %}text-warning
+                                        {% else %}text-danger{% endif %}">
+                                        {{ data.final_grade.percentage }}%
+                                    </div>
+                                    <small class="text-muted">Overall Grade</small>
+                                </div>
+                            </div>
+                            
+                            <!-- Quarter Grades -->
+                            {% if data.quarter_grades %}
+                            <div class="mb-3">
+                                <h6 class="text-muted mb-2">
+                                    <i class="bi bi-calendar-week me-1"></i>
+                                    Quarter Grades
+                                </h6>
+                                <div class="row g-2">
+                                    {% for quarter_name, quarter_data in data.quarter_grades.items() %}
+                                    <div class="col-6">
+                                        <div class="border rounded p-2 text-center">
+                                            <div class="small text-muted">{{ quarter_name }}</div>
+                                            <div class="fw-bold 
+                                                {% if quarter_data.average >= 90 %}text-success
+                                                {% elif quarter_data.average >= 80 %}text-primary
+                                                {% elif quarter_data.average >= 70 %}text-warning
+                                                {% else %}text-danger{% endif %}">
+                                                {{ quarter_data.average }}%
+                                            </div>
+                                            <div class="small">{{ quarter_data.letter }}</div>
+                                            <div class="small text-muted">{{ quarter_data.assignments }} assignments</div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Semester Grades -->
+                            {% if data.semester_grades %}
+                            <div class="mb-3">
+                                <h6 class="text-muted mb-2">
+                                    <i class="bi bi-calendar-month me-1"></i>
+                                    Semester Grades
+                                </h6>
+                                <div class="row g-2">
+                                    {% for semester_name, semester_data in data.semester_grades.items() %}
+                                    <div class="col-6">
+                                        <div class="border rounded p-2 text-center">
+                                            <div class="small text-muted">{{ semester_name }}</div>
+                                            <div class="fw-bold 
+                                                {% if semester_data.average >= 90 %}text-success
+                                                {% elif semester_data.average >= 80 %}text-primary
+                                                {% elif semester_data.average >= 70 %}text-warning
+                                                {% else %}text-danger{% endif %}">
+                                                {{ semester_data.average }}%
+                                            </div>
+                                            <div class="small">{{ semester_data.letter }}</div>
+                                            <div class="small text-muted">{{ semester_data.assignments }} assignments</div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Recent Assignments -->
+                            <div class="mb-3">
+                                <h6 class="text-muted mb-2">
+                                    <i class="bi bi-clock-history me-1"></i>
+                                    Recent Assignments
+                                </h6>
+                                {% if data.recent_assignments %}
+                                    <div class="list-group list-group-flush recent-assignments">
+                                        {% for assignment in data.recent_assignments %}
+                                        <div class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center">
+                                            <div class="flex-grow-1">
+                                                <div class="fw-semibold text-truncate" title="{{ assignment.title }}">
+                                                    {{ assignment.title }}
+                                                </div>
+                                                <small class="text-muted">{{ assignment.graded_at }}</small>
+                                            </div>
+                                            <div class="ms-2 text-end">
+                                                <div class="badge fs-6 px-2 py-1
+                                                    {% if assignment.score >= 90 %}bg-success
+                                                    {% elif assignment.score >= 80 %}bg-primary
+                                                    {% elif assignment.score >= 70 %}bg-warning text-dark
+                                                    {% else %}bg-danger{% endif %}">
+                                                    {{ assignment.score }}%
+                                                </div>
+                                                <div class="small text-muted">{{ assignment.letter }}</div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <div class="text-center text-muted py-3">
+                                        <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                        <small>No recent assignments graded</small>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Progress Bar -->
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <small class="text-muted">Class Progress</small>
+                                    <small class="text-muted">{{ data.final_grade.percentage }}%</small>
+                                </div>
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar 
+                                        {% if data.final_grade.percentage >= 90 %}bg-success
+                                        {% elif data.final_grade.percentage >= 80 %}bg-primary
+                                        {% elif data.final_grade.percentage >= 70 %}bg-warning
+                                        {% else %}bg-danger{% endif %}"
+                                         style="width: {{ data.final_grade.percentage }}%">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card-footer bg-light">
+                            <button class="btn btn-outline-primary btn-sm w-100" type="button" 
+                                    data-bs-toggle="collapse" 
+                                    data-bs-target="#details-{{ loop.index }}" 
+                                    aria-expanded="false">
+                                <i class="bi bi-chevron-down me-1"></i>
+                                View All Assignments
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Collapsible Assignment Details -->
+                    <div class="collapse mt-2" id="details-{{ loop.index }}">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">
+                                    <i class="bi bi-list-ul me-2"></i>
+                                    All Assignment Grades
+                                </h6>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-sm mb-0 assignment-details-table">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Assignment</th>
+                                                <th class="text-center">Grade</th>
+                                                <th class="text-center">Letter</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for assignment_title, assignment_grade in data.grades.Current.grade_details.items() %}
+                                            <tr>
+                                                <td class="text-truncate" style="max-width: 150px;" title="{{ assignment_title }}">
+                                                    {{ assignment_title }}
+                                                </td>
+                                                <td class="text-center fw-bold">{{ assignment_grade }}</td>
+                                                <td class="text-center">
+                                                    {% set score = assignment_grade|replace('%', '')|int %}
+                                                    <span class="badge 
+                                                        {% if score >= 90 %}bg-success
+                                                        {% elif score >= 80 %}bg-primary
+                                                        {% elif score >= 70 %}bg-warning text-dark
+                                                        {% else %}bg-danger{% endif %}">
+                                                        {{ get_letter_grade(score) }}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
             </div>
         {% else %}
-            <div class="alert alert-info">
-                You do not have any grades recorded yet.
+            <div class="text-center py-5">
+                <div class="card border-0 shadow-sm empty-grades-state">
+                    <div class="card-body py-5">
+                        <i class="bi bi-inbox text-muted" style="font-size: 4rem;"></i>
+                        <h4 class="text-muted mt-3">No Grades Available</h4>
+                        <p class="text-muted">You don't have any grades recorded yet. Check back after your teachers have graded your assignments.</p>
+                    </div>
+                </div>
             </div>
         {% endif %}
 
@@ -462,7 +734,7 @@
                                         {% endif %}
                                     </div>
                                 </td>
-                                <td>{{ assignment.class_assigned.name }}</td>
+                                <td>{{ assignment.class_info.name }}</td>
                                 <td>
                                     {% if submission %}
                                         {% if submission.status == 'Graded' %}
@@ -481,7 +753,7 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <a href="{{ url_for('submit_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-primary">
+                                    <a href="{{ url_for('student.submit_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-primary">
                                         {% if submission %}View / Resubmit{% else %}Submit{% endif %}
                                     </a>
                                 </td>
@@ -842,7 +1114,7 @@
                         </div>
                     {% endif %}
                     <div class="mt-3">
-                        <a href="{{ url_for('student.student_messages') }}" class="btn btn-outline-secondary">Back to Messages</a>
+                                                        <a href="{{ url_for('student.student_messages') }}" class="btn btn-outline-secondary">Back to Messages</a>
                     </div>
                 {% else %}
                     <p class="text-muted">Message not found.</p>
@@ -858,9 +1130,9 @@
             <div class="card-header bg-info text-white">
                 <div class="d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="bi bi-people-fill me-2"></i>Your Groups</h5>
-                    <a href="{{ url_for('student.student_create_group') }}" class="btn btn-light btn-sm">
-                        <i class="bi bi-plus-circle me-1"></i>Create Group
-                    </a>
+                                                <a href="{{ url_for('student.student_create_group') }}" class="btn btn-light btn-sm">
+                                <i class="bi bi-plus-circle me-1"></i>Create Group
+                            </a>
                 </div>
             </div>
             <div class="card-body">
@@ -1022,7 +1294,7 @@
                 <h5 class="mb-0"><i class="bi bi-envelope-fill me-2"></i>Compose New Message</h5>
             </div>
             <div class="card-body">
-                <form method="POST" action="{{ url_for('student.student_send_message') }}">
+                                        <form method="POST" action="{{ url_for('student.student_send_message') }}">
                     <div class="mb-3">
                         <label for="recipient_id" class="form-label">Recipient</label>
                         <select class="form-select" id="recipient_id" name="recipient_id" required>
@@ -1059,7 +1331,7 @@
                     </div>
                     
                     <div class="d-flex justify-content-between">
-                        <a href="{{ url_for('student.student_messages') }}" class="btn btn-outline-secondary">Cancel</a>
+                                                    <a href="{{ url_for('student.student_messages') }}" class="btn btn-outline-secondary">Cancel</a>
                         <button type="submit" class="btn btn-primary">Send Message</button>
                     </div>
                 </form>
@@ -1075,7 +1347,7 @@
                 <h5 class="mb-0"><i class="bi bi-people-fill me-2"></i>Create Message Group</h5>
             </div>
             <div class="card-body">
-                <form method="POST" action="{{ url_for('student.student_create_group') }}">
+                                        <form method="POST" action="{{ url_for('student.student_create_group') }}">
                     <div class="mb-3">
                         <label for="name" class="form-label">Group Name</label>
                         <input type="text" class="form-control" id="name" name="name" placeholder="Enter group name" required>
@@ -1113,7 +1385,7 @@
                     </div>
                     
                     <div class="d-flex justify-content-between">
-                        <a href="{{ url_for('student.student_groups') }}" class="btn btn-outline-secondary">Cancel</a>
+                                                    <a href="{{ url_for('student.student_groups') }}" class="btn btn-outline-secondary">Cancel</a>
                         <button type="submit" class="btn btn-info">Create Group</button>
                     </div>
                 </form>

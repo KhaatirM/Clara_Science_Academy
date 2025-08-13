@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, Response, abort, jsonify
 from flask_login import login_required, current_user
-from models import db, Student, TeacherStaff, Class, SchoolYear, User, ReportCard, Assignment, Announcement, Message, MessageGroup, ScheduledAnnouncement, Notification, MessageGroupMember, Grade, Enrollment, Attendance
+from models import db, Student, TeacherStaff, Class, SchoolYear, User, ReportCard, Assignment, Announcement, Message, MessageGroup, ScheduledAnnouncement, Notification, MessageGroupMember, Grade, Enrollment, Attendance, AcademicPeriod, CalendarEvent, TeacherWorkDay, SchoolBreak
 from decorators import management_required
 from app import calculate_and_get_grade_for_student, get_grade_for_student
 try:
@@ -11,7 +11,14 @@ import os
 import json
 from werkzeug.security import generate_password_hash
 from werkzeug.utils import secure_filename
-from datetime import datetime
+from datetime import datetime, timedelta, date
+import time # Added for time.time()
+import re
+import PyPDF2
+import pdfplumber
+from sqlalchemy import text
+from werkzeug.security import generate_password_hash
+from add_academic_periods import add_academic_periods_for_year
 
 # File upload configuration
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'}
@@ -667,6 +674,9 @@ def calendar():
     cal_obj = cal.monthcalendar(year, month)
     month_name = datetime(year, month, 1).strftime('%B')
     
+    # Get academic dates for this month
+    academic_dates = get_academic_dates_for_calendar(year, month)
+    
     # Simple calendar data structure
     calendar_data = {
         'month_name': month_name,
@@ -683,13 +693,40 @@ def calendar():
                 week_data.append({'day_num': '', 'is_current_month': False, 'is_today': False, 'events': []})
             else:
                 is_today = (day == datetime.now().day and month == datetime.now().month and year == datetime.now().year)
-                week_data.append({'day_num': day, 'is_current_month': True, 'is_today': is_today, 'events': []})
+                
+                # Get events for this day
+                day_events = []
+                for academic_date in academic_dates:
+                    if academic_date['day'] == day:
+                        day_events.append({
+                            'title': academic_date['title'],
+                            'category': academic_date['category']
+                        })
+                
+                week_data.append({'day_num': day, 'is_current_month': True, 'is_today': is_today, 'events': day_events})
         calendar_data['weeks'].append(week_data)
     
-    return render_template('role_dashboard.html', 
+    # Get school years for the academic calendar management tab
+    school_years = SchoolYear.query.order_by(SchoolYear.start_date.desc()).all()
+    
+    # Get active school year and add academic periods and calendar events data
+    active_school_year = SchoolYear.query.filter_by(is_active=True).first()
+    
+    # Add academic periods to each school year
+    for year in school_years:
+        year.academic_periods = AcademicPeriod.query.filter_by(school_year_id=year.id, is_active=True).all()
+        year.calendar_events = CalendarEvent.query.filter_by(school_year_id=year.id).all()
+        if year.start_date and year.end_date:
+            year.total_days = (year.end_date - year.start_date).days
+    
+    return render_template('role_calendar.html', 
                          calendar_data=calendar_data,
                          prev_month=prev_month,
                          next_month=next_month,
+                         school_years=school_years,
+                         active_school_year=active_school_year,
+                         month_name=month_name,
+                         year=year,
                          section='calendar',
                          active_tab='calendar')
 
@@ -708,6 +745,213 @@ def delete_calendar_event(event_id):
     """Delete a calendar event"""
     flash('Calendar event deletion will be implemented soon!', 'info')
     return redirect(url_for('management.calendar'))
+
+
+# Teacher Work Day Management Routes
+@management_blueprint.route('/calendar/teacher-work-days')
+@login_required
+@management_required
+def teacher_work_days():
+    """View and manage teacher work days"""
+    # Get active school year
+    active_year = SchoolYear.query.filter_by(is_active=True).first()
+    if not active_year:
+        flash('No active school year found.', 'warning')
+        return redirect(url_for('management.calendar'))
+    
+    # Get all teacher work days for the active school year
+    work_days = TeacherWorkDay.query.filter_by(school_year_id=active_year.id).order_by(TeacherWorkDay.date).all()
+    
+    return render_template('management_teacher_work_days.html',
+                         work_days=work_days,
+                         school_year=active_year,
+                         section='calendar',
+                         active_tab='calendar')
+
+
+@management_blueprint.route('/calendar/teacher-work-days/add', methods=['POST'])
+@login_required
+@management_required
+def add_teacher_work_days():
+    """Add multiple teacher work days"""
+    try:
+        dates_str = request.form.get('dates', '').strip()
+        title = request.form.get('title', '').strip()
+        attendance_requirement = request.form.get('attendance_requirement', 'Mandatory')
+        description = request.form.get('description', '').strip()
+        
+        if not dates_str or not title:
+            flash('Dates and title are required.', 'danger')
+            return redirect(url_for('management.teacher_work_days'))
+        
+        # Get active school year
+        active_year = SchoolYear.query.filter_by(is_active=True).first()
+        if not active_year:
+            flash('No active school year found.', 'danger')
+            return redirect(url_for('management.teacher_work_days'))
+        
+        # Parse dates (comma-separated)
+        dates = [date.strip() for date in dates_str.split(',')]
+        added_count = 0
+        
+        for date_str in dates:
+            try:
+                # Parse date (assuming format: MM/DD/YYYY or YYYY-MM-DD)
+                if '/' in date_str:
+                    # MM/DD/YYYY format
+                    month, day, year = date_str.strip().split('/')
+                    date_obj = datetime.strptime(f"{year}-{month.zfill(2)}-{day.zfill(2)}", "%Y-%m-%d").date()
+                else:
+                    # YYYY-MM-DD format
+                    date_obj = datetime.strptime(date_str.strip(), "%Y-%m-%d").date()
+                
+                # Check if work day already exists for this date
+                existing = TeacherWorkDay.query.filter_by(
+                    school_year_id=active_year.id,
+                    date=date_obj
+                ).first()
+                
+                if not existing:
+                    work_day = TeacherWorkDay(
+                        school_year_id=active_year.id,
+                        date=date_obj,
+                        title=title,
+                        attendance_requirement=attendance_requirement,
+                        description=description
+                    )
+                    db.session.add(work_day)
+                    added_count += 1
+                
+            except ValueError:
+                flash(f'Invalid date format: {date_str}. Use MM/DD/YYYY or YYYY-MM-DD format.', 'warning')
+                continue
+        
+        db.session.commit()
+        flash(f'Successfully added {added_count} teacher work day(s).', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error adding teacher work days: {str(e)}', 'danger')
+    
+    return redirect(url_for('management.teacher_work_days'))
+
+
+@management_blueprint.route('/calendar/teacher-work-days/delete/<int:work_day_id>', methods=['POST'])
+@login_required
+@management_required
+def delete_teacher_work_day(work_day_id):
+    """Delete a teacher work day"""
+    try:
+        work_day = TeacherWorkDay.query.get_or_404(work_day_id)
+        db.session.delete(work_day)
+        db.session.commit()
+        flash('Teacher work day deleted successfully.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting teacher work day: {str(e)}', 'danger')
+    
+    return redirect(url_for('management.teacher_work_days'))
+
+
+# School Break Management Routes
+@management_blueprint.route('/calendar/school-breaks')
+@login_required
+@management_required
+def school_breaks():
+    """View and manage school breaks"""
+    # Get active school year
+    active_year = SchoolYear.query.filter_by(is_active=True).first()
+    if not active_year:
+        flash('No active school year found.', 'warning')
+        return redirect(url_for('management.calendar'))
+    
+    # Get all school breaks for the active school year
+    breaks = SchoolBreak.query.filter_by(school_year_id=active_year.id).order_by(SchoolBreak.start_date).all()
+    
+    return render_template('management_school_breaks.html',
+                         breaks=breaks,
+                         school_year=active_year,
+                         section='calendar',
+                         active_tab='calendar')
+
+
+@management_blueprint.route('/calendar/school-breaks/add', methods=['POST'])
+@login_required
+@management_required
+def add_school_break():
+    """Add a school break"""
+    try:
+        name = request.form.get('name', '').strip()
+        start_date_str = request.form.get('start_date', '').strip()
+        end_date_str = request.form.get('end_date', '').strip()
+        break_type = request.form.get('break_type', 'Vacation')
+        description = request.form.get('description', '').strip()
+        
+        if not all([name, start_date_str, end_date_str]):
+            flash('Name, start date, and end date are required.', 'danger')
+            return redirect(url_for('management.school_breaks'))
+        
+        # Get active school year
+        active_year = SchoolYear.query.filter_by(is_active=True).first()
+        if not active_year:
+            flash('No active school year found.', 'danger')
+            return redirect(url_for('management.school_breaks'))
+        
+        # Parse dates
+        start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+        end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+        
+        if start_date > end_date:
+            flash('Start date must be before or equal to end date.', 'danger')
+            return redirect(url_for('management.school_breaks'))
+        
+        # Check if break already exists for this date range
+        existing = SchoolBreak.query.filter(
+            SchoolBreak.school_year_id == active_year.id,
+            SchoolBreak.start_date <= end_date,
+            SchoolBreak.end_date >= start_date
+        ).first()
+        
+        if not existing:
+            school_break = SchoolBreak(
+                school_year_id=active_year.id,
+                name=name,
+                start_date=start_date,
+                end_date=end_date,
+                break_type=break_type,
+                description=description
+            )
+            db.session.add(school_break)
+            db.session.commit()
+            flash('School break added successfully.', 'success')
+        else:
+            flash('A break already exists for this date range.', 'warning')
+        
+    except ValueError:
+        flash('Invalid date format. Use YYYY-MM-DD format.', 'danger')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error adding school break: {str(e)}', 'danger')
+    
+    return redirect(url_for('management.school_breaks'))
+
+
+@management_blueprint.route('/calendar/school-breaks/delete/<int:break_id>', methods=['POST'])
+@login_required
+@management_required
+def delete_school_break(break_id):
+    """Delete a school break"""
+    try:
+        school_break = SchoolBreak.query.get_or_404(break_id)
+        db.session.delete(school_break)
+        db.session.commit()
+        flash('School break deleted successfully.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting school break: {str(e)}', 'danger')
+    
+    return redirect(url_for('management.school_breaks'))
+
 
 @management_blueprint.route('/communications')
 @login_required
@@ -1630,6 +1874,7 @@ def school_years():
         start_date_str = request.form.get('start_date')
         end_date_str = request.form.get('end_date')
         is_active = request.form.get('is_active') == 'true'
+        auto_generate_quarters = request.form.get('auto_generate_quarters') == 'true'
 
         if not all([name, start_date_str, end_date_str]):
             flash('All fields are required to create a school year.', 'danger')
@@ -1648,12 +1893,34 @@ def school_years():
         
         new_year = SchoolYear(name=name, start_date=start_date, end_date=end_date, is_active=is_active)
         db.session.add(new_year)
+        db.session.flush()  # Get the ID without committing
+        
+        # Auto-generate academic periods if requested
+        if auto_generate_quarters:
+            try:
+                add_academic_periods_for_year(new_year.id)
+                flash(f'School year "{name}" created successfully with academic periods!', 'success')
+            except Exception as e:
+                flash(f'School year "{name}" created but there was an error generating academic periods: {str(e)}', 'warning')
+        else:
+            flash(f'School year "{name}" created successfully!', 'success')
+        
         db.session.commit()
-        flash(f'School year "{name}" created successfully!', 'success')
         return redirect(url_for('management.school_years'))
 
     school_years = SchoolYear.query.order_by(SchoolYear.start_date.desc()).all()
-    return render_template('management_school_years.html', school_years=school_years)
+    active_school_year = SchoolYear.query.filter_by(is_active=True).first()
+    
+    # Add academic periods to each school year
+    for year in school_years:
+        year.academic_periods = AcademicPeriod.query.filter_by(school_year_id=year.id, is_active=True).all()
+        year.calendar_events = CalendarEvent.query.filter_by(school_year_id=year.id).all()
+        if year.start_date and year.end_date:
+            year.total_days = (year.end_date - year.start_date).days
+    
+    return render_template('management_school_years.html', 
+                         school_years=school_years,
+                         active_school_year=active_school_year)
 
 
 @management_blueprint.route('/school-year/set-active/<int:year_id>', methods=['POST'])
@@ -1673,6 +1940,954 @@ def set_active_school_year(year_id):
     flash(f'School year "{year_to_activate.name}" is now the active year.', 'success')
     return redirect(url_for('management.school_years'))
 
+
+@management_blueprint.route('/school-year/edit-active', methods=['POST'])
+@login_required
+@management_required
+def edit_active_school_year():
+    """Edit the active school year's dates with automatic academic period synchronization."""
+    active_school_year = SchoolYear.query.filter_by(is_active=True).first()
+    if not active_school_year:
+        flash('No active school year found.', 'danger')
+        return redirect(url_for('management.calendar'))
+    
+    start_date_str = request.form.get('start_date')
+    end_date_str = request.form.get('end_date')
+    
+    if not all([start_date_str, end_date_str]):
+        flash('Both start and end dates are required.', 'danger')
+        return redirect(url_for('management.calendar'))
+    
+    try:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        
+        if start_date >= end_date:
+            flash('End date must be after start date.', 'danger')
+            return redirect(url_for('management.calendar'))
+        
+        # Update school year dates
+        active_school_year.start_date = start_date
+        active_school_year.end_date = end_date
+        
+        # Get academic periods for this school year
+        from models import AcademicPeriod
+        academic_periods = AcademicPeriod.query.filter_by(school_year_id=active_school_year.id).all()
+        
+        # Create a mapping of period names to period objects
+        period_map = {period.name: period for period in academic_periods}
+        
+        # Calculate new quarter dates based on school year duration
+        year_duration = (end_date - start_date).days
+        quarter_duration = year_duration // 4
+        
+        # Update Q1 and S1 start dates (linked to school year start)
+        if 'Quarter 1' in period_map:
+            period_map['Quarter 1'].start_date = start_date
+            period_map['Quarter 1'].end_date = start_date + timedelta(days=quarter_duration - 1)
+        
+        if 'Semester 1' in period_map:
+            period_map['Semester 1'].start_date = start_date
+        
+        # Update Q2 end date and S1 end date (linked together)
+        if 'Quarter 2' in period_map:
+            q2_start = start_date + timedelta(days=quarter_duration)
+            q2_end = q2_start + timedelta(days=quarter_duration - 1)
+            period_map['Quarter 2'].start_date = q2_start
+            period_map['Quarter 2'].end_date = q2_end
+            
+            if 'Semester 1' in period_map:
+                period_map['Semester 1'].end_date = q2_end
+        
+        # Update Q3 start date and S2 start date (linked together)
+        if 'Quarter 3' in period_map:
+            q3_start = start_date + timedelta(days=quarter_duration * 2)
+            q3_end = q3_start + timedelta(days=quarter_duration - 1)
+            period_map['Quarter 3'].start_date = q3_start
+            period_map['Quarter 3'].end_date = q3_end
+            
+            if 'Semester 2' in period_map:
+                period_map['Semester 2'].start_date = q3_start
+        
+        # Update Q4 end date and S2 end date (linked to school year end)
+        if 'Quarter 4' in period_map:
+            q4_start = start_date + timedelta(days=quarter_duration * 3)
+            period_map['Quarter 4'].start_date = q4_start
+            period_map['Quarter 4'].end_date = end_date
+        
+        if 'Semester 2' in period_map:
+            period_map['Semester 2'].end_date = end_date
+        
+        # Commit all changes
+        db.session.commit()
+        
+        flash(f'Active school year "{active_school_year.name}" dates updated successfully with automatic academic period synchronization!', 'success')
+        
+    except ValueError:
+        flash('Invalid date format. Please use YYYY-MM-DD.', 'danger')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error updating active school year: {str(e)}', 'danger')
+    
+    return redirect(url_for('management.calendar'))
+
+
+@management_blueprint.route('/school-year/edit/<int:year_id>', methods=['POST'])
+@login_required
+@management_required
+def edit_school_year(year_id):
+    """Edit a school year's start and end dates with automatic academic period synchronization."""
+    school_year = SchoolYear.query.get_or_404(year_id)
+    
+    start_date_str = request.form.get('start_date')
+    end_date_str = request.form.get('end_date')
+    
+    if not all([start_date_str, end_date_str]):
+        flash('Both start and end dates are required.', 'danger')
+        return redirect(url_for('management.school_years'))
+    
+    try:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        
+        if start_date >= end_date:
+            flash('End date must be after start date.', 'danger')
+            return redirect(url_for('management.school_years'))
+        
+        # Store old dates for comparison
+        old_start_date = school_year.start_date
+        old_end_date = school_year.end_date
+        
+        # Update school year dates
+        school_year.start_date = start_date
+        school_year.end_date = end_date
+        
+        # Get academic periods for this school year
+        from models import AcademicPeriod
+        academic_periods = AcademicPeriod.query.filter_by(school_year_id=school_year.id).all()
+        
+        # Create a mapping of period names to period objects
+        period_map = {period.name: period for period in academic_periods}
+        
+        # Calculate new quarter dates based on school year duration
+        year_duration = (end_date - start_date).days
+        quarter_duration = year_duration // 4
+        
+        # Update Q1 and S1 start dates (linked to school year start)
+        if 'Quarter 1' in period_map:
+            period_map['Quarter 1'].start_date = start_date
+            period_map['Quarter 1'].end_date = start_date + timedelta(days=quarter_duration - 1)
+        
+        if 'Semester 1' in period_map:
+            period_map['Semester 1'].start_date = start_date
+        
+        # Update Q2 end date and S1 end date (linked together)
+        if 'Quarter 2' in period_map:
+            q2_start = start_date + timedelta(days=quarter_duration)
+            q2_end = q2_start + timedelta(days=quarter_duration - 1)
+            period_map['Quarter 2'].start_date = q2_start
+            period_map['Quarter 2'].end_date = q2_end
+            
+            if 'Semester 1' in period_map:
+                period_map['Semester 1'].end_date = q2_end
+        
+        # Update Q3 start date and S2 start date (linked together)
+        if 'Quarter 3' in period_map:
+            q3_start = start_date + timedelta(days=quarter_duration * 2)
+            q3_end = q3_start + timedelta(days=quarter_duration - 1)
+            period_map['Quarter 3'].start_date = q3_start
+            period_map['Quarter 3'].end_date = q3_end
+            
+            if 'Semester 2' in period_map:
+                period_map['Semester 2'].start_date = q3_start
+        
+        # Update Q4 end date and S2 end date (linked to school year end)
+        if 'Quarter 4' in period_map:
+            q4_start = start_date + timedelta(days=quarter_duration * 3)
+            period_map['Quarter 4'].start_date = q4_start
+            period_map['Quarter 4'].end_date = end_date
+        
+        if 'Semester 2' in period_map:
+            period_map['Semester 2'].end_date = end_date
+        
+        # Commit all changes
+        db.session.commit()
+        
+        flash(f'School year "{school_year.name}" dates updated successfully with automatic academic period synchronization!', 'success')
+        
+    except ValueError:
+        flash('Invalid date format. Please use YYYY-MM-DD.', 'danger')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error updating school year: {str(e)}', 'danger')
+    
+    return redirect(url_for('management.school_years'))
+
+
+@management_blueprint.route('/academic-period/edit/<int:period_id>', methods=['POST'])
+@login_required
+@management_required
+def edit_academic_period(period_id):
+    """Edit an academic period's dates with automatic synchronization of linked periods."""
+    period = AcademicPeriod.query.get_or_404(period_id)
+    
+    start_date_str = request.form.get('start_date')
+    end_date_str = request.form.get('end_date')
+    
+    if not all([start_date_str, end_date_str]):
+        flash('Both start and end dates are required.', 'danger')
+        return redirect(url_for('management.school_years'))
+    
+    try:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        
+        if start_date >= end_date:
+            flash('End date must be after start date.', 'danger')
+            return redirect(url_for('management.school_years'))
+        
+        # Store old dates for comparison
+        old_start_date = period.start_date
+        old_end_date = period.end_date
+        
+        # Update the current period
+        period.start_date = start_date
+        period.end_date = end_date
+        
+        # Get all academic periods for this school year
+        academic_periods = AcademicPeriod.query.filter_by(school_year_id=period.school_year_id).all()
+        period_map = {p.name: p for p in academic_periods}
+        
+        # Handle synchronization based on period type
+        if period.name == 'Quarter 1':
+            # Q1 start date changes → update S1 start date and school year start date
+            if 'Semester 1' in period_map:
+                period_map['Semester 1'].start_date = start_date
+            
+            # Update school year start date if it's different
+            school_year = SchoolYear.query.get(period.school_year_id)
+            if school_year and school_year.start_date != start_date:
+                school_year.start_date = start_date
+        
+        elif period.name == 'Quarter 2':
+            # Q2 end date changes → update S1 end date
+            if 'Semester 1' in period_map:
+                period_map['Semester 1'].end_date = end_date
+        
+        elif period.name == 'Quarter 3':
+            # Q3 start date changes → update S2 start date
+            if 'Semester 2' in period_map:
+                period_map['Semester 2'].start_date = start_date
+        
+        elif period.name == 'Quarter 4':
+            # Q4 end date changes → update S2 end date and school year end date
+            if 'Semester 2' in period_map:
+                period_map['Semester 2'].end_date = end_date
+            
+            # Update school year end date if it's different
+            school_year = SchoolYear.query.get(period.school_year_id)
+            if school_year and school_year.end_date != end_date:
+                school_year.end_date = end_date
+        
+        elif period.name == 'Semester 1':
+            # S1 start date changes → update Q1 start date and school year start date
+            if 'Quarter 1' in period_map:
+                period_map['Quarter 1'].start_date = start_date
+            
+            # Update school year start date if it's different
+            school_year = SchoolYear.query.get(period.school_year_id)
+            if school_year and school_year.start_date != start_date:
+                school_year.start_date = start_date
+            
+            # S1 end date changes → update Q2 end date
+            if 'Quarter 2' in period_map:
+                period_map['Quarter 2'].end_date = end_date
+        
+        elif period.name == 'Semester 2':
+            # S2 start date changes → update Q3 start date
+            if 'Quarter 3' in period_map:
+                period_map['Quarter 3'].start_date = start_date
+            
+            # S2 end date changes → update Q4 end date and school year end date
+            if 'Quarter 4' in period_map:
+                period_map['Quarter 4'].end_date = end_date
+            
+            # Update school year end date if it's different
+            school_year = SchoolYear.query.get(period.school_year_id)
+            if school_year and school_year.end_date != end_date:
+                school_year.end_date = end_date
+        
+        # Commit all changes
+        db.session.commit()
+        
+        flash(f'{period.name} dates updated successfully with automatic synchronization!', 'success')
+        
+    except ValueError:
+        flash('Invalid date format. Please use YYYY-MM-DD.', 'danger')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error updating academic period: {str(e)}', 'danger')
+    
+    return redirect(url_for('management.school_years'))
+
+
+@management_blueprint.route('/academic-periods/generate/<int:year_id>', methods=['POST'])
+@login_required
+@management_required
+def generate_academic_periods(year_id):
+    """Generate or regenerate academic periods for a school year with proper linking."""
+    school_year = SchoolYear.query.get_or_404(year_id)
+    
+    try:
+        # Remove existing academic periods for this year
+        AcademicPeriod.query.filter_by(school_year_id=year_id).delete()
+        
+        # Generate new academic periods with proper linking
+        add_academic_periods_for_year(year_id)
+        
+        flash(f'Academic periods for {school_year.name} have been regenerated successfully with proper linking!', 'success')
+        
+    except Exception as e:
+        flash(f'Error generating academic periods: {str(e)}', 'danger')
+    
+    return redirect(url_for('management.school_years'))
+
+
+@management_blueprint.route('/academic-period/add/<int:year_id>', methods=['POST'])
+@login_required
+@management_required
+def add_academic_period(year_id):
+    """Add a new academic period to a school year."""
+    school_year = SchoolYear.query.get_or_404(year_id)
+    
+    # Get form data
+    name = request.form.get('name')
+    period_type = request.form.get('period_type')
+    start_date_str = request.form.get('start_date')
+    end_date_str = request.form.get('end_date')
+    
+    # Validate required fields
+    if not all([name, period_type, start_date_str, end_date_str]):
+        flash('All fields are required.', 'danger')
+        return redirect(url_for('management.calendar'))
+    
+    # Validate period type
+    if period_type not in ['quarter', 'semester']:
+        flash('Invalid period type. Must be quarter or semester.', 'danger')
+        return redirect(url_for('management.calendar'))
+    
+    try:
+        # Parse dates
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        
+        # Validate date logic
+        if start_date >= end_date:
+            flash('End date must be after start date.', 'danger')
+            return redirect(url_for('management.calendar'))
+        
+        # Check if dates fall within school year
+        if start_date < school_year.start_date or end_date > school_year.end_date:
+            flash('Academic period dates must fall within the school year.', 'danger')
+            return redirect(url_for('management.calendar'))
+        
+        # Check for overlapping periods of the same type
+        overlapping_periods = AcademicPeriod.query.filter(
+            AcademicPeriod.school_year_id == year_id,
+            AcademicPeriod.period_type == period_type,
+            AcademicPeriod.start_date <= end_date,
+            AcademicPeriod.end_date >= start_date
+        ).all()
+        
+        if overlapping_periods:
+            flash(f'A {period_type} already exists for the selected date range.', 'danger')
+            return redirect(url_for('management.calendar'))
+        
+        # Create new academic period
+        new_period = AcademicPeriod(
+            name=name,
+            period_type=period_type,
+            start_date=start_date,
+            end_date=end_date,
+            school_year_id=year_id
+        )
+        
+        db.session.add(new_period)
+        db.session.commit()
+        
+        flash(f'Academic period "{name}" added successfully!', 'success')
+        
+    except ValueError:
+        flash('Invalid date format. Please use YYYY-MM-DD.', 'danger')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error adding academic period: {str(e)}', 'danger')
+    
+    return redirect(url_for('management.calendar'))
+
+
+def get_academic_dates_for_calendar(year, month):
+    """Get academic dates (quarters, semesters, holidays) for a specific month/year."""
+    from datetime import date
+    
+    academic_dates = []
+    
+    # Get the active school year
+    active_year = SchoolYear.query.filter_by(is_active=True).first()
+    if not active_year:
+        return academic_dates
+    
+    # Get academic periods for this month
+    start_of_month = date(year, month, 1)
+    if month == 12:
+        end_of_month = date(year + 1, 1, 1) - timedelta(days=1)
+    else:
+        end_of_month = date(year, month + 1, 1) - timedelta(days=1)
+    
+    # Get academic periods that overlap with this month
+    academic_periods = AcademicPeriod.query.filter(
+        AcademicPeriod.school_year_id == active_year.id,
+        AcademicPeriod.start_date <= end_of_month,
+        AcademicPeriod.end_date >= start_of_month
+    ).all()
+    
+    for period in academic_periods:
+        # Add start date event
+        if period.start_date.month == month:
+            academic_dates.append({
+                'day': period.start_date.day,
+                'title': f"{period.name} Start",
+                'category': f"{period.period_type.title()}",
+                'type': 'academic_period_start'
+            })
+        
+        # Add end date event
+        if period.end_date.month == month:
+            academic_dates.append({
+                'day': period.end_date.day,
+                'title': f"{period.name} End",
+                'category': f"{period.period_type.title()}",
+                'type': 'academic_period_end'
+            })
+    
+    # Get calendar events for this month
+    calendar_events = CalendarEvent.query.filter(
+        CalendarEvent.school_year_id == active_year.id,
+        CalendarEvent.start_date <= end_of_month,
+        CalendarEvent.end_date >= start_of_month
+    ).all()
+    
+    for event in calendar_events:
+        if event.start_date.month == month:
+            academic_dates.append({
+                'day': event.start_date.day,
+                'title': event.name,
+                'category': event.event_type.replace('_', ' ').title(),
+                'type': 'calendar_event'
+            })
+    
+    # Get teacher work days for this month
+    teacher_work_days = TeacherWorkDay.query.filter(
+        TeacherWorkDay.school_year_id == active_year.id,
+        TeacherWorkDay.date >= start_of_month,
+        TeacherWorkDay.date <= end_of_month
+    ).all()
+    
+    for work_day in teacher_work_days:
+        if work_day.date.month == month:
+            academic_dates.append({
+                'day': work_day.date.day,
+                'title': f"{work_day.title} ({work_day.attendance_requirement})",
+                'category': 'Teacher Work Day',
+                'type': 'teacher_work_day'
+            })
+    
+    # Get school breaks for this month
+    school_breaks = SchoolBreak.query.filter(
+        SchoolBreak.school_year_id == active_year.id,
+        SchoolBreak.start_date <= end_of_month,
+        SchoolBreak.end_date >= start_of_month
+    ).all()
+    
+    for school_break in school_breaks:
+        # Check if any part of the break falls in this month
+        if (school_break.start_date.month == month or 
+            school_break.end_date.month == month or
+            (school_break.start_date.month < month and school_break.end_date.month > month)):
+            
+            # For multi-day breaks, show start and end dates
+            if school_break.start_date.month == month:
+                academic_dates.append({
+                    'day': school_break.start_date.day,
+                    'title': f"{school_break.name} Start",
+                    'category': school_break.break_type,
+                    'type': 'school_break_start'
+                })
+            
+            if school_break.end_date.month == month:
+                academic_dates.append({
+                    'day': school_break.end_date.day,
+                    'title': f"{school_break.name} End",
+                    'category': school_break.break_type,
+                    'type': 'school_break_end'
+                })
+    
+    return academic_dates
+
+
+@management_blueprint.route('/upload-calendar-pdf', methods=['POST'])
+@login_required
+@management_required
+def upload_calendar_pdf():
+    """Upload and process a school calendar PDF."""
+    if 'calendar_pdf' not in request.files:
+        flash('No PDF file selected.', 'danger')
+        return redirect(url_for('management.school_years'))
+    
+    file = request.files['calendar_pdf']
+    school_year_id = request.form.get('school_year')
+    calendar_name = request.form.get('calendar_name', 'School Calendar')
+    
+    if file.filename == '':
+        flash('No PDF file selected.', 'danger')
+        return redirect(url_for('management.school_years'))
+    
+    if not school_year_id:
+        flash('Please select a school year.', 'danger')
+        return redirect(url_for('management.school_years'))
+    
+    if file and file.filename.lower().endswith('.pdf'):
+        try:
+            # Save the PDF file
+            filename = secure_filename(f"calendar_{school_year_id}_{int(time.time())}.pdf")
+            filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+            file.save(filepath)
+            
+            # Process the PDF to extract calendar information
+            calendar_data = process_calendar_pdf(filepath)
+            
+            # Store the calendar data in the database
+            store_calendar_data(calendar_data, school_year_id, filename)
+            
+            flash(f'Calendar PDF uploaded and processed successfully! Found {len(calendar_data["holidays"])} holidays, {len(calendar_data["breaks"])} breaks, and {len(calendar_data["professional_development"])} PD days.', 'success')
+            
+        except Exception as e:
+            flash(f'Error processing calendar PDF: {str(e)}', 'danger')
+    else:
+        flash('Please upload a valid PDF file.', 'danger')
+    
+    return redirect(url_for('management.school_years'))
+
+
+def process_calendar_pdf(filepath):
+    """Process a PDF calendar to extract important dates."""
+    try:
+        calendar_data = {
+            'school_year_start': None,
+            'school_year_end': None,
+            'quarters': [],
+            'holidays': [],
+            'breaks': [],
+            'professional_development': [],
+            'parent_teacher_conferences': [],
+            'early_dismissal': [],
+            'no_school': []
+        }
+        
+        # Try to extract text using pdfplumber first (better for complex layouts)
+        try:
+            with pdfplumber.open(filepath) as pdf:
+                text_content = ""
+                for page in pdf.pages:
+                    if page.extract_text():
+                        text_content += page.extract_text() + "\n"
+        except Exception as e:
+            current_app.logger.warning(f"pdfplumber failed, trying PyPDF2: {str(e)}")
+            # Fallback to PyPDF2
+            with open(filepath, 'rb') as file:
+                pdf_reader = PyPDF2.PdfReader(file)
+                text_content = ""
+                for page in pdf_reader.pages:
+                    text_content += page.extract_text() + "\n"
+        
+        if not text_content.strip():
+            raise Exception("Could not extract text from PDF")
+        
+        # Convert to lowercase for easier pattern matching
+        text_lower = text_content.lower()
+        
+        # Extract school year dates
+        calendar_data.update(extract_school_year_dates(text_content, text_lower))
+        
+        # Extract academic periods (quarters/semesters)
+        calendar_data.update(extract_academic_periods(text_content, text_lower))
+        
+        # Extract holidays and special events
+        calendar_data.update(extract_holidays_and_events(text_content, text_lower))
+        
+        # Extract breaks and vacations
+        calendar_data.update(extract_breaks_and_vacations(text_content, text_lower))
+        
+        # Extract professional development and conference dates
+        calendar_data.update(extract_professional_dates(text_content, text_lower))
+        
+        current_app.logger.info(f"Successfully processed PDF calendar: {len(calendar_data['holidays'])} holidays, {len(calendar_data['breaks'])} breaks found")
+        
+        return calendar_data
+        
+    except Exception as e:
+        current_app.logger.error(f"Error processing PDF: {str(e)}")
+        raise
+
+def extract_school_year_dates(text_content, text_lower):
+    """Extract school year start and end dates."""
+    dates = {
+        'school_year_start': None,
+        'school_year_end': None
+    }
+    
+    # Common patterns for school year dates
+    patterns = [
+        r'school\s+year\s+(\d{4})[-\s]+(\d{4})',
+        r'(\d{4})[-\s]+(\d{4})\s+school\s+year',
+        r'(\d{4})[-\s]+(\d{4})\s+academic\s+year',
+        r'(\d{4})[-\s]+(\d{4})\s+calendar'
+    ]
+    
+    for pattern in patterns:
+        match = re.search(pattern, text_lower)
+        if match:
+            year1, year2 = int(match.group(1)), int(match.group(2))
+            # Assume school year starts in August/September and ends in May/June
+            dates['school_year_start'] = date(year1, 8, 1)  # August 1st
+            dates['school_year_end'] = date(year2, 6, 30)   # June 30th
+            break
+    
+    # Look for specific start/end dates
+    start_patterns = [
+        r'first\s+day\s+of\s+school[:\s]*(\w+\s+\d{1,2},?\s+\d{4})',
+        r'school\s+starts[:\s]*(\w+\s+\d{1,2},?\s+\d{4})',
+        r'classes\s+begin[:\s]*(\w+\s+\d{1,2},?\s+\d{4})'
+    ]
+    
+    end_patterns = [
+        r'last\s+day\s+of\s+school[:\s]*(\w+\s+\d{1,2},?\s+\d{4})',
+        r'school\s+ends[:\s]*(\w+\s+\d{1,2},?\s+\d{4})',
+        r'classes\s+end[:\s]*(\w+\s+\d{1,2},?\s+\d{4})'
+    ]
+    
+    for pattern in start_patterns:
+        match = re.search(pattern, text_lower)
+        if match:
+            try:
+                date_str = match.group(1)
+                parsed_date = parse_date_string(date_str)
+                if parsed_date:
+                    dates['school_year_start'] = parsed_date
+                    break
+            except:
+                continue
+    
+    for pattern in end_patterns:
+        match = re.search(pattern, text_lower)
+        if match:
+            try:
+                date_str = match.group(1)
+                parsed_date = parse_date_string(date_str)
+                if parsed_date:
+                    dates['school_year_end'] = parsed_date
+                    break
+            except:
+                continue
+    
+    return dates
+
+def extract_academic_periods(text_content, text_lower):
+    """Extract quarter and semester dates."""
+    periods = {
+        'quarters': [],
+        'semesters': []
+    }
+    
+    # Quarter patterns
+    quarter_patterns = [
+        r'quarter\s+(\d)[:\s]*(\w+\s+\d{1,2},?\s+\d{4})[-\s]+(\w+\s+\d{1,2},?\s+\d{4})',
+        r'q(\d)[:\s]*(\w+\s+\d{1,2},?\s+\d{4})[-\s]+(\w+\s+\d{1,2},?\s+\d{4})',
+        r'(\w+\s+\d{1,2},?\s+\d{4})[-\s]+(\w+\s+\d{1,2},?\s+\d{4})[:\s]*quarter\s+(\d)'
+    ]
+    
+    # Semester patterns
+    semester_patterns = [
+        r'semester\s+(\d)[:\s]*(\w+\s+\d{1,2},?\s+\d{4})[-\s]+(\w+\s+\d{1,2},?\s+\d{4})',
+        r's(\d)[:\s]*(\w+\s+\d{1,2},?\s+\d{4})[-\s]+(\w+\s+\d{1,2},?\s+\d{4})'
+    ]
+    
+    # Extract quarters
+    for pattern in quarter_patterns:
+        matches = re.finditer(pattern, text_lower)
+        for match in matches:
+            try:
+                if len(match.groups()) == 3:
+                    if 'quarter' in pattern or 'q' in pattern:
+                        quarter_num = int(match.group(1))
+                        start_date = parse_date_string(match.group(2))
+                        end_date = parse_date_string(match.group(3))
+                    else:
+                        start_date = parse_date_string(match.group(1))
+                        end_date = parse_date_string(match.group(2))
+                        quarter_num = int(match.group(3))
+                    
+                    if start_date and end_date:
+                        periods['quarters'].append({
+                            'name': f'Q{quarter_num}',
+                            'start_date': start_date,
+                            'end_date': end_date
+                        })
+            except:
+                continue
+    
+    # Extract semesters
+    for pattern in semester_patterns:
+        matches = re.finditer(pattern, text_lower)
+        for match in matches:
+            try:
+                semester_num = int(match.group(1))
+                start_date = parse_date_string(match.group(2))
+                end_date = parse_date_string(match.group(3))
+                
+                if start_date and end_date:
+                    periods['semesters'].append({
+                        'name': f'S{semester_num}',
+                        'start_date': start_date,
+                        'end_date': end_date
+                    })
+            except:
+                continue
+    
+    return periods
+
+def extract_holidays_and_events(text_content, text_lower):
+    """Extract holidays and special event dates."""
+    events = {
+        'holidays': [],
+        'parent_teacher_conferences': [],
+        'early_dismissal': [],
+        'no_school': []
+    }
+    
+    # Common holiday patterns
+    holiday_patterns = [
+        (r'(\w+\s+\d{1,2},?\s+\d{4})[:\s]*labor\s+day', 'Labor Day'),
+        (r'(\w+\s+\d{1,2},?\s+\d{4})[:\s]*columbus\s+day', 'Columbus Day'),
+        (r'(\w+\s+\d{1,2},?\s+\d{4})[:\s]*veterans\s+day', 'Veterans Day'),
+        (r'(\w+\s+\d{1,2},?\s+\d{4})[:\s]*thanksgiving', 'Thanksgiving'),
+        (r'(\w+\s+\d{1,2},?\s+\d{4})[:\s]*christmas', 'Christmas'),
+        (r'(\w+\s+\d{1,2},?\s+\d{4})[:\s]*new\s+year', 'New Year'),
+        (r'(\w+\s+\d{1,2},?\s+\d{4})[:\s]*martin\s+luther\s+king', 'Martin Luther King Jr. Day'),
+        (r'(\w+\s+\d{1,2},?\s+\d{4})[:\s]*presidents\s+day', 'Presidents Day'),
+        (r'(\w+\s+\d{1,2},?\s+\d{4})[:\s]*memorial\s+day', 'Memorial Day'),
+        (r'(\w+\s+\d{1,2},?\s+\d{4})[:\s]*independence\s+day', 'Independence Day')
+    ]
+    
+    for pattern, holiday_name in holiday_patterns:
+        matches = re.finditer(pattern, text_lower)
+        for match in matches:
+            try:
+                date_str = match.group(1)
+                parsed_date = parse_date_string(date_str)
+                if parsed_date:
+                    events['holidays'].append({
+                        'name': holiday_name,
+                        'date': parsed_date
+                    })
+            except:
+                continue
+    
+    # Parent-teacher conference patterns
+    ptc_patterns = [
+        r'(\w+\s+\d{1,2},?\s+\d{4})[:\s]*parent[-\s]*teacher\s+conference',
+        r'parent[-\s]*teacher\s+conference[:\s]*(\w+\s+\d{1,2},?\s+\d{4})',
+        r'ptc[:\s]*(\w+\s+\d{1,2},?\s+\d{4})'
+    ]
+    
+    for pattern in ptc_patterns:
+        matches = re.finditer(pattern, text_lower)
+        for match in matches:
+            try:
+                date_str = match.group(1)
+                parsed_date = parse_date_string(date_str)
+                if parsed_date:
+                    events['parent_teacher_conferences'].append({
+                        'name': 'Parent-Teacher Conference',
+                        'date': parsed_date
+                    })
+            except:
+                continue
+    
+    # Early dismissal patterns
+    early_patterns = [
+        r'(\w+\s+\d{1,2},?\s+\d{4})[:\s]*early\s+dismissal',
+        r'early\s+dismissal[:\s]*(\w+\s+\d{1,2},?\s+\d{4})'
+    ]
+    
+    for pattern in early_patterns:
+        matches = re.finditer(pattern, text_lower)
+        for match in matches:
+            try:
+                date_str = match.group(1)
+                parsed_date = parse_date_string(date_str)
+                if parsed_date:
+                    events['early_dismissal'].append({
+                        'name': 'Early Dismissal',
+                        'date': parsed_date
+                    })
+            except:
+                continue
+    
+    # No school patterns
+    no_school_patterns = [
+        r'(\w+\s+\d{1,2},?\s+\d{4})[:\s]*no\s+school',
+        r'no\s+school[:\s]*(\w+\s+\d{1,2},?\s+\d{4})',
+        r'(\w+\s+\d{1,2},?\s+\d{4})[:\s]*school\s+closed',
+        r'school\s+closed[:\s]*(\w+\s+\d{1,2},?\s+\d{4})'
+    ]
+    
+    for pattern in no_school_patterns:
+        matches = re.finditer(pattern, text_lower)
+        for match in matches:
+            try:
+                date_str = match.group(1)
+                parsed_date = parse_date_string(date_str)
+                if parsed_date:
+                    events['no_school'].append({
+                        'name': 'No School',
+                        'date': parsed_date
+                    })
+            except:
+                continue
+    
+    return events
+
+def extract_breaks_and_vacations(text_content, text_lower):
+    """Extract vacation and break dates."""
+    breaks = {
+        'breaks': []
+    }
+    
+    # Break patterns
+    break_patterns = [
+        r'(\w+\s+\d{1,2},?\s+\d{4})[-\s]+(\w+\s+\d{1,2},?\s+\d{4})[:\s]*winter\s+break',
+        r'winter\s+break[:\s]*(\w+\s+\d{1,2},?\s+\d{4})[-\s]+(\w+\s+\d{1,2},?\s+\d{4})',
+        r'(\w+\s+\d{1,2},?\s+\d{4})[-\s]+(\w+\s+\d{1,2},?\s+\d{4})[:\s]*spring\s+break',
+        r'spring\s+break[:\s]*(\w+\s+\d{1,2},?\s+\d{4})[-\s]+(\w+\s+\d{1,2},?\s+\d{4})',
+        r'(\w+\s+\d{1,2},?\s+\d{4})[-\s]+(\w+\s+\d{1,2},?\s+\d{4})[:\s]*summer\s+break',
+        r'summer\s+break[:\s]*(\w+\s+\d{1,2},?\s+\d{4})[-\s]+(\w+\s+\d{1,2},?\s+\d{4})',
+        r'(\w+\s+\d{1,2},?\s+\d{4})[-\s]+(\w+\s+\d{1,2},?\s+\d{4})[:\s]*fall\s+break',
+        r'fall\s+break[:\s]*(\w+\s+\d{1,2},?\s+\d{4})[-\s]+(\w+\s+\d{1,2},?\s+\d{4})'
+    ]
+    
+    for pattern in break_patterns:
+        matches = re.finditer(pattern, text_lower)
+        for match in matches:
+            try:
+                start_date = parse_date_string(match.group(1))
+                end_date = parse_date_string(match.group(2))
+                
+                if start_date and end_date:
+                    # Determine break type from the pattern
+                    if 'winter' in pattern:
+                        break_name = 'Winter Break'
+                    elif 'spring' in pattern:
+                        break_name = 'Spring Break'
+                    elif 'summer' in pattern:
+                        break_name = 'Summer Break'
+                    elif 'fall' in pattern:
+                        break_name = 'Fall Break'
+                    else:
+                        break_name = 'School Break'
+                    
+                    breaks['breaks'].append({
+                        'name': break_name,
+                        'start_date': start_date,
+                        'end_date': end_date
+                    })
+            except:
+                continue
+    
+    return breaks
+
+def extract_professional_dates(text_content, text_lower):
+    """Extract professional development and staff dates."""
+    prof_dates = {
+        'professional_development': []
+    }
+    
+    # Professional development patterns
+    pd_patterns = [
+        r'(\w+\s+\d{1,2},?\s+\d{4})[:\s]*professional\s+development',
+        r'professional\s+development[:\s]*(\w+\s+\d{1,2},?\s+\d{4})',
+        r'(\w+\s+\d{1,2},?\s+\d{4})[:\s]*pd\s+day',
+        r'pd\s+day[:\s]*(\w+\s+\d{1,2},?\s+\d{4})',
+        r'(\w+\s+\d{1,2},?\s+\d{4})[:\s]*staff\s+development',
+        r'staff\s+development[:\s]*(\w+\s+\d{1,2},?\s+\d{4})',
+        r'(\w+\s+\d{1,2},?\s+\d{4})[:\s]*teacher\s+workday',
+        r'teacher\s+workday[:\s]*(\w+\s+\d{1,2},?\s+\d{4})'
+    ]
+    
+    for pattern in pd_patterns:
+        matches = re.finditer(pattern, text_lower)
+        for match in matches:
+            try:
+                date_str = match.group(1)
+                parsed_date = parse_date_string(date_str)
+                if parsed_date:
+                    prof_dates['professional_development'].append({
+                        'name': 'Professional Development',
+                        'date': parsed_date
+                    })
+            except:
+                continue
+    
+    return prof_dates
+
+def parse_date_string(date_str):
+    """Parse various date string formats into a date object."""
+    if not date_str:
+        return None
+    
+    # Remove extra whitespace and common punctuation
+    date_str = re.sub(r'[,\s]+', ' ', date_str.strip())
+    
+    # Common date formats
+    date_formats = [
+        '%B %d %Y',      # January 15 2024
+        '%b %d %Y',      # Jan 15 2024
+        '%B %d, %Y',     # January 15, 2024
+        '%b %d, %Y',     # Jan 15, 2024
+        '%m/%d/%Y',      # 01/15/2024
+        '%m-%d-%Y',      # 01-15-2024
+        '%Y-%m-%d',      # 2024-01-15
+        '%B %d',         # January 15 (assume current year)
+        '%b %d',         # Jan 15 (assume current year)
+        '%m/%d',         # 01/15 (assume current year)
+        '%m-%d'          # 01-15 (assume current year)
+    ]
+    
+    current_year = datetime.now().year
+    
+    for fmt in date_formats:
+        try:
+            if fmt in ['%B %d', '%b %d', '%m/%d', '%m-%d']:
+                # For formats without year, assume current year
+                parsed_date = datetime.strptime(date_str, fmt)
+                return date(current_year, parsed_date.month, parsed_date.day)
+            else:
+                parsed_date = datetime.strptime(date_str, fmt)
+                return parsed_date.date()
+        except ValueError:
+            continue
+    
+    return None
 
 @management_blueprint.route('/view-class/<int:class_id>')
 @login_required
@@ -1897,3 +3112,122 @@ def remove_student(student_id):
     
     flash('Student removed successfully.', 'success')
     return redirect(url_for('management.students'))
+
+def store_calendar_data(calendar_data, school_year_id, pdf_filename):
+    """Store extracted calendar data in the database."""
+    try:
+        # Clear existing calendar events for this school year
+        CalendarEvent.query.filter_by(school_year_id=school_year_id).delete()
+        
+        events_added = 0
+        
+        # Store holidays
+        for holiday in calendar_data.get('holidays', []):
+            event = CalendarEvent(
+                school_year_id=school_year_id,
+                event_type='holiday',
+                name=holiday['name'],
+                start_date=holiday['date'],
+                end_date=holiday['date'],
+                pdf_filename=pdf_filename
+            )
+            db.session.add(event)
+            events_added += 1
+        
+        # Store breaks
+        for break_event in calendar_data.get('breaks', []):
+            event = CalendarEvent(
+                school_year_id=school_year_id,
+                event_type='break',
+                name=break_event['name'],
+                start_date=break_event['start_date'],
+                end_date=break_event['end_date'],
+                pdf_filename=pdf_filename
+            )
+            db.session.add(event)
+            events_added += 1
+        
+        # Store professional development days
+        for pd_day in calendar_data.get('professional_development', []):
+            event = CalendarEvent(
+                school_year_id=school_year_id,
+                event_type='professional_development',
+                name=pd_day['name'],
+                start_date=pd_day['date'],
+                end_date=pd_day['date'],
+                pdf_filename=pdf_filename
+            )
+            db.session.add(event)
+            events_added += 1
+        
+        # Store parent-teacher conferences
+        for ptc in calendar_data.get('parent_teacher_conferences', []):
+            event = CalendarEvent(
+                school_year_id=school_year_id,
+                event_type='parent_teacher_conference',
+                name=ptc['name'],
+                start_date=ptc['date'],
+                end_date=ptc['date'],
+                pdf_filename=pdf_filename
+            )
+            db.session.add(event)
+            events_added += 1
+        
+        # Store early dismissal days
+        for early in calendar_data.get('early_dismissal', []):
+            event = CalendarEvent(
+                school_year_id=school_year_id,
+                event_type='early_dismissal',
+                name=early['name'],
+                start_date=early['date'],
+                end_date=early['date'],
+                pdf_filename=pdf_filename
+            )
+            db.session.add(event)
+            events_added += 1
+        
+        # Store no school days
+        for no_school in calendar_data.get('no_school', []):
+            event = CalendarEvent(
+                school_year_id=school_year_id,
+                event_type='no_school',
+                name=no_school['name'],
+                start_date=no_school['date'],
+                end_date=no_school['date'],
+                pdf_filename=pdf_filename
+            )
+            db.session.add(event)
+            events_added += 1
+        
+        # Store academic periods if found
+        for quarter in calendar_data.get('quarters', []):
+            event = CalendarEvent(
+                school_year_id=school_year_id,
+                event_type='quarter',
+                name=quarter['name'],
+                start_date=quarter['start_date'],
+                end_date=quarter['end_date'],
+                pdf_filename=pdf_filename
+            )
+            db.session.add(event)
+            events_added += 1
+        
+        for semester in calendar_data.get('semesters', []):
+            event = CalendarEvent(
+                school_year_id=school_year_id,
+                event_type='semester',
+                name=semester['name'],
+                start_date=semester['start_date'],
+                end_date=semester['end_date'],
+                pdf_filename=pdf_filename
+            )
+            db.session.add(event)
+            events_added += 1
+        
+        db.session.commit()
+        current_app.logger.info(f"Stored {events_added} calendar events in database")
+        
+    except Exception as e:
+        current_app.logger.error(f"Error storing calendar data: {str(e)}")
+        db.session.rollback()
+        raise

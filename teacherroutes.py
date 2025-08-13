@@ -499,6 +499,46 @@ def calendar():
     cal_obj = cal.monthcalendar(year, month)
     month_name = datetime(year, month, 1).strftime('%B')
 
+    # Get academic dates from the database
+    academic_dates = []
+    active_year = SchoolYear.query.filter_by(is_active=True).first()
+    if active_year:
+        # Get academic periods for this month
+        start_of_month = date(year, month, 1)
+        if month == 12:
+            end_of_month = date(year + 1, 1, 1) - timedelta(days=1)
+        else:
+            end_of_month = date(year, month + 1, 1) - timedelta(days=1)
+        
+        # Get academic periods that overlap with this month
+        from models import AcademicPeriod
+        academic_periods = AcademicPeriod.query.filter(
+            AcademicPeriod.school_year_id == active_year.id,
+            AcademicPeriod.start_date <= end_of_month,
+            AcademicPeriod.end_date >= start_of_month
+        ).all()
+        
+        for period in academic_periods:
+            # Add start date event
+            if period.start_date.month == month:
+                academic_dates.append((period.start_date.day, f"{period.name} Start", 'Academic Period'))
+            
+            # Add end date event
+            if period.end_date.month == month:
+                academic_dates.append((period.end_date.day, f"{period.name} End", 'Academic Period'))
+        
+        # Get calendar events for this month
+        from models import CalendarEvent
+        calendar_events = CalendarEvent.query.filter(
+            CalendarEvent.school_year_id == active_year.id,
+            CalendarEvent.start_date <= end_of_month,
+            CalendarEvent.end_date >= start_of_month
+        ).all()
+        
+        for event in calendar_events:
+            if event.start_date.month == month:
+                academic_dates.append((event.start_date.day, event.name, event.event_type.replace('_', ' ').title()))
+    
     us_holidays = pyholidays.country_holidays('US', years=[year])
     religious_holidays = get_religious_holidays(year)
     holidays_this_month = []
@@ -536,6 +576,12 @@ def calendar():
         for day in week:
             events = []
             if day != 0:
+                # Add academic dates
+                for acad_day, acad_name, acad_category in academic_dates:
+                    if day == acad_day:
+                        events.append({'title': acad_name, 'category': acad_category})
+                
+                # Add holidays
                 for hol_day, hol_name in holidays_this_month:
                     if day == hol_day:
                         events.append({'title': hol_name, 'category': 'Holiday'})

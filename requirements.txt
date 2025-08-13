@@ -8,3 +8,4 @@ psycopg2-binary
 pdfkit
 psutil
 PyPDF2
+pdfplumber

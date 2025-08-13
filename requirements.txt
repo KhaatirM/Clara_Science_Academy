@@ -6,4 +6,5 @@ gunicorn
 python-dotenv
 psycopg2-binary
 pdfkit
-psutil 
+psutil
+PyPDF2

@@ -1,8 +1,8 @@
-"""Add semester column to assignment table
+"""Final schema
 
-Revision ID: 81af790afd8c
-Revises: 9c099ca1f5c3
-Create Date: 2025-08-14 11:53:01.369408
+Revision ID: 1c75747b887c
+Revises: 
+Create Date: 2025-08-14 12:16:41.825254
 
 """
 from alembic import op
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '81af790afd8c'
-down_revision = '9c099ca1f5c3'
+revision = '1c75747b887c'
+down_revision = None
 branch_labels = None
 depends_on = None
 

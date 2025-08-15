@@ -923,51 +923,56 @@ body {
     background: white;
     border-radius: 8px;
     overflow: hidden;
+    border: 1px solid #dee2e6;
 }
 
 .calendar-header {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
     background-color: #f8f9fa;
     border-bottom: 2px solid #dee2e6;
 }
 
-.calendar-day-header {
+.calendar-header .row {
+    margin: 0;
+}
+
+.calendar-header .col {
     padding: 12px 8px;
     text-align: center;
     font-weight: 600;
     color: #495057;
     border-right: 1px solid #dee2e6;
+    min-height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.calendar-day-header:last-child {
+.calendar-header .col:last-child {
     border-right: none;
 }
 
 .calendar-body {
-    display: flex;
-    flex-direction: column;
+    background-color: white;
 }
 
 .calendar-week {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
     border-bottom: 1px solid #dee2e6;
+    margin: 0;
 }
 
 .calendar-week:last-child {
     border-bottom: none;
 }
 
-.calendar-day {
-    min-height: 100px;
+.calendar-week .col {
     padding: 8px;
     border-right: 1px solid #dee2e6;
+    min-height: 100px;
     position: relative;
     background-color: white;
 }
 
-.calendar-day:last-child {
+.calendar-week .col:last-child {
     border-right: none;
 }
 
@@ -1024,6 +1029,85 @@ body {
 
 .event-item.no-school {
     background-color: #ff9ff3;
+}
+
+/* Calendar event styles for the management calendar */
+.calendar-event {
+    background-color: #007bff;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    margin-bottom: 2px;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.calendar-event.event-quarter_start {
+    background-color: #28a745;
+}
+
+.calendar-event.event-quarter_end {
+    background-color: #dc3545;
+}
+
+.calendar-event.event-semester_start {
+    background-color: #17a2b8;
+}
+
+.calendar-event.event-semester_end {
+    background-color: #6f42c1;
+}
+
+.calendar-event.event-teacher_work_day {
+    background-color: #fd7e14;
+}
+
+.calendar-event.event-school_break_start {
+    background-color: #e83e8c;
+}
+
+.calendar-event.event-school_break_end {
+    background-color: #6f42c1;
+}
+
+/* Calendar legend styles */
+.calendar-legend-item {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    margin-right: 8px;
+}
+
+.calendar-legend-item.event-quarter_start {
+    background-color: #28a745;
+}
+
+.calendar-legend-item.event-quarter_end {
+    background-color: #dc3545;
+}
+
+.calendar-legend-item.event-semester_start {
+    background-color: #17a2b8;
+}
+
+.calendar-legend-item.event-semester_end {
+    background-color: #6f42c1;
+}
+
+.calendar-legend-item.event-teacher_work_day {
+    background-color: #fd7e14;
+}
+
+.calendar-legend-item.event-school_break_start {
+    background-color: #e83e8c;
+}
+
+.calendar-legend-item.event-school_break_end {
+    background-color: #6f42c1;
 }
 
 /* Custom avatar for student initials */
@@ -1122,5 +1206,32 @@ body {
   }
   .assignments-table td:last-child {
     border-bottom: 0;
+  }
+}
+
+/* Calendar responsive styles */
+@media (max-width: 768px) {
+  .calendar-container {
+    font-size: 0.9rem;
+  }
+  
+  .calendar-header .col {
+    padding: 8px 4px;
+    font-size: 0.8rem;
+    min-height: 40px;
+  }
+  
+  .calendar-week .col {
+    padding: 6px 4px;
+    min-height: 80px;
+  }
+  
+  .day-number {
+    font-size: 0.9rem;
+  }
+  
+  .calendar-event {
+    font-size: 0.7rem;
+    padding: 1px 4px;
   }
 }

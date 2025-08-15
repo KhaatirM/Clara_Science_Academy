@@ -366,8 +366,14 @@ def create_app(config_class=Config):
 
     @app.route('/')
     def home():
-        # Check for maintenance mode
-        maintenance = MaintenanceMode.query.filter_by(is_active=True).first()
+        # Check for maintenance mode - handle case where table might not exist
+        maintenance = None
+        try:
+            maintenance = MaintenanceMode.query.filter_by(is_active=True).first()
+        except Exception as e:
+            # Table might not exist yet, continue without maintenance mode
+            pass
+        
         if maintenance and maintenance.end_time > datetime.now():
             # Calculate progress percentage
             total_duration = (maintenance.end_time - maintenance.start_time).total_seconds()

@@ -13,8 +13,14 @@ def login():
     if current_user.is_authenticated:
         return redirect(url_for('auth.dashboard'))
     
-    # Check for maintenance mode
-    maintenance = MaintenanceMode.query.filter_by(is_active=True).first()
+    # Check for maintenance mode - handle case where table might not exist
+    maintenance = None
+    try:
+        maintenance = MaintenanceMode.query.filter_by(is_active=True).first()
+    except Exception as e:
+        # Table might not exist yet, continue without maintenance mode
+        pass
+    
     if maintenance and maintenance.end_time > datetime.now():
         # Allow tech users to login during maintenance
         if request.method == 'POST':

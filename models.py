@@ -128,13 +128,27 @@ class TeacherStaff(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     first_name = db.Column(db.String(100), nullable=False)
     last_name = db.Column(db.String(100), nullable=False)
+    middle_initial = db.Column(db.String(1), nullable=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
     staff_id = db.Column(db.String(50), nullable=True, unique=True)
     
-    # Additional fields for staff ID generation
+    # Personal information
+    dob = db.Column(db.String(20), nullable=True)  # Date of birth
+    staff_ssn = db.Column(db.String(20), nullable=True)  # Social Security Number
+    
+    # Professional information
+    assigned_role = db.Column(db.String(100), nullable=True)  # Assigned role (e.g., Director, Math Teacher)
     hire_date = db.Column(db.String(20), nullable=True)  # Storing as string like DOB
     department = db.Column(db.String(100), nullable=True)
     position = db.Column(db.String(100), nullable=True)
+    subject = db.Column(db.String(200), nullable=True)  # Primary subject(s) taught
+    employment_type = db.Column(db.String(20), nullable=True)  # Full Time, Part Time
+    grades_taught = db.Column(db.Text, nullable=True)  # JSON string of grades taught
+    
+    # File uploads
+    resume_filename = db.Column(db.String(255), nullable=True)
+    other_document_filename = db.Column(db.String(255), nullable=True)
+    image = db.Column(db.String(255), nullable=True)
     
     # Emergency contact information
     emergency_first_name = db.Column(db.String(100), nullable=True)

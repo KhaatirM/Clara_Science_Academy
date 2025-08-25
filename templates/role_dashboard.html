@@ -1773,13 +1773,25 @@
                                     <i class="bi bi-info-circle me-2 text-primary"></i>Basic Information
                                 </h6>
                                 <div class="row g-3">
-                                    <div class="col-md-6">
+                                    <div class="col-md-4">
                                         <label class="form-label">First Name <span class="text-danger">*</span></label>
                                         <input type="text" class="form-control" name="first_name" value="${data.first_name || ''}" required>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label">M.I.</label>
+                                        <input type="text" class="form-control" name="middle_initial" value="${data.middle_initial || ''}" maxlength="1">
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label">Last Name <span class="text-danger">*</span></label>
                                         <input type="text" class="form-control" name="last_name" value="${data.last_name || ''}" required>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Date of Birth</label>
+                                        <input type="date" class="form-control" name="dob" value="${data.dob || ''}">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">SSN</label>
+                                        <input type="text" class="form-control" name="staff_ssn" value="${data.staff_ssn || ''}" placeholder="XXX-XX-XXXX">
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label">Email <span class="text-danger">*</span></label>
@@ -1801,40 +1813,213 @@
                                 </h6>
                                 <div class="row g-3">
                                     <div class="col-md-6">
-                                        <label class="form-label">Role</label>
-                                        <select class="form-select" name="role">
-                                            <option value="Teacher" ${(data.role || '') === 'Teacher' ? 'selected' : ''}>Teacher</option>
-                                            <option value="School Administrator" ${(data.role || '') === 'School Administrator' ? 'selected' : ''}>School Administrator</option>
-                                            <option value="Director" ${(data.role || '') === 'Director' ? 'selected' : ''}>Director</option>
-                                            <option value="Staff" ${(data.role || '') === 'Staff' ? 'selected' : ''}>Staff</option>
+                                        <label class="form-label">Assigned Role <span class="text-danger">*</span></label>
+                                        <select class="form-select" name="assigned_role" required>
+                                            <option value="">Choose role...</option>
+                                            <option value="Director" ${(data.assigned_role || '') === 'Director' ? 'selected' : ''}>Director</option>
+                                            <option value="School Administrator" ${(data.assigned_role || '') === 'School Administrator' ? 'selected' : ''}>School Administrator</option>
+                                            <option value="Math Teacher" ${(data.assigned_role || '') === 'Math Teacher' ? 'selected' : ''}>Math Teacher</option>
+                                            <option value="Physics Teacher" ${(data.assigned_role || '') === 'Physics Teacher' ? 'selected' : ''}>Physics Teacher</option>
+                                            <option value="English Language Arts Teacher" ${(data.assigned_role || '') === 'English Language Arts Teacher' ? 'selected' : ''}>English Language Arts Teacher</option>
+                                            <option value="History Teacher" ${(data.assigned_role || '') === 'History Teacher' ? 'selected' : ''}>History Teacher</option>
+                                            <option value="Science Teacher" ${(data.assigned_role || '') === 'Science Teacher' ? 'selected' : ''}>Science Teacher</option>
+                                            <option value="Substitute Teacher" ${(data.assigned_role || '') === 'Substitute Teacher' ? 'selected' : ''}>Substitute Teacher</option>
+                                            <option value="School Counselor" ${(data.assigned_role || '') === 'School Counselor' ? 'selected' : ''}>School Counselor</option>
+                                            <option value="IT Support" ${(data.assigned_role || '') === 'IT Support' ? 'selected' : ''}>IT Support</option>
+                                            <option value="Other Staff" ${(data.assigned_role || '') === 'Other Staff' ? 'selected' : ''}>Other Staff</option>
                                         </select>
                                     </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Department</label>
-                                        <select class="form-select" name="department">
-                                            <option value="">Choose department...</option>
-                                            <option value="Mathematics" ${(data.department || '') === 'Mathematics' ? 'selected' : ''}>Mathematics</option>
-                                            <option value="Science" ${(data.department || '') === 'Science' ? 'selected' : ''}>Science</option>
-                                            <option value="English" ${(data.department || '') === 'English' ? 'selected' : ''}>English</option>
-                                            <option value="History" ${(data.department || '') === 'History' ? 'selected' : ''}>History</option>
-                                            <option value="Physical Education" ${(data.department || '') === 'Physical Education' ? 'selected' : ''}>Physical Education</option>
-                                            <option value="Art" ${(data.department || '') === 'Art' ? 'selected' : ''}>Art</option>
-                                            <option value="Music" ${(data.department || '') === 'Music' ? 'selected' : ''}>Music</option>
-                                            <option value="Technology" ${(data.department || '') === 'Technology' ? 'selected' : ''}>Technology</option>
-                                            <option value="Administration" ${(data.department || '') === 'Administration' ? 'selected' : ''}>Administration</option>
-                                            <option value="Counseling" ${(data.department || '') === 'Counseling' ? 'selected' : ''}>Counseling</option>
-                                            <option value="Library" ${(data.department || '') === 'Library' ? 'selected' : ''}>Library</option>
-                                            <option value="Special Education" ${(data.department || '') === 'Special Education' ? 'selected' : ''}>Special Education</option>
-                                            <option value="Foreign Language" ${(data.department || '') === 'Foreign Language' ? 'selected' : ''}>Foreign Language</option>
-                                            <option value="Computer Science" ${(data.department || '') === 'Computer Science' ? 'selected' : ''}>Computer Science</option>
-                                            <option value="Business" ${(data.department || '') === 'Business' ? 'selected' : ''}>Business</option>
-                                            <option value="Health" ${(data.department || '') === 'Health' ? 'selected' : ''}>Health</option>
-                                            <option value="Social Studies" ${(data.department || '') === 'Social Studies' ? 'selected' : ''}>Social Studies</option>
-                                        </select>
+                                    <div class="col-12">
+                                        <label class="form-label d-block">Department(s) <span class="text-danger">*</span></label>
+                                        <div class="row g-3 px-2">
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="Mathematics" id="dept_math_edit" ${(data.department || '').includes('Mathematics') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="dept_math_edit">Mathematics</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="Science" id="dept_science_edit" ${(data.department || '').includes('Science') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="dept_science_edit">Science</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="English" id="dept_english_edit" ${(data.department || '').includes('English') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="dept_english_edit">English</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="History & Social Studies" id="dept_history_edit" ${(data.department || '').includes('History & Social Studies') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="dept_history_edit">History & Social Studies</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="Physical Education & Health" id="dept_pe_edit" ${(data.department || '').includes('Physical Education & Health') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="dept_pe_edit">Physical Education & Health</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="Music & Arts" id="dept_arts_edit" ${(data.department || '').includes('Music & Arts') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="dept_arts_edit">Music & Arts</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="Computer Science & Technology" id="dept_tech_edit" ${(data.department || '').includes('Computer Science & Technology') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="dept_tech_edit">Computer Science & Technology</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="Administration" id="dept_admin_edit" ${(data.department || '').includes('Administration') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="dept_admin_edit">Administration</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="Counseling" id="dept_counsel_edit" ${(data.department || '').includes('Counseling') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="dept_counsel_edit">Counseling</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="Special Education" id="dept_sped_edit" ${(data.department || '').includes('Special Education') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="dept_sped_edit">Special Education</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="Foreign Language" id="dept_lang_edit" ${(data.department || '').includes('Foreign Language') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="dept_lang_edit">Foreign Language</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="Business" id="dept_business_edit" ${(data.department || '').includes('Business') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="dept_business_edit">Business</label>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label">Position</label>
                                         <input type="text" class="form-control" name="position" value="${data.position || ''}" placeholder="e.g., Lead Teacher, Assistant Principal">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Primary Subject(s) Taught</label>
+                                        <input type="text" class="form-control" name="subject" value="${data.subject || ''}" placeholder="e.g., Algebra I, Chemistry">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Employment Type</label>
+                                        <select class="form-select" name="employment_type">
+                                            <option value="">Choose...</option>
+                                            <option value="Full Time" ${(data.employment_type || '') === 'Full Time' ? 'selected' : ''}>Full Time</option>
+                                            <option value="Part Time" ${(data.employment_type || '') === 'Part Time' ? 'selected' : ''}>Part Time</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Hire Date</label>
+                                        <input type="date" class="form-control" name="hire_date" value="${data.hire_date || ''}">
+                                    </div>
+                                </div>
+                                
+                                <!-- Grades Taught Section -->
+                                <div class="row mb-4">
+                                    <div class="col-12">
+                                        <h6 class="border-bottom pb-2 mb-3">
+                                            <i class="bi bi-mortarboard me-2 text-primary"></i>Grades Taught
+                                        </h6>
+                                        <div class="row g-2 px-2">
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="grades_taught" value="Kindergarten" id="grade_k_edit" ${(data.grades_taught || '').includes('Kindergarten') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="grade_k_edit">Kindergarten</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="grades_taught" value="1st" id="grade_1_edit" ${(data.grades_taught || '').includes('1st') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="grade_1_edit">1st</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="grades_taught" value="2nd" id="grade_2_edit" ${(data.grades_taught || '').includes('2nd') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="grade_2_edit">2nd</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="grades_taught" value="3rd" id="grade_3_edit" ${(data.grades_taught || '').includes('3rd') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="grade_3_edit">3rd</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="grades_taught" value="4th" id="grade_4_edit" ${(data.grades_taught || '').includes('4th') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="grade_4_edit">4th</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="grades_taught" value="5th" id="grade_5_edit" ${(data.grades_taught || '').includes('5th') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="grade_5_edit">5th</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="grades_taught" value="6th" id="grade_6_edit" ${(data.grades_taught || '').includes('6th') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="grade_6_edit">6th</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="grades_taught" value="7th" id="grade_7_edit" ${(data.grades_taught || '').includes('7th') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="grade_7_edit">7th</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="grades_taught" value="8th" id="grade_8_edit" ${(data.grades_taught || '').includes('8th') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="grade_8_edit">8th</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="grades_taught" value="9th" id="grade_9_edit" ${(data.grades_taught || '').includes('9th') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="grade_9_edit">9th</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="grades_taught" value="10th" id="grade_10_edit" ${(data.grades_taught || '').includes('10th') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="grade_10_edit">10th</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="grades_taught" value="11th" id="grade_11_edit" ${(data.grades_taught || '').includes('11th') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="grade_11_edit">11th</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="grades_taught" value="12th" id="grade_12_edit" ${(data.grades_taught || '').includes('12th') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="grade_12_edit">12th</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="grades_taught" value="N/A - Staff" id="grade_na_edit" ${(data.grades_taught || '').includes('N/A - Staff') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="grade_na_edit">N/A - Staff</label>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1849,11 +2034,11 @@
                                 <div class="row g-3">
                                     <div class="col-12">
                                         <label class="form-label">Street Address</label>
-                                        <input type="text" class="form-control" name="street" value="${data.street || ''}" placeholder="123 Main Street">
+                                        <input type="text" class="form-control" name="street_address" value="${data.street || ''}" placeholder="123 Main Street">
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label">Apt, Unit, Suite, etc.</label>
-                                        <input type="text" class="form-control" name="apt_unit" value="${data.apt_unit || ''}" placeholder="Apt 4B">
+                                        <input type="text" class="form-control" name="apt_unit_suite" value="${data.apt_unit || ''}" placeholder="Apt 4B">
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label">City</label>
@@ -1933,15 +2118,15 @@
                                 <div class="row g-3">
                                     <div class="col-md-6">
                                         <label class="form-label">First Name <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" name="emergency_first_name" value="${data.emergency_first_name || ''}" required>
+                                        <input type="text" class="form-control" name="emergency_contact_name" value="${data.emergency_first_name || ''}" required>
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label">Last Name <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" name="emergency_last_name" value="${data.emergency_last_name || ''}" required>
+                                        <input type="text" class="form-control" name="emergency_contact_last_name" value="${data.emergency_last_name || ''}" required>
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label">Relationship</label>
-                                        <select class="form-select" name="emergency_relationship">
+                                        <select class="form-select" name="emergency_contact_relationship">
                                             <option value="">Choose relationship...</option>
                                             <option value="Spouse" ${(data.emergency_relationship || '') === 'Spouse' ? 'selected' : ''}>Spouse</option>
                                             <option value="Parent" ${(data.emergency_relationship || '') === 'Parent' ? 'selected' : ''}>Parent</option>
@@ -1953,11 +2138,11 @@
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label">Phone Number <span class="text-danger">*</span></label>
-                                        <input type="tel" class="form-control" name="emergency_phone" value="${data.emergency_phone || ''}" required placeholder="e.g., 555-123-4567">
+                                        <input type="tel" class="form-control" name="emergency_contact_phone" value="${data.emergency_phone || ''}" required placeholder="e.g., 555-123-4567">
                                     </div>
                                     <div class="col-md-12">
                                         <label class="form-label">Email</label>
-                                        <input type="email" class="form-control" name="emergency_email" value="${data.emergency_email || ''}" placeholder="emergency@example.com">
+                                        <input type="email" class="form-control" name="emergency_contact_email" value="${data.emergency_email || ''}" placeholder="emergency@example.com">
                                     </div>
                                 </div>
                             </div>

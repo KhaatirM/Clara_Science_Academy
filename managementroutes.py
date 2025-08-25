@@ -281,18 +281,30 @@ def add_teacher_staff():
     if request.method == 'POST':
         # Get form data
         first_name = request.form.get('first_name', '').strip()
+        middle_initial = request.form.get('middle_initial', '').strip()
         last_name = request.form.get('last_name', '').strip()
         email = request.form.get('email', '').strip()
-        role = request.form.get('assigned_role', 'Teacher').strip()
+        dob = request.form.get('dob', '').strip()
+        staff_ssn = request.form.get('staff_ssn', '').strip()
+        phone = request.form.get('phone', '').strip()
+        
+        # Professional information
+        assigned_role = request.form.get('assigned_role', 'Teacher').strip()
         hire_date = request.form.get('hire_date', '').strip()
         # Handle multiple department selections
         departments = request.form.getlist('department')
         department = ', '.join(departments) if departments else ''
         position = request.form.get('position', '').strip()
+        subject = request.form.get('subject', '').strip()
+        employment_type = request.form.get('employment_type', '').strip()
+        
+        # Handle multiple grades taught selections
+        grades_taught = request.form.getlist('grades_taught')
+        grades_taught_json = json.dumps(grades_taught) if grades_taught else ''
         
         # Auto-assign role and department for Tech users
         if current_user.role in ['Tech', 'IT Support']:
-            role = 'IT Support'
+            assigned_role = 'IT Support'
             department = 'Administration'
         
         # Address fields
@@ -301,7 +313,6 @@ def add_teacher_staff():
         city = request.form.get('city', '').strip()
         state = request.form.get('state', '').strip()
         zip_code = request.form.get('zip_code', '').strip()
-        phone = request.form.get('phone', '').strip()
         
         # Emergency contact fields
         emergency_first_name = request.form.get('emergency_contact_name', '').strip()
@@ -344,11 +355,21 @@ def add_teacher_staff():
             # Create teacher/staff record
             teacher_staff = TeacherStaff()
             teacher_staff.first_name = first_name
+            teacher_staff.middle_initial = middle_initial
             teacher_staff.last_name = last_name
             teacher_staff.email = email
+            teacher_staff.dob = dob
+            teacher_staff.staff_ssn = staff_ssn
+            teacher_staff.phone = phone
+            
+            # Professional information
+            teacher_staff.assigned_role = assigned_role
             teacher_staff.hire_date = hire_date
             teacher_staff.department = department
             teacher_staff.position = position
+            teacher_staff.subject = subject
+            teacher_staff.employment_type = employment_type
+            teacher_staff.grades_taught = grades_taught_json
             
             # Address fields
             teacher_staff.street = street
@@ -356,7 +377,6 @@ def add_teacher_staff():
             teacher_staff.city = city
             teacher_staff.state = state
             teacher_staff.zip_code = zip_code
-            teacher_staff.phone = phone
             
             # Emergency contact fields
             teacher_staff.emergency_first_name = emergency_first_name
@@ -375,19 +395,19 @@ def add_teacher_staff():
             user = User()
             user.username = username
             user.password_hash = generate_password_hash(password)
-            user.role = role
+            user.role = assigned_role
             user.teacher_staff_id = teacher_staff.id
             
             db.session.add(user)
             db.session.commit()
             
             # Show success message with credentials
-            flash(f'{role} added successfully! Username: {username}, Password: {password}, Staff ID: {teacher_staff.staff_id}', 'success')
+            flash(f'{assigned_role} added successfully! Username: {username}, Password: {password}, Staff ID: {teacher_staff.staff_id}', 'success')
             return redirect(url_for('management.teachers'))
             
         except Exception as e:
             db.session.rollback()
-            flash(f'Error adding {role.lower()}: {str(e)}', 'danger')
+            flash(f'Error adding {assigned_role.lower()}: {str(e)}', 'danger')
             return redirect(request.url)
     
     return render_template('add_teacher_staff.html')
@@ -1821,33 +1841,46 @@ def edit_teacher(teacher_id):
     try:
         # Basic information
         teacher.first_name = request.form.get('first_name', teacher.first_name)
+        teacher.middle_initial = request.form.get('middle_initial', teacher.middle_initial)
         teacher.last_name = request.form.get('last_name', teacher.last_name)
         teacher.email = request.form.get('email', teacher.email)
+        teacher.dob = request.form.get('dob', teacher.dob)
+        teacher.staff_ssn = request.form.get('staff_ssn', teacher.staff_ssn)
         teacher.phone = request.form.get('phone', teacher.phone)
         
-        # Role and department
+        # Professional information
+        teacher.assigned_role = request.form.get('assigned_role', teacher.assigned_role)
+        teacher.hire_date = request.form.get('hire_date', teacher.hire_date)
         teacher.position = request.form.get('position', teacher.position)
+        teacher.subject = request.form.get('subject', teacher.subject)
+        teacher.employment_type = request.form.get('employment_type', teacher.employment_type)
+        
         # Handle multiple department selections
         departments = request.form.getlist('department')
         teacher.department = ', '.join(departments) if departments else teacher.department
         
+        # Handle multiple grades taught selections
+        grades_taught = request.form.getlist('grades_taught')
+        teacher.grades_taught = json.dumps(grades_taught) if grades_taught else teacher.grades_taught
+        
         # Auto-assign role and department for Tech users
         if current_user.role in ['Tech', 'IT Support']:
             teacher.department = 'Administration'
+            teacher.assigned_role = 'IT Support'
         
         # Address information
-        teacher.street = request.form.get('street', teacher.street)
-        teacher.apt_unit = request.form.get('apt_unit', teacher.apt_unit)
+        teacher.street = request.form.get('street_address', teacher.street)
+        teacher.apt_unit = request.form.get('apt_unit_suite', teacher.apt_unit)
         teacher.city = request.form.get('city', teacher.city)
         teacher.state = request.form.get('state', teacher.state)
         teacher.zip_code = request.form.get('zip_code', teacher.zip_code)
         
         # Emergency contact information
-        teacher.emergency_first_name = request.form.get('emergency_first_name', teacher.emergency_first_name)
-        teacher.emergency_last_name = request.form.get('emergency_last_name', teacher.emergency_last_name)
-        teacher.emergency_email = request.form.get('emergency_email', teacher.emergency_email)
-        teacher.emergency_phone = request.form.get('emergency_phone', teacher.emergency_phone)
-        teacher.emergency_relationship = request.form.get('emergency_relationship', teacher.emergency_relationship)
+        teacher.emergency_first_name = request.form.get('emergency_contact_name', teacher.emergency_first_name)
+        teacher.emergency_last_name = request.form.get('emergency_contact_last_name', teacher.emergency_last_name)
+        teacher.emergency_email = request.form.get('emergency_contact_email', teacher.emergency_email)
+        teacher.emergency_phone = request.form.get('emergency_contact_phone', teacher.emergency_phone)
+        teacher.emergency_relationship = request.form.get('emergency_contact_relationship', teacher.emergency_relationship)
         
         # Update user role if user account exists
         if teacher.user:
@@ -1855,7 +1888,7 @@ def edit_teacher(teacher_id):
             if current_user.role in ['Tech', 'IT Support']:
                 teacher.user.role = 'IT Support'
             else:
-                teacher.user.role = request.form.get('role', teacher.user.role)
+                teacher.user.role = request.form.get('assigned_role', teacher.user.role)
         
         db.session.commit()
         return jsonify({'success': True, 'message': 'Teacher/Staff updated successfully.'})

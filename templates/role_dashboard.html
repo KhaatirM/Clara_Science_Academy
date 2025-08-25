@@ -460,7 +460,7 @@
                             {% for assignment in assignments %}
                                 <tr>
                                     <td>{{ assignment.title }}</td>
-                                    <td>{{ assignment.class_assigned.name }}</td>
+                                    <td>{{ assignment.class_info.name }}</td>
                                     <td>{{ assignment.due_date.strftime('%Y-%m-%d') }}</td>
                                     <td>
                                         {% if assignment.due_date < today %}

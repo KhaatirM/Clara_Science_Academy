@@ -10,7 +10,7 @@
           Assignment: <strong>{{ assignment.title }}</strong>
         </div>
         <div class="card-body">
-          <p class="card-text"><strong>Class:</strong> {{ assignment.class_assigned.name }}</p>
+                          <p class="card-text"><strong>Class:</strong> {{ assignment.class_info.name }}</p>
           <p class="card-text"><strong>Due Date:</strong> {{ assignment.due_date.strftime('%Y-%m-%d %I:%M %p') }}</p>
           {% if assignment.description %}
             <p class="card-text"><strong>Description:</strong> {{ assignment.description|nl2br }}</p>

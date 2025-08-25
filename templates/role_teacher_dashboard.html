@@ -240,7 +240,7 @@
                                 <tr>
                                     <td>{{ assignment.due_date.strftime('%Y-%m-%d') }}</td>
                                     <td>{{ assignment.title }}</td>
-                                    <td>{{ assignment.class_assigned.name }}</td>
+                                    <td>{{ assignment.class_info.name }}</td>
                                     <td>
                                         {% if assignment.due_date < today %}
                                             <span class="badge bg-danger">Past Due</span>
@@ -286,7 +286,7 @@
                             {% for assignment in assignments %}
                                 <tr>
                                     <td>{{ assignment.title }}</td>
-                                    <td>{{ assignment.class_assigned.name }}</td>
+                                    <td>{{ assignment.class_info.name }}</td>
                                     <td>{{ assignment.due_date.strftime('%Y-%m-%d') }}</td>
                                     <td>{{ assignment.students|length if assignment.students else 0 }}</td>
                                     <td>

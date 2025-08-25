@@ -9,11 +9,13 @@
                 <i class="bi bi-calendar-event-fill me-2"></i>Monthly Calendar
             </button>
         </li>
+        {% if current_user.role in ['Director', 'School Administrator'] %}
         <li class="nav-item" role="presentation">
             <button class="nav-link" id="academic-tab" data-bs-toggle="tab" data-bs-target="#academic" type="button" role="tab" aria-controls="academic" aria-selected="false">
                 <i class="bi bi-calendar-range-fill me-2"></i>Academic Calendar Management
             </button>
         </li>
+        {% endif %}
     </ul>
 
     <!-- Tab Content -->
@@ -220,6 +222,7 @@
         </div>
 
         <!-- Academic Calendar Management Tab -->
+        {% if current_user.role in ['Director', 'School Administrator'] %}
         <div class="tab-pane fade" id="academic" role="tabpanel" aria-labelledby="academic-tab">
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
                 <h3 class="mb-2 mb-md-0"><i class="bi bi-calendar-range-fill me-2"></i>Academic Calendar Management</h3>
@@ -234,7 +237,7 @@
             </div>
 
             <!-- Active School Year Overview -->
-            {% if active_school_year %}
+            {% if active_school_year and current_user.role in ['Director', 'School Administrator'] %}
             <div class="row mb-4">
                 <div class="col-12">
                     <div class="card shadow-sm border-success">
@@ -287,7 +290,7 @@
             {% endif %}
 
             <!-- Academic Periods Management -->
-            {% if active_school_year and active_school_year.academic_periods %}
+            {% if active_school_year and active_school_year.academic_periods and current_user.role in ['Director', 'School Administrator'] %}
             <div class="row mb-4">
                 <div class="col-12">
                     <div class="card shadow-sm">
@@ -785,6 +788,7 @@
 {% endif %}
 
 <!-- Edit Active School Year Modal -->
+{% if current_user.role in ['Director', 'School Administrator'] and active_school_year %}
 <div class="modal fade" id="editSchoolYearModal" tabindex="-1" aria-labelledby="editSchoolYearModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -813,9 +817,10 @@
         </div>
     </div>
 </div>
+{% endif %}
 
 <!-- Manage Academic Periods Modal -->
-{% if school_years %}
+{% if school_years and current_user.role in ['Director', 'School Administrator'] %}
     {% for year in school_years %}
         <div class="modal fade" id="managePeriodsModal{{ year.id }}" tabindex="-1" aria-labelledby="managePeriodsModalLabel{{ year.id }}" aria-hidden="true">
             <div class="modal-dialog modal-lg">

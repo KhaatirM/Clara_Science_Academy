@@ -648,13 +648,19 @@ def student_school_calendar():
                 week_data.append({'day_num': day, 'is_current_month': True, 'is_today': is_today, 'events': events})
         calendar_data['weeks'].append(week_data)
 
+    # Get active school year for template context
+    from models import SchoolYear
+    active_school_year = SchoolYear.query.filter_by(is_active=True).first()
+    
     return render_template('role_calendar.html', 
                          calendar_data=calendar_data,
                          prev_month=prev_month,
                          next_month=next_month,
                          month_name=month_name,
                          year=year,
-                         current_user=current_user)
+                         current_user=current_user,
+                         active_school_year=active_school_year,
+                         school_years=[])
 
 @student_blueprint.route('/settings')
 @login_required

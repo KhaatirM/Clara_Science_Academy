@@ -4,7 +4,10 @@
     'Physics Teacher',
     'English Language Arts Teacher',
     'Math Teacher',
-    'Substitute Teacher'
+    'Substitute Teacher',
+    'School Counselor',
+    'School Administrator',
+    'Director'
 ] %}
 <!DOCTYPE html>
 <html lang="en">
@@ -62,7 +65,7 @@
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.settings' %}active{% endif %}" href="{{ url_for('management.settings') }}"><i class="bi bi-gear-fill"></i><span> Settings</span></a></li>
 
                 {# --- TEACHER TABS --- #}
-                {% elif current_user.role in TEACHER_ROLES %}
+                {% elif current_user.role in TEACHER_ROLES or 'Teacher' in current_user.role or current_user.role in ['School Administrator', 'Director'] %}
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'teacher.teacher_dashboard' %}active{% endif %}" href="{{ url_for('teacher.teacher_dashboard') }}"><i class="bi bi-grid-1x2-fill"></i><span> Home</span></a></li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'teacher.my_classes' %}active{% endif %}" href="{{ url_for('teacher.my_classes') }}"><i class="bi bi-house-door-fill"></i><span> My Classes</span></a></li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'teacher.my_assignments' %}active{% endif %}" href="{{ url_for('teacher.my_assignments') }}"><i class="bi bi-journal-check"></i><span> Assignments</span></a></li>

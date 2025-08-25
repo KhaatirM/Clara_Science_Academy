@@ -211,10 +211,163 @@
     border-color: #4752c4;
 }
 
-.badge-sm {
-    font-size: 0.75rem;
-    padding: 0.25rem 0.5rem;
-}
+        .badge-sm {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+        }
+
+        /* Message styling */
+        .message-item {
+            margin-bottom: 1rem;
+        }
+
+        .message-item.own-message .message-content {
+            background: #5865f2;
+            color: white;
+            padding: 0.75rem;
+            border-radius: 18px 18px 4px 18px;
+            max-width: 70%;
+            margin-left: auto;
+        }
+
+        .message-item:not(.own-message) .message-content {
+            background: #40444b;
+            color: white;
+            padding: 0.75rem;
+            border-radius: 18px 18px 18px 4px;
+            max-width: 70%;
+        }
+
+        .message-header {
+            margin-bottom: 0.5rem;
+        }
+
+        .message-author {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .message-text {
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+
+        .own-avatar {
+            background: #57f287 !important;
+        }
+
+        /* Enhanced sidebar styling */
+        .sidebar-section {
+            border-bottom: 1px solid #40444b;
+        }
+
+        .section-header {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            transition: background-color 0.2s;
+            font-weight: 500;
+        }
+
+        .section-header:hover {
+            background: #40444b;
+        }
+
+        .section-content {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .chat-item {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            transition: background-color 0.2s;
+            border-bottom: 1px solid #40444b;
+        }
+
+        .chat-item:hover {
+            background: #40444b;
+        }
+
+        .chat-item.active {
+            background: #5865f2;
+        }
+
+        .new-chat-avatar {
+            background: #5865f2 !important;
+        }
+
+        .new-chat-item:hover {
+            background: #5865f2;
+        }
+
+        .new-chat-item .chat-name {
+            color: #fff !important;
+        }
+
+        /* Typing indicator */
+        .typing-indicator {
+            padding: 0.5rem 1rem;
+            background: #2f3136;
+            border-top: 1px solid #40444b;
+            font-style: italic;
+        }
+
+        /* Enhanced chat experience */
+        .chat-messages {
+            padding: 1rem;
+            overflow-y: auto;
+            background: #36393f;
+            scroll-behavior: smooth;
+        }
+
+        .chat-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-messages::-webkit-scrollbar-track {
+            background: #2f3136;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: #40444b;
+            border-radius: 3px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+            background: #5865f2;
+        }
+
+        /* Message animations */
+        .message-item {
+            animation: fadeInUp 0.3s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Enhanced input area */
+        .chat-input-area .form-control:focus {
+            box-shadow: 0 0 0 0.2rem rgba(88, 101, 242, 0.25);
+            border-color: #5865f2;
+        }
+
+        .chat-input-area .btn:disabled {
+            background: #40444b;
+            border-color: #40444b;
+            opacity: 0.6;
+        }
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
@@ -1123,6 +1276,17 @@
                                     <small class="text-muted">No messages yet</small>
                                 </div>
                             {% endif %}
+                            
+                            <!-- Quick Start New Chat -->
+                            <div class="chat-item new-chat-item" onclick="openNewMessageModal()">
+                                <div class="chat-avatar new-chat-avatar">
+                                    <i class="bi bi-plus"></i>
+                                </div>
+                                <div class="chat-info">
+                                    <div class="chat-name text-info">Start New Chat</div>
+                                    <div class="chat-preview">Click to message someone</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -1141,7 +1305,7 @@
                                         </div>
                                         <div class="chat-info">
                                             <div class="chat-name">{{ group.name }}</div>
-                                            <div class="chat-preview">{{ group.member_count }} members</div>
+                                            <div class="chat-preview">{{ group.members|length }} members</div>
                                         </div>
                                     </div>
                                 {% endfor %}
@@ -1151,6 +1315,17 @@
                                     <small class="text-muted">No groups yet</small>
                                 </div>
                             {% endif %}
+                            
+                            <!-- Create New Group -->
+                            <div class="chat-item new-chat-item" onclick="openCreateGroupModal()">
+                                <div class="chat-avatar new-chat-avatar">
+                                    <i class="bi bi-plus"></i>
+                                </div>
+                                <div class="chat-info">
+                                    <div class="chat-name text-info">Create Group</div>
+                                    <div class="chat-preview">Start a new study group</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -1226,9 +1401,12 @@
                         </div>
 
                         <div class="chat-input-area">
+                            <div class="typing-indicator" id="typing-indicator" style="display: none;">
+                                <small class="text-muted"><i class="bi bi-three-dots"></i> Someone is typing...</small>
+                            </div>
                             <div class="input-group">
-                                <input type="text" class="form-control" id="message-input" placeholder="Type your message...">
-                                <button class="btn btn-primary" onclick="sendMessage()">
+                                <input type="text" class="form-control" id="message-input" placeholder="Type your message..." oninput="handleTyping()">
+                                <button class="btn btn-primary" onclick="sendMessage()" id="send-button">
                                     <i class="bi bi-send"></i>
                                 </button>
                             </div>
@@ -1863,6 +2041,9 @@
 
         <script>
         // Chat functionality for Discord-like interface
+        let currentChat = null;
+        let currentChatType = null;
+
         function toggleSection(sectionId) {
             const section = document.getElementById(sectionId);
             const chevron = document.getElementById(sectionId + '-chevron');
@@ -1877,16 +2058,21 @@
         }
 
         function openChat(chatName, chatType) {
+            currentChat = chatName;
+            currentChatType = chatType;
+            
             document.getElementById('chat-welcome').style.display = 'none';
             document.getElementById('active-chat').style.display = 'flex';
             document.getElementById('active-chat-name').textContent = chatName;
-            document.getElementById('active-chat-status').textContent = chatType === 'group' ? 'Group Chat' : 'Online';
+            document.getElementById('active-chat-status').textContent = chatType === 'group' ? 'Group Chat' : 'Direct Message';
             
-            // Load chat messages here
+            // Load chat messages
             loadChatMessages(chatName, chatType);
         }
 
         function closeActiveChat() {
+            currentChat = null;
+            currentChatType = null;
             document.getElementById('active-chat').style.display = 'none';
             document.getElementById('chat-welcome').style.display = 'flex';
             document.getElementById('chat-messages').innerHTML = '';
@@ -1894,98 +2080,501 @@
 
         function loadChatMessages(chatName, chatType) {
             const messagesContainer = document.getElementById('chat-messages');
-            // This would typically make an AJAX call to load messages
-            // For now, showing a placeholder
-            messagesContainer.innerHTML = `
-                <div class="text-center text-muted mt-4">
-                    <i class="bi bi-chat-dots display-4"></i>
-                    <p class="mt-2">Loading messages for ${chatName}...</p>
-                </div>
-            `;
+            
+            if (chatType === 'direct') {
+                // Load direct message history
+                loadDirectMessages(chatName);
+            } else if (chatType === 'group') {
+                // Load group message history
+                loadGroupMessages(chatName);
+            }
+        }
+
+        function loadDirectMessages(recipientName) {
+            const messagesContainer = document.getElementById('chat-messages');
+            
+            // Find the user by username
+            const recipient = findUserByUsername(recipientName);
+            if (!recipient) {
+                messagesContainer.innerHTML = '<div class="text-center text-muted mt-4">User not found</div>';
+                return;
+            }
+
+            // Load messages between current user and recipient
+            fetch(`/student/communications/messages?recipient_id=${recipient.id}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayMessages(data.messages, 'direct');
+                    } else {
+                        messagesContainer.innerHTML = '<div class="text-center text-muted mt-4">No messages found</div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading messages:', error);
+                    messagesContainer.innerHTML = '<div class="text-center text-muted mt-4">Error loading messages</div>';
+                });
+        }
+
+        function loadGroupMessages(groupName) {
+            const messagesContainer = document.getElementById('chat-messages');
+            
+            // Find the group by name
+            const group = findGroupByName(groupName);
+            if (!group) {
+                messagesContainer.innerHTML = '<div class="text-center text-muted mt-4">Group not found</div>';
+                return;
+            }
+
+            // Load group messages
+            fetch(`/student/communications/group/${group.id}/messages`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayMessages(data.messages, 'group');
+                    } else {
+                        messagesContainer.innerHTML = '<div class="text-center text-muted mt-4">No messages found</div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading messages:', error);
+                    messagesContainer.innerHTML = '<div class="text-center text-muted mt-4">Error loading messages</div>';
+                });
+        }
+
+        function displayMessages(messages, chatType) {
+            const messagesContainer = document.getElementById('chat-messages');
+            
+            if (!messages || messages.length === 0) {
+                messagesContainer.innerHTML = '<div class="text-center text-muted mt-4">No messages yet. Start the conversation!</div>';
+                return;
+            }
+
+            let html = '';
+            messages.forEach(message => {
+                const isOwnMessage = message.sender_id === {{ current_user.id }};
+                const messageClass = isOwnMessage ? 'message-item own-message mb-3' : 'message-item mb-3';
+                const avatarClass = isOwnMessage ? 'chat-avatar own-avatar me-2' : 'chat-avatar me-2';
+                
+                html += `
+                    <div class="${messageClass}">
+                        <div class="d-flex align-items-start ${isOwnMessage ? 'justify-content-end' : ''}">
+                            ${!isOwnMessage ? `<div class="${avatarClass}">
+                                <i class="bi bi-person-circle"></i>
+                            </div>` : ''}
+                            <div class="message-content ${isOwnMessage ? 'text-end' : ''}">
+                                <div class="message-header">
+                                    <span class="message-author ${isOwnMessage ? 'text-info' : 'text-primary'}">${message.sender_name}</span>
+                                    <small class="text-muted ms-2">${formatMessageTime(message.created_at)}</small>
+                                </div>
+                                <div class="message-text text-white">${message.content}</div>
+                            </div>
+                            ${isOwnMessage ? `<div class="${avatarClass}">
+                                <i class="bi bi-person-circle"></i>
+                            </div>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            messagesContainer.innerHTML = html;
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
 
         function sendMessage() {
             const messageInput = document.getElementById('message-input');
             const message = messageInput.value.trim();
             
-            if (message) {
-                const messagesContainer = document.getElementById('chat-messages');
-                const messageElement = document.createElement('div');
-                messageElement.className = 'message-item mb-3';
-                messageElement.innerHTML = `
-                    <div class="d-flex align-items-start">
-                        <div class="chat-avatar me-2">
-                            <i class="bi bi-person-circle"></i>
-                        </div>
-                        <div class="message-content">
-                            <div class="message-header">
-                                <span class="message-author text-primary">You</span>
-                                <small class="text-muted ms-2">${new Date().toLocaleTimeString()}</small>
-                            </div>
-                            <div class="message-text text-white">${message}</div>
-                        </div>
-                    </div>
-                `;
-                
-                messagesContainer.appendChild(messageElement);
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                messageInput.value = '';
+            if (!message || !currentChat) return;
+            
+            if (currentChatType === 'direct') {
+                sendDirectMessage(message);
+            } else if (currentChatType === 'group') {
+                sendGroupMessage(message);
             }
         }
 
+        function sendDirectMessage(content) {
+            const recipient = findUserByUsername(currentChat);
+            if (!recipient) return;
+
+            fetch('/student/communications/send-message', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    recipient_id: recipient.id,
+                    content: content,
+                    message_type: 'direct'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Add message to chat
+                    addMessageToChat({
+                        sender_id: {{ current_user.id }},
+                        sender_name: '{{ current_user.username }}',
+                        content: content,
+                        created_at: new Date().toISOString()
+                    });
+                    document.getElementById('message-input').value = '';
+                } else {
+                    alert('Error sending message: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error sending message');
+            });
+        }
+
+        function sendGroupMessage(content) {
+            const group = findGroupByName(currentChat);
+            if (!group) return;
+
+            fetch(`/student/communications/group/${group.id}/send-message`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    content: content,
+                    message_type: 'group'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Add message to chat
+                    addMessageToChat({
+                        sender_id: {{ current_user.id }},
+                        sender_name: '{{ current_user.username }}',
+                        content: content,
+                        created_at: new Date().toISOString()
+                    });
+                    document.getElementById('message-input').value = '';
+                } else {
+                    alert('Error sending message: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error sending message');
+            });
+        }
+
+        function addMessageToChat(message) {
+            const messagesContainer = document.getElementById('chat-messages');
+            const messageElement = document.createElement('div');
+            messageElement.className = 'message-item own-message mb-3';
+            
+            messageElement.innerHTML = `
+                <div class="d-flex align-items-start justify-content-end">
+                    <div class="message-content text-end">
+                        <div class="message-header">
+                            <span class="message-author text-info">You</span>
+                            <small class="text-muted ms-2">${formatMessageTime(message.created_at)}</small>
+                        </div>
+                        <div class="message-text text-white">${message.content}</div>
+                    </div>
+                    <div class="chat-avatar own-avatar me-2">
+                        <i class="bi bi-person-circle"></i>
+                    </div>
+                </div>
+            `;
+            
+            messagesContainer.appendChild(messageElement);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
         function openNewMessageModal() {
+            // Populate recipients dropdown
+            populateRecipientsDropdown();
             const modal = new bootstrap.Modal(document.getElementById('newMessageModal'));
             modal.show();
         }
 
         function openCreateGroupModal() {
+            // Populate members dropdown
+            populateMembersDropdown();
             const modal = new bootstrap.Modal(document.getElementById('createGroupModal'));
             modal.show();
         }
 
+        function populateRecipientsDropdown() {
+            const recipientSelect = document.getElementById('recipient');
+            recipientSelect.innerHTML = '<option value="">Select recipient...</option>';
+            
+            // Add teachers and other students
+            {% if teachers %}
+                {% for teacher in teachers %}
+                    recipientSelect.innerHTML += `<option value="{{ teacher.id }}">{{ teacher.username }}</option>`;
+                {% endfor %}
+            {% endif %}
+            
+            {% if students %}
+                {% for student in students %}
+                    {% if student.id != current_user.id %}
+                        recipientSelect.innerHTML += `<option value="{{ student.id }}">{{ student.username }}</option>`;
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+        }
+
+        function populateMembersDropdown() {
+            const membersSelect = document.getElementById('group-members');
+            membersSelect.innerHTML = '';
+            
+            // Add students
+            {% if students %}
+                {% for student in students %}
+                    {% if student.id != current_user.id %}
+                        membersSelect.innerHTML += `<option value="{{ student.id }}">{{ student.username }}</option>`;
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+        }
+
         function sendNewMessage() {
-            const recipient = document.getElementById('recipient').value;
+            const recipientId = document.getElementById('recipient').value;
             const content = document.getElementById('message-content').value;
             
-            if (recipient && content) {
-                // This would typically make an AJAX call to send the message
-                alert(`Message sent to ${recipient}: ${content}`);
-                bootstrap.Modal.getInstance(document.getElementById('newMessageModal')).hide();
-            } else {
+            if (!recipientId || !content) {
                 alert('Please fill in all fields');
+                return;
             }
+
+            fetch('/student/communications/send-message', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    recipient_id: recipientId,
+                    content: content,
+                    message_type: 'direct'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Message sent successfully!');
+                    bootstrap.Modal.getInstance(document.getElementById('newMessageModal')).hide();
+                    // Refresh the page to show new message
+                    location.reload();
+                } else {
+                    alert('Error sending message: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error sending message');
+            });
         }
 
         function createGroup() {
             const name = document.getElementById('group-name').value;
             const description = document.getElementById('group-description').value;
-            const members = document.getElementById('group-members').value;
+            const memberIds = Array.from(document.getElementById('group-members').selectedOptions).map(option => option.value);
             
-            if (name && description) {
-                // This would typically make an AJAX call to create the group
-                alert(`Group "${name}" created successfully!`);
-                bootstrap.Modal.getInstance(document.getElementById('createGroupModal')).hide();
-            } else {
+            if (!name || !description) {
                 alert('Please fill in group name and description');
+                return;
             }
+
+            fetch('/student/communications/create-group', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: name,
+                    description: description,
+                    member_ids: memberIds
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(`Group "${name}" created successfully!`);
+                    bootstrap.Modal.getInstance(document.getElementById('createGroupModal')).hide();
+                    // Refresh the page to show new group
+                    location.reload();
+                } else {
+                    alert('Error creating group: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error creating group');
+            });
         }
 
         function openAnnouncement(announcementId) {
-            // This would typically open the announcement in a modal or new view
-            alert(`Opening announcement ${announcementId}`);
+            // Open announcement in a modal
+            fetch(`/student/communications/announcement/${announcementId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAnnouncementModal(data.announcement);
+                    } else {
+                        alert('Error loading announcement');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error loading announcement');
+                });
         }
 
-        // Handle Enter key in message input
-        document.addEventListener('DOMContentLoaded', function() {
+        function showAnnouncementModal(announcement) {
+            // Create and show announcement modal
+            const modalHtml = `
+                <div class="modal fade" id="announcementModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">${announcement.title}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p><strong>From:</strong> ${announcement.sender_name}</p>
+                                <p><strong>Date:</strong> ${formatMessageTime(announcement.timestamp)}</p>
+                                <hr>
+                                <div>${announcement.message}</div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remove existing modal if any
+            const existingModal = document.getElementById('announcementModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            // Add new modal to body
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('announcementModal'));
+            modal.show();
+        }
+
+        // Helper functions
+        function findUserByUsername(username) {
+            // This would typically search through available users
+            // For now, return a mock user object
+            return { id: 1, username: username };
+        }
+
+        function findGroupByName(groupName) {
+            // This would typically search through available groups
+            // For now, return a mock group object
+            return { id: 1, name: groupName };
+        }
+
+        function formatMessageTime(timestamp) {
+            if (!timestamp) return '';
+            
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMs / 3600000);
+            const diffDays = Math.floor(diffMs / 86400000);
+            
+            if (diffMins < 1) return 'Just now';
+            if (diffMins < 60) return `${diffMins}m ago`;
+            if (diffHours < 24) return `${diffHours}h ago`;
+            if (diffDays < 7) return `${diffDays}d ago`;
+            
+            return date.toLocaleDateString();
+        }
+
+        // Typing indicator functionality
+        let typingTimeout;
+        let isTyping = false;
+
+        function handleTyping() {
+            if (!isTyping) {
+                isTyping = true;
+                showTypingIndicator();
+            }
+            
+            clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(() => {
+                isTyping = false;
+                hideTypingIndicator();
+            }, 1000);
+        }
+
+        function showTypingIndicator() {
+            const indicator = document.getElementById('typing-indicator');
+            if (indicator) {
+                indicator.style.display = 'block';
+            }
+        }
+
+        function hideTypingIndicator() {
+            const indicator = document.getElementById('typing-indicator');
+            if (indicator) {
+                indicator.style.display = 'none';
+            }
+        }
+
+        // Enhanced message input handling
+        function handleMessageInput() {
             const messageInput = document.getElementById('message-input');
-            if (messageInput) {
+            const sendButton = document.getElementById('send-button');
+            
+            if (messageInput && sendButton) {
+                messageInput.addEventListener('input', function() {
+                    sendButton.disabled = !this.value.trim();
+                });
+                
                 messageInput.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
                         sendMessage();
                     }
                 });
             }
+        }
+
+        // Auto-refresh chat data
+        function startAutoRefresh() {
+            if (currentChat && currentChatType) {
+                setInterval(() => {
+                    loadChatMessages(currentChat, currentChatType);
+                }, 30000); // Refresh every 30 seconds
+            }
+        }
+
+        // Handle Enter key in message input
+        document.addEventListener('DOMContentLoaded', function() {
+            handleMessageInput();
+            
+            // Initialize chat sections
+            initializeChatSections();
         });
+
+        function initializeChatSections() {
+            // Set default sections to expanded
+            const sections = ['direct-messages', 'groups', 'announcements'];
+            sections.forEach(sectionId => {
+                const section = document.getElementById(sectionId);
+                if (section) {
+                    section.style.display = 'block';
+                }
+            });
+        }
 
         document.addEventListener('DOMContentLoaded', function() {
             // Handle student bug report form submission

@@ -21,7 +21,18 @@ teacher_blueprint = Blueprint('teacher', __name__)
 @login_required
 @teacher_required
 def teacher_dashboard():
-    teacher = TeacherStaff.query.filter_by(id=current_user.teacher_staff_id).first_or_404()
+    # Debug logging
+    print(f"Teacher dashboard accessed by user: {current_user.username}, role: {current_user.role}, teacher_staff_id: {current_user.teacher_staff_id}")
+    
+    # Check if teacher_staff_id exists
+    if not current_user.teacher_staff_id:
+        flash('Teacher profile not found. Please contact administration.', 'danger')
+        return redirect(url_for('auth.dashboard'))
+    
+    teacher = TeacherStaff.query.filter_by(id=current_user.teacher_staff_id).first()
+    if not teacher:
+        flash('Teacher profile not found. Please contact administration.', 'danger')
+        return redirect(url_for('auth.dashboard'))
     classes = Class.query.filter_by(teacher_id=teacher.id).all()
     
     # Get recent assignments

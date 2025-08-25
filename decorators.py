@@ -8,8 +8,17 @@ TEACHER_ROLES = [
     'Physics Teacher',
     'English Language Arts Teacher',
     'Math Teacher',
-    'Substitute Teacher'
+    'Substitute Teacher',
+    'School Counselor',
+    'School Administrator',
+    'Director'
 ]
+
+def is_teacher_role(role):
+    """Check if a role is considered a teacher role"""
+    if not role:
+        return False
+    return role in TEACHER_ROLES or 'Teacher' in role
 
 def admin_required(f):
     """Restricts access to users with the 'Director' role."""
@@ -39,13 +48,10 @@ def management_required(f):
     return decorated_function
 
 def teacher_required(f):
-    """Restricts access to users with specific teacher roles, School Administrator, or Director."""
+    """Restricts access to users with teacher roles (including School Administrator and Director)."""
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated or (
-            current_user.role not in TEACHER_ROLES and
-            current_user.role not in ['School Administrator', 'Director']
-        ):
+        if not current_user.is_authenticated or not is_teacher_role(current_user.role):
             abort(403)
         return f(*args, **kwargs)
     return decorated_function

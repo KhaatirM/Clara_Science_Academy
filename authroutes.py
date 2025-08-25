@@ -4,7 +4,7 @@ from models import User, db, MaintenanceMode, BugReport
 from werkzeug.security import check_password_hash
 from datetime import datetime
 from app import log_activity
-from decorators import TEACHER_ROLES
+from decorators import is_teacher_role
 
 auth_blueprint = Blueprint('auth', __name__)
 
@@ -134,7 +134,7 @@ def dashboard():
     flash(f"Redirecting user with role: {current_user.role}", "info")
     if current_user.role == 'Student':
         return redirect(url_for('student.student_dashboard'))
-    elif current_user.role in TEACHER_ROLES:
+    elif is_teacher_role(current_user.role):
         return redirect(url_for('teacher.teacher_dashboard'))
     elif current_user.role in ['School Administrator', 'Director']:
         return redirect(url_for('management.management_dashboard'))

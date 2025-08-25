@@ -648,21 +648,13 @@ def student_school_calendar():
                 week_data.append({'day_num': day, 'is_current_month': True, 'is_today': is_today, 'events': events})
         calendar_data['weeks'].append(week_data)
 
-    return render_template('role_student_dashboard.html', 
-                         **create_template_context(student, 'school-calendar', 'school-calendar',
-                             calendar_data=calendar_data,
-                             prev_month=prev_month,
-                             next_month=next_month,
-                             gpa=0.0,
-                             grade_trends={},
-                             today_schedule=[],
-                             goals={},
-                             announcements=[],
-                             notifications=[],
-                             past_due_assignments=[],
-                             upcoming_assignments=[],
-                             recent_grades=[],
-                             get_letter_grade=get_letter_grade))
+    return render_template('role_calendar.html', 
+                         calendar_data=calendar_data,
+                         prev_month=prev_month,
+                         next_month=next_month,
+                         month_name=month_name,
+                         year=year,
+                         current_user=current_user)
 
 @student_blueprint.route('/settings')
 @login_required

@@ -129,35 +129,44 @@
                                 <div class="calendar-container">
                                     <div class="calendar-header">
                                         <div class="row text-center">
-                                            <div class="col">Mon</div>
-                                            <div class="col">Tue</div>
-                                            <div class="col">Wed</div>
-                                            <div class="col">Thu</div>
-                                            <div class="col">Fri</div>
-                                            <div class="col">Sat</div>
-                                            <div class="col">Sun</div>
+                                            <div class="col calendar-day-header">Mon</div>
+                                            <div class="col calendar-day-header">Tue</div>
+                                            <div class="col calendar-day-header">Wed</div>
+                                            <div class="col calendar-day-header">Thu</div>
+                                            <div class="col calendar-day-header">Fri</div>
+                                            <div class="col calendar-day-header">Sat</div>
+                                            <div class="col calendar-day-header">Sun</div>
                                         </div>
                                     </div>
                                     <div class="calendar-body">
-                                        {% for week in calendar_data.weeks %}
-                                            <div class="row calendar-week">
-                                                {% for day in week %}
-                                                    <div class="col calendar-day {% if not day.is_current_month %}empty{% endif %} {% if day.is_today %}today{% endif %}">
-                                                        {% if day.is_current_month %}
-                                                            <div class="day-number">{{ day.day_num }}</div>
-                                                            <div class="day-events">
-                                                                {% for event in day.events %}
-                                                                    <div class="calendar-event event-{{ event.type if event.type else 'default' }}" title="{{ event.title }}">
-                                                                        <small class="event-title">{{ event.title }}</small>
-                                                                        <small class="event-category">{{ event.category }}</small>
-                                                                    </div>
-                                                                {% endfor %}
-                                                            </div>
-                                                        {% endif %}
-                                                    </div>
-                                                {% endfor %}
+                                        {% if calendar_data and calendar_data.weeks %}
+                                            {% for week in calendar_data.weeks %}
+                                                <div class="row calendar-week">
+                                                    {% for day in week %}
+                                                        <div class="col calendar-day {% if not day.is_current_month %}empty{% endif %} {% if day.is_today %}today{% endif %}">
+                                                            {% if day.is_current_month %}
+                                                                <div class="day-number">{{ day.day_num }}</div>
+                                                                <div class="day-events">
+                                                                    {% for event in day.events %}
+                                                                        <div class="calendar-event event-{{ event.category|lower|replace(' ', '_') if event.category else 'default' }}" title="{{ event.title }}">
+                                                                            <small class="event-title">{{ event.title }}</small>
+                                                                            {% if event.category %}
+                                                                                <small class="event-category">{{ event.category }}</small>
+                                                                            {% endif %}
+                                                                        </div>
+                                                                    {% endfor %}
+                                                                </div>
+                                                            {% endif %}
+                                                        </div>
+                                                    {% endfor %}
+                                                </div>
+                                            {% endfor %}
+                                        {% else %}
+                                            <!-- Fallback if no calendar data -->
+                                            <div class="text-center py-5">
+                                                <p class="text-muted">No calendar data available for this month.</p>
                                             </div>
-                                        {% endfor %}
+                                        {% endif %}
                                     </div>
                                 </div>
                             </div>
@@ -947,21 +956,27 @@
     background: white;
     border-radius: 8px;
     overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 
 .calendar-header {
     background: #f8f9fa;
-    padding: 15px 0;
-    border-bottom: 1px solid #dee2e6;
+    padding: 12px 0;
+    border-bottom: 2px solid #dee2e6;
 }
 
-.calendar-header .col {
-    font-weight: 600;
+.calendar-day-header {
+    font-weight: 700;
     color: #495057;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 8px 4px;
 }
 
 .calendar-body .calendar-week {
-    border-bottom: 1px solid #dee2e6;
+    border-bottom: 1px solid #e9ecef;
+    min-height: 80px;
 }
 
 .calendar-body .calendar-week:last-child {
@@ -969,10 +984,12 @@
 }
 
 .calendar-day {
-    min-height: 100px;
-    padding: 8px;
-    border-right: 1px solid #dee2e6;
+    min-height: 80px;
+    padding: 6px 4px;
+    border-right: 1px solid #e9ecef;
     position: relative;
+    display: flex;
+    flex-direction: column;
 }
 
 .calendar-day:last-child {
@@ -985,48 +1002,60 @@
 
 .calendar-day.today {
     background: #e3f2fd;
+    border: 2px solid #2196f3;
 }
 
 .day-number {
-    font-weight: 600;
-    margin-bottom: 8px;
-    color: #495057;
+    font-weight: 700;
+    margin-bottom: 4px;
+    color: #212529;
+    font-size: 1.1rem;
+    text-align: center;
+    padding: 2px;
 }
 
 .day-events {
-    max-height: 80px;
+    flex: 1;
+    max-height: 60px;
     overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
 }
 
 .calendar-event {
     background: #007bff;
     color: white;
-    padding: 2px 6px;
-    margin: 2px 0;
+    padding: 3px 6px;
+    margin: 1px 0;
     border-radius: 4px;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     cursor: pointer;
+    line-height: 1.2;
+    word-wrap: break-word;
+    overflow: hidden;
 }
 
 .event-title {
     display: block;
     font-weight: 500;
+    margin-bottom: 1px;
 }
 
 .event-category {
     display: block;
-    opacity: 0.8;
-    font-size: 0.7rem;
+    opacity: 0.9;
+    font-size: 0.65rem;
+    font-weight: 400;
 }
 
 /* Event type specific styling */
-.event-quarter_start { background: #28a745; }
-.event-quarter_end { background: #dc3545; }
-.event-semester_start { background: #17a2b8; }
-.event-semester_end { background: #6f42c1; }
+.event-quarter_start, .event-quarter_end { background: #28a745; }
+.event-semester_start, .event-semester_end { background: #17a2b8; }
 .event-teacher_work_day { background: #fd7e14; }
-.event-school_break_start { background: #e83e8c; }
-.event-school_break_end { background: #6f42c1; }
+.event-school_break_start, .event-school_break_end { background: #e83e8c; }
+.event-holiday { background: #dc3545; }
+.event-default { background: #6c757d; }
 
 .calendar-legend-item {
     display: inline-block;
@@ -1036,13 +1065,57 @@
     margin-right: 8px;
 }
 
-.event-quarter_start { background: #28a745; }
-.event-quarter_end { background: #dc3545; }
-.event-semester_start { background: #17a2b8; }
-.event-semester_end { background: #6f42c1; }
-.event-teacher_work_day { background: #fd7e14; }
-.event-school_break_start { background: #e83e8c; }
-.event-school_break_end { background: #6f42c1; }
+/* Responsive design */
+@media (max-width: 768px) {
+    .calendar-day {
+        min-height: 60px;
+        padding: 4px 2px;
+    }
+    
+    .day-number {
+        font-size: 0.9rem;
+        margin-bottom: 2px;
+    }
+    
+    .calendar-event {
+        font-size: 0.6rem;
+        padding: 2px 4px;
+    }
+    
+    .event-title, .event-category {
+        font-size: 0.6rem;
+    }
+    
+    .calendar-header {
+        padding: 8px 0;
+    }
+    
+    .calendar-day-header {
+        font-size: 0.8rem;
+        padding: 6px 2px;
+    }
+}
+
+@media (max-width: 576px) {
+    .calendar-container {
+        margin: 0 -15px;
+        border-radius: 0;
+    }
+    
+    .calendar-day {
+        min-height: 50px;
+        padding: 2px 1px;
+    }
+    
+    .day-number {
+        font-size: 0.8rem;
+    }
+    
+    .calendar-event {
+        font-size: 0.55rem;
+        padding: 1px 3px;
+    }
+}
 
 .nav-tabs .nav-link {
     color: #495057;

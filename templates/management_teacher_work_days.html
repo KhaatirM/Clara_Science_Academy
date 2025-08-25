@@ -141,7 +141,7 @@
 
 <!-- Date Picker Modal -->
 <div class="modal fade" id="datePickerModal" tabindex="-1" aria-labelledby="datePickerModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="datePickerModalLabel">Select Multiple Dates</h5>
@@ -150,7 +150,7 @@
             <div class="modal-body">
                 <div class="row">
                     <div class="col-12 col-md-8">
-                        <div id="calendar-container"></div>
+                        <div id="calendar-container" class="calendar-wrapper"></div>
                     </div>
                     <div class="col-12 col-md-4">
                         <h6>Selected Dates:</h6>
@@ -177,12 +177,43 @@
     border-top: none;
 }
 
+/* Calendar Modal Styling */
+.modal-xl {
+    max-width: 95%;
+}
+
+.modal-body {
+    max-height: 85vh;
+    overflow-y: auto;
+    padding: 1.5rem;
+}
+
+.calendar-wrapper {
+    min-height: 400px;
+    overflow: visible;
+}
+
+.calendar-grid {
+    min-height: 350px;
+}
+
+/* Ensure calendar is fully visible */
+#calendar-container {
+    width: 100%;
+    overflow: visible;
+}
+
 .calendar-day {
     cursor: pointer;
-    padding: 8px;
+    padding: 10px 8px;
     text-align: center;
     border: 1px solid #dee2e6;
     transition: background-color 0.2s;
+    min-height: 45px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
 }
 
 .calendar-day:hover {
@@ -203,6 +234,20 @@
     background-color: #f8f9fa;
     font-weight: bold;
     text-align: center;
+    padding: 8px;
+}
+
+.calendar-day.text-muted {
+    color: #6c757d !important;
+}
+
+/* Ensure calendar rows are properly spaced */
+.calendar-grid .row {
+    margin-bottom: 0;
+}
+
+.calendar-grid .col {
+    padding: 0;
 }
 </style>
 
@@ -239,19 +284,37 @@ function initializeCalendar() {
     });
     html += '</div>';
     
-    // Generate calendar days
+    // Generate calendar days - ensure we show the complete month
     const firstDay = new Date(currentYear, currentMonth, 1);
     const lastDay = new Date(currentYear, currentMonth + 1, 0);
     const startDate = new Date(firstDay);
     startDate.setDate(startDate.getDate() - firstDay.getDay());
     
-    let currentRow = '';
-    let dayCount = 0;
+    // Calculate how many weeks we need to display
+    let totalDays = 42; // Start with 6 weeks × 7 days
+    let endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + totalDays - 1);
     
-    for (let i = 0; i < 42; i++) {
+    // If the end date doesn't cover the full month, extend it
+    if (endDate < lastDay) {
+        const additionalDays = lastDay.getDate() - endDate.getDate() + 1;
+        const additionalWeeks = Math.ceil(additionalDays / 7);
+        totalDays = totalDays + (additionalWeeks * 7);
+    }
+    
+    // Ensure we have enough weeks to display the full month
+    const weeksNeeded = Math.ceil(totalDays / 7);
+    totalDays = weeksNeeded * 7;
+    
+    let currentRow = '';
+    let weekCount = 0;
+    const maxWeeks = 8; // Maximum weeks to prevent infinite loops
+    
+    for (let i = 0; i < totalDays && weekCount < maxWeeks; i++) {
         if (i % 7 === 0) {
             if (currentRow) html += `</div>`;
             currentRow = `<div class="row text-center">`;
+            weekCount++;
         }
         
         const currentDate = new Date(startDate);
@@ -269,8 +332,6 @@ function initializeCalendar() {
         currentRow += `<div class="col ${dayClass}" onclick="toggleDate('${currentDate.toISOString()}')">`;
         currentRow += currentDate.getDate();
         currentRow += '</div>';
-        
-        dayCount++;
     }
     
     if (currentRow) html += currentRow + '</div>';

@@ -33,15 +33,20 @@ def teacher_dashboard():
     if not teacher:
         flash('Teacher profile not found. Please contact administration.', 'danger')
         return redirect(url_for('auth.dashboard'))
-    classes = Class.query.filter_by(teacher_id=teacher.id).all()
-    
-    # Get recent assignments
-    class_ids = [c.id for c in classes]
-    recent_assignments = Assignment.query.filter(Assignment.class_id.in_(class_ids)).order_by(Assignment.due_date.desc()).limit(5).all()
+    # Directors see all classes, teachers only see their assigned classes
+    if current_user.role == 'Director':
+        classes = Class.query.all()
+        class_ids = [c.id for c in classes]
+        recent_assignments = Assignment.query.order_by(Assignment.due_date.desc()).limit(5).all()
+        assignments = Assignment.query.all()
+    else:
+        classes = Class.query.filter_by(teacher_id=teacher.id).all()
+        class_ids = [c.id for c in classes]
+        recent_assignments = Assignment.query.filter(Assignment.class_id.in_(class_ids)).order_by(Assignment.due_date.desc()).limit(5).all()
+        assignments = Assignment.query.filter(Assignment.class_id.in_(class_ids)).all()
     
     # Get recent grades (simplified)
     recent_grades = []
-    assignments = Assignment.query.filter(Assignment.class_id.in_(class_ids)).all()
     for assignment in assignments[:5]:
         grades = Grade.query.filter_by(assignment_id=assignment.id).limit(3).all()
         for grade in grades:
@@ -132,8 +137,8 @@ def view_class(class_id):
     teacher = TeacherStaff.query.filter_by(id=current_user.teacher_staff_id).first_or_404()
     class_obj = Class.query.get_or_404(class_id)
     
-    # Ensure the teacher is assigned to this class
-    if class_obj.teacher_id != teacher.id:
+    # Directors have access to all classes, teachers only to their assigned classes
+    if current_user.role != 'Director' and class_obj.teacher_id != teacher.id:
         return redirect(url_for('teacher.teacher_dashboard'))
 
     # Get only actively enrolled students for this class
@@ -167,9 +172,9 @@ def view_class(class_id):
 @teacher_required
 def add_assignment(class_id):
     class_obj = Class.query.get_or_404(class_id)
-    # Authorization check
+    # Authorization check - Directors can add assignments to any class
     teacher = TeacherStaff.query.filter_by(id=current_user.teacher_staff_id).first_or_404()
-    if class_obj.teacher_id != teacher.id:
+    if current_user.role != 'Director' and class_obj.teacher_id != teacher.id:
         flash("You are not authorized to add assignments to this class.", "danger")
         return redirect(url_for('teacher.teacher_dashboard'))
 
@@ -259,9 +264,9 @@ def grade_assignment(assignment_id):
     assignment = Assignment.query.get_or_404(assignment_id)
     class_obj = assignment.class_info
     
-    # Authorization check
+    # Authorization check - Directors can grade any assignment
     teacher = TeacherStaff.query.filter_by(id=current_user.teacher_staff_id).first_or_404()
-    if class_obj.teacher_id != teacher.id:
+    if current_user.role != 'Director' and class_obj.teacher_id != teacher.id:
         flash("You are not authorized to grade this assignment.", "danger")
         return redirect(url_for('teacher.teacher_dashboard'))
 
@@ -308,11 +313,19 @@ def grade_assignment(assignment_id):
         flash('Grades updated successfully.', 'success')
         return redirect(url_for('teacher.grade_assignment', assignment_id=assignment_id))
 
-    # For GET request
+    # For GET request - get students in this specific class
+    class_students = Student.query.join(Enrollment).filter(Enrollment.class_id == class_obj.id).all() if hasattr(Student, 'enrollments') else students
+    
+    # Get existing grades for this assignment
     grades = {g.student_id: json.loads(g.grade_data) for g in Grade.query.filter_by(assignment_id=assignment_id).all()}
     submissions = {s.student_id: s for s in Submission.query.filter_by(assignment_id=assignment_id).all()}
     
-    return render_template('class_grades_view.html', assignment=assignment, students=students, grades=grades, submissions=submissions)
+    return render_template('teacher_grade_assignment.html', 
+                         assignment=assignment, 
+                         class_obj=class_obj,
+                         students=class_students, 
+                         grades=grades, 
+                         submissions=submissions)
 
 
 @teacher_blueprint.route('/attendance/take/<int:class_id>', methods=['GET', 'POST'])
@@ -321,7 +334,8 @@ def grade_assignment(assignment_id):
 def take_attendance(class_id):
     class_obj = Class.query.get_or_404(class_id)
     teacher = TeacherStaff.query.filter_by(id=current_user.teacher_staff_id).first_or_404()
-    if class_obj.teacher_id != teacher.id:
+    # Directors can take attendance for any class
+    if current_user.role != 'Director' and class_obj.teacher_id != teacher.id:
         flash("You are not authorized to take attendance for this class.", "danger")
         return redirect(url_for('teacher.teacher_dashboard'))
 
@@ -381,9 +395,14 @@ def take_attendance(class_id):
 @login_required
 @teacher_required
 def my_classes():
-    """View all classes taught by the teacher"""
+    """View all classes taught by the teacher, or all classes for Directors"""
     teacher = TeacherStaff.query.filter_by(id=current_user.teacher_staff_id).first_or_404()
-    classes = Class.query.filter_by(teacher_id=teacher.id).all()
+    
+    # Directors see all classes, teachers only see their assigned classes
+    if current_user.role == 'Director':
+        classes = Class.query.all()
+    else:
+        classes = Class.query.filter_by(teacher_id=teacher.id).all()
     
     return render_template('role_teacher_dashboard.html', 
                          teacher=teacher, 
@@ -395,11 +414,17 @@ def my_classes():
 @login_required
 @teacher_required
 def my_assignments():
-    """View all assignments created by the teacher"""
+    """View all assignments created by the teacher, or all assignments for Directors"""
     teacher = TeacherStaff.query.filter_by(id=current_user.teacher_staff_id).first_or_404()
-    classes = Class.query.filter_by(teacher_id=teacher.id).all()
-    class_ids = [c.id for c in classes]
-    assignments = Assignment.query.filter(Assignment.class_id.in_(class_ids)).order_by(Assignment.due_date.desc()).all()
+    
+    # Directors see all classes and assignments, teachers only see their assigned ones
+    if current_user.role == 'Director':
+        classes = Class.query.all()
+        assignments = Assignment.query.order_by(Assignment.due_date.desc()).all()
+    else:
+        classes = Class.query.filter_by(teacher_id=teacher.id).all()
+        class_ids = [c.id for c in classes]
+        assignments = Assignment.query.filter(Assignment.class_id.in_(class_ids)).order_by(Assignment.due_date.desc()).all()
     
     from datetime import datetime
     return render_template('role_teacher_dashboard.html',
@@ -415,13 +440,20 @@ def my_assignments():
 @login_required
 @teacher_required
 def my_grades():
-    """View all grades entered by the teacher"""
+    """View all grades entered by the teacher, or all grades for Directors"""
     teacher = TeacherStaff.query.filter_by(id=current_user.teacher_staff_id).first_or_404()
-    classes = Class.query.filter_by(teacher_id=teacher.id).all()
-    class_ids = [c.id for c in classes]
-    assignments = Assignment.query.filter(Assignment.class_id.in_(class_ids)).all()
-    assignment_ids = [a.id for a in assignments]
-    grades = Grade.query.filter(Grade.assignment_id.in_(assignment_ids)).all()
+    
+    # Directors see all classes, assignments, and grades, teachers only see their assigned ones
+    if current_user.role == 'Director':
+        classes = Class.query.all()
+        assignments = Assignment.query.all()
+        grades = Grade.query.all()
+    else:
+        classes = Class.query.filter_by(teacher_id=teacher.id).all()
+        class_ids = [c.id for c in classes]
+        assignments = Assignment.query.filter(Assignment.class_id.in_(class_ids)).all()
+        assignment_ids = [a.id for a in assignments]
+        grades = Grade.query.filter(Grade.assignment_id.in_(assignment_ids)).all()
     
     return render_template('role_teacher_dashboard.html', 
                          teacher=teacher,
@@ -435,9 +467,14 @@ def my_grades():
 @login_required
 @teacher_required
 def attendance():
-    """View attendance for teacher's classes"""
+    """View attendance for teacher's classes, or all classes for Directors"""
     teacher = TeacherStaff.query.filter_by(id=current_user.teacher_staff_id).first_or_404()
-    classes = Class.query.filter_by(teacher_id=teacher.id).all()
+    
+    # Directors see all classes, teachers only see their assigned classes
+    if current_user.role == 'Director':
+        classes = Class.query.all()
+    else:
+        classes = Class.query.filter_by(teacher_id=teacher.id).all()
     
     return render_template('role_teacher_dashboard.html', 
                          teacher=teacher,
@@ -636,8 +673,11 @@ def teacher_communications():
     # Get notifications
     notifications = Notification.query.filter_by(user_id=current_user.id).order_by(Notification.timestamp.desc()).all()
     
-    # Get teacher's classes for group messaging
-    classes = Class.query.filter_by(teacher_id=teacher.id).all()
+    # Get teacher's classes for group messaging - Directors see all classes
+    if current_user.role == 'Director':
+        classes = Class.query.all()
+    else:
+        classes = Class.query.filter_by(teacher_id=teacher.id).all()
     
     # Get message groups the teacher is part of
     group_memberships = MessageGroupMember.query.filter_by(user_id=current_user.id).all()
@@ -954,7 +994,11 @@ def create_group():
         flash('Group created successfully!', 'success')
         return redirect(url_for('teacher.teacher_groups'))
     
-    classes = Class.query.filter_by(teacher_id=teacher.id).all()
+    # Directors can create groups for any class
+    if current_user.role == 'Director':
+        classes = Class.query.all()
+    else:
+        classes = Class.query.filter_by(teacher_id=teacher.id).all()
     
     return render_template('teacher_create_group.html',
                          teacher=teacher,
@@ -1085,7 +1129,11 @@ def create_announcement():
         flash('Announcement created successfully!', 'success')
         return redirect(url_for('teacher.teacher_communications'))
     
-    classes = Class.query.filter_by(teacher_id=teacher.id).all()
+    # Directors can create announcements for any class
+    if current_user.role == 'Director':
+        classes = Class.query.all()
+    else:
+        classes = Class.query.filter_by(teacher_id=teacher.id).all()
     
     return render_template('teacher_create_announcement.html',
                          teacher=teacher,
@@ -1134,7 +1182,11 @@ def schedule_announcement():
         flash('Announcement scheduled successfully!', 'success')
         return redirect(url_for('teacher.teacher_communications'))
     
-    classes = Class.query.filter_by(teacher_id=teacher.id).all()
+    # Directors can schedule announcements for any class
+    if current_user.role == 'Director':
+        classes = Class.query.all()
+    else:
+        classes = Class.query.filter_by(teacher_id=teacher.id).all()
     
     return render_template('teacher_schedule_announcement.html',
                          teacher=teacher,

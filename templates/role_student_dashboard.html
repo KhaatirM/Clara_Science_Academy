@@ -1,6 +1,238 @@
 {% extends "dashboard_layout.html" %}
 
 {% block dashboard_content %}
+<style>
+/* Discord-like Chat Styles */
+.chat-container {
+    height: calc(100vh - 200px);
+    background: #f8f9fa;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.chat-header {
+    background: #5865f2;
+    color: white;
+    padding: 1rem;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.chat-layout {
+    display: flex;
+    height: calc(100% - 80px);
+}
+
+.chat-sidebar {
+    width: 280px;
+    background: #2f3136;
+    color: #dcddde;
+    border-right: 1px solid #202225;
+    overflow-y: auto;
+}
+
+.sidebar-header {
+    padding: 1rem;
+    border-bottom: 1px solid #40444b;
+    font-weight: 600;
+    color: #fff;
+}
+
+.sidebar-section {
+    border-bottom: 1px solid #40444b;
+}
+
+.section-header {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: background-color 0.2s;
+}
+
+.section-header:hover {
+    background: #40444b;
+}
+
+.section-content {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.chat-item {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: background-color 0.2s;
+    border-bottom: 1px solid #40444b;
+}
+
+.chat-item:hover {
+    background: #40444b;
+}
+
+.chat-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #5865f2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 0.75rem;
+    color: white;
+    font-size: 1.2rem;
+}
+
+.group-avatar {
+    background: #57f287;
+}
+
+.announcement-avatar {
+    background: #faa61a;
+}
+
+.chat-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.chat-name {
+    font-weight: 500;
+    color: #fff;
+    margin-bottom: 0.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.chat-preview {
+    font-size: 0.875rem;
+    color: #b9bbbe;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.chat-meta {
+    text-align: right;
+    min-width: 60px;
+}
+
+.unread-indicator {
+    width: 8px;
+    height: 8px;
+    background: #ed4245;
+    border-radius: 50%;
+    display: inline-block;
+    margin-left: 0.5rem;
+}
+
+.no-chats {
+    padding: 1rem;
+    text-align: center;
+    color: #72767d;
+}
+
+.chat-main {
+    flex: 1;
+    background: #36393f;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-welcome {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #dcddde;
+}
+
+.welcome-content {
+    text-align: center;
+}
+
+.welcome-actions {
+    margin-top: 1.5rem;
+}
+
+.active-chat {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-header-bar {
+    background: #2f3136;
+    padding: 1rem;
+    border-bottom: 1px solid #40444b;
+    color: #fff;
+}
+
+.chat-status {
+    font-size: 0.875rem;
+    color: #b9bbbe;
+}
+
+.chat-messages {
+    flex: 1;
+    padding: 1rem;
+    overflow-y: auto;
+    background: #36393f;
+}
+
+.chat-input-area {
+    padding: 1rem;
+    background: #2f3136;
+    border-top: 1px solid #40444b;
+}
+
+.chat-input-area .form-control {
+    background: #40444b;
+    border: 1px solid #202225;
+    color: #dcddde;
+}
+
+.chat-input-area .form-control:focus {
+    background: #40444b;
+    border-color: #5865f2;
+    color: #fff;
+    box-shadow: 0 0 0 0.2rem rgba(88, 101, 242, 0.25);
+}
+
+.chat-input-area .btn {
+    background: #5865f2;
+    border-color: #5865f2;
+}
+
+.chat-input-area .btn:hover {
+    background: #4752c4;
+    border-color: #4752c4;
+}
+
+.badge-sm {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .chat-layout {
+        flex-direction: column;
+    }
+    
+    .chat-sidebar {
+        width: 100%;
+        height: 200px;
+    }
+    
+    .chat-main {
+        height: calc(100% - 200px);
+    }
+}
+</style>
+
 <div class="container-fluid px-2 px-md-4">
     <!-- DEBUG: Current section is "{{ section }}" -->
     {% if section == 'home' %}
@@ -836,192 +1068,232 @@
         {% endif %}
 
     {% elif section == 'communications' %}
-        <!-- Communications Hub for Students -->
-        <h2 class="mb-4">Communications Center</h2>
-
-        <div class="alert alert-info">
-            <h5><i class="bi bi-chat-dots-fill me-2"></i>Student Communications</h5>
-            <p>Send messages, create groups, and communicate with other students and teachers.</p>
-        </div>
-
-        <!-- Quick Actions -->
-        <div class="row mb-4">
-            <div class="col-md-6">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0"><i class="bi bi-envelope-fill me-2"></i>Quick Actions</h5>
+        <!-- Discord-like Communications Hub for Students -->
+        <div class="chat-container">
+            <!-- Chat Header -->
+            <div class="chat-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h2 class="mb-0"><i class="bi bi-chat-dots-fill me-2"></i>Student Chat Center</h2>
+                    <div class="chat-actions">
+                        <button class="btn btn-outline-primary btn-sm me-2" onclick="openNewMessageModal()">
+                            <i class="bi bi-plus-circle me-1"></i>New Message
+                        </button>
+                        <button class="btn btn-outline-info btn-sm" onclick="openCreateGroupModal()">
+                            <i class="bi bi-people-plus me-1"></i>Create Group
+                        </button>
                     </div>
-                    <div class="card-body">
-                        <div class="d-grid gap-2">
-                            <a href="{{ url_for('student.student_send_message') }}" class="btn btn-outline-primary">
-                                <i class="bi bi-envelope-plus me-2"></i>Send New Message
-                            </a>
-                            <a href="{{ url_for('student.student_create_group') }}" class="btn btn-outline-info">
-                                <i class="bi bi-people-plus me-2"></i>Create New Group
-                            </a>
-                            <a href="{{ url_for('student.student_sent_messages') }}" class="btn btn-outline-secondary">
-                                <i class="bi bi-envelope-check me-2"></i>View Sent Messages
-                            </a>
+                </div>
+            </div>
+
+            <div class="chat-layout">
+                <!-- Left Sidebar - Chat List -->
+                <div class="chat-sidebar">
+                    <div class="sidebar-header">
+                        <h6 class="mb-0"><i class="bi bi-hash me-2"></i>Chats & Groups</h6>
+                    </div>
+                    
+                    <!-- Direct Messages -->
+                    <div class="sidebar-section">
+                        <div class="section-header" onclick="toggleSection('direct-messages')">
+                            <i class="bi bi-person-lines-fill me-2"></i>Direct Messages
+                            <i class="bi bi-chevron-down ms-auto" id="dm-chevron"></i>
+                        </div>
+                        <div class="section-content" id="direct-messages">
+                            {% if messages %}
+                                {% for message in messages[:10] %}
+                                    <div class="chat-item" onclick="openChat('{{ message.sender.username }}', 'direct')">
+                                        <div class="chat-avatar">
+                                            <i class="bi bi-person-circle"></i>
+                                        </div>
+                                        <div class="chat-info">
+                                            <div class="chat-name">{{ message.sender.username }}</div>
+                                            <div class="chat-preview">{{ message.content[:30] }}{% if message.content|length > 30 %}...{% endif %}</div>
+                                        </div>
+                                        <div class="chat-meta">
+                                            <small class="text-muted">{{ message.created_at.strftime('%H:%M') if message.created_at else 'N/A' }}</small>
+                                            {% if not message.is_read %}
+                                                <span class="unread-indicator"></span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="no-chats">
+                                    <i class="bi bi-chat-dots text-muted"></i>
+                                    <small class="text-muted">No messages yet</small>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Groups -->
+                    <div class="sidebar-section">
+                        <div class="section-header" onclick="toggleSection('groups')">
+                            <i class="bi bi-people-fill me-2"></i>Groups
+                            <i class="bi bi-chevron-down ms-auto" id="groups-chevron"></i>
+                        </div>
+                        <div class="section-content" id="groups">
+                            {% if groups %}
+                                {% for group in groups[:5] %}
+                                    <div class="chat-item" onclick="openChat('{{ group.name }}', 'group')">
+                                        <div class="chat-avatar group-avatar">
+                                            <i class="bi bi-people"></i>
+                                        </div>
+                                        <div class="chat-info">
+                                            <div class="chat-name">{{ group.name }}</div>
+                                            <div class="chat-preview">{{ group.member_count }} members</div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="no-chats">
+                                    <i class="bi bi-people text-muted"></i>
+                                    <small class="text-muted">No groups yet</small>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Announcements -->
+                    <div class="sidebar-section">
+                        <div class="section-header" onclick="toggleSection('announcements')">
+                            <i class="bi bi-megaphone-fill me-2"></i>Announcements
+                            <i class="bi bi-chevron-down ms-auto" id="announcements-chevron"></i>
+                        </div>
+                        <div class="section-content" id="announcements">
+                            {% if announcements %}
+                                {% for announcement in announcements[:5] %}
+                                    <div class="chat-item announcement-item" onclick="openAnnouncement('{{ announcement.id }}')">
+                                        <div class="chat-avatar announcement-avatar">
+                                            <i class="bi bi-megaphone"></i>
+                                        </div>
+                                        <div class="chat-info">
+                                            <div class="chat-name">{{ announcement.title }}</div>
+                                            <div class="chat-preview">{{ announcement.message[:30] }}{% if announcement.message|length > 30 %}...{% endif %}</div>
+                                        </div>
+                                        {% if announcement.is_important %}
+                                            <span class="badge bg-warning badge-sm">!</span>
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="no-chats">
+                                    <i class="bi bi-megaphone text-muted"></i>
+                                    <small class="text-muted">No announcements</small>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Chat Area -->
+                <div class="chat-main">
+                    <div class="chat-welcome" id="chat-welcome">
+                        <div class="welcome-content">
+                            <i class="bi bi-chat-dots display-1 text-muted"></i>
+                            <h3 class="mt-3">Welcome to Student Chat!</h3>
+                            <p class="text-muted">Select a chat from the sidebar to start messaging</p>
+                            <div class="welcome-actions">
+                                <button class="btn btn-primary me-2" onclick="openNewMessageModal()">
+                                    <i class="bi bi-plus-circle me-1"></i>Start New Chat
+                                </button>
+                                <button class="btn btn-outline-info" onclick="openCreateGroupModal()">
+                                    <i class="bi bi-people-plus me-1"></i>Create Study Group
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Active Chat (Hidden by default) -->
+                    <div class="active-chat" id="active-chat" style="display: none;">
+                        <div class="chat-header-bar">
+                            <div class="d-flex align-items-center">
+                                <button class="btn btn-link btn-sm me-2" onclick="closeActiveChat()">
+                                    <i class="bi bi-arrow-left"></i>
+                                </button>
+                                <div class="chat-avatar me-2">
+                                    <i class="bi bi-person-circle"></i>
+                                </div>
+                                <div>
+                                    <div class="chat-name" id="active-chat-name">Chat Name</div>
+                                    <div class="chat-status" id="active-chat-status">Online</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="chat-messages" id="chat-messages">
+                            <!-- Messages will be loaded here -->
+                        </div>
+
+                        <div class="chat-input-area">
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="message-input" placeholder="Type your message...">
+                                <button class="btn btn-primary" onclick="sendMessage()">
+                                    <i class="bi bi-send"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-            
-            <div class="col-md-6">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-success text-white">
-                        <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Messaging Features</h5>
+        </div>
+
+        <!-- New Message Modal -->
+        <div class="modal fade" id="newMessageModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">New Message</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
-                    <div class="card-body">
-                        <ul class="list-unstyled mb-0">
-                            <li><i class="bi bi-check-circle text-success me-2"></i>Send direct messages to students and teachers</li>
-                            <li><i class="bi bi-check-circle text-success me-2"></i>Create study groups and social groups</li>
-                            <li><i class="bi bi-check-circle text-success me-2"></i>Send messages to groups</li>
-                            <li><i class="bi bi-check-circle text-success me-2"></i>View message history and sent messages</li>
-                        </ul>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="recipient" class="form-label">To:</label>
+                            <select class="form-select" id="recipient">
+                                <option value="">Select recipient...</option>
+                                <!-- Recipients will be populated -->
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="message-content" class="form-label">Message:</label>
+                            <textarea class="form-control" id="message-content" rows="4" placeholder="Type your message..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" onclick="sendNewMessage()">Send</button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="row">
-            <!-- Messages Section -->
-            <div class="col-md-6 mb-4">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0"><i class="bi bi-envelope-fill me-2"></i>Recent Messages</h5>
+        <!-- Create Group Modal -->
+        <div class="modal fade" id="createGroupModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Create New Group</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
-                    <div class="card-body">
-                        {% if messages %}
-                            <div class="list-group list-group-flush">
-                                {% for message in messages[:5] %}
-                                    <div class="list-group-item">
-                                        <div class="d-flex justify-content-between align-items-start">
-                                            <div class="flex-grow-1">
-                                                <h6 class="mb-1">{{ message.subject or 'No Subject' }}</h6>
-                                                <small class="text-muted">From: {{ message.sender.username }}</small>
-                                                <p class="mb-1 text-truncate">{{ message.content[:100] }}{% if message.content|length > 100 %}...{% endif %}</p>
-                                                <small class="text-muted">{{ message.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
-                                            </div>
-                                            <div class="ms-2">
-                                                {% if not message.is_read %}
-                                                    <span class="badge bg-danger">New</span>
-                                                {% endif %}
-                                                <a href="{{ url_for('student.student_view_message', message_id=message.id) }}" class="btn btn-sm btn-outline-primary">View</a>
-                                            </div>
-                                        </div>
-                                    </div>
-                                {% endfor %}
-                            </div>
-                            <div class="mt-3">
-                                <a href="{{ url_for('student.student_messages') }}" class="btn btn-outline-primary">View All Messages</a>
-                            </div>
-                        {% else %}
-                            <p class="text-muted mb-0">No messages to display.</p>
-                        {% endif %}
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="group-name" class="form-label">Group Name:</label>
+                            <input type="text" class="form-control" id="group-name" placeholder="Enter group name...">
+                        </div>
+                        <div class="mb-3">
+                            <label for="group-description" class="form-label">Description:</label>
+                            <textarea class="form-control" id="group-description" rows="3" placeholder="Enter group description..."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="group-members" class="form-label">Add Members:</label>
+                            <select class="form-select" id="group-members" multiple>
+                                <!-- Members will be populated -->
+                            </select>
+                        </div>
                     </div>
-                </div>
-            </div>
-
-            <!-- Announcements Section -->
-            <div class="col-md-6 mb-4">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-success text-white">
-                        <h5 class="mb-0"><i class="bi bi-megaphone-fill me-2"></i>Recent Announcements</h5>
-                    </div>
-                    <div class="card-body">
-                        {% if announcements %}
-                            <div class="list-group list-group-flush">
-                                {% for announcement in announcements[:5] %}
-                                    <div class="list-group-item">
-                                        <div class="d-flex justify-content-between align-items-start">
-                                            <div class="flex-grow-1">
-                                                <h6 class="mb-1">{{ announcement.title }}</h6>
-                                                <small class="text-muted">From: {{ announcement.sender.username }}</small>
-                                                <p class="mb-1 text-truncate">{{ announcement.message[:100] }}{% if announcement.message|length > 100 %}...{% endif %}</p>
-                                                <small class="text-muted">{{ announcement.timestamp.strftime('%Y-%m-%d %H:%M') }}</small>
-                                            </div>
-                                            <div class="ms-2">
-                                                {% if announcement.is_important %}
-                                                    <span class="badge bg-warning">Important</span>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                    </div>
-                                {% endfor %}
-                            </div>
-                            <div class="mt-3">
-                                <a href="{{ url_for('student.student_announcements') }}" class="btn btn-outline-success">View All Announcements</a>
-                            </div>
-                        {% else %}
-                            <p class="text-muted mb-0">No announcements to display.</p>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="row">
-            <!-- Groups Section -->
-            <div class="col-md-6 mb-4">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-info text-white">
-                        <h5 class="mb-0"><i class="bi bi-people-fill me-2"></i>Message Groups</h5>
-                    </div>
-                    <div class="card-body">
-                        {% if groups %}
-                            <div class="list-group list-group-flush">
-                                {% for group in groups[:5] %}
-                                    <div class="list-group-item">
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <div>
-                                                <h6 class="mb-1">{{ group.name }}</h6>
-                                                <small class="text-muted">{{ group.description or 'No description' }}</small>
-                                            </div>
-                                            <a href="{{ url_for('student.student_view_group', group_id=group.id) }}" class="btn btn-sm btn-outline-info">View</a>
-                                        </div>
-                                    </div>
-                                {% endfor %}
-                            </div>
-                            <div class="mt-3">
-                                <a href="{{ url_for('student.student_groups') }}" class="btn btn-outline-info">View All Groups</a>
-                            </div>
-                        {% else %}
-                            <p class="text-muted mb-0">You are not a member of any message groups.</p>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Notifications Section -->
-            <div class="col-md-6 mb-4">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-warning text-dark">
-                        <h5 class="mb-0"><i class="bi bi-bell-fill me-2"></i>Recent Notifications</h5>
-                    </div>
-                    <div class="card-body">
-                        {% if notifications %}
-                            <div class="list-group list-group-flush">
-                                {% for notification in notifications[:5] %}
-                                    <div class="list-group-item">
-                                        <div class="d-flex justify-content-between align-items-start">
-                                            <div class="flex-grow-1">
-                                                <h6 class="mb-1">{{ notification.title }}</h6>
-                                                <p class="mb-1 text-truncate">{{ notification.message[:100] }}{% if notification.message|length > 100 %}...{% endif %}</p>
-                                                <small class="text-muted">{{ notification.timestamp.strftime('%Y-%m-%d %H:%M') }}</small>
-                                            </div>
-                                            <div class="ms-2">
-                                                {% if not notification.is_read %}
-                                                    <span class="badge bg-danger">New</span>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                    </div>
-                                {% endfor %}
-                            </div>
-                        {% else %}
-                            <p class="text-muted mb-0">No notifications to display.</p>
-                        {% endif %}
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" onclick="createGroup()">Create Group</button>
                     </div>
                 </div>
             </div>
@@ -1590,6 +1862,131 @@
         </div>
 
         <script>
+        // Chat functionality for Discord-like interface
+        function toggleSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            const chevron = document.getElementById(sectionId + '-chevron');
+            
+            if (section.style.display === 'none') {
+                section.style.display = 'block';
+                chevron.className = 'bi bi-chevron-down ms-auto';
+            } else {
+                section.style.display = 'none';
+                chevron.className = 'bi bi-chevron-up ms-auto';
+            }
+        }
+
+        function openChat(chatName, chatType) {
+            document.getElementById('chat-welcome').style.display = 'none';
+            document.getElementById('active-chat').style.display = 'flex';
+            document.getElementById('active-chat-name').textContent = chatName;
+            document.getElementById('active-chat-status').textContent = chatType === 'group' ? 'Group Chat' : 'Online';
+            
+            // Load chat messages here
+            loadChatMessages(chatName, chatType);
+        }
+
+        function closeActiveChat() {
+            document.getElementById('active-chat').style.display = 'none';
+            document.getElementById('chat-welcome').style.display = 'flex';
+            document.getElementById('chat-messages').innerHTML = '';
+        }
+
+        function loadChatMessages(chatName, chatType) {
+            const messagesContainer = document.getElementById('chat-messages');
+            // This would typically make an AJAX call to load messages
+            // For now, showing a placeholder
+            messagesContainer.innerHTML = `
+                <div class="text-center text-muted mt-4">
+                    <i class="bi bi-chat-dots display-4"></i>
+                    <p class="mt-2">Loading messages for ${chatName}...</p>
+                </div>
+            `;
+        }
+
+        function sendMessage() {
+            const messageInput = document.getElementById('message-input');
+            const message = messageInput.value.trim();
+            
+            if (message) {
+                const messagesContainer = document.getElementById('chat-messages');
+                const messageElement = document.createElement('div');
+                messageElement.className = 'message-item mb-3';
+                messageElement.innerHTML = `
+                    <div class="d-flex align-items-start">
+                        <div class="chat-avatar me-2">
+                            <i class="bi bi-person-circle"></i>
+                        </div>
+                        <div class="message-content">
+                            <div class="message-header">
+                                <span class="message-author text-primary">You</span>
+                                <small class="text-muted ms-2">${new Date().toLocaleTimeString()}</small>
+                            </div>
+                            <div class="message-text text-white">${message}</div>
+                        </div>
+                    </div>
+                `;
+                
+                messagesContainer.appendChild(messageElement);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                messageInput.value = '';
+            }
+        }
+
+        function openNewMessageModal() {
+            const modal = new bootstrap.Modal(document.getElementById('newMessageModal'));
+            modal.show();
+        }
+
+        function openCreateGroupModal() {
+            const modal = new bootstrap.Modal(document.getElementById('createGroupModal'));
+            modal.show();
+        }
+
+        function sendNewMessage() {
+            const recipient = document.getElementById('recipient').value;
+            const content = document.getElementById('message-content').value;
+            
+            if (recipient && content) {
+                // This would typically make an AJAX call to send the message
+                alert(`Message sent to ${recipient}: ${content}`);
+                bootstrap.Modal.getInstance(document.getElementById('newMessageModal')).hide();
+            } else {
+                alert('Please fill in all fields');
+            }
+        }
+
+        function createGroup() {
+            const name = document.getElementById('group-name').value;
+            const description = document.getElementById('group-description').value;
+            const members = document.getElementById('group-members').value;
+            
+            if (name && description) {
+                // This would typically make an AJAX call to create the group
+                alert(`Group "${name}" created successfully!`);
+                bootstrap.Modal.getInstance(document.getElementById('createGroupModal')).hide();
+            } else {
+                alert('Please fill in group name and description');
+            }
+        }
+
+        function openAnnouncement(announcementId) {
+            // This would typically open the announcement in a modal or new view
+            alert(`Opening announcement ${announcementId}`);
+        }
+
+        // Handle Enter key in message input
+        document.addEventListener('DOMContentLoaded', function() {
+            const messageInput = document.getElementById('message-input');
+            if (messageInput) {
+                messageInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        sendMessage();
+                    }
+                });
+            }
+        });
+
         document.addEventListener('DOMContentLoaded', function() {
             // Handle student bug report form submission
             const studentBugReportForm = document.getElementById('studentBugReportForm');

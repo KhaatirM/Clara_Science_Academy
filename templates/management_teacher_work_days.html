@@ -194,7 +194,7 @@
 }
 
 .calendar-grid {
-    min-height: 350px;
+    min-height: auto;
 }
 
 /* Ensure calendar is fully visible */
@@ -205,11 +205,11 @@
 
 .calendar-day {
     cursor: pointer;
-    padding: 10px 8px;
+    padding: 8px 4px;
     text-align: center;
     border: 1px solid #dee2e6;
     transition: background-color 0.2s;
-    min-height: 45px;
+    min-height: 35px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -234,7 +234,7 @@
     background-color: #f8f9fa;
     font-weight: bold;
     text-align: center;
-    padding: 8px;
+    padding: 6px 4px;
 }
 
 .calendar-day.text-muted {
@@ -253,6 +253,8 @@
 
 <script>
 let selectedDates = [];
+let currentMonth = new Date().getMonth();
+let currentYear = new Date().getFullYear();
 
 function openDatePicker() {
     // Initialize calendar if not already done
@@ -266,9 +268,6 @@ function openDatePicker() {
 
 function initializeCalendar() {
     const container = document.getElementById('calendar-container');
-    const currentDate = new Date();
-    const currentMonth = currentDate.getMonth();
-    const currentYear = currentDate.getFullYear();
     
     let html = '<div class="calendar-header mb-3">';
     html += '<div class="d-flex justify-content-between align-items-center">';
@@ -278,7 +277,7 @@ function initializeCalendar() {
     html += '</div></div>';
     
     html += '<div class="calendar-grid">';
-    html += '<div class="row text-center mb-2">';
+    html += '<div class="row text-center mb-1">';
     ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].forEach(day => {
         html += `<div class="col calendar-header">${day}</div>`;
     });
@@ -290,30 +289,18 @@ function initializeCalendar() {
     const startDate = new Date(firstDay);
     startDate.setDate(startDate.getDate() - firstDay.getDay());
     
-    // Calculate how many weeks we need to display
-    let totalDays = 42; // Start with 6 weeks × 7 days
-    let endDate = new Date(startDate);
-    endDate.setDate(startDate.getDate() + totalDays - 1);
-    
-    // If the end date doesn't cover the full month, extend it
-    if (endDate < lastDay) {
-        const additionalDays = lastDay.getDate() - endDate.getDate() + 1;
-        const additionalWeeks = Math.ceil(additionalDays / 7);
-        totalDays = totalDays + (additionalWeeks * 7);
-    }
-    
-    // Ensure we have enough weeks to display the full month
-    const weeksNeeded = Math.ceil(totalDays / 7);
-    totalDays = weeksNeeded * 7;
+    // Calculate total days needed (including padding days)
+    const daysInMonth = lastDay.getDate();
+    const firstDayOfWeek = firstDay.getDay();
+    const totalDays = Math.ceil((firstDayOfWeek + daysInMonth) / 7) * 7;
     
     let currentRow = '';
     let weekCount = 0;
-    const maxWeeks = 8; // Maximum weeks to prevent infinite loops
     
-    for (let i = 0; i < totalDays && weekCount < maxWeeks; i++) {
+    for (let i = 0; i < totalDays; i++) {
         if (i % 7 === 0) {
-            if (currentRow) html += `</div>`;
-            currentRow = `<div class="row text-center">`;
+            if (currentRow) html += currentRow + '</div>';
+            currentRow = '<div class="row text-center mb-1">';
             weekCount++;
         }
         
@@ -338,6 +325,9 @@ function initializeCalendar() {
     html += '</div>';
     
     container.innerHTML = html;
+    
+    // Update display to show any previously selected dates
+    updateCalendarDisplay();
 }
 
 function getMonthName(month) {
@@ -347,8 +337,16 @@ function getMonthName(month) {
 }
 
 function changeMonth(direction) {
-    // This would need to be implemented to change months
-    // For now, just reinitialize with current month
+    currentMonth += direction;
+    
+    if (currentMonth < 0) {
+        currentMonth = 11;
+        currentYear--;
+    } else if (currentMonth > 11) {
+        currentMonth = 0;
+        currentYear++;
+    }
+    
     initializeCalendar();
 }
 
@@ -389,15 +387,20 @@ function updateCalendarDisplay() {
         day.classList.remove('selected');
     });
     
-    selectedDates.forEach(date => {
-        const dayElements = document.querySelectorAll('.calendar-day');
-        dayElements.forEach(day => {
+    selectedDates.forEach(selectedDate => {
+        days.forEach(day => {
             const dayText = day.textContent.trim();
             if (dayText && !isNaN(dayText)) {
-                const dayDate = new Date();
-                dayDate.setDate(parseInt(dayText));
-                if (dayDate.toDateString() === date.toDateString()) {
-                    day.classList.add('selected');
+                // Get the onclick attribute which contains the full date
+                const onclickAttr = day.getAttribute('onclick');
+                if (onclickAttr) {
+                    const dateMatch = onclickAttr.match(/toggleDate\('([^']+)'\)/);
+                    if (dateMatch) {
+                        const dayDate = new Date(dateMatch[1]);
+                        if (dayDate.toDateString() === selectedDate.toDateString()) {
+                            day.classList.add('selected');
+                        }
+                    }
                 }
             }
         });

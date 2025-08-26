@@ -499,6 +499,9 @@ def student_school_calendar():
     from datetime import datetime, timedelta, date
     import calendar as cal
     
+    # Import all required models at the top of the function
+    from models import AcademicPeriod, CalendarEvent
+    
     # Try to import holidays, but provide fallback if not available
     try:
         import holidays as pyholidays
@@ -576,7 +579,6 @@ def student_school_calendar():
             end_of_month = date(year, month + 1, 1) - timedelta(days=1)
         
         # Get academic periods that overlap with this month
-        from models import AcademicPeriod
         academic_periods = AcademicPeriod.query.filter(
             AcademicPeriod.school_year_id == active_year.id,
             AcademicPeriod.start_date <= end_of_month,
@@ -593,7 +595,6 @@ def student_school_calendar():
                 academic_dates.append((period.end_date.day, f"{period.name} End", 'Academic Period'))
         
         # Get calendar events for this month
-        from models import CalendarEvent
         calendar_events = CalendarEvent.query.filter(
             CalendarEvent.school_year_id == active_year.id,
             CalendarEvent.start_date <= end_of_month,
@@ -649,7 +650,6 @@ def student_school_calendar():
         calendar_data['weeks'].append(week_data)
 
     # Get active school year for template context
-    from models import SchoolYear
     active_school_year = SchoolYear.query.filter_by(is_active=True).first()
     
     return render_template('role_calendar.html', 

@@ -671,6 +671,9 @@ def calendar():
     from datetime import datetime, timedelta, date
     import calendar as cal
     import holidays as pyholidays
+    
+    # Import all required models at the top of the function
+    from models import AcademicPeriod, CalendarEvent
 
     def get_religious_holidays(year):
         jewish = [
@@ -714,7 +717,6 @@ def calendar():
             end_of_month = date(year, month + 1, 1) - timedelta(days=1)
         
         # Get academic periods that overlap with this month
-        from models import AcademicPeriod
         academic_periods = AcademicPeriod.query.filter(
             AcademicPeriod.school_year_id == active_year.id,
             AcademicPeriod.start_date <= end_of_month,
@@ -731,7 +733,6 @@ def calendar():
                 academic_dates.append((period.end_date.day, f"{period.name} End", 'Academic Period'))
         
         # Get calendar events for this month
-        from models import CalendarEvent
         calendar_events = CalendarEvent.query.filter(
             CalendarEvent.school_year_id == active_year.id,
             CalendarEvent.start_date <= end_of_month,

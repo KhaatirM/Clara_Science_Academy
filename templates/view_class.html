@@ -141,7 +141,7 @@
                                         <td>Q{{ assignment.quarter if assignment.quarter else 'N/A' }}</td>
                                         <td>
                                             {% if assignment.due_date %}
-                                                {% if assignment.due_date < today %}
+                                                {% if assignment.due_date.date() < today %}
                                                     <span class="badge bg-danger">Past Due</span>
                                                 {% else %}
                                                     <span class="badge bg-success">Active</span>

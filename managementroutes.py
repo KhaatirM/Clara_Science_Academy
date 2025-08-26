@@ -639,7 +639,18 @@ def assignments():
 @login_required
 @management_required
 def attendance():
+    # Get all classes with student counts
     classes = Class.query.all()
+    
+    # For each class, get the enrolled student count
+    for class_obj in classes:
+        # Count active enrollments for this class
+        student_count = db.session.query(Enrollment).filter_by(
+            class_id=class_obj.id, 
+            is_active=True
+        ).count()
+        class_obj.enrolled_student_count = student_count
+    
     return render_template('role_dashboard.html',
                          classes=classes,
                          section='attendance',

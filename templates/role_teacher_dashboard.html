@@ -310,21 +310,38 @@
         <!-- Attendance View -->
         <h2 class="mb-4">Attendance Management</h2>
 
+        <div class="alert alert-info">
+            <h5><i class="bi bi-calendar-check-fill me-2"></i>Attendance Tracking</h5>
+            <p>Manage attendance for all classes. Your assigned classes are highlighted.</p>
+        </div>
+
         <div class="row">
-            {% for class in classes %}
+            {% for class in all_classes %}
+                {% set is_assigned = class in classes %}
                 <div class="col-md-6 col-lg-4 mb-4">
-                    <div class="card shadow-sm">
-                        <div class="card-header bg-warning text-dark">
-                            <h5 class="card-title mb-0">{{ class.name }}</h5>
+                    <div class="card shadow-sm {% if is_assigned %}border-primary{% else %}border-secondary opacity-75{% endif %}">
+                        <div class="card-header {% if is_assigned %}bg-warning text-dark{% else %}bg-secondary text-white{% endif %}">
+                            <h5 class="card-title mb-0">
+                                {{ class.name }}
+                                {% if is_assigned %}
+                                    <span class="badge bg-success ms-2">Your Class</span>
+                                {% endif %}
+                            </h5>
                         </div>
                         <div class="card-body">
                             <p class="card-text">
                                 <strong>Subject:</strong> {{ class.subject or 'N/A' }}<br>
-                                <strong>Students:</strong> {{ class.students|length if class.students else 0 }}
+                                <strong>Students:</strong> {{ class.enrolled_student_count }} enrolled
                             </p>
-                            <a href="{{ url_for('teacher.take_attendance', class_id=class.id) }}" class="btn btn-warning btn-sm">
-                                <i class="bi bi-clipboard-check me-1"></i>Take Attendance
-                            </a>
+                            {% if is_assigned %}
+                                <a href="{{ url_for('teacher.take_attendance', class_id=class.id) }}" class="btn btn-warning btn-sm">
+                                    <i class="bi bi-clipboard-check me-1"></i>Take Attendance
+                                </a>
+                            {% else %}
+                                <button class="btn btn-secondary btn-sm" disabled>
+                                    <i class="bi bi-lock me-1"></i>Not Assigned
+                                </button>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -332,7 +349,7 @@
                 <div class="col">
                     <div class="alert alert-info">
                         <h5><i class="bi bi-info-circle me-2"></i>No Classes Available</h5>
-                        <p>You don't have any classes assigned for attendance tracking.</p>
+                        <p>There are no classes in the system for attendance tracking.</p>
                     </div>
                 </div>
             {% endfor %}

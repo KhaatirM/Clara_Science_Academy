@@ -578,15 +578,28 @@ def attendance():
     """View attendance for teacher's classes, or all classes for Directors"""
     teacher = TeacherStaff.query.filter_by(id=current_user.teacher_staff_id).first_or_404()
     
+    # Get all classes with student counts
+    all_classes = Class.query.all()
+    
+    # For each class, get the enrolled student count
+    for class_obj in all_classes:
+        # Count active enrollments for this class
+        student_count = db.session.query(Enrollment).filter_by(
+            class_id=class_obj.id, 
+            is_active=True
+        ).count()
+        class_obj.enrolled_student_count = student_count
+    
     # Directors see all classes, teachers only see their assigned classes
     if current_user.role == 'Director':
-        classes = Class.query.all()
+        classes = all_classes
     else:
-        classes = Class.query.filter_by(teacher_id=teacher.id).all()
+        classes = [c for c in all_classes if c.teacher_id == teacher.id]
     
     return render_template('role_teacher_dashboard.html', 
                          teacher=teacher,
                          classes=classes,
+                         all_classes=all_classes,  # Pass all classes for comparison
                          section='attendance',
                          active_tab='attendance')
 

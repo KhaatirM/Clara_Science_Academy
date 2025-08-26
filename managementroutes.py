@@ -559,9 +559,27 @@ def generate_report_card_pdf(report_card_id):
 @login_required
 @management_required
 def students():
-    students = Student.query.order_by(Student.last_name, Student.first_name).all()
+    search_query = request.args.get('search', '').strip()
+    
+    # Build the query
+    query = Student.query
+    
+    # Apply search filter if query exists
+    if search_query:
+        search_filter = db.or_(
+            Student.first_name.ilike(f'%{search_query}%'),
+            Student.last_name.ilike(f'%{search_query}%'),
+            Student.email.ilike(f'%{search_query}%'),
+            Student.student_id.ilike(f'%{search_query}%')
+        )
+        query = query.filter(search_filter)
+    
+    # Order by last name, then first name
+    students = query.order_by(Student.last_name, Student.first_name).all()
+    
     return render_template('role_dashboard.html', 
                          students=students,
+                         search_query=search_query,
                          section='students',
                          active_tab='students')
 
@@ -569,9 +587,27 @@ def students():
 @login_required
 @management_required
 def teachers():
-    teachers = TeacherStaff.query.order_by(TeacherStaff.last_name, TeacherStaff.first_name).all()
+    search_query = request.args.get('search', '').strip()
+    
+    # Build the query
+    query = TeacherStaff.query
+    
+    # Apply search filter if query exists
+    if search_query:
+        search_filter = db.or_(
+            TeacherStaff.first_name.ilike(f'%{search_query}%'),
+            TeacherStaff.last_name.ilike(f'%{search_query}%'),
+            TeacherStaff.email.ilike(f'%{search_query}%'),
+            TeacherStaff.assigned_role.ilike(f'%{search_query}%')
+        )
+        query = query.filter(search_filter)
+    
+    # Order by last name, then first name
+    teachers = query.order_by(TeacherStaff.last_name, TeacherStaff.first_name).all()
+    
     return render_template('role_dashboard.html', 
                          teachers=teachers,
+                         search_query=search_query,
                          section='teachers',
                          active_tab='teachers')
 

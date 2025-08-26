@@ -256,6 +256,44 @@
         <!-- Students Management View -->
         <h2 class="mb-4">Students Management</h2>
 
+        <!-- Search Bar -->
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <form method="GET" action="{{ url_for('management.students') }}" class="row g-3 align-items-end">
+                    <div class="col-md-6">
+                        <label for="search" class="form-label">Search Students</label>
+                        <input type="text" 
+                               class="form-control" 
+                               id="search" 
+                               name="search" 
+                               value="{{ search_query or '' }}" 
+                               placeholder="Search by name, email, or student ID..."
+                               autocomplete="off">
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-search me-2"></i>Search
+                        </button>
+                    </div>
+                    <div class="col-md-3">
+                        {% if search_query %}
+                            <a href="{{ url_for('management.students') }}" class="btn btn-outline-secondary w-100">
+                                <i class="bi bi-x-circle me-2"></i>Clear Search
+                            </a>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Search Results Info -->
+        {% if search_query %}
+            <div class="alert alert-info mb-3">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>Search Results:</strong> Found {{ students|length }} student(s) matching "{{ search_query }}"
+            </div>
+        {% endif %}
+
         <div class="card shadow-sm">
             <div class="card-header bg-primary text-white">
                 <div class="d-flex justify-content-between align-items-center">
@@ -314,6 +352,44 @@
     {% elif section == 'teachers' %}
         <!-- Teachers & Staff Management View -->
         <h2 class="mb-4">Teachers & Staff Management</h2>
+
+        <!-- Search Bar -->
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <form method="GET" action="{{ url_for('management.teachers') }}" class="row g-3 align-items-end">
+                    <div class="col-md-6">
+                        <label for="search" class="form-label">Search Teachers & Staff</label>
+                        <input type="text" 
+                               class="form-control" 
+                               id="search" 
+                               name="search" 
+                               value="{{ search_query or '' }}" 
+                               placeholder="Search by name, email, or role..."
+                               autocomplete="off">
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-search me-2"></i>Search
+                        </button>
+                    </div>
+                    <div class="col-md-3">
+                        {% if search_query %}
+                            <a href="{{ url_for('management.teachers') }}" class="btn btn-outline-secondary w-100">
+                                <i class="bi bi-x-circle me-2"></i>Clear Search
+                            </a>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Search Results Info -->
+        {% if search_query %}
+            <div class="alert alert-info mb-3">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>Search Results:</strong> Found {{ teachers|length }} staff member(s) matching "{{ search_query }}"
+            </div>
+        {% endif %}
 
         <div class="card shadow-sm">
             <div class="card-header bg-success text-white">

@@ -270,8 +270,17 @@ def grade_assignment(assignment_id):
         flash("You are not authorized to grade this assignment.", "danger")
         return redirect(url_for('teacher.teacher_dashboard'))
 
-    # Simplified - get all students since Enrollment model doesn't exist
-    students = Student.query.all()
+    # Get only students enrolled in this specific class
+    enrolled_students = db.session.query(Student).join(Enrollment).filter(
+        Enrollment.class_id == class_obj.id,
+        Enrollment.is_active == True
+    ).order_by(Student.last_name, Student.first_name).all()
+    
+    if not enrolled_students:
+        flash("No students are currently enrolled in this class.", "warning")
+        return redirect(url_for('teacher.view_class', class_id=class_obj.id))
+    
+    students = enrolled_students
     
     if request.method == 'POST':
         for student in students:
@@ -313,9 +322,6 @@ def grade_assignment(assignment_id):
         flash('Grades updated successfully.', 'success')
         return redirect(url_for('teacher.grade_assignment', assignment_id=assignment_id))
 
-    # For GET request - get students in this specific class
-    class_students = Student.query.join(Enrollment).filter(Enrollment.class_id == class_obj.id).all() if hasattr(Student, 'enrollments') else students
-    
     # Get existing grades for this assignment
     grades = {g.student_id: json.loads(g.grade_data) for g in Grade.query.filter_by(assignment_id=assignment_id).all()}
     submissions = {s.student_id: s for s in Submission.query.filter_by(assignment_id=assignment_id).all()}
@@ -323,7 +329,7 @@ def grade_assignment(assignment_id):
     return render_template('teacher_grade_assignment.html', 
                          assignment=assignment, 
                          class_obj=class_obj,
-                         students=class_students, 
+                         students=students, 
                          grades=grades, 
                          submissions=submissions)
 
@@ -333,13 +339,40 @@ def grade_assignment(assignment_id):
 @teacher_required
 def take_attendance(class_id):
     class_obj = Class.query.get_or_404(class_id)
+    
+    # Check if class is active (has an active school year)
+    if not hasattr(class_obj, 'school_year_id') or not class_obj.school_year_id:
+        flash("This class is not associated with an active school year.", "warning")
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    # Check if class is archived or inactive
+    if hasattr(class_obj, 'is_active') and not class_obj.is_active:
+        flash("This class is archived or inactive. Cannot take attendance.", "warning")
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
     teacher = TeacherStaff.query.filter_by(id=current_user.teacher_staff_id).first_or_404()
     # Directors can take attendance for any class
     if current_user.role != 'Director' and class_obj.teacher_id != teacher.id:
         flash("You are not authorized to take attendance for this class.", "danger")
         return redirect(url_for('teacher.teacher_dashboard'))
 
-    students = Student.query.all()  # Temporary: all students
+    # Get only students enrolled in this specific class
+    enrolled_students = db.session.query(Student).join(Enrollment).filter(
+        Enrollment.class_id == class_id,
+        Enrollment.is_active == True
+    ).order_by(Student.last_name, Student.first_name).all()
+    
+    if not enrolled_students:
+        flash("No students are currently enrolled in this class.", "warning")
+        return redirect(url_for('teacher.view_class', class_id=class_id))
+    
+    students = enrolled_students
+    
+    # Additional validation - ensure class has active enrollment
+    active_enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).count()
+    if active_enrollments == 0:
+        flash("This class has no active enrollments. Cannot take attendance.", "warning")
+        return redirect(url_for('teacher.view_class', class_id=class_id))
     statuses = [
         "Present",
         "Late",
@@ -351,17 +384,65 @@ def take_attendance(class_id):
     attendance_date_str = request.args.get('date') or request.form.get('attendance_date')
     if not attendance_date_str:
         attendance_date_str = datetime.now().strftime('%Y-%m-%d')
-    attendance_date = datetime.strptime(attendance_date_str, '%Y-%m-%d').date()
+    
+    try:
+        attendance_date = datetime.strptime(attendance_date_str, '%Y-%m-%d').date()
+    except ValueError:
+        flash("Invalid date format. Please use YYYY-MM-DD format.", "danger")
+        return redirect(url_for('teacher.take_attendance', class_id=class_id))
+    
+    # Check if date is not in the future
+    if attendance_date > datetime.now().date():
+        flash("Cannot take attendance for future dates.", "warning")
+        attendance_date_str = datetime.now().strftime('%Y-%m-%d')
+        attendance_date = datetime.now().date()
 
     # Load existing records for this class/date
     existing_records = {rec.student_id: rec for rec in Attendance.query.filter_by(class_id=class_id, date=attendance_date).all()}
+    
+    # Calculate attendance statistics
+    total_students = len(students)
+    present_count = sum(1 for record in existing_records.values() if record.status == "Present")
+    late_count = sum(1 for record in existing_records.values() if record.status == "Late")
+    absent_count = sum(1 for record in existing_records.values() if record.status in ["Unexcused Absence", "Excused Absence"])
+    suspended_count = sum(1 for record in existing_records.values() if record.status == "Suspended")
+    
+    attendance_stats = {
+        'total': total_students,
+        'present': present_count,
+        'late': late_count,
+        'absent': absent_count,
+        'suspended': suspended_count,
+        'present_percentage': round((present_count / total_students * 100) if total_students > 0 else 0, 1)
+    }
 
     if request.method == 'POST':
+        attendance_saved = False
+        valid_statuses = ["Present", "Late", "Unexcused Absence", "Excused Absence", "Suspended"]
+        
         for student in students:
             status = request.form.get(f'status-{student.id}')
             notes = request.form.get(f'notes-{student.id}')
+            
             if not status:
                 continue
+                
+            # Validate status
+            if status not in valid_statuses:
+                flash(f"Invalid attendance status for {student.first_name} {student.last_name}.", "warning")
+                continue
+            
+            # Validate that the student is still enrolled in this class
+            enrollment = Enrollment.query.filter_by(
+                student_id=student.id, 
+                class_id=class_id, 
+                is_active=True
+            ).first()
+            
+            if not enrollment:
+                flash(f'Student {student.first_name} {student.last_name} is no longer enrolled in this class.', 'warning')
+                continue
+            
             # Check if record exists
             record = Attendance.query.filter_by(student_id=student.id, class_id=class_id, date=attendance_date).first()
             if record:
@@ -378,8 +459,29 @@ def take_attendance(class_id):
                     teacher_id=teacher.id
                 )
                 db.session.add(record)
-        db.session.commit()
-        flash('Attendance recorded successfully.', 'success')
+            attendance_saved = True
+            
+            # Check for duplicate records (safety check)
+            duplicate_count = Attendance.query.filter_by(
+                student_id=student.id, 
+                class_id=class_id, 
+                date=attendance_date
+            ).count()
+            
+            if duplicate_count > 1:
+                flash(f"Warning: Multiple attendance records found for {student.first_name} {student.last_name} on {attendance_date_str}. Please contact administration.", "warning")
+        
+        if attendance_saved:
+            try:
+                db.session.commit()
+                flash('Attendance recorded successfully.', 'success')
+            except Exception as e:
+                db.session.rollback()
+                flash('Error saving attendance. Please try again.', 'danger')
+                print(f"Error saving attendance: {e}")
+        else:
+            flash('No attendance data was submitted.', 'warning')
+        
         return redirect(url_for('teacher.view_class', class_id=class_id))
 
     return render_template(
@@ -388,7 +490,8 @@ def take_attendance(class_id):
         students=students,
         attendance_date_str=attendance_date_str,
         statuses=statuses,
-        existing_records=existing_records
+        existing_records=existing_records,
+        attendance_stats=attendance_stats
     )
 
 @teacher_blueprint.route('/classes')
@@ -486,12 +589,29 @@ def attendance():
 @login_required
 @teacher_required
 def students_directory():
-    """View students directory"""
-    students = Student.query.order_by(Student.last_name, Student.first_name).all()
+    """View students directory with search functionality"""
+    search_query = request.args.get('search', '').strip()
+    
+    # Build the query
+    query = Student.query
+    
+    # Apply search filter if query exists
+    if search_query:
+        search_filter = db.or_(
+            Student.first_name.ilike(f'%{search_query}%'),
+            Student.last_name.ilike(f'%{search_query}%'),
+            Student.email.ilike(f'%{search_query}%'),
+            Student.student_id.ilike(f'%{search_query}%')
+        )
+        query = query.filter(search_filter)
+    
+    # Order by last name, then first name
+    students = query.order_by(Student.last_name, Student.first_name).all()
     
     return render_template('role_teacher_dashboard.html', 
                          teacher=current_user,
                          students=students,
+                         search_query=search_query,
                          section='students',
                          active_tab='students')
 
@@ -499,12 +619,29 @@ def students_directory():
 @login_required
 @teacher_required
 def teachers_staff_directory():
-    """View teachers and staff directory"""
-    teachers_staff = TeacherStaff.query.order_by(TeacherStaff.last_name, TeacherStaff.first_name).all()
+    """View teachers and staff directory with search functionality"""
+    search_query = request.args.get('search', '').strip()
+    
+    # Build the query
+    query = TeacherStaff.query
+    
+    # Apply search filter if query exists
+    if search_query:
+        search_filter = db.or_(
+            TeacherStaff.first_name.ilike(f'%{search_query}%'),
+            TeacherStaff.last_name.ilike(f'%{search_query}%'),
+            TeacherStaff.email.ilike(f'%{search_query}%'),
+            TeacherStaff.assigned_role.ilike(f'%{search_query}%')
+        )
+        query = query.filter(search_filter)
+    
+    # Order by last name, then first name
+    teachers_staff = query.order_by(TeacherStaff.last_name, TeacherStaff.first_name).all()
     
     return render_template('role_teacher_dashboard.html', 
                          teacher=current_user,
                          teachers_staff=teachers_staff,
+                         search_query=search_query,
                          section='teachers-staff',
                          active_tab='teachers-staff')
 
@@ -978,10 +1115,13 @@ def create_group():
                     )
                     db.session.add(member)
                 
-                # Add students (simplified - in real app you'd have enrollment model)
-                # For now, we'll add all students
-                students = Student.query.all()
-                for student in students:
+                # Add only students enrolled in this specific class
+                enrolled_students = db.session.query(Student).join(Enrollment).filter(
+                    Enrollment.class_id == class_id,
+                    Enrollment.is_active == True
+                ).order_by(Student.last_name, Student.first_name).all()
+                
+                for student in enrolled_students:
                     if student.user:
                         member = MessageGroupMember(
                             group_id=group.id,

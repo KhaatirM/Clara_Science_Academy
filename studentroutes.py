@@ -824,45 +824,10 @@ def delete_goal(goal_id):
 @login_required
 @student_required
 def student_communications():
-    """Student communications hub - read-only access to messages and announcements."""
-    student = Student.query.get_or_404(current_user.student_id)
-    
-    # Get student's classes for filtering
-    classes = Class.query.all()  # Simplified - should filter by enrollment
-    class_ids = [c.id for c in classes]
-    
-    # Get messages for the student
-    messages = Message.query.filter_by(recipient_id=current_user.id).order_by(Message.created_at.desc()).limit(20).all()
-    
-    # Get announcements relevant to the student
-    announcements = Announcement.query.filter(
-        (Announcement.target_group.in_(['all_students', 'all'])) |
-        ((Announcement.target_group == 'class') & (Announcement.class_id.in_(class_ids)))
-    ).order_by(Announcement.timestamp.desc()).limit(10).all()
-    
-    # Get notifications
-    notifications = Notification.query.filter_by(user_id=current_user.id).order_by(Notification.timestamp.desc()).limit(10).all()
-    
-    # Get message groups the student is a member of
-    groups = MessageGroup.query.join(MessageGroupMember).filter(
-        MessageGroupMember.user_id == current_user.id
-    ).all()
-    
-    return render_template('role_student_dashboard.html',
-                         **create_template_context(student, 'communications', 'communications',
-                             grades={},
-                             attendance_summary={},
-                             gpa=0.0,
-                             grade_trends={},
-                             today_schedule=[],
-                             goals={},
-                             announcements=announcements,
-                             notifications=notifications,
-                             past_due_assignments=[],
-                             upcoming_assignments=[],
-                             recent_grades=[],
-                             messages=messages,
-                             groups=groups))
+    """Communications tab - Under Development."""
+    return render_template('under_development.html',
+                         section='communications',
+                         active_tab='communications')
 
 @student_blueprint.route('/communications/messages')
 @login_required

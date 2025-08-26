@@ -1013,31 +1013,8 @@ def delete_school_break(break_id):
 @login_required
 @management_required
 def communications():
-    """Enhanced communications hub with unified inbox."""
-    # Get all messages for the admin
-    messages = Message.query.filter(
-        (Message.recipient_id == current_user.id) |
-        (Message.sender_id == current_user.id)
-    ).order_by(Message.created_at.desc()).all()
-    
-    # Get announcements
-    announcements = Announcement.query.order_by(Announcement.timestamp.desc()).all()
-    
-    # Get message groups
-    groups = MessageGroup.query.filter_by(is_active=True).all()
-    
-    # Get scheduled announcements
-    scheduled = ScheduledAnnouncement.query.filter_by(is_sent=False).order_by(ScheduledAnnouncement.scheduled_for).all()
-    
-    # Get notifications
-    notifications = Notification.query.filter_by(user_id=current_user.id).order_by(Notification.timestamp.desc()).limit(10).all()
-    
-    return render_template('management_communications.html',
-                         messages=messages,
-                         announcements=announcements,
-                         groups=groups,
-                         scheduled=scheduled,
-                         notifications=notifications,
+    """Communications tab - Under Development."""
+    return render_template('under_development.html',
                          section='communications',
                          active_tab='communications')
 
@@ -2970,17 +2947,24 @@ def view_class(class_id):
     if class_info.teacher_id:
         teacher = TeacherStaff.query.get(class_info.teacher_id)
     
-    # Get enrolled students (placeholder - would need enrollment system)
-    enrolled_students = []  # This would be populated from enrollment system
+    # Get enrolled students from enrollment system
+    enrolled_students = db.session.query(Student).join(Enrollment).filter(
+        Enrollment.class_id == class_id, 
+        Enrollment.is_active == True
+    ).order_by(Student.last_name, Student.first_name).all()
     
     # Get assignments for this class
     assignments = Assignment.query.filter_by(class_id=class_id).all()
+    
+    # Get current date for assignment status comparison
+    today = datetime.now().date()
     
     return render_template('view_class.html', 
                          class_info=class_info,
                          teacher=teacher,
                          enrolled_students=enrolled_students,
-                         assignments=assignments)
+                         assignments=assignments,
+                         today=today)
 
 
 @management_blueprint.route('/edit-class/<int:class_id>', methods=['GET', 'POST'])

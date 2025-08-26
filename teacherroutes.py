@@ -144,6 +144,11 @@ def view_class(class_id):
     # Get only actively enrolled students for this class
     enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
     enrolled_students = [enrollment.student for enrollment in enrollments]
+    
+    # Debug logging
+    print(f"DEBUG: Class ID: {class_id}")
+    print(f"DEBUG: Found {len(enrollments)} enrollments")
+    print(f"DEBUG: Enrolled students: {[f'{s.first_name} {s.last_name}' for s in enrolled_students]}")
 
     # Get recent assignments for this class
     assignments = Assignment.query.filter_by(class_id=class_id).order_by(Assignment.due_date.desc()).limit(5).all()
@@ -792,47 +797,8 @@ def calendar():
 @login_required
 @teacher_required
 def teacher_communications():
-    """Enhanced communications hub with unified inbox."""
-    teacher = TeacherStaff.query.get_or_404(current_user.teacher_staff_id)
-    
-    # Get all messages for the teacher
-    messages = Message.query.filter(
-        (Message.recipient_id == current_user.id) |
-        (Message.sender_id == current_user.id)
-    ).order_by(Message.created_at.desc()).all()
-    
-    # Get announcements for the teacher
-    announcements = Announcement.query.filter(
-        (Announcement.target_group.in_(['all_staff', 'all'])) |
-        ((Announcement.target_group == 'class') & (Announcement.class_id.in_([c.id for c in teacher.classes])))
-    ).order_by(Announcement.timestamp.desc()).all()
-    
-    # Get notifications
-    notifications = Notification.query.filter_by(user_id=current_user.id).order_by(Notification.timestamp.desc()).all()
-    
-    # Get teacher's classes for group messaging - Directors see all classes
-    if current_user.role == 'Director':
-        classes = Class.query.all()
-    else:
-        classes = Class.query.filter_by(teacher_id=teacher.id).all()
-    
-    # Get message groups the teacher is part of
-    group_memberships = MessageGroupMember.query.filter_by(user_id=current_user.id).all()
-    groups = [membership.group for membership in group_memberships if membership.group.is_active]
-    
-    # Get unread counts
-    unread_messages = Message.query.filter_by(recipient_id=current_user.id, is_read=False).count()
-    unread_notifications = Notification.query.filter_by(user_id=current_user.id, is_read=False).count()
-    
-    return render_template('teacher_communications.html',
-                         teacher=teacher,
-                         messages=messages,
-                         announcements=announcements,
-                         notifications=notifications,
-                         classes=classes,
-                         groups=groups,
-                         unread_messages=unread_messages,
-                         unread_notifications=unread_notifications,
+    """Communications tab - Under Development."""
+    return render_template('under_development.html',
                          section='communications',
                          active_tab='communications')
 

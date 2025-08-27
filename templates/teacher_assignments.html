@@ -51,9 +51,19 @@
                             </td>
                             <td data-label="Actions">
                                 <div class="d-flex flex-column flex-sm-row gap-1">
+                                    <a href="{{ url_for('management.view_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-secondary btn-sm">
+                                        <i class="bi bi-eye me-1"></i>View
+                                    </a>
                                     <a href="{{ url_for('teacher.grade_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-primary btn-sm">
                                         <i class="bi bi-pencil me-1"></i>Grade
                                     </a>
+                                    <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-warning btn-sm">
+                                        <i class="bi bi-pencil-square me-1"></i>Edit
+                                    </a>
+                                    <button type="button" class="btn btn-outline-danger btn-sm remove-assignment-btn"
+                                            data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}">
+                                        <i class="bi bi-trash me-1"></i>Remove
+                                    </button>
                                     <a href="{{ url_for('teacher.view_class', class_id=assignment.class_id) }}" class="btn btn-outline-info btn-sm">
                                         <i class="bi bi-eye me-1"></i>View Class
                                     </a>
@@ -85,6 +95,55 @@
         </div>
     {% endif %}
 </div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the assignment "<span id="assignmentTitle"></span>"?</p>
+                <p class="text-danger"><small>This action cannot be undone.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">Delete Assignment</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle remove assignment button clicks
+    const removeButtons = document.querySelectorAll('.remove-assignment-btn');
+    const deleteModal = document.getElementById('deleteModal');
+    const assignmentTitleSpan = document.getElementById('assignmentTitle');
+    const deleteForm = document.getElementById('deleteForm');
+    
+    removeButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const assignmentId = this.getAttribute('data-assignment-id');
+            const assignmentTitle = this.getAttribute('data-assignment-title');
+            
+            // Update modal content
+            assignmentTitleSpan.textContent = assignmentTitle;
+            
+            // Update form action
+            deleteForm.action = "{{ url_for('management.remove_assignment', assignment_id=0) }}".replace('0', assignmentId);
+            
+            // Show modal
+            const modal = new bootstrap.Modal(deleteModal);
+            modal.show();
+        });
+    });
+});
+</script>
 {% endblock %}
 
 <style>

@@ -692,6 +692,53 @@ def view_class(class_id):
     return render_template('role_student_forms.html', class_obj=class_obj, assignments=assignments, grades=student_grades, submissions=student_submissions)
 
 
+@student_blueprint.route('/class/<int:class_id>/assignments')
+@login_required
+@student_required
+def view_class_assignments(class_id):
+    """View all assignments for a specific class"""
+    student = Student.query.get_or_404(current_user.student_id)
+    class_obj = Class.query.get_or_404(class_id)
+    
+    # Get assignments for this class
+    assignments = Assignment.query.filter_by(class_id=class_id).order_by(Assignment.due_date.desc()).all()
+    
+    # Get submissions and grades for this student
+    student_grades = {g.assignment_id: json.loads(g.grade_data) for g in Grade.query.filter_by(student_id=student.id).all()}
+    student_submissions = {s.assignment_id: s for s in Submission.query.filter_by(student_id=student.id).all()}
+    
+    from datetime import datetime
+    today = datetime.now()
+    
+    return render_template('role_student_dashboard.html', 
+                         **create_template_context(student, 'classes', 'classes'),
+                         class_obj=class_obj, 
+                         assignments=assignments, 
+                         grades=student_grades, 
+                         submissions=student_submissions,
+                         today=today,
+                         show_assignments=True)
+
+
+@student_blueprint.route('/class/<int:class_id>/teacher')
+@login_required
+@student_required
+def view_class_teacher(class_id):
+    """View teacher information for a specific class"""
+    student = Student.query.get_or_404(current_user.student_id)
+    class_obj = Class.query.get_or_404(class_id)
+    
+    # Get teacher information
+    teacher = None
+    if class_obj.teacher_id:
+        teacher = TeacherStaff.query.get(class_obj.teacher_id)
+    
+    return render_template('role_student_dashboard.html', 
+                         **create_template_context(student, 'classes', 'classes'),
+                         class_obj=class_obj, 
+                         teacher=teacher,
+                         show_teacher=True)
+
 @student_blueprint.route('/submit/<int:assignment_id>', methods=['POST'])
 @login_required
 @student_required

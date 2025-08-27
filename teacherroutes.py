@@ -710,6 +710,102 @@ def my_grades():
                          section='grades',
                          active_tab='grades')
 
+
+@teacher_blueprint.route('/student-grades')
+@login_required
+@teacher_required
+def student_grades():
+    """View detailed student grades for teacher's classes"""
+    teacher = TeacherStaff.query.filter_by(id=current_user.teacher_staff_id).first_or_404()
+    
+    # Get the class filter if provided
+    class_filter = request.args.get('class_id', type=int)
+    student_filter = request.args.get('student_id', type=int)
+    
+    # Directors see all classes, teachers only see their assigned ones
+    if current_user.role == 'Director':
+        classes = Class.query.all()
+        if class_filter:
+            classes = [c for c in classes if c.id == class_filter]
+    else:
+        classes = Class.query.filter_by(teacher_id=teacher.id).all()
+        if class_filter:
+            classes = [c for c in classes if c.id == class_filter]
+    
+    # Get all students enrolled in these classes
+    class_ids = [c.id for c in classes]
+    enrollments = Enrollment.query.filter(
+        Enrollment.class_id.in_(class_ids),
+        Enrollment.is_active == True
+    ).all()
+    
+    # Group students by class
+    students_by_class = {}
+    for enrollment in enrollments:
+        class_id = enrollment.class_id
+        if class_id not in students_by_class:
+            students_by_class[class_id] = []
+        students_by_class[class_id].append(enrollment.student)
+    
+    # Get assignments and grades for these classes
+    assignments = Assignment.query.filter(Assignment.class_id.in_(class_ids)).all()
+    assignment_ids = [a.id for a in assignments]
+    
+    # Get all grades for these assignments
+    all_grades = Grade.query.filter(Grade.assignment_id.in_(assignment_ids)).all()
+    
+    # Organize grades by student and assignment
+    grades_by_student = {}
+    for grade in all_grades:
+        student_id = grade.student_id
+        assignment_id = grade.assignment_id
+        
+        if student_id not in grades_by_student:
+            grades_by_student[student_id] = {}
+        
+        grade_data = json.loads(grade.grade_data)
+        grades_by_student[student_id][assignment_id] = {
+            'score': grade_data.get('score', 0),
+            'feedback': grade_data.get('feedback', ''),
+            'graded_at': grade.graded_at,
+            'assignment': grade.assignment
+        }
+    
+    # Calculate GPA for each student
+    student_gpas = {}
+    for student_id, student_grades in grades_by_student.items():
+        scores = [grade_info['score'] for grade_info in student_grades.values() if 'score' in grade_info]
+        if scores:
+            # Convert percentage to GPA (90-100 = 4.0, 80-89 = 3.0, etc.)
+            gpa_scores = []
+            for score in scores:
+                if score >= 90:
+                    gpa_scores.append(4.0)
+                elif score >= 80:
+                    gpa_scores.append(3.0)
+                elif score >= 70:
+                    gpa_scores.append(2.0)
+                elif score >= 60:
+                    gpa_scores.append(1.0)
+                else:
+                    gpa_scores.append(0.0)
+            
+            student_gpas[student_id] = sum(gpa_scores) / len(gpa_scores)
+        else:
+            student_gpas[student_id] = 0.0
+    
+    return render_template('role_teacher_dashboard.html', 
+                         teacher=teacher,
+                         classes=classes,
+                         assignments=assignments,
+                         students_by_class=students_by_class,
+                         grades_by_student=grades_by_student,
+                         student_gpas=student_gpas,
+                         class_filter=class_filter,
+                         student_filter=student_filter,
+                         section='student-grades',
+                         active_tab='student-grades')
+
 @teacher_blueprint.route('/attendance')
 @login_required
 @teacher_required

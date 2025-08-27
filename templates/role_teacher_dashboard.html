@@ -53,6 +53,9 @@
                             <a href="{{ url_for('teacher.my_grades') }}" class="btn btn-outline-info">
                                 <i class="bi bi-mortarboard-fill me-2"></i>Grade Assignments
                             </a>
+                            <a href="{{ url_for('teacher.student_grades') }}" class="btn btn-outline-success">
+                                <i class="bi bi-graph-up me-2"></i>View Student Grades
+                            </a>
                             <a href="{{ url_for('teacher.attendance') }}" class="btn btn-outline-warning">
                                 <i class="bi bi-calendar-check-fill me-2"></i>Take Attendance
                             </a>
@@ -317,6 +320,219 @@
                 </div>
             </div>
         </div>
+
+    {% elif section == 'student-grades' %}
+        <!-- Student Grades View -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="mb-0">
+                <i class="bi bi-mortarboard-fill text-primary me-2"></i>
+                Student Grades Overview
+            </h2>
+            <div class="d-flex gap-2">
+                <a href="{{ url_for('teacher.my_grades') }}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-left me-1"></i>Back to Grade Management
+                </a>
+            </div>
+        </div>
+
+        <!-- Class Filter -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <form method="GET" action="{{ url_for('teacher.student_grades') }}" class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label for="class_filter" class="form-label">Filter by Class:</label>
+                        <select class="form-select" id="class_filter" name="class_id">
+                            <option value="">All Classes</option>
+                            {% for class in classes %}
+                                <option value="{{ class.id }}" {% if class_filter == class.id %}selected{% endif %}>
+                                    {{ class.name }} - {{ class.subject }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-funnel me-1"></i>Apply Filter
+                        </button>
+                        <a href="{{ url_for('teacher.student_grades') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle me-1"></i>Clear
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Student Grades by Class -->
+        {% for class in classes %}
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-people-fill me-2"></i>
+                        {{ class.name }} - {{ class.subject }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% set class_students = students_by_class.get(class.id, []) %}
+                    {% if class_students %}
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Student</th>
+                                        <th>Email</th>
+                                        <th>Overall GPA</th>
+                                        <th>Assignments</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for student in class_students %}
+                                        {% set student_grades = grades_by_student.get(student.id, {}) %}
+                                        {% set student_gpa = student_gpas.get(student.id, 0.0) %}
+                                        {% set completed_assignments = student_grades|length %}
+                                        {% set total_assignments = assignments|selectattr('class_id', 'equalto', class.id)|list|length %}
+                                        
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="avatar-sm me-3">
+                                                        <i class="bi bi-person-circle fs-4 text-primary"></i>
+                                                    </div>
+                                                    <div>
+                                                        <strong>{{ student.first_name }} {{ student.last_name }}</strong>
+                                                        <br><small class="text-muted">{{ student.student_id }}</small>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                {% if student.email %}
+                                                    <a href="mailto:{{ student.email }}" class="text-decoration-none">
+                                                        {{ student.email }}
+                                                    </a>
+                                                {% else %}
+                                                    <span class="text-muted">N/A</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <span class="badge {% if student_gpa >= 3.5 %}bg-success
+                                                               {% elif student_gpa >= 3.0 %}bg-primary
+                                                               {% elif student_gpa >= 2.0 %}bg-warning text-dark
+                                                               {% else %}bg-danger{% endif %} fs-6">
+                                                    {{ "%.2f"|format(student_gpa) }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-info">
+                                                    {{ completed_assignments }}/{{ total_assignments }}
+                                                </span>
+                                                <br><small class="text-muted">Completed</small>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    <button type="button" class="btn btn-outline-primary btn-sm dropdown-toggle" 
+                                                            data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-gear me-1"></i>Actions
+                                                    </button>
+                                                    <ul class="dropdown-menu">
+                                                        <li>
+                                                            <a class="dropdown-item" href="#" 
+                                                               onclick="viewStudentGrades({{ student.id }}, '{{ student.first_name }} {{ student.last_name }}')">
+                                                                <i class="bi bi-eye me-2"></i>View Grades
+                                                            </a>
+                                                        </li>
+                                                        <li>
+                                                            <a class="dropdown-item" href="#" 
+                                                               onclick="viewStudentAssignments({{ student.id }}, '{{ student.first_name }} {{ student.last_name }}')">
+                                                                <i class="bi bi-journal-text me-2"></i>View Assignments
+                                                            </a>
+                                                        </li>
+                                                        <li>
+                                                            <a class="dropdown-item" href="#" 
+                                                               onclick="viewStudentProgress({{ student.id }}, '{{ student.first_name }} {{ student.last_name }}')">
+                                                                <i class="bi bi-graph-up me-2"></i>View Progress
+                                                            </a>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="bi bi-people fs-1 text-muted"></i>
+                            <p class="mt-2">No students enrolled in this class.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% else %}
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle me-2"></i>
+                No classes available for viewing student grades.
+            </div>
+        {% endfor %}
+
+        <!-- Student Details Modal -->
+        <div class="modal fade" id="studentDetailsModal" tabindex="-1" aria-labelledby="studentDetailsModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="studentDetailsModalLabel">Student Details</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body" id="studentDetailsContent">
+                        <!-- Content will be loaded here -->
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+        function viewStudentGrades(studentId, studentName) {
+            // Implementation for viewing individual student grades
+            document.getElementById('studentDetailsModalLabel').textContent = `Grades - ${studentName}`;
+            document.getElementById('studentDetailsContent').innerHTML = `
+                <div class="text-center">
+                    <h6>Grades for ${studentName}</h6>
+                    <p class="text-muted">Detailed grade breakdown will be implemented here.</p>
+                </div>
+            `;
+            const modal = new bootstrap.Modal(document.getElementById('studentDetailsModal'));
+            modal.show();
+        }
+
+        function viewStudentAssignments(studentId, studentName) {
+            // Implementation for viewing student assignments
+            document.getElementById('studentDetailsModalLabel').textContent = `Assignments - ${studentName}`;
+            document.getElementById('studentDetailsContent').innerHTML = `
+                <div class="text-center">
+                    <h6>Assignments for ${studentName}</h6>
+                    <p class="text-muted">Assignment list will be implemented here.</p>
+                </div>
+            `;
+            const modal = new bootstrap.Modal(document.getElementById('studentDetailsModal'));
+            modal.show();
+        }
+
+        function viewStudentProgress(studentId, studentName) {
+            // Implementation for viewing student progress
+            document.getElementById('studentDetailsModalLabel').textContent = `Progress - ${studentName}`;
+            document.getElementById('studentDetailsContent').innerHTML = `
+                <div class="text-center">
+                    <h6>Progress Report for ${studentName}</h6>
+                    <p class="text-muted">Progress charts will be implemented here.</p>
+                </div>
+            `;
+            const modal = new bootstrap.Modal(document.getElementById('studentDetailsModal'));
+            modal.show();
+        }
+        </script>
 
     {% elif section == 'attendance' %}
         <!-- Attendance View -->

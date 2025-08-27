@@ -1652,15 +1652,91 @@ def add_assignment():
 @management_required
 def view_assignment(assignment_id):
     """View assignment details"""
-    return render_template('view_assignment.html', assignment_id=assignment_id)
+    assignment = Assignment.query.get_or_404(assignment_id)
+    
+    # Get class information
+    class_info = Class.query.get(assignment.class_id) if assignment.class_id else None
+    teacher = None
+    if class_info and class_info.teacher_id:
+        teacher = TeacherStaff.query.get(class_info.teacher_id)
+    
+    # Get submissions count (if any)
+    submissions_count = 0  # This would be implemented when submission system is added
+    
+    # Get current date for status calculations
+    today = datetime.now().date()
+    
+    return render_template('view_assignment.html', 
+                         assignment=assignment,
+                         class_info=class_info,
+                         teacher=teacher,
+                         submissions_count=submissions_count,
+                         today=today)
 
 
-@management_blueprint.route('/edit-assignment/<int:assignment_id>')
+@management_blueprint.route('/edit-assignment/<int:assignment_id>', methods=['GET', 'POST'])
 @login_required
 @management_required
 def edit_assignment(assignment_id):
     """Edit an assignment"""
-    return render_template('edit_assignment.html', assignment_id=assignment_id)
+    assignment = Assignment.query.get_or_404(assignment_id)
+    
+    if request.method == 'POST':
+        # Get form data
+        title = request.form.get('title', '').strip()
+        description = request.form.get('description', '').strip()
+        due_date_str = request.form.get('due_date')
+        quarter = request.form.get('quarter')
+        
+        if not all([title, due_date_str, quarter]):
+            flash('Title, Due Date, and Quarter are required.', 'danger')
+            return redirect(request.url)
+        
+        try:
+            due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
+            
+            # Update assignment
+            assignment.title = title
+            assignment.description = description
+            assignment.due_date = due_date
+            assignment.quarter = int(quarter)
+            
+            # Handle file upload
+            if 'assignment_file' in request.files:
+                file = request.files['assignment_file']
+                if file and file.filename != '':
+                    if allowed_file(file.filename):
+                        filename = secure_filename(file.filename)
+                        unique_filename = f"assignment_{assignment.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{filename}"
+                        filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], unique_filename)
+                        
+                        try:
+                            file.save(filepath)
+                            
+                            # Update file information
+                            assignment.attachment_filename = unique_filename
+                            assignment.attachment_original_filename = filename
+                        except Exception as e:
+                            flash(f'Error saving file: {str(e)}', 'danger')
+                            return redirect(request.url)
+            
+            db.session.commit()
+            flash('Assignment updated successfully!', 'success')
+            return redirect(url_for('management.assignments'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error updating assignment: {str(e)}', 'danger')
+            return redirect(request.url)
+    
+    # For GET request, get all classes for the dropdown
+    classes = Class.query.all()
+    school_years = SchoolYear.query.all()
+    
+    return render_template('edit_assignment.html', 
+                         assignment=assignment,
+                         classes=classes,
+                         school_years=school_years)
 
 
 @management_blueprint.route('/remove-assignment/<int:assignment_id>', methods=['POST'])
@@ -1668,8 +1744,24 @@ def edit_assignment(assignment_id):
 @management_required
 def remove_assignment(assignment_id):
     """Remove an assignment"""
-    # This would delete the assignment from the database
-    flash('Assignment removed successfully.', 'success')
+    assignment = Assignment.query.get_or_404(assignment_id)
+    
+    try:
+        # Delete the assignment file if it exists
+        if assignment.attachment_filename:
+            filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], assignment.attachment_filename)
+            if os.path.exists(filepath):
+                os.remove(filepath)
+        
+        # Delete the assignment from database
+        db.session.delete(assignment)
+        db.session.commit()
+        
+        flash('Assignment removed successfully.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error removing assignment: {str(e)}', 'danger')
+    
     return redirect(url_for('management.assignments'))
 
 

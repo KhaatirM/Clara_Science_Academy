@@ -143,11 +143,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (confirm(`Are you sure you want to remove "${assignmentTitle}"? This action cannot be undone.`)) {
                 const form = document.createElement('form');
                 form.method = 'POST';
-                
-                if (userRole === 'Director' || userRole === 'School Administrator' || userRole === 'Teacher') {
-                    form.action = `{{ url_for('management.remove_assignment', assignment_id=0) }}`.replace('0', assignmentId);
-                }
-                
+                form.action = `{{ url_for('management.remove_assignment', assignment_id=0) }}`.replace('0', assignmentId);
                 document.body.appendChild(form);
                 form.submit();
             }

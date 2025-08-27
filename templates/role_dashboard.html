@@ -419,12 +419,8 @@
                                     <td>{{ teacher.first_name }} {{ teacher.last_name }}</td>
                                     <td>
                                         {% if teacher.user %}
-                                            <span class="badge 
-                                                {% if teacher.user.role == 'Director' %}bg-danger
-                                                {% elif teacher.user.role == 'School Administrator' %}bg-warning
-                                                {% elif teacher.user.role == 'Teacher' %}bg-info
-                                                {% elif teacher.user.role == 'Tech' %}bg-secondary
-                                                {% else %}bg-light text-dark{% endif %}">
+                                            {% set badge_class = 'bg-danger' if teacher.user.role == 'Director' else 'bg-warning' if teacher.user.role == 'School Administrator' else 'bg-info' if teacher.user.role == 'Teacher' else 'bg-secondary' if teacher.user.role == 'Tech' else 'bg-light text-dark' %}
+                                            <span class="badge {{ badge_class }}">
                                                 {{ teacher.user.role }}
                                             </span>
                                         {% else %}
@@ -550,18 +546,23 @@
                                         {% endif %}
                                     </td>
                                     <td>
-                                        <div class="d-flex flex-column gap-1">
+                                        <div class="d-flex gap-1">
+                                            {% if assignment.attachment_filename %}
+                                                <a href="{{ url_for('download_assignment_file', assignment_id=assignment.id) }}" 
+                                                   class="btn btn-sm btn-outline-info flex-fill" 
+                                                   title="Download Attachment: {{ assignment.attachment_original_filename or assignment.attachment_filename }}">
+                                                    <i class="bi bi-paperclip me-1"></i>Attachment
+                                                </a>
+                                            {% endif %}
                                             {% if current_user.role in ['Director', 'School Administrator', 'Teacher'] %}
-                                                <div class="d-flex gap-1 mb-1">
-                                                    <a href="{{ url_for('management.view_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-primary">View</a>
-                                                    <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-warning">Edit</a>
-                                                </div>
-                                                <button type="button" class="btn btn-sm btn-outline-danger remove-assignment-btn" 
+                                                <a href="{{ url_for('management.view_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-primary flex-fill">View</a>
+                                                <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-warning flex-fill">Edit</a>
+                                                <button type="button" class="btn btn-sm btn-outline-danger flex-fill remove-assignment-btn" 
                                                         data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}">Remove</button>
                                             {% elif current_user.role == 'Student' %}
                                                 <a href="#" class="btn btn-sm btn-outline-primary">View Details</a>
                                                 {% if assignment.due_date and assignment.due_date.date() >= today %}
-                                                    <a href="#" class="btn btn-sm btn-outline-success mt-1">Submit Work</a>
+                                                    <a href="#" class="btn btn-sm btn-outline-success">Submit Work</a>
                                                 {% endif %}
                                             {% endif %}
                                         </div>
@@ -849,11 +850,8 @@
                                 <td>{{ record.student_name }}</td>
                                 <td>{{ record.class_name }}</td>
                                 <td>
-                                    <span class="badge 
-                                        {% if record.status == 'Present' %}bg-success
-                                        {% elif record.status == 'Absent' %}bg-danger
-                                        {% elif record.status == 'Tardy' %}bg-warning
-                                        {% else %}bg-secondary{% endif %}">
+                                    {% set status_badge = 'bg-success' if record.status == 'Present' else 'bg-danger' if record.status == 'Absent' else 'bg-warning' if record.status == 'Tardy' else 'bg-secondary' %}
+                                    <span class="badge {{ status_badge }}">
                                         {{ record.status }}
                                     </span>
                                 </td>
@@ -1252,6 +1250,7 @@
 
 {% block scripts %}
     {{ super() }}
+    {% raw %}
     <script>
     function viewStudent(studentId) {
         console.log('viewStudent called with', studentId);
@@ -2342,4 +2341,5 @@
         }
     }
     </script>
+    {% endraw %}
 {% endblock %} 

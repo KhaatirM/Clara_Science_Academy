@@ -25,9 +25,15 @@
                                 <label for="class_id" class="form-label">Class</label>
                                 <select class="form-control" id="class_id" name="class_id" required>
                                     <option value="">Select a class</option>
-                                    {% for class in classes %}
-                                    <option value="{{ class.id }}">{{ class.name }} - {{ class.subject }}</option>
-                                    {% endfor %}
+                                    {% if class_obj %}
+                                        <!-- Single class pre-selected (from teacher route) -->
+                                        <option value="{{ class_obj.id }}" selected>{{ class_obj.name }} - {{ class_obj.subject }}</option>
+                                    {% elif classes %}
+                                        <!-- Multiple classes available (from management route) -->
+                                        {% for class in classes %}
+                                        <option value="{{ class.id }}">{{ class.name }} - {{ class.subject }}</option>
+                                        {% endfor %}
+                                    {% endif %}
                                 </select>
                             </div>
                             
@@ -79,7 +85,11 @@
                             
                             <div class="col-12">
                                 <div class="d-flex flex-column flex-md-row justify-content-between gap-2">
-                                    <a href="{{ url_for('management.management_dashboard') }}" class="btn btn-secondary">Cancel</a>
+                                    {% if class_obj %}
+                                        <a href="{{ url_for('teacher.view_class', class_id=class_obj.id) }}" class="btn btn-secondary">Cancel</a>
+                                    {% else %}
+                                        <a href="{{ url_for('management.management_dashboard') }}" class="btn btn-secondary">Cancel</a>
+                                    {% endif %}
                                     <button type="submit" class="btn btn-primary">
                                         <i class="bi bi-plus-circle me-2"></i>Add Assignment
                                     </button>
@@ -100,6 +110,18 @@ document.addEventListener('DOMContentLoaded', function() {
     const fileName = document.getElementById('fileName');
     const fileSize = document.getElementById('fileSize');
     const fileType = document.getElementById('fileType');
+    const classSelect = document.getElementById('class_id');
+    
+    // If a class is pre-selected, disable the dropdown
+    if (classSelect.value && classSelect.value !== '') {
+        classSelect.disabled = true;
+        // Add a hidden input to preserve the value when form is submitted
+        const hiddenInput = document.createElement('input');
+        hiddenInput.type = 'hidden';
+        hiddenInput.name = 'class_id';
+        hiddenInput.value = classSelect.value;
+        classSelect.parentNode.appendChild(hiddenInput);
+    }
     
     fileInput.addEventListener('change', function() {
         const file = this.files[0];

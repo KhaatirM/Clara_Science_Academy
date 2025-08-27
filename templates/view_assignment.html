@@ -7,11 +7,18 @@
             <i class="bi bi-journal-text me-2"></i>Assignment Details
         </h3>
         <div class="d-flex gap-2">
-            <a href="{{ url_for('management.assignments') }}" class="btn btn-outline-secondary btn-sm">
-                <i class="bi bi-arrow-left me-1"></i>Back to Assignments
-            </a>
-            {% if current_user.role in ['Director', 'School Administrator', 'Teacher'] %}
+            {% if current_user.role in ['Director', 'School Administrator'] %}
+                <a href="{{ url_for('management.assignments') }}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-left me-1"></i>Back to Assignments
+                </a>
                 <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-warning btn-sm">
+                    <i class="bi bi-pencil me-1"></i>Edit Assignment
+                </a>
+            {% elif current_user.role in ['Teacher'] %}
+                <a href="{{ url_for('teacher.view_class', class_id=assignment.class_id) }}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-left me-1"></i>Back to Class
+                </a>
+                <a href="{{ url_for('teacher.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-warning btn-sm">
                     <i class="bi bi-pencil me-1"></i>Edit Assignment
                 </a>
             {% endif %}
@@ -128,14 +135,25 @@
                 <div class="card-body">
                     <h6 class="card-title mb-3">Assignment Actions</h6>
                     <div class="d-flex gap-2 flex-wrap">
-                        <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" 
-                           class="btn btn-warning">
-                            <i class="bi bi-pencil me-1"></i>Edit Assignment
-                        </a>
-                        <button type="button" class="btn btn-danger" 
-                                onclick="confirmDelete('{{ assignment.title }}', {{ assignment.id }})">
-                            <i class="bi bi-trash me-1"></i>Remove Assignment
-                        </button>
+                        {% if current_user.role in ['Director', 'School Administrator'] %}
+                            <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" 
+                               class="btn btn-warning">
+                                <i class="bi bi-pencil me-1"></i>Edit Assignment
+                            </a>
+                            <button type="button" class="btn btn-danger" 
+                                    onclick="confirmDelete('{{ assignment.title }}', {{ assignment.id }})">
+                                <i class="bi bi-trash me-1"></i>Remove Assignment
+                            </button>
+                        {% elif current_user.role in ['Teacher'] %}
+                            <a href="{{ url_for('teacher.edit_assignment', assignment_id=assignment.id) }}" 
+                               class="btn btn-warning">
+                                <i class="bi bi-pencil me-1"></i>Edit Assignment
+                            </a>
+                            <button type="button" class="btn btn-danger" 
+                                    onclick="confirmDelete('{{ assignment.title }}', {{ assignment.id }})">
+                                <i class="bi bi-trash me-1"></i>Remove Assignment
+                            </button>
+                        {% endif %}
                         <a href="#" class="btn btn-info">
                             <i class="bi bi-eye me-1"></i>View Submissions
                         </a>
@@ -172,7 +190,11 @@
 <script>
 function confirmDelete(title, assignmentId) {
     document.getElementById('assignmentTitle').textContent = title;
-    document.getElementById('deleteForm').action = "{{ url_for('management.remove_assignment', assignment_id=0) }}".replace('0', assignmentId);
+    {% if current_user.role in ['Director', 'School Administrator'] %}
+        document.getElementById('deleteForm').action = "{{ url_for('management.remove_assignment', assignment_id=0) }}".replace('0', assignmentId);
+    {% elif current_user.role in ['Teacher'] %}
+        document.getElementById('deleteForm').action = "{{ url_for('teacher.remove_assignment', assignment_id=0) }}".replace('0', assignmentId);
+    {% endif %}
     
     const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
     deleteModal.show();

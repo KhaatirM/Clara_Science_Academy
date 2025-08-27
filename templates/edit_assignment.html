@@ -7,12 +7,21 @@
             <i class="bi bi-pencil me-2"></i>Edit Assignment
         </h3>
         <div class="d-flex gap-2">
-            <a href="{{ url_for('management.assignments') }}" class="btn btn-outline-secondary btn-sm">
-                <i class="bi bi-arrow-left me-1"></i>Back to Assignments
-            </a>
-            <a href="{{ url_for('management.view_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-primary btn-sm">
-                <i class="bi bi-eye me-1"></i>View Assignment
-            </a>
+            {% if current_user.role in ['Director', 'School Administrator'] %}
+                <a href="{{ url_for('management.assignments') }}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-left me-1"></i>Back to Assignments
+                </a>
+                <a href="{{ url_for('management.view_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-primary btn-sm">
+                    <i class="bi bi-eye me-1"></i>View Assignment
+                </a>
+            {% elif current_user.role in ['Teacher'] %}
+                <a href="{{ url_for('teacher.view_class', class_id=assignment.class_id) }}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-left me-1"></i>Back to Class
+                </a>
+                <a href="{{ url_for('teacher.view_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-primary btn-sm">
+                    <i class="bi bi-eye me-1"></i>View Assignment
+                </a>
+            {% endif %}
         </div>
     </div>
 
@@ -109,8 +118,13 @@
                             <div class="col-12">
                                 <hr class="my-3">
                                 <div class="d-flex gap-2 justify-content-end">
-                                    <a href="{{ url_for('management.view_assignment', assignment_id=assignment.id) }}" 
-                                       class="btn btn-secondary">Cancel</a>
+                                    {% if current_user.role in ['Director', 'School Administrator'] %}
+                                        <a href="{{ url_for('management.view_assignment', assignment_id=assignment.id) }}" 
+                                           class="btn btn-secondary">Cancel</a>
+                                    {% elif current_user.role in ['Teacher'] %}
+                                        <a href="{{ url_for('teacher.view_assignment', assignment_id=assignment.id) }}" 
+                                           class="btn btn-secondary">Cancel</a>
+                                    {% endif %}
                                     <button type="submit" class="btn btn-warning">
                                         <i class="bi bi-check-circle me-1"></i>Update Assignment
                                     </button>

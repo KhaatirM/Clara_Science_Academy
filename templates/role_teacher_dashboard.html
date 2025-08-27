@@ -250,13 +250,13 @@
                                     </td>
                                     <td>
                                         <div class="d-flex gap-1">
-                                            <a href="{{ url_for('management.view_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-secondary">
+                                            <a href="{{ url_for('teacher.view_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-secondary">
                                                 View
                                             </a>
                                             <a href="{{ url_for('teacher.grade_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-primary">
                                                 Grade
                                             </a>
-                                            <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-warning">
+                                            <a href="{{ url_for('teacher.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-warning">
                                                 Edit
                                             </a>
                                             <button type="button" class="btn btn-sm btn-outline-danger remove-assignment-btn"
@@ -679,7 +679,7 @@ document.addEventListener('DOMContentLoaded', function() {
             assignmentTitleSpan.textContent = assignmentTitle;
             
             // Update form action
-            deleteForm.action = "{{ url_for('management.remove_assignment', assignment_id=0) }}".replace('0', assignmentId);
+            deleteForm.action = "{{ url_for('teacher.remove_assignment', assignment_id=0) }}".replace('0', assignmentId);
             
             // Show modal
             const modal = new bootstrap.Modal(deleteModal);

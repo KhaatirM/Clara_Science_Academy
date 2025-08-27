@@ -1,8 +1,8 @@
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, Response, abort, jsonify
 from flask_login import login_required, current_user
-from models import db, Student, TeacherStaff, Class, SchoolYear, User, ReportCard, Assignment, Announcement, Message, MessageGroup, ScheduledAnnouncement, Notification, MessageGroupMember, Grade, Enrollment, Attendance, AcademicPeriod, CalendarEvent, TeacherWorkDay, SchoolBreak
+from models import db, Student, TeacherStaff, Class, SchoolYear, User, ReportCard, Assignment, Announcement, Message, MessageGroup, ScheduledAnnouncement, Notification, MessageGroupMember, Grade, Enrollment, Attendance, AcademicPeriod, CalendarEvent, TeacherWorkDay, SchoolBreak, Submission
 from decorators import management_required
-from app import calculate_and_get_grade_for_student, get_grade_for_student
+from app import calculate_and_get_grade_for_student, get_grade_for_student, create_notification
 try:
     import pdfkit  # type: ignore
 except ImportError:
@@ -1667,6 +1667,78 @@ def add_assignment():
     # For GET request, get all classes for the dropdown
     classes = Class.query.all()
     return render_template('add_assignment.html', classes=classes)
+
+
+@management_blueprint.route('/grade/assignment/<int:assignment_id>', methods=['GET', 'POST'])
+@login_required
+@management_required
+def grade_assignment(assignment_id):
+    """Grade an assignment - Directors and School Administrators can grade any assignment"""
+    assignment = Assignment.query.get_or_404(assignment_id)
+    class_obj = assignment.class_info
+    
+    # Get only students enrolled in this specific class
+    enrolled_students = db.session.query(Student).join(Enrollment).filter(
+        Enrollment.class_id == class_obj.id,
+        Enrollment.is_active == True
+    ).order_by(Student.last_name, Student.first_name).all()
+    
+    if not enrolled_students:
+        flash("No students are currently enrolled in this class.", "warning")
+        return redirect(url_for('management.assignments'))
+    
+    students = enrolled_students
+    
+    if request.method == 'POST':
+        for student in students:
+            score = request.form.get(f'score_{student.id}')
+            comment = request.form.get(f'comment_{student.id}')
+            
+            if score is not None:
+                try:
+                    score_val = float(score) if score else 0.0
+                    grade_data = json.dumps({'score': score_val, 'comment': comment})
+                    
+                    grade = Grade.query.filter_by(student_id=student.id, assignment_id=assignment_id).first()
+                    if grade:
+                        grade.grade_data = grade_data
+                    else:
+                        # Create grade using attribute assignment
+                        grade = Grade()
+                        grade.student_id = student.id
+                        grade.assignment_id = assignment_id
+                        grade.grade_data = grade_data
+                        db.session.add(grade)
+                    
+                    # Create notification for the student
+                    if student.user:
+                        from app import create_notification
+                        create_notification(
+                            user_id=student.user.id,
+                            notification_type='grade',
+                            title=f'Grade posted for {assignment.title}',
+                            message=f'Your grade for "{assignment.title}" has been posted. Score: {score_val}%',
+                            link=url_for('student.student_grades')
+                        )
+                        
+                except ValueError:
+                    flash(f"Invalid score format for student {student.id}.", "warning")
+                    continue # Skip this student and continue with others
+        
+        db.session.commit()
+        flash('Grades updated successfully.', 'success')
+        return redirect(url_for('management.grade_assignment', assignment_id=assignment_id))
+
+    # Get existing grades for this assignment
+    grades = {g.student_id: json.loads(g.grade_data) for g in Grade.query.filter_by(assignment_id=assignment_id).all()}
+    submissions = {s.student_id: s for s in Submission.query.filter_by(assignment_id=assignment_id).all()}
+    
+    return render_template('teacher_grade_assignment.html', 
+                         assignment=assignment, 
+                         class_obj=class_obj,
+                         students=students, 
+                         grades=grades, 
+                         submissions=submissions)
 
 
 @management_blueprint.route('/view-assignment/<int:assignment_id>')

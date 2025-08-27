@@ -69,27 +69,21 @@
                                 <td data-label="Class">{{ assignment.class.name if assignment.class else 'N/A' }}</td>
                                 <td data-label="Status">{{ assignment.status|title }}</td>
                                 <td data-label="Actions">
-                                    {% if current_user.role in ['Director', 'School Administrator'] %}
-                                        <div class="d-flex gap-1">
-                                            <a href="{{ url_for('management.view_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-primary flex-fill">View Details</a>
-                                            <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-warning flex-fill">Edit</a>
-                                        </div>
-                                        <button type="button" class="btn btn-sm btn-outline-danger remove-assignment-btn" 
-                                                data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}">Remove</button>
-                                    {% elif current_user.role == 'Teacher' %}
-                                        <div class="d-flex gap-1">
-                                            <a href="{{ url_for('management.view_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-primary flex-fill">View Details</a>
-                                            <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-warning flex-fill">Edit</a>
-                                        </div>
-                                        <a href="#" class="btn btn-sm btn-outline-success">View Submissions</a>
-                                    {% elif current_user.role == 'Student' %}
-                                        <div class="d-flex gap-1">
-                                            <a href="#" class="btn btn-sm btn-outline-primary flex-fill">View Details</a>
+                                    <div class="d-flex flex-column gap-1">
+                                        {% if current_user.role in ['Director', 'School Administrator', 'Teacher'] %}
+                                            <div class="d-flex gap-1 mb-1">
+                                                <a href="{{ url_for('management.view_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                                                <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-warning">Edit</a>
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-outline-danger remove-assignment-btn" 
+                                                    data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}">Remove</button>
+                                        {% elif current_user.role == 'Student' %}
+                                            <a href="#" class="btn btn-sm btn-outline-primary">View Details</a>
                                             {% if assignment.status == 'active' %}
-                                                <a href="#" class="btn btn-sm btn-outline-success flex-fill">Submit Work</a>
+                                                <a href="#" class="btn btn-sm btn-outline-success mt-1">Submit Work</a>
                                             {% endif %}
-                                        </div>
-                                    {% endif %}
+                                        {% endif %}
+                                    </div>
                                 </td>
                             </tr>
                         {% endfor %}
@@ -97,7 +91,7 @@
                 </table>
             </div>
         </div>
-        {% else %}
+        {% if not assignments %}
         <div class="col-12">
             <div class="alert alert-info">
                 <h5>No Assignments Found</h5>
@@ -107,7 +101,7 @@
                 {% endif %}
             </div>
         </div>
-        {% endfor %}
+        {% endif %}
     </div>
 
     <!-- Pagination -->

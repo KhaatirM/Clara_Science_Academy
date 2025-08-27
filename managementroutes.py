@@ -628,10 +628,32 @@ def assignments():
     assignments = Assignment.query.all()
     classes = Class.query.all()  # For the filter dropdown
     from datetime import datetime
+    
+    # Get current date for filtering
+    today = datetime.now().date()
+    
+    # Add status to each assignment based on due date
+    for assignment in assignments:
+        if assignment.due_date:
+            due_date = assignment.due_date.date()
+            if due_date < today:
+                assignment.status = 'overdue'
+            elif due_date == today:
+                assignment.status = 'due_today'
+            else:
+                assignment.status = 'active'
+        else:
+            assignment.status = 'no_due_date'
+    
     return render_template('role_dashboard.html',
                          assignments=assignments,
                          classes=classes,
-                         today=datetime.now(),
+                         today=today,
+                         selected_class_id=request.args.get('class_id', type=int),
+                         selected_status=request.args.get('status', ''),
+                         selected_due_date=request.args.get('due_date', ''),
+                         total_pages=1,
+                         page=1,
                          section='assignments',
                          active_tab='assignments')
 

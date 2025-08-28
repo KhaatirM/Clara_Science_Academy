@@ -1,5 +1,5 @@
 import os
-from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, abort, jsonify
+from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, abort, jsonify, send_file
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from models import db, Student, Class, Assignment, Submission, Grade, SchoolYear, Announcement, Notification, StudentGoal, Message, MessageGroup, MessageGroupMember, TeacherStaff, User, Enrollment, ClassSchedule, Attendance, AcademicPeriod
@@ -278,23 +278,47 @@ def student_assignments():
     student = Student.query.get_or_404(current_user.student_id)
     from datetime import datetime
     
-    # Get assignments for student's classes (simplified)
-    assignments = Assignment.query.all()  # Should filter by student's enrolled classes
+    # Get current school year
+    current_school_year = SchoolYear.query.filter_by(is_active=True).first()
+    if not current_school_year:
+        flash("No active school year found.", "warning")
+        return render_template('role_student_dashboard.html', 
+                             **create_template_context(student, 'assignments', 'assignments'))
+    
+    # Get student's enrolled classes
+    enrollments = Enrollment.query.filter_by(
+        student_id=student.id,
+        is_active=True
+    ).join(Class).filter(
+        Class.school_year_id == current_school_year.id
+    ).all()
+    
+    class_ids = [enrollment.class_id for enrollment in enrollments]
+    
+    # Get assignments for student's classes
+    assignments = Assignment.query.filter(
+        Assignment.class_id.in_(class_ids),
+        Assignment.school_year_id == current_school_year.id
+    ).order_by(Assignment.due_date.asc()).all()
+    
+    # Get all submissions for this student
+    submissions = Submission.query.filter_by(student_id=student.id).all()
+    submissions_dict = {sub.assignment_id: sub for sub in submissions}
+    
+    # Get all grades for this student
+    grades = Grade.query.filter_by(student_id=student.id).all()
+    grades_dict = {g.assignment_id: g for g in grades}
     
     # Create assignments with status for template
     assignments_with_status = []
     for assignment in assignments:
-        # Check if student has submitted this assignment
-        submission = Submission.query.filter_by(
-            student_id=student.id,
-            assignment_id=assignment.id
-        ).first()
-        
+        submission = submissions_dict.get(assignment.id)
         assignments_with_status.append((assignment, submission))
     
     return render_template('role_student_dashboard.html', 
                          **create_template_context(student, 'assignments', 'assignments',
                              assignments_with_status=assignments_with_status,
+                             grades=grades_dict,
                              today=datetime.now()))
 
 @student_blueprint.route('/classes')
@@ -854,6 +878,41 @@ def submit_assignment(assignment_id):
 
     else:
         return jsonify({'success': False, 'message': f'File type not allowed. Allowed types are: {", ".join(ALLOWED_EXTENSIONS)}'}), 400
+
+@student_blueprint.route('/download-assignment-file/<int:assignment_id>')
+@login_required
+@student_required
+def download_assignment_file(assignment_id):
+    """Download assignment attachment file"""
+    assignment = Assignment.query.get_or_404(assignment_id)
+    
+    # Check if student is enrolled in this class
+    student = Student.query.get_or_404(current_user.student_id)
+    enrollment = Enrollment.query.filter_by(
+        student_id=student.id,
+        class_id=assignment.class_id,
+        is_active=True
+    ).first()
+    
+    if not enrollment:
+        abort(403, description="You are not enrolled in this class")
+    
+    if not assignment.attachment_filename:
+        abort(404, description="No attachment found for this assignment")
+    
+    file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], assignment.attachment_filename)
+    
+    if not os.path.exists(file_path):
+        abort(404, description="File not found")
+    
+    # Get the original filename for download
+    original_filename = assignment.attachment_original_filename or assignment.attachment_filename
+    
+    return send_file(
+        file_path,
+        as_attachment=True,
+        download_name=original_filename
+    )
 
 @student_blueprint.route('/notifications/mark-read/<int:notification_id>', methods=['POST'])
 @login_required

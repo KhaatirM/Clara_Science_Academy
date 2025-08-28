@@ -1677,15 +1677,13 @@
                                 <td>{{ assignment.class_info.name }}</td>
                                 <td>
                                     {% if submission %}
-                                        {% if submission.status == 'Graded' %}
-                                            <span class="badge bg-success">Graded ({{ submission.grade }})</span>
-                                        {% elif submission.status in ['Received', 'Late Submission'] %}
-                                            <span class="badge bg-info">Submitted</span>
+                                        {% if grades.get(assignment.id) %}
+                                            <span class="badge bg-success">Graded</span>
                                         {% else %}
-                                             <span class="badge bg-secondary">{{ submission.status }}</span>
+                                            <span class="badge bg-info">Submitted</span>
                                         {% endif %}
                                     {% else %}
-                                        {% if assignment.due_date < today %}
+                                        {% if assignment.due_date and assignment.due_date.date() < today.date() %}
                                             <span class="badge bg-danger">Past Due</span>
                                         {% else %}
                                             <span class="badge bg-warning text-dark">Not Submitted</span>
@@ -1695,7 +1693,7 @@
                                 <td>
                                     <div class="d-flex flex-column gap-1">
                                         <!-- View Button -->
-                                        <button type="button" class="btn btn-sm btn-outline-info" onclick="openAssignmentViewModal({{ assignment.id }}, '{{ assignment.title }}', '{{ assignment.description or '' }}', '{{ assignment.due_date.strftime('%B %d, %Y at %I:%M %p') if assignment.due_date else 'No due date' }}', '{{ assignment.quarter }}', '{{ assignment.attachment_filename or '' }}', {{ 'true' if submission else 'false' }}, {{ 'true' if grades.get(assignment.id) else 'false' }})">
+                                        <button type="button" class="btn btn-sm btn-outline-info" onclick="openAssignmentViewModal({{ assignment.id }}, '{{ assignment.title|replace("'", "\\'")|replace('"', '\\"') }}', '{{ (assignment.description or '')|replace("'", "\\'")|replace('"', '\\"') }}', '{{ assignment.due_date.strftime('%B %d, %Y at %I:%M %p') if assignment.due_date else 'No due date' }}', '{{ assignment.quarter }}', '{{ (assignment.attachment_filename or '')|replace("'", "\\'")|replace('"', '\\"') }}', {{ 'true' if submission else 'false' }}, {{ 'true' if grades.get(assignment.id) else 'false' }})">
                                             <i class="bi bi-eye me-1"></i>View
                                         </button>
                                         
@@ -1703,12 +1701,12 @@
                                             <!-- Show existing submission info -->
                                             <span class="badge bg-success">Submitted</span>
                                             <small class="text-muted">{{ submission.submitted_at.strftime('%b %d, %Y') if submission.submitted_at else 'Unknown date' }}</small>
-                                            <button type="button" class="btn btn-sm btn-outline-warning" onclick="openSubmissionModal({{ assignment.id }}, '{{ assignment.title }}', true)">
+                                            <button type="button" class="btn btn-sm btn-outline-warning" onclick="openSubmissionModal({{ assignment.id }}, '{{ assignment.title|replace("'", "\\'")|replace('"', '\\"') }}', true)">
                                                 <i class="bi bi-pencil me-1"></i>Resubmit
                                             </button>
                                         {% else %}
                                             <!-- Show submit button -->
-                                            <button type="button" class="btn btn-sm btn-primary" onclick="openSubmissionModal({{ assignment.id }}, '{{ assignment.title }}', false)">
+                                            <button type="button" class="btn btn-sm btn-primary" onclick="openSubmissionModal({{ assignment.id }}, '{{ assignment.title|replace("'", "\\'")|replace('"', '\\"') }}', false)">
                                                 <i class="bi bi-upload me-1"></i>Submit
                                             </button>
                                         {% endif %}

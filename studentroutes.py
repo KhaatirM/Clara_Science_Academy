@@ -735,13 +735,14 @@ def view_class(class_id):
     today = datetime.now()
     
     return render_template('role_student_dashboard.html', 
-                         **create_template_context(student, 'classes', 'classes', grades=student_grades),
+                         **create_template_context(student, 'classes', 'classes', 
+                                                grades=student_grades,
+                                                assignments=assignments,
+                                                submissions=student_submissions,
+                                                announcements=announcements),
                          class_obj=class_obj,
                          teacher=teacher,
                          enrolled_students=enrolled_students,
-                         assignments=assignments,
-                         submissions=student_submissions,
-                         announcements=announcements,
                          class_gpa=class_gpa,
                          today=today,
                          show_class_details=True)

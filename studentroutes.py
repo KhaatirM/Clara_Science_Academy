@@ -701,7 +701,7 @@ def view_class(class_id):
     student_submissions = {s.assignment_id: s for s in Submission.query.filter_by(student_id=student.id).all()}
     
     # Get announcements for this class
-    announcements = Announcement.query.filter_by(class_id=class_id).order_by(Announcement.created_at.desc()).limit(5).all()
+    announcements = Announcement.query.filter_by(class_id=class_id).order_by(Announcement.timestamp.desc()).limit(5).all()
     
     # Calculate student's GPA for this class
     class_gpa = 0.0

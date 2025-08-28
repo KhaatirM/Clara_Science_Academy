@@ -985,6 +985,295 @@
         </div>
         {% endif %}
 
+        <!-- Comprehensive Class Details View (when show_class_details is True) -->
+        {% if show_class_details and class_obj %}
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="mb-0">
+                        <i class="bi bi-house-door text-primary me-2"></i>
+                        {{ class_obj.name }} - Class Details
+                    </h2>
+                    <a href="{{ url_for('student.student_classes') }}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-left me-1"></i>Back to Classes
+                    </a>
+                </div>
+
+                <!-- Class Overview Cards -->
+                <div class="row g-3 mb-4">
+                    <!-- Class Info Card -->
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card bg-primary text-white h-100">
+                            <div class="card-body text-center">
+                                <i class="bi bi-info-circle fs-1 mb-2"></i>
+                                <h6 class="card-title">Class Information</h6>
+                                <p class="card-text mb-1">{{ class_obj.subject }}</p>
+                                <p class="card-text small">Grade {{ class_obj.grade_level }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Teacher Info Card -->
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card bg-success text-white h-100">
+                            <div class="card-body text-center">
+                                <i class="bi bi-person-badge fs-1 mb-2"></i>
+                                <h6 class="card-title">Teacher</h6>
+                                {% if teacher %}
+                                    <p class="card-text mb-1">{{ teacher.first_name }} {{ teacher.last_name }}</p>
+                                    <p class="card-text small">{{ teacher.position or 'Teacher' }}</p>
+                                {% else %}
+                                    <p class="card-text mb-1">Not Assigned</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Students Count Card -->
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card bg-info text-white h-100">
+                            <div class="card-body text-center">
+                                <i class="bi bi-people fs-1 mb-2"></i>
+                                <h6 class="card-title">Students</h6>
+                                <p class="card-text mb-1">{{ enrolled_students|length }}</p>
+                                <p class="card-text small">Enrolled</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Class GPA Card -->
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card {% if class_gpa >= 3.5 %}bg-success{% elif class_gpa >= 3.0 %}bg-primary{% elif class_gpa >= 2.0 %}bg-warning{% else %}bg-danger{% endif %} text-white h-100">
+                            <div class="card-body text-center">
+                                <i class="bi bi-graph-up fs-1 mb-2"></i>
+                                <h6 class="card-title">Your GPA</h6>
+                                <p class="card-text mb-1">{{ "%.2f"|format(class_gpa) }}</p>
+                                <p class="card-text small">In This Class</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Content Row -->
+                <div class="row g-4">
+                    <!-- Left Column: Teacher & Class Info -->
+                    <div class="col-lg-4">
+                        <!-- Teacher Information -->
+                        {% if teacher %}
+                        <div class="card shadow-sm mb-4">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-person-circle me-2"></i>
+                                    Teacher Information
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="text-center mb-3">
+                                    <i class="bi bi-person-circle fs-1 text-success"></i>
+                                    <h6 class="mt-2">{{ teacher.first_name }} {{ teacher.last_name }}</h6>
+                                    <p class="text-muted mb-0">{{ teacher.position or 'Teacher' }}</p>
+                                </div>
+                                <hr>
+                                <div class="row g-2">
+                                    <div class="col-12">
+                                        <strong>Email:</strong> 
+                                        {% if teacher.email %}
+                                            <a href="mailto:{{ teacher.email }}" class="text-decoration-none">
+                                                {{ teacher.email }}
+                                            </a>
+                                        {% else %}
+                                            <span class="text-muted">Not available</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-12">
+                                        <strong>Phone:</strong> 
+                                        {% if teacher.phone %}
+                                            <a href="tel:{{ teacher.phone }}" class="text-decoration-none">
+                                                {{ teacher.phone }}
+                                            </a>
+                                        {% else %}
+                                            <span class="text-muted">Not available</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Class Information -->
+                        <div class="card shadow-sm mb-4">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    Class Details
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-2">
+                                    <div class="col-12">
+                                        <strong>Class Name:</strong> {{ class_obj.name }}
+                                    </div>
+                                    <div class="col-12">
+                                        <strong>Subject:</strong> {{ class_obj.subject }}
+                                    </div>
+                                    <div class="col-12">
+                                        <strong>Grade Level:</strong> {{ class_obj.grade_level }}
+                                    </div>
+                                    <div class="col-12">
+                                        <strong>School Year:</strong> 
+                                        {% if class_obj.school_year %}
+                                            {{ class_obj.school_year.name }}
+                                        {% else %}
+                                            <span class="text-muted">Not specified</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Enrolled Students -->
+                        <div class="card shadow-sm">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-people me-2"></i>
+                                    Class Roster
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="list-group list-group-flush">
+                                    {% for student in enrolled_students %}
+                                    <div class="list-group-item d-flex align-items-center">
+                                        <i class="bi bi-person-circle text-primary me-2"></i>
+                                        <div class="flex-grow-1">
+                                            <strong>{{ student.first_name }} {{ student.last_name }}</strong>
+                                            {% if student.id == current_user.student_id %}
+                                                <span class="badge bg-success ms-2">You</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Assignments & Announcements -->
+                    <div class="col-lg-8">
+                        <!-- Recent Assignments -->
+                        <div class="card shadow-sm mb-4">
+                            <div class="card-header bg-warning text-dark">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-journal-text me-2"></i>
+                                    Recent Assignments
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                {% if assignments %}
+                                    <div class="row g-3">
+                                        {% for assignment in assignments[:6] %}
+                                        <div class="col-md-6">
+                                            <div class="card border-0 bg-light h-100">
+                                                <div class="card-body">
+                                                    <h6 class="card-title">{{ assignment.title }}</h6>
+                                                    <p class="card-text small text-muted">
+                                                        {{ assignment.description or 'No description provided.' }}
+                                                    </p>
+                                                    
+                                                    <div class="mb-2">
+                                                        <strong>Due:</strong> 
+                                                        {% if assignment.due_date %}
+                                                            {{ assignment.due_date.strftime('%B %d, %Y') }}
+                                                            {% set days_remaining = (assignment.due_date.date() - today.date()).days %}
+                                                            {% if days_remaining > 0 %}
+                                                                <span class="badge bg-success ms-2">{{ days_remaining }} days</span>
+                                                            {% elif days_remaining == 0 %}
+                                                                <span class="badge bg-warning ms-2">Due today</span>
+                                                            {% else %}
+                                                                <span class="badge bg-danger ms-2">{{ abs(days_remaining) }} overdue</span>
+                                                            {% endif %}
+                                                        {% else %}
+                                                            <span class="text-muted">No due date</span>
+                                                        {% endif %}
+                                                    </div>
+                                                    
+                                                    <div class="mb-2">
+                                                        <strong>Quarter:</strong> Q{{ assignment.quarter }}
+                                                    </div>
+                                                    
+                                                    <!-- Submission Status -->
+                                                    {% set submission = submissions.get(assignment.id) %}
+                                                    {% set grade = grades.get(assignment.id) %}
+                                                    <div class="mt-2">
+                                                        {% if submission %}
+                                                            <span class="badge bg-success">Submitted</span>
+                                                            {% if grade %}
+                                                                <span class="badge bg-info ms-1">{{ grade.score }}%</span>
+                                                            {% endif %}
+                                                        {% else %}
+                                                            <span class="badge bg-warning">Not Submitted</span>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% if assignments|length > 6 %}
+                                    <div class="text-center mt-3">
+                                        <a href="{{ url_for('student.view_class_assignments', class_id=class_obj.id) }}" class="btn btn-outline-warning btn-sm">
+                                            View All Assignments
+                                        </a>
+                                    </div>
+                                    {% endif %}
+                                {% else %}
+                                    <div class="alert alert-info">
+                                        <i class="bi bi-info-circle me-2"></i>
+                                        No assignments have been posted for this class yet.
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Recent Announcements -->
+                        <div class="card shadow-sm">
+                            <div class="card-header bg-secondary text-white">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-megaphone me-2"></i>
+                                    Recent Announcements
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                {% if announcements %}
+                                    <div class="list-group list-group-flush">
+                                        {% for announcement in announcements %}
+                                        <div class="list-group-item">
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <div class="flex-grow-1">
+                                                    <h6 class="mb-1">{{ announcement.title }}</h6>
+                                                    <p class="mb-1 text-muted">{{ announcement.message }}</p>
+                                                    <small class="text-muted">
+                                                        {{ announcement.created_at.strftime('%B %d, %Y at %I:%M %p') }}
+                                                    </small>
+                                                </div>
+                                                <span class="badge bg-secondary">New</span>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <div class="alert alert-info">
+                                        <i class="bi bi-info-circle me-2"></i>
+                                        No announcements for this class yet.
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
     {% elif section == 'grades' %}
         <!-- Grades View -->
         <div class="row mb-4">

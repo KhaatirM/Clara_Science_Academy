@@ -388,9 +388,16 @@
                                 <tbody>
                                     {% for student in class_students %}
                                         {% set student_grades = grades_by_student.get(student.id, {}) %}
-                                        {% set student_gpa = student_gpas.get(student.id, 0.0) %}
-                                        {% set completed_assignments = student_grades|length %}
-                                        {% set total_assignments = assignments|selectattr('class_id', 'equalto', class.id)|list|length %}
+                                        {% set student_gpa = student_gpas_by_class.get(class.id, {}).get(student.id, 0.0) %}
+                                        {% set class_assignments = assignments|selectattr('class_id', 'equalto', class.id)|list %}
+                                        {% set class_assignment_ids = class_assignments|map(attribute='id')|list %}
+                                        {% set completed_assignments = 0 %}
+                                        {% for assignment_id in class_assignment_ids %}
+                                            {% if assignment_id in student_grades %}
+                                                {% set completed_assignments = completed_assignments + 1 %}
+                                            {% endif %}
+                                        {% endfor %}
+                                        {% set total_assignments = class_assignments|length %}
                                         
                                         <tr>
                                             <td>

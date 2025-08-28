@@ -771,28 +771,44 @@ def student_grades():
             'assignment': grade.assignment
         }
     
-    # Calculate GPA for each student
-    student_gpas = {}
-    for student_id, student_grades in grades_by_student.items():
-        scores = [grade_info['score'] for grade_info in student_grades.values() if 'score' in grade_info]
-        if scores:
-            # Convert percentage to GPA (90-100 = 4.0, 80-89 = 3.0, etc.)
-            gpa_scores = []
-            for score in scores:
-                if score >= 90:
-                    gpa_scores.append(4.0)
-                elif score >= 80:
-                    gpa_scores.append(3.0)
-                elif score >= 70:
-                    gpa_scores.append(2.0)
-                elif score >= 60:
-                    gpa_scores.append(1.0)
-                else:
-                    gpa_scores.append(0.0)
+    # Calculate GPA for each student by class
+    student_gpas_by_class = {}
+    for class_id in class_ids:
+        student_gpas_by_class[class_id] = {}
+        
+        # Get students in this class
+        class_students = students_by_class.get(class_id, [])
+        class_assignments = [a for a in assignments if a.class_id == class_id]
+        class_assignment_ids = [a.id for a in class_assignments]
+        
+        for student in class_students:
+            student_id = student.id
+            # Get grades only for this class's assignments
+            class_grades = {}
+            for assignment_id in class_assignment_ids:
+                if student_id in grades_by_student and assignment_id in grades_by_student[student_id]:
+                    class_grades[assignment_id] = grades_by_student[student_id][assignment_id]
             
-            student_gpas[student_id] = sum(gpa_scores) / len(gpa_scores)
-        else:
-            student_gpas[student_id] = 0.0
+            # Calculate GPA for this specific class
+            scores = [grade_info['score'] for grade_info in class_grades.values() if 'score' in grade_info]
+            if scores:
+                # Convert percentage to GPA (90-100 = 4.0, 80-89 = 3.0, etc.)
+                gpa_scores = []
+                for score in scores:
+                    if score >= 90:
+                        gpa_scores.append(4.0)
+                    elif score >= 80:
+                        gpa_scores.append(3.0)
+                    elif score >= 70:
+                        gpa_scores.append(2.0)
+                    elif score >= 60:
+                        gpa_scores.append(1.0)
+                    else:
+                        gpa_scores.append(0.0)
+                
+                student_gpas_by_class[class_id][student_id] = sum(gpa_scores) / len(gpa_scores)
+            else:
+                student_gpas_by_class[class_id][student_id] = 0.0
     
     return render_template('role_teacher_dashboard.html', 
                          teacher=teacher,
@@ -800,7 +816,7 @@ def student_grades():
                          assignments=assignments,
                          students_by_class=students_by_class,
                          grades_by_student=grades_by_student,
-                         student_gpas=student_gpas,
+                         student_gpas_by_class=student_gpas_by_class,
                          class_filter=class_filter,
                          student_filter=student_filter,
                          section='student-grades',

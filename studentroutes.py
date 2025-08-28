@@ -674,22 +674,78 @@ def student_settings():
 @login_required
 @student_required
 def view_class(class_id):
+    """View comprehensive class information including teacher, students, assignments, grades, and announcements"""
     student = Student.query.get_or_404(current_user.student_id)
     class_obj = Class.query.get_or_404(class_id)
     
-    # Verify student is enrolled in this class - simplified for now
-    # In a real implementation, you'd check Enrollment model
-    # enrollment = Enrollment.query.filter_by(student_id=student.id, class_id=class_id).first()
-    # if not enrollment:
-    #     abort(403)
+    # Verify student is enrolled in this class
+    enrollment = Enrollment.query.filter_by(student_id=student.id, class_id=class_id, is_active=True).first()
+    if not enrollment:
+        flash('You are not enrolled in this class.', 'danger')
+        return redirect(url_for('student.student_classes'))
 
+    # Get teacher information
+    teacher = None
+    if class_obj.teacher_id:
+        teacher = TeacherStaff.query.get(class_obj.teacher_id)
+    
+    # Get all enrolled students in this class
+    enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
+    enrolled_students = [enrollment.student for enrollment in enrollments]
+    
+    # Get assignments for this class
     assignments = Assignment.query.filter_by(class_id=class_id).order_by(Assignment.due_date.desc()).all()
     
     # Get submissions and grades for this student
     student_grades = {g.assignment_id: json.loads(g.grade_data) for g in Grade.query.filter_by(student_id=student.id).all()}
     student_submissions = {s.assignment_id: s for s in Submission.query.filter_by(student_id=student.id).all()}
-
-    return render_template('role_student_forms.html', class_obj=class_obj, assignments=assignments, grades=student_grades, submissions=student_submissions)
+    
+    # Get announcements for this class
+    announcements = Announcement.query.filter_by(class_id=class_id).order_by(Announcement.created_at.desc()).limit(5).all()
+    
+    # Calculate student's GPA for this class
+    class_gpa = 0.0
+    if assignments:
+        scores = []
+        for assignment in assignments:
+            if assignment.id in student_grades:
+                score = student_grades[assignment.id].get('score', 0)
+                if score is not None:
+                    scores.append(score)
+        
+        if scores:
+            # Convert percentage to GPA (90-100 = 4.0, 80-89 = 3.0, etc.)
+            gpa_scores = []
+            for score in scores:
+                if score >= 90:
+                    gpa_scores.append(4.0)
+                elif score >= 80:
+                    gpa_scores.append(3.0)
+                elif score >= 70:
+                    gpa_scores.append(2.0)
+                elif score >= 60:
+                    gpa_scores.append(1.0)
+                else:
+                    gpa_scores.append(0.0)
+            
+            class_gpa = sum(gpa_scores) / len(gpa_scores)
+    
+    # Get current date for assignment status
+    from datetime import datetime
+    today = datetime.now()
+    
+    return render_template('role_student_dashboard.html', 
+                         **create_template_context(student, 'classes', 'classes'),
+                         class_obj=class_obj,
+                         teacher=teacher,
+                         enrolled_students=enrolled_students,
+                         assignments=assignments,
+                         grades=student_grades,
+                         submissions=student_submissions,
+                         announcements=announcements,
+                         class_gpa=class_gpa,
+                         today=today,
+                         show_class_details=True)
 
 
 @student_blueprint.route('/class/<int:class_id>/assignments')

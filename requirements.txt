@@ -1,11 +1,11 @@
 Flask
 Flask-Login
 Flask-SQLAlchemy
-Flask-Migrate
+# Flask-Migrate  # Temporarily disabled due to import issues
 gunicorn
 python-dotenv
 psycopg2-binary
-pdfkit
+# pdfkit  # Temporarily disabled due to import issues
 psutil
-PyPDF2
-pdfplumber
+# PyPDF2  # Temporarily disabled due to import issues
+# pdfplumber  # Temporarily disabled due to import issues

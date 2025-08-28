@@ -489,67 +489,13 @@ def view_report_card(report_card_id):
 
     return render_template('report_card_detail.html', report_card=report_card, grades=grades, attendance=attendance)
 
-@management_blueprint.route('/report/card/pdf/<int:report_card_id>')
-@login_required
-@management_required
-def generate_report_card_pdf(report_card_id):
-    if pdfkit is None:
-        flash('PDF generation is not available. Please install pdfkit.', 'danger')
-        return redirect(url_for('management.view_report_card', report_card_id=report_card_id))
-        
-    report_card = ReportCard.query.get_or_404(report_card_id)
-    student = report_card.student
-    grades = json.loads(report_card.grades_details) if report_card.grades_details else {}
-    
-    # Dummy attendance data
-    attendance = {"Present": 45, "Absent": 2, "Tardy": 1}
-
-    # Choose template based on grade level
-    grade_level = student.grade_level
-    if grade_level in [1, 2]:
-        template_name = 'official_report_card_pdf_template_1_2.html'
-    elif grade_level == 3:
-        template_name = 'official_report_card_pdf_template_3.html'
-    elif grade_level in [4, 5, 6, 7, 8]:
-        template_name = 'official_report_card_pdf_template_4_8.html'
-    else:
-        flash(f"No report card template for grade level {grade_level}.", "danger")
-        return redirect(url_for('management.view_report_card', report_card_id=report_card_id))
-        
-    rendered_template = render_template(
-        template_name, 
-        report_card=report_card, 
-        student=student, 
-        grades=grades, 
-        attendance=attendance
-    )
-    
-    # Get path to CSS file
-    css_path = os.path.join(current_app.root_path, 'static', 'report_card_styles.css')
-    
-    options = {
-        'page-size': 'Letter',
-        'margin-top': '0.75in',
-        'margin-right': '0.75in',
-        'margin-bottom': '0.75in',
-        'margin-left': '0.75in',
-        'encoding': "UTF-8",
-        'no-outline': None
-    }
-
-    try:
-        # Generate PDF from rendered HTML
-        pdf = pdfkit.from_string(rendered_template, False, options=options, css=css_path)
-        
-        # Create a response to send the PDF to the browser
-        response = Response(pdf, mimetype='application/pdf')
-        response.headers['Content-Disposition'] = f'inline; filename=ReportCard_{student.last_name}_{report_card.id}.pdf'
-        
-        return response
-    except Exception as e:
-        current_app.logger.error(f"PDF generation failed for report card {report_card_id}: {e}")
-        flash(f'Could not generate PDF. Please ensure wkhtmltopdf is installed and configured correctly. Error: {e}', 'danger')
-        return redirect(url_for('management.view_report_card', report_card_id=report_card_id))
+# @management_blueprint.route('/report/card/pdf/<int:report_card_id>')
+# @login_required
+# @management_required
+# def generate_report_card_pdf(report_card_id):
+#     # PDF generation temporarily disabled due to import issues
+#     flash('PDF generation is temporarily unavailable. Please check back later.', 'warning')
+#     return redirect(url_for('management.view_report_card', report_card_id=report_card_id))
 
 @management_blueprint.route('/students')
 @login_required
@@ -2674,338 +2620,35 @@ def get_academic_dates_for_calendar(year, month):
     return academic_dates
 
 
-@management_blueprint.route('/upload-calendar-pdf', methods=['POST'])
-@login_required
-@management_required
-def upload_calendar_pdf():
-    """Upload and process a school calendar PDF."""
-    if 'calendar_pdf' not in request.files:
-        flash('No PDF file selected.', 'danger')
-        return redirect(url_for('management.school_years'))
-    
-    file = request.files['calendar_pdf']
-    school_year_id = request.form.get('school_year')
-    calendar_name = request.form.get('calendar_name', 'School Calendar')
-    
-    if file.filename == '':
-        flash('No PDF file selected.', 'danger')
-        return redirect(url_for('management.school_years'))
-    
-    if not school_year_id:
-        flash('Please select a school year.', 'danger')
-        return redirect(url_for('management.school_years'))
-    
-    if file and file.filename.lower().endswith('.pdf'):
-        try:
-            # Save the PDF file
-            filename = secure_filename(f"calendar_{school_year_id}_{int(time.time())}.pdf")
-            filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
-            file.save(filepath)
-            
-            # Process the PDF to extract calendar information
-            calendar_data = process_calendar_pdf(filepath)
-            
-            # Store the calendar data in the database
-            store_calendar_data(calendar_data, school_year_id, filename)
-            
-            flash(f'Calendar PDF uploaded and processed successfully! Found {len(calendar_data["holidays"])} holidays, {len(calendar_data["breaks"])} breaks, and {len(calendar_data["professional_development"])} PD days.', 'success')
-            
-        except Exception as e:
-            flash(f'Error processing calendar PDF: {str(e)}', 'danger')
-    else:
-        flash('Please upload a valid PDF file.', 'danger')
-    
-    return redirect(url_for('management.school_years'))
+# @management_blueprint.route('/upload-calendar-pdf', methods=['POST'])
+# @login_required
+# @management_required
+# def upload_calendar_pdf():
+#     """Upload and process a school calendar PDF."""
+#     # PDF processing temporarily disabled due to import issues
+#     flash('PDF processing is temporarily unavailable. Please check back later.', 'warning')
+#     return redirect(url_for('management.school_years'))
 
 
-def process_calendar_pdf(filepath):
-    """Process a PDF calendar to extract important dates."""
-    try:
-        calendar_data = {
-            'school_year_start': None,
-            'school_year_end': None,
-            'quarters': [],
-            'holidays': [],
-            'breaks': [],
-            'professional_development': [],
-            'parent_teacher_conferences': [],
-            'early_dismissal': [],
-            'no_school': []
-        }
-        
-        # Try to extract text using pdfplumber first (better for complex layouts)
-        try:
-            with pdfplumber.open(filepath) as pdf:
-                text_content = ""
-                for page in pdf.pages:
-                    if page.extract_text():
-                        text_content += page.extract_text() + "\n"
-        except Exception as e:
-            current_app.logger.warning(f"pdfplumber failed, trying PyPDF2: {str(e)}")
-            # Fallback to PyPDF2
-            with open(filepath, 'rb') as file:
-                pdf_reader = PyPDF2.PdfReader(file)
-                text_content = ""
-                for page in pdf_reader.pages:
-                    text_content += page.extract_text() + "\n"
-        
-        if not text_content.strip():
-            raise Exception("Could not extract text from PDF")
-        
-        # Convert to lowercase for easier pattern matching
-        text_lower = text_content.lower()
-        
-        # Extract school year dates
-        calendar_data.update(extract_school_year_dates(text_content, text_lower))
-        
-        # Extract academic periods (quarters/semesters)
-        calendar_data.update(extract_academic_periods(text_content, text_lower))
-        
-        # Extract holidays and special events
-        calendar_data.update(extract_holidays_and_events(text_content, text_lower))
-        
-        # Extract breaks and vacations
-        calendar_data.update(extract_breaks_and_vacations(text_content, text_lower))
-        
-        # Extract professional development and conference dates
-        calendar_data.update(extract_professional_dates(text_content, text_lower))
-        
-        current_app.logger.info(f"Successfully processed PDF calendar: {len(calendar_data['holidays'])} holidays, {len(calendar_data['breaks'])} breaks found")
-        
-        return calendar_data
-        
-    except Exception as e:
-        current_app.logger.error(f"Error processing PDF: {str(e)}")
-        raise
+# def process_calendar_pdf(filepath):
+#     """Process a PDF calendar to extract important dates."""
+#     # PDF processing temporarily disabled due to import issues
+#     return {}
 
-def extract_school_year_dates(text_content, text_lower):
-    """Extract school year start and end dates."""
-    dates = {
-        'school_year_start': None,
-        'school_year_end': None
-    }
-    
-    # Common patterns for school year dates
-    patterns = [
-        r'school\s+year\s+(\d{4})[-\s]+(\d{4})',
-        r'(\d{4})[-\s]+(\d{4})\s+school\s+year',
-        r'(\d{4})[-\s]+(\d{4})\s+academic\s+year',
-        r'(\d{4})[-\s]+(\d{4})\s+calendar'
-    ]
-    
-    for pattern in patterns:
-        match = re.search(pattern, text_lower)
-        if match:
-            year1, year2 = int(match.group(1)), int(match.group(2))
-            # Assume school year starts in August/September and ends in May/June
-            dates['school_year_start'] = date(year1, 8, 1)  # August 1st
-            dates['school_year_end'] = date(year2, 6, 30)   # June 30th
-            break
-    
-    # Look for specific start/end dates
-    start_patterns = [
-        r'first\s+day\s+of\s+school[:\s]*(\w+\s+\d{1,2},?\s+\d{4})',
-        r'school\s+starts[:\s]*(\w+\s+\d{1,2},?\s+\d{4})',
-        r'classes\s+begin[:\s]*(\w+\s+\d{1,2},?\s+\d{4})'
-    ]
-    
-    end_patterns = [
-        r'last\s+day\s+of\s+school[:\s]*(\w+\s+\d{1,2},?\s+\d{4})',
-        r'school\s+ends[:\s]*(\w+\s+\d{1,2},?\s+\d{4})',
-        r'classes\s+end[:\s]*(\w+\s+\d{1,2},?\s+\d{4})'
-    ]
-    
-    for pattern in start_patterns:
-        match = re.search(pattern, text_lower)
-        if match:
-            try:
-                date_str = match.group(1)
-                parsed_date = parse_date_string(date_str)
-                if parsed_date:
-                    dates['school_year_start'] = parsed_date
-                    break
-            except:
-                continue
-    
-    for pattern in end_patterns:
-        match = re.search(pattern, text_lower)
-        if match:
-            try:
-                date_str = match.group(1)
-                parsed_date = parse_date_string(date_str)
-                if parsed_date:
-                    dates['school_year_end'] = parsed_date
-                    break
-            except:
-                continue
-    
-    return dates
+# def extract_school_year_dates(text_content, text_lower):
+#     """Extract school year start and end dates."""
+#     # PDF processing temporarily disabled due to import issues
+#     return {'school_year_start': None, 'school_year_end': None}
 
-def extract_academic_periods(text_content, text_lower):
-    """Extract quarter and semester dates."""
-    periods = {
-        'quarters': [],
-        'semesters': []
-    }
-    
-    # Quarter patterns
-    quarter_patterns = [
-        r'quarter\s+(\d)[:\s]*(\w+\s+\d{1,2},?\s+\d{4})[-\s]+(\w+\s+\d{1,2},?\s+\d{4})',
-        r'q(\d)[:\s]*(\w+\s+\d{1,2},?\s+\d{4})[-\s]+(\w+\s+\d{1,2},?\s+\d{4})',
-        r'(\w+\s+\d{1,2},?\s+\d{4})[-\s]+(\w+\s+\d{1,2},?\s+\d{4})[:\s]*quarter\s+(\d)'
-    ]
-    
-    # Semester patterns
-    semester_patterns = [
-        r'semester\s+(\d)[:\s]*(\w+\s+\d{1,2},?\s+\d{4})[-\s]+(\w+\s+\d{1,2},?\s+\d{4})',
-        r's(\d)[:\s]*(\w+\s+\d{1,2},?\s+\d{4})[-\s]+(\w+\s+\d{1,2},?\s+\d{4})'
-    ]
-    
-    # Extract quarters
-    for pattern in quarter_patterns:
-        matches = re.finditer(pattern, text_lower)
-        for match in matches:
-            try:
-                if len(match.groups()) == 3:
-                    if 'quarter' in pattern or 'q' in pattern:
-                        quarter_num = int(match.group(1))
-                        start_date = parse_date_string(match.group(2))
-                        end_date = parse_date_string(match.group(3))
-                    else:
-                        start_date = parse_date_string(match.group(1))
-                        end_date = parse_date_string(match.group(2))
-                        quarter_num = int(match.group(3))
-                    
-                    if start_date and end_date:
-                        periods['quarters'].append({
-                            'name': f'Q{quarter_num}',
-                            'start_date': start_date,
-                            'end_date': end_date
-                        })
-            except:
-                continue
-    
-    # Extract semesters
-    for pattern in semester_patterns:
-        matches = re.finditer(pattern, text_lower)
-        for match in matches:
-            try:
-                semester_num = int(match.group(1))
-                start_date = parse_date_string(match.group(2))
-                end_date = parse_date_string(match.group(3))
-                
-                if start_date and end_date:
-                    periods['semesters'].append({
-                        'name': f'S{semester_num}',
-                        'start_date': start_date,
-                        'end_date': end_date
-                    })
-            except:
-                continue
-    
-    return periods
+# def extract_academic_periods(text_content, text_lower):
+#     """Extract quarter and semester dates."""
+#     # PDF processing temporarily disabled due to import issues
+#     return {'quarters': [], 'semesters': []}
 
-def extract_holidays_and_events(text_content, text_lower):
-    """Extract holidays and special event dates."""
-    events = {
-        'holidays': [],
-        'parent_teacher_conferences': [],
-        'early_dismissal': [],
-        'no_school': []
-    }
-    
-    # Common holiday patterns
-    holiday_patterns = [
-        (r'(\w+\s+\d{1,2},?\s+\d{4})[:\s]*labor\s+day', 'Labor Day'),
-        (r'(\w+\s+\d{1,2},?\s+\d{4})[:\s]*columbus\s+day', 'Columbus Day'),
-        (r'(\w+\s+\d{1,2},?\s+\d{4})[:\s]*veterans\s+day', 'Veterans Day'),
-        (r'(\w+\s+\d{1,2},?\s+\d{4})[:\s]*thanksgiving', 'Thanksgiving'),
-        (r'(\w+\s+\d{1,2},?\s+\d{4})[:\s]*christmas', 'Christmas'),
-        (r'(\w+\s+\d{1,2},?\s+\d{4})[:\s]*new\s+year', 'New Year'),
-        (r'(\w+\s+\d{1,2},?\s+\d{4})[:\s]*martin\s+luther\s+king', 'Martin Luther King Jr. Day'),
-        (r'(\w+\s+\d{1,2},?\s+\d{4})[:\s]*presidents\s+day', 'Presidents Day'),
-        (r'(\w+\s+\d{1,2},?\s+\d{4})[:\s]*memorial\s+day', 'Memorial Day'),
-        (r'(\w+\s+\d{1,2},?\s+\d{4})[:\s]*independence\s+day', 'Independence Day')
-    ]
-    
-    for pattern, holiday_name in holiday_patterns:
-        matches = re.finditer(pattern, text_lower)
-        for match in matches:
-            try:
-                date_str = match.group(1)
-                parsed_date = parse_date_string(date_str)
-                if parsed_date:
-                    events['holidays'].append({
-                        'name': holiday_name,
-                        'date': parsed_date
-                    })
-            except:
-                continue
-    
-    # Parent-teacher conference patterns
-    ptc_patterns = [
-        r'(\w+\s+\d{1,2},?\s+\d{4})[:\s]*parent[-\s]*teacher\s+conference',
-        r'parent[-\s]*teacher\s+conference[:\s]*(\w+\s+\d{1,2},?\s+\d{4})',
-        r'ptc[:\s]*(\w+\s+\d{1,2},?\s+\d{4})'
-    ]
-    
-    for pattern in ptc_patterns:
-        matches = re.finditer(pattern, text_lower)
-        for match in matches:
-            try:
-                date_str = match.group(1)
-                parsed_date = parse_date_string(date_str)
-                if parsed_date:
-                    events['parent_teacher_conferences'].append({
-                        'name': 'Parent-Teacher Conference',
-                        'date': parsed_date
-                    })
-            except:
-                continue
-    
-    # Early dismissal patterns
-    early_patterns = [
-        r'(\w+\s+\d{1,2},?\s+\d{4})[:\s]*early\s+dismissal',
-        r'early\s+dismissal[:\s]*(\w+\s+\d{1,2},?\s+\d{4})'
-    ]
-    
-    for pattern in early_patterns:
-        matches = re.finditer(pattern, text_lower)
-        for match in matches:
-            try:
-                date_str = match.group(1)
-                parsed_date = parse_date_string(date_str)
-                if parsed_date:
-                    events['early_dismissal'].append({
-                        'name': 'Early Dismissal',
-                        'date': parsed_date
-                    })
-            except:
-                continue
-    
-    # No school patterns
-    no_school_patterns = [
-        r'(\w+\s+\d{1,2},?\s+\d{4})[:\s]*no\s+school',
-        r'no\s+school[:\s]*(\w+\s+\d{1,2},?\s+\d{4})',
-        r'(\w+\s+\d{1,2},?\s+\d{4})[:\s]*school\s+closed',
-        r'school\s+closed[:\s]*(\w+\s+\d{1,2},?\s+\d{4})'
-    ]
-    
-    for pattern in no_school_patterns:
-        matches = re.finditer(pattern, text_lower)
-        for match in matches:
-            try:
-                date_str = match.group(1)
-                parsed_date = parse_date_string(date_str)
-                if parsed_date:
-                    events['no_school'].append({
-                        'name': 'No School',
-                        'date': parsed_date
-                    })
-            except:
-                continue
-    
-    return events
+# def extract_holidays_and_events(text_content, text_lower):
+#     """Extract holidays and special event dates."""
+#     # PDF processing temporarily disabled due to import issues
+#     return {'holidays': [], 'parent_teacher_conferences': [], 'early_dismissal': [], 'no_school': []}
 
 def extract_breaks_and_vacations(text_content, text_lower):
     """Extract vacation and break dates."""
@@ -3359,121 +3002,7 @@ def remove_student(student_id):
     flash('Student removed successfully.', 'success')
     return redirect(url_for('management.students'))
 
-def store_calendar_data(calendar_data, school_year_id, pdf_filename):
-    """Store extracted calendar data in the database."""
-    try:
-        # Clear existing calendar events for this school year
-        CalendarEvent.query.filter_by(school_year_id=school_year_id).delete()
-        
-        events_added = 0
-        
-        # Store holidays
-        for holiday in calendar_data.get('holidays', []):
-            event = CalendarEvent(
-                school_year_id=school_year_id,
-                event_type='holiday',
-                name=holiday['name'],
-                start_date=holiday['date'],
-                end_date=holiday['date'],
-                pdf_filename=pdf_filename
-            )
-            db.session.add(event)
-            events_added += 1
-        
-        # Store breaks
-        for break_event in calendar_data.get('breaks', []):
-            event = CalendarEvent(
-                school_year_id=school_year_id,
-                event_type='break',
-                name=break_event['name'],
-                start_date=break_event['start_date'],
-                end_date=break_event['end_date'],
-                pdf_filename=pdf_filename
-            )
-            db.session.add(event)
-            events_added += 1
-        
-        # Store professional development days
-        for pd_day in calendar_data.get('professional_development', []):
-            event = CalendarEvent(
-                school_year_id=school_year_id,
-                event_type='professional_development',
-                name=pd_day['name'],
-                start_date=pd_day['date'],
-                end_date=pd_day['date'],
-                pdf_filename=pdf_filename
-            )
-            db.session.add(event)
-            events_added += 1
-        
-        # Store parent-teacher conferences
-        for ptc in calendar_data.get('parent_teacher_conferences', []):
-            event = CalendarEvent(
-                school_year_id=school_year_id,
-                event_type='parent_teacher_conference',
-                name=ptc['name'],
-                start_date=ptc['date'],
-                end_date=ptc['date'],
-                pdf_filename=pdf_filename
-            )
-            db.session.add(event)
-            events_added += 1
-        
-        # Store early dismissal days
-        for early in calendar_data.get('early_dismissal', []):
-            event = CalendarEvent(
-                school_year_id=school_year_id,
-                event_type='early_dismissal',
-                name=early['name'],
-                start_date=early['date'],
-                end_date=early['date'],
-                pdf_filename=pdf_filename
-            )
-            db.session.add(event)
-            events_added += 1
-        
-        # Store no school days
-        for no_school in calendar_data.get('no_school', []):
-            event = CalendarEvent(
-                school_year_id=school_year_id,
-                event_type='no_school',
-                name=no_school['name'],
-                start_date=no_school['date'],
-                end_date=no_school['date'],
-                pdf_filename=pdf_filename
-            )
-            db.session.add(event)
-            events_added += 1
-        
-        # Store academic periods if found
-        for quarter in calendar_data.get('quarters', []):
-            event = CalendarEvent(
-                school_year_id=school_year_id,
-                event_type='quarter',
-                name=quarter['name'],
-                start_date=quarter['start_date'],
-                end_date=quarter['end_date'],
-                pdf_filename=pdf_filename
-            )
-            db.session.add(event)
-            events_added += 1
-        
-        for semester in calendar_data.get('semesters', []):
-            event = CalendarEvent(
-                school_year_id=school_year_id,
-                event_type='semester',
-                name=semester['name'],
-                start_date=semester['start_date'],
-                end_date=semester['end_date'],
-                pdf_filename=pdf_filename
-            )
-            db.session.add(event)
-            events_added += 1
-        
-        db.session.commit()
-        current_app.logger.info(f"Stored {events_added} calendar events in database")
-        
-    except Exception as e:
-        current_app.logger.error(f"Error storing calendar data: {str(e)}")
-        db.session.rollback()
-        raise
+# def store_calendar_data(calendar_data, school_year_id, pdf_filename):
+#     """Store extracted calendar data in the database."""
+#     # PDF processing temporarily disabled due to import issues
+#     pass

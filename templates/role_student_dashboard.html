@@ -1644,6 +1644,25 @@
     {% elif section == 'assignments' %}
         <!-- Assignments List View -->
         <h2 class="mb-4">My Assignments</h2>
+        
+        <!-- Debug Test Button -->
+        <div class="alert alert-info mb-3">
+            <button type="button" class="btn btn-sm btn-outline-primary me-2" onclick="testJavaScript()">Test JavaScript</button>
+            <button type="button" class="btn btn-sm btn-outline-success me-2" onclick="testBootstrap()">Test Bootstrap</button>
+            <button type="button" class="btn btn-sm btn-outline-warning" onclick="testModals()">Test Modals</button>
+            <button type="button" class="btn btn-sm btn-outline-info" onclick="showDebugInfo()">Show Debug Info</button>
+            <small class="text-muted">Use these buttons to test if JavaScript and Bootstrap are working properly.</small>
+        </div>
+        
+        <!-- Debug Information (hidden by default) -->
+        <div id="debugInfo" class="alert alert-secondary mb-3" style="display: none;">
+            <h6>Debug Information:</h6>
+            <p><strong>Assignments with status count:</strong> {{ assignments_with_status|length if assignments_with_status else 0 }}</p>
+            <p><strong>Grades count:</strong> {{ grades|length if grades else 0 }}</p>
+            <p><strong>Today:</strong> {{ today.strftime('%Y-%m-%d %H:%M:%S') if today else 'Not set' }}</p>
+            <p><strong>Section:</strong> {{ section }}</p>
+            <p><strong>Active Tab:</strong> {{ active_tab }}</p>
+        </div>
 
         <div class="card shadow-sm">
             <div class="card-body">
@@ -1658,66 +1677,85 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for assignment, submission in assignments_with_status %}
-                            <tr>
-                                <td>{{ assignment.due_date.strftime('%Y-%m-%d') }}</td>
-                                <td>
-                                    <div>
-                                        <strong>{{ assignment.title }}</strong>
-                                        {% if assignment.attachment_filename %}
-                                            <br><small class="text-primary">
-                                                <i class="bi bi-paperclip me-1"></i>
-                                                <a href="{{ url_for('download_assignment_file', assignment_id=assignment.id) }}" class="text-decoration-none">
-                                                    {{ assignment.attachment_original_filename }}
-                                                </a>
-                                            </small>
-                                        {% endif %}
-                                    </div>
-                                </td>
-                                <td>{{ assignment.class_info.name }}</td>
-                                <td>
-                                    {% if submission %}
-                                        {% if grades.get(assignment.id) %}
-                                            <span class="badge bg-success">Graded</span>
-                                        {% else %}
-                                            <span class="badge bg-info">Submitted</span>
-                                        {% endif %}
-                                    {% else %}
-                                        {% if assignment.due_date and assignment.due_date.date() < today.date() %}
-                                            <span class="badge bg-danger">Past Due</span>
-                                        {% else %}
-                                            <span class="badge bg-warning text-dark">Not Submitted</span>
-                                        {% endif %}
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <div class="d-flex flex-column gap-1">
-                                        <!-- View Button -->
-                                        <button type="button" class="btn btn-sm btn-outline-info" onclick="openAssignmentViewModal({{ assignment.id }}, '{{ assignment.title|replace("'", "\\'")|replace('"', '\\"') }}', '{{ (assignment.description or '')|replace("'", "\\'")|replace('"', '\\"') }}', '{{ assignment.due_date.strftime('%B %d, %Y at %I:%M %p') if assignment.due_date else 'No due date' }}', '{{ assignment.quarter }}', '{{ (assignment.attachment_filename or '')|replace("'", "\\'")|replace('"', '\\"') }}', {{ 'true' if submission else 'false' }}, {{ 'true' if grades.get(assignment.id) else 'false' }})">
-                                            <i class="bi bi-eye me-1"></i>View
-                                        </button>
-                                        
+                        {% if assignments_with_status %}
+                            {% for assignment, submission in assignments_with_status %}
+                                <tr>
+                                    <td>{{ assignment.due_date.strftime('%Y-%m-%d') if assignment.due_date else 'No due date' }}</td>
+                                    <td>
+                                        <div>
+                                            <strong>{{ assignment.title }}</strong>
+                                            {% if assignment.attachment_filename %}
+                                                <br><small class="text-primary">
+                                                    <i class="bi bi-paperclip me-1"></i>
+                                                    <a href="{{ url_for('student.download_assignment_file', assignment_id=assignment.id) }}" class="text-decoration-none">
+                                                        {{ assignment.attachment_original_filename or assignment.attachment_filename }}
+                                                    </a>
+                                                </small>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td>{{ assignment.class_info.name if assignment.class_info else 'Unknown Class' }}</td>
+                                    <td>
                                         {% if submission %}
-                                            <!-- Show existing submission info -->
-                                            <span class="badge bg-success">Submitted</span>
-                                            <small class="text-muted">{{ submission.submitted_at.strftime('%b %d, %Y') if submission.submitted_at else 'Unknown date' }}</small>
-                                            <button type="button" class="btn btn-sm btn-outline-warning" onclick="openSubmissionModal({{ assignment.id }}, '{{ assignment.title|replace("'", "\\'")|replace('"', '\\"') }}', true)">
-                                                <i class="bi bi-pencil me-1"></i>Resubmit
-                                            </button>
+                                            {% if grades.get(assignment.id) %}
+                                                <span class="badge bg-success">Graded</span>
+                                            {% else %}
+                                                <span class="badge bg-info">Submitted</span>
+                                            {% endif %}
                                         {% else %}
-                                            <!-- Show submit button -->
-                                            <button type="button" class="btn btn-sm btn-primary" onclick="openSubmissionModal({{ assignment.id }}, '{{ assignment.title|replace("'", "\\'")|replace('"', '\\"') }}', false)">
-                                                <i class="bi bi-upload me-1"></i>Submit
-                                            </button>
+                                            {% if assignment.due_date and assignment.due_date.date() < today.date() %}
+                                                <span class="badge bg-danger">Past Due</span>
+                                            {% else %}
+                                                <span class="badge bg-warning text-dark">Not Submitted</span>
+                                            {% endif %}
                                         {% endif %}
-                                    </div>
-                                </td>
-                            </tr>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex flex-column gap-1">
+                                            <!-- View Button -->
+                                            <button type="button" class="btn btn-sm btn-outline-info view-assignment-btn"
+                                                    data-assignment-id="{{ assignment.id }}"
+                                                    data-assignment-title="{{ assignment.title }}"
+                                                    data-assignment-description="{{ assignment.description or '' }}"
+                                                    data-assignment-due-date="{{ assignment.due_date.strftime('%B %d, %Y at %I:%M %p') if assignment.due_date else 'No due date' }}"
+                                                    data-assignment-quarter="{{ assignment.quarter }}"
+                                                    data-assignment-attachment="{{ assignment.attachment_filename or '' }}"
+                                                    data-has-submission="{{ 'true' if submission else 'false' }}"
+                                                    data-has-grade="{{ 'true' if grades.get(assignment.id) else 'false' }}"
+                                                    onclick="fallbackViewAssignment({{ assignment.id }}, '{{ assignment.title|replace("'", "\\'")|replace('"', '\\"') }}', '{{ (assignment.description or '')|replace("'", "\\'")|replace('"', '\\"') }}', '{{ assignment.due_date.strftime('%B %d, %Y at %I:%M %p') if assignment.due_date else 'No due date' }}', '{{ assignment.quarter }}', '{{ (assignment.attachment_filename or '')|replace("'", "\\'")|replace('"', '\\"') }}', {{ 'true' if submission else 'false' }}, {{ 'true' if grades.get(assignment.id) else 'false' }})">
+                                                <i class="bi bi-eye me-1"></i>View
+                                            </button>
+                                            
+                                            {% if submission %}
+                                                <!-- Show existing submission info -->
+                                                <span class="badge bg-success">Submitted</span>
+                                                <small class="text-muted">{{ submission.submitted_at.strftime('%b %d, %Y') if submission.submitted_at else 'Unknown date' }}</small>
+                                                <button type="button" class="btn btn-sm btn-outline-warning submit-assignment-btn"
+                                                        data-assignment-id="{{ assignment.id }}"
+                                                        data-assignment-title="{{ assignment.title }}"
+                                                        data-is-resubmit="true"
+                                                        onclick="fallbackSubmitAssignment({{ assignment.id }}, '{{ assignment.title|replace("'", "\\'")|replace('"', '\\"') }}', true)">
+                                                    <i class="bi bi-pencil me-1"></i>Resubmit
+                                                </button>
+                                            {% else %}
+                                                <!-- Show submit button -->
+                                                <button type="button" class="btn btn-sm btn-primary submit-assignment-btn"
+                                                        data-assignment-id="{{ assignment.id }}"
+                                                        data-assignment-title="{{ assignment.title }}"
+                                                        data-is-resubmit="false"
+                                                        onclick="fallbackSubmitAssignment({{ assignment.id }}, '{{ assignment.title|replace("'", "\\'")|replace('"', '\\"') }}', false)">
+                                                    <i class="bi bi-upload me-1"></i>Submit
+                                                </button>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
                         {% else %}
                             <tr>
                                 <td colspan="5" class="text-center text-muted">You have no assignments.</td>
                             </tr>
-                        {% endfor %}
+                        {% endif %}
                     </tbody>
                 </table>
             </div>
@@ -3505,5 +3543,170 @@
             </div>
         </div>
     </div>
+
+         <!-- Fallback Functions for Assignment Buttons -->
+     <script>
+     // Test if JavaScript is working at all
+     console.log('Student dashboard JavaScript loaded');
+     
+     // Test if basic functions exist
+     if (typeof openAssignmentViewModal === 'undefined') {
+         console.error('openAssignmentViewModal function is not defined!');
+     }
+     if (typeof openSubmissionModal === 'undefined') {
+         console.error('openSubmissionModal function is not defined!');
+     }
+     
+     // Test functions for debugging
+     window.testJavaScript = function() {
+         console.log('JavaScript test function called');
+         alert('JavaScript is working! Check the console for more details.');
+     };
+     
+     window.testBootstrap = function() {
+         if (typeof bootstrap === 'undefined') {
+             alert('Bootstrap is NOT loaded! This will prevent modals from working.');
+         } else {
+             alert('Bootstrap is loaded successfully!');
+         }
+     };
+     
+     window.testModals = function() {
+         const assignmentViewModal = document.getElementById('assignmentViewModal');
+         const submissionModal = document.getElementById('submissionModal');
+         
+         let message = 'Modal elements found:\n';
+         message += assignmentViewModal ? '✓ assignmentViewModal\n' : '✗ assignmentViewModal\n';
+         message += submissionModal ? '✓ submissionModal\n' : '✗ submissionModal\n';
+         
+         alert(message);
+     };
+     
+     window.showDebugInfo = function() {
+         const debugInfo = document.getElementById('debugInfo');
+         if (debugInfo.style.display === 'none') {
+             debugInfo.style.display = 'block';
+         } else {
+             debugInfo.style.display = 'none';
+         }
+     };
+     
+     // Fallback functions that work even if the event listeners fail
+     function fallbackViewAssignment(assignmentId, assignmentTitle, assignmentDescription, assignmentDueDate, assignmentQuarter, assignmentAttachment, hasSubmission, hasGrade) {
+         console.log('Fallback view function called with:', arguments);
+         try {
+             openAssignmentViewModal(assignmentId, assignmentTitle, assignmentDescription, assignmentDueDate, assignmentQuarter, assignmentAttachment, hasSubmission, hasGrade);
+         } catch (error) {
+             console.error('Error in fallback view function:', error);
+             alert('Error opening assignment view. Please try again.');
+         }
+     }
+     
+     function fallbackSubmitAssignment(assignmentId, assignmentTitle, isResubmit) {
+         console.log('Fallback submit function called with:', arguments);
+         try {
+             openSubmissionModal(assignmentId, assignmentTitle, isResubmit);
+         } catch (error) {
+             console.error('Error in fallback submit function:', error);
+             alert('Error opening submission form. Please try again.');
+         }
+     }
+     
+     <!-- Event Listeners for Assignment Buttons -->
+     document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOMContentLoaded event fired');
+        
+        // Debug: Check if Bootstrap is available
+        if (typeof bootstrap === 'undefined') {
+            console.error('Bootstrap is not loaded! This will prevent modals from working.');
+            // Fallback: Add click handlers that show alerts instead of modals
+            document.querySelectorAll('.view-assignment-btn, .submit-assignment-btn').forEach(function(button) {
+                button.addEventListener('click', function() {
+                    alert('Bootstrap is not loaded. Please refresh the page or contact support.');
+                });
+            });
+            return;
+        }
+        
+        console.log('Bootstrap is available');
+        
+        // View Assignment Button Event Listeners
+        const viewButtons = document.querySelectorAll('.view-assignment-btn');
+        console.log('Found', viewButtons.length, 'view assignment buttons');
+        
+        viewButtons.forEach(function(button, index) {
+            console.log('Setting up view button', index, 'with data:', button.dataset);
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                console.log('View button clicked:', this.dataset);
+                
+                try {
+                    const assignmentId = this.dataset.assignmentId;
+                    const assignmentTitle = this.dataset.assignmentTitle;
+                    const assignmentDescription = this.dataset.assignmentDescription;
+                    const assignmentDueDate = this.dataset.assignmentDueDate;
+                    const assignmentQuarter = this.dataset.assignmentQuarter;
+                    const assignmentAttachment = this.dataset.assignmentAttachment;
+                    const hasSubmission = this.dataset.hasSubmission === 'true';
+                    const hasGrade = this.dataset.hasGrade === 'true';
+                    
+                    console.log('Opening view modal with:', {
+                        assignmentId, assignmentTitle, assignmentDescription, 
+                        assignmentDueDate, assignmentQuarter, assignmentAttachment,
+                        hasSubmission, hasGrade
+                    });
+                    
+                    openAssignmentViewModal(assignmentId, assignmentTitle, assignmentDescription, assignmentDueDate, assignmentQuarter, assignmentAttachment, hasSubmission, hasGrade);
+                } catch (error) {
+                    console.error('Error in view button click handler:', error);
+                    alert('Error opening assignment view. Please try again.');
+                }
+            });
+        });
+
+        // Submit Assignment Button Event Listeners
+        const submitButtons = document.querySelectorAll('.submit-assignment-btn');
+        console.log('Found', submitButtons.length, 'submit assignment buttons');
+        
+        submitButtons.forEach(function(button, index) {
+            console.log('Setting up submit button', index, 'with data:', button.dataset);
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                console.log('Submit button clicked:', this.dataset);
+                
+                try {
+                    const assignmentId = this.dataset.assignmentId;
+                    const assignmentTitle = this.dataset.assignmentTitle;
+                    const isResubmit = this.dataset.isResubmit === 'true';
+                    
+                    console.log('Opening submission modal with:', {
+                        assignmentId, assignmentTitle, isResubmit
+                    });
+                    
+                    openSubmissionModal(assignmentId, assignmentTitle, isResubmit);
+                } catch (error) {
+                    console.error('Error in submit button click handler:', error);
+                    alert('Error opening submission form. Please try again.');
+                }
+            });
+        });
+        
+        // Debug: Check if modals exist
+        const assignmentViewModal = document.getElementById('assignmentViewModal');
+        const submissionModal = document.getElementById('submissionModal');
+        
+        if (!assignmentViewModal) {
+            console.error('assignmentViewModal element not found!');
+        } else {
+            console.log('assignmentViewModal element found');
+        }
+        
+        if (!submissionModal) {
+            console.error('submissionModal element not found!');
+        } else {
+            console.log('submissionModal element found');
+        }
+    });
+    </script>
 </div>
 {% endblock %} 

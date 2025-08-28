@@ -3,10 +3,6 @@ from flask_login import login_required, current_user
 from models import db, Student, TeacherStaff, Class, SchoolYear, User, ReportCard, Assignment, Announcement, Message, MessageGroup, ScheduledAnnouncement, Notification, MessageGroupMember, Grade, Enrollment, Attendance, AcademicPeriod, CalendarEvent, TeacherWorkDay, SchoolBreak, Submission
 from decorators import management_required
 from app import calculate_and_get_grade_for_student, get_grade_for_student, create_notification
-try:
-    import pdfkit  # type: ignore
-except ImportError:
-    pdfkit = None
 import os
 import json
 from werkzeug.security import generate_password_hash
@@ -14,8 +10,8 @@ from werkzeug.utils import secure_filename
 from datetime import datetime, timedelta, date
 import time # Added for time.time()
 import re
-import PyPDF2
-import pdfplumber
+# import PyPDF2
+# import pdfplumber
 from sqlalchemy import text
 from werkzeug.security import generate_password_hash
 from add_academic_periods import add_academic_periods_for_year

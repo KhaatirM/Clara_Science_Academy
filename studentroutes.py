@@ -767,11 +767,11 @@ def view_class_assignments(class_id):
     today = datetime.now()
     
     return render_template('role_student_dashboard.html', 
-                         **create_template_context(student, 'classes', 'classes'),
+                         **create_template_context(student, 'classes', 'classes',
+                                                assignments=assignments,
+                                                grades=student_grades,
+                                                submissions=student_submissions),
                          class_obj=class_obj, 
-                         assignments=assignments, 
-                         grades=student_grades, 
-                         submissions=student_submissions,
                          today=today,
                          show_assignments=True)
 

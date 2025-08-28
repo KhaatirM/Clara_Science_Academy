@@ -18,6 +18,13 @@ def tech_dashboard():
     users = User.query.all()
     # Check if maintenance mode is active
     maintenance = MaintenanceMode.query.filter_by(is_active=True).first()
+    
+    # Debug logging for tech dashboard
+    print(f"Tech dashboard - User: {current_user.username}, Role: {current_user.role}")
+    print(f"Maintenance mode: {maintenance.is_active if maintenance else 'None'}")
+    if maintenance:
+        print(f"Maintenance allow_tech_access: {maintenance.allow_tech_access}")
+    
     return render_template('tech_dashboard.html', users=users, maintenance=maintenance)
 
 @tech_blueprint.route('/activity/log')

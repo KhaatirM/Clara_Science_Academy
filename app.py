@@ -375,6 +375,21 @@ def create_app(config_class=Config):
             pass
         
         if maintenance and maintenance.end_time > datetime.now():
+            # Debug logging for maintenance mode
+            print(f"Maintenance mode active: {maintenance.is_active}")
+            print(f"Maintenance end time: {maintenance.end_time}")
+            print(f"Current time: {datetime.now()}")
+            print(f"Allow tech access: {maintenance.allow_tech_access}")
+            if current_user.is_authenticated:
+                print(f"User authenticated: {current_user.username}, Role: {current_user.role}")
+            else:
+                print("User not authenticated")
+            
+            # Allow tech users to bypass maintenance mode
+            if current_user.is_authenticated and current_user.role in ['Tech', 'IT Support', 'Director'] and maintenance.allow_tech_access:
+                print("Tech user bypassing maintenance mode")
+                return render_template('home.html')
+            
             # Calculate progress percentage
             total_duration = (maintenance.end_time - maintenance.start_time).total_seconds()
             elapsed = (datetime.now() - maintenance.start_time).total_seconds()

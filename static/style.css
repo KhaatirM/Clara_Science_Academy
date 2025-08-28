@@ -384,8 +384,31 @@ body {
 
 .sidebar .nav {
     flex: 1 1 auto;
-    /* overflow-y: auto; */
+    overflow-y: auto;
     margin-bottom: 0;
+    /* Custom scrollbar styling */
+    scrollbar-width: thin;
+    scrollbar-color: #6c757d #343a40;
+}
+
+/* Webkit scrollbar styling for Chrome/Safari/Edge */
+.sidebar .nav::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar .nav::-webkit-scrollbar-track {
+    background: #343a40;
+    border-radius: 3px;
+}
+
+.sidebar .nav::-webkit-scrollbar-thumb {
+    background: #6c757d;
+    border-radius: 3px;
+    transition: background 0.2s ease;
+}
+
+.sidebar .nav::-webkit-scrollbar-thumb:hover {
+    background: #0d6efd;
 }
 
 .sidebar .nav-link {
@@ -415,10 +438,14 @@ body {
 }
 
 .logout-btn-container {
-    position: static;
+    position: sticky;
+    bottom: 0;
     margin-top: auto;
     width: 100%;
     padding: 0 20px 20px 20px;
+    background-color: #212529;
+    border-top: 1px solid #343a40;
+    z-index: 1001;
 }
 
 .main-content {
@@ -443,6 +470,16 @@ body {
     justify-content: center;
     padding: 6px 0;
     min-height: 36px;
+}
+
+.sidebar.collapsed .nav {
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #6c757d #343a40;
+}
+
+.sidebar.collapsed .nav::-webkit-scrollbar {
+    width: 4px;
 }
 .sidebar.collapsed .nav-link .bi {
     font-size: 1.1rem;

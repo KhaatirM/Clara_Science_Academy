@@ -803,13 +803,11 @@ def submit_assignment(assignment_id):
     assignment = Assignment.query.get_or_404(assignment_id)
 
     if 'submission_file' not in request.files:
-        flash('No file part', 'danger')
-        return redirect(request.referrer or url_for('student.view_class', class_id=assignment.class_id))
+        return jsonify({'success': False, 'message': 'No file selected'}), 400
     
     file = request.files['submission_file']
     if file.filename == '':
-        flash('No selected file', 'danger')
-        return redirect(request.referrer or url_for('student.view_class', class_id=assignment.class_id))
+        return jsonify({'success': False, 'message': 'No file selected'}), 400
 
     if file and allowed_file(file.filename):
         # Type assertion for filename
@@ -822,6 +820,9 @@ def submit_assignment(assignment_id):
         try:
             file.save(filepath)
             
+            # Get optional notes
+            notes = request.form.get('submission_notes', '')
+            
             # Check for existing submission and update it, or create a new one
             submission = Submission.query.filter_by(student_id=student.id, assignment_id=assignment_id).first()
             if submission:
@@ -830,25 +831,29 @@ def submit_assignment(assignment_id):
                     os.remove(os.path.join(current_app.config['UPLOAD_FOLDER'], submission.file_path))
                 submission.file_path = unique_filename
                 submission.submitted_at = db.func.now()
+                if notes:
+                    submission.notes = notes
             else:
-                # Create new submission using attribute assignment
-                submission = Submission()
-                submission.student_id = student.id
-                submission.assignment_id = assignment_id
-                submission.file_path = unique_filename
+                # Create new submission
+                submission = Submission(
+                    student_id=student.id,
+                    assignment_id=assignment_id,
+                    file_path=unique_filename,
+                    notes=notes,
+                    status='Submitted'
+                )
                 db.session.add(submission)
             
             db.session.commit()
-            flash('Assignment submitted successfully!', 'success')
+            return jsonify({'success': True, 'message': 'Assignment submitted successfully!'}), 200
+            
         except Exception as e:
             db.session.rollback()
-            flash(f'An error occurred while saving the file: {e}', 'danger')
             current_app.logger.error(f"File upload failed for student {student.id}, assignment {assignment_id}: {e}")
+            return jsonify({'success': False, 'message': f'An error occurred while saving the file: {e}'}), 500
 
     else:
-        flash(f'File type not allowed. Allowed types are: {", ".join(ALLOWED_EXTENSIONS)}', 'danger')
-
-    return redirect(url_for('student.view_class', class_id=assignment.class_id))
+        return jsonify({'success': False, 'message': f'File type not allowed. Allowed types are: {", ".join(ALLOWED_EXTENSIONS)}'}), 400
 
 @student_blueprint.route('/notifications/mark-read/<int:notification_id>', methods=['POST'])
 @login_required

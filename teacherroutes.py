@@ -921,7 +921,15 @@ def calendar():
     """View school calendar"""
     from datetime import datetime, timedelta, date
     import calendar as cal
-    import holidays as pyholidays
+    
+    # Try to import holidays module, with fallback
+    try:
+        import holidays as pyholidays
+        holidays_available = True
+    except ImportError:
+        holidays_available = False
+        pyholidays = None
+        print("Warning: holidays module not available. Calendar will show limited holiday information.")
     
     # Import all required models at the top of the function
     from models import AcademicPeriod, CalendarEvent
@@ -994,7 +1002,6 @@ def calendar():
             if event.start_date.month == month:
                 academic_dates.append((event.start_date.day, event.name, event.event_type.replace('_', ' ').title()))
     
-    us_holidays = pyholidays.country_holidays('US', years=[year])
     religious_holidays = get_religious_holidays(year)
     holidays_this_month = []
     
@@ -1003,22 +1010,30 @@ def calendar():
         if hol_date.month == month:
             holidays_this_month.append((hol_date.day, hol_name))
     
-    # Add US Federal holidays with "No School" for weekdays during school year
-    school_year_start = date(year, 8, 1)  # August 1st
-    school_year_end = date(year, 6, 30)   # June 30th
-    
-    for hol_date, hol_name in us_holidays.items():
-        if hol_date.month == month:
-            # Check if it's a weekday (Monday=0, Sunday=6)
-            is_weekday = hol_date.weekday() < 5
-            # Check if it's during school year
-            is_school_year = (hol_date >= school_year_start and hol_date <= school_year_end) or \
-                           (hol_date >= date(year-1, 8, 1) and hol_date <= date(year, 6, 30))
+    # Add US Federal holidays if holidays module is available
+    if holidays_available and pyholidays:
+        try:
+            us_holidays = pyholidays.country_holidays('US', years=[year])
             
-            if is_weekday and is_school_year:
-                holidays_this_month.append((hol_date.day, f"{hol_name} - No School"))
-            else:
-                holidays_this_month.append((hol_date.day, hol_name))
+            # Add US Federal holidays with "No School" for weekdays during school year
+            school_year_start = date(year, 8, 1)  # August 1st
+            school_year_end = date(year, 6, 30)   # June 30th
+            
+            for hol_date, hol_name in us_holidays.items():
+                if hol_date.month == month:
+                    # Check if it's a weekday (Monday=0, Sunday=6)
+                    is_weekday = hol_date.weekday() < 5
+                    # Check if it's during school year
+                    is_school_year = (hol_date >= school_year_start and hol_date <= school_year_end) or \
+                                   (hol_date >= date(year-1, 8, 1) and hol_date <= date(year, 6, 30))
+                    
+                    if is_weekday and is_school_year:
+                        holidays_this_month.append((hol_date.day, f"{hol_name} - No School"))
+                    else:
+                        holidays_this_month.append((hol_date.day, hol_name))
+        except Exception as e:
+            print(f"Error processing US holidays: {e}")
+            # Continue without US holidays
 
     calendar_data = {
         'month_name': month_name,

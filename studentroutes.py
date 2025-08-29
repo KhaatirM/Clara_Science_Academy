@@ -182,8 +182,7 @@ def student_dashboard():
         # Get schedule for this class on today's weekday
         schedule = ClassSchedule.query.filter_by(
             class_id=c.id,
-            day_of_week=today_weekday,
-            is_active=True
+            day_of_week=today_weekday
         ).first()
         
         if schedule:
@@ -319,7 +318,7 @@ def student_assignments():
                          **create_template_context(student, 'assignments', 'assignments',
                              assignments_with_status=assignments_with_status,
                              grades=grades_dict,
-                             today=datetime.now()))
+                             today=datetime.now().date()))
 
 @student_blueprint.route('/classes')
 @login_required

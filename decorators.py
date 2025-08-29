@@ -9,9 +9,7 @@ TEACHER_ROLES = [
     'English Language Arts Teacher',
     'Math Teacher',
     'Substitute Teacher',
-    'School Counselor',
-    'School Administrator',
-    'Director'
+    'School Counselor'
 ]
 
 def is_teacher_role(role):

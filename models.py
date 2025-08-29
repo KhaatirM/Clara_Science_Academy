@@ -331,7 +331,6 @@ class ClassSchedule(db.Model):
     start_time = db.Column(db.Time, nullable=False)
     end_time = db.Column(db.Time, nullable=False)
     room = db.Column(db.String(50), nullable=True)
-    is_active = db.Column(db.Boolean, default=True)
     
     class_info = db.relationship('Class', backref='schedules')
     

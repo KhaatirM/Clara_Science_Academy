@@ -350,6 +350,21 @@ def create_app(config_class=Config):
         except (json.JSONDecodeError, TypeError):
             return {}
 
+    # Add CSP headers to allow necessary JavaScript execution
+    @app.after_request
+    def add_security_headers(response):
+        # Set Content Security Policy to allow inline scripts and eval for necessary functionality
+        response.headers['Content-Security-Policy'] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
+            "img-src 'self' data: https:; "
+            "font-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
+            "connect-src 'self'; "
+            "frame-ancestors 'none';"
+        )
+        return response
+
     # Custom error handlers
     @app.errorhandler(404)
     def not_found_error(error):

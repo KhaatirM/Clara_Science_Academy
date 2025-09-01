@@ -15,6 +15,50 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+def calculate_student_gpa(student_id):
+    """Calculate GPA for a student based on their grades"""
+    try:
+        # Get all grades for the student
+        grades = Grade.query.filter_by(student_id=student_id).all()
+        
+        if not grades:
+            return 0.0
+        
+        total_points = 0
+        total_weight = 0
+        
+        for grade in grades:
+            try:
+                grade_data = json.loads(grade.grade_data)
+                score = grade_data.get('score', 0)
+                
+                # Convert percentage to GPA points (90-100 = 4.0, 80-89 = 3.0, etc.)
+                if score >= 90:
+                    gpa_points = 4.0
+                elif score >= 80:
+                    gpa_points = 3.0
+                elif score >= 70:
+                    gpa_points = 2.0
+                elif score >= 60:
+                    gpa_points = 1.0
+                else:
+                    gpa_points = 0.0
+                
+                total_points += gpa_points
+                total_weight += 1
+                
+            except (json.JSONDecodeError, TypeError, KeyError):
+                continue
+        
+        if total_weight == 0:
+            return 0.0
+        
+        return round(total_points / total_weight, 2)
+        
+    except Exception as e:
+        print(f"Error calculating GPA for student {student_id}: {e}")
+        return 0.0
+
 teacher_blueprint = Blueprint('teacher', __name__)
 
 @teacher_blueprint.route('/dashboard')
@@ -716,14 +760,18 @@ def my_grades():
 @teacher_required
 def student_grades():
     """View detailed student grades for teacher's classes"""
-    teacher = TeacherStaff.query.filter_by(id=current_user.teacher_staff_id).first_or_404()
+    # Handle Directors and School Administrators who don't have teacher_staff_id
+    if current_user.role in ['Director', 'School Administrator']:
+        teacher = None
+    else:
+        teacher = TeacherStaff.query.filter_by(id=current_user.teacher_staff_id).first_or_404()
     
     # Get the class filter if provided
     class_filter = request.args.get('class_id', type=int)
     student_filter = request.args.get('student_id', type=int)
     
-    # Directors see all classes, teachers only see their assigned ones
-    if current_user.role == 'Director':
+    # Directors and School Administrators see all classes, teachers only see their assigned ones
+    if current_user.role in ['Director', 'School Administrator']:
         classes = Class.query.all()
         if class_filter:
             classes = [c for c in classes if c.id == class_filter]
@@ -742,6 +790,9 @@ def student_grades():
     # Group students by class
     students_by_class = {}
     for enrollment in enrollments:
+        # Skip enrollments where the student doesn't exist
+        if not enrollment.student:
+            continue
         class_id = enrollment.class_id
         if class_id not in students_by_class:
             students_by_class[class_id] = []
@@ -858,29 +909,127 @@ def attendance():
 @login_required
 @teacher_required
 def students_directory():
-    """View students directory with search functionality"""
+    """View students directory with enhanced search functionality"""
+    # Get search parameters
     search_query = request.args.get('search', '').strip()
+    search_type = request.args.get('search_type', 'all')
+    grade_filter = request.args.get('grade_filter', '')
+    status_filter = request.args.get('status_filter', '')
+    sort_by = request.args.get('sort_by', 'name')
+    sort_order = request.args.get('sort_order', 'asc')
     
     # Build the query
     query = Student.query
     
     # Apply search filter if query exists
     if search_query:
-        search_filter = db.or_(
-            Student.first_name.ilike(f'%{search_query}%'),
-            Student.last_name.ilike(f'%{search_query}%'),
-            Student.email.ilike(f'%{search_query}%'),
-            Student.student_id.ilike(f'%{search_query}%')
-        )
+        if search_type == 'all':
+            search_filter = db.or_(
+                Student.first_name.ilike(f'%{search_query}%'),
+                Student.last_name.ilike(f'%{search_query}%'),
+                Student.middle_initial.ilike(f'%{search_query}%'),
+                Student.email.ilike(f'%{search_query}%'),
+                Student.phone.ilike(f'%{search_query}%'),
+                Student.student_id.ilike(f'%{search_query}%'),
+                Student.grade_level.ilike(f'%{search_query}%'),
+                Student.street.ilike(f'%{search_query}%'),
+                Student.city.ilike(f'%{search_query}%'),
+                Student.state.ilike(f'%{search_query}%'),
+                Student.zip_code.ilike(f'%{search_query}%'),
+                Student.emergency_first_name.ilike(f'%{search_query}%'),
+                Student.emergency_last_name.ilike(f'%{search_query}%'),
+                Student.emergency_phone.ilike(f'%{search_query}%'),
+                Student.emergency_relationship.ilike(f'%{search_query}%')
+            )
+        elif search_type == 'name':
+            search_filter = db.or_(
+                Student.first_name.ilike(f'%{search_query}%'),
+                Student.last_name.ilike(f'%{search_query}%'),
+                Student.middle_initial.ilike(f'%{search_query}%')
+            )
+        elif search_type == 'contact':
+            search_filter = db.or_(
+                Student.email.ilike(f'%{search_query}%'),
+                Student.phone.ilike(f'%{search_query}%')
+            )
+        elif search_type == 'academic':
+            search_filter = db.or_(
+                Student.grade_level.ilike(f'%{search_query}%'),
+                Student.student_id.ilike(f'%{search_query}%')
+            )
+        elif search_type == 'address':
+            search_filter = db.or_(
+                Student.street.ilike(f'%{search_query}%'),
+                Student.city.ilike(f'%{search_query}%'),
+                Student.state.ilike(f'%{search_query}%'),
+                Student.zip_code.ilike(f'%{search_query}%')
+            )
+        elif search_type == 'emergency':
+            search_filter = db.or_(
+                Student.emergency_first_name.ilike(f'%{search_query}%'),
+                Student.emergency_last_name.ilike(f'%{search_query}%'),
+                Student.emergency_phone.ilike(f'%{search_query}%'),
+                Student.emergency_relationship.ilike(f'%{search_query}%')
+            )
+        elif search_type == 'student_id':
+            search_filter = Student.student_id.ilike(f'%{search_query}%')
+        else:
+            search_filter = db.or_(
+                Student.first_name.ilike(f'%{search_query}%'),
+                Student.last_name.ilike(f'%{search_query}%'),
+                Student.email.ilike(f'%{search_query}%'),
+                Student.student_id.ilike(f'%{search_query}%')
+            )
         query = query.filter(search_filter)
     
-    # Order by last name, then first name
-    students = query.order_by(Student.last_name, Student.first_name).all()
+    # Apply grade filter
+    if grade_filter:
+        query = query.filter(Student.grade_level == grade_filter)
+    
+    # Apply status filter
+    if status_filter == 'active':
+        query = query.filter(Student.user_id.isnot(None))
+    elif status_filter == 'inactive':
+        query = query.filter(Student.user_id.is_(None))
+    elif status_filter == 'no_account':
+        query = query.filter(Student.user_id.is_(None))
+    
+    # Apply sorting
+    if sort_by == 'name':
+        if sort_order == 'desc':
+            query = query.order_by(Student.last_name.desc(), Student.first_name.desc())
+        else:
+            query = query.order_by(Student.last_name, Student.first_name)
+    elif sort_by == 'grade':
+        if sort_order == 'desc':
+            query = query.order_by(Student.grade_level.desc(), Student.last_name)
+        else:
+            query = query.order_by(Student.grade_level, Student.last_name)
+    elif sort_by == 'student_id':
+        if sort_order == 'desc':
+            query = query.order_by(Student.student_id.desc())
+        else:
+            query = query.order_by(Student.student_id)
+    else:  # default to name
+        query = query.order_by(Student.last_name, Student.first_name)
+    
+    students = query.all()
+    
+    # Calculate GPAs for students
+    student_gpas = {}
+    for student in students:
+        student_gpas[student.id] = calculate_student_gpa(student.id)
     
     return render_template('role_teacher_dashboard.html', 
                          teacher=current_user,
                          students=students,
+                         student_gpas=student_gpas,
                          search_query=search_query,
+                         search_type=search_type,
+                         grade_filter=grade_filter,
+                         status_filter=status_filter,
+                         sort_by=sort_by,
+                         sort_order=sort_order,
                          section='students',
                          active_tab='students')
 

@@ -257,42 +257,152 @@
         <h2 class="mb-4">Students Management</h2>
 
         <!-- Search Bar -->
+        <!-- Enhanced Search Interface -->
         <div class="card shadow-sm mb-3">
+            <div class="card-header bg-light">
+                <h6 class="mb-0"><i class="bi bi-search me-2"></i>Advanced Student Search</h6>
+            </div>
             <div class="card-body">
-                <form method="GET" action="{{ url_for('management.students') }}" class="row g-3 align-items-end">
-                    <div class="col-md-6">
-                        <label for="search" class="form-label">Search Students</label>
+                <form method="GET" action="{{ url_for('management.students') }}" class="row g-3">
+                    <!-- Search Query -->
+                    <div class="col-md-4">
+                        <label for="search" class="form-label">Search Term</label>
                         <input type="text" 
                                class="form-control" 
                                id="search" 
                                name="search" 
                                value="{{ search_query or '' }}" 
-                               placeholder="Search by name, email, or student ID..."
+                               placeholder="Enter search term..."
                                autocomplete="off">
                     </div>
-                    <div class="col-md-3">
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="bi bi-search me-2"></i>Search
-                        </button>
+                    
+                    <!-- Search Type -->
+                    <div class="col-md-2">
+                        <label for="search_type" class="form-label">Search In</label>
+                        <select class="form-select" id="search_type" name="search_type">
+                            <option value="all" {% if search_type == 'all' %}selected{% endif %}>All Fields</option>
+                            <option value="name" {% if search_type == 'name' %}selected{% endif %}>Student Name</option>
+                            <option value="contact" {% if search_type == 'contact' %}selected{% endif %}>Contact Info</option>
+                            <option value="phone" {% if search_type == 'phone' %}selected{% endif %}>Phone Numbers</option>
+                            <option value="address" {% if search_type == 'address' %}selected{% endif %}>Address</option>
+                            <option value="parents" {% if search_type == 'parents' %}selected{% endif %}>Parent Names</option>
+                        </select>
                     </div>
-                    <div class="col-md-3">
-                        {% if search_query %}
-                            <a href="{{ url_for('management.students') }}" class="btn btn-outline-secondary w-100">
-                                <i class="bi bi-x-circle me-2"></i>Clear Search
+                    
+                    <!-- Grade Level Filter -->
+                    <div class="col-md-2">
+                        <label for="grade_level" class="form-label">Grade Level</label>
+                        <select class="form-select" id="grade_level" name="grade_level">
+                            <option value="">All Grades</option>
+                            <option value="1" {% if grade_filter == '1' %}selected{% endif %}>1st Grade</option>
+                            <option value="2" {% if grade_filter == '2' %}selected{% endif %}>2nd Grade</option>
+                            <option value="3" {% if grade_filter == '3' %}selected{% endif %}>3rd Grade</option>
+                            <option value="4" {% if grade_filter == '4' %}selected{% endif %}>4th Grade</option>
+                            <option value="5" {% if grade_filter == '5' %}selected{% endif %}>5th Grade</option>
+                            <option value="6" {% if grade_filter == '6' %}selected{% endif %}>6th Grade</option>
+                            <option value="7" {% if grade_filter == '7' %}selected{% endif %}>7th Grade</option>
+                            <option value="8" {% if grade_filter == '8' %}selected{% endif %}>8th Grade</option>
+                            <option value="9" {% if grade_filter == '9' %}selected{% endif %}>9th Grade</option>
+                            <option value="10" {% if grade_filter == '10' %}selected{% endif %}>10th Grade</option>
+                            <option value="11" {% if grade_filter == '11' %}selected{% endif %}>11th Grade</option>
+                            <option value="12" {% if grade_filter == '12' %}selected{% endif %}>12th Grade</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Status Filter -->
+                    <div class="col-md-2">
+                        <label for="status" class="form-label">Account Status</label>
+                        <select class="form-select" id="status" name="status">
+                            <option value="">All Students</option>
+                            <option value="has_account" {% if status_filter == 'has_account' %}selected{% endif %}>Has Account</option>
+                            <option value="no_account" {% if status_filter == 'no_account' %}selected{% endif %}>No Account</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Sort Options -->
+                    <div class="col-md-2">
+                        <label for="sort" class="form-label">Sort By</label>
+                        <select class="form-select" id="sort" name="sort">
+                            <option value="name" {% if sort_by == 'name' %}selected{% endif %}>Name</option>
+                            <option value="grade" {% if sort_by == 'grade' %}selected{% endif %}>Grade Level</option>
+                            <option value="id" {% if sort_by == 'id' %}selected{% endif %}>Student ID</option>
+                            <option value="gpa" {% if sort_by == 'gpa' %}selected{% endif %}>GPA</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Sort Order -->
+                    <div class="col-md-2">
+                        <label for="order" class="form-label">Order</label>
+                        <select class="form-select" id="order" name="order">
+                            <option value="asc" {% if sort_order == 'asc' %}selected{% endif %}>Ascending</option>
+                            <option value="desc" {% if sort_order == 'desc' %}selected{% endif %}>Descending</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="col-12">
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-search me-2"></i>Search
+                            </button>
+                            <a href="{{ url_for('management.students') }}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-clockwise me-2"></i>Reset
                             </a>
-                        {% endif %}
+                            <button type="button" class="btn btn-outline-info" data-bs-toggle="collapse" data-bs-target="#searchTips">
+                                <i class="bi bi-info-circle me-2"></i>Search Tips
+                            </button>
+                        </div>
                     </div>
                 </form>
+                
+                <!-- Search Tips -->
+                <div class="collapse mt-3" id="searchTips">
+                    <div class="alert alert-info">
+                        <h6><i class="bi bi-lightbulb me-2"></i>Search Tips:</h6>
+                        <ul class="mb-0">
+                            <li><strong>All Fields:</strong> Search across student names, contact info, addresses, and parent information</li>
+                            <li><strong>Student Name:</strong> Search by first or last name</li>
+                            <li><strong>Contact Info:</strong> Search by student or parent email addresses</li>
+                            <li><strong>Phone Numbers:</strong> Search by parent or emergency contact phone numbers</li>
+                            <li><strong>Address:</strong> Search by street, city, state, or zip code</li>
+                            <li><strong>Parent Names:</strong> Search by parent first or last names</li>
+                        </ul>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- Search Results Info -->
-        {% if search_query %}
-            <div class="alert alert-info mb-3">
-                <i class="bi bi-info-circle me-2"></i>
-                <strong>Search Results:</strong> Found {{ students|length }} student(s) matching "{{ search_query }}"
+        <!-- Enhanced Search Results Info -->
+        <div class="row mb-3">
+            <div class="col-md-8">
+                {% if search_query or grade_filter or status_filter %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Search Results:</strong> Found {{ total_students }} student(s)
+                        {% if search_query %} matching "{{ search_query }}"{% endif %}
+                        {% if grade_filter %} in grade {{ grade_filter }}{% endif %}
+                        {% if status_filter == 'has_account' %} with accounts{% endif %}
+                        {% if status_filter == 'no_account' %} without accounts{% endif %}
+                    </div>
+                {% endif %}
             </div>
-        {% endif %}
+            <div class="col-md-4">
+                <div class="card bg-light">
+                    <div class="card-body py-2">
+                        <div class="row text-center">
+                            <div class="col-6">
+                                <small class="text-muted">Total</small><br>
+                                <strong>{{ total_students }}</strong>
+                            </div>
+                            <div class="col-6">
+                                <small class="text-muted">With Accounts</small><br>
+                                <strong class="text-success">{{ students_with_accounts }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <div class="card shadow-sm">
             <div class="card-header bg-primary text-white">
@@ -312,6 +422,7 @@
                                 <th>Grade Level</th>
                                 <th>Date of Birth</th>
                                 <th>Student ID</th>
+                                <th>GPA</th>
                                 <th>Username</th>
                                 <th>Actions</th>
                             </tr>
@@ -323,6 +434,15 @@
                                     <td>{{ student.grade_level or 'N/A' }}</td>
                                     <td>{{ student.dob or 'N/A' }}</td>
                                     <td>{{ student.student_id or 'N/A' }}</td>
+                                    <td>
+                                        {% if student.gpa %}
+                                            <span class="badge {% if student.gpa >= 3.5 %}bg-success{% elif student.gpa >= 2.0 %}bg-warning{% else %}bg-danger{% endif %}">
+                                                {{ "%.2f"|format(student.gpa) }}
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">N/A</span>
+                                        {% endif %}
+                                    </td>
                                     <td>
                                         {% if student.user %}
                                             <span class="badge bg-info">{{ student.user.username }}</span>
@@ -340,7 +460,7 @@
                                 </tr>
                             {% else %}
                                 <tr>
-                                    <td colspan="6" class="text-center text-muted">No students found.</td>
+                                    <td colspan="7" class="text-center text-muted">No students found.</td>
                                 </tr>
                             {% endfor %}
                         </tbody>
@@ -353,48 +473,181 @@
         <!-- Teachers & Staff Management View -->
         <h2 class="mb-4">Teachers & Staff Management</h2>
 
-        <!-- Search Bar -->
-        <div class="card shadow-sm mb-3">
+        <!-- Advanced Teacher Search -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-search me-2"></i>Advanced Teacher & Staff Search</h5>
+            </div>
             <div class="card-body">
-                <form method="GET" action="{{ url_for('management.teachers') }}" class="row g-3 align-items-end">
-                    <div class="col-md-6">
-                        <label for="search" class="form-label">Search Teachers & Staff</label>
-                        <input type="text" 
-                               class="form-control" 
-                               id="search" 
-                               name="search" 
-                               value="{{ search_query or '' }}" 
-                               placeholder="Search by name, email, or role..."
-                               autocomplete="off">
+                <form method="GET" action="{{ url_for('management.teachers') }}" id="teacherSearchForm">
+                    <div class="row g-3">
+                        <!-- Search Query -->
+                        <div class="col-md-6">
+                            <label for="search" class="form-label">Search Query</label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="search" 
+                                   name="search" 
+                                   value="{{ search_query or '' }}" 
+                                   placeholder="Enter search term..."
+                                   autocomplete="off">
+                        </div>
+                        
+                        <!-- Search Type -->
+                        <div class="col-md-6">
+                            <label for="search_type" class="form-label">Search In</label>
+                            <select class="form-select" id="search_type" name="search_type">
+                                <option value="all" {% if search_type == 'all' %}selected{% endif %}>All Fields</option>
+                                <option value="name" {% if search_type == 'name' %}selected{% endif %}>Staff Name</option>
+                                <option value="contact" {% if search_type == 'contact' %}selected{% endif %}>Contact Info</option>
+                                <option value="role" {% if search_type == 'role' %}selected{% endif %}>Role & Position</option>
+                                <option value="department" {% if search_type == 'department' %}selected{% endif %}>Department</option>
+                                <option value="subject" {% if search_type == 'subject' %}selected{% endif %}>Subject</option>
+                                <option value="address" {% if search_type == 'address' %}selected{% endif %}>Address</option>
+                                <option value="emergency" {% if search_type == 'emergency' %}selected{% endif %}>Emergency Contact</option>
+                                <option value="staff_id" {% if search_type == 'staff_id' %}selected{% endif %}>Staff ID</option>
+                                <option value="employment" {% if search_type == 'employment' %}selected{% endif %}>Employment Type</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Department Filter -->
+                        <div class="col-md-4">
+                            <label for="department" class="form-label">Department</label>
+                            <select class="form-select" id="department" name="department">
+                                <option value="">All Departments</option>
+                                <option value="Mathematics" {% if department_filter == 'Mathematics' %}selected{% endif %}>Mathematics</option>
+                                <option value="Science" {% if department_filter == 'Science' %}selected{% endif %}>Science</option>
+                                <option value="English" {% if department_filter == 'English' %}selected{% endif %}>English</option>
+                                <option value="History & Social Studies" {% if department_filter == 'History & Social Studies' %}selected{% endif %}>History & Social Studies</option>
+                                <option value="Physical Education & Health" {% if department_filter == 'Physical Education & Health' %}selected{% endif %}>Physical Education & Health</option>
+                                <option value="Music & Arts" {% if department_filter == 'Music & Arts' %}selected{% endif %}>Music & Arts</option>
+                                <option value="Computer Science & Technology" {% if department_filter == 'Computer Science & Technology' %}selected{% endif %}>Computer Science & Technology</option>
+                                <option value="Administration" {% if department_filter == 'Administration' %}selected{% endif %}>Administration</option>
+                                <option value="Counseling" {% if department_filter == 'Counseling' %}selected{% endif %}>Counseling</option>
+                                <option value="Special Education" {% if department_filter == 'Special Education' %}selected{% endif %}>Special Education</option>
+                                <option value="Foreign Language" {% if department_filter == 'Foreign Language' %}selected{% endif %}>Foreign Language</option>
+                                <option value="Business" {% if department_filter == 'Business' %}selected{% endif %}>Business</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Role Filter -->
+                        <div class="col-md-4">
+                            <label for="role" class="form-label">Role</label>
+                            <select class="form-select" id="role" name="role">
+                                <option value="">All Roles</option>
+                                <option value="Director" {% if role_filter == 'Director' %}selected{% endif %}>Director</option>
+                                <option value="School Administrator" {% if role_filter == 'School Administrator' %}selected{% endif %}>School Administrator</option>
+                                <option value="Math Teacher" {% if role_filter == 'Math Teacher' %}selected{% endif %}>Math Teacher</option>
+                                <option value="Physics Teacher" {% if role_filter == 'Physics Teacher' %}selected{% endif %}>Physics Teacher</option>
+                                <option value="English Language Arts Teacher" {% if role_filter == 'English Language Arts Teacher' %}selected{% endif %}>English Language Arts Teacher</option>
+                                <option value="History Teacher" {% if role_filter == 'History Teacher' %}selected{% endif %}>History Teacher</option>
+                                <option value="Science Teacher" {% if role_filter == 'Science Teacher' %}selected{% endif %}>Science Teacher</option>
+                                <option value="Substitute Teacher" {% if role_filter == 'Substitute Teacher' %}selected{% endif %}>Substitute Teacher</option>
+                                <option value="School Counselor" {% if role_filter == 'School Counselor' %}selected{% endif %}>School Counselor</option>
+                                <option value="IT Support" {% if role_filter == 'IT Support' %}selected{% endif %}>IT Support</option>
+                                <option value="Other Staff" {% if role_filter == 'Other Staff' %}selected{% endif %}>Other Staff</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Employment Type Filter -->
+                        <div class="col-md-4">
+                            <label for="employment" class="form-label">Employment Type</label>
+                            <select class="form-select" id="employment" name="employment">
+                                <option value="">All Types</option>
+                                <option value="Full Time" {% if employment_filter == 'Full Time' %}selected{% endif %}>Full Time</option>
+                                <option value="Part Time" {% if employment_filter == 'Part Time' %}selected{% endif %}>Part Time</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Sort Options -->
+                        <div class="col-md-6">
+                            <label for="sort" class="form-label">Sort By</label>
+                            <select class="form-select" id="sort" name="sort">
+                                <option value="name" {% if sort_by == 'name' %}selected{% endif %}>Name</option>
+                                <option value="role" {% if sort_by == 'role' %}selected{% endif %}>Role</option>
+                                <option value="department" {% if sort_by == 'department' %}selected{% endif %}>Department</option>
+                                <option value="hire_date" {% if sort_by == 'hire_date' %}selected{% endif %}>Hire Date</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Sort Order -->
+                        <div class="col-md-6">
+                            <label for="order" class="form-label">Order</label>
+                            <select class="form-select" id="order" name="order">
+                                <option value="asc" {% if sort_order == 'asc' %}selected{% endif %}>Ascending</option>
+                                <option value="desc" {% if sort_order == 'desc' %}selected{% endif %}>Descending</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        <div class="col-12">
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-search me-2"></i>Search
+                                </button>
+                                <a href="{{ url_for('management.teachers') }}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-arrow-clockwise me-2"></i>Reset
+                                </a>
+                                <button type="button" class="btn btn-outline-info" data-bs-toggle="collapse" data-bs-target="#searchTips">
+                                    <i class="bi bi-info-circle me-2"></i>Search Tips
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                    <div class="col-md-3">
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="bi bi-search me-2"></i>Search
-                        </button>
-                    </div>
-                    <div class="col-md-3">
-                        {% if search_query %}
-                            <a href="{{ url_for('management.teachers') }}" class="btn btn-outline-secondary w-100">
-                                <i class="bi bi-x-circle me-2"></i>Clear Search
-                            </a>
-                        {% endif %}
+                    
+                    <!-- Search Tips -->
+                    <div class="collapse mt-3" id="searchTips">
+                        <div class="alert alert-info">
+                            <h6><i class="bi bi-lightbulb me-2"></i>Search Tips:</h6>
+                            <ul class="mb-0">
+                                <li><strong>All Fields:</strong> Searches across all staff information including name, contact, role, department, address, emergency contacts, and employment details</li>
+                                <li><strong>Staff Name:</strong> Search by first name, last name, or middle initial</li>
+                                <li><strong>Contact Info:</strong> Search by email address or phone number</li>
+                                <li><strong>Role & Position:</strong> Search by assigned role or position title</li>
+                                <li><strong>Department:</strong> Search within specific departments</li>
+                                <li><strong>Subject:</strong> Search by subjects taught</li>
+                                <li><strong>Address:</strong> Search by street, apartment/unit, city, state, or zip code</li>
+                                <li><strong>Emergency Contact:</strong> Search by emergency contact name, phone, email, or relationship</li>
+                                <li><strong>Staff ID:</strong> Search by staff identification number</li>
+                                <li><strong>Employment Type:</strong> Search by Full Time or Part Time employment status</li>
+                                <li><strong>Keyboard Shortcuts:</strong> Ctrl/Cmd + F to focus search, Escape to clear</li>
+                            </ul>
+                        </div>
                     </div>
                 </form>
             </div>
         </div>
 
         <!-- Search Results Info -->
-        {% if search_query %}
-            <div class="alert alert-info mb-3">
-                <i class="bi bi-info-circle me-2"></i>
-                <strong>Search Results:</strong> Found {{ teachers|length }} staff member(s) matching "{{ search_query }}"
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <div class="alert alert-success mb-0">
+                    <i class="bi bi-people-fill me-2"></i>
+                    <strong>Total Staff:</strong> {{ total_teachers or teachers|length }}
+                    {% if teachers_with_accounts is defined %}
+                        | <strong>With Accounts:</strong> {{ teachers_with_accounts }}
+                        | <strong>Without Accounts:</strong> {{ teachers_without_accounts }}
+                    {% endif %}
+                </div>
             </div>
-        {% endif %}
+            {% if search_query or department_filter or role_filter or employment_filter %}
+            <div class="col-md-6">
+                <div class="alert alert-info mb-0">
+                    <i class="bi bi-funnel me-2"></i>
+                    <strong>Active Filters:</strong>
+                    {% if search_query %}<span class="badge bg-primary me-1">Search: "{{ search_query }}"</span>{% endif %}
+                    {% if department_filter %}<span class="badge bg-secondary me-1">Dept: "{{ department_filter }}"</span>{% endif %}
+                    {% if role_filter %}<span class="badge bg-warning me-1">Role: "{{ role_filter }}"</span>{% endif %}
+                    {% if employment_filter %}<span class="badge bg-info me-1">Type: "{{ employment_filter }}"</span>{% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
 
         <div class="card shadow-sm">
             <div class="card-header bg-success text-white">
                 <div class="d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="bi bi-person-badge-fill me-2"></i>All Teachers & Staff</h5>
+                    <h5 class="mb-0"><i class="bi bi-person-badge-fill me-2"></i>Teachers & Staff Directory</h5>
                     <a href="{{ url_for('management.add_teacher_staff') }}" class="btn btn-light btn-sm">
                         <i class="bi bi-plus-circle me-1"></i>Add Staff
                     </a>
@@ -407,8 +660,10 @@
                             <tr>
                                 <th>Name</th>
                                 <th>Role</th>
+                                <th>Department</th>
                                 <th>Email</th>
                                 <th>Username</th>
+                                <th>Employment</th>
                                 <th>Status</th>
                                 <th>Actions</th>
                             </tr>
@@ -416,23 +671,65 @@
                         <tbody>
                             {% for teacher in teachers %}
                                 <tr>
-                                    <td>{{ teacher.first_name }} {{ teacher.last_name }}</td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="me-2">
+                                                {% if teacher.image %}
+                                                    <img src="{{ url_for('static', filename='uploads/' + teacher.image) }}" 
+                                                         alt="{{ teacher.first_name }} {{ teacher.last_name }}" 
+                                                         class="rounded-circle" 
+                                                         style="width: 32px; height: 32px; object-fit: cover;">
+                                                {% else %}
+                                                    <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center" 
+                                                         style="width: 32px; height: 32px;">
+                                                        <i class="bi bi-person-fill text-white"></i>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                            <div>
+                                                <strong>{{ teacher.first_name }}{% if teacher.middle_initial %} {{ teacher.middle_initial }}.{% endif %} {{ teacher.last_name }}</strong>
+                                                {% if teacher.staff_id %}
+                                                    <br><small class="text-muted">ID: {{ teacher.staff_id }}</small>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
                                     <td>
                                         {% if teacher.user %}
                                             {% set badge_class = 'bg-danger' if teacher.user.role == 'Director' else 'bg-warning' if teacher.user.role == 'School Administrator' else 'bg-info' if teacher.user.role == 'Teacher' else 'bg-secondary' if teacher.user.role == 'Tech' else 'bg-light text-dark' %}
                                             <span class="badge {{ badge_class }}">
                                                 {{ teacher.user.role }}
                                             </span>
+                                            {% if teacher.assigned_role and teacher.assigned_role != teacher.user.role %}
+                                                <br><small class="text-muted">{{ teacher.assigned_role }}</small>
+                                            {% endif %}
                                         {% else %}
                                             <span class="badge bg-warning">No Account</span>
+                                            {% if teacher.assigned_role %}
+                                                <br><small class="text-muted">{{ teacher.assigned_role }}</small>
+                                            {% endif %}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if teacher.department %}
+                                            <span class="badge bg-info">{{ teacher.department }}</span>
+                                        {% else %}
+                                            <span class="text-muted">N/A</span>
                                         {% endif %}
                                     </td>
                                     <td>{{ teacher.email or 'N/A' }}</td>
                                     <td>
                                         {% if teacher.user %}
-                                            <span class="badge bg-info">{{ teacher.user.username }}</span>
+                                            <span class="badge bg-primary">{{ teacher.user.username }}</span>
                                         {% else %}
                                             <span class="badge bg-warning">No Account</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if teacher.employment_type %}
+                                            <span class="badge bg-secondary">{{ teacher.employment_type }}</span>
+                                        {% else %}
+                                            <span class="text-muted">N/A</span>
                                         {% endif %}
                                     </td>
                                     <td>
@@ -448,7 +745,11 @@
                                 </tr>
                             {% else %}
                                 <tr>
-                                    <td colspan="6" class="text-center text-muted">No teachers or staff found.</td>
+                                    <td colspan="8" class="text-center text-muted py-4">
+                                        <i class="bi bi-search display-4 text-muted"></i>
+                                        <p class="mt-2 mb-0">No teachers or staff found matching your criteria.</p>
+                                        <small>Try adjusting your search filters or clearing them to see all staff.</small>
+                                    </td>
                                 </tr>
                             {% endfor %}
                         </tbody>
@@ -1140,12 +1441,12 @@
                                 <input type="email" class="form-control" id="email" value="{{ current_user.email or '' }}">
                             </div>
                             <div class="mb-3">
-                                <label for="current_password" class="form-label">Current Password</label>
-                                <input type="password" class="form-control" id="current_password">
-                            </div>
-                            <div class="mb-3">
-                                <label for="new_password" class="form-label">New Password</label>
-                                <input type="password" class="form-control" id="new_password">
+                                <label class="form-label">Change Password</label>
+                                <div>
+                                    <a href="{{ url_for('auth.change_password') }}" class="btn btn-warning">
+                                        <i class="bi bi-lock-fill me-2"></i>Change Password
+                                    </a>
+                                </div>
                             </div>
                             <button type="submit" class="btn btn-secondary">Update Settings</button>
                         </form>
@@ -2341,6 +2642,118 @@
             .catch(() => alert('Could not remove student.'));
         }
     }
+    
+    // Enhanced Search JavaScript
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchForm = document.querySelector('form[action*="students"]');
+        if (searchForm) {
+            const filterSelects = searchForm.querySelectorAll('select[name="search_type"], select[name="grade_level"], select[name="status"], select[name="sort"], select[name="order"]');
+            
+            filterSelects.forEach(select => {
+                select.addEventListener('change', function() {
+                    searchForm.submit();
+                });
+            });
+            
+            // Add search suggestions
+            const searchInput = document.getElementById('search');
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
+                    const query = this.value.trim();
+                    if (query.length >= 2) {
+                        this.style.borderColor = '#28a745';
+                    } else {
+                        this.style.borderColor = '';
+                    }
+                });
+            }
+        }
+        
+        // Add keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            // Ctrl/Cmd + F to focus search
+            if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+                e.preventDefault();
+                const searchInput = document.getElementById('search');
+                if (searchInput) {
+                    searchInput.focus();
+                }
+            }
+            
+            // Escape to clear search
+            if (e.key === 'Escape') {
+                const searchInput = document.getElementById('search');
+                if (searchInput && searchInput.value) {
+                    searchInput.value = '';
+                    const searchForm = document.querySelector('form[action*="students"]');
+                    if (searchForm) {
+                        searchForm.submit();
+                    }
+                }
+            }
+        });
+    });
     </script>
     {% endraw %}
+
+    <!-- Enhanced Teacher Search JavaScript -->
+    {% if section == 'teachers' %}
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const teacherSearchForm = document.getElementById('teacherSearchForm');
+        const searchInput = document.getElementById('search');
+        const searchTypeSelect = document.getElementById('search_type');
+        const departmentSelect = document.getElementById('department');
+        const roleSelect = document.getElementById('role');
+        const employmentSelect = document.getElementById('employment');
+        const sortSelect = document.getElementById('sort');
+        const orderSelect = document.getElementById('order');
+
+        // Auto-submit form when filter dropdowns change
+        [searchTypeSelect, departmentSelect, roleSelect, employmentSelect, sortSelect, orderSelect].forEach(element => {
+            if (element) {
+                element.addEventListener('change', function() {
+                    teacherSearchForm.submit();
+                });
+            }
+        });
+
+        // Visual feedback for search input
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                if (this.value.length >= 2) {
+                    this.style.borderColor = '#28a745';
+                    this.style.borderWidth = '2px';
+                } else {
+                    this.style.borderColor = '';
+                    this.style.borderWidth = '';
+                }
+            });
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            // Ctrl/Cmd + F to focus search input
+            if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+                e.preventDefault();
+                if (searchInput) {
+                    searchInput.focus();
+                    searchInput.select();
+                }
+            }
+            
+            // Escape to clear search and re-submit
+            if (e.key === 'Escape') {
+                if (searchInput && searchInput.value) {
+                    searchInput.value = '';
+                    const teacherSearchForm = document.querySelector('form[action*="teachers"]');
+                    if (teacherSearchForm) {
+                        teacherSearchForm.submit();
+                    }
+                }
+            }
+        });
+    });
+    </script>
+    {% endif %}
 {% endblock %} 

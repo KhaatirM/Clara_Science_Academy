@@ -501,27 +501,138 @@ def view_report_card(report_card_id):
 @login_required
 @management_required
 def students():
+    # Get search parameters
     search_query = request.args.get('search', '').strip()
+    search_type = request.args.get('search_type', 'all')
+    grade_filter = request.args.get('grade_level', '')
+    status_filter = request.args.get('status', '')
+    sort_by = request.args.get('sort', 'name')
+    sort_order = request.args.get('order', 'asc')
     
     # Build the query
     query = Student.query
     
     # Apply search filter if query exists
     if search_query:
-        search_filter = db.or_(
-            Student.first_name.ilike(f'%{search_query}%'),
-            Student.last_name.ilike(f'%{search_query}%'),
-            Student.email.ilike(f'%{search_query}%'),
-            Student.student_id.ilike(f'%{search_query}%')
-        )
+        if search_type == 'all' or search_type == '':
+            # Search across all fields
+            search_filter = db.or_(
+                Student.first_name.ilike(f'%{search_query}%'),
+                Student.last_name.ilike(f'%{search_query}%'),
+                Student.email.ilike(f'%{search_query}%'),
+                Student.student_id.ilike(f'%{search_query}%'),
+                Student.parent1_first_name.ilike(f'%{search_query}%'),
+                Student.parent1_last_name.ilike(f'%{search_query}%'),
+                Student.parent1_email.ilike(f'%{search_query}%'),
+                Student.parent1_phone.ilike(f'%{search_query}%'),
+                Student.parent2_first_name.ilike(f'%{search_query}%'),
+                Student.parent2_last_name.ilike(f'%{search_query}%'),
+                Student.parent2_email.ilike(f'%{search_query}%'),
+                Student.parent2_phone.ilike(f'%{search_query}%'),
+                Student.emergency_first_name.ilike(f'%{search_query}%'),
+                Student.emergency_last_name.ilike(f'%{search_query}%'),
+                Student.emergency_phone.ilike(f'%{search_query}%'),
+                Student.city.ilike(f'%{search_query}%'),
+                Student.state.ilike(f'%{search_query}%'),
+                Student.previous_school.ilike(f'%{search_query}%')
+            )
+        elif search_type == 'name':
+            search_filter = db.or_(
+                Student.first_name.ilike(f'%{search_query}%'),
+                Student.last_name.ilike(f'%{search_query}%')
+            )
+        elif search_type == 'contact':
+            search_filter = db.or_(
+                Student.email.ilike(f'%{search_query}%'),
+                Student.parent1_email.ilike(f'%{search_query}%'),
+                Student.parent2_email.ilike(f'%{search_query}%'),
+                Student.emergency_email.ilike(f'%{search_query}%')
+            )
+        elif search_type == 'phone':
+            search_filter = db.or_(
+                Student.parent1_phone.ilike(f'%{search_query}%'),
+                Student.parent2_phone.ilike(f'%{search_query}%'),
+                Student.emergency_phone.ilike(f'%{search_query}%')
+            )
+        elif search_type == 'address':
+            search_filter = db.or_(
+                Student.street.ilike(f'%{search_query}%'),
+                Student.city.ilike(f'%{search_query}%'),
+                Student.state.ilike(f'%{search_query}%'),
+                Student.zip_code.ilike(f'%{search_query}%')
+            )
+        elif search_type == 'parents':
+            search_filter = db.or_(
+                Student.parent1_first_name.ilike(f'%{search_query}%'),
+                Student.parent1_last_name.ilike(f'%{search_query}%'),
+                Student.parent2_first_name.ilike(f'%{search_query}%'),
+                Student.parent2_last_name.ilike(f'%{search_query}%')
+            )
+        else:
+            # Default to all fields
+            search_filter = db.or_(
+                Student.first_name.ilike(f'%{search_query}%'),
+                Student.last_name.ilike(f'%{search_query}%'),
+                Student.email.ilike(f'%{search_query}%'),
+                Student.student_id.ilike(f'%{search_query}%')
+            )
         query = query.filter(search_filter)
     
-    # Order by last name, then first name
-    students = query.order_by(Student.last_name, Student.first_name).all()
+    # Apply grade level filter
+    if grade_filter:
+        query = query.filter(Student.grade_level == int(grade_filter))
+    
+    # Apply status filter (account status)
+    if status_filter:
+        if status_filter == 'has_account':
+            query = query.filter(Student.user.isnot(None))
+        elif status_filter == 'no_account':
+            query = query.filter(Student.user.is_(None))
+    
+    # Apply sorting
+    if sort_by == 'name':
+        if sort_order == 'desc':
+            query = query.order_by(Student.last_name.desc(), Student.first_name.desc())
+        else:
+            query = query.order_by(Student.last_name, Student.first_name)
+    elif sort_by == 'grade':
+        if sort_order == 'desc':
+            query = query.order_by(Student.grade_level.desc(), Student.last_name, Student.first_name)
+        else:
+            query = query.order_by(Student.grade_level, Student.last_name, Student.first_name)
+    elif sort_by == 'id':
+        if sort_order == 'desc':
+            query = query.order_by(Student.student_id.desc())
+        else:
+            query = query.order_by(Student.student_id)
+    elif sort_by == 'gpa':
+        if sort_order == 'desc':
+            query = query.order_by(Student.gpa.desc(), Student.last_name, Student.first_name)
+        else:
+            query = query.order_by(Student.gpa, Student.last_name, Student.first_name)
+    else:
+        # Default sorting
+        query = query.order_by(Student.last_name, Student.first_name)
+    
+    # Get all students
+    students = query.all()
+    
+    # Calculate additional stats for display
+    total_students = len(students)
+    students_with_accounts = len([s for s in students if s.user])
+    students_without_accounts = total_students - students_with_accounts
     
     return render_template('role_dashboard.html', 
                          students=students,
                          search_query=search_query,
+                         search_type=search_type,
+                         grade_filter=grade_filter,
+                         status_filter=status_filter,
+                         sort_by=sort_by,
+                         sort_order=sort_order,
+                         total_students=total_students,
+                         students_with_accounts=students_with_accounts,
+                         students_without_accounts=students_without_accounts,
                          section='students',
                          active_tab='students')
 
@@ -529,27 +640,148 @@ def students():
 @login_required
 @management_required
 def teachers():
+    # Get search parameters
     search_query = request.args.get('search', '').strip()
+    search_type = request.args.get('search_type', 'all')
+    department_filter = request.args.get('department', '')
+    role_filter = request.args.get('role', '')
+    employment_filter = request.args.get('employment', '')
+    sort_by = request.args.get('sort', 'name')
+    sort_order = request.args.get('order', 'asc')
     
     # Build the query
     query = TeacherStaff.query
     
     # Apply search filter if query exists
     if search_query:
-        search_filter = db.or_(
-            TeacherStaff.first_name.ilike(f'%{search_query}%'),
-            TeacherStaff.last_name.ilike(f'%{search_query}%'),
-            TeacherStaff.email.ilike(f'%{search_query}%'),
-            TeacherStaff.assigned_role.ilike(f'%{search_query}%')
-        )
+        if search_type == 'all':
+            search_filter = db.or_(
+                TeacherStaff.first_name.ilike(f'%{search_query}%'),
+                TeacherStaff.last_name.ilike(f'%{search_query}%'),
+                TeacherStaff.middle_initial.ilike(f'%{search_query}%'),
+                TeacherStaff.email.ilike(f'%{search_query}%'),
+                TeacherStaff.staff_id.ilike(f'%{search_query}%'),
+                TeacherStaff.assigned_role.ilike(f'%{search_query}%'),
+                TeacherStaff.department.ilike(f'%{search_query}%'),
+                TeacherStaff.position.ilike(f'%{search_query}%'),
+                TeacherStaff.subject.ilike(f'%{search_query}%'),
+                TeacherStaff.employment_type.ilike(f'%{search_query}%'),
+                TeacherStaff.phone.ilike(f'%{search_query}%'),
+                TeacherStaff.street.ilike(f'%{search_query}%'),
+                TeacherStaff.apt_unit.ilike(f'%{search_query}%'),
+                TeacherStaff.city.ilike(f'%{search_query}%'),
+                TeacherStaff.state.ilike(f'%{search_query}%'),
+                TeacherStaff.zip_code.ilike(f'%{search_query}%'),
+                TeacherStaff.emergency_first_name.ilike(f'%{search_query}%'),
+                TeacherStaff.emergency_last_name.ilike(f'%{search_query}%'),
+                TeacherStaff.emergency_phone.ilike(f'%{search_query}%'),
+                TeacherStaff.emergency_email.ilike(f'%{search_query}%'),
+                TeacherStaff.emergency_relationship.ilike(f'%{search_query}%')
+            )
+        elif search_type == 'name':
+            search_filter = db.or_(
+                TeacherStaff.first_name.ilike(f'%{search_query}%'),
+                TeacherStaff.last_name.ilike(f'%{search_query}%'),
+                TeacherStaff.middle_initial.ilike(f'%{search_query}%')
+            )
+        elif search_type == 'contact':
+            search_filter = db.or_(
+                TeacherStaff.email.ilike(f'%{search_query}%'),
+                TeacherStaff.phone.ilike(f'%{search_query}%')
+            )
+        elif search_type == 'role':
+            search_filter = db.or_(
+                TeacherStaff.assigned_role.ilike(f'%{search_query}%'),
+                TeacherStaff.position.ilike(f'%{search_query}%')
+            )
+        elif search_type == 'department':
+            search_filter = TeacherStaff.department.ilike(f'%{search_query}%')
+        elif search_type == 'subject':
+            search_filter = TeacherStaff.subject.ilike(f'%{search_query}%')
+        elif search_type == 'address':
+            search_filter = db.or_(
+                TeacherStaff.street.ilike(f'%{search_query}%'),
+                TeacherStaff.apt_unit.ilike(f'%{search_query}%'),
+                TeacherStaff.city.ilike(f'%{search_query}%'),
+                TeacherStaff.state.ilike(f'%{search_query}%'),
+                TeacherStaff.zip_code.ilike(f'%{search_query}%')
+            )
+        elif search_type == 'emergency':
+            search_filter = db.or_(
+                TeacherStaff.emergency_first_name.ilike(f'%{search_query}%'),
+                TeacherStaff.emergency_last_name.ilike(f'%{search_query}%'),
+                TeacherStaff.emergency_phone.ilike(f'%{search_query}%'),
+                TeacherStaff.emergency_email.ilike(f'%{search_query}%'),
+                TeacherStaff.emergency_relationship.ilike(f'%{search_query}%')
+            )
+        elif search_type == 'staff_id':
+            search_filter = TeacherStaff.staff_id.ilike(f'%{search_query}%')
+        elif search_type == 'employment':
+            search_filter = TeacherStaff.employment_type.ilike(f'%{search_query}%')
+        else:
+            search_filter = db.or_(
+                TeacherStaff.first_name.ilike(f'%{search_query}%'),
+                TeacherStaff.last_name.ilike(f'%{search_query}%'),
+                TeacherStaff.email.ilike(f'%{search_query}%'),
+                TeacherStaff.assigned_role.ilike(f'%{search_query}%')
+            )
         query = query.filter(search_filter)
     
-    # Order by last name, then first name
-    teachers = query.order_by(TeacherStaff.last_name, TeacherStaff.first_name).all()
+    # Apply department filter
+    if department_filter:
+        query = query.filter(TeacherStaff.department.ilike(f'%{department_filter}%'))
+    
+    # Apply role filter
+    if role_filter:
+        query = query.filter(TeacherStaff.assigned_role.ilike(f'%{role_filter}%'))
+    
+    # Apply employment type filter
+    if employment_filter:
+        query = query.filter(TeacherStaff.employment_type == employment_filter)
+    
+    # Apply sorting
+    if sort_by == 'name':
+        if sort_order == 'desc':
+            query = query.order_by(TeacherStaff.last_name.desc(), TeacherStaff.first_name.desc())
+        else:
+            query = query.order_by(TeacherStaff.last_name, TeacherStaff.first_name)
+    elif sort_by == 'role':
+        if sort_order == 'desc':
+            query = query.order_by(TeacherStaff.assigned_role.desc())
+        else:
+            query = query.order_by(TeacherStaff.assigned_role)
+    elif sort_by == 'department':
+        if sort_order == 'desc':
+            query = query.order_by(TeacherStaff.department.desc())
+        else:
+            query = query.order_by(TeacherStaff.department)
+    elif sort_by == 'hire_date':
+        if sort_order == 'desc':
+            query = query.order_by(TeacherStaff.hire_date.desc())
+        else:
+            query = query.order_by(TeacherStaff.hire_date)
+    else:
+        query = query.order_by(TeacherStaff.last_name, TeacherStaff.first_name)
+    
+    teachers = query.all()
+    
+    # Calculate additional stats for display
+    total_teachers = len(teachers)
+    teachers_with_accounts = len([t for t in teachers if t.user])
+    teachers_without_accounts = total_teachers - teachers_with_accounts
     
     return render_template('role_dashboard.html', 
                          teachers=teachers,
                          search_query=search_query,
+                         search_type=search_type,
+                         department_filter=department_filter,
+                         role_filter=role_filter,
+                         employment_filter=employment_filter,
+                         sort_by=sort_by,
+                         sort_order=sort_order,
+                         total_teachers=total_teachers,
+                         teachers_with_accounts=teachers_with_accounts,
+                         teachers_without_accounts=teachers_without_accounts,
                          section='teachers',
                          active_tab='teachers')
 
@@ -2580,9 +2812,16 @@ def get_academic_dates_for_calendar(year, month):
     
     for work_day in teacher_work_days:
         if work_day.date.month == month:
+            # Shorten the title for better display
+            short_title = work_day.title
+            if "Professional Development" in short_title:
+                short_title = "PD Day"
+            elif "First Day" in short_title:
+                short_title = "First Day"
+            
             academic_dates.append({
                 'day': work_day.date.day,
-                'title': f"{work_day.title} ({work_day.attendance_requirement})",
+                'title': short_title,
                 'category': 'Teacher Work Day',
                 'type': 'teacher_work_day'
             })
@@ -2602,17 +2841,35 @@ def get_academic_dates_for_calendar(year, month):
             
             # For multi-day breaks, show start and end dates
             if school_break.start_date.month == month:
+                # Shorten break names for better display
+                short_name = school_break.name
+                if "Thanksgiving" in short_name:
+                    short_name = "Thanksgiving"
+                elif "Winter" in short_name:
+                    short_name = "Winter"
+                elif "Spring" in short_name:
+                    short_name = "Spring"
+                
                 academic_dates.append({
                     'day': school_break.start_date.day,
-                    'title': f"{school_break.name} Start",
+                    'title': f"{short_name} Start",
                     'category': school_break.break_type,
                     'type': 'school_break_start'
                 })
             
             if school_break.end_date.month == month:
+                # Shorten break names for better display
+                short_name = school_break.name
+                if "Thanksgiving" in short_name:
+                    short_name = "Thanksgiving"
+                elif "Winter" in short_name:
+                    short_name = "Winter"
+                elif "Spring" in short_name:
+                    short_name = "Spring"
+                
                 academic_dates.append({
                     'day': school_break.end_date.day,
-                    'title': f"{school_break.name} End",
+                    'title': f"{short_name} End",
                     'category': school_break.break_type,
                     'type': 'school_break_end'
                 })
@@ -2620,14 +2877,14 @@ def get_academic_dates_for_calendar(year, month):
     return academic_dates
 
 
-# @management_blueprint.route('/upload-calendar-pdf', methods=['POST'])
-# @login_required
-# @management_required
-# def upload_calendar_pdf():
-#     """Upload and process a school calendar PDF."""
-#     # PDF processing temporarily disabled due to import issues
-#     flash('PDF processing is temporarily unavailable. Please check back later.', 'warning')
-#     return redirect(url_for('management.school_years'))
+@management_blueprint.route('/upload-calendar-pdf', methods=['POST'])
+@login_required
+@management_required
+def upload_calendar_pdf():
+    """Upload and process a school calendar PDF."""
+    # PDF processing temporarily disabled due to import issues
+    flash('PDF processing is temporarily unavailable. Please check back later.', 'warning')
+    return redirect(url_for('management.calendar'))
 
 
 # def process_calendar_pdf(filepath):

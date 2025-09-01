@@ -594,41 +594,133 @@
         <!-- Students Directory View -->
         <h2 class="mb-4">Students Directory</h2>
 
-        <!-- Search Bar -->
-        <div class="card shadow-sm mb-3">
+        <!-- Advanced Student Search -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-search me-2"></i>Advanced Student Search</h5>
+            </div>
             <div class="card-body">
-                <form method="GET" action="{{ url_for('teacher.students_directory') }}" class="row g-3 align-items-end">
+                <form method="GET" action="{{ url_for('teacher.students_directory') }}" id="studentSearchForm" class="row g-3">
+                    <!-- Search Query -->
                     <div class="col-md-6">
-                        <label for="search" class="form-label">Search Students</label>
+                        <label for="search" class="form-label">Search Query</label>
                         <input type="text" 
                                class="form-control" 
                                id="search" 
                                name="search" 
                                value="{{ search_query or '' }}" 
-                               placeholder="Search by name, email, or student ID..."
+                               placeholder="Enter search terms..."
                                autocomplete="off">
                     </div>
+                    
+                    <!-- Search Type -->
                     <div class="col-md-3">
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="bi bi-search me-2"></i>Search
-                        </button>
+                        <label for="search_type" class="form-label">Search Type</label>
+                        <select class="form-select" id="search_type" name="search_type">
+                            <option value="all" {% if search_type == 'all' %}selected{% endif %}>All Fields</option>
+                            <option value="name" {% if search_type == 'name' %}selected{% endif %}>Student Name</option>
+                            <option value="contact" {% if search_type == 'contact' %}selected{% endif %}>Contact Info</option>
+                            <option value="academic" {% if search_type == 'academic' %}selected{% endif %}>Academic Info</option>
+                            <option value="address" {% if search_type == 'address' %}selected{% endif %}>Address</option>
+                            <option value="emergency" {% if search_type == 'emergency' %}selected{% endif %}>Emergency Contact</option>
+                            <option value="student_id" {% if search_type == 'student_id' %}selected{% endif %}>Student ID</option>
+                        </select>
                     </div>
+                    
+                    <!-- Grade Filter -->
                     <div class="col-md-3">
-                        {% if search_query %}
-                            <a href="{{ url_for('teacher.students_directory') }}" class="btn btn-outline-secondary w-100">
-                                <i class="bi bi-x-circle me-2"></i>Clear Search
+                        <label for="grade_filter" class="form-label">Grade Level</label>
+                        <select class="form-select" id="grade_filter" name="grade_filter">
+                            <option value="">All Grades</option>
+                            <option value="Kindergarten" {% if grade_filter == 'Kindergarten' %}selected{% endif %}>Kindergarten</option>
+                            <option value="1st" {% if grade_filter == '1st' %}selected{% endif %}>1st Grade</option>
+                            <option value="2nd" {% if grade_filter == '2nd' %}selected{% endif %}>2nd Grade</option>
+                            <option value="3rd" {% if grade_filter == '3rd' %}selected{% endif %}>3rd Grade</option>
+                            <option value="4th" {% if grade_filter == '4th' %}selected{% endif %}>4th Grade</option>
+                            <option value="5th" {% if grade_filter == '5th' %}selected{% endif %}>5th Grade</option>
+                            <option value="6th" {% if grade_filter == '6th' %}selected{% endif %}>6th Grade</option>
+                            <option value="7th" {% if grade_filter == '7th' %}selected{% endif %}>7th Grade</option>
+                            <option value="8th" {% if grade_filter == '8th' %}selected{% endif %}>8th Grade</option>
+                            <option value="9th" {% if grade_filter == '9th' %}selected{% endif %}>9th Grade</option>
+                            <option value="10th" {% if grade_filter == '10th' %}selected{% endif %}>10th Grade</option>
+                            <option value="11th" {% if grade_filter == '11th' %}selected{% endif %}>11th Grade</option>
+                            <option value="12th" {% if grade_filter == '12th' %}selected{% endif %}>12th Grade</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Status Filter -->
+                    <div class="col-md-3">
+                        <label for="status_filter" class="form-label">Account Status</label>
+                        <select class="form-select" id="status_filter" name="status_filter">
+                            <option value="">All Statuses</option>
+                            <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+                            <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive</option>
+                            <option value="no_account" {% if status_filter == 'no_account' %}selected{% endif %}>No Account</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Sort Options -->
+                    <div class="col-md-3">
+                        <label for="sort_by" class="form-label">Sort By</label>
+                        <select class="form-select" id="sort_by" name="sort_by">
+                            <option value="name" {% if sort_by == 'name' %}selected{% endif %}>Name</option>
+                            <option value="grade" {% if sort_by == 'grade' %}selected{% endif %}>Grade Level</option>
+                            <option value="gpa" {% if sort_by == 'gpa' %}selected{% endif %}>GPA</option>
+                            <option value="student_id" {% if sort_by == 'student_id' %}selected{% endif %}>Student ID</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Sort Order -->
+                    <div class="col-md-3">
+                        <label for="sort_order" class="form-label">Order</label>
+                        <select class="form-select" id="sort_order" name="sort_order">
+                            <option value="asc" {% if sort_order == 'asc' %}selected{% endif %}>Ascending</option>
+                            <option value="desc" {% if sort_order == 'desc' %}selected{% endif %}>Descending</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="col-12">
+                        <div class="d-flex gap-2 flex-wrap">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-search me-2"></i>Search
+                            </button>
+                            <a href="{{ url_for('teacher.students_directory') }}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-clockwise me-2"></i>Reset
                             </a>
-                        {% endif %}
+                            <button type="button" class="btn btn-outline-info" data-bs-toggle="collapse" data-bs-target="#searchTips">
+                                <i class="bi bi-lightbulb me-2"></i>Search Tips
+                            </button>
+                        </div>
                     </div>
                 </form>
+                
+                <!-- Search Tips -->
+                <div class="collapse mt-3" id="searchTips">
+                    <div class="alert alert-info">
+                        <h6><i class="bi bi-info-circle me-2"></i>Search Tips:</h6>
+                        <ul class="mb-0">
+                            <li><strong>All Fields:</strong> Searches across all student information including name, contact, academic details, and emergency contacts</li>
+                            <li><strong>Student Name:</strong> Search by first name, last name, or middle initial</li>
+                            <li><strong>Contact Info:</strong> Search by email address or phone number</li>
+                            <li><strong>Academic Info:</strong> Search by grade level, GPA, or student ID</li>
+                            <li><strong>Address:</strong> Search by street, city, state, or zip code</li>
+                            <li><strong>Emergency Contact:</strong> Search by emergency contact name, phone, or relationship</li>
+                            <li><strong>Student ID:</strong> Search by student identification number</li>
+                        </ul>
+                    </div>
+                </div>
             </div>
         </div>
 
         <!-- Search Results Info -->
-        {% if search_query %}
+        {% if search_query or grade_filter or status_filter %}
             <div class="alert alert-info mb-3">
                 <i class="bi bi-info-circle me-2"></i>
-                <strong>Search Results:</strong> Found {{ students|length }} student(s) matching "{{ search_query }}"
+                <strong>Search Results:</strong> Found {{ students|length }} student(s)
+                {% if search_query %}<span class="badge bg-primary me-1">Search: "{{ search_query }}"</span>{% endif %}
+                {% if grade_filter %}<span class="badge bg-secondary me-1">Grade: "{{ grade_filter }}"</span>{% endif %}
+                {% if status_filter %}<span class="badge bg-warning me-1">Status: "{{ status_filter }}"</span>{% endif %}
             </div>
         {% endif %}
 
@@ -642,23 +734,53 @@
                                 <th>Grade Level</th>
                                 <th>Email</th>
                                 <th>Phone</th>
+                                <th>GPA</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for student in students %}
                                 <tr>
-                                    <td>{{ student.first_name }} {{ student.last_name }}</td>
-                                    <td>{{ student.grade_level or 'N/A' }}</td>
-                                    <td>{{ student.email or 'N/A' }}</td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-sm me-3">
+                                                <i class="bi bi-person-circle fs-4 text-primary"></i>
+                                            </div>
+                                            <div>
+                                                <strong>{{ student.first_name }} {{ student.last_name }}</strong>
+                                                <br><small class="text-muted">{{ student.student_id }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">{{ student.grade_level or 'N/A' }}</span>
+                                    </td>
+                                    <td>
+                                        {% if student.email %}
+                                            <a href="mailto:{{ student.email }}" class="text-decoration-none">
+                                                {{ student.email }}
+                                            </a>
+                                        {% else %}
+                                            <span class="text-muted">N/A</span>
+                                        {% endif %}
+                                    </td>
                                     <td>{{ student.phone or 'N/A' }}</td>
+                                    <td>
+                                        {% set student_gpa = student_gpas.get(student.id, 0.0) %}
+                                        <span class="badge {% if student_gpa >= 3.5 %}bg-success
+                                                       {% elif student_gpa >= 3.0 %}bg-primary
+                                                       {% elif student_gpa >= 2.0 %}bg-warning text-dark
+                                                       {% else %}bg-danger{% endif %} fs-6">
+                                            {{ "%.2f"|format(student_gpa) }}
+                                        </span>
+                                    </td>
                                     <td>
                                         <button type="button" class="btn btn-sm btn-outline-primary" onclick="showInfoUnavailableModal()">View Details</button>
                                     </td>
                                 </tr>
                             {% else %}
                                 <tr>
-                                    <td colspan="5" class="text-center text-muted">No students found.</td>
+                                    <td colspan="6" class="text-center text-muted">No students found.</td>
                                 </tr>
                             {% endfor %}
                         </tbody>
@@ -726,7 +848,7 @@
                             {% for staff in teachers_staff %}
                                 <tr>
                                     <td>{{ staff.first_name }} {{ staff.last_name }}</td>
-                                    <td>{{ staff.role or 'N/A' }}</td>
+                                    <td>{{ staff.assigned_role or 'N/A' }}</td>
                                     <td>{{ staff.email or 'N/A' }}</td>
                                     <td>{{ staff.phone or 'N/A' }}</td>
                                     <td>
@@ -754,10 +876,10 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">{{ calendar_data.month_name }} {{ calendar_data.year }}</h5>
                         <div>
-                            <a href="?month={{ prev_month.month }}&year={{ prev_month.year }}" class="btn btn-sm btn-outline-light me-2">
+                            <a href="{{ url_for('teacher.calendar', month=prev_month.month, year=prev_month.year) }}" class="btn btn-sm btn-outline-light me-2">
                                 <i class="bi bi-chevron-left"></i> Previous
                             </a>
-                            <a href="?month={{ next_month.month }}&year={{ next_month.year }}" class="btn btn-sm btn-outline-light">
+                            <a href="{{ url_for('teacher.calendar', month=next_month.month, year=next_month.year) }}" class="btn btn-sm btn-outline-light">
                                 Next <i class="bi bi-chevron-right"></i>
                             </a>
                         </div>
@@ -766,22 +888,31 @@
                 <div class="card-body">
                     <div class="calendar-container">
                         <div class="calendar-header">
-                            {% for day in calendar_data.weekdays %}
-                                <div class="calendar-day-header">{{ day }}</div>
-                            {% endfor %}
+                            <div class="row text-center">
+                                <div class="col">Mon</div>
+                                <div class="col">Tue</div>
+                                <div class="col">Wed</div>
+                                <div class="col">Thu</div>
+                                <div class="col">Fri</div>
+                                <div class="col">Sat</div>
+                                <div class="col">Sun</div>
+                            </div>
                         </div>
                         <div class="calendar-body">
                             {% for week in calendar_data.weeks %}
-                                <div class="calendar-week">
+                                <div class="row calendar-week">
                                     {% for day in week %}
-                                        <div class="calendar-day {% if day.is_today %}today{% endif %} {% if not day.is_current_month %}other-month{% endif %}">
-                                            {% if day.day_num %}
+                                        <div class="col calendar-day {% if not day.is_current_month %}empty{% endif %} {% if day.is_today %}today{% endif %}">
+                                            {% if day.is_current_month %}
                                                 <div class="day-number">{{ day.day_num }}</div>
                                                 {% if day.events %}
                                                     <div class="day-events">
                                                         {% for event in day.events %}
-                                                            <div class="event-item holiday">
-                                                                <small>{{ event.title }}</small>
+                                                            <div class="calendar-event event-{{ event.category|lower|replace(' ', '_') if event.category else 'default' }}" title="{{ event.title }}">
+                                                                <small class="event-title">{{ event.title }}</small>
+                                                                {% if event.category %}
+                                                                    <small class="event-category">{{ event.category }}</small>
+                                                                {% endif %}
                                                             </div>
                                                         {% endfor %}
                                                     </div>
@@ -791,6 +922,37 @@
                                     {% endfor %}
                                 </div>
                             {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Additional Calendar Information -->
+            <div class="row g-3 g-md-4 mt-4">
+                <div class="col-12 col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Upcoming Events</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-info">
+                                <p>No upcoming events scheduled.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Quick Actions</h5>
+                        </div>
+                        <div class="card-body">
+                            <button class="btn btn-outline-primary btn-sm me-2 mb-2">
+                                <i class="bi bi-plus-circle me-1"></i>Add Event
+                            </button>
+                            <button class="btn btn-outline-success btn-sm me-2 mb-2">
+                                <i class="bi bi-download me-1"></i>Export Calendar
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -885,6 +1047,55 @@ function showInfoUnavailableModal() {
     const modal = new bootstrap.Modal(document.getElementById('infoUnavailableModal'));
     modal.show();
 }
+
+// Enhanced Search Functionality for Students
+{% if section == 'students' %}
+document.addEventListener('DOMContentLoaded', function() {
+    const studentSearchForm = document.getElementById('studentSearchForm');
+    const searchInput = document.getElementById('search');
+    const searchTypeSelect = document.getElementById('search_type');
+    const gradeFilterSelect = document.getElementById('grade_filter');
+    const statusFilterSelect = document.getElementById('status_filter');
+    const sortBySelect = document.getElementById('sort_by');
+    const sortOrderSelect = document.getElementById('sort_order');
+
+    // Auto-submit form when filter dropdowns change
+    [searchTypeSelect, gradeFilterSelect, statusFilterSelect, sortBySelect, sortOrderSelect].forEach(element => {
+        if (element) {
+            element.addEventListener('change', function() {
+                studentSearchForm.submit();
+            });
+        }
+    });
+
+    // Visual feedback for search input
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            if (this.value.length >= 2) {
+                this.style.borderColor = '#0d6efd';
+            } else {
+                this.style.borderColor = '';
+            }
+        });
+    }
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+            e.preventDefault();
+            if (searchInput) {
+                searchInput.focus();
+            }
+        }
+        if (e.key === 'Escape' && searchInput) {
+            searchInput.value = '';
+            searchInput.style.borderColor = '';
+        }
+    });
+});
+{% endif %}
+
+
 
 // Handle remove assignment button clicks
 document.addEventListener('DOMContentLoaded', function() {

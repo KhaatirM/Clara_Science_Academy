@@ -16,7 +16,7 @@ def is_teacher_role(role):
     """Check if a role is considered a teacher role"""
     if not role:
         return False
-    return role in TEACHER_ROLES or 'Teacher' in role
+    return role in TEACHER_ROLES or 'Teacher' in role or role == 'Director' or role == 'School Administrator'
 
 def admin_required(f):
     """Restricts access to users with the 'Director' role."""

@@ -150,11 +150,8 @@
                                                                 <div class="day-number">{{ day.day_num }}</div>
                                                                 <div class="day-events">
                                                                     {% for event in day.events %}
-                                                                        <div class="calendar-event event-{{ event.category|lower|replace(' ', '_') if event.category else 'default' }}" title="{{ event.title }}">
+                                                                        <div class="calendar-event event-{{ event.category|lower|replace(' ', '_') if event.category else 'default' }}" title="{{ event.title }} - {{ event.category if event.category else 'Event' }}">
                                                                             <small class="event-title">{{ event.title }}</small>
-                                                                            {% if event.category %}
-                                                                                <small class="event-category">{{ event.category }}</small>
-                                                                            {% endif %}
                                                                         </div>
                                                                     {% endfor %}
                                                                 </div>

@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
 from models import User, db, MaintenanceMode, BugReport
-from werkzeug.security import check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 from datetime import datetime
 from app import log_activity
 from decorators import is_teacher_role
@@ -216,13 +216,124 @@ def submit_bug_report():
 
 @auth_blueprint.route('/bug-reports')
 @login_required
-def view_bug_reports():
-    """View bug reports (Tech users only)."""
-    if current_user.role != 'Tech':
-        flash('Access denied. Only technical staff can view bug reports.', 'danger')
-        return redirect(url_for('auth.dashboard'))
+def bug_reports():
+    """Bug reports page - all users can submit, tech users can view all reports."""
+    # Get bug reports based on user role
+    if current_user.role in ['Tech', 'IT Support']:
+        # Tech users can see all bug reports
+        bug_reports = BugReport.query.order_by(BugReport.created_at.desc()).all()
+        can_manage = True
+    else:
+        # Other users can only see their own bug reports
+        bug_reports = BugReport.query.filter_by(user_id=current_user.id).order_by(BugReport.created_at.desc()).all()
+        can_manage = False
     
-    # Get all bug reports, ordered by creation date (newest first)
-    bug_reports = BugReport.query.order_by(BugReport.created_at.desc()).all()
+    return render_template('bug_reports.html', 
+                         bug_reports=bug_reports, 
+                         can_manage=can_manage,
+                         current_user=current_user)
+
+
+@auth_blueprint.route('/bug-reports/<int:report_id>/update-status', methods=['POST'])
+@login_required
+def update_bug_report_status(report_id):
+    """Update bug report status (Tech users only)."""
+    if current_user.role not in ['Tech', 'IT Support']:
+        return jsonify({'success': False, 'message': 'Access denied. Only technical staff can update bug report status.'})
     
-    return render_template('bug_reports.html', bug_reports=bug_reports)
+    try:
+        bug_report = BugReport.query.get_or_404(report_id)
+        new_status = request.form.get('status', '').strip()
+        
+        if new_status not in ['open', 'in_progress', 'resolved', 'closed']:
+            return jsonify({'success': False, 'message': 'Invalid status.'})
+        
+        bug_report.status = new_status
+        db.session.commit()
+        
+        # Log the status update
+        log_activity(
+            current_user.id,
+            'bug_report_status_updated',
+            {
+                'bug_report_id': report_id,
+                'new_status': new_status,
+                'title': bug_report.title
+            },
+            request.remote_addr,
+            request.headers.get('User-Agent')
+        )
+        
+        return jsonify({'success': True, 'message': f'Bug report status updated to {new_status.replace("_", " ")}.'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': 'An error occurred while updating the bug report status.'})
+
+@auth_blueprint.route('/change-password', methods=['GET', 'POST'])
+@login_required
+def change_password():
+    """Change password for any authenticated user."""
+    if request.method == 'POST':
+        current_password = request.form.get('current_password')
+        new_password = request.form.get('new_password')
+        confirm_password = request.form.get('confirm_new_password')
+        
+        # Validate input
+        if not current_password or not new_password or not confirm_password:
+            flash('All fields are required.', 'danger')
+            return redirect(url_for('auth.change_password'))
+        
+        # Check if current password is correct
+        if not check_password_hash(current_user.password_hash, current_password):
+            flash('Current password is incorrect.', 'danger')
+            return redirect(url_for('auth.change_password'))
+        
+        # Check if new password matches confirmation
+        if new_password != confirm_password:
+            flash('New password and confirmation do not match.', 'danger')
+            return redirect(url_for('auth.change_password'))
+        
+        # Validate new password strength (minimum 8 characters)
+        if len(new_password) < 8:
+            flash('New password must be at least 8 characters long.', 'danger')
+            return redirect(url_for('auth.change_password'))
+        
+        # Check if new password is different from current
+        if check_password_hash(current_user.password_hash, new_password):
+            flash('New password must be different from current password.', 'danger')
+            return redirect(url_for('auth.change_password'))
+        
+        try:
+            # Update password
+            current_user.password_hash = generate_password_hash(new_password)
+            db.session.commit()
+            
+            # Log the password change
+            log_activity(
+                current_user.id,
+                'password_changed',
+                {'role': current_user.role},
+                request.remote_addr,
+                request.headers.get('User-Agent')
+            )
+            
+            flash('Password changed successfully!', 'success')
+            return redirect(url_for('auth.dashboard'))
+            
+        except Exception as e:
+            db.session.rollback()
+            log_activity(
+                current_user.id,
+                'password_change_failed',
+                {'error': str(e)},
+                request.remote_addr,
+                request.headers.get('User-Agent'),
+                False,
+                str(e)
+            )
+            flash('An error occurred while changing your password. Please try again.', 'danger')
+            return redirect(url_for('auth.change_password'))
+    
+    # GET request - show password change form
+    return render_template('change_password.html')

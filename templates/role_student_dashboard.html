@@ -2991,41 +2991,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                     </div>
                 </div>
 
-                <!-- Bug Report -->
-                <div class="card shadow-sm mb-4">
-                    <div class="card-header bg-danger text-white">
-                        <h5 class="mb-0"><i class="bi bi-bug-fill me-2"></i>Report a Bug</h5>
-                    </div>
-                    <div class="card-body">
-                        <form id="studentBugReportForm">
-                            <div class="mb-3">
-                                <label for="student_bug_title" class="form-label">Bug Title:</label>
-                                <input type="text" class="form-control" id="student_bug_title" name="title" placeholder="Brief description of the issue..." required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="student_bug_description" class="form-label">Detailed Description:</label>
-                                <textarea class="form-control" id="student_bug_description" name="description" rows="5" placeholder="Please describe the bug you encountered in detail..." required></textarea>
-                            </div>
-                            <div class="mb-3">
-                                <label for="student_bug_severity" class="form-label">Severity Level:</label>
-                                <select class="form-select" id="student_bug_severity" name="severity">
-                                    <option value="low">Low - Minor issue, doesn't affect functionality</option>
-                                    <option value="medium" selected>Medium - Some functionality affected</option>
-                                    <option value="high">High - Major functionality broken</option>
-                                    <option value="critical">Critical - System unusable</option>
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label for="student_contact_email" class="form-label">Your Email (Optional):</label>
-                                <input type="email" class="form-control" id="student_contact_email" name="contact_email" placeholder="Enter your email for follow-up">
-                            </div>
-                            <input type="hidden" name="page_url" value="{{ request.url }}">
-                            <button type="submit" class="btn btn-danger">
-                                <i class="bi bi-send me-2"></i>Submit Bug Report
-                            </button>
-                        </form>
-                    </div>
-                </div>
+
             </div>
 
             <div class="col-lg-4">
@@ -3042,9 +3008,9 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                             <button class="btn btn-outline-info" onclick="viewActivityLog()">
                                 <i class="bi bi-clock-history me-2"></i>View Activity Log
                             </button>
-                            <button class="btn btn-outline-warning" onclick="changePassword()">
+                            <a href="{{ url_for('auth.change_password') }}" class="btn btn-outline-warning">
                                 <i class="bi bi-key me-2"></i>Change Password
-                            </button>
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -3576,68 +3542,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
             });
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
-            // Handle student bug report form submission
-            const studentBugReportForm = document.getElementById('studentBugReportForm');
-            if (studentBugReportForm) {
-                studentBugReportForm.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    
-                    const formData = new FormData(studentBugReportForm);
-                    const submitButton = studentBugReportForm.querySelector('button[type="submit"]');
-                    const originalText = submitButton.innerHTML;
-                    
-                    // Disable button and show loading state
-                    submitButton.disabled = true;
-                    submitButton.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Submitting...';
-                    
-                    fetch('{{ url_for("auth.submit_bug_report") }}', {
-                        method: 'POST',
-                        body: formData
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            // Show success message
-                            const alertDiv = document.createElement('div');
-                            alertDiv.className = 'alert alert-success alert-dismissible fade show';
-                            alertDiv.innerHTML = `
-                                <i class="bi bi-check-circle-fill me-2"></i>${data.message}
-                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                            `;
-                            studentBugReportForm.parentNode.insertBefore(alertDiv, studentBugReportForm);
-                            
-                            // Reset form
-                            studentBugReportForm.reset();
-                        } else {
-                            // Show error message
-                            const alertDiv = document.createElement('div');
-                            alertDiv.className = 'alert alert-danger alert-dismissible fade show';
-                            alertDiv.innerHTML = `
-                                <i class="bi bi-exclamation-triangle-fill me-2"></i>${data.message}
-                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                            `;
-                            studentBugReportForm.parentNode.insertBefore(alertDiv, studentBugReportForm);
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        const alertDiv = document.createElement('div');
-                        alertDiv.className = 'alert alert-danger alert-dismissible fade show';
-                        alertDiv.innerHTML = `
-                            <i class="bi bi-exclamation-triangle-fill me-2"></i>An error occurred while submitting the bug report. Please try again.
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        `;
-                        studentBugReportForm.parentNode.insertBefore(alertDiv, studentBugReportForm);
-                    })
-                    .finally(() => {
-                        // Re-enable button
-                        submitButton.disabled = false;
-                        submitButton.innerHTML = originalText;
-                    });
-                });
-            }
-        });
+
 
         function savePreferences() {
             alert('Preferences saved successfully!');
@@ -3651,9 +3556,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
             alert('Activity log functionality will be implemented here.');
         }
 
-        function changePassword() {
-            alert('Password change functionality will be implemented here.');
-        }
+
 
 
 

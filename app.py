@@ -5,7 +5,7 @@ from flask_login import current_user, login_user, logout_user, login_required
 from werkzeug.security import check_password_hash
 from config import Config
 from sqlalchemy import func, and_
-from datetime import datetime
+from datetime import datetime, timezone
 
 # Import extensions to avoid circular imports
 from extensions import db, login_manager
@@ -390,7 +390,7 @@ def create_app(config_class=Config):
             # Table might not exist yet, continue without maintenance mode
             pass
         
-        if maintenance and maintenance.end_time > datetime.now():
+        if maintenance and maintenance.end_time > datetime.now(timezone.utc):
             # Debug logging for maintenance mode
             print(f"Maintenance mode active: {maintenance.is_active}")
             print(f"Maintenance end time: {maintenance.end_time}")
@@ -406,9 +406,9 @@ def create_app(config_class=Config):
                 print("Tech user bypassing maintenance mode")
                 return render_template('home.html')
             
-            # Calculate progress percentage
+            # Calculate progress percentage using UTC time
             total_duration = (maintenance.end_time - maintenance.start_time).total_seconds()
-            elapsed = (datetime.now() - maintenance.start_time).total_seconds()
+            elapsed = (datetime.now(timezone.utc) - maintenance.start_time).total_seconds()
             progress_percentage = min(100, max(0, int((elapsed / total_duration) * 100)))
             
             return render_template('maintenance.html', 

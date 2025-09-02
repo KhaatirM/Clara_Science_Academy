@@ -726,8 +726,9 @@ def start_maintenance():
         MaintenanceMode.query.update({'is_active': False})
         db.session.commit()
         
-        # Create new maintenance session
-        start_time = datetime.now()
+        # Create new maintenance session using UTC time
+        from datetime import timezone
+        start_time = datetime.now(timezone.utc)
         end_time = start_time + timedelta(minutes=duration_minutes)
         
         maintenance = MaintenanceMode()

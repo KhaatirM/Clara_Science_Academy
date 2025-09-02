@@ -98,29 +98,59 @@
         </div>
     </div>
     <script>
-        // Countdown timer
+        // Countdown timer with proper timezone handling
         function updateCountdown() {
             const now = new Date();
-            const endTime = new Date('{{ maintenance.end_time.isoformat() }}');
+            
+            // Parse the end time from the server (assuming UTC if no timezone specified)
+            const endTimeStr = '{{ maintenance.end_time.isoformat() }}';
+            let endTime;
+            
+            // Handle timezone properly - if no timezone info, treat as UTC
+            if (endTimeStr.includes('+') || endTimeStr.includes('Z') || endTimeStr.includes('-', 10)) {
+                endTime = new Date(endTimeStr);
+            } else {
+                // No timezone info, treat as UTC
+                endTime = new Date(endTimeStr + 'Z');
+            }
+            
             const timeLeft = endTime - now;
+            
             if (timeLeft <= 0) {
                 document.getElementById('countdown').innerHTML = 
                     '<span class="text-success">Maintenance completed! Please refresh the page.</span>';
                 return;
             }
+            
             const hours = Math.floor(timeLeft / (1000 * 60 * 60));
             const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
             const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+            
+            // Format the countdown display
+            let timeDisplay = '';
+            if (hours > 0) {
+                timeDisplay += `${hours}h `;
+            }
+            if (minutes > 0 || hours > 0) {
+                timeDisplay += `${minutes}m `;
+            }
+            timeDisplay += `${seconds}s`;
+            
             document.getElementById('countdown').innerHTML = 
-                `<span class="text-primary">Estimated time remaining: ${hours}h ${minutes}m ${seconds}s</span>`;
+                `<div class="alert alert-primary">
+                    <i class="bi bi-clock"></i> 
+                    <strong>Estimated time remaining:</strong> ${timeDisplay}
+                </div>`;
         }
+        
         // Update countdown every second
         updateCountdown();
         setInterval(updateCountdown, 1000);
-        // Auto-refresh every 30 seconds to check if maintenance is complete
+        
+        // Auto-refresh every 60 seconds to check if maintenance is complete
         setTimeout(function() {
             location.reload();
-        }, 30000);
+        }, 60000);
     </script>
 </body>
 </html> 

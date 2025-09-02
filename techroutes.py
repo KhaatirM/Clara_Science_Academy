@@ -715,7 +715,12 @@ def start_maintenance():
         duration_minutes = int(request.form.get('duration_minutes', 60))
         reason = request.form.get('reason', 'Scheduled maintenance')
         maintenance_message = request.form.get('maintenance_message', 'System is under maintenance. Please check back later.')
-        allow_tech_access = request.form.get('allow_tech_access') == 'on'
+        
+        # Validate duration (max 7 days = 10080 minutes)
+        max_duration = 7 * 24 * 60  # 7 days in minutes
+        if duration_minutes > max_duration:
+            flash(f'Error: Maximum maintenance duration is 7 days ({max_duration} minutes).', 'danger')
+            return redirect(url_for('tech.maintenance_control'))
         
         # Deactivate any existing maintenance sessions
         MaintenanceMode.query.update({'is_active': False})
@@ -733,12 +738,30 @@ def start_maintenance():
         maintenance.reason = reason
         maintenance.initiated_by = current_user.id
         maintenance.maintenance_message = maintenance_message
-        maintenance.allow_tech_access = allow_tech_access
+        maintenance.allow_tech_access = True  # Tech users always have access
         
         db.session.add(maintenance)
         db.session.commit()
         
-        flash(f'Maintenance mode activated for {duration_minutes} minutes. End time: {end_time.strftime("%Y-%m-%d %H:%M:%S")}', 'success')
+        # Format duration for display
+        if duration_minutes >= 1440:  # 1 day or more
+            days = duration_minutes // 1440
+            hours = (duration_minutes % 1440) // 60
+            if hours > 0:
+                duration_display = f"{days} day{'s' if days > 1 else ''} and {hours} hour{'s' if hours > 1 else ''}"
+            else:
+                duration_display = f"{days} day{'s' if days > 1 else ''}"
+        elif duration_minutes >= 60:  # 1 hour or more
+            hours = duration_minutes // 60
+            minutes = duration_minutes % 60
+            if minutes > 0:
+                duration_display = f"{hours} hour{'s' if hours > 1 else ''} and {minutes} minute{'s' if minutes > 1 else ''}"
+            else:
+                duration_display = f"{hours} hour{'s' if hours > 1 else ''}"
+        else:
+            duration_display = f"{duration_minutes} minute{'s' if duration_minutes > 1 else ''}"
+        
+        flash(f'Maintenance mode activated for {duration_display}. End time: {end_time.strftime("%Y-%m-%d %H:%M:%S")}', 'success')
     except Exception as e:
         flash(f'Error starting maintenance mode: {str(e)}', 'danger')
     

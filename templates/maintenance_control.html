@@ -70,17 +70,26 @@
                         <div class="row g-3">
                             <div class="col-12 col-md-6">
                                 <div class="mb-3">
-                                    <label for="duration_minutes" class="form-label">Duration (minutes)</label>
-                                    <select class="form-select" id="duration_minutes" name="duration_minutes" required>
-                                        <option value="15">15 minutes</option>
+                                    <label for="duration_type" class="form-label">Maintenance Duration</label>
+                                    <select class="form-select" id="duration_type" name="duration_type" required onchange="toggleCustomDuration()">
                                         <option value="30">30 minutes</option>
                                         <option value="60" selected>1 hour</option>
                                         <option value="120">2 hours</option>
                                         <option value="240">4 hours</option>
                                         <option value="480">8 hours</option>
-                                        <option value="1440">24 hours</option>
+                                        <option value="1440">24 hours (1 day)</option>
+                                        <option value="4320">3 days</option>
+                                        <option value="7200">5 days</option>
+                                        <option value="custom">Custom duration (max 7 days)</option>
                                     </select>
                                 </div>
+                                <div class="mb-3" id="custom_duration_group" style="display: none;">
+                                    <label for="custom_duration" class="form-label">Custom Duration (hours)</label>
+                                    <input type="number" class="form-control" id="custom_duration" name="custom_duration" 
+                                           min="1" max="168" placeholder="Enter hours (max 168 = 7 days)">
+                                    <div class="form-text">Maximum 168 hours (7 days)</div>
+                                </div>
+                                <input type="hidden" id="duration_minutes" name="duration_minutes" value="60">
                                 <div class="mb-3">
                                     <label for="reason" class="form-label">Reason for Maintenance</label>
                                     <select class="form-select" id="reason" name="reason" required>
@@ -98,13 +107,9 @@
                                     <label for="maintenance_message" class="form-label">Message to Display</label>
                                     <textarea class="form-control" id="maintenance_message" name="maintenance_message" rows="3" required>System is under maintenance. Please check back later.</textarea>
                                 </div>
-                                <div class="mb-3">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="allow_tech_access" name="allow_tech_access" checked>
-                                        <label class="form-check-label" for="allow_tech_access">
-                                            Allow Tech users to access during maintenance
-                                        </label>
-                                    </div>
+                                <div class="alert alert-info">
+                                    <i class="bi bi-info-circle"></i>
+                                    <strong>Tech Access:</strong> Tech users will always be able to access the system during maintenance mode.
                                 </div>
                             </div>
                         </div>
@@ -128,18 +133,30 @@
                         <ul class="mb-0">
                             <li>Home page remains accessible</li>
                             <li>Login is disabled for regular users</li>
-                            <li>Tech users can still access the system</li>
+                            <li><strong>Tech users always have access</strong></li>
                             <li>Maintenance message is displayed</li>
                             <li>Automatic end time based on duration</li>
+                            <li>Maximum duration: 7 days</li>
                         </ul>
                     </div>
                     <div class="alert alert-warning">
                         <h6><i class="bi bi-exclamation-triangle"></i> Important Notes</h6>
                         <ul class="mb-0">
-                            <li>Maintenance mode affects all users</li>
-                            <li>Set appropriate duration</li>
-                            <li>Provide clear reason and message</li>
+                            <li>Maintenance mode affects all regular users</li>
+                            <li>Tech users can always bypass maintenance</li>
+                            <li>Maximum maintenance duration: 7 days</li>
+                            <li>Set appropriate duration and reason</li>
+                            <li>Provide clear maintenance message</li>
                             <li>Monitor system during maintenance</li>
+                        </ul>
+                    </div>
+                    <div class="alert alert-success">
+                        <h6><i class="bi bi-shield-check"></i> Tech User Benefits</h6>
+                        <ul class="mb-0">
+                            <li>Always able to login during maintenance</li>
+                            <li>Can stop maintenance mode anytime</li>
+                            <li>Full system access maintained</li>
+                            <li>Can monitor maintenance progress</li>
                         </ul>
                     </div>
                 </div>
@@ -147,4 +164,65 @@
         </div>
     </div>
 </div>
+
+<script>
+function toggleCustomDuration() {
+    const durationType = document.getElementById('duration_type');
+    const customDurationGroup = document.getElementById('custom_duration_group');
+    const durationMinutes = document.getElementById('duration_minutes');
+    const customDuration = document.getElementById('custom_duration');
+    
+    if (durationType.value === 'custom') {
+        customDurationGroup.style.display = 'block';
+        customDuration.required = true;
+    } else {
+        customDurationGroup.style.display = 'none';
+        customDuration.required = false;
+        durationMinutes.value = durationType.value;
+    }
+}
+
+function updateDurationMinutes() {
+    const durationType = document.getElementById('duration_type');
+    const customDuration = document.getElementById('custom_duration');
+    const durationMinutes = document.getElementById('duration_minutes');
+    
+    if (durationType.value === 'custom') {
+        const hours = parseInt(customDuration.value);
+        if (hours && hours > 0 && hours <= 168) {
+            durationMinutes.value = hours * 60;
+        }
+    } else {
+        durationMinutes.value = durationType.value;
+    }
+}
+
+// Add event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    const durationType = document.getElementById('duration_type');
+    const customDuration = document.getElementById('custom_duration');
+    
+    durationType.addEventListener('change', toggleCustomDuration);
+    customDuration.addEventListener('input', updateDurationMinutes);
+    
+    // Form validation
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        const durationType = document.getElementById('duration_type');
+        const customDuration = document.getElementById('custom_duration');
+        
+        if (durationType.value === 'custom') {
+            const hours = parseInt(customDuration.value);
+            if (!hours || hours < 1 || hours > 168) {
+                e.preventDefault();
+                alert('Please enter a valid duration between 1 and 168 hours (7 days maximum).');
+                customDuration.focus();
+                return false;
+            }
+        }
+        
+        return confirm('Start maintenance mode? This will restrict access for all users except Tech users.');
+    });
+});
+</script>
 {% endblock %} 

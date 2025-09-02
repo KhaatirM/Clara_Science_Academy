@@ -401,8 +401,8 @@ def create_app(config_class=Config):
             else:
                 print("User not authenticated")
             
-            # Allow tech users to bypass maintenance mode
-            if current_user.is_authenticated and current_user.role in ['Tech', 'IT Support', 'Director'] and maintenance.allow_tech_access:
+            # Allow tech users to bypass maintenance mode (always allowed)
+            if current_user.is_authenticated and current_user.role in ['Tech', 'IT Support', 'Director']:
                 print("Tech user bypassing maintenance mode")
                 return render_template('home.html')
             

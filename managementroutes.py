@@ -2069,6 +2069,7 @@ def view_student(student_id):
         'age': age,
         'grade_level': student.grade_level,
         'student_id': student.student_id,
+        'email': student.email,
         'gpa': gpa,
         'assigned_classes': assigned_classes,
         'photo_filename': student.photo_filename,

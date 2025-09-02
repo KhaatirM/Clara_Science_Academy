@@ -19,6 +19,9 @@
                         <th>Name</th>
                         <th>Grade Level</th>
                         <th>State ID</th>
+                        {% if current_user.role in ['Director', 'School Administrator'] %}
+                        <th>Email</th>
+                        {% endif %}
                         <th>Address</th>
                         <th>Actions</th>
                     </tr>
@@ -34,6 +37,9 @@
                             </td>
                             <td>Grade {{ student.grade_level }}</td>
                             <td>{{ student.state_id or 'N/A' }}</td>
+                            {% if current_user.role in ['Director', 'School Administrator'] %}
+                            <td>{{ student.email or 'N/A' }}</td>
+                            {% endif %}
                             <td>
                                 {% if student.address %}
                                     {{ student.address[:50] }}{% if student.address|length > 50 %}...{% endif %}

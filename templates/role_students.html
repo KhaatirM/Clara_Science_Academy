@@ -29,6 +29,7 @@
                                  data-grade="{{ student.grade_level }}"
                                  data-state-id="{{ student.state_id or 'N/A' }}"
                                  data-address="{{ student.address or 'N/A' }}"
+                                 data-email="{{ student.email or 'N/A' }}"
                                  data-image="{{ url_for('static', filename=image_path) }}">
                                 
                                 <img src="{{ url_for('static', filename=image_path) }}" alt="Photo of {{ student.first_name }}" class="student-img img-fluid rounded-circle mb-2">
@@ -75,6 +76,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <p><strong>DOB:</strong> ${student.dob}</p>
                 <p><strong>Grade:</strong> ${student.grade}</p>
                 <p><strong>State ID:</strong> ${student.stateId}</p>
+                <p><strong>Email:</strong> ${student.email}</p>
                 <p><strong>Address:</strong> ${student.address}</p>
                 <hr>
                 <div class="d-grid gap-2">

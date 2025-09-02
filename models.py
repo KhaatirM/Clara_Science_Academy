@@ -117,6 +117,37 @@ class Student(db.Model):
         except Exception as e:
             return None
     
+    def generate_email(self):
+        """Generate email address based on first name, last initial, month & year of birth"""
+        if not self.first_name or not self.last_name or not self.dob:
+            return None
+        
+        try:
+            from datetime import datetime
+            
+            # Parse DOB (handle both MM/DD/YYYY and YYYY-MM-DD)
+            dob = self.dob
+            if '-' in dob:
+                # Format: YYYY-MM-DD
+                dt = datetime.strptime(dob, '%Y-%m-%d')
+            elif '/' in dob:
+                # Format: MM/DD/YYYY
+                dt = datetime.strptime(dob, '%m/%d/%Y')
+            else:
+                return None
+            
+            # Format: first name + last initial + month + year
+            first_name_clean = self.first_name.lower().replace(' ', '')
+            last_initial = self.last_name[0].lower()
+            month = str(dt.month).zfill(2)
+            year = str(dt.year)[-2:]
+            
+            email = f"{first_name_clean}{last_initial}{month}{year}@clarascienceacademy.org"
+            return email
+            
+        except Exception as e:
+            return None
+    
     def __repr__(self):
         return f"Student('{self.first_name} {self.last_name}', Grade: '{self.grade_level}')"
 

@@ -1,0 +1,284 @@
+{% extends "dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
+    <h3 class="mb-2 mb-md-0"><i class="bi bi-clock me-2"></i>Time Tracking - {{ class_obj.name }}</h3>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('teacher.class_analytics', class_id=class_obj.id) }}" class="btn btn-outline-info btn-sm">
+        <i class="bi bi-bar-chart me-1"></i>Analytics
+      </a>
+      <a href="{{ url_for('teacher.view_class', class_id=class_obj.id) }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Back to Class
+      </a>
+    </div>
+  </div>
+
+  <!-- Overview Stats -->
+  <div class="row g-3 g-md-4 mb-4">
+    <div class="col-12 col-md-3">
+      <div class="card shadow-sm">
+        <div class="card-body text-center">
+          <h4 class="text-primary">{{ time_tracking|length }}</h4>
+          <p class="mb-0">Total Entries</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-3">
+      <div class="card shadow-sm">
+        <div class="card-body text-center">
+          <h4 class="text-success">{{ students|length }}</h4>
+          <p class="mb-0">Students Tracked</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-3">
+      <div class="card shadow-sm">
+        <div class="card-body text-center">
+          <h4 class="text-info">
+            {% set total_time = time_tracking|sum(attribute='duration_minutes') %}
+            {{ (total_time / 60)|round(1) }}h
+          </h4>
+          <p class="mb-0">Total Time</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-3">
+      <div class="card shadow-sm">
+        <div class="card-body text-center">
+          <h4 class="text-warning">
+            {% if time_tracking %}
+              {{ (time_tracking|sum(attribute='duration_minutes') / time_tracking|length)|round(1) }}min
+            {% else %}
+              0min
+            {% endif %}
+          </h4>
+          <p class="mb-0">Avg Session</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Time Tracking List -->
+  <div class="card shadow-sm">
+    <div class="card-header bg-primary text-white">
+      <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Time Tracking Entries</h5>
+    </div>
+    <div class="card-body">
+      {% if time_tracking %}
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>Student</th>
+                <th>Group</th>
+                <th>Assignment</th>
+                <th>Activity Type</th>
+                <th>Description</th>
+                <th>Start Time</th>
+                <th>End Time</th>
+                <th>Duration</th>
+                <th>Productivity</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for entry in time_tracking %}
+                <tr>
+                  <td>
+                    <div class="fw-bold">{{ entry.student.first_name }} {{ entry.student.last_name }}</div>
+                    <small class="text-muted">ID: {{ entry.student.student_id }}</small>
+                  </td>
+                  <td>
+                    {% if entry.group %}
+                      <span class="badge bg-secondary">{{ entry.group.name }}</span>
+                    {% else %}
+                      <span class="text-muted">Individual</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if entry.group_assignment %}
+                      <div class="fw-bold">{{ entry.group_assignment.title }}</div>
+                      <small class="text-muted">{{ entry.group_assignment.description[:50] }}{% if entry.group_assignment.description|length > 50 %}...{% endif %}</small>
+                    {% else %}
+                      <span class="text-muted">N/A</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <span class="badge bg-info">{{ entry.activity_type.replace('_', ' ').title() }}</span>
+                  </td>
+                  <td>
+                    <div class="text-truncate" style="max-width: 200px;" title="{{ entry.activity_description }}">
+                      {{ entry.activity_description or 'No description' }}
+                    </div>
+                  </td>
+                  <td>
+                    <small class="text-muted">{{ entry.start_time.strftime('%m/%d/%Y %I:%M %p') }}</small>
+                  </td>
+                  <td>
+                    <small class="text-muted">{{ entry.end_time.strftime('%m/%d/%Y %I:%M %p') }}</small>
+                  </td>
+                  <td>
+                    <span class="badge bg-warning">{{ entry.duration_minutes }}min</span>
+                  </td>
+                  <td>
+                    {% if entry.productivity_rating %}
+                      <div class="progress" style="height: 20px; width: 60px;">
+                        <div class="progress-bar" role="progressbar" style="width: {{ (entry.productivity_rating / 5 * 100)|round(1) }}%">
+                          {{ entry.productivity_rating }}/5
+                        </div>
+                      </div>
+                    {% else %}
+                      <span class="text-muted">N/A</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if entry.is_verified %}
+                      <span class="badge bg-success">Verified</span>
+                    {% else %}
+                      <span class="badge bg-warning">Pending</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="text-center py-5">
+          <i class="bi bi-clock display-1 text-muted"></i>
+          <h5 class="mt-3 text-muted">No Time Tracking Entries</h5>
+          <p class="text-muted">Time tracking entries will appear here once students start logging their work time.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Time Analysis -->
+  {% if time_tracking %}
+  <div class="row g-4 mt-4">
+    <div class="col-12 col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-header bg-info text-white">
+          <h6 class="mb-0"><i class="bi bi-pie-chart me-2"></i>Activity Types</h6>
+        </div>
+        <div class="card-body">
+          {% set activity_types = time_tracking|groupby('activity_type') %}
+          {% for type, type_entries in activity_types %}
+            {% set type_time = type_entries|sum(attribute='duration_minutes') %}
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span>{{ type.replace('_', ' ').title() }}</span>
+              <div>
+                <span class="badge bg-info me-1">{{ type_entries|list|length }}</span>
+                <span class="text-muted">{{ (type_time / 60)|round(1) }}h</span>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-header bg-success text-white">
+          <h6 class="mb-0"><i class="bi bi-graph-up me-2"></i>Productivity Distribution</h6>
+        </div>
+        <div class="card-body">
+          {% set productivity_ratings = time_tracking|selectattr('productivity_rating')|groupby('productivity_rating') %}
+          {% for rating, rating_entries in productivity_ratings %}
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span>{{ rating }}/5 Stars</span>
+              <span class="badge bg-success">{{ rating_entries|list|length }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Student Time Summary -->
+  <div class="row g-4 mt-4">
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-header bg-warning text-white">
+          <h6 class="mb-0"><i class="bi bi-person-lines-fill me-2"></i>Student Time Summary</h6>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-sm">
+              <thead>
+                <tr>
+                  <th>Student</th>
+                  <th>Total Time</th>
+                  <th>Entries</th>
+                  <th>Avg Session</th>
+                  <th>Avg Productivity</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% set student_times = time_tracking|groupby('student_id') %}
+                {% for student_id, student_entries in student_times %}
+                  {% set student = student_entries|first %}
+                  {% set total_time = student_entries|sum(attribute='duration_minutes') %}
+                  {% set productivity_ratings = student_entries|selectattr('productivity_rating')|map(attribute='productivity_rating')|list %}
+                  <tr>
+                    <td>
+                      <div class="fw-bold">{{ student.student.first_name }} {{ student.student.last_name }}</div>
+                      <small class="text-muted">ID: {{ student.student.student_id }}</small>
+                    </td>
+                    <td><span class="badge bg-warning">{{ (total_time / 60)|round(1) }}h</span></td>
+                    <td><span class="badge bg-info">{{ student_entries|list|length }}</span></td>
+                    <td><span class="badge bg-secondary">{{ (total_time / student_entries|list|length)|round(1) }}min</span></td>
+                    <td>
+                      {% if productivity_ratings %}
+                        <span class="badge bg-success">{{ (productivity_ratings|sum / productivity_ratings|length)|round(1) }}/5</span>
+                      {% else %}
+                        <span class="text-muted">N/A</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Quick Actions -->
+  <div class="row g-4 mt-4">
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+          <h6 class="mb-0"><i class="bi bi-lightning me-2"></i>Quick Actions</h6>
+        </div>
+        <div class="card-body">
+          <div class="row g-2">
+            <div class="col-12 col-md-3">
+              <a href="{{ url_for('teacher.class_analytics', class_id=class_obj.id) }}" class="btn btn-info btn-sm w-100">
+                <i class="bi bi-bar-chart me-1"></i>Analytics Dashboard
+              </a>
+            </div>
+            <div class="col-12 col-md-3">
+              <a href="{{ url_for('teacher.class_contributions', class_id=class_obj.id) }}" class="btn btn-success btn-sm w-100">
+                <i class="bi bi-people me-1"></i>Contributions
+              </a>
+            </div>
+            <div class="col-12 col-md-3">
+              <a href="{{ url_for('teacher.create_report', class_id=class_obj.id) }}" class="btn btn-warning btn-sm w-100">
+                <i class="bi bi-file-text me-1"></i>Create Report
+              </a>
+            </div>
+            <div class="col-12 col-md-3">
+              <a href="{{ url_for('teacher.class_groups', class_id=class_obj.id) }}" class="btn btn-secondary btn-sm w-100">
+                <i class="bi bi-people-fill me-1"></i>Manage Groups
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

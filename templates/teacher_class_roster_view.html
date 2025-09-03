@@ -24,6 +24,81 @@
           <p class="mb-0"><strong>School Year:</strong> {{ class_item.school_year.name if class_item.school_year else 'N/A' }}</p>
         </div>
       </div>
+      
+      <!-- Action Buttons Card -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0"><i class="bi bi-tools me-2"></i>Class Management</h5>
+        </div>
+        <div class="card-body">
+          <!-- Core Management Actions -->
+          <div class="mb-3">
+            <h6 class="text-muted mb-2"><i class="bi bi-gear me-1"></i>Core Management</h6>
+            <div class="row g-2">
+              <div class="col-6 col-md-4">
+                <a href="{{ url_for('teacher.add_assignment', class_id=class_item.id) }}" class="btn btn-outline-success btn-sm w-100">
+                  <i class="bi bi-plus-circle me-1"></i>Add Assignment
+                </a>
+              </div>
+              <div class="col-6 col-md-4">
+                <a href="{{ url_for('teacher.take_attendance', class_id=class_item.id) }}" class="btn btn-outline-warning btn-sm w-100">
+                  <i class="bi bi-clipboard-check me-1"></i>Take Attendance
+                </a>
+              </div>
+              <div class="col-6 col-md-4">
+                <a href="{{ url_for('teacher.class_groups', class_id=class_item.id) }}" class="btn btn-outline-info btn-sm w-100">
+                  <i class="bi bi-people me-1"></i>Manage Groups
+                </a>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Group Work & Assignments -->
+          <div class="mb-3">
+            <h6 class="text-muted mb-2"><i class="bi bi-people-fill me-1"></i>Group Work & Assignments</h6>
+            <div class="row g-2">
+              <div class="col-6 col-md-4">
+                <a href="{{ url_for('teacher.class_group_assignments', class_id=class_item.id) }}" class="btn btn-outline-secondary btn-sm w-100">
+                  <i class="bi bi-journal-plus me-1"></i>Group Assignments
+                </a>
+              </div>
+              <div class="col-6 col-md-4">
+                <a href="{{ url_for('teacher.class_deadline_reminders', class_id=class_item.id) }}" class="btn btn-outline-primary btn-sm w-100">
+                  <i class="bi bi-bell me-1"></i>Deadline Reminders
+                </a>
+              </div>
+              <div class="col-6 col-md-4">
+                <a href="{{ url_for('teacher.class_reports', class_id=class_item.id) }}" class="btn btn-outline-primary btn-sm w-100">
+                  <i class="bi bi-graph-up me-1"></i>Reports & Analytics
+                </a>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Assessment & Feedback -->
+          <div class="mb-0">
+            <h6 class="text-muted mb-2"><i class="bi bi-star me-1"></i>Assessment & Feedback</h6>
+            <div class="row g-2">
+              <div class="col-6 col-md-4">
+                <a href="{{ url_for('teacher.class_360_feedback', class_id=class_item.id) }}" class="btn btn-outline-info btn-sm w-100">
+                  <i class="bi bi-arrow-repeat me-1"></i>360° Feedback
+                </a>
+              </div>
+              <div class="col-6 col-md-4">
+                <a href="{{ url_for('teacher.class_reflection_journals', class_id=class_item.id) }}" class="btn btn-outline-success btn-sm w-100">
+                  <i class="bi bi-journal-text me-1"></i>Reflection Journals
+                </a>
+              </div>
+              <div class="col-6 col-md-4">
+                <a href="{{ url_for('teacher.class_conflicts', class_id=class_item.id) }}" class="btn btn-outline-danger btn-sm w-100">
+                  <i class="bi bi-exclamation-triangle me-1"></i>Conflict Resolution
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
       <!-- Announcements Card -->
       <div class="card shadow-sm mb-4">
         <div class="card-header bg-info text-white">

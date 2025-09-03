@@ -1,0 +1,247 @@
+{% extends "dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
+    <h3 class="mb-2 mb-md-0"><i class="bi bi-plus-circle me-2"></i>Add Resolution Step</h3>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('teacher.view_conflict', conflict_id=conflict.id) }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Back to Conflict
+      </a>
+    </div>
+  </div>
+
+  <!-- Conflict Summary -->
+  <div class="row g-4 mb-4">
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Conflict Summary</h5>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-12 col-md-6">
+              <strong>Group:</strong><br>
+              <span class="badge bg-secondary fs-6">{{ conflict.group.name }}</span>
+            </div>
+            <div class="col-12 col-md-6">
+              <strong>Assignment:</strong><br>
+              <span class="fw-bold">{{ conflict.group_assignment.title }}</span>
+            </div>
+            <div class="col-12 col-md-6">
+              <strong>Type:</strong><br>
+              <span class="badge bg-info">{{ conflict.conflict_type.replace('_', ' ').title() }}</span>
+            </div>
+            <div class="col-12 col-md-6">
+              <strong>Current Status:</strong><br>
+              {% if conflict.status == 'reported' %}
+                <span class="badge bg-warning">Reported</span>
+              {% elif conflict.status == 'investigating' %}
+                <span class="badge bg-info">Investigating</span>
+              {% elif conflict.status == 'resolved' %}
+                <span class="badge bg-success">Resolved</span>
+              {% elif conflict.status == 'escalated' %}
+                <span class="badge bg-danger">Escalated</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Resolution Step Form -->
+  <div class="row g-4">
+    <div class="col-12 col-lg-8">
+      <div class="card shadow-sm">
+        <div class="card-header bg-success text-white">
+          <h5 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Resolution Step Details</h5>
+        </div>
+        <div class="card-body">
+          <form method="POST" id="resolutionStepForm">
+            <div class="row g-3 mb-4">
+              <div class="col-12">
+                <h6 class="text-primary border-bottom pb-2 mb-3">
+                  <i class="bi bi-info-circle me-2"></i>Basic Information
+                </h6>
+              </div>
+              <div class="col-12">
+                <label for="resolution_step" class="form-label">Resolution Step <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="resolution_step" name="resolution_step" required placeholder="Enter a clear title for this resolution step">
+                <div class="form-text">A brief, descriptive title for this resolution step</div>
+              </div>
+              <div class="col-12">
+                <label for="step_description" class="form-label">Step Description <span class="text-danger">*</span></label>
+                <textarea class="form-control" id="step_description" name="step_description" rows="6" required placeholder="Describe what this resolution step involves and how it will be implemented..."></textarea>
+                <div class="form-text">Detailed description of the resolution step and its implementation</div>
+              </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+              <div class="col-12">
+                <h6 class="text-primary border-bottom pb-2 mb-3">
+                  <i class="bi bi-gear me-2"></i>Step Configuration
+                </h6>
+              </div>
+              <div class="col-12 col-md-6">
+                <label for="step_type" class="form-label">Step Type <span class="text-danger">*</span></label>
+                <select class="form-select" id="step_type" name="step_type" required>
+                  <option value="mediation">Mediation</option>
+                  <option value="intervention">Direct Intervention</option>
+                  <option value="restructuring">Group Restructuring</option>
+                  <option value="communication">Communication Training</option>
+                  <option value="counseling">Individual Counseling</option>
+                  <option value="other">Other</option>
+                </select>
+                <div class="form-text">Choose the type of resolution step</div>
+              </div>
+              <div class="col-12 col-md-6">
+                <label for="outcome" class="form-label">Expected Outcome</label>
+                <select class="form-select" id="outcome" name="outcome">
+                  <option value="pending">Pending</option>
+                  <option value="successful">Successful</option>
+                  <option value="partial">Partially Successful</option>
+                  <option value="unsuccessful">Unsuccessful</option>
+                </select>
+                <div class="form-text">Current outcome of this step</div>
+              </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+              <div class="col-12">
+                <h6 class="text-primary border-bottom pb-2 mb-3">
+                  <i class="bi bi-calendar me-2"></i>Follow-up
+                </h6>
+              </div>
+              <div class="col-12 col-md-6">
+                <label for="follow_up_date" class="form-label">Follow-up Date (Optional)</label>
+                <input type="datetime-local" class="form-control" id="follow_up_date" name="follow_up_date">
+                <div class="form-text">When should this step be followed up on</div>
+              </div>
+              <div class="col-12">
+                <label for="follow_up_notes" class="form-label">Follow-up Notes (Optional)</label>
+                <textarea class="form-control" id="follow_up_notes" name="follow_up_notes" rows="3" placeholder="Any notes about follow-up actions or observations..."></textarea>
+                <div class="form-text">Notes for follow-up actions or observations</div>
+              </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-success">
+                <i class="bi bi-save me-1"></i>Add Resolution Step
+              </button>
+              <a href="{{ url_for('teacher.view_conflict', conflict_id=conflict.id) }}" class="btn btn-outline-secondary">
+                <i class="bi bi-x-circle me-1"></i>Cancel
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Help Panel -->
+    <div class="col-12 col-lg-4">
+      <div class="card shadow-sm">
+        <div class="card-header bg-info text-white">
+          <h6 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Step Types</h6>
+        </div>
+        <div class="card-body">
+          <h6>Mediation</h6>
+          <p class="small mb-3">Facilitated discussion between conflicting parties to reach mutual understanding.</p>
+          
+          <h6>Direct Intervention</h6>
+          <p class="small mb-3">Teacher directly addresses the conflict and implements solutions.</p>
+          
+          <h6>Group Restructuring</h6>
+          <p class="small mb-3">Reorganizing group members or roles to resolve conflicts.</p>
+          
+          <h6>Communication Training</h6>
+          <p class="small mb-3">Teaching students better communication and conflict resolution skills.</p>
+          
+          <h6>Individual Counseling</h6>
+          <p class="small mb-3">One-on-one support for students involved in conflicts.</p>
+          
+          <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <strong>Tip:</strong> Document each step clearly for tracking progress.
+          </div>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mt-3">
+        <div class="card-header bg-success text-white">
+          <h6 class="mb-0"><i class="bi bi-star me-2"></i>Best Practices</h6>
+        </div>
+        <div class="card-body">
+          <ul class="mb-0 small">
+            <li>Be specific about what the step involves</li>
+            <li>Set clear expectations for outcomes</li>
+            <li>Schedule appropriate follow-up times</li>
+            <li>Document all observations and results</li>
+            <li>Involve students in the resolution process</li>
+            <li>Focus on learning and growth</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mt-3">
+        <div class="card-header bg-warning text-white">
+          <h6 class="mb-0"><i class="bi bi-gear me-2"></i>Quick Templates</h6>
+        </div>
+        <div class="card-body">
+          <div class="d-grid gap-2">
+            <button type="button" class="btn btn-outline-primary btn-sm" onclick="setStepTemplate('mediation')">
+              <i class="bi bi-chat-dots me-1"></i>Mediation Template
+            </button>
+            <button type="button" class="btn btn-outline-success btn-sm" onclick="setStepTemplate('intervention')">
+              <i class="bi bi-shield-check me-1"></i>Intervention Template
+            </button>
+            <button type="button" class="btn btn-outline-info btn-sm" onclick="setStepTemplate('restructuring')">
+              <i class="bi bi-arrow-repeat me-1"></i>Restructuring Template
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Set step templates
+function setStepTemplate(type) {
+    const stepField = document.getElementById('resolution_step');
+    const descriptionField = document.getElementById('step_description');
+    const typeField = document.getElementById('step_type');
+    
+    switch(type) {
+        case 'mediation':
+            typeField.value = 'mediation';
+            stepField.value = 'Facilitated Mediation Session';
+            descriptionField.value = 'Conduct a structured mediation session with all involved parties to:\n\n1. Allow each person to share their perspective\n2. Identify the root causes of the conflict\n3. Work together to find mutually acceptable solutions\n4. Establish clear communication guidelines\n5. Set expectations for future interactions\n\nGoal: Reach a mutual understanding and agreement on how to move forward.';
+            break;
+            
+        case 'intervention':
+            typeField.value = 'intervention';
+            stepField.value = 'Direct Teacher Intervention';
+            descriptionField.value = 'Implement direct intervention measures including:\n\n1. Separate conflicting parties temporarily\n2. Provide clear guidelines for appropriate behavior\n3. Assign specific roles and responsibilities\n4. Monitor group interactions closely\n5. Provide immediate feedback on behavior\n\nGoal: Stop the conflict and establish clear boundaries for group work.';
+            break;
+            
+        case 'restructuring':
+            typeField.value = 'restructuring';
+            stepField.value = 'Group Restructuring';
+            descriptionField.value = 'Reorganize the group structure to resolve conflicts:\n\n1. Reassign group roles and responsibilities\n2. Modify group composition if necessary\n3. Establish new communication protocols\n4. Set clear expectations for collaboration\n5. Provide additional support resources\n\nGoal: Create a more functional group dynamic that supports learning.';
+            break;
+    }
+}
+
+// Set default follow-up date to one week from now
+document.addEventListener('DOMContentLoaded', function() {
+    const nextWeek = new Date();
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    nextWeek.setHours(14, 0, 0, 0); // Set to 2:00 PM
+    
+    const dateInput = document.getElementById('follow_up_date');
+    dateInput.value = nextWeek.toISOString().slice(0, 16);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,222 @@
+{% extends "dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
+    <h3 class="mb-2 mb-md-0"><i class="bi bi-bell me-2"></i>Edit Deadline Reminder</h3>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('teacher.class_deadline_reminders', class_id=class_obj.id) }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Back to Reminders
+      </a>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-12 col-lg-8">
+      <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0"><i class="bi bi-bell me-2"></i>Edit Reminder Details</h5>
+        </div>
+        <div class="card-body">
+          <form method="POST" id="reminderForm">
+            <div class="row g-3 mb-4">
+              <div class="col-12">
+                <h6 class="text-primary border-bottom pb-2 mb-3">
+                  <i class="bi bi-info-circle me-2"></i>Basic Information
+                </h6>
+              </div>
+              <div class="col-12 col-md-6">
+                <label for="reminder_type" class="form-label">Reminder Type <span class="text-danger">*</span></label>
+                <select class="form-select" id="reminder_type" name="reminder_type" required>
+                  <option value="assignment" {% if reminder.reminder_type == 'assignment' %}selected{% endif %}>Assignment Reminder</option>
+                  <option value="group_assignment" {% if reminder.reminder_type == 'group_assignment' %}selected{% endif %}>Group Assignment Reminder</option>
+                  <option value="general" {% if reminder.reminder_type == 'general' %}selected{% endif %}>General Class Reminder</option>
+                </select>
+                <div class="form-text">Choose the type of reminder you want to create</div>
+              </div>
+              <div class="col-12 col-md-6">
+                <label for="reminder_frequency" class="form-label">Frequency <span class="text-danger">*</span></label>
+                <select class="form-select" id="reminder_frequency" name="reminder_frequency" required>
+                  <option value="once" {% if reminder.reminder_frequency == 'once' %}selected{% endif %}>Once</option>
+                  <option value="daily" {% if reminder.reminder_frequency == 'daily' %}selected{% endif %}>Daily</option>
+                  <option value="weekly" {% if reminder.reminder_frequency == 'weekly' %}selected{% endif %}>Weekly</option>
+                </select>
+                <div class="form-text">How often should this reminder be sent</div>
+              </div>
+            </div>
+
+            <div class="row g-3 mb-4" id="assignmentSection">
+              <div class="col-12">
+                <h6 class="text-primary border-bottom pb-2 mb-3">
+                  <i class="bi bi-file-text me-2"></i>Assignment Selection
+                </h6>
+              </div>
+              <div class="col-12 col-md-6" id="regularAssignmentDiv">
+                <label for="assignment_id" class="form-label">Regular Assignment</label>
+                <select class="form-select" id="assignment_id" name="assignment_id">
+                  <option value="">Select an assignment...</option>
+                  {% for assignment in assignments %}
+                    <option value="{{ assignment.id }}" {% if reminder.assignment_id == assignment.id %}selected{% endif %}>{{ assignment.title }}</option>
+                  {% endfor %}
+                </select>
+                <div class="form-text">Choose a regular assignment for this reminder</div>
+              </div>
+              <div class="col-12 col-md-6" id="groupAssignmentDiv">
+                <label for="group_assignment_id" class="form-label">Group Assignment</label>
+                <select class="form-select" id="group_assignment_id" name="group_assignment_id">
+                  <option value="">Select a group assignment...</option>
+                  {% for group_assignment in group_assignments %}
+                    <option value="{{ group_assignment.id }}" {% if reminder.group_assignment_id == group_assignment.id %}selected{% endif %}>{{ group_assignment.title }}</option>
+                  {% endfor %}
+                </select>
+                <div class="form-text">Choose a group assignment for this reminder</div>
+              </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+              <div class="col-12">
+                <h6 class="text-primary border-bottom pb-2 mb-3">
+                  <i class="bi bi-pencil me-2"></i>Reminder Content
+                </h6>
+              </div>
+              <div class="col-12">
+                <label for="reminder_title" class="form-label">Reminder Title <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="reminder_title" name="reminder_title" required value="{{ reminder.reminder_title }}" placeholder="Enter a clear, descriptive title for this reminder">
+                <div class="form-text">A brief title that will appear in notifications</div>
+              </div>
+              <div class="col-12">
+                <label for="reminder_message" class="form-label">Reminder Message <span class="text-danger">*</span></label>
+                <textarea class="form-control" id="reminder_message" name="reminder_message" rows="6" required placeholder="Enter the message that will be sent to students...">{{ reminder.reminder_message }}</textarea>
+                <div class="form-text">The message that will be sent to students</div>
+              </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+              <div class="col-12">
+                <h6 class="text-primary border-bottom pb-2 mb-3">
+                  <i class="bi bi-calendar me-2"></i>Schedule
+                </h6>
+              </div>
+              <div class="col-12 col-md-6">
+                <label for="reminder_date" class="form-label">Reminder Date & Time <span class="text-danger">*</span></label>
+                <input type="datetime-local" class="form-control" id="reminder_date" name="reminder_date" required value="{{ reminder.reminder_date.strftime('%Y-%m-%dT%H:%M') }}">
+                <div class="form-text">When should this reminder be sent</div>
+              </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-save me-1"></i>Update Reminder
+              </button>
+              <a href="{{ url_for('teacher.class_deadline_reminders', class_id=class_obj.id) }}" class="btn btn-outline-secondary">
+                <i class="bi bi-x-circle me-1"></i>Cancel
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Help Panel -->
+    <div class="col-12 col-lg-4">
+      <div class="card shadow-sm">
+        <div class="card-header bg-info text-white">
+          <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Reminder Information</h6>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <strong>Created:</strong><br>
+            <small class="text-muted">{{ reminder.created_at.strftime('%m/%d/%Y %I:%M %p') }}</small>
+          </div>
+          
+          {% if reminder.last_sent %}
+          <div class="mb-3">
+            <strong>Last Sent:</strong><br>
+            <small class="text-muted">{{ reminder.last_sent.strftime('%m/%d/%Y %I:%M %p') }}</small>
+          </div>
+          {% endif %}
+          
+          <div class="mb-3">
+            <strong>Status:</strong><br>
+            {% if reminder.is_active %}
+              <span class="badge bg-success">Active</span>
+            {% else %}
+              <span class="badge bg-secondary">Inactive</span>
+            {% endif %}
+          </div>
+          
+          <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <strong>Note:</strong> Changes will affect future reminder sends.
+          </div>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mt-3">
+        <div class="card-header bg-success text-white">
+          <h6 class="mb-0"><i class="bi bi-star me-2"></i>Editing Tips</h6>
+        </div>
+        <div class="card-body">
+          <ul class="mb-0 small">
+            <li>Update the message to reflect current information</li>
+            <li>Adjust timing based on student feedback</li>
+            <li>Consider changing frequency if needed</li>
+            <li>Test the reminder by sending it manually</li>
+            <li>Keep messages clear and actionable</li>
+            <li>Include relevant assignment details</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mt-3">
+        <div class="card-header bg-warning text-white">
+          <h6 class="mb-0"><i class="bi bi-gear me-2"></i>Quick Actions</h6>
+        </div>
+        <div class="card-body">
+          <div class="d-grid gap-2">
+            <form method="POST" action="{{ url_for('teacher.send_deadline_reminder_now', reminder_id=reminder.id) }}" class="d-inline">
+              <button type="submit" class="btn btn-outline-info btn-sm w-100">
+                <i class="bi bi-send me-1"></i>Send Now
+              </button>
+            </form>
+            <form method="POST" action="{{ url_for('teacher.toggle_deadline_reminder', reminder_id=reminder.id) }}" class="d-inline">
+              <button type="submit" class="btn btn-outline-{% if reminder.is_active %}warning{% else %}success{% endif %} btn-sm w-100">
+                <i class="bi bi-{% if reminder.is_active %}pause{% else %}play{% endif %} me-1"></i>{% if reminder.is_active %}Deactivate{% else %}Activate{% endif %}
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Show/hide assignment sections based on reminder type
+document.getElementById('reminder_type').addEventListener('change', function() {
+    const reminderType = this.value;
+    const regularAssignmentDiv = document.getElementById('regularAssignmentDiv');
+    const groupAssignmentDiv = document.getElementById('groupAssignmentDiv');
+    const assignmentSection = document.getElementById('assignmentSection');
+    
+    if (reminderType === 'assignment') {
+        regularAssignmentDiv.style.display = 'block';
+        groupAssignmentDiv.style.display = 'none';
+        assignmentSection.style.display = 'block';
+    } else if (reminderType === 'group_assignment') {
+        regularAssignmentDiv.style.display = 'none';
+        groupAssignmentDiv.style.display = 'block';
+        assignmentSection.style.display = 'block';
+    } else {
+        assignmentSection.style.display = 'none';
+    }
+});
+
+// Initialize the display based on current reminder type
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('reminder_type').dispatchEvent(new Event('change'));
+});
+</script>
+{% endblock %}
+

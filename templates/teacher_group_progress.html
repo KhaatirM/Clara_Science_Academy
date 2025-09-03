@@ -1,0 +1,340 @@
+{% extends "dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
+    <h3 class="mb-2 mb-md-0"><i class="bi bi-graph-up me-2"></i>Group Progress - {{ assignment.title }}</h3>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('teacher.view_group_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Back to Assignment
+      </a>
+    </div>
+  </div>
+
+  <!-- Assignment Info -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-header bg-info text-white">
+      <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Assignment Details</h6>
+    </div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-12 col-md-6">
+          <strong>Assignment:</strong> {{ assignment.title }}
+        </div>
+        <div class="col-12 col-md-6">
+          <strong>Due Date:</strong> {{ assignment.due_date.strftime('%B %d, %Y at %I:%M %p') }}
+        </div>
+        {% if assignment.description %}
+          <div class="col-12">
+            <strong>Description:</strong> {{ assignment.description }}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Progress Overview -->
+  <div class="row g-3 g-md-4 mb-4">
+    <div class="col-12 col-md-3">
+      <div class="card shadow-sm">
+        <div class="card-body text-center">
+          <h4 class="text-primary">{{ progress_data|length }}</h4>
+          <p class="mb-0">Total Groups</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-3">
+      <div class="card shadow-sm">
+        <div class="card-body text-center">
+          <h4 class="text-success">
+            {% set completed = progress_data|selectattr('progress.status', 'equalto', 'completed')|list|length %}
+            {{ completed }}
+          </h4>
+          <p class="mb-0">Completed</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-3">
+      <div class="card shadow-sm">
+        <div class="card-body text-center">
+          <h4 class="text-warning">
+            {% set in_progress = progress_data|selectattr('progress.status', 'equalto', 'in_progress')|list|length %}
+            {{ in_progress }}
+          </h4>
+          <p class="mb-0">In Progress</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-3">
+      <div class="card shadow-sm">
+        <div class="card-body text-center">
+          <h4 class="text-info">
+            {% set avg_progress = 0 %}
+            {% for data in progress_data %}
+              {% set avg_progress = avg_progress + data.progress.progress_percentage %}
+            {% endfor %}
+            {% if progress_data|length > 0 %}
+              {{ "%.0f"|format(avg_progress / progress_data|length) }}%
+            {% else %}
+              0%
+            {% endif %}
+          </h4>
+          <p class="mb-0">Avg Progress</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Group Progress Cards -->
+  <div class="row g-3 g-md-4">
+    {% for data in progress_data %}
+      <div class="col-12 col-md-6 col-lg-4">
+        <div class="card shadow-sm h-100">
+          <div class="card-header bg-light">
+            <h6 class="mb-0">
+              <i class="bi bi-people me-2"></i>{{ data.group.name }}
+              <span class="badge bg-primary ms-2">{{ data.group.members|length }} members</span>
+            </h6>
+          </div>
+          <div class="card-body">
+            <!-- Progress Bar -->
+            <div class="mb-3">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="text-muted">Progress</span>
+                <span class="fw-bold">{{ data.progress.progress_percentage }}%</span>
+              </div>
+              <div class="progress" style="height: 8px;">
+                <div class="progress-bar 
+                  {% if data.progress.progress_percentage >= 80 %}
+                    bg-success
+                  {% elif data.progress.progress_percentage >= 50 %}
+                    bg-warning
+                  {% else %}
+                    bg-danger
+                  {% endif %}" 
+                  role="progressbar" 
+                  style="width: {{ data.progress.progress_percentage }}%"
+                  aria-valuenow="{{ data.progress.progress_percentage }}" 
+                  aria-valuemin="0" 
+                  aria-valuemax="100">
+                </div>
+              </div>
+            </div>
+
+            <!-- Status -->
+            <div class="mb-3">
+              <span class="text-muted">Status:</span>
+              {% if data.progress.status == 'completed' %}
+                <span class="badge bg-success">Completed</span>
+              {% elif data.progress.status == 'in_progress' %}
+                <span class="badge bg-warning">In Progress</span>
+              {% else %}
+                <span class="badge bg-secondary">Not Started</span>
+              {% endif %}
+            </div>
+
+            <!-- Group Members -->
+            <div class="mb-3">
+              <span class="text-muted">Members:</span>
+              <div class="mt-1">
+                {% for member in data.group.members %}
+                  <span class="badge bg-light text-dark me-1 mb-1">
+                    {{ member.student.first_name }} {{ member.student.last_name }}
+                    {% if member.is_leader %}(L){% endif %}
+                  </span>
+                {% endfor %}
+              </div>
+            </div>
+
+            <!-- Submission Status -->
+            <div class="mb-3">
+              <span class="text-muted">Submission:</span>
+              {% if data.submission %}
+                <span class="badge bg-success">Submitted</span>
+                <br><small class="text-muted">{{ data.submission.submitted_at.strftime('%m/%d/%Y %I:%M %p') }}</small>
+              {% else %}
+                <span class="badge bg-warning">Not Submitted</span>
+              {% endif %}
+            </div>
+
+            <!-- Last Updated -->
+            <div class="mb-3">
+              <span class="text-muted">Last Updated:</span>
+              <br><small class="text-muted">{{ data.progress.last_updated.strftime('%m/%d/%Y %I:%M %p') }}</small>
+            </div>
+
+            <!-- Notes -->
+            {% if data.progress.notes %}
+              <div class="mb-3">
+                <span class="text-muted">Notes:</span>
+                <p class="small text-muted mb-0">{{ data.progress.notes }}</p>
+              </div>
+            {% endif %}
+          </div>
+          <div class="card-footer bg-transparent">
+            <div class="btn-group w-100" role="group">
+              <button type="button" class="btn btn-outline-primary btn-sm" 
+                      onclick="updateProgress({{ data.group.id }}, {{ assignment.id }})">
+                <i class="bi bi-pencil me-1"></i>Update
+              </button>
+              <a href="{{ url_for('teacher.manage_group', group_id=data.group.id) }}" 
+                 class="btn btn-outline-info btn-sm">
+                <i class="bi bi-gear"></i>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <!-- Progress Summary -->
+  {% if progress_data %}
+    <div class="row g-3 g-md-4 mt-4">
+      <div class="col-12 col-md-6">
+        <div class="card shadow-sm">
+          <div class="card-header bg-success text-white">
+            <h6 class="mb-0"><i class="bi bi-check-circle me-2"></i>Groups on Track</h6>
+          </div>
+          <div class="card-body">
+            {% set on_track = progress_data|selectattr('progress.progress_percentage', 'ge', 70)|list %}
+            {% if on_track %}
+              {% for data in on_track %}
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span>{{ data.group.name }}</span>
+                  <span class="badge bg-success">{{ data.progress.progress_percentage }}%</span>
+                </div>
+              {% endfor %}
+            {% else %}
+              <p class="text-muted mb-0">No groups are on track yet.</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-md-6">
+        <div class="card shadow-sm">
+          <div class="card-header bg-warning text-white">
+            <h6 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Groups Needing Attention</h6>
+          </div>
+          <div class="card-body">
+            {% set needs_attention = progress_data|selectattr('progress.progress_percentage', 'lt', 50)|list %}
+            {% if needs_attention %}
+              {% for data in needs_attention %}
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span>{{ data.group.name }}</span>
+                  <span class="badge bg-danger">{{ data.progress.progress_percentage }}%</span>
+                </div>
+              {% endfor %}
+            {% else %}
+              <p class="text-muted mb-0">All groups are making good progress!</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+</div>
+
+<!-- Progress Update Modal -->
+<div class="modal fade" id="progressModal" tabindex="-1" aria-labelledby="progressModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="progressModalLabel">Update Group Progress</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="progressUpdateForm">
+        <div class="modal-body">
+          <input type="hidden" id="group_id" name="group_id">
+          <input type="hidden" id="assignment_id" name="assignment_id">
+          
+          <div class="mb-3">
+            <label for="progress_percentage" class="form-label">Progress Percentage</label>
+            <input type="range" class="form-range" id="progress_percentage" name="progress_percentage" 
+                   min="0" max="100" value="0" oninput="updateProgressDisplay(this.value)">
+            <div class="d-flex justify-content-between">
+              <span>0%</span>
+              <span id="progress_display" class="fw-bold">0%</span>
+              <span>100%</span>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label for="status" class="form-label">Status</label>
+            <select class="form-select" id="status" name="status">
+              <option value="not_started">Not Started</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
+            </select>
+          </div>
+          
+          <div class="mb-3">
+            <label for="notes" class="form-label">Notes (Optional)</label>
+            <textarea class="form-control" id="notes" name="notes" rows="3" 
+                      placeholder="Add any notes about the group's progress..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Update Progress</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function updateProgress(groupId, assignmentId) {
+  document.getElementById('group_id').value = groupId;
+  document.getElementById('assignment_id').value = assignmentId;
+  
+  // Find current progress data
+  const progressData = {{ progress_data|tojson }};
+  const currentData = progressData.find(data => data.group.id === groupId);
+  
+  if (currentData) {
+    document.getElementById('progress_percentage').value = currentData.progress.progress_percentage;
+    document.getElementById('status').value = currentData.progress.status;
+    document.getElementById('notes').value = currentData.progress.notes || '';
+    updateProgressDisplay(currentData.progress.progress_percentage);
+  }
+  
+  const modal = new bootstrap.Modal(document.getElementById('progressModal'));
+  modal.show();
+}
+
+function updateProgressDisplay(value) {
+  document.getElementById('progress_display').textContent = value + '%';
+}
+
+// Handle form submission
+document.getElementById('progressUpdateForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const formData = new FormData(this);
+  const data = Object.fromEntries(formData);
+  
+  // Here you would typically send the data to the server
+  // For now, we'll just close the modal and show a success message
+  const modal = bootstrap.Modal.getInstance(document.getElementById('progressModal'));
+  modal.hide();
+  
+  // Show success message
+  const alert = document.createElement('div');
+  alert.className = 'alert alert-success alert-dismissible fade show';
+  alert.innerHTML = `
+    <i class="bi bi-check-circle me-2"></i>Progress updated successfully!
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  `;
+  
+  document.querySelector('.container-fluid').insertBefore(alert, document.querySelector('.container-fluid').firstChild);
+  
+  // Auto-dismiss after 3 seconds
+  setTimeout(() => {
+    if (alert.parentNode) {
+      alert.remove();
+    }
+  }, 3000);
+});
+</script>
+{% endblock %}

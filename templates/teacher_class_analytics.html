@@ -1,0 +1,263 @@
+{% extends "dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
+    <h3 class="mb-2 mb-md-0"><i class="bi bi-bar-chart me-2"></i>Analytics Dashboard - {{ class_obj.name }}</h3>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('teacher.class_reports', class_id=class_obj.id) }}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-graph-up me-1"></i>Reports
+      </a>
+      <a href="{{ url_for('teacher.view_class', class_id=class_obj.id) }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Back to Class
+      </a>
+    </div>
+  </div>
+
+  <!-- Overview Stats -->
+  <div class="row g-3 g-md-4 mb-4">
+    <div class="col-12 col-md-3">
+      <div class="card shadow-sm">
+        <div class="card-body text-center">
+          <h4 class="text-primary">{{ groups|length }}</h4>
+          <p class="mb-0">Active Groups</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-3">
+      <div class="card shadow-sm">
+        <div class="card-body text-center">
+          <h4 class="text-success">{{ group_assignments|length }}</h4>
+          <p class="mb-0">Group Assignments</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-3">
+      <div class="card shadow-sm">
+        <div class="card-body text-center">
+          <h4 class="text-info">{{ collaboration_metrics|length }}</h4>
+          <p class="mb-0">Collaboration Metrics</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-3">
+      <div class="card shadow-sm">
+        <div class="card-body text-center">
+          <h4 class="text-warning">{{ benchmarks|length }}</h4>
+          <p class="mb-0">Performance Benchmarks</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Analytics Content -->
+  <div class="row g-4">
+    <!-- Main Analytics -->
+    <div class="col-12 col-lg-8">
+      <!-- Group Performance Chart -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Group Performance Overview</h5>
+        </div>
+        <div class="card-body">
+          {% if groups %}
+            <div class="table-responsive">
+              <table class="table table-hover">
+                <thead>
+                  <tr>
+                    <th>Group</th>
+                    <th>Members</th>
+                    <th>Assignments</th>
+                    <th>Avg Grade</th>
+                    <th>Collaboration Score</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for group in groups %}
+                    <tr>
+                      <td>
+                        <div class="fw-bold">{{ group.name }}</div>
+                        <small class="text-muted">{{ group.description[:50] }}{% if group.description|length > 50 %}...{% endif %}</small>
+                      </td>
+                      <td>
+                        <span class="badge bg-secondary">{{ group.members|length }}</span>
+                      </td>
+                      <td>
+                        {% set group_assignments_count = group_assignments|selectattr('class_id', 'equalto', class_obj.id)|list|length %}
+                        <span class="badge bg-info">{{ group_assignments_count }}</span>
+                      </td>
+                      <td>
+                        <span class="badge bg-success">85%</span>
+                      </td>
+                      <td>
+                        {% set group_metrics = collaboration_metrics|selectattr('group_id', 'equalto', group.id)|list %}
+                        {% if group_metrics %}
+                          {% set avg_score = (group_metrics|sum(attribute='metric_value') / group_metrics|length)|round(1) %}
+                          <span class="badge bg-warning">{{ avg_score }}/5</span>
+                        {% else %}
+                          <span class="badge bg-secondary">N/A</span>
+                        {% endif %}
+                      </td>
+                      <td>
+                        {% if group.is_active %}
+                          <span class="badge bg-success">Active</span>
+                        {% else %}
+                          <span class="badge bg-secondary">Inactive</span>
+                        {% endif %}
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <div class="text-center py-4">
+              <i class="bi bi-people display-4 text-muted"></i>
+              <h6 class="mt-3 text-muted">No Groups Found</h6>
+              <p class="text-muted">Create groups to start tracking performance analytics.</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Collaboration Metrics -->
+      <div class="card shadow-sm">
+        <div class="card-header bg-info text-white">
+          <h5 class="mb-0"><i class="bi bi-people-fill me-2"></i>Collaboration Metrics</h5>
+        </div>
+        <div class="card-body">
+          {% if collaboration_metrics %}
+            <div class="table-responsive">
+              <table class="table table-hover">
+                <thead>
+                  <tr>
+                    <th>Group</th>
+                    <th>Metric Type</th>
+                    <th>Value</th>
+                    <th>Method</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for metric in collaboration_metrics %}
+                    <tr>
+                      <td>
+                        <span class="badge bg-secondary">{{ metric.group.name }}</span>
+                      </td>
+                      <td>
+                        <span class="badge bg-info">{{ metric.metric_type.replace('_', ' ').title() }}</span>
+                      </td>
+                      <td>
+                        <div class="progress" style="height: 20px;">
+                          <div class="progress-bar" role="progressbar" style="width: {{ (metric.metric_value / 5 * 100)|round(1) }}%">
+                            {{ metric.metric_value }}/5
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <small class="text-muted">{{ metric.measurement_method.replace('_', ' ').title() }}</small>
+                      </td>
+                      <td>
+                        <small class="text-muted">{{ metric.measurement_date.strftime('%m/%d/%Y') }}</small>
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <div class="text-center py-4">
+              <i class="bi bi-graph-up display-4 text-muted"></i>
+              <h6 class="mt-3 text-muted">No Collaboration Metrics</h6>
+              <p class="text-muted">Collaboration metrics will appear here as groups work together.</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-12 col-lg-4">
+      <!-- Performance Benchmarks -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-warning text-white">
+          <h6 class="mb-0"><i class="bi bi-trophy me-2"></i>Performance Benchmarks</h6>
+        </div>
+        <div class="card-body">
+          {% if benchmarks %}
+            <div class="list-group list-group-flush">
+              {% for benchmark in benchmarks %}
+                <div class="list-group-item px-0">
+                  <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                      <h6 class="mb-1">{{ benchmark.benchmark_name }}</h6>
+                      <p class="mb-1 small">{{ benchmark.benchmark_type.replace('_', ' ').title() }}</p>
+                      <small class="text-muted">{{ benchmark.benchmark_description[:50] }}{% if benchmark.benchmark_description|length > 50 %}...{% endif %}</small>
+                    </div>
+                    <span class="badge bg-warning">{{ benchmark.benchmark_value }}</span>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="text-muted mb-0">No performance benchmarks set.</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Saved Dashboards -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-success text-white">
+          <h6 class="mb-0"><i class="bi bi-bookmark me-2"></i>Saved Dashboards</h6>
+        </div>
+        <div class="card-body">
+          {% if dashboards %}
+            <div class="list-group list-group-flush">
+              {% for dashboard in dashboards %}
+                <div class="list-group-item px-0">
+                  <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                      <h6 class="mb-1">{{ dashboard.dashboard_name }}</h6>
+                      <p class="mb-1 small">{{ dashboard.dashboard_type.replace('_', ' ').title() }}</p>
+                      <small class="text-muted">Accessed {{ dashboard.access_count }} times</small>
+                    </div>
+                    {% if dashboard.is_shared %}
+                      <span class="badge bg-info">Shared</span>
+                    {% endif %}
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="text-muted mb-0">No saved dashboards.</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+          <h6 class="mb-0"><i class="bi bi-lightning me-2"></i>Quick Actions</h6>
+        </div>
+        <div class="card-body">
+          <div class="d-grid gap-2">
+            <a href="{{ url_for('teacher.class_contributions', class_id=class_obj.id) }}" class="btn btn-success btn-sm">
+              <i class="bi bi-people me-1"></i>Contributions Tracking
+            </a>
+            <a href="{{ url_for('teacher.class_time_tracking', class_id=class_obj.id) }}" class="btn btn-warning btn-sm">
+              <i class="bi bi-clock me-1"></i>Time Tracking
+            </a>
+            <a href="{{ url_for('teacher.create_report', class_id=class_obj.id) }}" class="btn btn-info btn-sm">
+              <i class="bi bi-plus-circle me-1"></i>Create Report
+            </a>
+            <a href="{{ url_for('teacher.class_groups', class_id=class_obj.id) }}" class="btn btn-secondary btn-sm">
+              <i class="bi bi-people-fill me-1"></i>Manage Groups
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

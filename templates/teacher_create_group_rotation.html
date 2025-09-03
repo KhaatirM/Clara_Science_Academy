@@ -1,0 +1,219 @@
+{% extends "dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
+    <h3 class="mb-2 mb-md-0"><i class="bi bi-arrow-repeat me-2"></i>Create Group Rotation</h3>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('teacher.class_group_rotations', class_id=class_obj.id) }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Back to Rotations
+      </a>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-12 col-lg-8">
+      <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0"><i class="bi bi-gear me-2"></i>Rotation Configuration</h5>
+        </div>
+        <div class="card-body">
+          <form method="POST" id="rotationForm">
+            <!-- Basic Information -->
+            <div class="row g-3 mb-4">
+              <div class="col-12">
+                <h6 class="text-primary border-bottom pb-2 mb-3">
+                  <i class="bi bi-info-circle me-2"></i>Basic Information
+                </h6>
+              </div>
+              <div class="col-12 col-md-6">
+                <label for="rotation_name" class="form-label">Rotation Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="rotation_name" name="rotation_name" required>
+                <div class="form-text">Give your rotation a descriptive name</div>
+              </div>
+              <div class="col-12 col-md-6">
+                <label for="description" class="form-label">Description</label>
+                <input type="text" class="form-control" id="description" name="description">
+                <div class="form-text">Brief description of this rotation</div>
+              </div>
+            </div>
+
+            <!-- Rotation Settings -->
+            <div class="row g-3 mb-4">
+              <div class="col-12">
+                <h6 class="text-primary border-bottom pb-2 mb-3">
+                  <i class="bi bi-arrow-repeat me-2"></i>Rotation Settings
+                </h6>
+              </div>
+              <div class="col-12 col-md-6">
+                <label for="rotation_type" class="form-label">Rotation Type <span class="text-danger">*</span></label>
+                <select class="form-select" id="rotation_type" name="rotation_type" required onchange="toggleFrequency()">
+                  <option value="manual">Manual</option>
+                  <option value="automatic">Automatic</option>
+                  <option value="scheduled">Scheduled</option>
+                </select>
+                <div class="form-text">How the rotation will be triggered</div>
+              </div>
+              <div class="col-12 col-md-6">
+                <label for="rotation_frequency" class="form-label">Rotation Frequency</label>
+                <select class="form-select" id="rotation_frequency" name="rotation_frequency">
+                  <option value="">Select Frequency</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="biweekly">Bi-weekly</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="custom">Custom</option>
+                </select>
+                <div class="form-text">How often to rotate (for scheduled rotations)</div>
+              </div>
+            </div>
+
+            <!-- Group Settings -->
+            <div class="row g-3 mb-4">
+              <div class="col-12">
+                <h6 class="text-primary border-bottom pb-2 mb-3">
+                  <i class="bi bi-diagram-3 me-2"></i>Group Settings
+                </h6>
+              </div>
+              <div class="col-12 col-md-6">
+                <label for="group_size" class="form-label">Group Size <span class="text-danger">*</span></label>
+                <input type="number" class="form-control" id="group_size" name="group_size" min="2" max="10" value="3" required>
+                <div class="form-text">Number of students per group</div>
+              </div>
+              <div class="col-12 col-md-6">
+                <label for="grouping_criteria" class="form-label">Grouping Criteria <span class="text-danger">*</span></label>
+                <select class="form-select" id="grouping_criteria" name="grouping_criteria" required>
+                  <option value="random">Random</option>
+                  <option value="skill_based">Skill-based</option>
+                  <option value="mixed_ability">Mixed Ability</option>
+                </select>
+                <div class="form-text">How to group students</div>
+              </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-save me-1"></i>Save Rotation
+              </button>
+              <a href="{{ url_for('teacher.class_group_rotations', class_id=class_obj.id) }}" class="btn btn-outline-secondary">
+                <i class="bi bi-x-circle me-1"></i>Cancel
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Help Panel -->
+    <div class="col-12 col-lg-4">
+      <div class="card shadow-sm">
+        <div class="card-header bg-info text-white">
+          <h6 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Rotation Types</h6>
+        </div>
+        <div class="card-body">
+          <h6>Manual Rotation</h6>
+          <p class="small mb-3">You manually trigger the rotation when needed. Gives you full control over timing.</p>
+          
+          <h6>Automatic Rotation</h6>
+          <p class="small mb-3">System automatically rotates groups based on set criteria. Requires additional configuration.</p>
+          
+          <h6>Scheduled Rotation</h6>
+          <p class="small mb-3">Groups rotate on a predetermined schedule (weekly, monthly, etc.).</p>
+          
+          <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong>Tip:</strong> Start with manual rotations to test your settings.
+          </div>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mt-3">
+        <div class="card-header bg-warning text-white">
+          <h6 class="mb-0"><i class="bi bi-gear me-2"></i>Grouping Criteria</h6>
+        </div>
+        <div class="card-body">
+          <h6>Random</h6>
+          <p class="small mb-2">Students are randomly assigned to groups.</p>
+          
+          <h6>Skill-based</h6>
+          <p class="small mb-2">Students are grouped based on academic performance.</p>
+          
+          <h6>Mixed Ability</h6>
+          <p class="small mb-2">Groups include students of varying skill levels.</p>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mt-3">
+        <div class="card-header bg-success text-white">
+          <h6 class="mb-0"><i class="bi bi-star me-2"></i>Quick Settings</h6>
+        </div>
+        <div class="card-body">
+          <div class="d-grid gap-2">
+            <button type="button" class="btn btn-outline-primary btn-sm" onclick="setQuickSettings('weekly')">
+              <i class="bi bi-calendar-week me-1"></i>Weekly Rotation
+            </button>
+            <button type="button" class="btn btn-outline-success btn-sm" onclick="setQuickSettings('monthly')">
+              <i class="bi bi-calendar-month me-1"></i>Monthly Rotation
+            </button>
+            <button type="button" class="btn btn-outline-info btn-sm" onclick="setQuickSettings('manual')">
+              <i class="bi bi-hand-index me-1"></i>Manual Rotation
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleFrequency() {
+  const rotationType = document.getElementById('rotation_type').value;
+  const frequencyField = document.getElementById('rotation_frequency');
+  
+  if (rotationType === 'scheduled') {
+    frequencyField.required = true;
+    frequencyField.disabled = false;
+  } else {
+    frequencyField.required = false;
+    frequencyField.disabled = true;
+    frequencyField.value = '';
+  }
+}
+
+function setQuickSettings(type) {
+  const form = document.getElementById('rotationForm');
+  
+  switch(type) {
+    case 'weekly':
+      document.getElementById('rotation_name').value = 'Weekly Group Rotation';
+      document.getElementById('rotation_type').value = 'scheduled';
+      document.getElementById('rotation_frequency').value = 'weekly';
+      document.getElementById('group_size').value = 3;
+      document.getElementById('grouping_criteria').value = 'random';
+      break;
+      
+    case 'monthly':
+      document.getElementById('rotation_name').value = 'Monthly Group Rotation';
+      document.getElementById('rotation_type').value = 'scheduled';
+      document.getElementById('rotation_frequency').value = 'monthly';
+      document.getElementById('group_size').value = 4;
+      document.getElementById('grouping_criteria').value = 'mixed_ability';
+      break;
+      
+    case 'manual':
+      document.getElementById('rotation_name').value = 'Manual Group Rotation';
+      document.getElementById('rotation_type').value = 'manual';
+      document.getElementById('group_size').value = 3;
+      document.getElementById('grouping_criteria').value = 'random';
+      break;
+  }
+  
+  toggleFrequency();
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+  toggleFrequency();
+});
+</script>
+{% endblock %}

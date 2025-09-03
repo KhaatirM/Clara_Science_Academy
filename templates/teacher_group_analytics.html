@@ -1,0 +1,198 @@
+{% extends "dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
+    <h3 class="mb-2 mb-md-0"><i class="bi bi-graph-up me-2"></i>Group Analytics - {{ class_obj.name }}</h3>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('teacher.class_groups', class_id=class_obj.id) }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Back to Groups
+      </a>
+    </div>
+  </div>
+
+  <!-- Analytics Overview -->
+  <div class="row g-3 g-md-4 mb-4">
+    <div class="col-12 col-md-3">
+      <div class="card shadow-sm">
+        <div class="card-body text-center">
+          <h4 class="text-primary">{{ analytics_data|length }}</h4>
+          <p class="mb-0">Total Groups</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-3">
+      <div class="card shadow-sm">
+        <div class="card-body text-center">
+          <h4 class="text-success">
+            {% if analytics_data %}
+              {{ "%.1f"|format(analytics_data|sum(attribute='avg_grade') / analytics_data|length) }}
+            {% else %}
+              0.0
+            {% endif %}
+          </h4>
+          <p class="mb-0">Avg Grade</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-3">
+      <div class="card shadow-sm">
+        <div class="card-body text-center">
+          <h4 class="text-info">
+            {% if analytics_data %}
+              {{ "%.1f"|format(analytics_data|sum(attribute='avg_peer_score') / analytics_data|length) }}
+            {% else %}
+              0.0
+            {% endif %}
+          </h4>
+          <p class="mb-0">Avg Peer Score</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-3">
+      <div class="card shadow-sm">
+        <div class="card-body text-center">
+          <h4 class="text-warning">
+            {% if analytics_data %}
+              {{ analytics_data|sum(attribute='submissions_count') }}
+            {% else %}
+              0
+            {% endif %}
+          </h4>
+          <p class="mb-0">Total Submissions</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Group Performance Table -->
+  <div class="card shadow-sm">
+    <div class="card-header bg-primary text-white">
+      <h5 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Group Performance Analysis</h5>
+    </div>
+    <div class="card-body">
+      {% if analytics_data %}
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>Group Name</th>
+                <th>Members</th>
+                <th>Avg Grade</th>
+                <th>Peer Score</th>
+                <th>Assignments</th>
+                <th>Submissions</th>
+                <th>Performance</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for data in analytics_data %}
+                <tr>
+                  <td>
+                    <strong>{{ data.group.name }}</strong>
+                    {% if data.group.description %}
+                      <br><small class="text-muted">{{ data.group.description }}</small>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <span class="badge bg-info">{{ data.member_count }}</span>
+                  </td>
+                  <td>
+                    {% if data.avg_grade > 0 %}
+                      <span class="badge bg-success">{{ "%.1f"|format(data.avg_grade) }}</span>
+                    {% else %}
+                      <span class="badge bg-secondary">No grades</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if data.avg_peer_score > 0 %}
+                      <span class="badge bg-primary">{{ "%.1f"|format(data.avg_peer_score) }}/5</span>
+                    {% else %}
+                      <span class="badge bg-secondary">No evaluations</span>
+                    {% endif %}
+                  </td>
+                  <td>{{ data.assignments_count }}</td>
+                  <td>{{ data.submissions_count }}</td>
+                  <td>
+                    {% set performance_score = (data.avg_grade + (data.avg_peer_score * 20)) / 2 %}
+                    {% if performance_score >= 80 %}
+                      <span class="badge bg-success">Excellent</span>
+                    {% elif performance_score >= 70 %}
+                      <span class="badge bg-warning">Good</span>
+                    {% elif performance_score >= 60 %}
+                      <span class="badge bg-info">Fair</span>
+                    {% else %}
+                      <span class="badge bg-danger">Needs Improvement</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <div class="btn-group btn-group-sm" role="group">
+                      <a href="{{ url_for('teacher.manage_group', group_id=data.group.id) }}" class="btn btn-outline-primary">
+                        <i class="bi bi-gear"></i>
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="text-center py-4">
+          <i class="bi bi-graph-up display-1 text-muted"></i>
+          <h5 class="mt-3 text-muted">No Groups Found</h5>
+          <p class="text-muted">Create some groups to see analytics data.</p>
+          <a href="{{ url_for('teacher.class_groups', class_id=class_obj.id) }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i>Create Groups
+          </a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Performance Insights -->
+  {% if analytics_data %}
+    <div class="row g-3 g-md-4 mt-4">
+      <div class="col-12 col-md-6">
+        <div class="card shadow-sm">
+          <div class="card-header bg-info text-white">
+            <h6 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Top Performing Groups</h6>
+          </div>
+          <div class="card-body">
+            {% set top_groups = analytics_data|sort(attribute='avg_grade', reverse=true)|list %}
+            {% for data in top_groups[:3] %}
+              {% if data.avg_grade > 0 %}
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span>{{ data.group.name }}</span>
+                  <span class="badge bg-success">{{ "%.1f"|format(data.avg_grade) }}</span>
+                </div>
+              {% endif %}
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-md-6">
+        <div class="card shadow-sm">
+          <div class="card-header bg-warning text-white">
+            <h6 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Groups Needing Attention</h6>
+          </div>
+          <div class="card-body">
+            {% set low_groups = analytics_data|selectattr('avg_grade', 'lt', 70)|list %}
+            {% if low_groups %}
+              {% for data in low_groups %}
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span>{{ data.group.name }}</span>
+                  <span class="badge bg-danger">{{ "%.1f"|format(data.avg_grade) }}</span>
+                </div>
+              {% endfor %}
+            {% else %}
+              <p class="text-muted mb-0">All groups are performing well!</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

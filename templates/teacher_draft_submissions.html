@@ -1,0 +1,250 @@
+{% extends "dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
+    <h3 class="mb-2 mb-md-0"><i class="bi bi-file-earmark-text me-2"></i>Draft Submissions - {{ group_assignment.title }}</h3>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('teacher.view_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Back to Assignment
+      </a>
+    </div>
+  </div>
+
+  <!-- Submissions Overview -->
+  <div class="row g-3 g-md-4 mb-4">
+    <div class="col-12 col-md-4">
+      <div class="card shadow-sm">
+        <div class="card-body text-center">
+          <h4 class="text-primary">{{ draft_submissions|length }}</h4>
+          <p class="mb-0">Total Drafts</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-4">
+      <div class="card shadow-sm">
+        <div class="card-body text-center">
+          <h4 class="text-success">
+            {% set approved_drafts = draft_submissions|selectattr('is_final', 'equalto', true)|list|length %}
+            {{ approved_drafts }}
+          </h4>
+          <p class="mb-0">Approved Drafts</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-4">
+      <div class="card shadow-sm">
+        <div class="card-body text-center">
+          <h4 class="text-warning">
+            {% set pending_drafts = draft_submissions|selectattr('is_final', 'equalto', false)|list|length %}
+            {{ pending_drafts }}
+          </h4>
+          <p class="mb-0">Pending Review</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Draft Submissions List -->
+  <div class="card shadow-sm">
+    <div class="card-header bg-primary text-white">
+      <h5 class="mb-0"><i class="bi bi-file-earmark-text me-2"></i>Draft Submissions</h5>
+    </div>
+    <div class="card-body">
+      {% if draft_submissions %}
+        <div class="row g-3">
+          {% for draft in draft_submissions %}
+            <div class="col-12 col-md-6 col-lg-4">
+              <div class="card border-primary h-100">
+                <div class="card-header {% if draft.is_final %}bg-success text-white{% else %}bg-warning text-dark{% endif %}">
+                  <h6 class="mb-0">
+                    <i class="bi bi-file-earmark-text me-2"></i>
+                    {{ draft.student.first_name }} {{ draft.student.last_name }}
+                    {% if draft.is_final %}
+                      <span class="badge bg-light text-success ms-2">Approved</span>
+                    {% else %}
+                      <span class="badge bg-light text-warning ms-2">Pending</span>
+                    {% endif %}
+                  </h6>
+                </div>
+                <div class="card-body">
+                  <div class="mb-3">
+                    <small class="text-muted">Group:</small>
+                    <div class="fw-bold">{{ draft.group.name }}</div>
+                  </div>
+                  
+                  <div class="mb-3">
+                    <small class="text-muted">Draft Content:</small>
+                    <div class="small text-truncate" style="max-height: 60px; overflow: hidden;">
+                      {{ draft.draft_content[:200] }}{% if draft.draft_content|length > 200 %}...{% endif %}
+                    </div>
+                  </div>
+                  
+                  {% if draft.submission_notes %}
+                    <div class="mb-3">
+                      <small class="text-muted">Notes:</small>
+                      <div class="small">{{ draft.submission_notes }}</div>
+                    </div>
+                  {% endif %}
+                  
+                  {% if draft.draft_attachments %}
+                    <div class="mb-3">
+                      <small class="text-muted">Attachments:</small>
+                      <div class="small">
+                        {% set attachments = draft.draft_attachments|from_json %}
+                        {% for attachment in attachments %}
+                          <span class="badge bg-secondary me-1">{{ attachment.filename }}</span>
+                        {% endfor %}
+                      </div>
+                    </div>
+                  {% endif %}
+                  
+                  <small class="text-muted">
+                    Submitted: {{ draft.submitted_at.strftime('%m/%d/%Y %I:%M %p') }}
+                  </small>
+                </div>
+                <div class="card-footer bg-transparent">
+                  <div class="btn-group w-100" role="group">
+                    <button type="button" class="btn btn-info btn-sm" onclick="viewDraft({{ draft.id }})">
+                      <i class="bi bi-eye me-1"></i>View
+                    </button>
+                    {% if not draft.is_final %}
+                      <a href="{{ url_for('teacher.provide_draft_feedback', draft_id=draft.id) }}" class="btn btn-primary btn-sm">
+                        <i class="bi bi-chat-dots me-1"></i>Feedback
+                      </a>
+                      <button type="button" class="btn btn-success btn-sm" onclick="approveDraft({{ draft.id }})">
+                        <i class="bi bi-check-circle me-1"></i>Approve
+                      </button>
+                    {% endif %}
+                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteDraft({{ draft.id }})">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="text-center py-5">
+          <i class="bi bi-file-earmark-text display-1 text-muted"></i>
+          <h5 class="mt-3 text-muted">No Draft Submissions Found</h5>
+          <p class="text-muted">Students haven't submitted any draft work for this assignment yet.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="row g-3 g-md-4 mt-4">
+    <div class="col-12 col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-header bg-info text-white">
+          <h6 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Draft Submission Benefits</h6>
+        </div>
+        <div class="card-body">
+          <ul class="mb-0">
+            <li>Allow students to get feedback before final submission</li>
+            <li>Improve work quality through iterative feedback</li>
+            <li>Encourage revision and improvement</li>
+            <li>Build confidence in student work</li>
+            <li>Track progress and development</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-header bg-warning text-white">
+          <h6 class="mb-0"><i class="bi bi-gear me-2"></i>Quick Actions</h6>
+        </div>
+        <div class="card-body">
+          <div class="d-grid gap-2">
+            <a href="{{ url_for('teacher.view_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-primary btn-sm">
+              <i class="bi bi-arrow-left me-1"></i>Back to Assignment
+            </a>
+            <a href="{{ url_for('teacher.view_group_progress', assignment_id=group_assignment.id) }}" class="btn btn-success btn-sm">
+              <i class="bi bi-graph-up me-1"></i>View Progress
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- View Draft Modal -->
+<div class="modal fade" id="viewDraftModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Draft Submission</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="draftContent">
+        <!-- Content will be loaded here -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Approve Draft Modal -->
+<div class="modal fade" id="approveDraftModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Approve Draft Submission</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="approveDraftForm" method="POST">
+        <div class="modal-body">
+          <div class="alert alert-success">
+            <i class="bi bi-check-circle me-2"></i>
+            <strong>Approve this draft submission?</strong> This will mark it as final and ready for grading.
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-success">Approve Draft</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function viewDraft(draftId) {
+  // This would typically load draft content via AJAX
+  // For now, we'll show a placeholder
+  document.getElementById('draftContent').innerHTML = '<p>Draft content would be loaded here...</p>';
+  
+  const modal = new bootstrap.Modal(document.getElementById('viewDraftModal'));
+  modal.show();
+}
+
+function approveDraft(draftId) {
+  const form = document.getElementById('approveDraftForm');
+  form.action = "{{ url_for('teacher.approve_draft_submission', draft_id=0) }}".replace('0', draftId);
+  
+  const modal = new bootstrap.Modal(document.getElementById('approveDraftModal'));
+  modal.show();
+}
+
+function deleteDraft(draftId) {
+  if (confirm('Are you sure you want to delete this draft submission? This action cannot be undone.')) {
+    // Create a form to submit the delete request
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = "{{ url_for('teacher.delete_draft_submission', draft_id=0) }}".replace('0', draftId);
+    
+    document.body.appendChild(form);
+    form.submit();
+  }
+}
+</script>
+{% endblock %}
+
+

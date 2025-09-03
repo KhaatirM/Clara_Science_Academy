@@ -1,0 +1,244 @@
+{% extends "dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
+    <h3 class="mb-2 mb-md-0"><i class="bi bi-bell me-2"></i>Create Deadline Reminder</h3>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('teacher.class_deadline_reminders', class_id=class_obj.id) }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Back to Reminders
+      </a>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-12 col-lg-8">
+      <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0"><i class="bi bi-bell me-2"></i>Reminder Details</h5>
+        </div>
+        <div class="card-body">
+          <form method="POST" id="reminderForm">
+            <div class="row g-3 mb-4">
+              <div class="col-12">
+                <h6 class="text-primary border-bottom pb-2 mb-3">
+                  <i class="bi bi-info-circle me-2"></i>Basic Information
+                </h6>
+              </div>
+              <div class="col-12 col-md-6">
+                <label for="reminder_type" class="form-label">Reminder Type <span class="text-danger">*</span></label>
+                <select class="form-select" id="reminder_type" name="reminder_type" required>
+                  <option value="assignment">Assignment Reminder</option>
+                  <option value="group_assignment">Group Assignment Reminder</option>
+                  <option value="general">General Class Reminder</option>
+                </select>
+                <div class="form-text">Choose the type of reminder you want to create</div>
+              </div>
+              <div class="col-12 col-md-6">
+                <label for="reminder_frequency" class="form-label">Frequency <span class="text-danger">*</span></label>
+                <select class="form-select" id="reminder_frequency" name="reminder_frequency" required>
+                  <option value="once">Once</option>
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                </select>
+                <div class="form-text">How often should this reminder be sent</div>
+              </div>
+            </div>
+
+            <div class="row g-3 mb-4" id="assignmentSection">
+              <div class="col-12">
+                <h6 class="text-primary border-bottom pb-2 mb-3">
+                  <i class="bi bi-file-text me-2"></i>Assignment Selection
+                </h6>
+              </div>
+              <div class="col-12 col-md-6" id="regularAssignmentDiv">
+                <label for="assignment_id" class="form-label">Regular Assignment</label>
+                <select class="form-select" id="assignment_id" name="assignment_id">
+                  <option value="">Select an assignment...</option>
+                  {% for assignment in assignments %}
+                    <option value="{{ assignment.id }}">{{ assignment.title }}</option>
+                  {% endfor %}
+                </select>
+                <div class="form-text">Choose a regular assignment for this reminder</div>
+              </div>
+              <div class="col-12 col-md-6" id="groupAssignmentDiv">
+                <label for="group_assignment_id" class="form-label">Group Assignment</label>
+                <select class="form-select" id="group_assignment_id" name="group_assignment_id">
+                  <option value="">Select a group assignment...</option>
+                  {% for group_assignment in group_assignments %}
+                    <option value="{{ group_assignment.id }}">{{ group_assignment.title }}</option>
+                  {% endfor %}
+                </select>
+                <div class="form-text">Choose a group assignment for this reminder</div>
+              </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+              <div class="col-12">
+                <h6 class="text-primary border-bottom pb-2 mb-3">
+                  <i class="bi bi-pencil me-2"></i>Reminder Content
+                </h6>
+              </div>
+              <div class="col-12">
+                <label for="reminder_title" class="form-label">Reminder Title <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="reminder_title" name="reminder_title" required placeholder="Enter a clear, descriptive title for this reminder">
+                <div class="form-text">A brief title that will appear in notifications</div>
+              </div>
+              <div class="col-12">
+                <label for="reminder_message" class="form-label">Reminder Message <span class="text-danger">*</span></label>
+                <textarea class="form-control" id="reminder_message" name="reminder_message" rows="6" required placeholder="Enter the message that will be sent to students..."></textarea>
+                <div class="form-text">The message that will be sent to students</div>
+              </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+              <div class="col-12">
+                <h6 class="text-primary border-bottom pb-2 mb-3">
+                  <i class="bi bi-calendar me-2"></i>Schedule
+                </h6>
+              </div>
+              <div class="col-12 col-md-6">
+                <label for="reminder_date" class="form-label">Reminder Date & Time <span class="text-danger">*</span></label>
+                <input type="datetime-local" class="form-control" id="reminder_date" name="reminder_date" required>
+                <div class="form-text">When should this reminder be sent</div>
+              </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-save me-1"></i>Create Reminder
+              </button>
+              <a href="{{ url_for('teacher.class_deadline_reminders', class_id=class_obj.id) }}" class="btn btn-outline-secondary">
+                <i class="bi bi-x-circle me-1"></i>Cancel
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Help Panel -->
+    <div class="col-12 col-lg-4">
+      <div class="card shadow-sm">
+        <div class="card-header bg-info text-white">
+          <h6 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Reminder Types</h6>
+        </div>
+        <div class="card-body">
+          <h6>Assignment Reminder</h6>
+          <p class="small mb-3">Reminds students about upcoming regular assignments and their deadlines.</p>
+          
+          <h6>Group Assignment Reminder</h6>
+          <p class="small mb-3">Reminds students about upcoming group assignments and collaboration deadlines.</p>
+          
+          <h6>General Class Reminder</h6>
+          <p class="small mb-3">General reminders for class activities, events, or important announcements.</p>
+          
+          <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <strong>Tip:</strong> Be specific and helpful in your reminder messages.
+          </div>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mt-3">
+        <div class="card-header bg-success text-white">
+          <h6 class="mb-0"><i class="bi bi-star me-2"></i>Best Practices</h6>
+        </div>
+        <div class="card-body">
+          <ul class="mb-0 small">
+            <li>Send reminders 1-3 days before deadlines</li>
+            <li>Include specific assignment details</li>
+            <li>Mention any special requirements</li>
+            <li>Be encouraging and supportive</li>
+            <li>Include contact information for questions</li>
+            <li>Use clear, concise language</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mt-3">
+        <div class="card-header bg-warning text-white">
+          <h6 class="mb-0"><i class="bi bi-gear me-2"></i>Quick Templates</h6>
+        </div>
+        <div class="card-body">
+          <div class="d-grid gap-2">
+            <button type="button" class="btn btn-outline-primary btn-sm" onclick="setReminderTemplate('assignment')">
+              <i class="bi bi-file-text me-1"></i>Assignment Template
+            </button>
+            <button type="button" class="btn btn-outline-success btn-sm" onclick="setReminderTemplate('group')">
+              <i class="bi bi-people me-1"></i>Group Assignment Template
+            </button>
+            <button type="button" class="btn btn-outline-info btn-sm" onclick="setReminderTemplate('general')">
+              <i class="bi bi-megaphone me-1"></i>General Template
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Show/hide assignment sections based on reminder type
+document.getElementById('reminder_type').addEventListener('change', function() {
+    const reminderType = this.value;
+    const regularAssignmentDiv = document.getElementById('regularAssignmentDiv');
+    const groupAssignmentDiv = document.getElementById('groupAssignmentDiv');
+    const assignmentSection = document.getElementById('assignmentSection');
+    
+    if (reminderType === 'assignment') {
+        regularAssignmentDiv.style.display = 'block';
+        groupAssignmentDiv.style.display = 'none';
+        assignmentSection.style.display = 'block';
+    } else if (reminderType === 'group_assignment') {
+        regularAssignmentDiv.style.display = 'none';
+        groupAssignmentDiv.style.display = 'block';
+        assignmentSection.style.display = 'block';
+    } else {
+        assignmentSection.style.display = 'none';
+    }
+});
+
+// Set reminder templates
+function setReminderTemplate(type) {
+    const titleField = document.getElementById('reminder_title');
+    const messageField = document.getElementById('reminder_message');
+    const typeField = document.getElementById('reminder_type');
+    
+    switch(type) {
+        case 'assignment':
+            typeField.value = 'assignment';
+            titleField.value = 'Assignment Deadline Reminder';
+            messageField.value = 'This is a friendly reminder that your assignment is due soon. Please make sure to submit your work on time.\n\nIf you have any questions or need assistance, please don\'t hesitate to reach out.\n\nGood luck with your assignment!';
+            break;
+            
+        case 'group':
+            typeField.value = 'group_assignment';
+            titleField.value = 'Group Assignment Deadline Reminder';
+            messageField.value = 'This is a reminder about your upcoming group assignment deadline. Please coordinate with your group members to ensure everyone contributes and the assignment is submitted on time.\n\nRemember to communicate regularly with your team and divide tasks fairly.\n\nIf you have any questions, please contact me or your group members.';
+            break;
+            
+        case 'general':
+            typeField.value = 'general';
+            titleField.value = 'Important Class Reminder';
+            messageField.value = 'This is a reminder about an important upcoming event or deadline in our class.\n\nPlease make sure you are prepared and have completed any necessary preparations.\n\nIf you have any questions, please don\'t hesitate to ask.';
+            break;
+    }
+    
+    // Trigger the change event to show/hide appropriate sections
+    document.getElementById('reminder_type').dispatchEvent(new Event('change'));
+}
+
+// Set default date to tomorrow
+document.addEventListener('DOMContentLoaded', function() {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(9, 0, 0, 0); // Set to 9:00 AM
+    
+    const dateInput = document.getElementById('reminder_date');
+    dateInput.value = tomorrow.toISOString().slice(0, 16);
+});
+</script>
+{% endblock %}
+

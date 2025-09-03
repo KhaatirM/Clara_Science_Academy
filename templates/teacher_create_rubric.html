@@ -1,0 +1,339 @@
+{% extends "dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
+    <h3 class="mb-2 mb-md-0"><i class="bi bi-list-check me-2"></i>Create Rubric - {{ assignment.title }}</h3>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('teacher.view_group_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Back to Assignment
+      </a>
+    </div>
+  </div>
+
+  <!-- Assignment Info -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-header bg-info text-white">
+      <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Assignment Details</h6>
+    </div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-12 col-md-6">
+          <strong>Assignment:</strong> {{ assignment.title }}
+        </div>
+        <div class="col-12 col-md-6">
+          <strong>Due Date:</strong> {{ assignment.due_date.strftime('%B %d, %Y at %I:%M %p') }}
+        </div>
+        {% if assignment.description %}
+          <div class="col-12">
+            <strong>Description:</strong> {{ assignment.description }}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Rubric Builder Form -->
+  <div class="card shadow-sm">
+    <div class="card-header bg-primary text-white">
+      <h5 class="mb-0"><i class="bi bi-list-check me-2"></i>Rubric Configuration</h5>
+    </div>
+    <div class="card-body">
+      <form method="POST" id="rubric-form">
+        <div class="row g-3 mb-4">
+          <div class="col-12 col-md-6">
+            <label for="name" class="form-label">Rubric Name <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="name" name="name" required 
+                   placeholder="e.g., Group Project Rubric, Presentation Rubric">
+            <div class="form-text">Choose a descriptive name for this rubric.</div>
+          </div>
+          
+          <div class="col-12 col-md-6">
+            <label for="total_points" class="form-label">Total Points <span class="text-danger">*</span></label>
+            <input type="number" class="form-control" id="total_points" name="total_points" 
+                   value="100" min="1" max="1000" required>
+            <div class="form-text">Maximum points for this assignment.</div>
+          </div>
+          
+          <div class="col-12">
+            <label for="description" class="form-label">Rubric Description</label>
+            <textarea class="form-control" id="description" name="description" rows="3" 
+                      placeholder="Describe the purpose and scope of this rubric..."></textarea>
+            <div class="form-text">Optional description to help students understand the rubric.</div>
+          </div>
+        </div>
+
+        <!-- Criteria Section -->
+        <div class="row mb-4">
+          <div class="col-12">
+            <h6><i class="bi bi-list-ul me-2"></i>Rubric Criteria</h6>
+            <p class="text-muted">Define the criteria and point values for grading this assignment.</p>
+          </div>
+        </div>
+
+        <div id="criteria-container">
+          <!-- Default criteria row -->
+          <div class="criteria-row border rounded p-3 mb-3">
+            <div class="row g-3">
+              <div class="col-12 col-md-4">
+                <label class="form-label">Criterion Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control criteria-name" name="criteria_name[]" required 
+                       placeholder="e.g., Content Quality, Collaboration, Presentation">
+              </div>
+              <div class="col-12 col-md-4">
+                <label class="form-label">Points <span class="text-danger">*</span></label>
+                <input type="number" class="form-control criteria-points" name="criteria_points[]" 
+                       min="1" max="100" required>
+              </div>
+              <div class="col-12 col-md-4">
+                <label class="form-label">Actions</label>
+                <div class="d-flex gap-2">
+                  <button type="button" class="btn btn-outline-danger btn-sm remove-criteria" style="display: none;">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Description</label>
+                <textarea class="form-control criteria-description" name="criteria_description[]" rows="2" 
+                          placeholder="Describe what this criterion evaluates..."></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row mb-4">
+          <div class="col-12">
+            <button type="button" class="btn btn-outline-primary" id="add-criteria">
+              <i class="bi bi-plus-circle me-1"></i>Add Another Criterion
+            </button>
+          </div>
+        </div>
+
+        <!-- Points Summary -->
+        <div class="row mb-4">
+          <div class="col-12">
+            <div class="alert alert-info">
+              <h6><i class="bi bi-calculator me-2"></i>Points Summary</h6>
+              <div class="d-flex justify-content-between align-items-center">
+                <span>Total Criteria Points: <strong id="total-criteria-points">0</strong></span>
+                <span>Assignment Total: <strong id="assignment-total">100</strong></span>
+                <span class="badge" id="points-status">Points Match</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rubric Preview -->
+        <div class="row mb-4">
+          <div class="col-12">
+            <h6>Rubric Preview:</h6>
+            <div class="card border-info">
+              <div class="card-header bg-light">
+                <strong id="preview-name">[Rubric Name]</strong>
+              </div>
+              <div class="card-body">
+                <div id="preview-criteria">
+                  <p class="text-muted">Add criteria to see preview...</p>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between">
+                  <strong>Total: <span id="preview-total">0</span> points</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-12">
+            <button type="submit" class="btn btn-primary btn-lg" id="submit-rubric">
+              <i class="bi bi-check-circle me-2"></i>Create Rubric
+            </button>
+            <a href="{{ url_for('teacher.view_group_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-secondary btn-lg ms-2">
+              <i class="bi bi-x-circle me-2"></i>Cancel
+            </a>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Rubric Tips -->
+  <div class="row g-3 g-md-4 mt-4">
+    <div class="col-12 col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-header bg-success text-white">
+          <h6 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Rubric Best Practices</h6>
+        </div>
+        <div class="card-body">
+          <ul class="mb-0">
+            <li>Use clear, specific criteria</li>
+            <li>Balance point distribution</li>
+            <li>Include both content and process criteria</li>
+            <li>Consider collaboration and communication</li>
+            <li>Make criteria measurable and observable</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-header bg-warning text-white">
+          <h6 class="mb-0"><i class="bi bi-gear me-2"></i>Common Criteria</h6>
+        </div>
+        <div class="card-body">
+          <ul class="mb-0">
+            <li><strong>Content Quality:</strong> Accuracy, depth, relevance</li>
+            <li><strong>Collaboration:</strong> Teamwork, participation</li>
+            <li><strong>Communication:</strong> Clarity, presentation</li>
+            <li><strong>Creativity:</strong> Originality, innovation</li>
+            <li><strong>Timeliness:</strong> Meeting deadlines</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let criteriaCount = 1;
+
+// Add new criteria row
+document.getElementById('add-criteria').addEventListener('click', function() {
+  const container = document.getElementById('criteria-container');
+  const newRow = document.querySelector('.criteria-row').cloneNode(true);
+  
+  // Clear values
+  newRow.querySelectorAll('input, textarea').forEach(input => {
+    input.value = '';
+  });
+  
+  // Show remove button
+  newRow.querySelector('.remove-criteria').style.display = 'block';
+  
+  container.appendChild(newRow);
+  criteriaCount++;
+  
+  // Add remove functionality
+  newRow.querySelector('.remove-criteria').addEventListener('click', function() {
+    newRow.remove();
+    updatePointsSummary();
+    updatePreview();
+  });
+  
+  // Add change listeners
+  addChangeListeners(newRow);
+});
+
+// Add change listeners to a criteria row
+function addChangeListeners(row) {
+  row.querySelector('.criteria-name').addEventListener('input', updatePreview);
+  row.querySelector('.criteria-points').addEventListener('input', function() {
+    updatePointsSummary();
+    updatePreview();
+  });
+  row.querySelector('.criteria-description').addEventListener('input', updatePreview);
+}
+
+// Update points summary
+function updatePointsSummary() {
+  const pointsInputs = document.querySelectorAll('.criteria-points');
+  const totalPoints = Array.from(pointsInputs).reduce((sum, input) => {
+    return sum + (parseInt(input.value) || 0);
+  }, 0);
+  
+  const assignmentTotal = parseInt(document.getElementById('total_points').value) || 100;
+  
+  document.getElementById('total-criteria-points').textContent = totalPoints;
+  document.getElementById('assignment-total').textContent = assignmentTotal;
+  
+  const statusBadge = document.getElementById('points-status');
+  if (totalPoints === assignmentTotal) {
+    statusBadge.textContent = 'Points Match';
+    statusBadge.className = 'badge bg-success';
+  } else if (totalPoints < assignmentTotal) {
+    statusBadge.textContent = 'Under Total';
+    statusBadge.className = 'badge bg-warning';
+  } else {
+    statusBadge.textContent = 'Over Total';
+    statusBadge.className = 'badge bg-danger';
+  }
+}
+
+// Update preview
+function updatePreview() {
+  const rubricName = document.getElementById('name').value || '[Rubric Name]';
+  document.getElementById('preview-name').textContent = rubricName;
+  
+  const criteriaRows = document.querySelectorAll('.criteria-row');
+  const previewContainer = document.getElementById('preview-criteria');
+  
+  if (criteriaRows.length === 0) {
+    previewContainer.innerHTML = '<p class="text-muted">Add criteria to see preview...</p>';
+    return;
+  }
+  
+  let previewHTML = '';
+  let totalPoints = 0;
+  
+  criteriaRows.forEach((row, index) => {
+    const name = row.querySelector('.criteria-name').value;
+    const points = parseInt(row.querySelector('.criteria-points').value) || 0;
+    const description = row.querySelector('.criteria-description').value;
+    
+    if (name) {
+      totalPoints += points;
+      previewHTML += `
+        <div class="mb-2">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <strong>${name}</strong>
+              ${description ? `<br><small class="text-muted">${description}</small>` : ''}
+            </div>
+            <span class="badge bg-primary">${points} pts</span>
+          </div>
+        </div>
+      `;
+    }
+  });
+  
+  previewContainer.innerHTML = previewHTML || '<p class="text-muted">Add criteria to see preview...</p>';
+  document.getElementById('preview-total').textContent = totalPoints;
+}
+
+// Form validation
+document.getElementById('rubric-form').addEventListener('submit', function(e) {
+  const totalPoints = Array.from(document.querySelectorAll('.criteria-points')).reduce((sum, input) => {
+    return sum + (parseInt(input.value) || 0);
+  }, 0);
+  
+  const assignmentTotal = parseInt(document.getElementById('total_points').value) || 100;
+  
+  if (totalPoints !== assignmentTotal) {
+    e.preventDefault();
+    alert('The total criteria points must equal the assignment total points.');
+    return false;
+  }
+  
+  const criteriaNames = Array.from(document.querySelectorAll('.criteria-name')).map(input => input.value.trim());
+  if (criteriaNames.some(name => !name)) {
+    e.preventDefault();
+    alert('All criteria must have names.');
+    return false;
+  }
+});
+
+// Add change listeners to existing elements
+document.getElementById('name').addEventListener('input', updatePreview);
+document.getElementById('total_points').addEventListener('input', updatePointsSummary);
+document.getElementById('description').addEventListener('input', updatePreview);
+
+// Add change listeners to the first criteria row
+addChangeListeners(document.querySelector('.criteria-row'));
+
+// Initial update
+updatePointsSummary();
+updatePreview();
+</script>
+{% endblock %}

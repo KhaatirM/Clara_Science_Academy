@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, abort
 from flask_login import login_required, current_user
-from models import db, TeacherStaff, Class, Student, Assignment, Grade, SchoolYear, Submission, Announcement, Notification, Message, MessageGroup, MessageGroupMember, MessageAttachment, ScheduledAnnouncement, Enrollment, Attendance
+from models import db, TeacherStaff, Class, Student, Assignment, Grade, SchoolYear, Submission, Announcement, Notification, Message, MessageGroup, MessageGroupMember, MessageAttachment, ScheduledAnnouncement, Enrollment, Attendance, StudentGroup, StudentGroupMember, GroupAssignment, GroupSubmission, GroupGrade, AcademicPeriod, GroupTemplate, PeerEvaluation, AssignmentRubric, GroupContract, ReflectionJournal, GroupProgress, AssignmentTemplate, GroupRotation, GroupRotationHistory, PeerReview, DraftSubmission, DraftFeedback, DeadlineReminder, ReminderNotification, Feedback360, Feedback360Response, Feedback360Criteria, GroupConflict, ConflictResolution, ConflictParticipant, GroupWorkReport, IndividualContribution, TimeTracking, CollaborationMetrics, ReportExport, AnalyticsDashboard, PerformanceBenchmark
 from decorators import teacher_required
 import json
 from datetime import datetime
@@ -14,6 +14,17 @@ ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'doc', 'docx', 
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def get_teacher_or_admin():
+    """Helper function to get teacher object or None for administrators."""
+    if current_user.role in ['Director', 'School Administrator']:
+        return None
+    else:
+        return TeacherStaff.query.filter_by(id=current_user.teacher_staff_id).first_or_404()
+
+def is_admin():
+    """Helper function to check if user is an administrator."""
+    return current_user.role in ['Director', 'School Administrator']
 
 def calculate_student_gpa(student_id):
     """Calculate GPA for a student based on their grades"""
@@ -68,17 +79,10 @@ def teacher_dashboard():
     # Debug logging
     print(f"Teacher dashboard accessed by user: {current_user.username}, role: {current_user.role}, teacher_staff_id: {current_user.teacher_staff_id}")
     
-    # Check if teacher_staff_id exists
-    if not current_user.teacher_staff_id:
-        flash('Teacher profile not found. Please contact administration.', 'danger')
-        return redirect(url_for('auth.dashboard'))
-    
-    teacher = TeacherStaff.query.filter_by(id=current_user.teacher_staff_id).first()
-    if not teacher:
-        flash('Teacher profile not found. Please contact administration.', 'danger')
-        return redirect(url_for('auth.dashboard'))
-    # Directors see all classes, teachers only see their assigned classes
-    if current_user.role == 'Director':
+    # Get teacher object or None for administrators
+    teacher = get_teacher_or_admin()
+    # Directors and School Administrators see all classes, teachers only see their assigned classes
+    if is_admin():
         classes = Class.query.all()
         class_ids = [c.id for c in classes]
         recent_assignments = Assignment.query.order_by(Assignment.due_date.desc()).limit(5).all()
@@ -172,22 +176,24 @@ def teacher_dashboard():
                          total_students=total_students,
                          active_assignments=active_assignments,
                          section='home',
-                         active_tab='home')
+                         active_tab='home',
+                         is_admin=is_admin())
 
 @teacher_blueprint.route('/class/<int:class_id>')
 @login_required
 @teacher_required
 def view_class(class_id):
-    teacher = TeacherStaff.query.filter_by(id=current_user.teacher_staff_id).first_or_404()
+    # Get teacher object or None for administrators
+    teacher = get_teacher_or_admin()
     class_obj = Class.query.get_or_404(class_id)
     
-    # Directors have access to all classes, teachers only to their assigned classes
-    if current_user.role != 'Director' and class_obj.teacher_id != teacher.id:
+    # Directors and School Administrators have access to all classes, teachers only to their assigned classes
+    if not is_admin() and class_obj.teacher_id != teacher.id:
         return redirect(url_for('teacher.teacher_dashboard'))
 
     # Get only actively enrolled students for this class
     enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
-    enrolled_students = [enrollment.student for enrollment in enrollments]
+    enrolled_students = [enrollment.student for enrollment in enrollments if enrollment.student is not None]
     
     # Debug logging
     print(f"DEBUG: Class ID: {class_id}")
@@ -221,9 +227,10 @@ def view_class(class_id):
 @teacher_required
 def add_assignment(class_id):
     class_obj = Class.query.get_or_404(class_id)
-    # Authorization check - Directors can add assignments to any class
-    teacher = TeacherStaff.query.filter_by(id=current_user.teacher_staff_id).first_or_404()
-    if current_user.role != 'Director' and class_obj.teacher_id != teacher.id:
+    # Authorization check - Directors and School Administrators can add assignments to any class
+    teacher = get_teacher_or_admin()
+    
+    if not is_admin() and class_obj.teacher_id != teacher.id:
         flash("You are not authorized to add assignments to this class.", "danger")
         return redirect(url_for('teacher.teacher_dashboard'))
 
@@ -319,9 +326,9 @@ def view_assignment(assignment_id):
     if class_info and class_info.teacher_id:
         teacher = TeacherStaff.query.get(class_info.teacher_id)
     
-    # Authorization check - Directors can view any assignment, teachers can only view their own
-    current_teacher = TeacherStaff.query.filter_by(id=current_user.teacher_staff_id).first_or_404()
-    if current_user.role != 'Director' and class_info.teacher_id != current_teacher.id:
+    # Authorization check - Directors and School Administrators can view any assignment, teachers can only view their own
+    current_teacher = get_teacher_or_admin()
+    if not is_admin() and class_info.teacher_id != current_teacher.id:
         flash("You are not authorized to view this assignment.", "danger")
         return redirect(url_for('teacher.teacher_dashboard'))
     
@@ -348,7 +355,7 @@ def edit_assignment(assignment_id):
     class_obj = assignment.class_info
     
     # Authorization check - Directors can edit any assignment, teachers can only edit their own
-    current_teacher = TeacherStaff.query.filter_by(id=current_user.teacher_staff_id).first_or_404()
+    current_teacher = get_teacher_or_admin()
     if current_user.role != 'Director' and class_obj.teacher_id != current_teacher.id:
         flash("You are not authorized to edit this assignment.", "danger")
         return redirect(url_for('teacher.teacher_dashboard'))
@@ -420,7 +427,7 @@ def remove_assignment(assignment_id):
     class_obj = assignment.class_info
     
     # Authorization check - Directors can remove any assignment, teachers can only remove their own
-    current_teacher = TeacherStaff.query.filter_by(id=current_user.teacher_staff_id).first_or_404()
+    current_teacher = get_teacher_or_admin()
     if current_user.role != 'Director' and class_obj.teacher_id != current_teacher.id:
         flash("You are not authorized to remove this assignment.", "danger")
         return redirect(url_for('teacher.teacher_dashboard'))
@@ -453,8 +460,8 @@ def grade_assignment(assignment_id):
     class_obj = assignment.class_info
     
     # Authorization check - Directors can grade any assignment
-    teacher = TeacherStaff.query.filter_by(id=current_user.teacher_staff_id).first_or_404()
-    if current_user.role != 'Director' and class_obj.teacher_id != teacher.id:
+    teacher = get_teacher_or_admin()
+    if not is_admin() and class_obj.teacher_id != teacher.id:
         flash("You are not authorized to grade this assignment.", "danger")
         return redirect(url_for('teacher.teacher_dashboard'))
 
@@ -538,9 +545,9 @@ def take_attendance(class_id):
         flash("This class is archived or inactive. Cannot take attendance.", "warning")
         return redirect(url_for('teacher.teacher_dashboard'))
     
-    teacher = TeacherStaff.query.filter_by(id=current_user.teacher_staff_id).first_or_404()
+    teacher = get_teacher_or_admin()
     # Directors can take attendance for any class
-    if current_user.role != 'Director' and class_obj.teacher_id != teacher.id:
+    if not is_admin() and class_obj.teacher_id != teacher.id:
         flash("You are not authorized to take attendance for this class.", "danger")
         return redirect(url_for('teacher.teacher_dashboard'))
 
@@ -687,7 +694,7 @@ def take_attendance(class_id):
 @teacher_required
 def my_classes():
     """View all classes taught by the teacher, or all classes for Directors"""
-    teacher = TeacherStaff.query.filter_by(id=current_user.teacher_staff_id).first_or_404()
+    teacher = get_teacher_or_admin()
     
     # Directors see all classes, teachers only see their assigned classes
     if current_user.role == 'Director':
@@ -706,7 +713,7 @@ def my_classes():
 @teacher_required
 def my_assignments():
     """View all assignments created by the teacher, or all assignments for Directors"""
-    teacher = TeacherStaff.query.filter_by(id=current_user.teacher_staff_id).first_or_404()
+    teacher = get_teacher_or_admin()
     
     # Directors see all classes and assignments, teachers only see their assigned ones
     if current_user.role == 'Director':
@@ -732,7 +739,7 @@ def my_assignments():
 @teacher_required
 def my_grades():
     """View all grades entered by the teacher, or all grades for Directors"""
-    teacher = TeacherStaff.query.filter_by(id=current_user.teacher_staff_id).first_or_404()
+    teacher = get_teacher_or_admin()
     
     # Directors see all classes, assignments, and grades, teachers only see their assigned ones
     if current_user.role == 'Director':
@@ -764,7 +771,7 @@ def student_grades():
     if current_user.role in ['Director', 'School Administrator']:
         teacher = None
     else:
-        teacher = TeacherStaff.query.filter_by(id=current_user.teacher_staff_id).first_or_404()
+        teacher = get_teacher_or_admin()
     
     # Get the class filter if provided
     class_filter = request.args.get('class_id', type=int)
@@ -878,7 +885,7 @@ def student_grades():
 @teacher_required
 def attendance():
     """View attendance for teacher's classes, or all classes for Directors"""
-    teacher = TeacherStaff.query.filter_by(id=current_user.teacher_staff_id).first_or_404()
+    teacher = get_teacher_or_admin()
     
     # Get all classes with student counts
     all_classes = Class.query.all()
@@ -1237,7 +1244,7 @@ def teacher_communications():
 @teacher_required
 def teacher_messages():
     """View all messages with filtering and sorting."""
-    teacher = TeacherStaff.query.get_or_404(current_user.teacher_staff_id)
+    teacher = get_teacher_or_admin()
     
     # Get filter parameters
     message_type = request.args.get('type', 'all')
@@ -1284,7 +1291,7 @@ def teacher_messages():
 @teacher_required
 def send_message():
     """Send a new message."""
-    teacher = TeacherStaff.query.get_or_404(current_user.teacher_staff_id)
+    teacher = get_teacher_or_admin()
     
     if request.method == 'POST':
         recipient_id = request.form.get('recipient_id', type=int)
@@ -1369,7 +1376,7 @@ def send_message():
 @teacher_required
 def view_message(message_id):
     """View a specific message."""
-    teacher = TeacherStaff.query.get_or_404(current_user.teacher_staff_id)
+    teacher = get_teacher_or_admin()
     message = Message.query.get_or_404(message_id)
     
     # Check if user has access to this message
@@ -1443,7 +1450,7 @@ def reply_to_message(message_id):
 @teacher_required
 def teacher_groups():
     """Manage message groups."""
-    teacher = TeacherStaff.query.get_or_404(current_user.teacher_staff_id)
+    teacher = get_teacher_or_admin()
     
     # Get groups the teacher is part of
     group_memberships = MessageGroupMember.query.filter_by(user_id=current_user.id).all()
@@ -1460,12 +1467,12 @@ def teacher_groups():
                          active_tab='groups')
 
 
-@teacher_blueprint.route('/groups/create', methods=['GET', 'POST'])
+@teacher_blueprint.route('/message-groups/create', methods=['GET', 'POST'])
 @login_required
 @teacher_required
-def create_group():
+def create_message_group():
     """Create a new message group."""
-    teacher = TeacherStaff.query.get_or_404(current_user.teacher_staff_id)
+    teacher = get_teacher_or_admin()
     
     if request.method == 'POST':
         name = request.form.get('name', '').strip()
@@ -1475,7 +1482,7 @@ def create_group():
         
         if not name:
             flash('Group name is required.', 'error')
-            return redirect(url_for('teacher.create_group'))
+            return redirect(url_for('teacher.create_message_group'))
         
         # Create group
         group = MessageGroup(
@@ -1547,7 +1554,7 @@ def create_group():
 @teacher_required
 def view_group(group_id):
     """View a message group and its messages."""
-    teacher = TeacherStaff.query.get_or_404(current_user.teacher_staff_id)
+    teacher = get_teacher_or_admin()
     group = MessageGroup.query.get_or_404(group_id)
     
     # Check if user is member of this group
@@ -1631,7 +1638,7 @@ def send_group_message(group_id):
 @teacher_required
 def create_announcement():
     """Create a new announcement."""
-    teacher = TeacherStaff.query.get_or_404(current_user.teacher_staff_id)
+    teacher = get_teacher_or_admin()
     
     if request.method == 'POST':
         title = request.form.get('title', '').strip()
@@ -1682,7 +1689,7 @@ def create_announcement():
 @teacher_required
 def schedule_announcement():
     """Schedule an announcement for future delivery."""
-    teacher = TeacherStaff.query.get_or_404(current_user.teacher_staff_id)
+    teacher = get_teacher_or_admin()
     
     if request.method == 'POST':
         title = request.form.get('title', '').strip()
@@ -1772,9 +1779,2584 @@ def mark_message_read(message_id):
 @teacher_required
 def settings():
     """Teacher settings page."""
-    teacher = TeacherStaff.query.get_or_404(current_user.teacher_staff_id)
+    teacher = get_teacher_or_admin()
     
     return render_template('teacher_settings.html',
                          teacher=teacher,
                          section='settings',
                          active_tab='settings')
+
+
+# ===== GROUP MANAGEMENT ROUTES =====
+
+@teacher_blueprint.route('/class/<int:class_id>/groups')
+@login_required
+@teacher_required
+def class_groups(class_id):
+    """View all groups for a specific class."""
+    teacher = get_teacher_or_admin()
+    class_obj = Class.query.get_or_404(class_id)
+    
+    # Check if teacher has access to this class
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this class.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    # Get all groups for this class
+    groups = StudentGroup.query.filter_by(class_id=class_id, is_active=True).all()
+    
+    # Get enrolled students for this class
+    enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
+    enrolled_students = [enrollment.student for enrollment in enrollments if enrollment.student is not None]
+    
+    return render_template('teacher_class_groups.html',
+                         class_obj=class_obj,
+                         groups=groups,
+                         enrolled_students=enrolled_students)
+
+
+@teacher_blueprint.route('/class/<int:class_id>/groups/create', methods=['GET', 'POST'])
+@login_required
+@teacher_required
+def create_student_group(class_id):
+    """Create a new group for a class."""
+    teacher = get_teacher_or_admin()
+    class_obj = Class.query.get_or_404(class_id)
+    
+    # Check if teacher has access to this class
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this class.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        description = request.form.get('description', '').strip()
+        max_students = request.form.get('max_students')
+        
+        if not name:
+            flash('Group name is required.', 'danger')
+            return render_template('teacher_create_group.html', class_obj=class_obj)
+        
+        # Check if group name already exists for this class
+        existing_group = StudentGroup.query.filter_by(class_id=class_id, name=name, is_active=True).first()
+        if existing_group:
+            flash('A group with this name already exists in this class.', 'danger')
+            return render_template('teacher_create_group.html', class_obj=class_obj)
+        
+        # Create the group
+        group = StudentGroup(
+            name=name,
+            description=description,
+            class_id=class_id,
+            created_by=teacher.id,
+            max_students=int(max_students) if max_students else None
+        )
+        
+        db.session.add(group)
+        db.session.commit()
+        
+        flash(f'Group "{name}" created successfully!', 'success')
+        return redirect(url_for('teacher.class_groups', class_id=class_id))
+    
+    return render_template('teacher_create_group.html', class_obj=class_obj)
+
+
+@teacher_blueprint.route('/group/<int:group_id>/manage', methods=['GET', 'POST'])
+@login_required
+@teacher_required
+def manage_group(group_id):
+    """Manage students in a specific group."""
+    teacher = get_teacher_or_admin()
+    group = StudentGroup.query.get_or_404(group_id)
+    
+    # Check if teacher has access to this group's class
+    if not is_admin() and group.class_info.teacher_id != teacher.id:
+        flash('You do not have access to this group.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    # Get current group members
+    current_members = StudentGroupMember.query.filter_by(group_id=group_id).all()
+    current_member_ids = [member.student_id for member in current_members]
+    
+    # Get all enrolled students for this class
+    enrollments = Enrollment.query.filter_by(class_id=group.class_id, is_active=True).all()
+    enrolled_students = [enrollment.student for enrollment in enrollments if enrollment.student is not None]
+    
+    if request.method == 'POST':
+        # Handle adding/removing students
+        action = request.form.get('action')
+        
+        if action == 'add_student':
+            student_id = request.form.get('student_id')
+            if student_id and int(student_id) not in current_member_ids:
+                # Check if group has reached max capacity
+                if group.max_students and len(current_members) >= group.max_students:
+                    flash('Group has reached maximum capacity.', 'warning')
+                else:
+                    # Add student to group
+                    member = StudentGroupMember(
+                        group_id=group_id,
+                        student_id=int(student_id)
+                    )
+                    db.session.add(member)
+                    db.session.commit()
+                    flash('Student added to group successfully!', 'success')
+                    return redirect(url_for('teacher.manage_group', group_id=group_id))
+        
+        elif action == 'remove_student':
+            student_id = request.form.get('student_id')
+            if student_id:
+                member = StudentGroupMember.query.filter_by(
+                    group_id=group_id, 
+                    student_id=int(student_id)
+                ).first()
+                if member:
+                    db.session.delete(member)
+                    db.session.commit()
+                    flash('Student removed from group successfully!', 'success')
+                    return redirect(url_for('teacher.manage_group', group_id=group_id))
+        
+        elif action == 'set_leader':
+            student_id = request.form.get('student_id')
+            if student_id:
+                # Remove leader status from all members
+                StudentGroupMember.query.filter_by(group_id=group_id).update({'is_leader': False})
+                
+                # Set new leader
+                member = StudentGroupMember.query.filter_by(
+                    group_id=group_id, 
+                    student_id=int(student_id)
+                ).first()
+                if member:
+                    member.is_leader = True
+                    db.session.commit()
+                    flash('Group leader updated successfully!', 'success')
+                    return redirect(url_for('teacher.manage_group', group_id=group_id))
+    
+    return render_template('teacher_manage_group.html',
+                         group=group,
+                         current_members=current_members,
+                         enrolled_students=enrolled_students,
+                         current_member_ids=current_member_ids)
+
+
+@teacher_blueprint.route('/group/<int:group_id>/delete', methods=['POST'])
+@login_required
+@teacher_required
+def delete_group(group_id):
+    """Delete a group (soft delete by setting is_active=False)."""
+    teacher = get_teacher_or_admin()
+    group = StudentGroup.query.get_or_404(group_id)
+    
+    # Check if teacher has access to this group's class
+    if not is_admin() and group.class_info.teacher_id != teacher.id:
+        flash('You do not have access to this group.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    # Soft delete the group
+    group.is_active = False
+    db.session.commit()
+    
+    flash(f'Group "{group.name}" deleted successfully!', 'success')
+    return redirect(url_for('teacher.class_groups', class_id=group.class_id))
+
+
+# ===== GROUP ASSIGNMENT ROUTES =====
+
+@teacher_blueprint.route('/class/<int:class_id>/group-assignments')
+@login_required
+@teacher_required
+def class_group_assignments(class_id):
+    """View all group assignments for a specific class."""
+    teacher = get_teacher_or_admin()
+    class_obj = Class.query.get_or_404(class_id)
+    
+    # Check if teacher has access to this class
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this class.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    # Get all group assignments for this class
+    group_assignments = GroupAssignment.query.filter_by(class_id=class_id).order_by(GroupAssignment.due_date.desc()).all()
+    
+    return render_template('teacher_class_group_assignments.html',
+                         class_obj=class_obj,
+                         group_assignments=group_assignments,
+                         moment=datetime.utcnow())
+
+
+@teacher_blueprint.route('/class/<int:class_id>/group-assignment/create', methods=['GET', 'POST'])
+@login_required
+@teacher_required
+def create_group_assignment(class_id):
+    """Create a new group assignment for a class."""
+    teacher = get_teacher_or_admin()
+    class_obj = Class.query.get_or_404(class_id)
+    
+    # Check if teacher has access to this class
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this class.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    # Get current school year and academic periods
+    current_school_year = SchoolYear.query.filter_by(is_active=True).first()
+    academic_periods = []
+    if current_school_year:
+        academic_periods = AcademicPeriod.query.filter_by(school_year_id=current_school_year.id, is_active=True).all()
+    
+    if request.method == 'POST':
+        title = request.form.get('title', '').strip()
+        description = request.form.get('description', '').strip()
+        due_date_str = request.form.get('due_date')
+        quarter = request.form.get('quarter', '')
+        semester = request.form.get('semester', '')
+        academic_period_id = request.form.get('academic_period_id')
+        group_size_min = request.form.get('group_size_min', 2)
+        group_size_max = request.form.get('group_size_max', 4)
+        allow_individual = 'allow_individual' in request.form
+        collaboration_type = request.form.get('collaboration_type', 'group')
+        
+        if not title or not due_date_str or not quarter:
+            flash('Title, due date, and quarter are required.', 'danger')
+            return render_template('teacher_create_group_assignment.html', 
+                                 class_obj=class_obj, 
+                                 academic_periods=academic_periods)
+        
+        try:
+            due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
+        except ValueError:
+            flash('Invalid due date format.', 'danger')
+            return render_template('teacher_create_group_assignment.html', 
+                                 class_obj=class_obj, 
+                                 academic_periods=academic_periods)
+        
+        # Handle file upload
+        attachment_filename = None
+        attachment_original_filename = None
+        attachment_file_path = None
+        attachment_file_size = None
+        attachment_mime_type = None
+        
+        if 'attachment' in request.files:
+            file = request.files['attachment']
+            if file and file.filename and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                timestamp = str(int(time.time()))
+                attachment_filename = f"group_assignment_{class_id}_{timestamp}_{filename}"
+                attachment_original_filename = file.filename
+                
+                # Create uploads directory if it doesn't exist
+                upload_dir = os.path.join(current_app.static_folder, 'uploads')
+                os.makedirs(upload_dir, exist_ok=True)
+                
+                attachment_file_path = os.path.join(upload_dir, attachment_filename)
+                file.save(attachment_file_path)
+                attachment_file_size = os.path.getsize(attachment_file_path)
+                attachment_mime_type = file.content_type
+        
+        # Create the group assignment
+        group_assignment = GroupAssignment(
+            title=title,
+            description=description,
+            class_id=class_id,
+            due_date=due_date,
+            quarter=quarter,
+            semester=semester if semester else None,
+            academic_period_id=int(academic_period_id) if academic_period_id else None,
+            school_year_id=current_school_year.id if current_school_year else None,
+            group_size_min=int(group_size_min),
+            group_size_max=int(group_size_max),
+            allow_individual=allow_individual,
+            collaboration_type=collaboration_type,
+            attachment_filename=attachment_filename,
+            attachment_original_filename=attachment_original_filename,
+            attachment_file_path=attachment_file_path,
+            attachment_file_size=attachment_file_size,
+            attachment_mime_type=attachment_mime_type
+        )
+        
+        db.session.add(group_assignment)
+        db.session.commit()
+        
+        flash(f'Group assignment "{title}" created successfully!', 'success')
+        return redirect(url_for('teacher.class_group_assignments', class_id=class_id))
+    
+    return render_template('teacher_create_group_assignment.html', 
+                         class_obj=class_obj, 
+                         academic_periods=academic_periods)
+
+
+@teacher_blueprint.route('/group-assignment/<int:assignment_id>/view')
+@login_required
+@teacher_required
+def view_group_assignment(assignment_id):
+    """View details of a specific group assignment."""
+    teacher = get_teacher_or_admin()
+    group_assignment = GroupAssignment.query.get_or_404(assignment_id)
+    
+    # Check if teacher has access to this assignment's class
+    if not is_admin() and group_assignment.class_info.teacher_id != teacher.id:
+        flash('You do not have access to this assignment.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    # Get submissions for this assignment
+    submissions = GroupSubmission.query.filter_by(group_assignment_id=assignment_id).all()
+    
+    # Get groups for this class
+    groups = StudentGroup.query.filter_by(class_id=group_assignment.class_id, is_active=True).all()
+    
+    return render_template('teacher_view_group_assignment.html',
+                         group_assignment=group_assignment,
+                         submissions=submissions,
+                         groups=groups)
+
+
+@teacher_blueprint.route('/group-assignment/<int:assignment_id>/grade', methods=['GET', 'POST'])
+@login_required
+@teacher_required
+def grade_group_assignment(assignment_id):
+    """Grade a group assignment."""
+    teacher = get_teacher_or_admin()
+    group_assignment = GroupAssignment.query.get_or_404(assignment_id)
+    
+    # Check if teacher has access to this assignment's class
+    if not is_admin() and group_assignment.class_info.teacher_id != teacher.id:
+        flash('You do not have access to this assignment.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    # Get all groups for this class
+    groups = StudentGroup.query.filter_by(class_id=group_assignment.class_id, is_active=True).all()
+    
+    # Get existing grades
+    existing_grades = GroupGrade.query.filter_by(group_assignment_id=assignment_id).all()
+    grades_by_student = {grade.student_id: grade for grade in existing_grades}
+    
+    if request.method == 'POST':
+        # Process grade submissions
+        for group in groups:
+            for member in group.members:
+                student_id = member.student_id
+                score_key = f'score_{student_id}'
+                comments_key = f'comments_{student_id}'
+                
+                if score_key in request.form:
+                    score = request.form.get(score_key, '').strip()
+                    comments = request.form.get(comments_key, '').strip()
+                    
+                    if score:
+                        try:
+                            score_value = float(score)
+                            if 0 <= score_value <= 100:
+                                grade_data = json.dumps({
+                                    'score': score_value,
+                                    'max_score': 100,
+                                    'letter_grade': get_letter_grade(score_value)
+                                })
+                                
+                                # Update or create grade
+                                if student_id in grades_by_student:
+                                    grade = grades_by_student[student_id]
+                                    grade.grade_data = grade_data
+                                    grade.comments = comments
+                                    grade.graded_at = datetime.utcnow()
+                                else:
+                                    grade = GroupGrade(
+                                        group_assignment_id=assignment_id,
+                                        group_id=group.id,
+                                        student_id=student_id,
+                                        grade_data=grade_data,
+                                        graded_by=teacher.id,
+                                        comments=comments
+                                    )
+                                    db.session.add(grade)
+                                
+                                db.session.commit()
+                        except ValueError:
+                            flash(f'Invalid score for {member.student.first_name} {member.student.last_name}', 'warning')
+        
+        flash('Grades saved successfully!', 'success')
+        return redirect(url_for('teacher.view_group_assignment', assignment_id=assignment_id))
+    
+    return render_template('teacher_grade_group_assignment.html',
+                         group_assignment=group_assignment,
+                         groups=groups,
+                         grades_by_student=grades_by_student)
+
+
+def get_letter_grade(percentage):
+    """Convert percentage to letter grade."""
+    if percentage >= 97:
+        return 'A+'
+    elif percentage >= 93:
+        return 'A'
+    elif percentage >= 90:
+        return 'A-'
+    elif percentage >= 87:
+        return 'B+'
+    elif percentage >= 83:
+        return 'B'
+    elif percentage >= 80:
+        return 'B-'
+    elif percentage >= 77:
+        return 'C+'
+    elif percentage >= 73:
+        return 'C'
+    elif percentage >= 70:
+        return 'C-'
+    elif percentage >= 67:
+        return 'D+'
+    elif percentage >= 63:
+        return 'D'
+    elif percentage >= 60:
+        return 'D-'
+    else:
+        return 'F'
+
+
+# ============================================================================
+# ENHANCED GROUP MANAGEMENT FEATURES
+# ============================================================================
+
+@teacher_blueprint.route('/class/<int:class_id>/groups/analytics')
+@login_required
+@teacher_required
+def group_analytics(class_id):
+    """View group analytics and performance insights."""
+    teacher = get_teacher_or_admin()
+    class_obj = Class.query.get_or_404(class_id)
+    
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this class.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    # Get groups and their performance data
+    groups = StudentGroup.query.filter_by(class_id=class_id, is_active=True).all()
+    
+    # Calculate analytics
+    analytics_data = []
+    for group in groups:
+        # Get group assignments and grades
+        assignments = GroupAssignment.query.filter_by(class_id=class_id).all()
+        group_grades = GroupGrade.query.filter_by(group_id=group.id).all()
+        
+        # Calculate average grade
+        if group_grades:
+            total_score = 0
+            count = 0
+            for grade in group_grades:
+                try:
+                    grade_data = json.loads(grade.grade_data)
+                    if 'score' in grade_data:
+                        total_score += grade_data['score']
+                        count += 1
+                except:
+                    continue
+            
+            avg_grade = total_score / count if count > 0 else 0
+        else:
+            avg_grade = 0
+        
+        # Get peer evaluations
+        peer_evals = PeerEvaluation.query.filter_by(group_id=group.id).all()
+        avg_peer_score = 0
+        if peer_evals:
+            total_peer_score = sum(eval.overall_score for eval in peer_evals)
+            avg_peer_score = total_peer_score / len(peer_evals)
+        
+        analytics_data.append({
+            'group': group,
+            'member_count': len(group.members),
+            'avg_grade': avg_grade,
+            'avg_peer_score': avg_peer_score,
+            'assignments_count': len(assignments),
+            'submissions_count': len([s for s in group.submissions if s.submitted_at])
+        })
+    
+    return render_template('teacher_group_analytics.html',
+                         class_obj=class_obj,
+                         analytics_data=analytics_data)
+
+
+@teacher_blueprint.route('/class/<int:class_id>/groups/auto-create', methods=['GET', 'POST'])
+@login_required
+@teacher_required
+def auto_create_groups(class_id):
+    """Auto-create groups with different criteria."""
+    teacher = get_teacher_or_admin()
+    class_obj = Class.query.get_or_404(class_id)
+    
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this class.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    if request.method == 'POST':
+        group_size = int(request.form.get('group_size', 3))
+        grouping_criteria = request.form.get('grouping_criteria', 'random')
+        group_prefix = request.form.get('group_prefix', 'Group')
+        
+        # Get enrolled students
+        enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
+        students = [enrollment.student for enrollment in enrollments if enrollment.student is not None]
+        
+        if len(students) < group_size:
+            flash('Not enough students to create groups of the specified size.', 'warning')
+            return redirect(url_for('teacher.auto_create_groups', class_id=class_id))
+        
+        # Create groups based on criteria
+        groups_created = 0
+        if grouping_criteria == 'random':
+            import random
+            random.shuffle(students)
+            
+            for i in range(0, len(students), group_size):
+                group_students = students[i:i + group_size]
+                if len(group_students) >= 2:  # Minimum 2 students per group
+                    group = StudentGroup(
+                        name=f"{group_prefix} {groups_created + 1}",
+                        description=f"Auto-created group with {len(group_students)} members",
+                        class_id=class_id,
+                        created_by=teacher.id,
+                        max_students=group_size
+                    )
+                    db.session.add(group)
+                    db.session.flush()  # Get the group ID
+                    
+                    # Add students to group
+                    for j, student in enumerate(group_students):
+                        member = StudentGroupMember(
+                            group_id=group.id,
+                            student_id=student.id,
+                            is_leader=(j == 0)  # First student is leader
+                        )
+                        db.session.add(member)
+                    
+                    groups_created += 1
+        
+        elif grouping_criteria == 'mixed_ability':
+            # Simple mixed ability grouping (would need more sophisticated logic in real implementation)
+            import random
+            random.shuffle(students)
+            
+            for i in range(0, len(students), group_size):
+                group_students = students[i:i + group_size]
+                if len(group_students) >= 2:
+                    group = StudentGroup(
+                        name=f"{group_prefix} {groups_created + 1}",
+                        description=f"Mixed ability group with {len(group_students)} members",
+                        class_id=class_id,
+                        created_by=teacher.id,
+                        max_students=group_size
+                    )
+                    db.session.add(group)
+                    db.session.flush()
+                    
+                    for j, student in enumerate(group_students):
+                        member = StudentGroupMember(
+                            group_id=group.id,
+                            student_id=student.id,
+                            is_leader=(j == 0)
+                        )
+                        db.session.add(member)
+                    
+                    groups_created += 1
+        
+        try:
+            db.session.commit()
+            flash(f'Successfully created {groups_created} groups!', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error creating groups: {str(e)}', 'danger')
+        
+        return redirect(url_for('teacher.class_groups', class_id=class_id))
+    
+    # Get enrolled students for preview
+    enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
+    students = [enrollment.student for enrollment in enrollments if enrollment.student is not None]
+    
+    return render_template('teacher_auto_create_groups.html',
+                         class_obj=class_obj,
+                         students=students)
+
+
+@teacher_blueprint.route('/class/<int:class_id>/group-templates')
+@login_required
+@teacher_required
+def class_group_templates(class_id):
+    """View and manage group templates for a class."""
+    teacher = get_teacher_or_admin()
+    class_obj = Class.query.get_or_404(class_id)
+    
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this class.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    templates = GroupTemplate.query.filter_by(class_id=class_id, is_active=True).all()
+    
+    return render_template('teacher_group_templates.html',
+                         class_obj=class_obj,
+                         templates=templates)
+
+
+@teacher_blueprint.route('/class/<int:class_id>/group-template/create', methods=['GET', 'POST'])
+@login_required
+@teacher_required
+def create_group_template(class_id):
+    """Create a new group template."""
+    teacher = get_teacher_or_admin()
+    class_obj = Class.query.get_or_404(class_id)
+    
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this class.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    if request.method == 'POST':
+        name = request.form.get('name')
+        description = request.form.get('description')
+        group_size = int(request.form.get('group_size', 3))
+        grouping_criteria = request.form.get('grouping_criteria', 'random')
+        
+        template = GroupTemplate(
+            name=name,
+            description=description,
+            class_id=class_id,
+            created_by=teacher.id,
+            group_size=group_size,
+            grouping_criteria=grouping_criteria
+        )
+        
+        try:
+            db.session.add(template)
+            db.session.commit()
+            flash('Group template created successfully!', 'success')
+            return redirect(url_for('teacher.class_group_templates', class_id=class_id))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error creating template: {str(e)}', 'danger')
+    
+    return render_template('teacher_create_group_template.html',
+                         class_obj=class_obj)
+
+
+@teacher_blueprint.route('/group-assignment/<int:assignment_id>/rubric/create', methods=['GET', 'POST'])
+@login_required
+@teacher_required
+def create_assignment_rubric(assignment_id):
+    """Create a rubric for a group assignment."""
+    teacher = get_teacher_or_admin()
+    assignment = GroupAssignment.query.get_or_404(assignment_id)
+    
+    # Check if teacher has access to this assignment
+    if not is_admin() and assignment.class_info.teacher_id != teacher.id:
+        flash('You do not have access to this assignment.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    if request.method == 'POST':
+        name = request.form.get('name')
+        description = request.form.get('description')
+        total_points = int(request.form.get('total_points', 100))
+        
+        # Get rubric criteria from form
+        criteria = []
+        criteria_names = request.form.getlist('criteria_name[]')
+        criteria_descriptions = request.form.getlist('criteria_description[]')
+        criteria_points = request.form.getlist('criteria_points[]')
+        
+        for i in range(len(criteria_names)):
+            if criteria_names[i] and criteria_points[i]:
+                criteria.append({
+                    'name': criteria_names[i],
+                    'description': criteria_descriptions[i],
+                    'points': int(criteria_points[i])
+                })
+        
+        rubric = AssignmentRubric(
+            group_assignment_id=assignment_id,
+            name=name,
+            description=description,
+            criteria_data=json.dumps(criteria),
+            total_points=total_points,
+            created_by=teacher.id
+        )
+        
+        try:
+            db.session.add(rubric)
+            db.session.commit()
+            flash('Rubric created successfully!', 'success')
+            return redirect(url_for('teacher.view_group_assignment', assignment_id=assignment_id))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error creating rubric: {str(e)}', 'danger')
+    
+    return render_template('teacher_create_rubric.html',
+                         assignment=assignment)
+
+
+@teacher_blueprint.route('/group/<int:group_id>/contract/create', methods=['GET', 'POST'])
+@login_required
+@teacher_required
+def create_group_contract(group_id):
+    """Create a group contract."""
+    teacher = get_teacher_or_admin()
+    group = StudentGroup.query.get_or_404(group_id)
+    
+    # Check if teacher has access to this group
+    if not is_admin() and group.class_info.teacher_id != teacher.id:
+        flash('You do not have access to this group.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    if request.method == 'POST':
+        assignment_id = request.form.get('assignment_id')
+        contract_terms = request.form.get('contract_terms')
+        
+        # Create contract data
+        contract_data = {
+            'terms': contract_terms,
+            'created_by_teacher': teacher.id,
+            'created_at': datetime.utcnow().isoformat()
+        }
+        
+        contract = GroupContract(
+            group_id=group_id,
+            group_assignment_id=assignment_id if assignment_id else None,
+            contract_data=json.dumps(contract_data),
+            created_by=teacher.id
+        )
+        
+        try:
+            db.session.add(contract)
+            db.session.commit()
+            flash('Group contract created successfully!', 'success')
+            return redirect(url_for('teacher.manage_group', group_id=group_id))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error creating contract: {str(e)}', 'danger')
+    
+    # Get available assignments for this group's class
+    assignments = GroupAssignment.query.filter_by(class_id=group.class_id).all()
+    
+    return render_template('teacher_create_group_contract.html',
+                         group=group,
+                         assignments=assignments)
+
+
+@teacher_blueprint.route('/group-assignment/<int:assignment_id>/peer-evaluations')
+@login_required
+@teacher_required
+def view_peer_evaluations(assignment_id):
+    """View peer evaluations for a group assignment."""
+    teacher = get_teacher_or_admin()
+    assignment = GroupAssignment.query.get_or_404(assignment_id)
+    
+    # Check if teacher has access to this assignment
+    if not is_admin() and assignment.class_info.teacher_id != teacher.id:
+        flash('You do not have access to this assignment.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    # Get all peer evaluations for this assignment
+    evaluations = PeerEvaluation.query.filter_by(group_assignment_id=assignment_id).all()
+    
+    # Group evaluations by group
+    evaluations_by_group = {}
+    for eval in evaluations:
+        if eval.group_id not in evaluations_by_group:
+            evaluations_by_group[eval.group_id] = []
+        evaluations_by_group[eval.group_id].append(eval)
+    
+    return render_template('teacher_peer_evaluations.html',
+                         assignment=assignment,
+                         evaluations_by_group=evaluations_by_group)
+
+
+@teacher_blueprint.route('/group-assignment/<int:assignment_id>/progress')
+@login_required
+@teacher_required
+def view_group_progress(assignment_id):
+    """View group progress for an assignment."""
+    teacher = get_teacher_or_admin()
+    assignment = GroupAssignment.query.get_or_404(assignment_id)
+    
+    # Check if teacher has access to this assignment
+    if not is_admin() and assignment.class_info.teacher_id != teacher.id:
+        flash('You do not have access to this assignment.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    # Get groups and their progress
+    groups = StudentGroup.query.filter_by(class_id=assignment.class_id, is_active=True).all()
+    progress_data = []
+    
+    for group in groups:
+        progress = GroupProgress.query.filter_by(
+            group_id=group.id,
+            group_assignment_id=assignment_id
+        ).first()
+        
+        if not progress:
+            # Create initial progress record
+            progress = GroupProgress(
+                group_id=group.id,
+                group_assignment_id=assignment_id,
+                progress_percentage=0,
+                status='not_started'
+            )
+            db.session.add(progress)
+            db.session.commit()
+        
+        progress_data.append({
+            'group': group,
+            'progress': progress,
+            'submission': GroupSubmission.query.filter_by(
+                group_id=group.id,
+                group_assignment_id=assignment_id
+            ).first()
+        })
+    
+    return render_template('teacher_group_progress.html',
+                         assignment=assignment,
+                         progress_data=progress_data)
+
+
+@teacher_blueprint.route('/class/<int:class_id>/group-template/delete', methods=['POST'])
+@login_required
+@teacher_required
+def delete_group_template(class_id):
+    """Delete a group template."""
+    teacher = get_teacher_or_admin()
+    class_obj = Class.query.get_or_404(class_id)
+    
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this class.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    template_id = request.form.get('template_id')
+    if not template_id:
+        flash('Template ID is required.', 'danger')
+        return redirect(url_for('teacher.class_group_templates', class_id=class_id))
+    
+    template = GroupTemplate.query.filter_by(id=template_id, class_id=class_id).first()
+    if not template:
+        flash('Template not found.', 'danger')
+        return redirect(url_for('teacher.class_group_templates', class_id=class_id))
+    
+    try:
+        template.is_active = False
+        db.session.commit()
+        flash('Template deleted successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting template: {str(e)}', 'danger')
+    
+    return redirect(url_for('teacher.class_group_templates', class_id=class_id))
+
+
+@teacher_blueprint.route('/group-progress/update', methods=['POST'])
+@login_required
+@teacher_required
+def update_group_progress():
+    """Update group progress."""
+    teacher = get_teacher_or_admin()
+    
+    group_id = request.form.get('group_id')
+    assignment_id = request.form.get('assignment_id')
+    progress_percentage = int(request.form.get('progress_percentage', 0))
+    status = request.form.get('status', 'not_started')
+    notes = request.form.get('notes', '')
+    
+    # Verify teacher has access to this group
+    group = StudentGroup.query.get_or_404(group_id)
+    if not is_admin() and group.class_info.teacher_id != teacher.id:
+        flash('You do not have access to this group.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    # Find or create progress record
+    progress = GroupProgress.query.filter_by(
+        group_id=group_id,
+        group_assignment_id=assignment_id
+    ).first()
+    
+    if not progress:
+        progress = GroupProgress(
+            group_id=group_id,
+            group_assignment_id=assignment_id,
+            progress_percentage=progress_percentage,
+            status=status,
+            notes=notes
+        )
+        db.session.add(progress)
+    else:
+        progress.progress_percentage = progress_percentage
+        progress.status = status
+        progress.notes = notes
+        progress.last_updated = datetime.utcnow()
+    
+    try:
+        db.session.commit()
+        flash('Progress updated successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error updating progress: {str(e)}', 'danger')
+    
+    return redirect(url_for('teacher.view_group_progress', assignment_id=assignment_id))
+
+
+@teacher_blueprint.route('/class/<int:class_id>/assignment-templates')
+@login_required
+@teacher_required
+def class_assignment_templates(class_id):
+    """View and manage assignment templates for a class."""
+    teacher = get_teacher_or_admin()
+    class_obj = Class.query.get_or_404(class_id)
+    
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this class.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    templates = AssignmentTemplate.query.filter_by(class_id=class_id, is_active=True).all()
+    
+    return render_template('teacher_assignment_templates.html',
+                         class_obj=class_obj,
+                         templates=templates)
+
+
+@teacher_blueprint.route('/class/<int:class_id>/assignment-template/create', methods=['GET', 'POST'])
+@login_required
+@teacher_required
+def create_assignment_template(class_id):
+    """Create a new assignment template."""
+    teacher = get_teacher_or_admin()
+    class_obj = Class.query.get_or_404(class_id)
+    
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this class.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    if request.method == 'POST':
+        name = request.form.get('name')
+        description = request.form.get('description')
+        
+        # Get template data from form
+        template_data = {
+            'title': request.form.get('title', ''),
+            'description': request.form.get('template_description', ''),
+            'group_size_min': int(request.form.get('group_size_min', 2)),
+            'group_size_max': int(request.form.get('group_size_max', 4)),
+            'allow_individual': request.form.get('allow_individual') == 'on',
+            'collaboration_type': request.form.get('collaboration_type', 'group'),
+            'quarter': request.form.get('quarter', ''),
+            'semester': request.form.get('semester', ''),
+            'due_days': int(request.form.get('due_days', 7)),
+            'has_attachment': request.form.get('has_attachment') == 'on',
+            'attachment_required': request.form.get('attachment_required') == 'on',
+            'rubric_included': request.form.get('rubric_included') == 'on',
+            'peer_evaluation': request.form.get('peer_evaluation') == 'on',
+            'progress_tracking': request.form.get('progress_tracking') == 'on'
+        }
+        
+        template = AssignmentTemplate(
+            name=name,
+            description=description,
+            class_id=class_id,
+            created_by=teacher.id,
+            template_data=json.dumps(template_data)
+        )
+        
+        try:
+            db.session.add(template)
+            db.session.commit()
+            flash('Assignment template created successfully!', 'success')
+            return redirect(url_for('teacher.class_assignment_templates', class_id=class_id))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error creating template: {str(e)}', 'danger')
+    
+    return render_template('teacher_create_assignment_template.html',
+                         class_obj=class_obj)
+
+
+@teacher_blueprint.route('/assignment-template/<int:template_id>/use', methods=['GET', 'POST'])
+@login_required
+@teacher_required
+def use_assignment_template(template_id):
+    """Use an assignment template to create a new assignment."""
+    teacher = get_teacher_or_admin()
+    template = AssignmentTemplate.query.get_or_404(template_id)
+    
+    # Check if teacher has access to this template
+    if not is_admin() and template.class_info.teacher_id != teacher.id:
+        flash('You do not have access to this template.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    if request.method == 'POST':
+        # Get template data
+        template_data = json.loads(template.template_data)
+        
+        # Create new assignment with template data
+        assignment = GroupAssignment(
+            title=request.form.get('title', template_data.get('title', '')),
+            description=request.form.get('description', template_data.get('description', '')),
+            class_id=template.class_id,
+            due_date=datetime.strptime(request.form.get('due_date'), '%Y-%m-%dT%H:%M'),
+            quarter=request.form.get('quarter', template_data.get('quarter', '')),
+            semester=request.form.get('semester', template_data.get('semester', '')),
+            school_year_id=request.form.get('school_year_id'),
+            group_size_min=template_data.get('group_size_min', 2),
+            group_size_max=template_data.get('group_size_max', 4),
+            allow_individual=template_data.get('allow_individual', False),
+            collaboration_type=template_data.get('collaboration_type', 'group')
+        )
+        
+        try:
+            db.session.add(assignment)
+            db.session.commit()
+            flash('Assignment created successfully from template!', 'success')
+            return redirect(url_for('teacher.view_group_assignment', assignment_id=assignment.id))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error creating assignment: {str(e)}', 'danger')
+    
+    # Get available school years and academic periods
+    school_years = SchoolYear.query.filter_by(is_active=True).all()
+    academic_periods = AcademicPeriod.query.filter_by(is_active=True).all()
+    template_data = json.loads(template.template_data)
+    
+    return render_template('teacher_use_assignment_template.html',
+                         template=template,
+                         template_data=template_data,
+                         school_years=school_years,
+                         academic_periods=academic_periods)
+
+# Group Rotation Routes
+@teacher_blueprint.route('/class/<int:class_id>/group-rotations')
+@login_required
+@teacher_required
+def class_group_rotations(class_id):
+    """View all group rotations for a class."""
+    teacher = get_teacher_or_admin()
+    class_obj = Class.query.get_or_404(class_id)
+
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this class.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+
+    rotations = GroupRotation.query.filter_by(class_id=class_id, is_active=True).order_by(GroupRotation.created_at.desc()).all()
+    
+    return render_template('teacher_class_group_rotations.html',
+                         class_obj=class_obj,
+                         rotations=rotations)
+
+@teacher_blueprint.route('/class/<int:class_id>/group-rotation/create', methods=['GET', 'POST'])
+@login_required
+@teacher_required
+def create_group_rotation(class_id):
+    """Create a new group rotation."""
+    teacher = get_teacher_or_admin()
+    class_obj = Class.query.get_or_404(class_id)
+
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this class.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+
+    if request.method == 'POST':
+        rotation_name = request.form.get('rotation_name')
+        description = request.form.get('description')
+        rotation_type = request.form.get('rotation_type')
+        rotation_frequency = request.form.get('rotation_frequency')
+        group_size = int(request.form.get('group_size', 3))
+        grouping_criteria = request.form.get('grouping_criteria')
+
+        rotation = GroupRotation(
+            class_id=class_id,
+            rotation_name=rotation_name,
+            description=description,
+            rotation_type=rotation_type,
+            rotation_frequency=rotation_frequency,
+            group_size=group_size,
+            grouping_criteria=grouping_criteria,
+            created_by=teacher.id
+        )
+
+        try:
+            db.session.add(rotation)
+            db.session.commit()
+            flash('Group rotation created successfully!', 'success')
+            return redirect(url_for('teacher.class_group_rotations', class_id=class_id))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error creating group rotation: {str(e)}', 'danger')
+
+    return render_template('teacher_create_group_rotation.html',
+                         class_obj=class_obj)
+
+@teacher_blueprint.route('/group-rotation/<int:rotation_id>/execute', methods=['POST'])
+@login_required
+@teacher_required
+def execute_group_rotation(rotation_id):
+    """Execute a group rotation."""
+    teacher = get_teacher_or_admin()
+    rotation = GroupRotation.query.get_or_404(rotation_id)
+    class_obj = Class.query.get_or_404(rotation.class_id)
+
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this class.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+
+    try:
+        # Get current groups
+        current_groups = StudentGroup.query.filter_by(class_id=rotation.class_id, is_active=True).all()
+        previous_groups_data = []
+        
+        for group in current_groups:
+            members = [member.student_id for member in group.members]
+            previous_groups_data.append({
+                'group_id': group.id,
+                'group_name': group.name,
+                'members': members
+            })
+
+        # Get all students in the class
+        enrollments = Enrollment.query.filter_by(class_id=rotation.class_id).all()
+        students = [enrollment.student for enrollment in enrollments if enrollment.student is not None]
+        
+        if len(students) < rotation.group_size:
+            flash('Not enough students for group rotation.', 'warning')
+            return redirect(url_for('teacher.class_group_rotations', class_id=rotation.class_id))
+
+        # Deactivate current groups
+        for group in current_groups:
+            group.is_active = False
+
+        # Create new groups based on criteria
+        new_groups = []
+        if rotation.grouping_criteria == 'random':
+            import random
+            random.shuffle(students)
+        elif rotation.grouping_criteria == 'skill_based':
+            # Sort by some criteria (could be based on grades, etc.)
+            students.sort(key=lambda s: s.id)  # Simple sort for now
+        
+        # Create groups
+        for i in range(0, len(students), rotation.group_size):
+            group_students = students[i:i + rotation.group_size]
+            if len(group_students) >= 2:  # Minimum group size
+                group = StudentGroup(
+                    class_id=rotation.class_id,
+                    name=f"Group {len(new_groups) + 1}",
+                    is_active=True
+                )
+                db.session.add(group)
+                db.session.flush()  # Get the group ID
+                
+                for student in group_students:
+                    member = StudentGroupMember(
+                        group_id=group.id,
+                        student_id=student.id
+                    )
+                    db.session.add(member)
+                
+                new_groups.append({
+                    'group_id': group.id,
+                    'group_name': group.name,
+                    'members': [s.id for s in group_students]
+                })
+
+        # Save rotation history
+        history = GroupRotationHistory(
+            rotation_id=rotation.id,
+            previous_groups=json.dumps(previous_groups_data),
+            new_groups=json.dumps(new_groups),
+            rotation_notes=request.form.get('rotation_notes', '')
+        )
+        db.session.add(history)
+
+        # Update rotation
+        rotation.last_rotated = datetime.utcnow()
+        
+        db.session.commit()
+        flash(f'Group rotation executed successfully! Created {len(new_groups)} new groups.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error executing group rotation: {str(e)}', 'danger')
+
+    return redirect(url_for('teacher.class_group_rotations', class_id=rotation.class_id))
+
+@teacher_blueprint.route('/group-rotation/<int:rotation_id>/history')
+@login_required
+@teacher_required
+def view_rotation_history(rotation_id):
+    """View rotation history for a specific rotation."""
+    teacher = get_teacher_or_admin()
+    rotation = GroupRotation.query.get_or_404(rotation_id)
+    class_obj = Class.query.get_or_404(rotation.class_id)
+
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this class.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+
+    history = GroupRotationHistory.query.filter_by(rotation_id=rotation_id).order_by(GroupRotationHistory.rotation_date.desc()).all()
+    
+    return render_template('teacher_rotation_history.html',
+                         class_obj=class_obj,
+                         rotation=rotation,
+                         history=history)
+
+@teacher_blueprint.route('/class/<int:class_id>/group-rotation/delete', methods=['POST'])
+@login_required
+@teacher_required
+def delete_group_rotation(class_id):
+    """Delete a group rotation (soft delete)."""
+    teacher = get_teacher_or_admin()
+    class_obj = Class.query.get_or_404(class_id)
+
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this class.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+
+    rotation_id = request.form.get('rotation_id')
+    rotation = GroupRotation.query.get_or_404(rotation_id)
+    
+    if rotation.class_id != class_id:
+        flash('Invalid rotation.', 'danger')
+        return redirect(url_for('teacher.class_group_rotations', class_id=class_id))
+
+    try:
+        rotation.is_active = False
+        db.session.commit()
+        flash('Group rotation deleted successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting group rotation: {str(e)}', 'danger')
+
+    return redirect(url_for('teacher.class_group_rotations', class_id=class_id))
+
+# Peer Review Routes
+@teacher_blueprint.route('/group-assignment/<int:assignment_id>/peer-reviews')
+@login_required
+@teacher_required
+def view_peer_reviews(assignment_id):
+    """View peer reviews for a group assignment."""
+    teacher = get_teacher_or_admin()
+    group_assignment = GroupAssignment.query.get_or_404(assignment_id)
+    class_obj = Class.query.get_or_404(group_assignment.class_id)
+
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this assignment.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+
+    # Get all peer reviews for this assignment
+    peer_reviews = PeerReview.query.filter_by(group_assignment_id=assignment_id).all()
+    
+    # Group reviews by reviewer
+    reviews_by_reviewer = {}
+    for review in peer_reviews:
+        if review.reviewer_id not in reviews_by_reviewer:
+            reviews_by_reviewer[review.reviewer_id] = []
+        reviews_by_reviewer[review.reviewer_id].append(review)
+    
+    return render_template('teacher_peer_reviews.html',
+                         class_obj=class_obj,
+                         group_assignment=group_assignment,
+                         peer_reviews=peer_reviews,
+                         reviews_by_reviewer=reviews_by_reviewer)
+
+@teacher_blueprint.route('/group-assignment/<int:assignment_id>/peer-review/create', methods=['GET', 'POST'])
+@login_required
+@teacher_required
+def create_peer_review(assignment_id):
+    """Create a peer review for a group assignment."""
+    teacher = get_teacher_or_admin()
+    group_assignment = GroupAssignment.query.get_or_404(assignment_id)
+    class_obj = Class.query.get_or_404(group_assignment.class_id)
+
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this assignment.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+
+    if request.method == 'POST':
+        group_id = int(request.form.get('group_id'))
+        reviewer_id = int(request.form.get('reviewer_id'))
+        reviewee_id = int(request.form.get('reviewee_id'))
+        
+        work_quality_score = int(request.form.get('work_quality_score'))
+        creativity_score = int(request.form.get('creativity_score'))
+        presentation_score = int(request.form.get('presentation_score'))
+        overall_score = int(request.form.get('overall_score'))
+        
+        constructive_feedback = request.form.get('constructive_feedback')
+        strengths = request.form.get('strengths')
+        improvements = request.form.get('improvements')
+
+        # Check if review already exists
+        existing_review = PeerReview.query.filter_by(
+            group_assignment_id=assignment_id,
+            reviewer_id=reviewer_id,
+            reviewee_id=reviewee_id
+        ).first()
+        
+        if existing_review:
+            flash('A review already exists for this student pair.', 'warning')
+            return redirect(url_for('teacher.create_peer_review', assignment_id=assignment_id))
+
+        peer_review = PeerReview(
+            group_assignment_id=assignment_id,
+            group_id=group_id,
+            reviewer_id=reviewer_id,
+            reviewee_id=reviewee_id,
+            work_quality_score=work_quality_score,
+            creativity_score=creativity_score,
+            presentation_score=presentation_score,
+            overall_score=overall_score,
+            constructive_feedback=constructive_feedback,
+            strengths=strengths,
+            improvements=improvements
+        )
+
+        try:
+            db.session.add(peer_review)
+            db.session.commit()
+            flash('Peer review created successfully!', 'success')
+            return redirect(url_for('teacher.view_peer_reviews', assignment_id=assignment_id))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error creating peer review: {str(e)}', 'danger')
+
+    # Get groups and students for the assignment
+    groups = StudentGroup.query.filter_by(class_id=class_obj.id, is_active=True).all()
+    
+    return render_template('teacher_create_peer_review.html',
+                         class_obj=class_obj,
+                         group_assignment=group_assignment,
+                         groups=groups)
+
+@teacher_blueprint.route('/peer-review/<int:review_id>/edit', methods=['GET', 'POST'])
+@login_required
+@teacher_required
+def edit_peer_review(review_id):
+    """Edit a peer review."""
+    teacher = get_teacher_or_admin()
+    peer_review = PeerReview.query.get_or_404(review_id)
+    group_assignment = peer_review.group_assignment
+    class_obj = Class.query.get_or_404(group_assignment.class_id)
+
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this review.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+
+    if request.method == 'POST':
+        peer_review.work_quality_score = int(request.form.get('work_quality_score'))
+        peer_review.creativity_score = int(request.form.get('creativity_score'))
+        peer_review.presentation_score = int(request.form.get('presentation_score'))
+        peer_review.overall_score = int(request.form.get('overall_score'))
+        peer_review.constructive_feedback = request.form.get('constructive_feedback')
+        peer_review.strengths = request.form.get('strengths')
+        peer_review.improvements = request.form.get('improvements')
+
+        try:
+            db.session.commit()
+            flash('Peer review updated successfully!', 'success')
+            return redirect(url_for('teacher.view_peer_reviews', assignment_id=group_assignment.id))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error updating peer review: {str(e)}', 'danger')
+
+    return render_template('teacher_edit_peer_review.html',
+                         class_obj=class_obj,
+                         group_assignment=group_assignment,
+                         peer_review=peer_review)
+
+@teacher_blueprint.route('/peer-review/<int:review_id>/delete', methods=['POST'])
+@login_required
+@teacher_required
+def delete_peer_review(review_id):
+    """Delete a peer review."""
+    teacher = get_teacher_or_admin()
+    peer_review = PeerReview.query.get_or_404(review_id)
+    group_assignment = peer_review.group_assignment
+    class_obj = Class.query.get_or_404(group_assignment.class_id)
+
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this review.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+
+    try:
+        db.session.delete(peer_review)
+        db.session.commit()
+        flash('Peer review deleted successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting peer review: {str(e)}', 'danger')
+
+    return redirect(url_for('teacher.view_peer_reviews', assignment_id=group_assignment.id))
+
+# Draft Submission Routes
+@teacher_blueprint.route('/group-assignment/<int:assignment_id>/draft-submissions')
+@login_required
+@teacher_required
+def view_draft_submissions(assignment_id):
+    """View draft submissions for a group assignment."""
+    teacher = get_teacher_or_admin()
+    group_assignment = GroupAssignment.query.get_or_404(assignment_id)
+    class_obj = Class.query.get_or_404(group_assignment.class_id)
+
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this assignment.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+
+    # Get all draft submissions for this assignment
+    draft_submissions = DraftSubmission.query.filter_by(group_assignment_id=assignment_id).order_by(DraftSubmission.submitted_at.desc()).all()
+    
+    return render_template('teacher_draft_submissions.html',
+                         class_obj=class_obj,
+                         group_assignment=group_assignment,
+                         draft_submissions=draft_submissions)
+
+@teacher_blueprint.route('/draft-submission/<int:draft_id>/feedback', methods=['GET', 'POST'])
+@login_required
+@teacher_required
+def provide_draft_feedback(draft_id):
+    """Provide feedback on a draft submission."""
+    teacher = get_teacher_or_admin()
+    draft_submission = DraftSubmission.query.get_or_404(draft_id)
+    group_assignment = draft_submission.group_assignment
+    class_obj = Class.query.get_or_404(group_assignment.class_id)
+
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this submission.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+
+    if request.method == 'POST':
+        feedback_content = request.form.get('feedback_content')
+        feedback_type = request.form.get('feedback_type', 'general')
+        is_approved = request.form.get('is_approved') == 'on'
+
+        if not feedback_content:
+            flash('Feedback content is required.', 'danger')
+            return redirect(url_for('teacher.provide_draft_feedback', draft_id=draft_id))
+
+        feedback = DraftFeedback(
+            draft_submission_id=draft_id,
+            feedback_provider_id=teacher.id,
+            feedback_content=feedback_content,
+            feedback_type=feedback_type,
+            is_approved=is_approved
+        )
+
+        try:
+            db.session.add(feedback)
+            db.session.commit()
+            flash('Feedback provided successfully!', 'success')
+            return redirect(url_for('teacher.view_draft_submissions', assignment_id=group_assignment.id))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error providing feedback: {str(e)}', 'danger')
+
+    return render_template('teacher_provide_draft_feedback.html',
+                         class_obj=class_obj,
+                         group_assignment=group_assignment,
+                         draft_submission=draft_submission)
+
+@teacher_blueprint.route('/draft-submission/<int:draft_id>/approve', methods=['POST'])
+@login_required
+@teacher_required
+def approve_draft_submission(draft_id):
+    """Approve a draft submission."""
+    teacher = get_teacher_or_admin()
+    draft_submission = DraftSubmission.query.get_or_404(draft_id)
+    group_assignment = draft_submission.group_assignment
+    class_obj = Class.query.get_or_404(group_assignment.class_id)
+
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this submission.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+
+    try:
+        draft_submission.is_final = True
+        db.session.commit()
+        flash('Draft submission approved successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error approving submission: {str(e)}', 'danger')
+
+    return redirect(url_for('teacher.view_draft_submissions', assignment_id=group_assignment.id))
+
+@teacher_blueprint.route('/draft-submission/<int:draft_id>/delete', methods=['POST'])
+@login_required
+@teacher_required
+def delete_draft_submission(draft_id):
+    """Delete a draft submission."""
+    teacher = get_teacher_or_admin()
+    draft_submission = DraftSubmission.query.get_or_404(draft_id)
+    group_assignment = draft_submission.group_assignment
+    class_obj = Class.query.get_or_404(group_assignment.class_id)
+
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this submission.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+
+    try:
+        # Delete associated feedback first
+        DraftFeedback.query.filter_by(draft_submission_id=draft_id).delete()
+        db.session.delete(draft_submission)
+        db.session.commit()
+        flash('Draft submission deleted successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting submission: {str(e)}', 'danger')
+
+    return redirect(url_for('teacher.view_draft_submissions', assignment_id=group_assignment.id))
+
+
+# Deadline Reminder Routes
+@teacher_blueprint.route('/class/<int:class_id>/deadline-reminders')
+@login_required
+@teacher_required
+def class_deadline_reminders(class_id):
+    """View deadline reminders for a class."""
+    teacher = get_teacher_or_admin()
+    class_obj = Class.query.get_or_404(class_id)
+    
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this class.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    # Get all deadline reminders for this class
+    reminders = DeadlineReminder.query.filter_by(class_id=class_id).order_by(DeadlineReminder.reminder_date.desc()).all()
+    
+    # Get upcoming reminders (next 7 days)
+    from datetime import datetime, timedelta
+    upcoming_date = datetime.utcnow() + timedelta(days=7)
+    upcoming_reminders = DeadlineReminder.query.filter(
+        DeadlineReminder.class_id == class_id,
+        DeadlineReminder.reminder_date <= upcoming_date,
+        DeadlineReminder.reminder_date >= datetime.utcnow(),
+        DeadlineReminder.is_active == True
+    ).order_by(DeadlineReminder.reminder_date.asc()).all()
+    
+    return render_template('teacher_class_deadline_reminders.html',
+                         class_obj=class_obj,
+                         reminders=reminders,
+                         upcoming_reminders=upcoming_reminders)
+
+
+@teacher_blueprint.route('/class/<int:class_id>/deadline-reminder/create', methods=['GET', 'POST'])
+@login_required
+@teacher_required
+def create_deadline_reminder(class_id):
+    """Create a new deadline reminder."""
+    teacher = get_teacher_or_admin()
+    class_obj = Class.query.get_or_404(class_id)
+    
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this class.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    # Get assignments and group assignments for this class
+    assignments = Assignment.query.filter_by(class_id=class_id).all()
+    group_assignments = GroupAssignment.query.filter_by(class_id=class_id).all()
+    
+    if request.method == 'POST':
+        try:
+            reminder_type = request.form.get('reminder_type')
+            assignment_id = request.form.get('assignment_id')
+            group_assignment_id = request.form.get('group_assignment_id')
+            reminder_title = request.form.get('reminder_title')
+            reminder_message = request.form.get('reminder_message')
+            reminder_date = request.form.get('reminder_date')
+            reminder_frequency = request.form.get('reminder_frequency', 'once')
+            
+            if not all([reminder_title, reminder_message, reminder_date]):
+                flash('All fields are required.', 'danger')
+                return render_template('teacher_create_deadline_reminder.html',
+                                     class_obj=class_obj,
+                                     assignments=assignments,
+                                     group_assignments=group_assignments)
+            
+            # Parse reminder date
+            try:
+                reminder_datetime = datetime.strptime(reminder_date, '%Y-%m-%dT%H:%M')
+            except ValueError:
+                flash('Invalid date format.', 'danger')
+                return render_template('teacher_create_deadline_reminder.html',
+                                     class_obj=class_obj,
+                                     assignments=assignments,
+                                     group_assignments=group_assignments)
+            
+            # Create reminder
+            reminder = DeadlineReminder(
+                assignment_id=assignment_id if assignment_id else None,
+                group_assignment_id=group_assignment_id if group_assignment_id else None,
+                class_id=class_id,
+                reminder_type=reminder_type,
+                reminder_title=reminder_title,
+                reminder_message=reminder_message,
+                reminder_date=reminder_datetime,
+                reminder_frequency=reminder_frequency,
+                created_by=teacher.id
+            )
+            
+            db.session.add(reminder)
+            db.session.commit()
+            
+            flash('Deadline reminder created successfully!', 'success')
+            return redirect(url_for('teacher.class_deadline_reminders', class_id=class_id))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error creating reminder: {str(e)}', 'danger')
+    
+    return render_template('teacher_create_deadline_reminder.html',
+                         class_obj=class_obj,
+                         assignments=assignments,
+                         group_assignments=group_assignments)
+
+
+@teacher_blueprint.route('/deadline-reminder/<int:reminder_id>/edit', methods=['GET', 'POST'])
+@login_required
+@teacher_required
+def edit_deadline_reminder(reminder_id):
+    """Edit a deadline reminder."""
+    teacher = get_teacher_or_admin()
+    reminder = DeadlineReminder.query.get_or_404(reminder_id)
+    class_obj = Class.query.get_or_404(reminder.class_id)
+    
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this reminder.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    # Get assignments and group assignments for this class
+    assignments = Assignment.query.filter_by(class_id=reminder.class_id).all()
+    group_assignments = GroupAssignment.query.filter_by(class_id=reminder.class_id).all()
+    
+    if request.method == 'POST':
+        try:
+            reminder.reminder_type = request.form.get('reminder_type')
+            reminder.assignment_id = request.form.get('assignment_id') if request.form.get('assignment_id') else None
+            reminder.group_assignment_id = request.form.get('group_assignment_id') if request.form.get('group_assignment_id') else None
+            reminder.reminder_title = request.form.get('reminder_title')
+            reminder.reminder_message = request.form.get('reminder_message')
+            reminder.reminder_frequency = request.form.get('reminder_frequency', 'once')
+            
+            reminder_date = request.form.get('reminder_date')
+            if reminder_date:
+                try:
+                    reminder.reminder_date = datetime.strptime(reminder_date, '%Y-%m-%dT%H:%M')
+                except ValueError:
+                    flash('Invalid date format.', 'danger')
+                    return render_template('teacher_edit_deadline_reminder.html',
+                                         reminder=reminder,
+                                         class_obj=class_obj,
+                                         assignments=assignments,
+                                         group_assignments=group_assignments)
+            
+            db.session.commit()
+            flash('Deadline reminder updated successfully!', 'success')
+            return redirect(url_for('teacher.class_deadline_reminders', class_id=reminder.class_id))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error updating reminder: {str(e)}', 'danger')
+    
+    return render_template('teacher_edit_deadline_reminder.html',
+                         reminder=reminder,
+                         class_obj=class_obj,
+                         assignments=assignments,
+                         group_assignments=group_assignments)
+
+
+@teacher_blueprint.route('/deadline-reminder/<int:reminder_id>/delete', methods=['POST'])
+@login_required
+@teacher_required
+def delete_deadline_reminder(reminder_id):
+    """Delete a deadline reminder."""
+    teacher = get_teacher_or_admin()
+    reminder = DeadlineReminder.query.get_or_404(reminder_id)
+    class_obj = Class.query.get_or_404(reminder.class_id)
+    
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this reminder.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    try:
+        # Delete associated notifications first
+        ReminderNotification.query.filter_by(reminder_id=reminder_id).delete()
+        db.session.delete(reminder)
+        db.session.commit()
+        flash('Deadline reminder deleted successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting reminder: {str(e)}', 'danger')
+    
+    return redirect(url_for('teacher.class_deadline_reminders', class_id=reminder.class_id))
+
+
+@teacher_blueprint.route('/deadline-reminder/<int:reminder_id>/toggle', methods=['POST'])
+@login_required
+@teacher_required
+def toggle_deadline_reminder(reminder_id):
+    """Toggle reminder active status."""
+    teacher = get_teacher_or_admin()
+    reminder = DeadlineReminder.query.get_or_404(reminder_id)
+    class_obj = Class.query.get_or_404(reminder.class_id)
+    
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this reminder.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    try:
+        reminder.is_active = not reminder.is_active
+        db.session.commit()
+        
+        status = 'activated' if reminder.is_active else 'deactivated'
+        flash(f'Reminder {status} successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error updating reminder: {str(e)}', 'danger')
+    
+    return redirect(url_for('teacher.class_deadline_reminders', class_id=reminder.class_id))
+
+
+@teacher_blueprint.route('/deadline-reminder/<int:reminder_id>/send-now', methods=['POST'])
+@login_required
+@teacher_required
+def send_deadline_reminder_now(reminder_id):
+    """Send a deadline reminder immediately."""
+    teacher = get_teacher_or_admin()
+    reminder = DeadlineReminder.query.get_or_404(reminder_id)
+    class_obj = Class.query.get_or_404(reminder.class_id)
+    
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this reminder.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    try:
+        # Get all students in the class
+        enrollments = Enrollment.query.filter_by(class_id=reminder.class_id).all()
+        students = [enrollment.student for enrollment in enrollments if enrollment.student]
+        
+        # Create notifications for each student
+        for student in students:
+            notification = ReminderNotification(
+                reminder_id=reminder_id,
+                student_id=student.id,
+                notification_type='in_app',
+                status='sent'
+            )
+            db.session.add(notification)
+        
+        # Update reminder last sent time
+        reminder.last_sent = datetime.utcnow()
+        db.session.commit()
+        
+        flash(f'Reminder sent to {len(students)} students successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error sending reminder: {str(e)}', 'danger')
+    
+    return redirect(url_for('teacher.class_deadline_reminders', class_id=reminder.class_id))
+
+
+# 360-Degree Feedback Routes
+@teacher_blueprint.route('/class/<int:class_id>/360-feedback')
+@login_required
+@teacher_required
+def class_360_feedback(class_id):
+    """View 360-degree feedback sessions for a class."""
+    teacher = get_teacher_or_admin()
+    class_obj = Class.query.get_or_404(class_id)
+    
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this class.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    # Get all 360-degree feedback sessions for this class
+    feedback_sessions = Feedback360.query.filter_by(class_id=class_id).order_by(Feedback360.created_at.desc()).all()
+    
+    # Get students in the class
+    enrollments = Enrollment.query.filter_by(class_id=class_id).all()
+    students = [enrollment.student for enrollment in enrollments if enrollment.student]
+    
+    return render_template('teacher_class_360_feedback.html',
+                         class_obj=class_obj,
+                         feedback_sessions=feedback_sessions,
+                         students=students)
+
+
+@teacher_blueprint.route('/class/<int:class_id>/360-feedback/create', methods=['GET', 'POST'])
+@login_required
+@teacher_required
+def create_360_feedback(class_id):
+    """Create a new 360-degree feedback session."""
+    teacher = get_teacher_or_admin()
+    class_obj = Class.query.get_or_404(class_id)
+    
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this class.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    # Get students in the class
+    enrollments = Enrollment.query.filter_by(class_id=class_id).all()
+    students = [enrollment.student for enrollment in enrollments if enrollment.student]
+    
+    if request.method == 'POST':
+        try:
+            title = request.form.get('title')
+            description = request.form.get('description')
+            target_student_id = request.form.get('target_student_id')
+            feedback_type = request.form.get('feedback_type')
+            due_date = request.form.get('due_date')
+            
+            if not all([title, target_student_id, feedback_type]):
+                flash('Title, target student, and feedback type are required.', 'danger')
+                return render_template('teacher_create_360_feedback.html',
+                                     class_obj=class_obj,
+                                     students=students)
+            
+            # Parse due date if provided
+            due_datetime = None
+            if due_date:
+                try:
+                    due_datetime = datetime.strptime(due_date, '%Y-%m-%dT%H:%M')
+                except ValueError:
+                    flash('Invalid due date format.', 'danger')
+                    return render_template('teacher_create_360_feedback.html',
+                                         class_obj=class_obj,
+                                         students=students)
+            
+            # Create feedback session
+            feedback_session = Feedback360(
+                title=title,
+                description=description,
+                class_id=class_id,
+                target_student_id=target_student_id,
+                feedback_type=feedback_type,
+                due_date=due_datetime,
+                created_by=teacher.id
+            )
+            
+            db.session.add(feedback_session)
+            db.session.commit()
+            
+            flash('360-degree feedback session created successfully!', 'success')
+            return redirect(url_for('teacher.view_360_feedback', session_id=feedback_session.id))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error creating feedback session: {str(e)}', 'danger')
+    
+    return render_template('teacher_create_360_feedback.html',
+                         class_obj=class_obj,
+                         students=students)
+
+
+@teacher_blueprint.route('/360-feedback/<int:session_id>')
+@login_required
+@teacher_required
+def view_360_feedback(session_id):
+    """View a specific 360-degree feedback session."""
+    teacher = get_teacher_or_admin()
+    feedback_session = Feedback360.query.get_or_404(session_id)
+    class_obj = Class.query.get_or_404(feedback_session.class_id)
+    
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this feedback session.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    # Get all responses for this session
+    responses = Feedback360Response.query.filter_by(feedback360_id=session_id).all()
+    
+    # Get criteria for this session
+    criteria = Feedback360Criteria.query.filter_by(feedback360_id=session_id).order_by(Feedback360Criteria.order_index).all()
+    
+    # Get students in the class for potential respondents
+    enrollments = Enrollment.query.filter_by(class_id=feedback_session.class_id).all()
+    students = [enrollment.student for enrollment in enrollments if enrollment.student]
+    
+    return render_template('teacher_view_360_feedback.html',
+                         feedback_session=feedback_session,
+                         class_obj=class_obj,
+                         responses=responses,
+                         criteria=criteria,
+                         students=students)
+
+
+@teacher_blueprint.route('/360-feedback/<int:session_id>/criteria/create', methods=['GET', 'POST'])
+@login_required
+@teacher_required
+def create_360_feedback_criteria(session_id):
+    """Create criteria for a 360-degree feedback session."""
+    teacher = get_teacher_or_admin()
+    feedback_session = Feedback360.query.get_or_404(session_id)
+    class_obj = Class.query.get_or_404(feedback_session.class_id)
+    
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this feedback session.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    if request.method == 'POST':
+        try:
+            criteria_name = request.form.get('criteria_name')
+            criteria_description = request.form.get('criteria_description')
+            criteria_type = request.form.get('criteria_type')
+            scale_min = request.form.get('scale_min', 1)
+            scale_max = request.form.get('scale_max', 5)
+            is_required = request.form.get('is_required') == 'on'
+            order_index = request.form.get('order_index', 0)
+            
+            if not criteria_name:
+                flash('Criteria name is required.', 'danger')
+                return render_template('teacher_create_360_feedback_criteria.html',
+                                     feedback_session=feedback_session,
+                                     class_obj=class_obj)
+            
+            # Create criteria
+            criteria = Feedback360Criteria(
+                feedback360_id=session_id,
+                criteria_name=criteria_name,
+                criteria_description=criteria_description,
+                criteria_type=criteria_type,
+                scale_min=int(scale_min),
+                scale_max=int(scale_max),
+                is_required=is_required,
+                order_index=int(order_index)
+            )
+            
+            db.session.add(criteria)
+            db.session.commit()
+            
+            flash('Feedback criteria created successfully!', 'success')
+            return redirect(url_for('teacher.view_360_feedback', session_id=session_id))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error creating criteria: {str(e)}', 'danger')
+    
+    return render_template('teacher_create_360_feedback_criteria.html',
+                         feedback_session=feedback_session,
+                         class_obj=class_obj)
+
+
+@teacher_blueprint.route('/360-feedback/<int:session_id>/delete', methods=['POST'])
+@login_required
+@teacher_required
+def delete_360_feedback(session_id):
+    """Delete a 360-degree feedback session."""
+    teacher = get_teacher_or_admin()
+    feedback_session = Feedback360.query.get_or_404(session_id)
+    class_obj = Class.query.get_or_404(feedback_session.class_id)
+    
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this feedback session.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    try:
+        # Delete associated responses and criteria first
+        Feedback360Response.query.filter_by(feedback360_id=session_id).delete()
+        Feedback360Criteria.query.filter_by(feedback360_id=session_id).delete()
+        db.session.delete(feedback_session)
+        db.session.commit()
+        flash('360-degree feedback session deleted successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting feedback session: {str(e)}', 'danger')
+    
+    return redirect(url_for('teacher.class_360_feedback', class_id=feedback_session.class_id))
+
+
+@teacher_blueprint.route('/360-feedback/<int:session_id>/toggle', methods=['POST'])
+@login_required
+@teacher_required
+def toggle_360_feedback(session_id):
+    """Toggle feedback session active status."""
+    teacher = get_teacher_or_admin()
+    feedback_session = Feedback360.query.get_or_404(session_id)
+    class_obj = Class.query.get_or_404(feedback_session.class_id)
+    
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this feedback session.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    try:
+        feedback_session.is_active = not feedback_session.is_active
+        db.session.commit()
+        
+        status = 'activated' if feedback_session.is_active else 'deactivated'
+        flash(f'Feedback session {status} successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error updating feedback session: {str(e)}', 'danger')
+    
+    return redirect(url_for('teacher.view_360_feedback', session_id=session_id))
+
+
+# Reflection Journal Routes
+@teacher_blueprint.route('/class/<int:class_id>/reflection-journals')
+@login_required
+@teacher_required
+def class_reflection_journals(class_id):
+    """View reflection journals for a class."""
+    teacher = get_teacher_or_admin()
+    class_obj = Class.query.get_or_404(class_id)
+    
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this class.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    # Get all reflection journals for this class
+    journals = ReflectionJournal.query.join(GroupAssignment).filter(
+        GroupAssignment.class_id == class_id
+    ).order_by(ReflectionJournal.submitted_at.desc()).all()
+    
+    # Get students in the class
+    enrollments = Enrollment.query.filter_by(class_id=class_id).all()
+    students = [enrollment.student for enrollment in enrollments if enrollment.student]
+    
+    return render_template('teacher_class_reflection_journals.html',
+                         class_obj=class_obj,
+                         journals=journals,
+                         students=students)
+
+
+@teacher_blueprint.route('/reflection-journal/<int:journal_id>')
+@login_required
+@teacher_required
+def view_reflection_journal(journal_id):
+    """View a specific reflection journal."""
+    teacher = get_teacher_or_admin()
+    journal = ReflectionJournal.query.get_or_404(journal_id)
+    class_obj = Class.query.get_or_404(journal.group_assignment.class_id)
+    
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this reflection journal.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    return render_template('teacher_view_reflection_journal.html',
+                         journal=journal,
+                         class_obj=class_obj)
+
+
+@teacher_blueprint.route('/reflection-journal/<int:journal_id>/delete', methods=['POST'])
+@login_required
+@teacher_required
+def delete_reflection_journal(journal_id):
+    """Delete a reflection journal."""
+    teacher = get_teacher_or_admin()
+    journal = ReflectionJournal.query.get_or_404(journal_id)
+    class_obj = Class.query.get_or_404(journal.group_assignment.class_id)
+    
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this reflection journal.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    try:
+        db.session.delete(journal)
+        db.session.commit()
+        flash('Reflection journal deleted successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting reflection journal: {str(e)}', 'danger')
+    
+    return redirect(url_for('teacher.class_reflection_journals', class_id=class_obj.id))
+
+
+@teacher_blueprint.route('/group-assignment/<int:assignment_id>/reflection-journals')
+@login_required
+@teacher_required
+def group_assignment_reflection_journals(assignment_id):
+    """View reflection journals for a specific group assignment."""
+    teacher = get_teacher_or_admin()
+    group_assignment = GroupAssignment.query.get_or_404(assignment_id)
+    class_obj = Class.query.get_or_404(group_assignment.class_id)
+    
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this assignment.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    # Get all reflection journals for this assignment
+    journals = ReflectionJournal.query.filter_by(group_assignment_id=assignment_id).order_by(ReflectionJournal.submitted_at.desc()).all()
+    
+    return render_template('teacher_group_assignment_reflection_journals.html',
+                         group_assignment=group_assignment,
+                         class_obj=class_obj,
+                         journals=journals)
+
+
+# Conflict Resolution Routes
+@teacher_blueprint.route('/class/<int:class_id>/conflicts')
+@login_required
+@teacher_required
+def class_conflicts(class_id):
+    """View conflicts for a class."""
+    teacher = get_teacher_or_admin()
+    class_obj = Class.query.get_or_404(class_id)
+    
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this class.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    # Get all conflicts for this class
+    conflicts = GroupConflict.query.join(GroupAssignment).filter(
+        GroupAssignment.class_id == class_id
+    ).order_by(GroupConflict.reported_at.desc()).all()
+    
+    # Get students in the class
+    enrollments = Enrollment.query.filter_by(class_id=class_id).all()
+    students = [enrollment.student for enrollment in enrollments if enrollment.student]
+    
+    return render_template('teacher_class_conflicts.html',
+                         class_obj=class_obj,
+                         conflicts=conflicts,
+                         students=students)
+
+
+@teacher_blueprint.route('/conflict/<int:conflict_id>')
+@login_required
+@teacher_required
+def view_conflict(conflict_id):
+    """View a specific conflict."""
+    teacher = get_teacher_or_admin()
+    conflict = GroupConflict.query.get_or_404(conflict_id)
+    class_obj = Class.query.get_or_404(conflict.group_assignment.class_id)
+    
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this conflict.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    # Get resolution steps
+    resolution_steps = ConflictResolution.query.filter_by(conflict_id=conflict_id).order_by(ConflictResolution.implemented_at.asc()).all()
+    
+    # Get participants
+    participants = ConflictParticipant.query.filter_by(conflict_id=conflict_id).all()
+    
+    return render_template('teacher_view_conflict.html',
+                         conflict=conflict,
+                         class_obj=class_obj,
+                         resolution_steps=resolution_steps,
+                         participants=participants)
+
+
+@teacher_blueprint.route('/conflict/<int:conflict_id>/resolve', methods=['GET', 'POST'])
+@login_required
+@teacher_required
+def resolve_conflict(conflict_id):
+    """Resolve a conflict."""
+    teacher = get_teacher_or_admin()
+    conflict = GroupConflict.query.get_or_404(conflict_id)
+    class_obj = Class.query.get_or_404(conflict.group_assignment.class_id)
+    
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this conflict.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    if request.method == 'POST':
+        try:
+            resolution_notes = request.form.get('resolution_notes')
+            new_status = request.form.get('status')
+            
+            # Update conflict status
+            conflict.status = new_status
+            conflict.resolution_notes = resolution_notes
+            conflict.resolved_by = teacher.id
+            
+            if new_status == 'resolved':
+                conflict.resolved_at = datetime.utcnow()
+            
+            db.session.commit()
+            
+            flash('Conflict resolution updated successfully!', 'success')
+            return redirect(url_for('teacher.view_conflict', conflict_id=conflict_id))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error updating conflict resolution: {str(e)}', 'danger')
+    
+    return render_template('teacher_resolve_conflict.html',
+                         conflict=conflict,
+                         class_obj=class_obj)
+
+
+@teacher_blueprint.route('/conflict/<int:conflict_id>/add-resolution-step', methods=['GET', 'POST'])
+@login_required
+@teacher_required
+def add_conflict_resolution_step(conflict_id):
+    """Add a resolution step to a conflict."""
+    teacher = get_teacher_or_admin()
+    conflict = GroupConflict.query.get_or_404(conflict_id)
+    class_obj = Class.query.get_or_404(conflict.group_assignment.class_id)
+    
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this conflict.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    if request.method == 'POST':
+        try:
+            resolution_step = request.form.get('resolution_step')
+            step_description = request.form.get('step_description')
+            step_type = request.form.get('step_type')
+            outcome = request.form.get('outcome')
+            follow_up_date = request.form.get('follow_up_date')
+            follow_up_notes = request.form.get('follow_up_notes')
+            
+            if not all([resolution_step, step_description, step_type]):
+                flash('Resolution step, description, and type are required.', 'danger')
+                return render_template('teacher_add_conflict_resolution_step.html',
+                                     conflict=conflict,
+                                     class_obj=class_obj)
+            
+            # Parse follow-up date if provided
+            follow_up_datetime = None
+            if follow_up_date:
+                try:
+                    follow_up_datetime = datetime.strptime(follow_up_date, '%Y-%m-%dT%H:%M')
+                except ValueError:
+                    flash('Invalid follow-up date format.', 'danger')
+                    return render_template('teacher_add_conflict_resolution_step.html',
+                                         conflict=conflict,
+                                         class_obj=class_obj)
+            
+            # Create resolution step
+            resolution = ConflictResolution(
+                conflict_id=conflict_id,
+                resolution_step=resolution_step,
+                step_description=step_description,
+                step_type=step_type,
+                outcome=outcome,
+                implemented_by=teacher.id,
+                follow_up_date=follow_up_datetime,
+                follow_up_notes=follow_up_notes
+            )
+            
+            db.session.add(resolution)
+            db.session.commit()
+            
+            flash('Resolution step added successfully!', 'success')
+            return redirect(url_for('teacher.view_conflict', conflict_id=conflict_id))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error adding resolution step: {str(e)}', 'danger')
+    
+    return render_template('teacher_add_conflict_resolution_step.html',
+                         conflict=conflict,
+                         class_obj=class_obj)
+
+
+@teacher_blueprint.route('/conflict/<int:conflict_id>/delete', methods=['POST'])
+@login_required
+@teacher_required
+def delete_conflict(conflict_id):
+    """Delete a conflict."""
+    teacher = get_teacher_or_admin()
+    conflict = GroupConflict.query.get_or_404(conflict_id)
+    class_obj = Class.query.get_or_404(conflict.group_assignment.class_id)
+    
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this conflict.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    try:
+        # Delete associated resolution steps and participants first
+        ConflictResolution.query.filter_by(conflict_id=conflict_id).delete()
+        ConflictParticipant.query.filter_by(conflict_id=conflict_id).delete()
+        db.session.delete(conflict)
+        db.session.commit()
+        flash('Conflict deleted successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting conflict: {str(e)}', 'danger')
+    
+    return redirect(url_for('teacher.class_conflicts', class_id=class_obj.id))
+
+
+# Comprehensive Reporting & Analytics Routes
+@teacher_blueprint.route('/class/<int:class_id>/reports')
+@login_required
+@teacher_required
+def class_reports(class_id):
+    """View comprehensive reports for a class."""
+    teacher = get_teacher_or_admin()
+    class_obj = Class.query.get_or_404(class_id)
+    
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this class.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    # Get all reports for this class
+    reports = GroupWorkReport.query.filter_by(class_id=class_id).order_by(GroupWorkReport.generated_at.desc()).all()
+    
+    # Get recent analytics data
+    recent_contributions = IndividualContribution.query.join(StudentGroup).filter(
+        StudentGroup.class_id == class_id
+    ).order_by(IndividualContribution.recorded_at.desc()).limit(10).all()
+    
+    recent_time_tracking = TimeTracking.query.join(StudentGroup).filter(
+        StudentGroup.class_id == class_id
+    ).order_by(TimeTracking.start_time.desc()).limit(10).all()
+    
+    return render_template('teacher_class_reports.html',
+                         class_obj=class_obj,
+                         reports=reports,
+                         recent_contributions=recent_contributions,
+                         recent_time_tracking=recent_time_tracking)
+
+
+@teacher_blueprint.route('/class/<int:class_id>/analytics')
+@login_required
+@teacher_required
+def class_analytics(class_id):
+    """View comprehensive analytics dashboard for a class."""
+    teacher = get_teacher_or_admin()
+    class_obj = Class.query.get_or_404(class_id)
+    
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this class.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    # Get analytics data
+    groups = StudentGroup.query.filter_by(class_id=class_id, is_active=True).all()
+    group_assignments = GroupAssignment.query.filter_by(class_id=class_id).all()
+    
+    # Get collaboration metrics
+    collaboration_metrics = CollaborationMetrics.query.join(StudentGroup).filter(
+        StudentGroup.class_id == class_id
+    ).order_by(CollaborationMetrics.measurement_date.desc()).all()
+    
+    # Get performance benchmarks
+    benchmarks = PerformanceBenchmark.query.filter_by(class_id=class_id, is_active=True).all()
+    
+    # Get saved dashboards
+    dashboards = AnalyticsDashboard.query.filter_by(class_id=class_id).order_by(AnalyticsDashboard.last_accessed.desc()).all()
+    
+    return render_template('teacher_class_analytics.html',
+                         class_obj=class_obj,
+                         groups=groups,
+                         group_assignments=group_assignments,
+                         collaboration_metrics=collaboration_metrics,
+                         benchmarks=benchmarks,
+                         dashboards=dashboards)
+
+
+@teacher_blueprint.route('/class/<int:class_id>/contributions')
+@login_required
+@teacher_required
+def class_contributions(class_id):
+    """View individual contributions tracking for a class."""
+    teacher = get_teacher_or_admin()
+    class_obj = Class.query.get_or_404(class_id)
+    
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this class.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    # Get all contributions for this class
+    contributions = IndividualContribution.query.join(StudentGroup).filter(
+        StudentGroup.class_id == class_id
+    ).order_by(IndividualContribution.recorded_at.desc()).all()
+    
+    # Get students in the class
+    enrollments = Enrollment.query.filter_by(class_id=class_id).all()
+    students = [enrollment.student for enrollment in enrollments if enrollment.student]
+    
+    return render_template('teacher_class_contributions.html',
+                         class_obj=class_obj,
+                         contributions=contributions,
+                         students=students)
+
+
+@teacher_blueprint.route('/class/<int:class_id>/time-tracking')
+@login_required
+@teacher_required
+def class_time_tracking(class_id):
+    """View time tracking for a class."""
+    teacher = get_teacher_or_admin()
+    class_obj = Class.query.get_or_404(class_id)
+    
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this class.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    # Get time tracking data
+    time_tracking = TimeTracking.query.join(StudentGroup).filter(
+        StudentGroup.class_id == class_id
+    ).order_by(TimeTracking.start_time.desc()).all()
+    
+    # Get students in the class
+    enrollments = Enrollment.query.filter_by(class_id=class_id).all()
+    students = [enrollment.student for enrollment in enrollments if enrollment.student]
+    
+    return render_template('teacher_class_time_tracking.html',
+                         class_obj=class_obj,
+                         time_tracking=time_tracking,
+                         students=students)
+
+
+@teacher_blueprint.route('/class/<int:class_id>/create-report', methods=['GET', 'POST'])
+@login_required
+@teacher_required
+def create_report(class_id):
+    """Create a comprehensive report for a class."""
+    teacher = get_teacher_or_admin()
+    class_obj = Class.query.get_or_404(class_id)
+    
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this class.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    if request.method == 'POST':
+        try:
+            report_name = request.form.get('report_name')
+            report_type = request.form.get('report_type')
+            report_period_start = request.form.get('report_period_start')
+            report_period_end = request.form.get('report_period_end')
+            
+            if not all([report_name, report_type, report_period_start, report_period_end]):
+                flash('All fields are required.', 'danger')
+                return render_template('teacher_create_report.html', class_obj=class_obj)
+            
+            # Parse dates
+            start_date = datetime.strptime(report_period_start, '%Y-%m-%d')
+            end_date = datetime.strptime(report_period_end, '%Y-%m-%d')
+            
+            # Generate report data based on type
+            report_data = generate_report_data(class_id, report_type, start_date, end_date)
+            
+            # Create report
+            report = GroupWorkReport(
+                class_id=class_id,
+                report_name=report_name,
+                report_type=report_type,
+                report_period_start=start_date,
+                report_period_end=end_date,
+                generated_by=teacher.id,
+                report_data=json.dumps(report_data)
+            )
+            
+            db.session.add(report)
+            db.session.commit()
+            
+            flash('Report generated successfully!', 'success')
+            return redirect(url_for('teacher.class_reports', class_id=class_id))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error generating report: {str(e)}', 'danger')
+    
+    return render_template('teacher_create_report.html', class_obj=class_obj)
+
+
+@teacher_blueprint.route('/report/<int:report_id>')
+@login_required
+@teacher_required
+def view_report(report_id):
+    """View a specific report."""
+    teacher = get_teacher_or_admin()
+    report = GroupWorkReport.query.get_or_404(report_id)
+    class_obj = Class.query.get_or_404(report.class_id)
+    
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this report.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    # Parse report data
+    report_data = json.loads(report.report_data) if report.report_data else {}
+    
+    return render_template('teacher_view_report.html',
+                         report=report,
+                         class_obj=class_obj,
+                         report_data=report_data)
+
+
+@teacher_blueprint.route('/report/<int:report_id>/export/<format>')
+@login_required
+@teacher_required
+def export_report(report_id, format):
+    """Export a report in the specified format."""
+    teacher = get_teacher_or_admin()
+    report = GroupWorkReport.query.get_or_404(report_id)
+    class_obj = Class.query.get_or_404(report.class_id)
+    
+    if not is_admin() and class_obj.teacher_id != teacher.id:
+        flash('You do not have access to this report.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    try:
+        # Generate export file
+        export_path = generate_export_file(report, format)
+        
+        # Create export record
+        export_record = ReportExport(
+            report_id=report_id,
+            export_format=format,
+            export_path=export_path,
+            exported_by=teacher.id
+        )
+        
+        db.session.add(export_record)
+        db.session.commit()
+        
+        flash(f'Report exported successfully as {format.upper()}!', 'success')
+        return redirect(url_for('teacher.view_report', report_id=report_id))
+        
+    except Exception as e:
+        flash(f'Error exporting report: {str(e)}', 'danger')
+        return redirect(url_for('teacher.view_report', report_id=report_id))
+
+
+def generate_report_data(class_id, report_type, start_date, end_date):
+    """Generate comprehensive report data based on type and date range."""
+    report_data = {
+        'class_id': class_id,
+        'report_type': report_type,
+        'period_start': start_date.isoformat(),
+        'period_end': end_date.isoformat(),
+        'generated_at': datetime.utcnow().isoformat()
+    }
+    
+    if report_type == 'comprehensive':
+        # Get all relevant data
+        groups = StudentGroup.query.filter_by(class_id=class_id).all()
+        assignments = GroupAssignment.query.filter_by(class_id=class_id).all()
+        contributions = IndividualContribution.query.join(StudentGroup).filter(
+            StudentGroup.class_id == class_id,
+            IndividualContribution.recorded_at >= start_date,
+            IndividualContribution.recorded_at <= end_date
+        ).all()
+        
+        report_data.update({
+            'groups': [{'id': g.id, 'name': g.name, 'member_count': len(g.members)} for g in groups],
+            'assignments': [{'id': a.id, 'title': a.title, 'due_date': a.due_date.isoformat()} for a in assignments],
+            'contributions': [{'student_id': c.student_id, 'type': c.contribution_type, 'quality': c.contribution_quality} for c in contributions]
+        })
+    
+    elif report_type == 'performance':
+        # Get performance-related data
+        grades = GroupGrade.query.join(GroupAssignment).filter(
+            GroupAssignment.class_id == class_id,
+            GroupGrade.graded_at >= start_date,
+            GroupGrade.graded_at <= end_date
+        ).all()
+        
+        report_data.update({
+            'grades': [{'student_id': g.student_id, 'grade_data': g.grade_data} for g in grades]
+        })
+    
+    elif report_type == 'collaboration':
+        # Get collaboration metrics
+        metrics = CollaborationMetrics.query.join(StudentGroup).filter(
+            StudentGroup.class_id == class_id,
+            CollaborationMetrics.measurement_date >= start_date,
+            CollaborationMetrics.measurement_date <= end_date
+        ).all()
+        
+        report_data.update({
+            'collaboration_metrics': [{'group_id': m.group_id, 'type': m.metric_type, 'value': m.metric_value} for m in metrics]
+        })
+    
+    return report_data
+
+
+def generate_export_file(report, format):
+    """Generate export file for a report."""
+    # This is a placeholder - in a real implementation, you would generate actual files
+    # For now, we'll just return a mock path
+    timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+    filename = f"report_{report.id}_{timestamp}.{format}"
+    return f"exports/{filename}"

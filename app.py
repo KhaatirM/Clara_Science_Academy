@@ -367,18 +367,28 @@ def create_app(config_class=Config):
         return response
 
     # Custom error handlers
+    @app.errorhandler(401)
+    def unauthorized_error(error):
+        """Handle 401 Unauthorized errors by redirecting to login page."""
+        flash('Please log in to access this page.', 'warning')
+        return redirect(url_for('auth.login'))
+    
+    @app.errorhandler(403)
+    def forbidden_error(error):
+        """Handle 403 Forbidden errors by redirecting to login page."""
+        flash('You do not have permission to access this page.', 'danger')
+        return redirect(url_for('auth.login'))
+
     @app.errorhandler(404)
     def not_found_error(error):
-        return render_template('home.html'), 404
+        """Handle 404 Not Found errors by redirecting to home page."""
+        return redirect(url_for('auth.home'))
 
     @app.errorhandler(500)
     def internal_error(error):
+        """Handle 500 Internal Server errors."""
         db.session.rollback()
         return render_template('home.html'), 500
-        
-    @app.errorhandler(403)
-    def forbidden_error(error):
-        return render_template('home.html'), 403
 
     @app.route('/')
     def home():

@@ -792,3 +792,736 @@ class SystemConfig(db.Model):
         db.session.commit()
         return config
 
+
+class StudentGroup(db.Model):
+    """
+    Model for student groups within a class (for group work, projects, etc.).
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    class_id = db.Column(db.Integer, db.ForeignKey('class.id'), nullable=False)
+    created_by = db.Column(db.Integer, db.ForeignKey('teacher_staff.id'), nullable=False)
+    max_students = db.Column(db.Integer, nullable=True)  # Optional limit on group size
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    class_info = db.relationship('Class', backref='student_groups')
+    creator = db.relationship('TeacherStaff', backref='created_groups')
+    
+    def __repr__(self):
+        return f"StudentGroup('{self.name}', Class: {self.class_id})"
+
+
+class StudentGroupMember(db.Model):
+    """
+    Model for tracking which students belong to which groups.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    group_id = db.Column(db.Integer, db.ForeignKey('student_group.id'), nullable=False)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
+    joined_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_leader = db.Column(db.Boolean, default=False)  # Optional group leader designation
+    
+    # Relationships
+    group = db.relationship('StudentGroup', backref='members')
+    student = db.relationship('Student', backref='group_memberships')
+    
+    def __repr__(self):
+        return f"StudentGroupMember(Group: {self.group_id}, Student: {self.student_id})"
+
+
+class GroupAssignment(db.Model):
+    """
+    Model for assignments that are specifically for groups.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    class_id = db.Column(db.Integer, db.ForeignKey('class.id'), nullable=False)
+    due_date = db.Column(db.DateTime, nullable=False)
+    quarter = db.Column(db.String(10), nullable=False)
+    semester = db.Column(db.String(10), nullable=True)
+    academic_period_id = db.Column(db.Integer, db.ForeignKey('academic_period.id'), nullable=True)
+    school_year_id = db.Column(db.Integer, db.ForeignKey('school_year.id'), nullable=False)
+    is_locked = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Group-specific fields
+    group_size_min = db.Column(db.Integer, default=2)  # Minimum students per group
+    group_size_max = db.Column(db.Integer, default=4)  # Maximum students per group
+    allow_individual = db.Column(db.Boolean, default=False)  # Allow individual submissions
+    collaboration_type = db.Column(db.String(20), default='group')  # 'group', 'individual', 'both'
+    
+    # File attachment fields
+    attachment_filename = db.Column(db.String(255), nullable=True)
+    attachment_original_filename = db.Column(db.String(255), nullable=True)
+    attachment_file_path = db.Column(db.String(500), nullable=True)
+    attachment_file_size = db.Column(db.Integer, nullable=True)
+    attachment_mime_type = db.Column(db.String(100), nullable=True)
+    
+    # Relationships
+    class_info = db.relationship('Class', backref='group_assignments')
+    school_year = db.relationship('SchoolYear', backref='group_assignments')
+    academic_period = db.relationship('AcademicPeriod', backref='group_assignments')
+    
+    def __repr__(self):
+        return f"GroupAssignment('{self.title}', Class: {self.class_id})"
+
+
+class GroupSubmission(db.Model):
+    """
+    Model for group submissions to group assignments.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    group_assignment_id = db.Column(db.Integer, db.ForeignKey('group_assignment.id'), nullable=False)
+    group_id = db.Column(db.Integer, db.ForeignKey('student_group.id'), nullable=True)  # Nullable for individual submissions
+    submitted_by = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)  # Student who submitted
+    submission_text = db.Column(db.Text, nullable=True)
+    submitted_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_late = db.Column(db.Boolean, default=False)
+    
+    # File attachment fields
+    attachment_filename = db.Column(db.String(255), nullable=True)
+    attachment_original_filename = db.Column(db.String(255), nullable=True)
+    attachment_file_path = db.Column(db.String(500), nullable=True)
+    attachment_file_size = db.Column(db.Integer, nullable=True)
+    attachment_mime_type = db.Column(db.String(100), nullable=True)
+    
+    # Relationships
+    group_assignment = db.relationship('GroupAssignment', backref='submissions')
+    group = db.relationship('StudentGroup', backref='submissions')
+    submitter = db.relationship('Student', backref='group_submissions')
+    
+    def __repr__(self):
+        return f"GroupSubmission(Assignment: {self.group_assignment_id}, Group: {self.group_id})"
+
+
+class GroupGrade(db.Model):
+    """
+    Model for grades on group assignments.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    group_assignment_id = db.Column(db.Integer, db.ForeignKey('group_assignment.id'), nullable=False)
+    group_id = db.Column(db.Integer, db.ForeignKey('student_group.id'), nullable=True)  # Nullable for individual grades
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
+    grade_data = db.Column(db.Text, nullable=False)  # JSON string with grade details
+    graded_by = db.Column(db.Integer, db.ForeignKey('teacher_staff.id'), nullable=False)
+    graded_at = db.Column(db.DateTime, default=datetime.utcnow)
+    comments = db.Column(db.Text, nullable=True)
+    
+    # Relationships
+    group_assignment = db.relationship('GroupAssignment', backref='grades')
+    group = db.relationship('StudentGroup', backref='grades')
+    student = db.relationship('Student', backref='group_grades')
+    grader = db.relationship('TeacherStaff', backref='group_grades_given')
+    
+    def __repr__(self):
+        return f"GroupGrade(Assignment: {self.group_assignment_id}, Student: {self.student_id})"
+
+
+class GroupTemplate(db.Model):
+    """
+    Model for saving common group configurations.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    class_id = db.Column(db.Integer, db.ForeignKey('class.id'), nullable=False)
+    created_by = db.Column(db.Integer, db.ForeignKey('teacher_staff.id'), nullable=False)
+    group_size = db.Column(db.Integer, nullable=False, default=3)
+    grouping_criteria = db.Column(db.String(50), nullable=False, default='random')  # random, skill_based, mixed_ability
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    class_info = db.relationship('Class', backref='group_templates')
+    creator = db.relationship('TeacherStaff', backref='created_group_templates')
+    
+    def __repr__(self):
+        return f"GroupTemplate('{self.name}', Size: {self.group_size})"
+
+
+class PeerEvaluation(db.Model):
+    """
+    Model for peer evaluations within groups.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    group_assignment_id = db.Column(db.Integer, db.ForeignKey('group_assignment.id'), nullable=False)
+    group_id = db.Column(db.Integer, db.ForeignKey('student_group.id'), nullable=False)
+    evaluator_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)  # Student doing the evaluation
+    evaluatee_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)  # Student being evaluated
+    collaboration_score = db.Column(db.Integer, nullable=False)  # 1-5 scale
+    contribution_score = db.Column(db.Integer, nullable=False)  # 1-5 scale
+    communication_score = db.Column(db.Integer, nullable=False)  # 1-5 scale
+    overall_score = db.Column(db.Integer, nullable=False)  # 1-5 scale
+    comments = db.Column(db.Text, nullable=True)
+    submitted_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    group_assignment = db.relationship('GroupAssignment', backref='peer_evaluations')
+    group = db.relationship('StudentGroup', backref='peer_evaluations')
+    evaluator = db.relationship('Student', foreign_keys=[evaluator_id], backref='evaluations_given')
+    evaluatee = db.relationship('Student', foreign_keys=[evaluatee_id], backref='evaluations_received')
+    
+    def __repr__(self):
+        return f"PeerEvaluation(Evaluator: {self.evaluator_id}, Evaluatee: {self.evaluatee_id})"
+
+
+class AssignmentRubric(db.Model):
+    """
+    Model for assignment rubrics.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    group_assignment_id = db.Column(db.Integer, db.ForeignKey('group_assignment.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    criteria_data = db.Column(db.Text, nullable=False)  # JSON string with rubric criteria
+    total_points = db.Column(db.Integer, nullable=False, default=100)
+    created_by = db.Column(db.Integer, db.ForeignKey('teacher_staff.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    group_assignment = db.relationship('GroupAssignment', backref='rubrics')
+    creator = db.relationship('TeacherStaff', backref='created_rubrics')
+    
+    def __repr__(self):
+        return f"AssignmentRubric('{self.name}', Points: {self.total_points})"
+
+
+class GroupContract(db.Model):
+    """
+    Model for group contracts and expectations.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    group_id = db.Column(db.Integer, db.ForeignKey('student_group.id'), nullable=False)
+    group_assignment_id = db.Column(db.Integer, db.ForeignKey('group_assignment.id'), nullable=True)
+    contract_data = db.Column(db.Text, nullable=False)  # JSON string with contract terms
+    is_agreed = db.Column(db.Boolean, default=False)
+    agreed_by = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=True)
+    agreed_at = db.Column(db.DateTime, nullable=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('teacher_staff.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    group = db.relationship('StudentGroup', backref='contracts')
+    group_assignment = db.relationship('GroupAssignment', backref='contracts')
+    student = db.relationship('Student', backref='contract_agreements')
+    creator = db.relationship('TeacherStaff', backref='created_contracts')
+    
+    def __repr__(self):
+        return f"GroupContract(Group: {self.group_id}, Agreed: {self.is_agreed})"
+
+
+class ReflectionJournal(db.Model):
+    """
+    Model for student reflection journals on group work.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
+    group_id = db.Column(db.Integer, db.ForeignKey('student_group.id'), nullable=False)
+    group_assignment_id = db.Column(db.Integer, db.ForeignKey('group_assignment.id'), nullable=False)
+    reflection_text = db.Column(db.Text, nullable=False)
+    collaboration_rating = db.Column(db.Integer, nullable=False)  # 1-5 scale
+    learning_rating = db.Column(db.Integer, nullable=False)  # 1-5 scale
+    challenges_faced = db.Column(db.Text, nullable=True)
+    lessons_learned = db.Column(db.Text, nullable=True)
+    submitted_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    student = db.relationship('Student', backref='reflection_journals')
+    group = db.relationship('StudentGroup', backref='reflection_journals')
+    group_assignment = db.relationship('GroupAssignment', backref='reflection_journals')
+    
+    def __repr__(self):
+        return f"ReflectionJournal(Student: {self.student_id}, Assignment: {self.group_assignment_id})"
+
+
+class GroupProgress(db.Model):
+    """
+    Model for tracking group progress on assignments.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    group_id = db.Column(db.Integer, db.ForeignKey('student_group.id'), nullable=False)
+    group_assignment_id = db.Column(db.Integer, db.ForeignKey('group_assignment.id'), nullable=False)
+    progress_percentage = db.Column(db.Integer, nullable=False, default=0)  # 0-100
+    status = db.Column(db.String(20), nullable=False, default='not_started')  # not_started, in_progress, completed
+    last_updated = db.Column(db.DateTime, default=datetime.utcnow)
+    notes = db.Column(db.Text, nullable=True)
+    
+    # Relationships
+    group = db.relationship('StudentGroup', backref='progress_tracking')
+    group_assignment = db.relationship('GroupAssignment', backref='progress_tracking')
+    
+    def __repr__(self):
+        return f"GroupProgress(Group: {self.group_id}, Progress: {self.progress_percentage}%)"
+
+
+class AssignmentTemplate(db.Model):
+    """
+    Model for saving common assignment structures.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    class_id = db.Column(db.Integer, db.ForeignKey('class.id'), nullable=False)
+    created_by = db.Column(db.Integer, db.ForeignKey('teacher_staff.id'), nullable=False)
+    template_data = db.Column(db.Text, nullable=False)  # JSON string with assignment structure
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    class_info = db.relationship('Class', backref='assignment_templates')
+    creator = db.relationship('TeacherStaff', backref='created_assignment_templates')
+
+class GroupRotation(db.Model):
+    """
+    Model for managing group rotations and member changes.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    class_id = db.Column(db.Integer, db.ForeignKey('class.id'), nullable=False)
+    rotation_name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    rotation_type = db.Column(db.String(50), nullable=False, default='manual')  # manual, automatic, scheduled
+    rotation_frequency = db.Column(db.String(20), nullable=True)  # weekly, biweekly, monthly, custom
+    group_size = db.Column(db.Integer, nullable=False, default=3)
+    grouping_criteria = db.Column(db.String(50), nullable=False, default='random')  # random, skill_based, mixed_ability
+    is_active = db.Column(db.Boolean, default=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('teacher_staff.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_rotated = db.Column(db.DateTime, nullable=True)
+    next_rotation = db.Column(db.DateTime, nullable=True)
+    
+    # Relationships
+    class_info = db.relationship('Class', backref='group_rotations')
+    creator = db.relationship('TeacherStaff', backref='created_group_rotations')
+
+class GroupRotationHistory(db.Model):
+    """
+    Model for tracking group rotation history.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    rotation_id = db.Column(db.Integer, db.ForeignKey('group_rotation.id'), nullable=False)
+    rotation_date = db.Column(db.DateTime, default=datetime.utcnow)
+    previous_groups = db.Column(db.Text, nullable=False)  # JSON string with previous group assignments
+    new_groups = db.Column(db.Text, nullable=False)  # JSON string with new group assignments
+    rotation_notes = db.Column(db.Text, nullable=True)
+    
+    # Relationships
+    rotation = db.relationship('GroupRotation', backref='rotation_history')
+
+class PeerReview(db.Model):
+    """
+    Model for peer review of student work.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    group_assignment_id = db.Column(db.Integer, db.ForeignKey('group_assignment.id'), nullable=False)
+    group_id = db.Column(db.Integer, db.ForeignKey('student_group.id'), nullable=False)
+    reviewer_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)  # Student doing the review
+    reviewee_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)  # Student being reviewed
+    work_quality_score = db.Column(db.Integer, nullable=False)  # 1-5 scale
+    creativity_score = db.Column(db.Integer, nullable=False)  # 1-5 scale
+    presentation_score = db.Column(db.Integer, nullable=False)  # 1-5 scale
+    overall_score = db.Column(db.Integer, nullable=False)  # 1-5 scale
+    constructive_feedback = db.Column(db.Text, nullable=True)
+    strengths = db.Column(db.Text, nullable=True)
+    improvements = db.Column(db.Text, nullable=True)
+    submitted_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    group_assignment = db.relationship('GroupAssignment', backref='peer_reviews')
+    group = db.relationship('StudentGroup', backref='peer_reviews')
+    reviewer = db.relationship('Student', foreign_keys=[reviewer_id], backref='reviews_given')
+    reviewee = db.relationship('Student', foreign_keys=[reviewee_id], backref='reviews_received')
+
+class DraftSubmission(db.Model):
+    """
+    Model for draft submissions with feedback capability.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    group_assignment_id = db.Column(db.Integer, db.ForeignKey('group_assignment.id'), nullable=False)
+    group_id = db.Column(db.Integer, db.ForeignKey('student_group.id'), nullable=False)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
+    draft_content = db.Column(db.Text, nullable=False)
+    draft_attachments = db.Column(db.Text, nullable=True)  # JSON string with file paths
+    submission_notes = db.Column(db.Text, nullable=True)
+    is_final = db.Column(db.Boolean, default=False)
+    submitted_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    group_assignment = db.relationship('GroupAssignment', backref='draft_submissions')
+    group = db.relationship('StudentGroup', backref='draft_submissions')
+    student = db.relationship('Student', backref='draft_submissions')
+
+class DraftFeedback(db.Model):
+    """
+    Model for feedback on draft submissions.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    draft_submission_id = db.Column(db.Integer, db.ForeignKey('draft_submission.id'), nullable=False)
+    feedback_provider_id = db.Column(db.Integer, db.ForeignKey('teacher_staff.id'), nullable=False)
+    feedback_content = db.Column(db.Text, nullable=False)
+    feedback_type = db.Column(db.String(20), nullable=False, default='general')  # general, specific, improvement
+    is_approved = db.Column(db.Boolean, default=False)
+    provided_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    draft_submission = db.relationship('DraftSubmission', backref='feedback')
+    feedback_provider = db.relationship('TeacherStaff', backref='draft_feedback')
+
+class DeadlineReminder(db.Model):
+    """
+    Model for deadline reminders with automated notifications.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    assignment_id = db.Column(db.Integer, db.ForeignKey('assignment.id'), nullable=True)
+    group_assignment_id = db.Column(db.Integer, db.ForeignKey('group_assignment.id'), nullable=True)
+    class_id = db.Column(db.Integer, db.ForeignKey('class.id'), nullable=False)
+    reminder_type = db.Column(db.String(20), nullable=False, default='assignment')  # assignment, group_assignment, general
+    reminder_title = db.Column(db.String(200), nullable=False)
+    reminder_message = db.Column(db.Text, nullable=False)
+    reminder_date = db.Column(db.DateTime, nullable=False)
+    reminder_frequency = db.Column(db.String(20), nullable=False, default='once')  # once, daily, weekly
+    is_active = db.Column(db.Boolean, default=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('teacher_staff.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_sent = db.Column(db.DateTime, nullable=True)
+    next_send = db.Column(db.DateTime, nullable=True)
+    
+    # Relationships
+    assignment = db.relationship('Assignment', backref='deadline_reminders')
+    group_assignment = db.relationship('GroupAssignment', backref='deadline_reminders')
+    class_info = db.relationship('Class', backref='deadline_reminders')
+    creator = db.relationship('TeacherStaff', backref='created_deadline_reminders')
+
+class ReminderNotification(db.Model):
+    """
+    Model for tracking reminder notifications sent to students.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    reminder_id = db.Column(db.Integer, db.ForeignKey('deadline_reminder.id'), nullable=False)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
+    notification_type = db.Column(db.String(20), nullable=False, default='email')  # email, in_app, sms
+    sent_at = db.Column(db.DateTime, default=datetime.utcnow)
+    status = db.Column(db.String(20), nullable=False, default='sent')  # sent, delivered, failed
+    response_data = db.Column(db.Text, nullable=True)  # JSON string with response details
+    
+    # Relationships
+    reminder = db.relationship('DeadlineReminder', backref='notifications')
+    student = db.relationship('Student', backref='reminder_notifications')
+    
+    def __repr__(self):
+        return f"ReminderNotification('{self.notification_type}', Student: {self.student_id})"
+
+
+# 360-Degree Feedback Models
+class Feedback360(db.Model):
+    """
+    Model for 360-degree feedback sessions.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    class_id = db.Column(db.Integer, db.ForeignKey('class.id'), nullable=False)
+    target_student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
+    feedback_type = db.Column(db.String(20), nullable=False, default='comprehensive')  # comprehensive, peer_only, self_only
+    is_active = db.Column(db.Boolean, default=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('teacher_staff.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    due_date = db.Column(db.DateTime, nullable=True)
+    
+    # Relationships
+    class_info = db.relationship('Class', backref='feedback360_sessions')
+    target_student = db.relationship('Student', foreign_keys=[target_student_id], backref='feedback360_received')
+    creator = db.relationship('TeacherStaff', backref='created_feedback360')
+    
+    def __repr__(self):
+        return f"Feedback360('{self.title}', Target: {self.target_student_id})"
+
+
+class Feedback360Response(db.Model):
+    """
+    Model for individual feedback responses in 360-degree feedback.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    feedback360_id = db.Column(db.Integer, db.ForeignKey('feedback360.id'), nullable=False)
+    respondent_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
+    respondent_type = db.Column(db.String(20), nullable=False)  # peer, self, teacher
+    feedback_data = db.Column(db.Text, nullable=False)  # JSON string with feedback responses
+    submitted_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_anonymous = db.Column(db.Boolean, default=False)
+    
+    # Relationships
+    feedback360 = db.relationship('Feedback360', backref='responses')
+    respondent = db.relationship('Student', backref='feedback360_given')
+    
+    def __repr__(self):
+        return f"Feedback360Response('{self.respondent_type}', Session: {self.feedback360_id})"
+
+
+class Feedback360Criteria(db.Model):
+    """
+    Model for feedback criteria in 360-degree feedback sessions.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    feedback360_id = db.Column(db.Integer, db.ForeignKey('feedback360.id'), nullable=False)
+    criteria_name = db.Column(db.String(200), nullable=False)
+    criteria_description = db.Column(db.Text, nullable=True)
+    criteria_type = db.Column(db.String(20), nullable=False, default='rating')  # rating, text, scale
+    scale_min = db.Column(db.Integer, default=1)
+    scale_max = db.Column(db.Integer, default=5)
+    is_required = db.Column(db.Boolean, default=True)
+    order_index = db.Column(db.Integer, default=0)
+    
+    # Relationships
+    feedback360 = db.relationship('Feedback360', backref='criteria')
+    
+    def __repr__(self):
+        return f"Feedback360Criteria('{self.criteria_name}', Session: {self.feedback360_id})"
+
+
+# Conflict Resolution Models
+class GroupConflict(db.Model):
+    """
+    Model for tracking group conflicts and their resolution.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    group_id = db.Column(db.Integer, db.ForeignKey('student_group.id'), nullable=False)
+    group_assignment_id = db.Column(db.Integer, db.ForeignKey('group_assignment.id'), nullable=False)
+    reported_by = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
+    conflict_type = db.Column(db.String(50), nullable=False)  # communication, workload, personality, other
+    conflict_description = db.Column(db.Text, nullable=False)
+    severity_level = db.Column(db.String(20), nullable=False, default='medium')  # low, medium, high, critical
+    status = db.Column(db.String(20), nullable=False, default='reported')  # reported, investigating, resolved, escalated
+    reported_at = db.Column(db.DateTime, default=datetime.utcnow)
+    resolved_at = db.Column(db.DateTime, nullable=True)
+    resolution_notes = db.Column(db.Text, nullable=True)
+    resolved_by = db.Column(db.Integer, db.ForeignKey('teacher_staff.id'), nullable=True)
+    
+    # Relationships
+    group = db.relationship('StudentGroup', backref='conflicts')
+    group_assignment = db.relationship('GroupAssignment', backref='conflicts')
+    reporter = db.relationship('Student', foreign_keys=[reported_by], backref='reported_conflicts')
+    resolver = db.relationship('TeacherStaff', backref='resolved_conflicts')
+    
+    def __repr__(self):
+        return f"GroupConflict('{self.conflict_type}', Group: {self.group_id})"
+
+
+class ConflictResolution(db.Model):
+    """
+    Model for tracking conflict resolution steps and outcomes.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    conflict_id = db.Column(db.Integer, db.ForeignKey('group_conflict.id'), nullable=False)
+    resolution_step = db.Column(db.String(100), nullable=False)
+    step_description = db.Column(db.Text, nullable=False)
+    step_type = db.Column(db.String(30), nullable=False)  # mediation, intervention, restructuring, other
+    outcome = db.Column(db.String(20), nullable=False, default='pending')  # pending, successful, unsuccessful, partial
+    implemented_by = db.Column(db.Integer, db.ForeignKey('teacher_staff.id'), nullable=False)
+    implemented_at = db.Column(db.DateTime, default=datetime.utcnow)
+    follow_up_date = db.Column(db.DateTime, nullable=True)
+    follow_up_notes = db.Column(db.Text, nullable=True)
+    
+    # Relationships
+    conflict = db.relationship('GroupConflict', backref='resolution_steps')
+    implementer = db.relationship('TeacherStaff', backref='implemented_resolutions')
+    
+    def __repr__(self):
+        return f"ConflictResolution('{self.resolution_step}', Conflict: {self.conflict_id})"
+
+
+class ConflictParticipant(db.Model):
+    """
+    Model for tracking students involved in conflicts.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    conflict_id = db.Column(db.Integer, db.ForeignKey('group_conflict.id'), nullable=False)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
+    role = db.Column(db.String(20), nullable=False)  # reporter, involved, witness, other
+    student_perspective = db.Column(db.Text, nullable=True)
+    is_resolved = db.Column(db.Boolean, default=False)
+    
+    # Relationships
+    conflict = db.relationship('GroupConflict', backref='participants')
+    student = db.relationship('Student', backref='conflict_participations')
+    
+    def __repr__(self):
+        return f"ConflictParticipant('{self.role}', Student: {self.student_id})"
+
+
+# Comprehensive Reporting & Analytics Models
+class GroupWorkReport(db.Model):
+    """
+    Model for comprehensive group work reports and analytics.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    class_id = db.Column(db.Integer, db.ForeignKey('class.id'), nullable=False)
+    report_name = db.Column(db.String(200), nullable=False)
+    report_type = db.Column(db.String(50), nullable=False)  # comprehensive, performance, collaboration, individual
+    report_period_start = db.Column(db.DateTime, nullable=False)
+    report_period_end = db.Column(db.DateTime, nullable=False)
+    generated_by = db.Column(db.Integer, db.ForeignKey('teacher_staff.id'), nullable=False)
+    generated_at = db.Column(db.DateTime, default=datetime.utcnow)
+    report_data = db.Column(db.Text, nullable=False)  # JSON string with comprehensive report data
+    is_exported = db.Column(db.Boolean, default=False)
+    export_format = db.Column(db.String(20), nullable=True)  # pdf, excel, csv
+    export_path = db.Column(db.String(500), nullable=True)
+    
+    # Relationships
+    class_info = db.relationship('Class', backref='group_work_reports')
+    generator = db.relationship('TeacherStaff', backref='generated_reports')
+    
+    def __repr__(self):
+        return f"GroupWorkReport('{self.report_name}', Type: {self.report_type})"
+
+
+class IndividualContribution(db.Model):
+    """
+    Model for tracking individual student contributions to group work.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
+    group_id = db.Column(db.Integer, db.ForeignKey('student_group.id'), nullable=False)
+    group_assignment_id = db.Column(db.Integer, db.ForeignKey('group_assignment.id'), nullable=False)
+    contribution_type = db.Column(db.String(50), nullable=False)  # research, writing, presentation, coordination, other
+    contribution_description = db.Column(db.Text, nullable=False)
+    time_spent_minutes = db.Column(db.Integer, nullable=True)
+    contribution_quality = db.Column(db.Integer, nullable=True)  # 1-5 scale
+    peer_rating = db.Column(db.Float, nullable=True)  # Average peer rating
+    teacher_rating = db.Column(db.Float, nullable=True)  # Teacher assessment
+    recorded_at = db.Column(db.DateTime, default=datetime.utcnow)
+    recorded_by = db.Column(db.Integer, db.ForeignKey('teacher_staff.id'), nullable=True)
+    
+    # Relationships
+    student = db.relationship('Student', backref='contributions')
+    group = db.relationship('StudentGroup', backref='member_contributions')
+    group_assignment = db.relationship('GroupAssignment', backref='contributions')
+    recorder = db.relationship('TeacherStaff', backref='recorded_contributions')
+    
+    def __repr__(self):
+        return f"IndividualContribution(Student: {self.student_id}, Type: {self.contribution_type})"
+
+
+class TimeTracking(db.Model):
+    """
+    Model for tracking time spent on group assignments and activities.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
+    group_id = db.Column(db.Integer, db.ForeignKey('student_group.id'), nullable=True)
+    group_assignment_id = db.Column(db.Integer, db.ForeignKey('group_assignment.id'), nullable=True)
+    activity_type = db.Column(db.String(50), nullable=False)  # research, writing, meeting, presentation, other
+    activity_description = db.Column(db.Text, nullable=True)
+    start_time = db.Column(db.DateTime, nullable=False)
+    end_time = db.Column(db.DateTime, nullable=False)
+    duration_minutes = db.Column(db.Integer, nullable=False)
+    productivity_rating = db.Column(db.Integer, nullable=True)  # 1-5 scale
+    notes = db.Column(db.Text, nullable=True)
+    is_verified = db.Column(db.Boolean, default=False)
+    verified_by = db.Column(db.Integer, db.ForeignKey('teacher_staff.id'), nullable=True)
+    verified_at = db.Column(db.DateTime, nullable=True)
+    
+    # Relationships
+    student = db.relationship('Student', backref='time_tracking')
+    group = db.relationship('StudentGroup', backref='time_tracking')
+    group_assignment = db.relationship('GroupAssignment', backref='time_tracking')
+    verifier = db.relationship('TeacherStaff', backref='verified_time_tracking')
+    
+    def __repr__(self):
+        return f"TimeTracking(Student: {self.student_id}, Duration: {self.duration_minutes}min)"
+
+
+class CollaborationMetrics(db.Model):
+    """
+    Model for tracking collaboration metrics and group dynamics.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    group_id = db.Column(db.Integer, db.ForeignKey('student_group.id'), nullable=False)
+    group_assignment_id = db.Column(db.Integer, db.ForeignKey('group_assignment.id'), nullable=False)
+    metric_type = db.Column(db.String(50), nullable=False)  # communication, participation, leadership, conflict_resolution
+    metric_value = db.Column(db.Float, nullable=False)
+    metric_description = db.Column(db.Text, nullable=True)
+    measurement_date = db.Column(db.DateTime, default=datetime.utcnow)
+    measured_by = db.Column(db.Integer, db.ForeignKey('teacher_staff.id'), nullable=True)
+    measurement_method = db.Column(db.String(50), nullable=False)  # observation, peer_evaluation, self_assessment, automated
+    
+    # Relationships
+    group = db.relationship('StudentGroup', backref='collaboration_metrics')
+    group_assignment = db.relationship('GroupAssignment', backref='collaboration_metrics')
+    measurer = db.relationship('TeacherStaff', backref='measured_collaboration')
+    
+    def __repr__(self):
+        return f"CollaborationMetrics(Group: {self.group_id}, Type: {self.metric_type})"
+
+
+class ReportExport(db.Model):
+    """
+    Model for tracking report exports and downloads.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    report_id = db.Column(db.Integer, db.ForeignKey('group_work_report.id'), nullable=False)
+    export_format = db.Column(db.String(20), nullable=False)  # pdf, excel, csv, json
+    export_path = db.Column(db.String(500), nullable=False)
+    file_size_bytes = db.Column(db.Integer, nullable=True)
+    exported_by = db.Column(db.Integer, db.ForeignKey('teacher_staff.id'), nullable=False)
+    exported_at = db.Column(db.DateTime, default=datetime.utcnow)
+    download_count = db.Column(db.Integer, default=0)
+    last_downloaded = db.Column(db.DateTime, nullable=True)
+    
+    # Relationships
+    report = db.relationship('GroupWorkReport', backref='exports')
+    exporter = db.relationship('TeacherStaff', backref='exported_reports')
+    
+    def __repr__(self):
+        return f"ReportExport(Report: {self.report_id}, Format: {self.export_format})"
+
+
+class AnalyticsDashboard(db.Model):
+    """
+    Model for storing dashboard configurations and saved analytics views.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    class_id = db.Column(db.Integer, db.ForeignKey('class.id'), nullable=False)
+    dashboard_name = db.Column(db.String(200), nullable=False)
+    dashboard_type = db.Column(db.String(50), nullable=False)  # overview, detailed, custom
+    widget_config = db.Column(db.Text, nullable=False)  # JSON string with widget configurations
+    filter_settings = db.Column(db.Text, nullable=True)  # JSON string with filter settings
+    is_shared = db.Column(db.Boolean, default=False)
+    created_by = db.Column(db.Integer, db.ForeignKey('teacher_staff.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_accessed = db.Column(db.DateTime, nullable=True)
+    access_count = db.Column(db.Integer, default=0)
+    
+    # Relationships
+    class_info = db.relationship('Class', backref='analytics_dashboards')
+    creator = db.relationship('TeacherStaff', backref='created_dashboards')
+    
+    def __repr__(self):
+        return f"AnalyticsDashboard('{self.dashboard_name}', Type: {self.dashboard_type})"
+
+
+class PerformanceBenchmark(db.Model):
+    """
+    Model for storing performance benchmarks and standards.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    class_id = db.Column(db.Integer, db.ForeignKey('class.id'), nullable=False)
+    benchmark_name = db.Column(db.String(200), nullable=False)
+    benchmark_type = db.Column(db.String(50), nullable=False)  # grade, participation, collaboration, time_management
+    benchmark_value = db.Column(db.Float, nullable=False)
+    benchmark_description = db.Column(db.Text, nullable=True)
+    is_active = db.Column(db.Boolean, default=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('teacher_staff.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    effective_date = db.Column(db.DateTime, nullable=True)
+    expiration_date = db.Column(db.DateTime, nullable=True)
+    
+    # Relationships
+    class_info = db.relationship('Class', backref='performance_benchmarks')
+    creator = db.relationship('TeacherStaff', backref='created_benchmarks')
+    
+    def __repr__(self):
+        return f"PerformanceBenchmark('{self.benchmark_name}', Value: {self.benchmark_value})"
+

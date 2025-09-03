@@ -654,18 +654,47 @@
                 </div>
             </div>
             <div class="card-body">
+                <style>
+                    .teachers-table {
+                        font-size: 0.9rem;
+                    }
+                    .teachers-table th {
+                        font-weight: 600;
+                        border-bottom: 2px solid #dee2e6;
+                    }
+                    .teachers-table td {
+                        vertical-align: middle;
+                        padding: 0.75rem 0.5rem;
+                    }
+                    .teachers-table .badge {
+                        font-size: 0.75rem;
+                    }
+                    .teachers-table .btn-group-sm .btn {
+                        padding: 0.25rem 0.5rem;
+                        font-size: 0.75rem;
+                    }
+                    @media (max-width: 768px) {
+                        .teachers-table {
+                            font-size: 0.8rem;
+                        }
+                        .teachers-table th,
+                        .teachers-table td {
+                            padding: 0.5rem 0.25rem;
+                        }
+                    }
+                </style>
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle">
-                        <thead>
+                    <table class="table table-hover align-middle teachers-table">
+                        <thead class="table-dark">
                             <tr>
-                                <th>Name</th>
-                                <th>Role</th>
-                                <th>Department</th>
-                                <th>Email</th>
-                                <th>Username</th>
-                                <th>Employment</th>
-                                <th>Status</th>
-                                <th>Actions</th>
+                                <th style="min-width: 200px;">Name</th>
+                                <th style="min-width: 120px;">Role</th>
+                                <th style="min-width: 150px;">Department</th>
+                                <th style="min-width: 180px;">Email</th>
+                                <th style="min-width: 100px;">Username</th>
+                                <th style="min-width: 100px;">Employment</th>
+                                <th style="min-width: 80px;">Status</th>
+                                <th style="min-width: 200px;">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -673,23 +702,23 @@
                                 <tr>
                                     <td>
                                         <div class="d-flex align-items-center">
-                                            <div class="me-2">
+                                            <div class="me-3">
                                                 {% if teacher.image %}
                                                     <img src="{{ url_for('static', filename='uploads/' + teacher.image) }}" 
                                                          alt="{{ teacher.first_name }} {{ teacher.last_name }}" 
                                                          class="rounded-circle" 
-                                                         style="width: 32px; height: 32px; object-fit: cover;">
+                                                         style="width: 40px; height: 40px; object-fit: cover;">
                                                 {% else %}
                                                     <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center" 
-                                                         style="width: 32px; height: 32px;">
+                                                         style="width: 40px; height: 40px;">
                                                         <i class="bi bi-person-fill text-white"></i>
                                                     </div>
                                                 {% endif %}
                                             </div>
                                             <div>
-                                                <strong>{{ teacher.first_name }}{% if teacher.middle_initial %} {{ teacher.middle_initial }}.{% endif %} {{ teacher.last_name }}</strong>
+                                                <div class="fw-bold text-dark">{{ teacher.first_name }}{% if teacher.middle_initial %} {{ teacher.middle_initial }}.{% endif %} {{ teacher.last_name }}</div>
                                                 {% if teacher.staff_id %}
-                                                    <br><small class="text-muted">ID: {{ teacher.staff_id }}</small>
+                                                    <small class="text-muted">ID: {{ teacher.staff_id }}</small>
                                                 {% endif %}
                                             </div>
                                         </div>
@@ -697,27 +726,34 @@
                                     <td>
                                         {% if teacher.user %}
                                             {% set badge_class = 'bg-danger' if teacher.user.role == 'Director' else 'bg-warning' if teacher.user.role == 'School Administrator' else 'bg-info' if teacher.user.role == 'Teacher' else 'bg-secondary' if teacher.user.role == 'Tech' else 'bg-light text-dark' %}
-                                            <span class="badge {{ badge_class }}">
+                                            <span class="badge {{ badge_class }} mb-1 d-block">
                                                 {{ teacher.user.role }}
                                             </span>
                                             {% if teacher.assigned_role and teacher.assigned_role != teacher.user.role %}
-                                                <br><small class="text-muted">{{ teacher.assigned_role }}</small>
+                                                <small class="text-muted d-block">{{ teacher.assigned_role }}</small>
                                             {% endif %}
                                         {% else %}
-                                            <span class="badge bg-warning">No Account</span>
+                                            <span class="badge bg-warning mb-1 d-block">No Account</span>
                                             {% if teacher.assigned_role %}
-                                                <br><small class="text-muted">{{ teacher.assigned_role }}</small>
+                                                <small class="text-muted d-block">{{ teacher.assigned_role }}</small>
                                             {% endif %}
                                         {% endif %}
                                     </td>
                                     <td>
                                         {% if teacher.department %}
-                                            <span class="badge bg-info">{{ teacher.department }}</span>
+                                            {% set departments = teacher.department.split(',') %}
+                                            {% for dept in departments %}
+                                                <span class="badge bg-info mb-1 d-block text-wrap" style="max-width: 140px; white-space: normal; line-height: 1.2;">{{ dept.strip() }}</span>
+                                            {% endfor %}
                                         {% else %}
                                             <span class="text-muted">N/A</span>
                                         {% endif %}
                                     </td>
-                                    <td>{{ teacher.email or 'N/A' }}</td>
+                                    <td>
+                                        <div class="text-truncate" style="max-width: 170px;" title="{{ teacher.email or 'N/A' }}">
+                                            {{ teacher.email or 'N/A' }}
+                                        </div>
+                                    </td>
                                     <td>
                                         {% if teacher.user %}
                                             <span class="badge bg-primary">{{ teacher.user.username }}</span>
@@ -736,10 +772,18 @@
                                         <span class="badge bg-success">Active</span>
                                     </td>
                                     <td>
-                                        <div class="btn-group" role="group">
-                                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="viewTeacher({{ teacher.id }})">View</button>
-                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="editTeacher({{ teacher.id }})">Edit</button>
-                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeTeacher({{ teacher.id }}, '{{ teacher.first_name }} {{ teacher.last_name }}')">Remove</button>
+                                        <div class="d-flex flex-column gap-1">
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <button type="button" class="btn btn-outline-primary" onclick="viewTeacher({{ teacher.id }})" title="View Details">
+                                                    <i class="bi bi-eye"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-outline-secondary" onclick="editTeacher({{ teacher.id }})" title="Edit">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-outline-danger" onclick="removeTeacher({{ teacher.id }}, '{{ teacher.first_name }} {{ teacher.last_name }}')" title="Remove">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
                                         </div>
                                     </td>
                                 </tr>

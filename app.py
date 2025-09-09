@@ -478,4 +478,33 @@ def create_app(config_class=None):
         except Exception as e:
             print(f"Failed to start GPA scheduler: {e}")
     
+    # Temporary migration route for grade_levels column
+    @app.route('/migrate/add-grade-levels')
+    def add_grade_levels_migration():
+        """Migration route to add grade_levels column to class table"""
+        try:
+            from sqlalchemy import text
+            
+            # Check if the column already exists
+            result = db.session.execute(text("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'class' AND column_name = 'grade_levels'
+            """))
+            
+            if result.fetchone():
+                flash('grade_levels column already exists in class table', 'info')
+                return redirect(url_for('management.classes'))
+            
+            # Add the grade_levels column
+            db.session.execute(text("ALTER TABLE class ADD COLUMN grade_levels VARCHAR(100)"))
+            db.session.commit()
+            
+            flash('Successfully added grade_levels column to class table! You can now uncomment the grade_levels field in models.py', 'success')
+            return redirect(url_for('management.classes'))
+            
+        except Exception as e:
+            flash(f'Error adding grade_levels column: {str(e)}', 'danger')
+            return redirect(url_for('management.classes'))
+    
     return app

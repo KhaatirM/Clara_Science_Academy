@@ -20,7 +20,7 @@
         </div>
         <div class="card-body">
           <p class="mb-2"><strong>Subject:</strong> {{ class_info.subject or 'N/A' }}</p>
-          <p class="mb-2"><strong>Grade Level:</strong> {{ class_info.grade_level or 'N/A' }}</p>
+          <p class="mb-2"><strong>Grade Levels:</strong> {{ class_info.get_grade_levels_display() }}</p>
           <p class="mb-2"><strong>Room:</strong> {{ class_info.room_number if class_info.room_number else 'N/A' }}</p>
           <p class="mb-2"><strong>Schedule:</strong> {{ class_info.schedule or 'TBD' }}</p>
           <p class="mb-0"><strong>School Year:</strong> {{ class_info.school_year.name if class_info.school_year else 'N/A' }}</p>

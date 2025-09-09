@@ -1712,6 +1712,7 @@ def add_class():
         class_name = request.form.get('class_name', '').strip()
         subject = request.form.get('subject', '').strip()
         teacher_id = request.form.get('teacher_id', type=int)
+        grade_levels = request.form.getlist('grade_levels')  # Get multiple selected values
 
         # Validate required fields
         if not all([class_name, subject, teacher_id]):
@@ -1737,6 +1738,13 @@ def add_class():
             teacher_id=teacher_id,
             school_year_id=current_school_year.id  # Add the active school year ID
         )
+        
+        # Handle grade levels
+        if grade_levels:
+            # Convert to integers and sort
+            grade_list = sorted([int(grade) for grade in grade_levels if grade.isdigit()])
+            new_class.set_grade_levels(grade_list)
+        
         db.session.add(new_class)
         db.session.commit()
         flash('Class added successfully!', 'success')
@@ -3075,6 +3083,7 @@ def edit_class(class_id):
         name = request.form.get('name', '').strip()
         subject = request.form.get('subject', '').strip()
         teacher_id = request.form.get('teacher_id', type=int)
+        grade_levels = request.form.getlist('grade_levels')  # Get multiple selected values
         
         # Validate required fields
         if not all([name, subject, teacher_id]):
@@ -3086,6 +3095,14 @@ def edit_class(class_id):
             class_info.name = name
             class_info.subject = subject
             class_info.teacher_id = teacher_id
+            
+            # Handle grade levels
+            if grade_levels:
+                # Convert to integers and sort
+                grade_list = sorted([int(grade) for grade in grade_levels if grade.isdigit()])
+                class_info.set_grade_levels(grade_list)
+            else:
+                class_info.grade_levels = None
             
             db.session.commit()
             flash('Class updated successfully!', 'success')

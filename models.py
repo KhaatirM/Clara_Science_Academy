@@ -344,9 +344,35 @@ class Class(db.Model):
     subject = db.Column(db.String(100), nullable=False)
     teacher_id = db.Column(db.Integer, db.ForeignKey('teacher_staff.id'), nullable=False)
     school_year_id = db.Column(db.Integer, db.ForeignKey('school_year.id'), nullable=False)
+    grade_levels = db.Column(db.String(100), nullable=True)  # Store as comma-separated string like "3,4,5"
 
     teacher = db.relationship('TeacherStaff', backref='classes', lazy=True)
     school_year = db.relationship('SchoolYear', backref='classes', lazy=True)
+
+    def get_grade_levels(self):
+        """Return grade levels as a list of integers"""
+        if not self.grade_levels:
+            return []
+        return [int(grade.strip()) for grade in self.grade_levels.split(',') if grade.strip()]
+    
+    def set_grade_levels(self, grade_list):
+        """Set grade levels from a list of integers"""
+        if grade_list:
+            self.grade_levels = ','.join(map(str, sorted(grade_list)))
+        else:
+            self.grade_levels = None
+    
+    def get_grade_levels_display(self):
+        """Return grade levels as a formatted string for display"""
+        grades = self.get_grade_levels()
+        if not grades:
+            return "Not specified"
+        if len(grades) == 1:
+            return f"Grade {grades[0]}"
+        elif len(grades) == 2:
+            return f"Grades {grades[0]} & {grades[1]}"
+        else:
+            return f"Grades {', '.join(map(str, grades[:-1]))} & {grades[-1]}"
 
     def __repr__(self):
         return f"Class('{self.name}', Subject: '{self.subject}')"

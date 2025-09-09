@@ -50,6 +50,23 @@
                             <div class="form-text">Choose the teacher who will be responsible for this class</div>
                         </div>
 
+                        <div class="mb-3">
+                            <label for="grade_levels" class="form-label">Grade Levels</label>
+                            <select class="form-select" id="grade_levels" name="grade_levels" multiple size="6" style="min-height: 120px;">
+                                {% for grade in range(1, 13) %}
+                                    <option value="{{ grade }}" 
+                                            {% if grade in class_info.get_grade_levels() %}selected{% endif %}>
+                                        Grade {{ grade }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Hold Ctrl (or Cmd on Mac) to select multiple grade levels. 
+                                This class can serve students from the selected grades.
+                            </div>
+                        </div>
+
                         <div class="d-flex flex-column flex-md-row justify-content-between gap-2">
                             <a href="{{ url_for('management.view_class', class_id=class_info.id) }}" class="btn btn-secondary">
                                 <i class="bi bi-x-circle me-1"></i> Cancel
@@ -92,6 +109,11 @@
                                 Not assigned
                             {% endif %}
                         </span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Grade Levels:</strong><br>
+                        <span class="text-muted">{{ class_info.get_grade_levels_display() }}</span>
                     </div>
                     
                     <div class="mb-3">

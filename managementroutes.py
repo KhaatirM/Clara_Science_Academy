@@ -1912,7 +1912,8 @@ def grade_assignment(assignment_id):
                          class_obj=class_obj,
                          students=students, 
                          grades=grades, 
-                         submissions=submissions)
+                         submissions=submissions,
+                         role_prefix=None)
 
 
 @management_blueprint.route('/view-assignment/<int:assignment_id>')
@@ -3058,7 +3059,8 @@ def view_class(class_id):
                          teacher=teacher,
                          enrolled_students=enrolled_students,
                          assignments=assignments,
-                         today=today)
+                         today=today,
+                         role_prefix=None)
 
 
 @management_blueprint.route('/edit-class/<int:class_id>', methods=['GET', 'POST'])

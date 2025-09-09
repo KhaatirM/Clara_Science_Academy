@@ -82,17 +82,17 @@
             <h6 class="text-muted mb-2"><i class="bi bi-people-fill me-1"></i>Group Work & Assignments</h6>
             <div class="row g-2">
               <div class="col-6 col-md-4">
-                <a href="{{ url_for('management.admin_class_group_assignments', class_id=class_info.id) }}" class="btn btn-outline-secondary btn-sm w-100 class-management-btn">
+                <a href="{{ url_for('teacher.class_group_assignments', class_id=class_info.id) }}" class="btn btn-outline-secondary btn-sm w-100 class-management-btn">
                   <i class="bi bi-journal-plus me-1"></i>Group Assignments
                 </a>
               </div>
               <div class="col-6 col-md-4">
-                <a href="{{ url_for('management.admin_class_deadline_reminders', class_id=class_info.id) }}" class="btn btn-outline-primary btn-sm w-100 class-management-btn">
+                <a href="{{ url_for('teacher.class_deadline_reminders', class_id=class_info.id) }}" class="btn btn-outline-primary btn-sm w-100 class-management-btn">
                   <i class="bi bi-bell me-1"></i>Deadline Reminders
                 </a>
               </div>
               <div class="col-6 col-md-4">
-                <a href="{{ url_for('management.admin_class_analytics', class_id=class_info.id) }}" class="btn btn-outline-primary btn-sm w-100 class-management-btn">
+                <a href="{{ url_for('teacher.class_analytics', class_id=class_info.id) }}" class="btn btn-outline-primary btn-sm w-100 class-management-btn">
                   <i class="bi bi-graph-up me-1"></i>Reports & Analytics
                 </a>
               </div>
@@ -104,17 +104,17 @@
             <h6 class="text-muted mb-2"><i class="bi bi-star me-1"></i>Assessment & Feedback</h6>
             <div class="row g-2">
               <div class="col-6 col-md-4">
-                <a href="{{ url_for('management.admin_class_360_feedback', class_id=class_info.id) }}" class="btn btn-outline-info btn-sm w-100 class-management-btn">
+                <a href="{{ url_for('teacher.class_360_feedback', class_id=class_info.id) }}" class="btn btn-outline-info btn-sm w-100 class-management-btn">
                   <i class="bi bi-arrow-repeat me-1"></i>360° Feedback
                 </a>
               </div>
               <div class="col-6 col-md-4">
-                <a href="{{ url_for('management.admin_class_reflection_journals', class_id=class_info.id) }}" class="btn btn-outline-success btn-sm w-100 class-management-btn">
+                <a href="{{ url_for('teacher.class_reflection_journals', class_id=class_info.id) }}" class="btn btn-outline-success btn-sm w-100 class-management-btn">
                   <i class="bi bi-journal-text me-1"></i>Reflection Journals
                 </a>
               </div>
               <div class="col-6 col-md-4">
-                <a href="{{ url_for('management.admin_class_conflicts', class_id=class_info.id) }}" class="btn btn-outline-danger btn-sm w-100 class-management-btn">
+                <a href="{{ url_for('teacher.class_conflicts', class_id=class_info.id) }}" class="btn btn-outline-danger btn-sm w-100 class-management-btn">
                   <i class="bi bi-exclamation-triangle me-1"></i>Conflict Resolution
                 </a>
               </div>

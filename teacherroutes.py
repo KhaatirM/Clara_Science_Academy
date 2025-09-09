@@ -166,8 +166,51 @@ def teacher_dashboard():
     total_students = Student.query.count()  # Simplified - should filter by enrollment
     active_assignments = Assignment.query.filter(Assignment.class_id.in_(class_ids)).count()
     
+    # Calculate additional teacher stats
+    total_assignments = Assignment.query.filter(Assignment.class_id.in_(class_ids)).count()
+    grades_entered = Grade.query.join(Assignment).filter(Assignment.class_id.in_(class_ids)).count()
+    
+    # Calculate monthly and weekly stats
+    from datetime import datetime, timedelta
+    now = datetime.now()
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    week_start = now - timedelta(days=now.weekday())
+    week_end = week_start + timedelta(days=7)
+    
+    # Assignments due this week
+    due_assignments = Assignment.query.filter(
+        Assignment.class_id.in_(class_ids),
+        Assignment.due_date >= week_start,
+        Assignment.due_date < week_end
+    ).count()
+    
+    # Grades entered this month
+    grades_this_month = Grade.query.join(Assignment).filter(
+        Assignment.class_id.in_(class_ids),
+        Grade.graded_at >= month_start
+    ).count()
+    
+    # Create teacher_data object for template compatibility
+    teacher_data = {
+        'classes': classes,
+        'total_students': total_students,
+        'active_assignments': active_assignments,
+        'total_assignments': total_assignments,
+        'grades_entered': grades_entered
+    }
+    
+    # Create monthly and weekly stats
+    monthly_stats = {
+        'grades_entered': grades_this_month
+    }
+    
+    weekly_stats = {
+        'due_assignments': due_assignments
+    }
+    
     return render_template('role_teacher_dashboard.html', 
                          teacher=teacher, 
+                         teacher_data=teacher_data,
                          classes=classes,
                          recent_assignments=recent_assignments,
                          recent_grades=recent_grades,
@@ -175,6 +218,8 @@ def teacher_dashboard():
                          notifications=notifications,
                          total_students=total_students,
                          active_assignments=active_assignments,
+                         monthly_stats=monthly_stats,
+                         weekly_stats=weekly_stats,
                          section='home',
                          active_tab='home',
                          is_admin=is_admin())

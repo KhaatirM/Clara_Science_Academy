@@ -70,14 +70,68 @@ management_blueprint = Blueprint('management', __name__)
 @login_required
 @management_required
 def management_dashboard():
+    from datetime import datetime, timedelta
+    
+    # Basic stats
     stats = {
         'students': Student.query.count(),
         'teachers': TeacherStaff.query.count(),
         'classes': Class.query.count(),
         'assignments': Assignment.query.count()
     }
+    
+    # Calculate monthly stats
+    now = datetime.now()
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    
+    # New students this month
+    new_students = Student.query.filter(Student.created_at >= month_start).count()
+    
+    # Assignments due this week
+    week_start = now - timedelta(days=now.weekday())
+    week_end = week_start + timedelta(days=7)
+    due_assignments = Assignment.query.filter(
+        Assignment.due_date >= week_start,
+        Assignment.due_date < week_end
+    ).count()
+    
+    # Calculate attendance rate (simplified)
+    total_attendance_records = Attendance.query.count()
+    present_records = Attendance.query.filter_by(status='Present').count()
+    attendance_rate = round((present_records / total_attendance_records * 100), 1) if total_attendance_records > 0 else 0
+    
+    # Calculate average grade (simplified)
+    grades = Grade.query.all()
+    if grades:
+        total_score = 0
+        valid_grades = 0
+        for grade in grades:
+            try:
+                grade_data = json.loads(grade.grade_data)
+                if 'score' in grade_data and isinstance(grade_data['score'], (int, float)):
+                    total_score += grade_data['score']
+                    valid_grades += 1
+            except (json.JSONDecodeError, TypeError, KeyError):
+                continue
+        
+        average_grade = round(total_score / valid_grades, 1) if valid_grades > 0 else 0
+    else:
+        average_grade = 0
+    
+    monthly_stats = {
+        'new_students': new_students,
+        'attendance_rate': attendance_rate,
+        'average_grade': average_grade
+    }
+    
+    weekly_stats = {
+        'due_assignments': due_assignments
+    }
+    
     return render_template('role_dashboard.html', 
                          stats=stats,
+                         monthly_stats=monthly_stats,
+                         weekly_stats=weekly_stats,
                          section='home',
                          active_tab='home')
 

@@ -2,13 +2,14 @@ import os
 import json
 from flask import Flask, render_template, g, current_app, redirect, url_for, flash, request, session
 from flask_login import current_user, login_user, logout_user, login_required
+from flask_wtf.csrf import CSRFError
 from werkzeug.security import check_password_hash
-from config import Config
+from config import Config, ProductionConfig, DevelopmentConfig, TestingConfig
 from sqlalchemy import func, and_
 from datetime import datetime, timezone
 
 # Import extensions to avoid circular imports
-from extensions import db, login_manager
+from extensions import db, login_manager, csrf
 # from flask_migrate import Migrate  # Temporarily disabled due to import issues
 
 # Import models here to avoid circular imports
@@ -311,10 +312,21 @@ def get_user_activity_log(user_id=None, action=None, start_date=None, end_date=N
     return query.order_by(ActivityLog.timestamp.desc()).limit(limit).all()
 
 
-def create_app(config_class=Config):
+def create_app(config_class=None):
     """
     Factory function to create the Flask application.
+    Automatically selects configuration based on environment.
     """
+    if config_class is None:
+        # Auto-detect environment and select appropriate config
+        env = os.environ.get('FLASK_ENV', 'production').lower()
+        if env == 'development':
+            config_class = DevelopmentConfig
+        elif env == 'testing':
+            config_class = TestingConfig
+        else:
+            config_class = ProductionConfig  # Default to production for security
+    
     app = Flask(__name__)
     app.config.from_object(config_class)
 
@@ -322,6 +334,9 @@ def create_app(config_class=Config):
     db.init_app(app)
     # migrate = Migrate(app, db)  # Temporarily disabled due to import issues
     login_manager.init_app(app)
+    csrf.init_app(app)
+    # Disable automatic CSRF token rendering
+    app.config['WTF_CSRF_CHECK_DEFAULT'] = False
 
     # User loader function for Flask-Login
     @login_manager.user_loader
@@ -361,8 +376,7 @@ def create_app(config_class=Config):
             "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
             "img-src 'self' data: blob: https:; "
             "font-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
-            "connect-src 'self' https:; "
-            "frame-ancestors 'none';"
+            "connect-src 'self' https:;"
         )
         return response
 
@@ -389,6 +403,12 @@ def create_app(config_class=Config):
         """Handle 500 Internal Server errors."""
         db.session.rollback()
         return render_template('home.html'), 500
+    
+    @app.errorhandler(CSRFError)
+    def handle_csrf_error(error):
+        """Handle CSRF errors."""
+        flash('Invalid request. Please try again.', 'danger')
+        return redirect(url_for('auth.login'))
 
     @app.route('/')
     def home():

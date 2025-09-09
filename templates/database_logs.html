@@ -154,11 +154,13 @@
                     <div class="row g-3">
                         <div class="col-12 col-md-6">
                             <form method="POST" action="{{ url_for('tech.backup_database') }}" class="d-inline">
+        { csrf_token() }
                                 <button type="submit" class="btn btn-outline-primary me-2">
                                     <i class="bi bi-download"></i> Backup Database
                                 </button>
                             </form>
                             <form method="POST" action="{{ url_for('tech.check_database_integrity') }}" class="d-inline">
+        { csrf_token() }
                                 <button type="submit" class="btn btn-outline-success me-2">
                                     <i class="bi bi-check-circle"></i> Check Integrity
                                 </button>

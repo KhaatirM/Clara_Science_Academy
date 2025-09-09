@@ -8,7 +8,7 @@
       <a href="{{ url_for('teacher.class_reports', class_id=class_obj.id) }}" class="btn btn-outline-primary btn-sm">
         <i class="bi bi-graph-up me-1"></i>Reports
       </a>
-      <a href="{{ url_for('teacher.view_class', class_id=class_obj.id) }}" class="btn btn-outline-secondary btn-sm">
+      <a href="{{ url_for('management.view_class', class_id=class_obj.id) if role_prefix else url_for('teacher.view_class', class_id=class_obj.id) }}" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-arrow-left me-1"></i>Back to Class
       </a>
     </div>
@@ -242,16 +242,16 @@
         </div>
         <div class="card-body">
           <div class="d-grid gap-2">
-            <a href="{{ url_for('teacher.class_contributions', class_id=class_obj.id) }}" class="btn btn-success btn-sm">
+            <a href="{{ url_for('management.admin_class_contributions', class_id=class_obj.id) if role_prefix else url_for('teacher.class_contributions', class_id=class_obj.id) }}" class="btn btn-success btn-sm">
               <i class="bi bi-people me-1"></i>Contributions Tracking
             </a>
-            <a href="{{ url_for('teacher.class_time_tracking', class_id=class_obj.id) }}" class="btn btn-warning btn-sm">
+            <a href="{{ url_for('management.admin_class_time_tracking', class_id=class_obj.id) if role_prefix else url_for('teacher.class_time_tracking', class_id=class_obj.id) }}" class="btn btn-warning btn-sm">
               <i class="bi bi-clock me-1"></i>Time Tracking
             </a>
-            <a href="{{ url_for('teacher.create_report', class_id=class_obj.id) }}" class="btn btn-info btn-sm">
+            <a href="{{ url_for('management.admin_create_report', class_id=class_obj.id) if role_prefix else url_for('teacher.create_report', class_id=class_obj.id) }}" class="btn btn-info btn-sm">
               <i class="bi bi-plus-circle me-1"></i>Create Report
             </a>
-            <a href="{{ url_for('teacher.class_groups', class_id=class_obj.id) }}" class="btn btn-secondary btn-sm">
+            <a href="{{ url_for('management.admin_class_groups', class_id=class_obj.id) if role_prefix else url_for('teacher.class_groups', class_id=class_obj.id) }}" class="btn btn-secondary btn-sm">
               <i class="bi bi-people-fill me-1"></i>Manage Groups
             </a>
           </div>

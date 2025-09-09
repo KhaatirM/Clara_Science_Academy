@@ -40,6 +40,7 @@
                     </div>
                     
                     <form method="POST" action="{{ url_for('management.upload_calendar_pdf') }}" enctype="multipart/form-data">
+        { csrf_token() }
                         <div class="mb-3">
                             <label for="calendar_pdf" class="form-label">Select Calendar PDF <span class="text-danger">*</span></label>
                             <input type="file" class="form-control" id="calendar_pdf" name="calendar_pdf" accept=".pdf" required>
@@ -87,6 +88,7 @@
                 </div>
                 <div class="modal-body">
                     <form method="POST" action="{{ url_for('management.school_years') }}">
+        { csrf_token() }
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
@@ -410,6 +412,7 @@
                                         <div class="btn-group btn-group-sm" role="group">
                                             {% if not year.is_active %}
                                             <form method="POST" action="{{ url_for('management.set_active_school_year', year_id=year.id) }}" style="display: inline;">
+        { csrf_token() }
                                                 <button type="submit" class="btn btn-outline-success" title="Set as Active">
                                                     <i class="bi bi-check-circle"></i>
                                                 </button>
@@ -454,6 +457,7 @@
                 </div>
                 <div class="modal-body">
                     <form method="POST" action="{{ url_for('management.edit_academic_period', period_id=period.id) }}">
+        { csrf_token() }
                         <div class="mb-3">
                             <label for="start_date_{{ period.id }}" class="form-label">Start Date</label>
                             <input type="date" class="form-control" id="start_date_{{ period.id }}" name="start_date" value="{{ period.start_date.strftime('%Y-%m-%d') }}" required>
@@ -515,6 +519,7 @@
                 
                 <div class="mt-3">
                     <form method="POST" action="{{ url_for('management.generate_academic_periods', year_id=year.id) }}">
+        { csrf_token() }
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-magic me-2"></i>Generate/Regenerate Academic Periods
                         </button>
@@ -581,6 +586,7 @@
             </div>
             <div class="modal-body">
                 <form method="POST" action="{{ url_for('management.edit_school_year', year_id=active_school_year.id) if active_school_year else '#' }}">
+        { csrf_token() }
                     <div class="mb-3">
                         <label for="edit_start_date" class="form-label">Start Date</label>
                         <input type="date" class="form-control" id="edit_start_date" name="start_date" 

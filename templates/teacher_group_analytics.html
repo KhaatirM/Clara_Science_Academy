@@ -5,7 +5,7 @@
   <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
     <h3 class="mb-2 mb-md-0"><i class="bi bi-graph-up me-2"></i>Group Analytics - {{ class_obj.name }}</h3>
     <div class="d-flex gap-2">
-      <a href="{{ url_for('teacher.class_groups', class_id=class_obj.id) }}" class="btn btn-outline-secondary btn-sm">
+      <a href="{{ url_for('management.admin_class_groups', class_id=class_obj.id) if role_prefix else url_for('teacher.class_groups', class_id=class_obj.id) }}" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-arrow-left me-1"></i>Back to Groups
       </a>
     </div>
@@ -128,7 +128,7 @@
                   </td>
                   <td>
                     <div class="btn-group btn-group-sm" role="group">
-                      <a href="{{ url_for('teacher.manage_group', group_id=data.group.id) }}" class="btn btn-outline-primary">
+                      <a href="{{ url_for('management.admin_manage_group', group_id=data.group.id) if role_prefix else url_for('teacher.manage_group', group_id=data.group.id) }}" class="btn btn-outline-primary">
                         <i class="bi bi-gear"></i>
                       </a>
                     </div>
@@ -143,7 +143,7 @@
           <i class="bi bi-graph-up display-1 text-muted"></i>
           <h5 class="mt-3 text-muted">No Groups Found</h5>
           <p class="text-muted">Create some groups to see analytics data.</p>
-          <a href="{{ url_for('teacher.class_groups', class_id=class_obj.id) }}" class="btn btn-primary">
+          <a href="{{ url_for('management.admin_class_groups', class_id=class_obj.id) if role_prefix else url_for('teacher.class_groups', class_id=class_obj.id) }}" class="btn btn-primary">
             <i class="bi bi-plus-circle me-1"></i>Create Groups
           </a>
         </div>

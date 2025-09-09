@@ -104,6 +104,7 @@
                 </div>
                 <div class="card-body">
                     <form method="POST" action="{{ url_for('management.management_send_group_message', group_id=group.id) }}">
+        { csrf_token() }
                         <div class="mb-3">
                             <label for="content" class="form-label">Message</label>
                             <textarea class="form-control" id="content" name="content" rows="4" 

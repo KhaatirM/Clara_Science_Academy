@@ -6,5 +6,5 @@ app = create_app()
 
 if __name__ == '__main__':
     # Run the application
-    # The debug setting will be controlled from your config.py file
-    app.run(debug=True)
+    # The debug setting is controlled from config.py for security
+    app.run(debug=app.config.get('DEBUG', False))

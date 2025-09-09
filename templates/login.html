@@ -1,12 +1,111 @@
 {% extends "base.html" %}
 
 {% block content %}
+<style>
+/* Hide CSRF token from being visible */
+input[name="csrf_token"] {
+    display: none !important;
+}
+
+/* More aggressive approach to hide CSRF token text */
+.card-body {
+    position: relative;
+    overflow: hidden;
+}
+
+/* Hide any text that appears between h2 and form */
+.card-body h2 + *:not(form) {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 0 !important;
+    line-height: 0 !important;
+}
+
+/* Alternative approach - hide any text nodes */
+.card-body > *:not(h2):not(form):not(div):not(script) {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+}
+
+/* Target any text that might be rendered as plain text */
+.card-body::after {
+    content: '';
+    position: absolute;
+    top: 60px;
+    left: 0;
+    right: 0;
+    height: 30px;
+    background: white;
+    z-index: 10;
+}
+
+/* More specific targeting for CSRF token text */
+.card-body h2 ~ *:not(form) {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 0 !important;
+    line-height: 0 !important;
+    overflow: hidden !important;
+}
+
+/* Hide any text nodes that might contain CSRF tokens */
+.card-body > *:not(h2):not(form):not(div):not(script):not(style) {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 0 !important;
+    line-height: 0 !important;
+    overflow: hidden !important;
+}
+
+/* Target any text that appears as a direct child of card-body */
+.card-body > text {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 0 !important;
+    line-height: 0 !important;
+    overflow: hidden !important;
+}
+
+/* Hide any text content that might be rendered */
+.card-body {
+    font-size: 0;
+}
+
+.card-body h2,
+.card-body form,
+.card-body div {
+    font-size: initial;
+}
+</style>
 <div class="row justify-content-center mt-3 mt-md-5 login-page">
   <div class="col-12 col-sm-8 col-md-6 col-lg-5">
     <div class="card shadow-sm">
       <div class="card-body p-3 p-md-4">
         <h2 class="text-center mb-4">Login</h2>
+        <!-- CSRF token will be automatically added here by Flask-WTF -->
         <form method="POST">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
           <div class="mb-3">
             <label for="username" class="form-label">Username</label>
             <input type="text" name="username" id="username" class="form-control" autocomplete="username" required>
@@ -176,6 +275,31 @@
 
     // Initial check on page load
     toggleUserIdInput();
+    
+    // Remove any CSRF token text that might appear
+    function removeCSRFTokenText() {
+      const cardBody = document.querySelector('.card-body');
+      if (cardBody) {
+        // Remove any text nodes that contain CSRF-like patterns
+        const walker = document.createTreeWalker(
+          cardBody,
+          NodeFilter.SHOW_TEXT,
+          null,
+          false
+        );
+        
+        let node;
+        while (node = walker.nextNode()) {
+          if (node.textContent && node.textContent.match(/^[A-Za-z0-9+/=]+\.[A-Za-z0-9+/=]+\.[A-Za-z0-9+/=]+$/)) {
+            node.remove();
+          }
+        }
+      }
+    }
+    
+    // Run immediately and after a short delay
+    removeCSRFTokenText();
+    setTimeout(removeCSRFTokenText, 100);
   });
 </script>
 {% endblock %}

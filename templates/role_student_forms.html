@@ -24,6 +24,7 @@
                 <hr>
                 <!-- Submission Form -->
                 <form method="POST" enctype="multipart/form-data">
+        { csrf_token() }
                     <h5>Your Submission</h5>
                     <!-- Display existing submission if it exists -->
                     {% if submission %}
@@ -66,6 +67,7 @@
             </div>
             <div class="card-body">
                 <form method="POST" enctype="multipart/form-data">
+        { csrf_token() }
                     <div class="row g-3">
                         <div class="col-12 col-md-6">
                             <div class="mb-3">
@@ -123,6 +125,7 @@
             </div>
             <div class="card-body">
                 <form method="POST">
+        { csrf_token() }
                     <div class="mb-3">
                         <label for="current_password" class="form-label">Current Password</label>
                         <input type="password" class="form-control" id="current_password" name="current_password" autocomplete="current-password" required>
@@ -154,6 +157,7 @@
             </div>
             <div class="card-body">
                 <form method="POST">
+        { csrf_token() }
                     <div class="mb-3">
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" id="email_notifications" name="email_notifications" {% if preferences.email_notifications %}checked{% endif %}>

@@ -6,8 +6,6 @@
 
     {# The form_action will be set by the Flask route (e.g., url_for('add_student_director') or url_for('edit_student_director', student_numeric_id=student_data.id)) #}
     <form method="POST" action="{{ url_for('management.add_student') }}" enctype="multipart/form-data" class="needs-validation" novalidate>
-        {# CSRF token would go here in a production app with Flask-WTF #}
-        {# {{ form.csrf_token }} #}
 
         <div class="row g-3">
             <h4 class="mt-4 mb-3 border-bottom pb-2">Student Information</h4>

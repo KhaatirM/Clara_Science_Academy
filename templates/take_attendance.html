@@ -27,6 +27,7 @@
             </form>
 
             <form method="POST" action="{{ url_for('teacher.take_attendance', class_id=class_item.id) }}">
+        { csrf_token() }
                 <input type="hidden" name="attendance_date" value="{{ attendance_date_str }}">
                 
                 <div class="alert alert-info mb-3">

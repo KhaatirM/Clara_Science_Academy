@@ -5,10 +5,10 @@
   <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
     <h3 class="mb-2 mb-md-0"><i class="bi bi-gear me-2"></i>Manage Group: {{ group.name }}</h3>
     <div class="d-flex gap-2">
-      <a href="{{ url_for('teacher.class_groups', class_id=group.class_id) }}" class="btn btn-outline-secondary btn-sm">
+      <a href="{{ url_for('management.admin_class_groups', class_id=group.class_id) if role_prefix else url_for('teacher.class_groups', class_id=group.class_id) }}" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-arrow-left me-1"></i>Back to Groups
       </a>
-      <a href="{{ url_for('teacher.create_group_contract', group_id=group.id) }}" class="btn btn-primary btn-sm">
+      <a href="{{ url_for('management.admin_create_group_contract', group_id=group.id) if role_prefix else url_for('teacher.create_group_contract', group_id=group.id) }}" class="btn btn-primary btn-sm">
         <i class="bi bi-file-text me-1"></i>Create Contract
       </a>
     </div>
@@ -83,6 +83,7 @@
                         <div class="btn-group btn-group-sm" role="group">
                           {% if not member.is_leader %}
                             <form method="POST" class="d-inline">
+        { csrf_token() }
                               <input type="hidden" name="action" value="set_leader">
                               <input type="hidden" name="student_id" value="{{ member.student_id }}">
                               <button type="submit" class="btn btn-outline-warning btn-sm" 
@@ -93,6 +94,7 @@
                           {% endif %}
                           <form method="POST" class="d-inline" 
                                 onsubmit="return confirm('Remove this student from the group?')">
+        { csrf_token() }
                             <input type="hidden" name="action" value="remove_student">
                             <input type="hidden" name="student_id" value="{{ member.student_id }}">
                             <button type="submit" class="btn btn-outline-danger btn-sm" 
@@ -146,6 +148,7 @@
                           </div>
                         </div>
                         <form method="POST" class="d-inline">
+        { csrf_token() }
                           <input type="hidden" name="action" value="add_student">
                           <input type="hidden" name="student_id" value="{{ student.id }}">
                           <button type="submit" class="btn btn-success btn-sm w-100">

@@ -188,7 +188,7 @@ def view_class(class_id):
     class_obj = Class.query.get_or_404(class_id)
     
     # Directors and School Administrators have access to all classes, teachers only to their assigned classes
-    if not is_admin() and class_obj.teacher_id != teacher.id:
+    if not is_admin() and teacher and class_obj.teacher_id != teacher.id:
         return redirect(url_for('teacher.teacher_dashboard'))
 
     # Get only actively enrolled students for this class
@@ -230,7 +230,7 @@ def add_assignment(class_id):
     # Authorization check - Directors and School Administrators can add assignments to any class
     teacher = get_teacher_or_admin()
     
-    if not is_admin() and class_obj.teacher_id != teacher.id:
+    if not is_admin() and teacher and class_obj.teacher_id != teacher.id:
         flash("You are not authorized to add assignments to this class.", "danger")
         return redirect(url_for('teacher.teacher_dashboard'))
 
@@ -328,7 +328,7 @@ def view_assignment(assignment_id):
     
     # Authorization check - Directors and School Administrators can view any assignment, teachers can only view their own
     current_teacher = get_teacher_or_admin()
-    if not is_admin() and class_info.teacher_id != current_teacher.id:
+    if not is_admin() and current_teacher and class_info.teacher_id != current_teacher.id:
         flash("You are not authorized to view this assignment.", "danger")
         return redirect(url_for('teacher.teacher_dashboard'))
     
@@ -546,8 +546,8 @@ def take_attendance(class_id):
         return redirect(url_for('teacher.teacher_dashboard'))
     
     teacher = get_teacher_or_admin()
-    # Directors can take attendance for any class
-    if not is_admin() and class_obj.teacher_id != teacher.id:
+    # Directors and School Administrators can take attendance for any class
+    if not is_admin() and teacher and class_obj.teacher_id != teacher.id:
         flash("You are not authorized to take attendance for this class.", "danger")
         return redirect(url_for('teacher.teacher_dashboard'))
 
@@ -643,7 +643,7 @@ def take_attendance(class_id):
             if record:
                 record.status = status
                 record.notes = notes
-                record.teacher_id = teacher.id
+                record.teacher_id = teacher.id if teacher else None
             else:
                 record = Attendance(
                     student_id=student.id,
@@ -651,7 +651,7 @@ def take_attendance(class_id):
                     date=attendance_date,
                     status=status,
                     notes=notes,
-                    teacher_id=teacher.id
+                    teacher_id=teacher.id if teacher else None
                 )
                 db.session.add(record)
             attendance_saved = True
@@ -693,11 +693,11 @@ def take_attendance(class_id):
 @login_required
 @teacher_required
 def my_classes():
-    """View all classes taught by the teacher, or all classes for Directors"""
+    """View all classes taught by the teacher, or all classes for Directors and School Administrators"""
     teacher = get_teacher_or_admin()
     
-    # Directors see all classes, teachers only see their assigned classes
-    if current_user.role == 'Director':
+    # Directors and School Administrators see all classes, teachers only see their assigned classes
+    if current_user.role in ['Director', 'School Administrator']:
         classes = Class.query.all()
     else:
         classes = Class.query.filter_by(teacher_id=teacher.id).all()

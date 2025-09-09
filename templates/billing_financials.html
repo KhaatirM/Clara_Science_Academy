@@ -200,6 +200,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form action="{{ url_for('management.add_invoice') }}" method="POST">
+        { csrf_token() }
                 <div class="modal-body">
                     <div class="row">
                         <div class="col-md-6">
@@ -263,6 +264,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form action="{{ url_for('management.record_payment') }}" method="POST">
+        { csrf_token() }
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="payment_invoice_id" class="form-label">Invoice</label>

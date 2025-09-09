@@ -48,6 +48,27 @@ body {
     box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
 }
 
+/* Class Management Button Enhancements */
+.class-management-btn {
+    min-height: 38px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    white-space: normal;
+    word-wrap: break-word;
+    line-height: 1.2;
+    padding: 0.375rem 0.5rem;
+}
+
+.class-management-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.1);
+}
+
+.class-management-btn i {
+    font-size: 0.875rem;
+}
+
 .grade-card .card-header {
     border-bottom: none;
     padding: 1rem 1.25rem;

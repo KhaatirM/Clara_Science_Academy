@@ -71,6 +71,7 @@
                                             <form method="POST" action="{{ url_for('tech.delete_user', user_id=user.id) }}" 
                                                   class="display-inline" 
                                                   onsubmit="return confirm('Are you sure you want to delete {{ user.username }}?')">
+        { csrf_token() }
                                                 <button type="submit" class="btn btn-outline-danger" title="Delete User">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
@@ -137,6 +138,7 @@
     </div>
     <div class="card-body">
         <form method="POST">
+        { csrf_token() }
             <div class="mb-3">
                 <label for="title" class="form-label">Title</label>
                 <input type="text" class="form-control" id="title" name="title" required>

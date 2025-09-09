@@ -39,6 +39,7 @@
                                         <td>
                                             <form method="POST" style="display: inline;" 
                                                   onsubmit="return confirm('Are you sure you want to remove {{ student.first_name }} {{ student.last_name }} from this class?');">
+        { csrf_token() }
                                                 <input type="hidden" name="action" value="remove">
                                                 <input type="hidden" name="student_id" value="{{ student.id }}">
                                                 <button type="submit" class="btn btn-danger btn-sm">
@@ -70,6 +71,7 @@
                 <div class="card-body">
                     {% if all_students %}
                         <form method="POST">
+        { csrf_token() }
                             <input type="hidden" name="action" value="add">
                             
                             <div class="mb-3">

@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
+from flask_wtf.csrf import CSRFError
 from models import User, db, MaintenanceMode, BugReport
 from werkzeug.security import check_password_hash, generate_password_hash
 from datetime import datetime
@@ -65,44 +66,48 @@ def login():
                              progress_percentage=progress_percentage)
     
     if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        
-        # Check if username and password are provided
-        if not username or not password:
-            flash('Username and password are required.', 'danger')
+        try:
+            username = request.form.get('username')
+            password = request.form.get('password')
+            
+            # Check if username and password are provided
+            if not username or not password:
+                flash('Username and password are required.', 'danger')
+                return render_template('login.html')
+            
+            user = User.query.filter_by(username=username).first()
+            
+            if user and check_password_hash(user.password_hash, password):
+                # Convert remember to boolean
+                remember = bool(request.form.get('remember'))
+                login_user(user, remember=remember)
+                
+                # Log successful login
+                log_activity(
+                    user_id=user.id,
+                    action='login',
+                    details={'role': user.role, 'remember': remember},
+                    ip_address=request.remote_addr,
+                    user_agent=request.headers.get('User-Agent')
+                )
+                
+                flash('Logged in successfully.', 'success')
+                return redirect(url_for('auth.dashboard'))
+            else:
+                # Log failed login attempt
+                log_activity(
+                    user_id=None,
+                    action='login_failed',
+                    details={'username': username},
+                    ip_address=request.remote_addr,
+                    user_agent=request.headers.get('User-Agent'),
+                    success=False,
+                    error_message='Invalid credentials'
+                )
+                flash('Invalid username or password.', 'danger')
+        except CSRFError:
+            flash('Invalid request. Please try again.', 'danger')
             return render_template('login.html')
-        
-        user = User.query.filter_by(username=username).first()
-        
-        if user and check_password_hash(user.password_hash, password):
-            # Convert remember to boolean
-            remember = bool(request.form.get('remember'))
-            login_user(user, remember=remember)
-            
-            # Log successful login
-            log_activity(
-                user_id=user.id,
-                action='login',
-                details={'role': user.role, 'remember': remember},
-                ip_address=request.remote_addr,
-                user_agent=request.headers.get('User-Agent')
-            )
-            
-            flash('Logged in successfully.', 'success')
-            return redirect(url_for('auth.dashboard'))
-        else:
-            # Log failed login attempt
-            log_activity(
-                user_id=None,
-                action='login_failed',
-                details={'username': username},
-                ip_address=request.remote_addr,
-                user_agent=request.headers.get('User-Agent'),
-                success=False,
-                error_message='Invalid credentials'
-            )
-            flash('Invalid username or password.', 'danger')
             
     return render_template('login.html')
 
@@ -200,6 +205,8 @@ def submit_bug_report():
             'message': 'Bug report submitted successfully. Thank you for helping us improve the system!'
         })
         
+    except CSRFError:
+        return jsonify({'success': False, 'message': 'Invalid request. Please try again.'})
     except Exception as e:
         db.session.rollback()
         log_activity(
@@ -266,6 +273,8 @@ def update_bug_report_status(report_id):
         
         return jsonify({'success': True, 'message': f'Bug report status updated to {new_status.replace("_", " ")}.'})
         
+    except CSRFError:
+        return jsonify({'success': False, 'message': 'Invalid request. Please try again.'})
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': 'An error occurred while updating the bug report status.'})
@@ -275,36 +284,36 @@ def update_bug_report_status(report_id):
 def change_password():
     """Change password for any authenticated user."""
     if request.method == 'POST':
-        current_password = request.form.get('current_password')
-        new_password = request.form.get('new_password')
-        confirm_password = request.form.get('confirm_new_password')
-        
-        # Validate input
-        if not current_password or not new_password or not confirm_password:
-            flash('All fields are required.', 'danger')
-            return redirect(url_for('auth.change_password'))
-        
-        # Check if current password is correct
-        if not check_password_hash(current_user.password_hash, current_password):
-            flash('Current password is incorrect.', 'danger')
-            return redirect(url_for('auth.change_password'))
-        
-        # Check if new password matches confirmation
-        if new_password != confirm_password:
-            flash('New password and confirmation do not match.', 'danger')
-            return redirect(url_for('auth.change_password'))
-        
-        # Validate new password strength (minimum 8 characters)
-        if len(new_password) < 8:
-            flash('New password must be at least 8 characters long.', 'danger')
-            return redirect(url_for('auth.change_password'))
-        
-        # Check if new password is different from current
-        if check_password_hash(current_user.password_hash, new_password):
-            flash('New password must be different from current password.', 'danger')
-            return redirect(url_for('auth.change_password'))
-        
         try:
+            current_password = request.form.get('current_password')
+            new_password = request.form.get('new_password')
+            confirm_password = request.form.get('confirm_new_password')
+            
+            # Validate input
+            if not current_password or not new_password or not confirm_password:
+                flash('All fields are required.', 'danger')
+                return redirect(url_for('auth.change_password'))
+            
+            # Check if current password is correct
+            if not check_password_hash(current_user.password_hash, current_password):
+                flash('Current password is incorrect.', 'danger')
+                return redirect(url_for('auth.change_password'))
+            
+            # Check if new password matches confirmation
+            if new_password != confirm_password:
+                flash('New password and confirmation do not match.', 'danger')
+                return redirect(url_for('auth.change_password'))
+            
+            # Validate new password strength (minimum 8 characters)
+            if len(new_password) < 8:
+                flash('New password must be at least 8 characters long.', 'danger')
+                return redirect(url_for('auth.change_password'))
+            
+            # Check if new password is different from current
+            if check_password_hash(current_user.password_hash, new_password):
+                flash('New password must be different from current password.', 'danger')
+                return redirect(url_for('auth.change_password'))
+            
             # Update password
             current_user.password_hash = generate_password_hash(new_password)
             db.session.commit()
@@ -321,6 +330,9 @@ def change_password():
             flash('Password changed successfully!', 'success')
             return redirect(url_for('auth.dashboard'))
             
+        except CSRFError:
+            flash('Invalid request. Please try again.', 'danger')
+            return redirect(url_for('auth.change_password'))
         except Exception as e:
             db.session.rollback()
             log_activity(

@@ -980,10 +980,12 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                         </div>
                                                         <form method="POST" action="{{ url_for('student.delete_goal', goal_id=goal.id) }}"
                       style="display: inline;" onsubmit="return confirm('Delete this goal?')">
+        { csrf_token() }
                                             <button type="submit" class="btn btn-sm btn-outline-danger">Remove Goal</button>
                                         </form>
                                     {% else %}
                                         <form method="POST" action="{{ url_for('student.set_goal') }}" class="d-inline">
+        { csrf_token() }
                                             <input type="hidden" name="class_id" value="{{ class.id }}">
                                             <div class="input-group input-group-sm">
                                                 <input type="number" name="target_grade" class="form-control" 
@@ -1094,6 +1096,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                             {% endif %}
                                             {% if not notification.is_read %}
                                                 <form method="POST" action="{{ url_for('student.mark_notification_read', notification_id=notification.id) }}" style="display: inline;">
+        { csrf_token() }
                                                     <button type="submit" class="btn btn-sm btn-outline-secondary">Mark as Read</button>
                                                 </form>
                                             {% endif %}
@@ -2695,6 +2698,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                     </div>
                     <div class="card-body">
                         <form method="POST" action="{{ url_for('student.student_send_group_message', group_id=group.id) }}">
+        { csrf_token() }
                             <div class="mb-3">
                                 <label for="subject" class="form-label">Subject (Optional)</label>
                                 <input type="text" class="form-control" id="subject" name="subject" placeholder="Message subject">
@@ -2717,6 +2721,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                             {% if group and group.created_by != current_user.id %}
                                 <form method="POST" action="{{ url_for('student.student_leave_group', group_id=group.id) }}" 
                                       onsubmit="return confirm('Are you sure you want to leave this group?')">
+        { csrf_token() }
                                     <button type="submit" class="btn btn-outline-danger">Leave Group</button>
                                 </form>
                             {% endif %}
@@ -2771,6 +2776,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
             </div>
             <div class="card-body">
                                         <form method="POST" action="{{ url_for('student.student_send_message') }}">
+        { csrf_token() }
                     <div class="mb-3">
                         <label for="recipient_id" class="form-label">Recipient</label>
                         <select class="form-select" id="recipient_id" name="recipient_id" required>
@@ -2824,6 +2830,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
             </div>
             <div class="card-body">
                                         <form method="POST" action="{{ url_for('student.student_create_group') }}">
+        { csrf_token() }
                     <div class="mb-3">
                         <label for="name" class="form-label">Group Name</label>
                         <input type="text" class="form-control" id="name" name="name" placeholder="Enter group name" required>

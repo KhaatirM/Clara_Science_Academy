@@ -1,6 +1,10 @@
 {% extends "base.html" %}
 
 {% block content %}
+<!-- Cache busting for security updates -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <style>
 /* Hide CSRF token from being visible */
 input[name="csrf_token"] {
@@ -102,7 +106,11 @@ input[name="csrf_token"] {
   <div class="col-12 col-sm-8 col-md-6 col-lg-5">
     <div class="card shadow-sm">
       <div class="card-body p-3 p-md-4">
-        <h2 class="text-center mb-4">Login</h2>
+        <h2 class="text-center mb-4">🔒 SECURE LOGIN 🔒</h2>
+        <!-- Updated login form - Role selection removed for enhanced security -->
+        <div class="alert alert-info text-center">
+            <strong>Enhanced Security:</strong> Role selection removed - system auto-detects your role!
+        </div>
         <!-- CSRF token will be automatically added here by Flask-WTF -->
         <form method="POST">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
@@ -120,43 +128,11 @@ input[name="csrf_token"] {
               </button>
             </div>
           </div>
-          <div class="mb-3" id="id_input_group">
-            <label for="user_id" class="form-label">ID# <span class="text-muted small">(Required for Directors)</span></label>
+          <div class="mb-3">
+            <label for="user_id" class="form-label">ID Number <span class="text-muted small">(Required for Students & Staff)</span></label>
             <input type="text" name="user_id" id="user_id" class="form-control" autocomplete="off">
+            <div class="form-text">Enter your student ID or staff ID number (optional for Tech users)</div>
           </div>
-          <div class="mb-3 p-3 bg-light border rounded">
-            <p class="text-center mb-2 small text-muted">Select Your Role</p>
-            
-            <!-- Desktop: Button group for larger screens -->
-            <div class="btn-group w-100 d-none d-md-flex" role="group" aria-label="User role">
-              <input type="radio" class="btn-check" name="role_desktop" id="student_desktop" value="Student" autocomplete="off">
-              <label class="btn btn-outline-secondary" for="student_desktop">Student</label>
-
-              <input type="radio" class="btn-check" name="role_desktop" id="teacher_desktop" value="Teacher" autocomplete="off">
-              <label class="btn btn-outline-secondary" for="teacher_desktop">Teacher</label>
-
-              <input type="radio" class="btn-check" name="role_desktop" id="admin_desktop" value="School Administrator" autocomplete="off">
-              <label class="btn btn-outline-secondary" for="admin_desktop">Administrator</label>
-
-              <input type="radio" class="btn-check" name="role_desktop" id="director_desktop" value="Director" autocomplete="off">
-              <label class="btn btn-outline-secondary" for="director_desktop">Director</label>
-
-              <input type="radio" class="btn-check" name="role_desktop" id="tech_desktop" value="IT" autocomplete="off">
-              <label class="btn btn-outline-secondary" for="tech_desktop">Tech</label>
-            </div>
-
-            <!-- Mobile: Dropdown for smaller screens -->
-            <select class="form-select d-md-none login-mobile-select" name="role_mobile" aria-label="Select user role mobile">
-                <option selected disabled>Choose a role...</option>
-                <option value="Student">Student</option>
-                <option value="Teacher">Teacher</option>
-                <option value="School Administrator">Administrator</option>
-                <option value="Director">Director</option>
-                <option value="IT">Tech</option>
-            </select>
-
-          </div>
-          <input type="hidden" name="role" id="role_hidden">
           <button type="submit" class="btn btn-primary w-100">Login</button>
         </form>
       </div>
@@ -220,61 +196,7 @@ input[name="csrf_token"] {
         myModal.show();
     }
 
-    const roleRadios = document.querySelectorAll('input[name="role_desktop"]');
-    const roleSelect = document.querySelector('select[name="role_mobile"]');
-    const hiddenRoleInput = document.getElementById('role_hidden');
-    const userIdInput = document.getElementById('user_id');
-    const form = document.querySelector('form');
-
-    function getSelectedRole() {
-        // Check which control is visible
-        if (window.getComputedStyle(roleSelect).display !== 'none') {
-            return roleSelect.value;
-        } else {
-            const checkedRadio = document.querySelector('input[name="role_desktop"]:checked');
-            return checkedRadio ? checkedRadio.value : null;
-        }
-    }
-
-    function toggleUserIdInput() {
-      const selectedRole = getSelectedRole();
-      
-      if (selectedRole) {
-        if (selectedRole === 'Director') {
-          userIdInput.removeAttribute('disabled');
-          userIdInput.setAttribute('required', 'required');
-        } else if (selectedRole === 'IT') {
-          userIdInput.value = '';
-          userIdInput.setAttribute('disabled', 'disabled');
-          userIdInput.removeAttribute('required');
-        } else {
-          userIdInput.removeAttribute('disabled');
-          userIdInput.removeAttribute('required');
-        }
-      } else {
-        userIdInput.removeAttribute('disabled');
-        userIdInput.removeAttribute('required');
-      }
-    }
-
-    // Add event listeners to both desktop and mobile controls
-    roleRadios.forEach(radio => radio.addEventListener('change', toggleUserIdInput));
-    roleSelect.addEventListener('change', toggleUserIdInput);
-
-    // Set the hidden input's value before submitting the form
-    form.addEventListener('submit', function(e) {
-        const role = getSelectedRole();
-        if (role) {
-            hiddenRoleInput.value = role;
-        } else {
-            // Prevent submission if no role is selected
-            alert('Please select a role.');
-            e.preventDefault();
-        }
-    });
-
-    // Initial check on page load
-    toggleUserIdInput();
+    // ID input is now always required - no role-based toggling needed
     
     // Remove any CSRF token text that might appear
     function removeCSRFTokenText() {

@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
 from flask_wtf.csrf import CSRFError
-from models import User, db, MaintenanceMode, BugReport
+from models import User, TeacherStaff, db, MaintenanceMode, BugReport
 from werkzeug.security import check_password_hash, generate_password_hash
 from datetime import datetime
 from app import log_activity
@@ -27,16 +27,31 @@ def login():
         if request.method == 'POST':
             username = request.form.get('username')
             password = request.form.get('password')
+            user_id = request.form.get('user_id')
+            
+            # Check if username and password are provided
+            if not username or not password:
+                flash('Username and password are required.', 'danger')
+                return render_template('maintenance.html', 
+                                     maintenance=maintenance, 
+                                     progress_percentage=0)
             
             user = User.query.filter_by(username=username).first()
             if user and password and check_password_hash(user.password_hash, password):
-                if user.role == 'Tech' and maintenance.allow_tech_access:
+                # Tech users don't need ID validation during maintenance
+                if user.role == 'Tech':
+                    id_valid = True
+                else:
+                    # Other users would need ID validation, but they can't login during maintenance anyway
+                    id_valid = False
+                
+                if id_valid and maintenance.allow_tech_access:
                     login_user(user)
                     # Log successful tech login during maintenance
                     log_activity(
                         user_id=user.id,
                         action='login_maintenance',
-                        details={'role': user.role, 'maintenance_mode': True},
+                        details={'role': user.role, 'maintenance_mode': True, 'id_verified': True},
                         ip_address=request.remote_addr,
                         user_agent=request.headers.get('User-Agent')
                     )
@@ -45,16 +60,29 @@ def login():
                 else:
                     # Log failed login attempt during maintenance
                     log_activity(
-                        user_id=None,
+                        user_id=user.id if user else None,
                         action='login_failed_maintenance',
-                        details={'username': username, 'role': user.role if user else 'unknown'},
+                        details={'username': username, 'role': user.role if user else 'unknown', 'reason': 'invalid_id_or_access'},
                         ip_address=request.remote_addr,
                         user_agent=request.headers.get('User-Agent'),
                         success=False,
-                        error_message='Login blocked during maintenance'
+                        error_message='Invalid ID or access denied during maintenance'
                     )
-                    flash('System is currently under maintenance. Please try again later.', 'warning')
+                    flash('Invalid ID number or access denied during maintenance.', 'warning')
                     return redirect(url_for('auth.login'))
+            else:
+                # Log failed login attempt during maintenance
+                log_activity(
+                    user_id=None,
+                    action='login_failed_maintenance',
+                    details={'username': username, 'role': user.role if user else 'unknown'},
+                    ip_address=request.remote_addr,
+                    user_agent=request.headers.get('User-Agent'),
+                    success=False,
+                    error_message='Login blocked during maintenance'
+                )
+                flash('System is currently under maintenance. Please try again later.', 'warning')
+                return redirect(url_for('auth.login'))
         
         # Show maintenance page for non-tech users
         total_duration = (maintenance.end_time - maintenance.start_time).total_seconds()
@@ -69,6 +97,7 @@ def login():
         try:
             username = request.form.get('username')
             password = request.form.get('password')
+            user_id = request.form.get('user_id')
             
             # Check if username and password are provided
             if not username or not password:
@@ -78,27 +107,61 @@ def login():
             user = User.query.filter_by(username=username).first()
             
             if user and check_password_hash(user.password_hash, password):
-                # Convert remember to boolean
-                remember = bool(request.form.get('remember'))
-                login_user(user, remember=remember)
+                # Skip ID validation for Tech users
+                if user.role == 'Tech':
+                    id_valid = True
+                else:
+                    # Validate ID number for all other roles
+                    id_valid = False
+                    
+                    if user.role == 'Student' and user.student_profile:
+                        # Check student ID
+                        if user.student_profile.student_id == user_id:
+                            id_valid = True
+                    elif user.teacher_staff_id:
+                        # Check staff ID
+                        teacher_staff = TeacherStaff.query.get(user.teacher_staff_id)
+                        if teacher_staff and teacher_staff.staff_id == user_id:
+                            id_valid = True
+                    
+                    # For non-Tech users, ID is required
+                    if not user_id:
+                        id_valid = False
                 
-                # Log successful login
-                log_activity(
-                    user_id=user.id,
-                    action='login',
-                    details={'role': user.role, 'remember': remember},
-                    ip_address=request.remote_addr,
-                    user_agent=request.headers.get('User-Agent')
-                )
-                
-                flash('Logged in successfully.', 'success')
-                return redirect(url_for('auth.dashboard'))
+                if id_valid:
+                    # Convert remember to boolean
+                    remember = bool(request.form.get('remember'))
+                    login_user(user, remember=remember)
+                    
+                    # Log successful login
+                    log_activity(
+                        user_id=user.id,
+                        action='login',
+                        details={'role': user.role, 'remember': remember, 'id_verified': True},
+                        ip_address=request.remote_addr,
+                        user_agent=request.headers.get('User-Agent')
+                    )
+                    
+                    flash('Logged in successfully.', 'success')
+                    return redirect(url_for('auth.dashboard'))
+                else:
+                    # Log failed login attempt - invalid ID
+                    log_activity(
+                        user_id=user.id if user else None,
+                        action='login_failed',
+                        details={'username': username, 'reason': 'invalid_id'},
+                        ip_address=request.remote_addr,
+                        user_agent=request.headers.get('User-Agent'),
+                        success=False,
+                        error_message='Invalid ID number'
+                    )
+                    flash('Invalid ID number for this user.', 'danger')
             else:
-                # Log failed login attempt
+                # Log failed login attempt - invalid credentials
                 log_activity(
                     user_id=None,
                     action='login_failed',
-                    details={'username': username},
+                    details={'username': username, 'reason': 'invalid_credentials'},
                     ip_address=request.remote_addr,
                     user_agent=request.headers.get('User-Agent'),
                     success=False,

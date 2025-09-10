@@ -16,20 +16,44 @@ def add_test_users():
         
         # 1. Director
         print("Adding Director...")
+        director_staff = TeacherStaff(
+            first_name='Dr. Maria',
+            last_name='Rodriguez',
+            email='maria.rodriguez@school.edu',
+            staff_id='DIR001',
+            assigned_role='Director',
+            position='School Director'
+        )
+        db.session.add(director_staff)
+        db.session.flush()
+        
         director_user = User(
             username='director',
             password_hash=generate_password_hash('password123'),
-            role='Director'
+            role='Director',
+            teacher_staff_id=director_staff.id
         )
         db.session.add(director_user)
-        db.session.flush()  # Get the ID
+        db.session.flush()
         
         # 2. School Administrator
         print("Adding School Administrator...")
+        admin_staff = TeacherStaff(
+            first_name='James',
+            last_name='Wilson',
+            email='james.wilson@school.edu',
+            staff_id='ADM001',
+            assigned_role='School Administrator',
+            position='School Administrator'
+        )
+        db.session.add(admin_staff)
+        db.session.flush()
+        
         admin_user = User(
             username='admin',
             password_hash=generate_password_hash('password123'),
-            role='School Administrator'
+            role='School Administrator',
+            teacher_staff_id=admin_staff.id
         )
         db.session.add(admin_user)
         db.session.flush()
@@ -39,7 +63,11 @@ def add_test_users():
         teacher_staff = TeacherStaff(
             first_name='Sarah',
             last_name='Johnson',
-            email='sarah.johnson@school.edu'
+            email='sarah.johnson@school.edu',
+            staff_id='TCH001',
+            assigned_role='Teacher',
+            position='Math Teacher',
+            subject='Mathematics'
         )
         db.session.add(teacher_staff)
         db.session.flush()
@@ -106,10 +134,22 @@ def add_test_users():
         
         # 5. Tech
         print("Adding Tech...")
+        tech_staff = TeacherStaff(
+            first_name='David',
+            last_name='Chen',
+            email='david.chen@school.edu',
+            staff_id='TEC001',
+            assigned_role='Tech',
+            position='IT Support Specialist'
+        )
+        db.session.add(tech_staff)
+        db.session.flush()
+        
         tech_user = User(
             username='tech',
             password_hash=generate_password_hash('password123'),
-            role='Tech'
+            role='Tech',
+            teacher_staff_id=tech_staff.id
         )
         db.session.add(tech_user)
         
@@ -118,16 +158,45 @@ def add_test_users():
         
         print("\n=== Test Users Added Successfully ===")
         print("All users have password: 'password123'")
-        print("\nUsers created:")
-        print("1. Director - username: 'director'")
-        print("2. School Administrator - username: 'admin'")
-        print("3. Teacher - username: 'teacher' (Sarah Johnson)")
-        print("4. Student - username: 'student' (Alex Smith)")
+        print("\nLogin Credentials:")
+        print("=" * 50)
+        print("1. DIRECTOR")
+        print("   Username: director")
+        print("   Password: password123")
+        print("   Staff ID: DIR001")
+        print("   Name: Dr. Maria Rodriguez")
+        print()
+        print("2. SCHOOL ADMINISTRATOR")
+        print("   Username: admin")
+        print("   Password: password123")
+        print("   Staff ID: ADM001")
+        print("   Name: James Wilson")
+        print()
+        print("3. TEACHER")
+        print("   Username: teacher")
+        print("   Password: password123")
+        print("   Staff ID: TCH001")
+        print("   Name: Sarah Johnson (Math Teacher)")
+        print()
+        print("4. STUDENT")
+        print("   Username: student")
+        print("   Password: password123")
+        print(f"   Student ID: {student.student_id}")
+        print("   Name: Alex Smith (Grade 8)")
         print("   - Parent 1: Michael Smith (Father)")
         print("   - Parent 2: Jennifer Smith (Mother)")
         print("   - Emergency Contact: Robert Johnson (Grandparent)")
-        print("5. Tech - username: 'tech'")
-        print("\nYou can now log in with any of these credentials!")
+        print()
+        print("5. TECH (ID NOT REQUIRED)")
+        print("   Username: tech")
+        print("   Password: password123")
+        print("   Staff ID: TEC001 (optional)")
+        print("   Name: David Chen (IT Support)")
+        print()
+        print("=" * 50)
+        print("IMPORTANT: Tech users can login with just username + password")
+        print("All other users need username + password + ID number")
+        print("\nYou can now test the enhanced security login!")
 
 if __name__ == '__main__':
     add_test_users() 

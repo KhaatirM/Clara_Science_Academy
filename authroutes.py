@@ -39,7 +39,7 @@ def login():
             user = User.query.filter_by(username=username).first()
             if user and password and check_password_hash(user.password_hash, password):
                 # Tech users don't need ID validation during maintenance
-                if user.role == 'Tech':
+                if user.role in ['Tech', 'IT Support']:
                     id_valid = True
                 else:
                     # Other users would need ID validation, but they can't login during maintenance anyway
@@ -107,11 +107,9 @@ def login():
             user = User.query.filter_by(username=username).first()
             
             if user and check_password_hash(user.password_hash, password):
-                print(f"DEBUG: User {username} found with role: {user.role}")
-                # Skip ID validation for Tech users
-                if user.role == 'Tech':
+                # Skip ID validation for Tech users (both 'Tech' and 'IT Support' roles)
+                if user.role in ['Tech', 'IT Support']:
                     id_valid = True
-                    print(f"DEBUG: Tech user {username} found, bypassing ID validation")
                 else:
                     # Validate ID number for all other roles
                     id_valid = False
@@ -148,7 +146,7 @@ def login():
                     return redirect(url_for('auth.dashboard'))
                 else:
                     # Log failed login attempt - invalid ID (only for non-Tech users)
-                    if user.role != 'Tech':
+                    if user.role not in ['Tech', 'IT Support']:
                         log_activity(
                             user_id=user.id if user else None,
                             action='login_failed',

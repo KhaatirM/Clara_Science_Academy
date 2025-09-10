@@ -540,3 +540,5 @@ def create_app(config_class=None):
         except Exception as e:
             flash(f'Error creating missing tables: {str(e)}', 'danger')
             return redirect(url_for('management.management_dashboard'))
+    
+    return app

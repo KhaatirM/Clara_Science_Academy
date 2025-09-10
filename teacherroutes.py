@@ -2022,7 +2022,12 @@ def class_group_assignments(class_id):
         return redirect(url_for('teacher.teacher_dashboard'))
     
     # Get all group assignments for this class
-    group_assignments = GroupAssignment.query.filter_by(class_id=class_id).order_by(GroupAssignment.due_date.desc()).all()
+    try:
+        group_assignments = GroupAssignment.query.filter_by(class_id=class_id).order_by(GroupAssignment.due_date.desc()).all()
+    except Exception as e:
+        # Handle case where tables don't exist yet
+        flash('Group assignments feature is not yet available. Please run the database migration first.', 'warning')
+        group_assignments = []
     
     return render_template('teacher_class_group_assignments.html',
                          class_obj=class_obj,
@@ -3364,17 +3369,24 @@ def class_deadline_reminders(class_id):
         return redirect(url_for('teacher.teacher_dashboard'))
     
     # Get all deadline reminders for this class
-    reminders = DeadlineReminder.query.filter_by(class_id=class_id).order_by(DeadlineReminder.reminder_date.desc()).all()
-    
-    # Get upcoming reminders (next 7 days)
-    from datetime import datetime, timedelta
-    upcoming_date = datetime.utcnow() + timedelta(days=7)
-    upcoming_reminders = DeadlineReminder.query.filter(
-        DeadlineReminder.class_id == class_id,
-        DeadlineReminder.reminder_date <= upcoming_date,
-        DeadlineReminder.reminder_date >= datetime.utcnow(),
-        DeadlineReminder.is_active == True
+    try:
+        reminders = DeadlineReminder.query.filter_by(class_id=class_id).order_by(DeadlineReminder.reminder_date.desc()).all()
+        
+        # Get upcoming reminders (next 7 days)
+        from datetime import datetime, timedelta
+        upcoming_date = datetime.utcnow() + timedelta(days=7)
+        upcoming_reminders = DeadlineReminder.query.filter(
+            DeadlineReminder.class_id == class_id,
+            DeadlineReminder.reminder_date <= upcoming_date,
+            DeadlineReminder.reminder_date >= datetime.utcnow(),
+            DeadlineReminder.is_active == True
     ).order_by(DeadlineReminder.reminder_date.asc()).all()
+    
+    except Exception as e:
+        # Handle case where tables don't exist yet
+        flash('Deadline reminders feature is not yet available. Please run the database migration first.', 'warning')
+        reminders = []
+        upcoming_reminders = []
     
     return render_template('teacher_class_deadline_reminders.html',
                          class_obj=class_obj,

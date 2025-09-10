@@ -507,4 +507,36 @@ def create_app(config_class=None):
             flash(f'Error adding grade_levels column: {str(e)}', 'danger')
             return redirect(url_for('management.classes'))
     
-    return app
+    @app.route('/migrate/create-missing-tables')
+    @login_required
+    def create_missing_tables():
+        """Create missing tables for group work and deadline reminders."""
+        if current_user.role not in ['School Administrator', 'Director', 'Tech']:
+            flash('Access denied. Only administrators can run migrations.', 'danger')
+            return redirect(url_for('auth.dashboard'))
+        
+        try:
+            # Import the models to ensure they're registered
+            from models import (
+                DeadlineReminder, ReminderNotification, 
+                StudentGroup, StudentGroupMember, GroupAssignment, 
+                GroupSubmission, GroupGrade, GroupTemplate, GroupContract,
+                GroupRotation, GroupRotationHistory, PeerEvaluation,
+                AssignmentRubric, AssignmentTemplate, GroupProgress,
+                GroupWorkReport, IndividualContribution, TimeTracking,
+                CollaborationMetrics, ReportExport, AnalyticsDashboard,
+                PerformanceBenchmark, Feedback360, Feedback360Response,
+                Feedback360Criteria, GroupConflict, ConflictResolution,
+                ConflictParticipant, ReflectionJournal, DraftSubmission,
+                DraftFeedback, DeadlineReminder, ReminderNotification
+            )
+            
+            # Create all tables
+            db.create_all()
+            
+            flash('Successfully created all missing tables! Group work and deadline reminder features should now work.', 'success')
+            return redirect(url_for('management.management_dashboard'))
+            
+        except Exception as e:
+            flash(f'Error creating missing tables: {str(e)}', 'danger')
+            return redirect(url_for('management.management_dashboard'))

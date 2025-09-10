@@ -949,7 +949,7 @@ def attendance():
     present_records = Attendance.query.filter_by(date=datetime.now().date(), status='Present').count()
     overall_attendance_rate = round((present_records / total_attendance_records * 100), 1) if total_attendance_records > 0 else 0
     
-    return render_template('attendance_hub_improved.html',
+    return render_template('attendance_hub_simple.html',
                          classes=classes,
                          today_date=today_date,
                          today_attendance_count=today_attendance_count,

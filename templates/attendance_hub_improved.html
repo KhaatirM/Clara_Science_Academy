@@ -14,10 +14,15 @@
             <button class="btn btn-outline-secondary" onclick="refreshAttendanceData()">
                 <i class="bi bi-arrow-clockwise me-1"></i>Refresh
             </button>
-            <a href="{{ url_for('management.attendance_reports') if current_user.role in ['Director', 'School Administrator'] else url_for('teacher.attendance_reports') if current_user.role == 'Teacher' else '#' }}" 
-               class="btn btn-outline-info">
-                <i class="bi bi-graph-up me-1"></i>Reports
-            </a>
+            {% if current_user.role in ['Director', 'School Administrator'] %}
+                <a href="{{ url_for('management.attendance_reports') }}" class="btn btn-outline-info">
+                    <i class="bi bi-graph-up me-1"></i>Reports
+                </a>
+            {% else %}
+                <a href="{{ url_for('management.attendance_reports') }}" class="btn btn-outline-info">
+                    <i class="bi bi-graph-up me-1"></i>Reports
+                </a>
+            {% endif %}
         </div>
     </div>
 

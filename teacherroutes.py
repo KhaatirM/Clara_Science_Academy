@@ -936,7 +936,10 @@ def attendance():
     if current_user.role in ['Director', 'School Administrator']:
         classes = Class.query.all()
     else:
-        classes = Class.query.filter_by(teacher_id=teacher.id).all()
+        if teacher:
+            classes = Class.query.filter_by(teacher_id=teacher.id).all()
+        else:
+            classes = []
     
     # Get today's date
     today_date = datetime.now().strftime('%Y-%m-%d')
@@ -983,7 +986,7 @@ def attendance():
     present_records = Attendance.query.filter_by(date=datetime.now().date(), status='Present').count()
     overall_attendance_rate = round((present_records / total_attendance_records * 100), 1) if total_attendance_records > 0 else 0
     
-    return render_template('attendance_hub_improved.html',
+    return render_template('attendance_hub_simple.html',
                          classes=classes,
                          today_date=today_date,
                          today_attendance_count=today_attendance_count,

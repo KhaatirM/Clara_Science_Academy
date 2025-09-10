@@ -52,12 +52,12 @@ def management_required(f):
     return decorated_function
 
 def teacher_required(f):
-    """Restricts access to users with teacher roles."""
+    """Restricts access to users with teacher roles, including School Administrators and Directors."""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
             abort(401)  # Unauthorized - not logged in
-        if not is_teacher_role(current_user.role):
+        if not (is_teacher_role(current_user.role) or current_user.role in ['School Administrator', 'Director']):
             abort(403)  # Forbidden - wrong role
         return f(*args, **kwargs)
     return decorated_function

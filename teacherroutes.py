@@ -2016,10 +2016,16 @@ def class_group_assignments(class_id):
     teacher = get_teacher_or_admin()
     class_obj = Class.query.get_or_404(class_id)
     
+    # Check if this is an admin view request
+    admin_view = request.args.get('admin_view') == 'true'
+    
     # Check if teacher has access to this class
     if not is_admin() and class_obj.teacher_id != teacher.id:
         flash('You do not have access to this class.', 'danger')
-        return redirect(url_for('teacher.teacher_dashboard'))
+        if admin_view:
+            return redirect(url_for('management.view_class', class_id=class_id))
+        else:
+            return redirect(url_for('teacher.teacher_dashboard'))
     
     # Get all group assignments for this class
     try:
@@ -2032,7 +2038,8 @@ def class_group_assignments(class_id):
     return render_template('teacher_class_group_assignments.html',
                          class_obj=class_obj,
                          group_assignments=group_assignments,
-                         moment=datetime.utcnow())
+                         moment=datetime.utcnow(),
+                         admin_view=admin_view)
 
 
 @teacher_blueprint.route('/class/<int:class_id>/group-assignment/create', methods=['GET', 'POST'])
@@ -3364,9 +3371,15 @@ def class_deadline_reminders(class_id):
     teacher = get_teacher_or_admin()
     class_obj = Class.query.get_or_404(class_id)
     
+    # Check if this is an admin view request
+    admin_view = request.args.get('admin_view') == 'true'
+    
     if not is_admin() and class_obj.teacher_id != teacher.id:
         flash('You do not have access to this class.', 'danger')
-        return redirect(url_for('teacher.teacher_dashboard'))
+        if admin_view:
+            return redirect(url_for('management.view_class', class_id=class_id))
+        else:
+            return redirect(url_for('teacher.teacher_dashboard'))
     
     # Get all deadline reminders for this class
     try:
@@ -3391,7 +3404,8 @@ def class_deadline_reminders(class_id):
     return render_template('teacher_class_deadline_reminders.html',
                          class_obj=class_obj,
                          reminders=reminders,
-                         upcoming_reminders=upcoming_reminders)
+                         upcoming_reminders=upcoming_reminders,
+                         admin_view=admin_view)
 
 
 @teacher_blueprint.route('/class/<int:class_id>/deadline-reminder/create', methods=['GET', 'POST'])

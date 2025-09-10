@@ -8,9 +8,15 @@
       <a href="{{ url_for(role_prefix ~ 'admin_create_deadline_reminder', class_id=class_obj.id) if role_prefix else url_for('teacher.create_deadline_reminder', class_id=class_obj.id) }}" class="btn btn-primary btn-sm">
         <i class="bi bi-plus-circle me-1"></i>Create Reminder
       </a>
-      <a href="{{ url_for('management.view_class', class_id=class_obj.id) if role_prefix else url_for('teacher.view_class', class_id=class_obj.id) }}" class="btn btn-outline-secondary btn-sm">
-        <i class="bi bi-arrow-left me-1"></i>Back to Class
-      </a>
+      {% if admin_view %}
+        <a href="{{ url_for('management.view_class', class_id=class_obj.id) }}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-arrow-left me-1"></i>Back to Management
+        </a>
+      {% else %}
+        <a href="{{ url_for('management.view_class', class_id=class_obj.id) if role_prefix else url_for('teacher.view_class', class_id=class_obj.id) }}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-arrow-left me-1"></i>Back to Class
+        </a>
+      {% endif %}
     </div>
   </div>
 

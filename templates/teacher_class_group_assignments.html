@@ -5,9 +5,15 @@
   <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
     <h3 class="mb-2 mb-md-0"><i class="bi bi-journal-plus me-2"></i>Group Assignments - {{ class_obj.name }}</h3>
     <div class="d-flex gap-2">
-      <a href="{{ url_for('management.view_class', class_id=class_obj.id) if role_prefix else url_for('teacher.view_class', class_id=class_obj.id) }}" class="btn btn-outline-secondary btn-sm">
-        <i class="bi bi-arrow-left me-1"></i>Back to Class
-      </a>
+      {% if admin_view %}
+        <a href="{{ url_for('management.view_class', class_id=class_obj.id) }}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-arrow-left me-1"></i>Back to Management
+        </a>
+      {% else %}
+        <a href="{{ url_for('management.view_class', class_id=class_obj.id) if role_prefix else url_for('teacher.view_class', class_id=class_obj.id) }}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-arrow-left me-1"></i>Back to Class
+        </a>
+      {% endif %}
       <a href="{{ url_for('management.admin_create_group_assignment', class_id=class_obj.id) if role_prefix else url_for('teacher.create_group_assignment', class_id=class_obj.id) }}" class="btn btn-primary btn-sm">
         <i class="bi bi-plus-circle me-1"></i>Create Group Assignment
       </a>

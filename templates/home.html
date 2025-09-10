@@ -7,15 +7,31 @@
 {% block content %}
 <!-- This template no longer needs its own <link> tag as it's handled by base.html -->
 
+<!-- Slideshow Background -->
+<div class="slideshow-container">
+    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image1.png');"></div>
+    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image2.png');"></div>
+    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image3.png');"></div>
+    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image4.png');"></div>
+    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image5.png');"></div>
+    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image6.png');"></div>
+    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image7.png');"></div>
+    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image8.png');"></div>
+    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image9.png');"></div>
+    <div class="slideshow-overlay"></div>
+</div>
+
 <!-- Hero Section -->
 <div class="hero-section">
     <div class="container hero-content">
-        <h1 class="display-4 display-md-3 text-success">Empowering Minds, Shaping Futures</h1>
-        <p class="lead">
-            Welcome to Clara Science Academy's student management portal. <br class="d-none d-md-block">
-            A centralized hub for academic excellence and seamless administration.
-        </p>
-        <hr class="my-4 border-color-white-50">
+        <div class="hero-text">
+            <h1 class="display-4 display-md-3">Empowering Minds, Shaping Futures</h1>
+            <p class="lead">
+                Welcome to Clara Science Academy's student management portal. <br class="d-none d-md-block">
+                A centralized hub for academic excellence and seamless administration.
+            </p>
+            <hr class="my-4 border-color-white-50">
+        </div>
         
         {% if current_user.is_authenticated %}
             {% set role_name = current_user.role|lower|replace(' ', '_') %}
@@ -49,38 +65,67 @@
 <div class="features-section">
     <div class="container">
         <div class="row text-center g-4">
+            <div class="col-12 mb-4">
+                <h2 class="section-title">Why Choose Clara Science Academy?</h2>
+                <p class="section-subtitle">Comprehensive tools designed for modern education management</p>
+            </div>
             <!-- Feature 1: Student Management -->
-            <div class="col-12 col-md-4">
+            <div class="col-12 col-sm-6 col-lg-4">
                 <div class="feature-card">
                     <div class="feature-icon">
                         <i class="fas fa-user-graduate"></i>
                     </div>
                     <h3>Student Management</h3>
-                    <p class="text-muted">Easily manage student records, enrollment, and academic progress all in one place.</p>
+                    <p>Easily manage student records, enrollment, and academic progress all in one place.</p>
                 </div>
             </div>
             <!-- Feature 2: Teacher & Class Tools -->
-            <div class="col-12 col-md-4">
+            <div class="col-12 col-sm-6 col-lg-4">
                 <div class="feature-card">
                     <div class="feature-icon">
                         <i class="fas fa-chalkboard-teacher"></i>
                     </div>
                     <h3>Teacher & Class Tools</h3>
-                    <p class="text-muted">Empower teachers with tools for class management, assignments, and grading.</p>
+                    <p>Empower teachers with tools for class management, assignments, and grading.</p>
                 </div>
             </div>
             <!-- Feature 3: Comprehensive Reporting -->
-            <div class="col-12 col-md-4">
+            <div class="col-12 col-sm-6 col-lg-4">
                 <div class="feature-card">
                     <div class="feature-icon">
                         <i class="fas fa-chart-pie"></i>
                     </div>
                     <h3>Comprehensive Reporting</h3>
-                    <p class="text-muted">Generate detailed reports for attendance, grades, and overall school performance.</p>
+                    <p>Generate detailed reports for attendance, grades, and overall school performance.</p>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+// Slideshow functionality for homepage
+document.addEventListener('DOMContentLoaded', function() {
+    const slideshowImages = document.querySelectorAll('.slideshow-image');
+    let currentSlide = 0;
+    
+    function showSlide(index) {
+        slideshowImages.forEach((img, i) => {
+            img.classList.toggle('active', i === index);
+        });
+    }
+    
+    function nextSlide() {
+        currentSlide = (currentSlide + 1) % slideshowImages.length;
+        showSlide(currentSlide);
+    }
+    
+    // Initialize slideshow
+    showSlide(0);
+    
+    // Change slide every 5 seconds
+    setInterval(nextSlide, 5000);
+});
+</script>
 
 {% endblock %}

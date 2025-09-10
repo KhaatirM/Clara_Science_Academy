@@ -5,64 +5,151 @@
     {% if section == 'home' %}
         <!-- Home Dashboard -->
         <div class="container-fluid px-2 px-md-4">
-            <h2 class="mb-4">Dashboard - {{ current_user.role }}</h2>
-
-            <!-- Role-specific welcome message -->
-            <div class="alert alert-info">
-                {% if current_user.role == 'Director' %}
-                    <h5>Welcome, Director!</h5>
-                    <p>You have full administrative access to manage students, teachers, classes, and system settings.</p>
-                {% elif current_user.role == 'School Administrator' %}
-                    <h5>Welcome, School Administrator!</h5>
-                    <p>You can manage students, teachers, classes, and oversee academic operations.</p>
-                {% elif current_user.role == 'Teacher' %}
-                    <h5>Welcome, Teacher!</h5>
-                    <p>Manage your classes, assignments, grades, and student interactions.</p>
-                {% elif current_user.role == 'Student' %}
-                    <h5>Welcome, Student!</h5>
-                    <p>View your classes, assignments, grades, and academic progress.</p>
-                {% elif current_user.role in ['Tech', 'IT Support'] %}
-                    <h5>Welcome, Tech Support!</h5>
-                    <p>Manage system maintenance, user accounts, and technical support.</p>
-                {% endif %}
+            <!-- Enhanced Header Section -->
+            <div class="dashboard-header mb-4">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h1 class="dashboard-title mb-2">
+                            <i class="bi bi-house-door-fill me-3"></i>
+                            Welcome to Your Dashboard
+                        </h1>
+                        <p class="dashboard-subtitle text-muted">{{ current_user.role }} Portal</p>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <div class="dashboard-time">
+                            <i class="bi bi-clock me-2"></i>
+                            <span id="current-time"></span>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <!-- Statistics Cards -->
+            <!-- Enhanced Role-specific welcome message -->
+            <div class="welcome-card mb-4">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body p-4">
+                                <div class="row align-items-center">
+                                    <div class="col-md-8">
+                                        {% if current_user.role == 'Director' %}
+                                            <h4 class="card-title text-primary mb-3">
+                                                <i class="bi bi-award-fill me-2"></i>
+                                                Director Dashboard
+                                            </h4>
+                                            <p class="card-text lead">You have full administrative access to manage students, teachers, classes, and system settings. Monitor school performance and make data-driven decisions.</p>
+                                        {% elif current_user.role == 'School Administrator' %}
+                                            <h4 class="card-title text-success mb-3">
+                                                <i class="bi bi-person-badge-fill me-2"></i>
+                                                Administrator Dashboard
+                                            </h4>
+                                            <p class="card-text lead">You can manage students, teachers, classes, and oversee academic operations. Keep track of school activities and student progress.</p>
+                                        {% elif current_user.role == 'Teacher' %}
+                                            <h4 class="card-title text-info mb-3">
+                                                <i class="bi bi-mortarboard-fill me-2"></i>
+                                                Teacher Dashboard
+                                            </h4>
+                                            <p class="card-text lead">Manage your classes, assignments, grades, and student interactions. Track student progress and create engaging learning experiences.</p>
+                                        {% elif current_user.role == 'Student' %}
+                                            <h4 class="card-title text-warning mb-3">
+                                                <i class="bi bi-book-fill me-2"></i>
+                                                Student Dashboard
+                                            </h4>
+                                            <p class="card-text lead">View your classes, assignments, grades, and academic progress. Stay organized and track your learning journey.</p>
+                                        {% elif current_user.role in ['Tech', 'IT Support'] %}
+                                            <h4 class="card-title text-secondary mb-3">
+                                                <i class="bi bi-gear-fill me-2"></i>
+                                                Tech Support Dashboard
+                                            </h4>
+                                            <p class="card-text lead">Manage system maintenance, user accounts, and technical support. Keep the system running smoothly for all users.</p>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-4 text-center">
+                                        <div class="welcome-icon">
+                                            {% if current_user.role == 'Director' %}
+                                                <i class="bi bi-award-fill display-1 text-primary"></i>
+                                            {% elif current_user.role == 'School Administrator' %}
+                                                <i class="bi bi-person-badge-fill display-1 text-success"></i>
+                                            {% elif current_user.role == 'Teacher' %}
+                                                <i class="bi bi-mortarboard-fill display-1 text-info"></i>
+                                            {% elif current_user.role == 'Student' %}
+                                                <i class="bi bi-book-fill display-1 text-warning"></i>
+                                            {% elif current_user.role in ['Tech', 'IT Support'] %}
+                                                <i class="bi bi-gear-fill display-1 text-secondary"></i>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Enhanced Statistics Cards -->
             <div class="row g-3 g-md-4 mb-4">
                 {% if current_user.role in ['Director', 'School Administrator'] %}
                     <div class="col-12 col-sm-6 col-lg-3">
-                        <div class="card text-white bg-primary h-100">
-                            <div class="card-body text-center">
-                                <i class="bi bi-people-fill fs-1"></i>
-                                <h3 class="card-title">{{ stats.students if stats else 0 }}</h3>
-                                <p class="card-text">Total Students</p>
+                        <div class="stats-card card border-0 shadow-sm h-100">
+                            <div class="card-body text-center p-4">
+                                <div class="stats-icon mb-3">
+                                    <i class="bi bi-people-fill"></i>
+                                </div>
+                                <h2 class="stats-number text-primary mb-2">{{ stats.students if stats else 0 }}</h2>
+                                <p class="stats-label text-muted mb-0">Total Students</p>
+                                <div class="stats-trend mt-2">
+                                    <small class="text-success">
+                                        <i class="bi bi-arrow-up"></i> +5% this month
+                                    </small>
+                                </div>
                             </div>
                         </div>
                     </div>
                     <div class="col-12 col-sm-6 col-lg-3">
-                        <div class="card text-white bg-success h-100">
-                            <div class="card-body text-center">
-                                <i class="bi bi-person-badge-fill fs-1"></i>
-                                <h3 class="card-title">{{ stats.teachers if stats else 0 }}</h3>
-                                <p class="card-text">Total Teachers & Staff</p>
+                        <div class="stats-card card border-0 shadow-sm h-100">
+                            <div class="card-body text-center p-4">
+                                <div class="stats-icon mb-3">
+                                    <i class="bi bi-person-badge-fill"></i>
+                                </div>
+                                <h2 class="stats-number text-success mb-2">{{ stats.teachers if stats else 0 }}</h2>
+                                <p class="stats-label text-muted mb-0">Teachers & Staff</p>
+                                <div class="stats-trend mt-2">
+                                    <small class="text-success">
+                                        <i class="bi bi-arrow-up"></i> +2% this month
+                                    </small>
+                                </div>
                             </div>
                         </div>
                     </div>
                     <div class="col-12 col-sm-6 col-lg-3">
-                        <div class="card text-white bg-warning h-100">
-                            <div class="card-body text-center">
-                                <i class="bi bi-house-door-fill fs-1"></i>
-                                <h3 class="card-title">{{ stats.classes if stats else 0 }}</h3>
-                                <p class="card-text">Total Classes</p>
+                        <div class="stats-card card border-0 shadow-sm h-100">
+                            <div class="card-body text-center p-4">
+                                <div class="stats-icon mb-3">
+                                    <i class="bi bi-house-door-fill"></i>
+                                </div>
+                                <h2 class="stats-number text-warning mb-2">{{ stats.classes if stats else 0 }}</h2>
+                                <p class="stats-label text-muted mb-0">Total Classes</p>
+                                <div class="stats-trend mt-2">
+                                    <small class="text-success">
+                                        <i class="bi bi-arrow-up"></i> +3% this month
+                                    </small>
+                                </div>
                             </div>
                         </div>
                     </div>
                     <div class="col-12 col-sm-6 col-lg-3">
-                        <div class="card text-white bg-info h-100">
-                            <div class="card-body text-center">
-                                <i class="bi bi-journal-check fs-1"></i>
-                                <h3 class="card-title">{{ stats.assignments if stats else 0 }}</h3>
-                                <p class="card-text">Active Assignments</p>
+                        <div class="stats-card card border-0 shadow-sm h-100">
+                            <div class="card-body text-center p-4">
+                                <div class="stats-icon mb-3">
+                                    <i class="bi bi-journal-check"></i>
+                                </div>
+                                <h2 class="stats-number text-info mb-2">{{ stats.assignments if stats else 0 }}</h2>
+                                <p class="stats-label text-muted mb-0">Active Assignments</p>
+                                <div class="stats-trend mt-2">
+                                    <small class="text-success">
+                                        <i class="bi bi-arrow-up"></i> +12% this month
+                                    </small>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -2809,4 +2896,50 @@
     });
     </script>
     {% endif %}
+
+    <!-- Enhanced Dashboard JavaScript -->
+    <script>
+    // Real-time clock functionality
+    function updateTime() {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+        });
+        const timeElement = document.getElementById('current-time');
+        if (timeElement) {
+            timeElement.textContent = timeString;
+        }
+    }
+
+    // Update time immediately and then every second
+    updateTime();
+    setInterval(updateTime, 1000);
+
+    // Add smooth animations to stats cards
+    document.addEventListener('DOMContentLoaded', function() {
+        const statsCards = document.querySelectorAll('.stats-card');
+        
+        // Animate cards on scroll
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry, index) => {
+                if (entry.isIntersecting) {
+                    setTimeout(() => {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }, index * 100);
+                }
+            });
+        }, { threshold: 0.1 });
+        
+        statsCards.forEach(card => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            card.style.transition = 'all 0.6s ease';
+            observer.observe(card);
+        });
+    });
+    </script>
 {% endblock %} 

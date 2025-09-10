@@ -5,6 +5,44 @@ html, body {
     padding: 0;
 }
 
+/* Slideshow Background Styles */
+.slideshow-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    overflow: hidden;
+}
+
+.slideshow-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    opacity: 0;
+    transition: opacity 1s ease-in-out;
+}
+
+.slideshow-image.active {
+    opacity: 1;
+}
+
+.slideshow-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.2);
+    z-index: 1;
+}
+
 /* --- Main Application Styles --- */
 
 /* General Body & Typography */
@@ -13,6 +51,117 @@ body {
     background-color: #f8f9fa;
     color: #343a40;
     overflow-x: hidden; /* Prevent horizontal scroll */
+}
+
+/* Enhanced Dashboard Styles */
+.dashboard-header {
+    background: linear-gradient(135deg, #2E8B57 0%, #228B22 50%, #556B2F 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 15px;
+    margin-bottom: 2rem;
+    box-shadow: 0 10px 30px rgba(46, 139, 87, 0.2);
+}
+
+.dashboard-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.dashboard-subtitle {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    margin: 0;
+}
+
+.dashboard-time {
+    font-size: 1rem;
+    font-weight: 500;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 0.5rem 1rem;
+    border-radius: 25px;
+    backdrop-filter: blur(10px);
+}
+
+.welcome-card .card {
+    border-radius: 15px;
+    transition: all 0.3s ease;
+}
+
+.welcome-card .card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+}
+
+.welcome-icon i {
+    opacity: 0.8;
+    transition: all 0.3s ease;
+}
+
+.welcome-card:hover .welcome-icon i {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+/* Enhanced Statistics Cards */
+.stats-card {
+    border-radius: 15px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.stats-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #2E8B57, #228B22, #556B2F);
+}
+
+.stats-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.stats-icon {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    background: linear-gradient(135deg, #2E8B57, #228B22);
+    color: white;
+    transition: all 0.3s ease;
+}
+
+.stats-card:hover .stats-icon {
+    transform: scale(1.1);
+    box-shadow: 0 10px 20px rgba(46, 139, 87, 0.3);
+}
+
+.stats-number {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.stats-label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stats-trend {
+    font-size: 0.8rem;
+    font-weight: 600;
 }
 
 /* Enhanced Grades Section Styles */
@@ -798,17 +947,39 @@ body {
 
 /* Hero Section */
 .hero-section {
-    background: linear-gradient(45deg, rgba(0, 123, 255, 0.8), rgba(0, 198, 255, 0.8)), url("/static/img/csa_logo_background.jpg");
-    background-size: cover;
-    background-position: center;
+    background: transparent;
     padding: 8rem 0;
     text-align: center;
     color: white;
+    position: relative;
+    overflow: hidden;
+    z-index: 2;
 }
+.hero-text {
+    animation: fadeInUp 1s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 .hero-content h1 {
     font-size: 3.5rem;
     font-weight: 700;
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    background: linear-gradient(45deg, #ffffff, #f0f8f0);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 1.5rem;
+    line-height: 1.2;
 }
 .hero-content p.lead {
     font-size: 1.25rem;
@@ -816,50 +987,132 @@ body {
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
 }
 .hero-content .btn-primary {
-    padding: 12px 30px;
+    background: linear-gradient(135deg, #2E8B57 0%, #228B22 50%, #556B2F 100%);
+    border: none;
+    padding: 15px 35px;
     font-size: 1.1rem;
     font-weight: 600;
     border-radius: 50px;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 8px 25px rgba(46, 139, 87, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+.hero-content .btn-primary::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+.hero-content .btn-primary:hover::before {
+    left: 100%;
 }
 .hero-content .btn-primary:hover {
     transform: translateY(-3px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 12px 30px rgba(46, 139, 87, 0.4);
 }
 .navbar>.container, .navbar>.container-fluid, .navbar>.container-lg, .navbar>.container-md, .navbar>.container-sm, .navbar>.container-xl, .navbar>.container-xxl {
-    background: linear-gradient(90deg, green);
+    background: linear-gradient(135deg, rgba(46, 139, 87, 0.95) 0%, rgba(34, 139, 34, 0.9) 50%, rgba(85, 107, 47, 0.95) 100%);
+    box-shadow: 0 2px 10px rgba(46, 139, 87, 0.2);
+    backdrop-filter: blur(10px);
+    position: relative;
+    z-index: 3;
 }
 
 /* Features Section */
 .features-section {
-    padding: 5rem 0;
+    padding: 4rem 0;
+    background: transparent;
+    position: relative;
+    z-index: 2;
+}
+
+.section-title {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: white;
+    margin-bottom: 1rem;
+    position: relative;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.section-title::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 3px;
+    background: linear-gradient(90deg, #ffffff, #f0f8f0);
+    border-radius: 2px;
+}
+
+.section-subtitle {
+    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 2rem;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
 }
 .feature-card {
-    background-color: white;
+    background-color: rgba(255, 255, 255, 0.95);
     border: none;
-    border-radius: 15px;
-    padding: 30px;
+    border-radius: 16px;
+    padding: 25px 20px;
     transition: all 0.3s ease;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+.feature-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #2E8B57, #228B22, #556B2F);
+    border-radius: 16px 16px 0 0;
 }
 .feature-card:hover {
-    transform: translateY(-10px);
-    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+    transform: translateY(-8px);
+    box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15);
+    background-color: rgba(255, 255, 255, 0.98);
 }
 .feature-icon {
-    font-size: 3rem;
-    color: #0d6efd;
-    margin-bottom: 1.5rem;
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
     display: inline-block;
-    background: linear-gradient(45deg, #0d6efd, #00c6ff);
+    background: linear-gradient(45deg, #2E8B57, #228B22, #556B2F);
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
+    transition: all 0.3s ease;
+}
+.feature-card:hover .feature-icon {
+    transform: scale(1.05);
 }
 .feature-card h3 {
-    font-size: 1.5rem;
+    font-size: 1.3rem;
     font-weight: 600;
-    margin-bottom: 1rem;
+    margin-bottom: 0.8rem;
+    color: #2E8B57;
+    transition: all 0.3s ease;
+}
+.feature-card:hover h3 {
+    color: #228B22;
+}
+.feature-card p {
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: #6c757d;
+    margin-bottom: 0;
 }
 
 /* Student Cards (from director_students.html) */

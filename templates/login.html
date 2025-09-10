@@ -6,6 +6,20 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 
+<!-- Slideshow Background -->
+<div class="slideshow-container">
+    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image1.png');"></div>
+    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image2.png');"></div>
+    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image3.png');"></div>
+    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image4.png');"></div>
+    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image5.png');"></div>
+    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image6.png');"></div>
+    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image7.png');"></div>
+    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image8.png');"></div>
+    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image9.png');"></div>
+    <div class="slideshow-overlay"></div>
+</div>
+
 <style>
 /* Hide CSRF token from being visible */
 input[name="csrf_token"] {
@@ -14,7 +28,7 @@ input[name="csrf_token"] {
 
 /* Modern Login Page Styles */
 body {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: transparent;
     min-height: 100vh;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
@@ -51,7 +65,7 @@ body {
 }
 
 .login-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #2E8B57 0%, #228B22 50%, #556B2F 100%);
     color: white;
     padding: 40px 40px 30px;
     text-align: center;
@@ -110,8 +124,8 @@ body {
 }
 
 .form-control:focus {
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: #2E8B57;
+    box-shadow: 0 0 0 3px rgba(46, 139, 87, 0.1);
     background: white;
     transform: translateY(-1px);
 }
@@ -150,7 +164,7 @@ body {
 }
 
 .btn-login {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #2E8B57 0%, #228B22 50%, #556B2F 100%);
     border: none;
     border-radius: 12px;
     padding: 16px;
@@ -180,7 +194,7 @@ body {
 
 .btn-login:hover {
     transform: translateY(-2px);
-    box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 10px 25px rgba(46, 139, 87, 0.3);
 }
 
 .btn-login:active {
@@ -477,6 +491,27 @@ body {
     // Run immediately and after a short delay
     removeCSRFTokenText();
     setTimeout(removeCSRFTokenText, 100);
+
+    // Slideshow functionality
+    const slideshowImages = document.querySelectorAll('.slideshow-image');
+    let currentSlide = 0;
+    
+    function showSlide(index) {
+        slideshowImages.forEach((img, i) => {
+            img.classList.toggle('active', i === index);
+        });
+    }
+    
+    function nextSlide() {
+        currentSlide = (currentSlide + 1) % slideshowImages.length;
+        showSlide(currentSlide);
+    }
+    
+    // Initialize slideshow
+    showSlide(0);
+    
+    // Change slide every 5 seconds
+    setInterval(nextSlide, 5000);
   });
 </script>
 {% endblock %}

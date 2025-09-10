@@ -25,8 +25,9 @@
                         <table class="table table-striped">
                             <thead>
                                 <tr>
-                                    <th>ID</th>
+                                    <th>User ID</th>
                                     <th>Username</th>
+                                    <th>Login ID</th>
                                     <th>Role</th>
                                     <th>Status</th>
                                     <th>Actions</th>
@@ -38,12 +39,21 @@
                                     <td>{{ user.id }}</td>
                                     <td>{{ user.username }}</td>
                                     <td>
+                                        {% if user.student_profile and user.student_profile.student_id %}
+                                            <code class="bg-light p-1 rounded">{{ user.student_profile.student_id }}</code>
+                                        {% elif user.teacher_staff_profile and user.teacher_staff_profile.staff_id %}
+                                            <code class="bg-light p-1 rounded">{{ user.teacher_staff_profile.staff_id }}</code>
+                                        {% else %}
+                                            <span class="text-muted">N/A</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
                                         <span class="badge 
                                             {% if user.role == 'Director' %}bg-danger
                                             {% elif user.role == 'School Administrator' %}bg-warning
                                             {% elif user.role == 'Teacher' %}bg-info
                                             {% elif user.role == 'Student' %}bg-success
-                                            {% elif user.role == 'Tech' %}bg-secondary
+                                            {% elif user.role in ['Tech', 'IT Support'] %}bg-secondary
                                             {% else %}bg-light text-dark{% endif %}">
                                             {{ user.role }}
                                         </span>

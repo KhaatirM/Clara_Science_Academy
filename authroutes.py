@@ -107,9 +107,11 @@ def login():
             user = User.query.filter_by(username=username).first()
             
             if user and check_password_hash(user.password_hash, password):
+                print(f"DEBUG: User {username} found with role: {user.role}")
                 # Skip ID validation for Tech users
                 if user.role == 'Tech':
                     id_valid = True
+                    print(f"DEBUG: Tech user {username} found, bypassing ID validation")
                 else:
                     # Validate ID number for all other roles
                     id_valid = False
@@ -145,17 +147,21 @@ def login():
                     flash('Logged in successfully.', 'success')
                     return redirect(url_for('auth.dashboard'))
                 else:
-                    # Log failed login attempt - invalid ID
-                    log_activity(
-                        user_id=user.id if user else None,
-                        action='login_failed',
-                        details={'username': username, 'reason': 'invalid_id'},
-                        ip_address=request.remote_addr,
-                        user_agent=request.headers.get('User-Agent'),
-                        success=False,
-                        error_message='Invalid ID number'
-                    )
-                    flash('Invalid ID number for this user.', 'danger')
+                    # Log failed login attempt - invalid ID (only for non-Tech users)
+                    if user.role != 'Tech':
+                        log_activity(
+                            user_id=user.id if user else None,
+                            action='login_failed',
+                            details={'username': username, 'reason': 'invalid_id'},
+                            ip_address=request.remote_addr,
+                            user_agent=request.headers.get('User-Agent'),
+                            success=False,
+                            error_message='Invalid ID number'
+                        )
+                        flash('Invalid ID number for this user.', 'danger')
+                    else:
+                        # This shouldn't happen for Tech users, but just in case
+                        flash('Login failed. Please try again.', 'danger')
             else:
                 # Log failed login attempt - invalid credentials
                 log_activity(

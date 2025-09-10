@@ -1,0 +1,353 @@
+{% extends "dashboard_layout.html" %}
+
+{% block title %}Attendance Hub{% endblock %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+    <!-- Header Section -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
+        <div>
+            <h2 class="mb-1"><i class="bi bi-clipboard-check me-2"></i>Attendance Hub</h2>
+            <p class="text-muted mb-0">Quick and easy attendance management for all your classes</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-secondary" onclick="refreshAttendanceData()">
+                <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+            </button>
+            <a href="{{ url_for('management.attendance_reports') if current_user.role in ['Director', 'School Administrator'] else url_for('teacher.attendance_reports') if current_user.role == 'Teacher' else '#' }}" 
+               class="btn btn-outline-info">
+                <i class="bi bi-graph-up me-1"></i>Reports
+            </a>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <h4 class="mb-1" id="total-classes">{{ classes|length }}</h4>
+                    <small>Total Classes</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <h4 class="mb-1" id="attendance-today">{{ today_attendance_count }}</h4>
+                    <small>Today's Attendance</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body text-center">
+                    <h4 class="mb-1" id="pending-classes">{{ pending_classes_count }}</h4>
+                    <small>Pending Today</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body text-center">
+                    <h4 class="mb-1" id="attendance-rate">{{ overall_attendance_rate }}%</h4>
+                    <small>Overall Rate</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Date Selector -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-12 col-md-4">
+                    <label for="attendance-date" class="form-label">Select Date:</label>
+                    <input type="date" class="form-control" id="attendance-date" value="{{ today_date }}">
+                </div>
+                <div class="col-12 col-md-4">
+                    <button class="btn btn-primary" onclick="loadDateAttendance()">
+                        <i class="bi bi-calendar-check me-1"></i>Load Attendance
+                    </button>
+                </div>
+                <div class="col-12 col-md-4">
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-secondary btn-sm" onclick="setDateToToday()">
+                            <i class="bi bi-calendar-day me-1"></i>Today
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="setDateToYesterday()">
+                            <i class="bi bi-calendar-minus me-1"></i>Yesterday
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Classes Grid -->
+    <div class="row g-3 g-md-4" id="classes-container">
+        {% for class_item in classes %}
+        <div class="col-12 col-md-6 col-lg-4">
+            <div class="card h-100 attendance-class-card" data-class-id="{{ class_item.id }}">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">{{ class_item.name }}</h5>
+                    <span class="badge bg-{{ 'success' if class_item.attendance_taken_today else 'warning' }}">
+                        {{ 'Completed' if class_item.attendance_taken_today else 'Pending' }}
+                    </span>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <p class="card-text mb-1"><strong>Subject:</strong> {{ class_item.subject }}</p>
+                        <p class="card-text mb-1"><strong>Grade Level:</strong> {{ class_item.get_grade_levels_display() }}</p>
+                        <p class="card-text mb-1"><strong>Students:</strong> {{ class_item.student_count or 0 }}</p>
+                        <p class="card-text mb-0"><strong>Teacher:</strong> {{ class_item.teacher.name if class_item.teacher else 'N/A' }}</p>
+                    </div>
+                    
+                    <!-- Quick Stats -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <div class="text-center">
+                                <div class="h6 mb-0 text-success">{{ class_item.today_present or 0 }}</div>
+                                <small class="text-muted">Present</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-center">
+                                <div class="h6 mb-0 text-danger">{{ class_item.today_absent or 0 }}</div>
+                                <small class="text-muted">Absent</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('teacher.take_attendance', class_id=class_item.id) }}?date={{ today_date }}" 
+                           class="btn btn-primary">
+                            <i class="bi bi-clipboard-check me-1"></i>Take Attendance
+                        </a>
+                        <div class="btn-group" role="group">
+                            <a href="{{ url_for('teacher.view_class', class_id=class_item.id) }}" 
+                               class="btn btn-outline-secondary btn-sm">
+                                <i class="bi bi-eye me-1"></i>View Class
+                            </a>
+                            <button class="btn btn-outline-info btn-sm" onclick="quickMarkAllPresent({{ class_item.id }})">
+                                <i class="bi bi-check-all me-1"></i>All Present
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12">
+            <div class="alert alert-info text-center">
+                <i class="bi bi-info-circle me-2"></i>
+                <h5>No Classes Available</h5>
+                <p class="mb-0">You don't have any classes assigned to take attendance for.</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Quick Actions Modal -->
+    <div class="modal fade" id="quickActionsModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Quick Attendance Actions</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-success" onclick="markAllClassesPresent()">
+                            <i class="bi bi-check-all me-2"></i>Mark All Classes Present
+                        </button>
+                        <button class="btn btn-warning" onclick="markAllClassesLate()">
+                            <i class="bi bi-clock me-2"></i>Mark All Classes Late
+                        </button>
+                        <button class="btn btn-info" onclick="exportAttendanceReport()">
+                            <i class="bi bi-download me-2"></i>Export Today's Report
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set today's date as default
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('attendance-date').value = today;
+    
+    // Add keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Ctrl/Cmd + T for today
+        if ((e.ctrlKey || e.metaKey) && e.key === 't') {
+            e.preventDefault();
+            setDateToToday();
+        }
+        // Ctrl/Cmd + Y for yesterday
+        if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+            e.preventDefault();
+            setDateToYesterday();
+        }
+        // Ctrl/Cmd + R for refresh
+        if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+            e.preventDefault();
+            refreshAttendanceData();
+        }
+    });
+    
+    // Auto-refresh every 5 minutes
+    setInterval(refreshAttendanceData, 300000);
+});
+
+function setDateToToday() {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('attendance-date').value = today;
+    loadDateAttendance();
+}
+
+function setDateToYesterday() {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    document.getElementById('attendance-date').value = yesterday.toISOString().split('T')[0];
+    loadDateAttendance();
+}
+
+function loadDateAttendance() {
+    const selectedDate = document.getElementById('attendance-date').value;
+    if (selectedDate) {
+        // Update all class links to include the selected date
+        const classLinks = document.querySelectorAll('.attendance-class-card a[href*="take_attendance"]');
+        classLinks.forEach(link => {
+            const baseUrl = link.href.split('?')[0];
+            link.href = baseUrl + '?date=' + selectedDate;
+        });
+        
+        // Reload the page with the new date
+        window.location.href = window.location.pathname + '?date=' + selectedDate;
+    }
+}
+
+function refreshAttendanceData() {
+    // Show loading state
+    const refreshBtn = document.querySelector('button[onclick="refreshAttendanceData()"]');
+    const originalText = refreshBtn.innerHTML;
+    refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Refreshing...';
+    refreshBtn.disabled = true;
+    
+    // Reload the page
+    setTimeout(() => {
+        window.location.reload();
+    }, 1000);
+}
+
+function quickMarkAllPresent(classId) {
+    if (confirm('Mark all students as present for this class?')) {
+        // This would need to be implemented as a backend endpoint
+        fetch(`/teacher/quick-attendance/${classId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                action: 'mark_all_present',
+                date: document.getElementById('attendance-date').value
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update the UI
+                const classCard = document.querySelector(`[data-class-id="${classId}"]`);
+                const badge = classCard.querySelector('.badge');
+                badge.className = 'badge bg-success';
+                badge.textContent = 'Completed';
+                
+                // Update stats
+                const presentCount = classCard.querySelector('.text-success');
+                const absentCount = classCard.querySelector('.text-danger');
+                presentCount.textContent = data.present_count;
+                absentCount.textContent = '0';
+                
+                // Show success message
+                showNotification('Attendance marked successfully!', 'success');
+            } else {
+                showNotification('Error marking attendance: ' + data.message, 'danger');
+            }
+        })
+        .catch(error => {
+            showNotification('Error: ' + error.message, 'danger');
+        });
+    }
+}
+
+function markAllClassesPresent() {
+    if (confirm('Mark all students as present for all classes today?')) {
+        // Implementation would go here
+        showNotification('Feature coming soon!', 'info');
+    }
+}
+
+function markAllClassesLate() {
+    if (confirm('Mark all students as late for all classes today?')) {
+        // Implementation would go here
+        showNotification('Feature coming soon!', 'info');
+    }
+}
+
+function exportAttendanceReport() {
+    // Implementation would go here
+    showNotification('Export feature coming soon!', 'info');
+}
+
+function showNotification(message, type) {
+    // Create a simple notification
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+        }
+    }, 5000);
+}
+</script>
+
+<style>
+.attendance-class-card {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.attendance-class-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.card-header .badge {
+    font-size: 0.75rem;
+}
+
+@media (max-width: 768px) {
+    .attendance-class-card .btn-group {
+        flex-direction: column;
+    }
+    
+    .attendance-class-card .btn-group .btn {
+        border-radius: 0.375rem !important;
+        margin-bottom: 0.25rem;
+    }
+}
+</style>
+{% endblock %}

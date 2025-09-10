@@ -899,20 +899,62 @@ def assignments():
 @login_required
 @management_required
 def attendance():
-    # Get all classes with student counts
+    """Management attendance hub with improved interface."""
+    # Get all classes
     classes = Class.query.all()
     
-    # For each class, get the enrolled student count
-    for class_obj in classes:
-        # Count active enrollments for this class
-        student_count = db.session.query(Enrollment).filter_by(
-            class_id=class_obj.id, 
-            is_active=True
-        ).count()
-        class_obj.enrolled_student_count = student_count
+    # Get today's date
+    from datetime import datetime
+    today_date = datetime.now().strftime('%Y-%m-%d')
     
-    return render_template('role_dashboard.html',
+    # Calculate attendance stats for each class
+    for class_obj in classes:
+        # Get student count
+        class_obj.student_count = db.session.query(Student).join(Enrollment).filter(
+            Enrollment.class_id == class_obj.id,
+            Enrollment.is_active == True
+        ).count()
+        
+        # Check if attendance was taken today
+        today_attendance = Attendance.query.filter_by(
+            class_id=class_obj.id,
+            date=datetime.now().date()
+        ).count()
+        class_obj.attendance_taken_today = today_attendance > 0
+        
+        # Get today's attendance stats
+        if class_obj.attendance_taken_today:
+            present_count = Attendance.query.filter_by(
+                class_id=class_obj.id,
+                date=datetime.now().date(),
+                status='Present'
+            ).count()
+            absent_count = Attendance.query.filter(
+                Attendance.class_id == class_obj.id,
+                Attendance.date == datetime.now().date(),
+                Attendance.status.in_(['Unexcused Absence', 'Excused Absence'])
+            ).count()
+            class_obj.today_present = present_count
+            class_obj.today_absent = absent_count
+        else:
+            class_obj.today_present = 0
+            class_obj.today_absent = 0
+    
+    # Calculate overall stats
+    today_attendance_count = sum(1 for c in classes if c.attendance_taken_today)
+    pending_classes_count = len(classes) - today_attendance_count
+    
+    # Calculate overall attendance rate
+    total_attendance_records = Attendance.query.filter_by(date=datetime.now().date()).count()
+    present_records = Attendance.query.filter_by(date=datetime.now().date(), status='Present').count()
+    overall_attendance_rate = round((present_records / total_attendance_records * 100), 1) if total_attendance_records > 0 else 0
+    
+    return render_template('attendance_hub_improved.html',
                          classes=classes,
+                         today_date=today_date,
+                         today_attendance_count=today_attendance_count,
+                         pending_classes_count=pending_classes_count,
+                         overall_attendance_rate=overall_attendance_rate,
                          section='attendance',
                          active_tab='attendance')
 

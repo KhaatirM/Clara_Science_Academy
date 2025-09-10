@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, abort
+from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, abort, jsonify
 from flask_login import login_required, current_user
 from models import db, TeacherStaff, Class, Student, Assignment, Grade, SchoolYear, Submission, Announcement, Notification, Message, MessageGroup, MessageGroupMember, MessageAttachment, ScheduledAnnouncement, Enrollment, Attendance, StudentGroup, StudentGroupMember, GroupAssignment, GroupSubmission, GroupGrade, AcademicPeriod, GroupTemplate, PeerEvaluation, AssignmentRubric, GroupContract, ReflectionJournal, GroupProgress, AssignmentTemplate, GroupRotation, GroupRotationHistory, PeerReview, DraftSubmission, DraftFeedback, DeadlineReminder, ReminderNotification, Feedback360, Feedback360Response, Feedback360Criteria, GroupConflict, ConflictResolution, ConflictParticipant, GroupWorkReport, IndividualContribution, TimeTracking, CollaborationMetrics, ReportExport, AnalyticsDashboard, PerformanceBenchmark
 from decorators import teacher_required
@@ -725,7 +725,7 @@ def take_attendance(class_id):
         return redirect(url_for('teacher.view_class', class_id=class_id))
 
     return render_template(
-        'take_attendance.html',
+        'take_attendance_improved.html',
         class_item=class_obj,
         students=students,
         attendance_date_str=attendance_date_str,
@@ -929,33 +929,121 @@ def student_grades():
 @login_required
 @teacher_required
 def attendance():
-    """View attendance for teacher's classes, or all classes for Directors"""
+    """View all classes for attendance taking with improved interface."""
     teacher = get_teacher_or_admin()
     
-    # Get all classes with student counts
-    all_classes = Class.query.all()
-    
-    # For each class, get the enrolled student count
-    for class_obj in all_classes:
-        # Count active enrollments for this class
-        student_count = db.session.query(Enrollment).filter_by(
-            class_id=class_obj.id, 
-            is_active=True
-        ).count()
-        class_obj.enrolled_student_count = student_count
-    
-    # Directors see all classes, teachers only see their assigned classes
-    if current_user.role == 'Director':
-        classes = all_classes
+    # Directors and School Administrators see all classes, teachers only see their assigned classes
+    if current_user.role in ['Director', 'School Administrator']:
+        classes = Class.query.all()
     else:
-        classes = [c for c in all_classes if c.teacher_id == teacher.id]
+        classes = Class.query.filter_by(teacher_id=teacher.id).all()
     
-    return render_template('role_teacher_dashboard.html', 
-                         teacher=teacher,
+    # Get today's date
+    today_date = datetime.now().strftime('%Y-%m-%d')
+    
+    # Calculate attendance stats for each class
+    for class_obj in classes:
+        # Get student count
+        class_obj.student_count = db.session.query(Student).join(Enrollment).filter(
+            Enrollment.class_id == class_obj.id,
+            Enrollment.is_active == True
+        ).count()
+        
+        # Check if attendance was taken today
+        today_attendance = Attendance.query.filter_by(
+            class_id=class_obj.id,
+            date=datetime.now().date()
+        ).count()
+        class_obj.attendance_taken_today = today_attendance > 0
+        
+        # Get today's attendance stats
+        if class_obj.attendance_taken_today:
+            present_count = Attendance.query.filter_by(
+                class_id=class_obj.id,
+                date=datetime.now().date(),
+                status='Present'
+            ).count()
+            absent_count = Attendance.query.filter(
+                Attendance.class_id == class_obj.id,
+                Attendance.date == datetime.now().date(),
+                Attendance.status.in_(['Unexcused Absence', 'Excused Absence'])
+            ).count()
+            class_obj.today_present = present_count
+            class_obj.today_absent = absent_count
+        else:
+            class_obj.today_present = 0
+            class_obj.today_absent = 0
+    
+    # Calculate overall stats
+    today_attendance_count = sum(1 for c in classes if c.attendance_taken_today)
+    pending_classes_count = len(classes) - today_attendance_count
+    
+    # Calculate overall attendance rate
+    total_attendance_records = Attendance.query.filter_by(date=datetime.now().date()).count()
+    present_records = Attendance.query.filter_by(date=datetime.now().date(), status='Present').count()
+    overall_attendance_rate = round((present_records / total_attendance_records * 100), 1) if total_attendance_records > 0 else 0
+    
+    return render_template('attendance_hub_improved.html',
                          classes=classes,
-                         all_classes=all_classes,  # Pass all classes for comparison
+                         today_date=today_date,
+                         today_attendance_count=today_attendance_count,
+                         pending_classes_count=pending_classes_count,
+                         overall_attendance_rate=overall_attendance_rate,
                          section='attendance',
                          active_tab='attendance')
+
+@teacher_blueprint.route('/quick-attendance/<int:class_id>', methods=['POST'])
+@login_required
+@teacher_required
+def quick_attendance(class_id):
+    """Handle quick attendance actions like marking all present."""
+    class_obj = Class.query.get_or_404(class_id)
+    
+    # Check authorization
+    teacher = get_teacher_or_admin()
+    if not is_admin() and teacher and class_obj.teacher_id != teacher.id:
+        return jsonify({'success': False, 'message': 'Not authorized'}), 403
+    
+    data = request.get_json()
+    action = data.get('action')
+    date_str = data.get('date', datetime.now().strftime('%Y-%m-%d'))
+    
+    try:
+        attendance_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({'success': False, 'message': 'Invalid date format'}), 400
+    
+    # Get enrolled students
+    students = db.session.query(Student).join(Enrollment).filter(
+        Enrollment.class_id == class_id,
+        Enrollment.is_active == True
+    ).all()
+    
+    if action == 'mark_all_present':
+        # Delete existing records for this date
+        Attendance.query.filter_by(class_id=class_id, date=attendance_date).delete()
+        
+        # Create new records
+        for student in students:
+            attendance = Attendance(
+                student_id=student.id,
+                class_id=class_id,
+                date=attendance_date,
+                status='Present',
+                notes='Bulk marked as present'
+            )
+            db.session.add(attendance)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'All students marked as present',
+            'present_count': len(students),
+            'absent_count': 0
+        })
+    
+    return jsonify({'success': False, 'message': 'Unknown action'}), 400
 
 @teacher_blueprint.route('/students')
 @login_required

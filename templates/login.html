@@ -304,8 +304,8 @@ body {
         Enhanced Security Enabled
       </div>
       
-      <form method="POST" id="loginForm">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <form method="POST" action="/login" id="loginForm">
+        {{ csrf_token() }}
         
         <div class="form-group">
           <label for="username" class="form-label">Username</label>
@@ -406,6 +406,7 @@ body {
     const loginBtn = document.getElementById('loginBtn');
     const btnText = document.querySelector('.btn-text');
 
+    // Simple form submission without interference
     loginForm.addEventListener('submit', function(e) {
       // Debug: Check form data
       const formData = new FormData(loginForm);
@@ -414,14 +415,9 @@ body {
         console.log(key + ': ' + value);
       }
       
-      // Don't prevent default form submission
-      // Just add loading state
+      // Add loading state but don't prevent submission
       loginBtn.classList.add('loading');
       btnText.textContent = 'Signing In...';
-      
-      // Disable only input fields, not the submit button
-      const inputFields = loginForm.querySelectorAll('input[type="text"], input[type="password"]');
-      inputFields.forEach(input => input.disabled = true);
     });
 
     // Add focus effects to form inputs

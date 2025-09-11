@@ -99,8 +99,13 @@ def login():
             password = request.form.get('password')
             user_id = request.form.get('user_id')
             
+            # Debug: Print form data
+            print(f"DEBUG: Received form data - username: '{username}', password: '{password}', user_id: '{user_id}'")
+            print(f"DEBUG: Form data dict: {dict(request.form)}")
+            
             # Check if username and password are provided
             if not username or not password:
+                print(f"DEBUG: Missing credentials - username: {bool(username)}, password: {bool(password)}")
                 flash('Username and password are required.', 'danger')
                 return render_template('login.html')
             

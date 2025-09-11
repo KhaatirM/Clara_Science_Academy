@@ -407,13 +407,21 @@ body {
     const btnText = document.querySelector('.btn-text');
 
     loginForm.addEventListener('submit', function(e) {
-      // Add loading state
+      // Debug: Check form data
+      const formData = new FormData(loginForm);
+      console.log('Form data being submitted:');
+      for (let [key, value] of formData.entries()) {
+        console.log(key + ': ' + value);
+      }
+      
+      // Don't prevent default form submission
+      // Just add loading state
       loginBtn.classList.add('loading');
       btnText.textContent = 'Signing In...';
       
-      // Disable form inputs
-      const inputs = loginForm.querySelectorAll('input, button');
-      inputs.forEach(input => input.disabled = true);
+      // Disable only input fields, not the submit button
+      const inputFields = loginForm.querySelectorAll('input[type="text"], input[type="password"]');
+      inputFields.forEach(input => input.disabled = true);
     });
 
     // Add focus effects to form inputs
@@ -460,12 +468,7 @@ body {
       }, 100 + (index * 100));
     });
 
-    // Add enter key support for better UX
-    document.addEventListener('keypress', function(e) {
-      if (e.key === 'Enter' && !loginBtn.disabled) {
-        loginForm.dispatchEvent(new Event('submit'));
-      }
-    });
+    // Enter key support is handled naturally by the form
 
     // Remove any CSRF token text that might appear
     function removeCSRFTokenText() {

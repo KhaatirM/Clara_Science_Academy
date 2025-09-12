@@ -542,11 +542,13 @@ def reset_user_password(user_id):
         import string
         temp_password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(8))
         
-        # Update the user's password
+        # Update the user's password and set temporary flag
         user.password_hash = generate_password_hash(temp_password)
+        user.is_temporary_password = True
+        user.password_changed_at = None  # Reset password change timestamp
         db.session.commit()
         
-        flash(f'Password reset successfully. Temporary password: {temp_password}', 'success')
+        flash(f'Password reset successfully. Temporary password: {temp_password}. User will be required to change password on next login.', 'success')
     except Exception as e:
         flash(f'Error resetting password: {str(e)}', 'danger')
     

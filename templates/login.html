@@ -24,6 +24,43 @@
 /* Hide CSRF token from being visible */
 input[name="csrf_token"] {
     display: none !important;
+    visibility: hidden !important;
+    position: absolute !important;
+    left: -9999px !important;
+}
+
+/* Hide any plain text CSRF tokens that might appear */
+body * {
+    font-family: inherit;
+}
+
+/* Additional protection against visible CSRF tokens */
+[style*="display: none"] {
+    display: none !important;
+}
+
+/* Hide any text that looks like a CSRF token */
+body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.01);
+    z-index: 9999;
+    pointer-events: none;
+}
+
+/* Hide any visible CSRF tokens that might appear as text */
+body *:not(input):not(script):not(style) {
+    font-family: inherit;
+}
+
+/* Additional CSS to hide any stray text that might be CSRF tokens */
+.login-container * {
+    position: relative;
+    z-index: 1;
 }
 
 /* Modern Login Page Styles */
@@ -305,7 +342,7 @@ body {
       </div>
       
       <form method="POST" action="/login" id="loginForm">
-        {{ csrf_token() }}
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         
         <div class="form-group">
           <label for="username" class="form-label">Username</label>
@@ -468,28 +505,46 @@ body {
 
     // Remove any CSRF token text that might appear
     function removeCSRFTokenText() {
-      const loginBody = document.querySelector('.login-body');
-      if (loginBody) {
-        // Remove any text nodes that contain CSRF-like patterns
-        const walker = document.createTreeWalker(
-          loginBody,
-          NodeFilter.SHOW_TEXT,
-          null,
-          false
-        );
-        
-        let node;
-        while (node = walker.nextNode()) {
-          if (node.textContent && node.textContent.match(/^[A-Za-z0-9+/=]+\.[A-Za-z0-9+/=]+\.[A-Za-z0-9+/=]+$/)) {
+      // Check the entire document, not just login body
+      const walker = document.createTreeWalker(
+        document.body,
+        NodeFilter.SHOW_TEXT,
+        null,
+        false
+      );
+      
+      let node;
+      while (node = walker.nextNode()) {
+        if (node.textContent && node.textContent.trim()) {
+          const text = node.textContent.trim();
+          // Match CSRF token pattern (base64-like with dots)
+          if (text.match(/^[A-Za-z0-9+/=]+\.[A-Za-z0-9+/=]+\.[A-Za-z0-9+/=]+$/) && text.length > 20) {
+            console.log('Removing CSRF token text:', text);
             node.remove();
           }
         }
       }
     }
     
-    // Run immediately and after a short delay
+    // Run immediately and after delays to catch any dynamically added content
     removeCSRFTokenText();
     setTimeout(removeCSRFTokenText, 100);
+    setTimeout(removeCSRFTokenText, 500);
+    setTimeout(removeCSRFTokenText, 1000);
+    
+    // Also run on DOM mutations
+    const observer = new MutationObserver(function(mutations) {
+      mutations.forEach(function(mutation) {
+        if (mutation.type === 'childList') {
+          removeCSRFTokenText();
+        }
+      });
+    });
+    
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
 
     // Slideshow functionality
     const slideshowImages = document.querySelectorAll('.slideshow-image');

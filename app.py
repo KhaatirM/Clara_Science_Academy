@@ -5,7 +5,7 @@ from flask_login import current_user, login_user, logout_user, login_required
 from flask_wtf.csrf import CSRFError
 from werkzeug.security import check_password_hash
 from config import Config, ProductionConfig, DevelopmentConfig, TestingConfig
-from sqlalchemy import func, and_
+from sqlalchemy import func, and_, text
 from datetime import datetime, timezone
 
 # Import extensions to avoid circular imports
@@ -539,6 +539,65 @@ def create_app(config_class=None):
             
         except Exception as e:
             flash(f'Error creating missing tables: {str(e)}', 'danger')
+            return redirect(url_for('management.management_dashboard'))
+    
+    @app.route('/migrate/add-temporary-password-fields')
+    @login_required
+    def add_temporary_password_fields():
+        """Add temporary password fields to the User table."""
+        if current_user.role not in ['School Administrator', 'Director', 'Tech']:
+            flash('Access denied. Only administrators can run migrations.', 'danger')
+            return redirect(url_for('auth.dashboard'))
+        
+        try:
+            # Check if columns already exist
+            result = db.session.execute(text("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'user' 
+                AND column_name IN ('is_temporary_password', 'password_changed_at', 'created_at')
+            """))
+            
+            existing_columns = [row[0] for row in result]
+            
+            # Add is_temporary_password column if it doesn't exist
+            if 'is_temporary_password' not in existing_columns:
+                db.session.execute(text("""
+                    ALTER TABLE "user" 
+                    ADD COLUMN is_temporary_password BOOLEAN DEFAULT FALSE NOT NULL
+                """))
+                db.session.commit()
+                flash('Added is_temporary_password column to User table', 'success')
+            else:
+                flash('is_temporary_password column already exists', 'info')
+            
+            # Add password_changed_at column if it doesn't exist
+            if 'password_changed_at' not in existing_columns:
+                db.session.execute(text("""
+                    ALTER TABLE "user" 
+                    ADD COLUMN password_changed_at TIMESTAMP
+                """))
+                db.session.commit()
+                flash('Added password_changed_at column to User table', 'success')
+            else:
+                flash('password_changed_at column already exists', 'info')
+            
+            # Add created_at column if it doesn't exist
+            if 'created_at' not in existing_columns:
+                db.session.execute(text("""
+                    ALTER TABLE "user" 
+                    ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+                """))
+                db.session.commit()
+                flash('Added created_at column to User table', 'success')
+            else:
+                flash('created_at column already exists', 'info')
+            
+            flash('Temporary password fields migration completed successfully!', 'success')
+            return redirect(url_for('management.management_dashboard'))
+            
+        except Exception as e:
+            flash(f'Error adding temporary password fields: {str(e)}', 'danger')
             return redirect(url_for('management.management_dashboard'))
     
     return app

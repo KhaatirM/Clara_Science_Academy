@@ -318,12 +318,14 @@ def add_student():
             user.password_hash = generate_password_hash(password)
             user.role = 'Student'
             user.student_id = student.id
+            user.is_temporary_password = True  # New users must change password
+            user.password_changed_at = None
             
             db.session.add(user)
             db.session.commit()
             
             # Show success message with credentials
-            flash(f'Student added successfully! Username: {username}, Password: {password}', 'success')
+            flash(f'Student added successfully! Username: {username}, Password: {password}. Student will be required to change password on first login.', 'success')
             return redirect(url_for('management.students'))
             
         except Exception as e:
@@ -457,12 +459,14 @@ def add_teacher_staff():
             user.password_hash = generate_password_hash(password)
             user.role = assigned_role
             user.teacher_staff_id = teacher_staff.id
+            user.is_temporary_password = True  # New users must change password
+            user.password_changed_at = None
             
             db.session.add(user)
             db.session.commit()
             
             # Show success message with credentials
-            flash(f'{assigned_role} added successfully! Username: {username}, Password: {password}, Staff ID: {teacher_staff.staff_id}', 'success')
+            flash(f'{assigned_role} added successfully! Username: {username}, Password: {password}, Staff ID: {teacher_staff.staff_id}. User will be required to change password on first login.', 'success')
             return redirect(url_for('management.teachers'))
             
         except Exception as e:

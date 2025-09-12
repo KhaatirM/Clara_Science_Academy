@@ -16,6 +16,11 @@ class User(db.Model, UserMixin):
     # This links the User model to a specific student or teacher record.
     student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=True)
     teacher_staff_id = db.Column(db.Integer, db.ForeignKey('teacher_staff.id'), nullable=True)
+    
+    # Password management flags
+    is_temporary_password = db.Column(db.Boolean, default=False, nullable=False)
+    password_changed_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
     def __repr__(self):
         return f"User('{self.username}', '{self.role}')"

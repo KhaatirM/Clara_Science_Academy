@@ -421,3 +421,100 @@ def change_password():
     
     # GET request - show password change form
     return render_template('change_password.html')
+
+@auth_blueprint.route('/change-password', methods=['POST'])
+@login_required
+def change_password_ajax():
+    """Handle password change via AJAX for temporary password users."""
+    try:
+        data = request.get_json() if request.is_json else request.form
+        
+        current_password = data.get('current_password', '').strip()
+        new_password = data.get('new_password', '').strip()
+        confirm_password = data.get('confirm_password', '').strip()
+        
+        # Validate input
+        if not current_password or not new_password or not confirm_password:
+            return jsonify({
+                'success': False,
+                'message': 'All fields are required.'
+            }), 400
+        
+        if new_password != confirm_password:
+            return jsonify({
+                'success': False,
+                'message': 'New passwords do not match.'
+            }), 400
+        
+        if len(new_password) < 8:
+            return jsonify({
+                'success': False,
+                'message': 'Password must be at least 8 characters long.'
+            }), 400
+        
+        # Verify current password
+        if not check_password_hash(current_user.password_hash, current_password):
+            return jsonify({
+                'success': False,
+                'message': 'Current password is incorrect.'
+            }), 400
+        
+        # Check if user has temporary password (required for this route)
+        if not current_user.is_temporary_password:
+            return jsonify({
+                'success': False,
+                'message': 'This route is only for users with temporary passwords.'
+            }), 403
+        
+        # Generate new password hash
+        new_password_hash = generate_password_hash(new_password)
+        
+        # Update user password and clear temporary flag
+        current_user.password_hash = new_password_hash
+        current_user.is_temporary_password = False
+        current_user.password_changed_at = datetime.utcnow()
+        
+        db.session.commit()
+        
+        # Log the password change
+        log_activity(
+            current_user.id,
+            'password_changed_from_temporary',
+            {'user_id': current_user.id, 'username': current_user.username},
+            request.remote_addr,
+            request.headers.get('User-Agent'),
+            True,
+            'Password changed from temporary password'
+        )
+        
+        # Determine redirect URL based on user role
+        if current_user.role in ['Director', 'School Administrator']:
+            redirect_url = url_for('management.dashboard')
+        elif current_user.role == 'Teacher':
+            redirect_url = url_for('teacher.dashboard')
+        elif current_user.role == 'Student':
+            redirect_url = url_for('student.dashboard')
+        else:
+            redirect_url = url_for('auth.dashboard')
+        
+        return jsonify({
+            'success': True,
+            'message': 'Password changed successfully!',
+            'redirect_url': redirect_url
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        log_activity(
+            current_user.id,
+            'password_change_ajax_failed',
+            {'error': str(e)},
+            request.remote_addr,
+            request.headers.get('User-Agent'),
+            False,
+            str(e)
+        )
+        return jsonify({
+            'success': False,
+            'message': 'An error occurred while changing your password. Please try again.'
+        }), 500

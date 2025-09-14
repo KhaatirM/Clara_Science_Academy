@@ -98,6 +98,21 @@
                                 </select>
                             </div>
 
+                            <!-- Assignment Status -->
+                            <div class="col-12 col-md-6">
+                                <label for="status" class="form-label">Assignment Status <span class="text-danger">*</span></label>
+                                <select class="form-select" id="status" name="status" required>
+                                    <option value="Active" {% if assignment.status == 'Active' %}selected{% endif %}>Active</option>
+                                    <option value="Inactive" {% if assignment.status == 'Inactive' %}selected{% endif %}>Inactive</option>
+                                    <option value="Voided" {% if assignment.status == 'Voided' %}selected{% endif %}>Voided</option>
+                                </select>
+                                <div class="form-text">
+                                    <strong>Active:</strong> Students can still submit work<br>
+                                    <strong>Inactive:</strong> Students cannot submit work<br>
+                                    <strong>Voided:</strong> Assignment doesn't affect grades (0/0 for all students)
+                                </div>
+                            </div>
+
                             <!-- File Upload -->
                             <div class="col-12">
                                 <label for="assignment_file" class="form-label">Assignment File</label>

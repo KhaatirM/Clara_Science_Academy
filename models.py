@@ -409,6 +409,9 @@ class Assignment(db.Model):
     is_locked = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
+    # Assignment status: Active, Inactive, Voided
+    status = db.Column(db.String(20), default='Active', nullable=False)
+    
     # File attachment fields
     attachment_filename = db.Column(db.String(255), nullable=True)
     attachment_original_filename = db.Column(db.String(255), nullable=True)

@@ -54,6 +54,20 @@
                                 </select>
                             </div>
                             
+                            <div class="col-12 col-md-6">
+                                <label for="status" class="form-label">Assignment Status</label>
+                                <select class="form-control" id="status" name="status" required>
+                                    <option value="Active" selected>Active</option>
+                                    <option value="Inactive">Inactive</option>
+                                    <option value="Voided">Voided</option>
+                                </select>
+                                <div class="form-text">
+                                    <strong>Active:</strong> Students can submit work<br>
+                                    <strong>Inactive:</strong> Students cannot submit work<br>
+                                    <strong>Voided:</strong> Assignment doesn't affect grades (0/0 for all students)
+                                </div>
+                            </div>
+                            
                             <!-- File Upload Section -->
                             <div class="col-12">
                                 <label for="assignment_file" class="form-label">Assignment File (Optional)</label>

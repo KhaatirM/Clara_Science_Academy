@@ -41,10 +41,11 @@ def calculate_gpa(grades):
 
 def get_grade_trends(student_id, class_id, limit=10):
     """Get grade trends for a specific class."""
-    # Get grades directly from the Grade model
+    # Get grades directly from the Grade model, excluding Voided assignments
     grades = Grade.query.join(Assignment).filter(
         Grade.student_id == student_id,
-        Assignment.class_id == class_id
+        Assignment.class_id == class_id,
+        Assignment.status != 'Voided'  # Exclude Voided assignments from grade trends
     ).order_by(Grade.graded_at.desc()).limit(limit).all()
     
     trends = []
@@ -219,7 +220,8 @@ def student_dashboard():
     class_ids = [c.id for c in classes]
     assignments = Assignment.query.filter(
         Assignment.class_id.in_(class_ids),
-        Assignment.school_year_id == current_school_year.id
+        Assignment.school_year_id == current_school_year.id,
+        Assignment.status == 'Active'  # Only show Active assignments to students
     ).all()
     
     past_due_assignments = []
@@ -234,9 +236,10 @@ def student_dashboard():
         elif assignment.due_date and assignment.due_date <= today + timedelta(days=7):
             upcoming_assignments.append(assignment)
     
-    # Get recent grades for enrolled classes only
+    # Get recent grades for enrolled classes only, excluding Voided assignments
     recent_grades_raw = Grade.query.filter_by(student_id=student.id).join(Assignment).filter(
-        Assignment.class_id.in_(class_ids)
+        Assignment.class_id.in_(class_ids),
+        Assignment.status != 'Voided'  # Exclude Voided assignments from recent grades
     ).order_by(Grade.graded_at.desc()).limit(5).all()
     
     # Format recent grades for template
@@ -294,10 +297,11 @@ def student_assignments():
     
     class_ids = [enrollment.class_id for enrollment in enrollments]
     
-    # Get assignments for student's classes
+    # Get assignments for student's classes (only Active assignments)
     assignments = Assignment.query.filter(
         Assignment.class_id.in_(class_ids),
-        Assignment.school_year_id == current_school_year.id
+        Assignment.school_year_id == current_school_year.id,
+        Assignment.status == 'Active'  # Only show Active assignments to students
     ).order_by(Assignment.due_date.asc()).all()
     
     # Get all submissions for this student

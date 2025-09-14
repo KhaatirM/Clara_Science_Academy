@@ -1895,9 +1895,16 @@ def add_assignment():
         class_id = request.form.get('class_id', type=int)
         due_date_str = request.form.get('due_date')
         quarter = request.form.get('quarter')
+        status = request.form.get('status', 'Active')
         
         if not all([title, class_id, due_date_str, quarter]):
             flash("Title, Class, Due Date, and Quarter are required.", "danger")
+            return redirect(request.url)
+        
+        # Validate status
+        valid_statuses = ['Active', 'Inactive', 'Voided']
+        if status not in valid_statuses:
+            flash('Invalid assignment status.', 'danger')
             return redirect(request.url)
 
         # Type assertion for due_date_str
@@ -1920,6 +1927,7 @@ def add_assignment():
         new_assignment.class_id = class_id
         new_assignment.school_year_id = current_school_year.id
         new_assignment.quarter = int(quarter)
+        new_assignment.status = status
         
         # Handle file upload
         if 'assignment_file' in request.files:
@@ -2074,9 +2082,16 @@ def edit_assignment(assignment_id):
         description = request.form.get('description', '').strip()
         due_date_str = request.form.get('due_date')
         quarter = request.form.get('quarter')
+        status = request.form.get('status', 'Active')
         
         if not all([title, due_date_str, quarter]):
             flash('Title, Due Date, and Quarter are required.', 'danger')
+            return redirect(request.url)
+        
+        # Validate status
+        valid_statuses = ['Active', 'Inactive', 'Voided']
+        if status not in valid_statuses:
+            flash('Invalid assignment status.', 'danger')
             return redirect(request.url)
         
         try:
@@ -2087,6 +2102,7 @@ def edit_assignment(assignment_id):
             assignment.description = description
             assignment.due_date = due_date
             assignment.quarter = int(quarter)
+            assignment.status = status
             
             # Handle file upload
             if 'assignment_file' in request.files:

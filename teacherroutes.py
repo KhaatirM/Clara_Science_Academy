@@ -29,8 +29,11 @@ def is_admin():
 def calculate_student_gpa(student_id):
     """Calculate GPA for a student based on their grades"""
     try:
-        # Get all grades for the student
-        grades = Grade.query.filter_by(student_id=student_id).all()
+        # Get all grades for the student, excluding Voided assignments
+        grades = Grade.query.join(Assignment).filter(
+            Grade.student_id == student_id,
+            Assignment.status != 'Voided'  # Exclude Voided assignments from GPA calculation
+        ).all()
         
         if not grades:
             return 0.0
@@ -284,9 +287,16 @@ def add_assignment(class_id):
         description = request.form.get('description')
         due_date_str = request.form.get('due_date')
         quarter = request.form.get('quarter')
+        status = request.form.get('status', 'Active')
         
         if not all([title, due_date_str, quarter]):
             flash("Title, Due Date, and Quarter are required.", "danger")
+            return redirect(request.url)
+        
+        # Validate status
+        valid_statuses = ['Active', 'Inactive', 'Voided']
+        if status not in valid_statuses:
+            flash('Invalid assignment status.', 'danger')
             return redirect(request.url)
 
         # Type assertion for due_date_str
@@ -309,6 +319,7 @@ def add_assignment(class_id):
         new_assignment.class_id = class_id
         new_assignment.school_year_id = current_school_year.id
         new_assignment.quarter = int(quarter)
+        new_assignment.status = status
         
         # Handle file upload
         if 'assignment_file' in request.files:
@@ -411,9 +422,16 @@ def edit_assignment(assignment_id):
         description = request.form.get('description', '').strip()
         due_date_str = request.form.get('due_date')
         quarter = request.form.get('quarter')
+        status = request.form.get('status', 'Active')
         
         if not all([title, due_date_str, quarter]):
             flash('Title, Due Date, and Quarter are required.', 'danger')
+            return redirect(request.url)
+        
+        # Validate status
+        valid_statuses = ['Active', 'Inactive', 'Voided']
+        if status not in valid_statuses:
+            flash('Invalid assignment status.', 'danger')
             return redirect(request.url)
         
         try:
@@ -424,6 +442,7 @@ def edit_assignment(assignment_id):
             assignment.description = description
             assignment.due_date = due_date
             assignment.quarter = int(quarter)
+            assignment.status = status
             
             # Handle file upload
             if 'assignment_file' in request.files:

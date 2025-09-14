@@ -30,9 +30,9 @@
                     <label for="status_filter" class="form-label">Filter by Status</label>
                     <select class="form-select" id="status_filter" name="status">
                         <option value="">All Statuses</option>
-                        <option value="active" {% if selected_status == 'active' %}selected{% endif %}>Active</option>
-                        <option value="completed" {% if selected_status == 'completed' %}selected{% endif %}>Completed</option>
-                        <option value="overdue" {% if selected_status == 'overdue' %}selected{% endif %}>Overdue</option>
+                        <option value="Active" {% if selected_status == 'Active' %}selected{% endif %}>Active</option>
+                        <option value="Inactive" {% if selected_status == 'Inactive' %}selected{% endif %}>Inactive</option>
+                        <option value="Voided" {% if selected_status == 'Voided' %}selected{% endif %}>Voided</option>
                     </select>
                 </div>
                 <div class="col-12 col-sm-6 col-md-3">
@@ -67,7 +67,17 @@
                                 <td data-label="Due Date">{{ assignment.due_date.strftime('%Y-%m-%d') if assignment.due_date else 'N/A' }}</td>
                                 <td data-label="Assignment Title">{{ assignment.title }}</td>
                                 <td data-label="Class">{{ assignment.class.name if assignment.class else 'N/A' }}</td>
-                                <td data-label="Status">{{ assignment.status|title }}</td>
+                                <td data-label="Status">
+                                    {% if assignment.status == 'Active' %}
+                                        <span class="badge bg-success">Active</span>
+                                    {% elif assignment.status == 'Inactive' %}
+                                        <span class="badge bg-warning text-dark">Inactive</span>
+                                    {% elif assignment.status == 'Voided' %}
+                                        <span class="badge bg-danger">Voided</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ assignment.status|title }}</span>
+                                    {% endif %}
+                                </td>
                                 <td data-label="Actions">
                                     <div class="d-flex flex-column gap-1">
                                         {% if current_user.role in ['Director', 'School Administrator', 'Teacher'] %}

@@ -32,7 +32,7 @@
                 </div>
                 <div class="card-body">
                     <form method="POST" action="{{ url_for('management.management_send_message') }}">
-        {{ csrf_token() }}
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <div class="mb-3">
                             <label for="recipient_id" class="form-label">Recipient *</label>
                             <select class="form-select" id="recipient_id" name="recipient_id" required>

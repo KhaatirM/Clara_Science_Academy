@@ -27,7 +27,7 @@
           </div>
 
           <form method="POST" id="assignmentForm">
-        {{ csrf_token() }}
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <!-- Basic Information -->
             <div class="row g-3 mb-4">
               <div class="col-12">

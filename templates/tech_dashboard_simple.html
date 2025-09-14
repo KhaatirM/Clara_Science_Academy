@@ -22,7 +22,7 @@
                     </div>
                     <div class="card-body">
                         <form method="POST" action="{{ url_for('start_maintenance') }}">
-        {{ csrf_token() }}
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                             <div class="mb-3">
                                 <label for="duration_minutes" class="form-label">Duration (minutes)</label>
                                 <select class="form-select" name="duration_minutes" required>
@@ -38,7 +38,7 @@
                         <hr>
                         
                         <form method="POST" action="{{ url_for('stop_maintenance') }}">
-        {{ csrf_token() }}
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                             <button type="submit" class="btn btn-success">Stop Maintenance Mode</button>
                         </form>
                     </div>

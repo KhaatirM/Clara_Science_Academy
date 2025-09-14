@@ -38,7 +38,7 @@
                             {% if not message.is_read and message.recipient_id == current_user.id %}
                                 <form method="POST" action="{{ url_for('management.management_mark_message_read', message_id=message.id) }}" 
                                       style="display: inline;">
-        { csrf_token() }
+        {{ csrf_token() }}
                             <button type="submit" class="btn btn-sm" style="border-color: #2E8B57; color: #2E8B57;">
                                 <i class="bi bi-check-circle me-1"></i>Mark Read
                             </button>
@@ -115,7 +115,7 @@
                     </div>
                     <div class="card-body">
                         <form method="POST" action="{{ url_for('management.management_reply_to_message', message_id=message.id) }}">
-        { csrf_token() }
+        {{ csrf_token() }}
                             <div class="mb-3">
                                 <label for="reply_content" class="form-label">Your Reply</label>
                                 <textarea class="form-control" id="reply_content" name="content" rows="6" 

@@ -26,7 +26,7 @@
       </div>
 
       <form method="POST" action="{{ form_action }}" enctype="multipart/form-data" class="needs-validation" novalidate>
-        { csrf_token() }
+        {{ csrf_token() }}
         <div class="row g-3">
           <div class="col-12 col-md-4">
             <label for="grade" class="form-label">Grade</label>
@@ -88,7 +88,7 @@
                   <!-- Lock/Unlock Form -->
                   <div class="col-12 col-md-3 mb-2 mb-md-0">
                       <form action="{{ url_for(role_prefix + 'toggle_assignment_lock', assignment_id=assignment.id) }}" method="POST">
-        { csrf_token() }
+        {{ csrf_token() }}
                           {% if assignment.submissions_locked %}
                               <button type="submit" class="btn btn-success w-100"><i class="bi bi-unlock-fill me-2"></i>Unlock Submissions</button>
                           {% else %}
@@ -99,7 +99,7 @@
                   <!-- Extend Deadline Form -->
                   <div class="col-12 col-md-5 mb-2 mb-md-0">
                       <form action="{{ url_for(role_prefix + 'extend_deadline', assignment_id=assignment.id) }}" method="POST" class="d-flex flex-wrap">
-        { csrf_token() }
+        {{ csrf_token() }}
                           <input type="date" name="new_due_date" class="form-control me-2 mb-2 mb-md-0" value="{{ assignment.due_date.strftime('%Y-%m-%d') }}">
                           <button type="submit" class="btn btn-info text-white">Extend Deadline</button>
                       </form>
@@ -171,7 +171,7 @@
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <form action="{{ url_for(role_prefix + 'manage_exemptions', assignment_id=assignment.id) }}" method="POST">
-        { csrf_token() }
+        {{ csrf_token() }}
               <div class="modal-body">
                 <p class="text-muted">Select students to exempt from this assignment. Their grade for this assignment will not be counted.</p>
                 <ul class="list-group">

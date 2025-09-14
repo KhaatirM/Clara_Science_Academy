@@ -105,7 +105,7 @@
                                             {% endif %}
                                             {% if not notification.is_read %}
                                                 <form method="POST" action="{{ url_for('teacher.mark_notification_read', notification_id=notification.id) }}" style="display: inline;">
-        { csrf_token() }
+        {{ csrf_token() }}
                                                     <button type="submit" class="btn btn-sm btn-outline-secondary">Mark as Read</button>
                                                 </form>
                                             {% endif %}
@@ -1022,7 +1022,7 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <form id="deleteForm" method="POST" style="display: inline;">
-        { csrf_token() }
+        {{ csrf_token() }}
                     <button type="submit" class="btn btn-danger">Delete Assignment</button>
                 </form>
             </div>

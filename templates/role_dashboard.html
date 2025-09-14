@@ -1027,7 +1027,7 @@
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                         <form id="deleteForm" method="POST" style="display: inline;">
-        { csrf_token() }
+        {{ csrf_token() }}
                             <button type="submit" class="btn btn-danger">Delete Assignment</button>
                         </form>
                     </div>
@@ -1316,7 +1316,7 @@
                     </div>
                     <div class="card-body">
                         <form method="POST" action="{{ url_for('management.generate_report_card_form') }}">
-        { csrf_token() }
+        {{ csrf_token() }}
                             <div class="mb-3">
                                 <label for="student_id" class="form-label">Select Student</label>
                                 <select class="form-select" id="student_id" name="student_id" required>

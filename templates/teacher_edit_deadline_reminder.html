@@ -19,7 +19,7 @@
         </div>
         <div class="card-body">
           <form method="POST" id="reminderForm">
-        { csrf_token() }
+        {{ csrf_token() }}
             <div class="row g-3 mb-4">
               <div class="col-12">
                 <h6 class="text-primary border-bottom pb-2 mb-3">
@@ -177,13 +177,13 @@
         <div class="card-body">
           <div class="d-grid gap-2">
             <form method="POST" action="{{ url_for('management.admin_send_deadline_reminder_now', reminder_id=reminder.id) if role_prefix else url_for('teacher.send_deadline_reminder_now', reminder_id=reminder.id) }}" class="d-inline">
-        { csrf_token() }
+        {{ csrf_token() }}
               <button type="submit" class="btn btn-outline-info btn-sm w-100">
                 <i class="bi bi-send me-1"></i>Send Now
               </button>
             </form>
             <form method="POST" action="{{ url_for('management.admin_toggle_deadline_reminder', reminder_id=reminder.id) if role_prefix else url_for('teacher.toggle_deadline_reminder', reminder_id=reminder.id) }}" class="d-inline">
-        { csrf_token() }
+        {{ csrf_token() }}
               <button type="submit" class="btn btn-outline-{% if reminder.is_active %}warning{% else %}success{% endif %} btn-sm w-100">
                 <i class="bi bi-{% if reminder.is_active %}pause{% else %}play{% endif %} me-1"></i>{% if reminder.is_active %}Deactivate{% else %}Activate{% endif %}
               </button>

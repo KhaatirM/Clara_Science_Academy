@@ -20,7 +20,7 @@
         </div>
         <div class="card-body">
             <form action="{{ url_for('management.add_school_break') }}" method="POST">
-        { csrf_token() }
+        {{ csrf_token() }}
                 <div class="row g-3">
                     <div class="col-12 col-md-6">
                         <label for="name" class="form-label">Break Name *</label>
@@ -142,7 +142,7 @@
                                 <td>
                                     <form action="{{ url_for('management.delete_school_break', break_id=break.id) }}" 
                                           method="POST" style="display: inline;">
-        { csrf_token() }
+        {{ csrf_token() }}
                                         <button type="submit" class="btn btn-sm btn-outline-danger" 
                                                 onclick="return confirm('Are you sure you want to delete this school break?')">
                                             <i class="bi bi-trash"></i>

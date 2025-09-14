@@ -48,7 +48,7 @@
                             <div class="btn-group" role="group">
                                 {% if message.recipient_id == current_user.id and not message.is_read %}
                                     <form method="POST" action="{{ url_for('teacher.mark_message_read', message_id=message.id) }}" class="display-inline">
-        { csrf_token() }
+        {{ csrf_token() }}
                                         <button type="submit" class="btn btn-outline-primary btn-sm">
                                             <i class="bi bi-check me-1"></i>Mark Read
                                         </button>
@@ -125,7 +125,7 @@
                         <div class="border-top pt-4">
                             <h6><i class="bi bi-reply me-2"></i>Reply</h6>
                             <form method="POST" action="{{ url_for('teacher.reply_to_message', message_id=message.id) }}">
-        { csrf_token() }
+        {{ csrf_token() }}
                                 <div class="mb-3">
                                     <textarea class="form-control" name="content" rows="4" 
                                               placeholder="Type your reply here..." required></textarea>

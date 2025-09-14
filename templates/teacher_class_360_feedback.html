@@ -121,13 +121,13 @@
                         <i class="bi bi-eye"></i>
                       </a>
                       <form method="POST" action="{{ url_for('management.admin_toggle_360_feedback', session_id=session.id) if role_prefix else url_for('teacher.toggle_360_feedback', session_id=session.id) }}" class="d-inline">
-        { csrf_token() }
+        {{ csrf_token() }}
                         <button type="submit" class="btn btn-outline-{% if session.is_active %}warning{% else %}success{% endif %} btn-sm" title="{% if session.is_active %}Deactivate{% else %}Activate{% endif %}">
                           <i class="bi bi-{% if session.is_active %}pause{% else %}play{% endif %}"></i>
                         </button>
                       </form>
                       <form method="POST" action="{{ url_for('management.admin_delete_360_feedback', session_id=session.id) if role_prefix else url_for('teacher.delete_360_feedback', session_id=session.id) }}" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this feedback session?')">
-        { csrf_token() }
+        {{ csrf_token() }}
                         <button type="submit" class="btn btn-outline-danger btn-sm" title="Delete">
                           <i class="bi bi-trash"></i>
                         </button>

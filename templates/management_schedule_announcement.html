@@ -32,7 +32,7 @@
                 </div>
                 <div class="card-body">
                     <form method="POST" action="{{ url_for('management.management_schedule_announcement') }}">
-        { csrf_token() }
+        {{ csrf_token() }}
                         <div class="mb-3">
                             <label for="title" class="form-label">Announcement Title *</label>
                             <input type="text" class="form-control" id="title" name="title" 

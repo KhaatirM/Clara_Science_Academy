@@ -14,7 +14,7 @@
     </div>
     <div class="card-body">
       <form method="POST" action="{{ url_for('report_card_generate_pdf_form', role_prefix_raw=role_prefix.replace('_', '')) }}">
-        { csrf_token() }
+        {{ csrf_token() }}
         
         <div class="mb-3">
           <label for="student_id" class="form-label">Select Student</label>

@@ -11,7 +11,7 @@
                 <h5 class="card-title">For Class: {{ class_item.name }}</h5>
                 <hr>
                 <form method="POST" action="{{ form_action }}" enctype="multipart/form-data">
-        { csrf_token() }
+        {{ csrf_token() }}
                     
                     <div class="mb-3">
                         <label for="title" class="form-label">Assignment Title <span class="text-danger">*</span></label>
@@ -88,7 +88,7 @@
     </div>
 
     <form method="POST" action="{{ form_action }}" enctype="multipart/form-data" class="needs-validation" novalidate>
-        { csrf_token() }
+        {{ csrf_token() }}
       <div class="row g-3">
         <div class="col-12 col-md-4">
           <label for="grade" class="form-label">Grade</label>

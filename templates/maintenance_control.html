@@ -47,7 +47,7 @@
                             </div>
                             <div class="d-grid">
                                 <form method="POST" action="{{ url_for('tech.stop_maintenance') }}">
-        {{ csrf_token() }}
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                     <button type="submit" class="btn btn-success" onclick="return confirm('Stop maintenance mode? Users will be able to access the system again.')">
                                         <i class="bi bi-play-circle"></i> Stop Maintenance Mode
                                     </button>
@@ -68,7 +68,7 @@
                 </div>
                 <div class="card-body">
                     <form method="POST" action="{{ url_for('tech.start_maintenance') }}">
-        {{ csrf_token() }}
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <div class="row g-3">
                             <div class="col-12 col-md-6">
                                 <div class="mb-3">

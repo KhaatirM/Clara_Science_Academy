@@ -26,10 +26,10 @@
                 <h3 class="mb-2 mb-md-0">School Calendar - {{ month_name }} {{ year }}</h3>
                 <div class="d-flex flex-wrap gap-2">
                     {% if current_user.role == 'Teacher' %}
-                        <a href="{{ url_for('teacher.calendar', month=prev_month.month, year=prev_month.year) }}" class="btn btn-outline-primary">
+                        <a href="{{ url_for('teacher.calendar', month=prev_month.month, year=prev_month.year) }}" class="btn" style="border-color: #2E8B57; color: #2E8B57;">
                             <i class="bi bi-chevron-left me-1"></i>Previous Month
                         </a>
-                        <a href="{{ url_for('teacher.calendar', month=next_month.month, year=next_month.year) }}" class="btn btn-outline-primary">
+                        <a href="{{ url_for('teacher.calendar', month=next_month.month, year=next_month.year) }}" class="btn" style="border-color: #2E8B57; color: #2E8B57;">
                             Next Month<i class="bi bi-chevron-right ms-1"></i>
                         </a>
                     {% elif current_user.role == 'Student' %}
@@ -41,13 +41,13 @@
                     {% endif %}
                     {% if current_user.role in ['Director', 'School Administrator'] %}
                         <div class="btn-group" role="group">
-                            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEventModal">
+                            <button class="btn text-white" style="background: linear-gradient(135deg, #2E8B57 0%, #228B22 50%, #556B2F 100%);" data-bs-toggle="modal" data-bs-target="#addEventModal">
                                 <i class="bi bi-plus-circle me-1"></i> Add Event
                             </button>
-                            <a href="{{ url_for('management.teacher_work_days') }}" class="btn btn-outline-primary">
+                            <a href="{{ url_for('management.teacher_work_days') }}" class="btn" style="border-color: #2E8B57; color: #2E8B57;">
                                 <i class="bi bi-person-badge me-1"></i> Teacher Work Days
                             </a>
-                            <a href="{{ url_for('management.school_breaks') }}" class="btn btn-outline-primary">
+                            <a href="{{ url_for('management.school_breaks') }}" class="btn" style="border-color: #2E8B57; color: #2E8B57;">
                                 <i class="bi bi-calendar-x me-1"></i> School Breaks
                             </a>
                         </div>

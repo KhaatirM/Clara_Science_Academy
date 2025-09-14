@@ -138,17 +138,26 @@ def login():
                     remember = bool(request.form.get('remember'))
                     login_user(user, remember=remember)
                     
+                    # Increment login count
+                    user.login_count += 1
+                    db.session.commit()
+                    
                     # Log successful login
                     log_activity(
                         user_id=user.id,
                         action='login',
-                        details={'role': user.role, 'remember': remember, 'id_verified': True},
+                        details={'role': user.role, 'remember': remember, 'id_verified': True, 'login_count': user.login_count},
                         ip_address=request.remote_addr,
                         user_agent=request.headers.get('User-Agent')
                     )
                     
-                    flash('Logged in successfully.', 'success')
-                    return redirect(url_for('auth.dashboard'))
+                    # Check if user has temporary password or is first-time login
+                    if user.is_temporary_password or user.login_count == 1:
+                        flash('You are using a temporary password or this is your first login. Please change your password for security.', 'warning')
+                        return redirect(url_for('auth.dashboard'))
+                    else:
+                        flash('Logged in successfully.', 'success')
+                        return redirect(url_for('auth.dashboard'))
                 else:
                     # Log failed login attempt - invalid ID (only for non-Tech users)
                     if user.role not in ['Tech', 'IT Support']:
@@ -221,6 +230,81 @@ def dashboard():
         # Fallback for unknown roles
         return render_template('home.html')
 
+
+@auth_blueprint.route('/change-password-popup', methods=['POST'])
+@login_required
+def change_password_popup():
+    """Handle password change from popup modal."""
+    try:
+        print(f"DEBUG: Password change popup request received from user: {current_user.username}")
+        print(f"DEBUG: Request form data: {dict(request.form)}")
+        print(f"DEBUG: Before change - is_temporary_password: {current_user.is_temporary_password}, login_count: {current_user.login_count}")
+        
+        new_password = request.form.get('new_password')
+        confirm_password = request.form.get('confirm_password')
+        
+        # Validate passwords
+        if not new_password or not confirm_password:
+            return jsonify({'success': False, 'message': 'Both password fields are required.'})
+        
+        if new_password != confirm_password:
+            return jsonify({'success': False, 'message': 'Passwords do not match.'})
+        
+        if len(new_password) < 8:
+            return jsonify({'success': False, 'message': 'Password must be at least 8 characters long.'})
+        
+        # Check password strength
+        has_upper = any(c.isupper() for c in new_password)
+        has_lower = any(c.islower() for c in new_password)
+        has_digit = any(c.isdigit() for c in new_password)
+        
+        if not (has_upper and has_lower and has_digit):
+            return jsonify({'success': False, 'message': 'Password must contain at least one uppercase letter, one lowercase letter, and one number.'})
+        
+        # Update user password
+        current_user.password_hash = generate_password_hash(new_password)
+        current_user.is_temporary_password = False
+        current_user.password_changed_at = datetime.utcnow()
+        
+        # If this was a first-time login (login_count == 1), increment it to prevent popup from showing again
+        if current_user.login_count == 1:
+            current_user.login_count = 2
+        
+        db.session.commit()
+        
+        print(f"DEBUG: After change - is_temporary_password: {current_user.is_temporary_password}, login_count: {current_user.login_count}")
+        
+        # Log password change
+        log_activity(
+            user_id=current_user.id,
+            action='password_changed_popup',
+            details={'role': current_user.role, 'login_count': current_user.login_count},
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent')
+        )
+        
+        # Get user ID for display
+        user_id = ''
+        if current_user.role == 'Student' and current_user.student_id:
+            from models import Student
+            student = Student.query.get(current_user.student_id)
+            if student:
+                user_id = student.student_id
+        elif current_user.teacher_staff_id:
+            teacher_staff = TeacherStaff.query.get(current_user.teacher_staff_id)
+            if teacher_staff:
+                user_id = teacher_staff.staff_id
+        
+        return jsonify({
+            'success': True,
+            'username': current_user.username,
+            'password': new_password,  # Return the new password for display
+            'user_id': user_id
+        })
+        
+    except Exception as e:
+        print(f"Error in change_password_popup: {str(e)}")
+        return jsonify({'success': False, 'message': 'An error occurred while changing password.'})
 
 @auth_blueprint.route('/submit-bug-report', methods=['POST'])
 @login_required

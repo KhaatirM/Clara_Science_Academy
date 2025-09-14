@@ -6,7 +6,7 @@
         <!-- Sidebar -->
         <div class="col-12 col-lg-3">
             <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
+                <div class="card-header" style="background: linear-gradient(135deg, #2E8B57 0%, #228B22 50%, #556B2F 100%); color: white;">
                     <h5 class="mb-0"><i class="bi bi-envelope-open me-2"></i>View Message</h5>
                 </div>
                 <div class="card-body p-0">
@@ -39,9 +39,9 @@
                                 <form method="POST" action="{{ url_for('management.management_mark_message_read', message_id=message.id) }}" 
                                       style="display: inline;">
         { csrf_token() }
-                                    <button type="submit" class="btn btn-sm btn-outline-success">
-                                        <i class="bi bi-check-circle me-1"></i>Mark Read
-                                    </button>
+                            <button type="submit" class="btn btn-sm" style="border-color: #2E8B57; color: #2E8B57;">
+                                <i class="bi bi-check-circle me-1"></i>Mark Read
+                            </button>
                                 </form>
                             {% endif %}
                         </div>

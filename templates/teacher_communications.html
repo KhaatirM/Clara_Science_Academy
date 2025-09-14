@@ -6,7 +6,7 @@
         <!-- Left Sidebar - Message List -->
         <div class="col-12 col-lg-4 col-xl-3">
             <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
+                <div class="card-header text-white" style="background: linear-gradient(135deg, #2E8B57 0%, #228B22 50%, #556B2F 100%);">
                     <div class="d-flex justify-content-between align-items-center">
                         <h5 class="mb-0"><i class="bi bi-inbox-fill me-2"></i>Unified Inbox</h5>
                         <div class="dropdown">
@@ -29,13 +29,13 @@
                     <!-- Quick Actions -->
                     <div class="p-3 border-bottom">
                         <div class="d-grid gap-2">
-                            <a href="{{ url_for('teacher.send_message') }}" class="btn btn-outline-primary btn-sm">
+                            <a href="{{ url_for('teacher.send_message') }}" class="btn btn-sm" style="border-color: #2E8B57; color: #2E8B57;">
                                 <i class="bi bi-pencil-square me-1"></i>New Message
                             </a>
-                            <a href="{{ url_for('teacher.create_announcement') }}" class="btn btn-outline-success btn-sm">
+                            <a href="{{ url_for('teacher.create_announcement') }}" class="btn btn-sm" style="border-color: #228B22; color: #228B22;">
                                 <i class="bi bi-megaphone me-1"></i>New Announcement
                             </a>
-                            <a href="{{ url_for('teacher.create_message_group') }}" class="btn btn-outline-info btn-sm">
+                            <a href="{{ url_for('teacher.create_message_group') }}" class="btn btn-sm" style="border-color: #556B2F; color: #556B2F;">
                                 <i class="bi bi-people me-1"></i>Create Group
                             </a>
                         </div>

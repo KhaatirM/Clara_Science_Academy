@@ -5,7 +5,7 @@
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-3 gap-2 gap-md-0">
         <h3 class="mb-2 mb-md-0">Assignments</h3>
         {% if current_user.role in ['Director', 'School Administrator', 'Teacher'] %}
-            <a href="{{ url_for('management.add_assignment') }}" class="btn btn-primary btn-sm">
+            <a href="{{ url_for('management.add_assignment') }}" class="btn btn-sm text-white" style="background: linear-gradient(135deg, #2E8B57 0%, #228B22 50%, #556B2F 100%);">
                 <i class="bi bi-plus-circle-fill me-1 me-md-2"></i>Add New Assignment
             </a>
         {% endif %}
@@ -40,7 +40,7 @@
                     <input type="date" class="form-control" id="due_date_filter" name="due_date" value="{{ selected_due_date }}">
                 </div>
                 <div class="col-12 col-sm-6 col-md-3 d-flex align-items-end gap-2">
-                    <button type="submit" class="btn btn-outline-primary flex-fill">Filter</button>
+                    <button type="submit" class="btn flex-fill" style="border-color: #2E8B57; color: #2E8B57;">Filter</button>
                     <a href="{{ request.path }}" class="btn btn-outline-secondary flex-fill">Clear</a>
                 </div>
             </form>

@@ -145,6 +145,13 @@
         });
     </script>
     
+    <!-- Password Change Popup Modal -->
+    {% if current_user.is_authenticated and current_user.is_temporary_password %}
+        {% include 'password_change_popup.html' %}
+    {% elif current_user.is_authenticated and current_user.login_count == 1 and not current_user.password_changed_at %}
+        {% include 'password_change_popup.html' %}
+    {% endif %}
+    
     {% block scripts %}{% endblock %}
 </body>
 </html>

@@ -21,6 +21,9 @@ class User(db.Model, UserMixin):
     is_temporary_password = db.Column(db.Boolean, default=False, nullable=False)
     password_changed_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    
+    # Login tracking
+    login_count = db.Column(db.Integer, default=0, nullable=False)
 
     def __repr__(self):
         return f"User('{self.username}', '{self.role}')"

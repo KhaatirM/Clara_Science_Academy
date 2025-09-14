@@ -33,7 +33,7 @@
                                 <div class="row align-items-center">
                                     <div class="col-md-8">
                                         {% if current_user.role == 'Director' %}
-                                            <h4 class="card-title text-primary mb-3">
+                                            <h4 class="card-title mb-3" style="color: #2E8B57;">
                                                 <i class="bi bi-award-fill me-2"></i>
                                                 Director Dashboard
                                             </h4>
@@ -67,7 +67,7 @@
                                     <div class="col-md-4 text-center">
                                         <div class="welcome-icon">
                                             {% if current_user.role == 'Director' %}
-                                                <i class="bi bi-award-fill display-1 text-primary"></i>
+                                                <i class="bi bi-award-fill display-1" style="color: #2E8B57;"></i>
                                             {% elif current_user.role == 'School Administrator' %}
                                                 <i class="bi bi-person-badge-fill display-1 text-success"></i>
                                             {% elif current_user.role == 'Teacher' %}

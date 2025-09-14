@@ -5,10 +5,10 @@
   <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
     <h3 class="mb-2 mb-md-0"><i class="bi bi-bookmark me-2"></i>Group Templates - {{ class_obj.name }}</h3>
     <div class="d-flex gap-2">
-      <a href="{{ url_for('management.admin_class_groups', class_id=class_obj.id) if role_prefix else url_for('teacher.class_groups', class_id=class_obj.id) }}" class="btn btn-outline-secondary btn-sm">
+      <a href="{{ url_for('management.admin_class_groups', class_id=class_obj.id) if role_prefix else url_for('teacher.class_groups', class_id=class_obj.id) }}" class="btn btn-sm" style="border-color: #2E8B57; color: #2E8B57;">
         <i class="bi bi-arrow-left me-1"></i>Back to Groups
       </a>
-      <a href="{{ url_for('management.admin_create_group_template', class_id=class_obj.id) if role_prefix else url_for('teacher.create_group_template', class_id=class_obj.id) }}" class="btn btn-primary btn-sm">
+      <a href="{{ url_for('management.admin_create_group_template', class_id=class_obj.id) if role_prefix else url_for('teacher.create_group_template', class_id=class_obj.id) }}" class="btn btn-sm text-white" style="background: linear-gradient(135deg, #2E8B57 0%, #228B22 50%, #556B2F 100%);">
         <i class="bi bi-plus-circle me-1"></i>Create Template
       </a>
     </div>
@@ -19,7 +19,7 @@
     <div class="col-12 col-md-4">
       <div class="card shadow-sm">
         <div class="card-body text-center">
-          <h4 class="text-primary">{{ templates|length }}</h4>
+          <h4 style="color: #2E8B57;">{{ templates|length }}</h4>
           <p class="mb-0">Saved Templates</p>
         </div>
       </div>

@@ -5,7 +5,7 @@
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-3 gap-2 gap-md-0">
         <h3 class="mb-2 mb-md-0">Students</h3>
         {% if current_user.role in ['Director', 'School Administrator'] %}
-            <a href="{{ url_for('management.add_student') }}" class="btn btn-primary btn-sm">
+            <a href="{{ url_for('management.add_student') }}" class="btn btn-sm text-white" style="background: linear-gradient(135deg, #2E8B57 0%, #228B22 50%, #556B2F 100%);">
                 <i class="bi bi-plus-circle-fill me-1 me-md-2"></i>Add New Student
             </a>
         {% endif %}

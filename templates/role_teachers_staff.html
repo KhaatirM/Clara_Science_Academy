@@ -13,7 +13,7 @@
       <div class="col-12 col-md-4 text-md-end mt-2 mt-md-0">
         <div class="d-flex flex-wrap justify-content-md-end align-items-center">
           {% if current_user.role in ['Director', 'School Administrator'] %}
-            <a href="{{ url_for('management.add_teacher_staff') }}" class="btn btn-sm btn-primary me-2 mb-2 mb-md-0">Add Teacher/Staff</a>
+            <a href="{{ url_for('management.add_teacher_staff') }}" class="btn btn-sm text-white me-2 mb-2 mb-md-0" style="background: linear-gradient(135deg, #2E8B57 0%, #228B22 50%, #556B2F 100%);">Add Teacher/Staff</a>
             <form class="d-flex" method="GET" action="{{ url_for('management.teachers') }}">
           {% endif %}
             <input class="form-control form-control-sm me-1" type="search" name="search_query" placeholder="Search Name..." aria-label="Search" value="{{ search_query }}">

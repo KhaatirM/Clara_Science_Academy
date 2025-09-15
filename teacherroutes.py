@@ -22,6 +22,18 @@ def get_teacher_or_admin():
     else:
         return TeacherStaff.query.filter_by(id=current_user.teacher_staff_id).first_or_404()
 
+def is_authorized_for_class(class_obj):
+    """Check if current user is authorized to access a specific class."""
+    if current_user.role == 'Director':
+        return True  # Directors have access to all classes
+    elif current_user.role == 'School Administrator':
+        # School Administrators can access classes they are assigned to as teachers
+        return class_obj.teacher_id == current_user.id
+    else:
+        # Regular teachers can only access their own classes
+        teacher = get_teacher_or_admin()
+        return teacher and class_obj.teacher_id == teacher.id
+
 def is_admin():
     """Helper function to check if user is an administrator."""
     return current_user.role in ['Director', 'School Administrator']
@@ -235,8 +247,9 @@ def view_class(class_id):
     teacher = get_teacher_or_admin()
     class_obj = Class.query.get_or_404(class_id)
     
-    # Directors and School Administrators have access to all classes, teachers only to their assigned classes
-    if not is_admin() and teacher and class_obj.teacher_id != teacher.id:
+    # Check authorization for this specific class
+    if not is_authorized_for_class(class_obj):
+        flash("You are not authorized to access this class.", "danger")
         return redirect(url_for('teacher.teacher_dashboard'))
 
     # Get only actively enrolled students for this class
@@ -557,9 +570,8 @@ def grade_assignment(assignment_id):
     assignment = Assignment.query.get_or_404(assignment_id)
     class_obj = assignment.class_info
     
-    # Authorization check - Directors can grade any assignment
-    teacher = get_teacher_or_admin()
-    if not is_admin() and class_obj.teacher_id != teacher.id:
+    # Check authorization for this specific class
+    if not is_authorized_for_class(class_obj):
         flash("You are not authorized to grade this assignment.", "danger")
         return redirect(url_for('teacher.teacher_dashboard'))
 

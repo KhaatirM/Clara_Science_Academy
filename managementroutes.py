@@ -2072,6 +2072,12 @@ def edit_assignment(assignment_id):
     """Edit an assignment"""
     assignment = Assignment.query.get_or_404(assignment_id)
     
+    # Authorization check - Directors can edit any assignment, others only their own classes
+    if current_user.role != 'Director':
+        if not assignment.class_info or assignment.class_info.teacher_id != current_user.id:
+            flash("You are not authorized to edit this assignment.", "danger")
+            return redirect(url_for('management.assignments'))
+    
     if request.method == 'POST':
         # Get form data
         title = request.form.get('title', '').strip()
@@ -2145,6 +2151,12 @@ def remove_assignment(assignment_id):
     """Remove an assignment"""
     assignment = Assignment.query.get_or_404(assignment_id)
     
+    # Authorization check - Directors can remove any assignment, others only their own classes
+    if current_user.role != 'Director':
+        if not assignment.class_info or assignment.class_info.teacher_id != current_user.id:
+            flash("You are not authorized to remove this assignment.", "danger")
+            return redirect(url_for('management.assignments'))
+    
     try:
         # Delete the assignment file if it exists
         if assignment.attachment_filename:
@@ -2170,6 +2182,12 @@ def remove_assignment(assignment_id):
 def change_assignment_status(assignment_id):
     """Change assignment status"""
     assignment = Assignment.query.get_or_404(assignment_id)
+    
+    # Authorization check - Directors can change any assignment status, others only their own classes
+    if current_user.role != 'Director':
+        if not assignment.class_info or assignment.class_info.teacher_id != current_user.id:
+            flash("You are not authorized to change this assignment status.", "danger")
+            return redirect(url_for('management.assignments'))
     
     new_status = request.form.get('status')
     

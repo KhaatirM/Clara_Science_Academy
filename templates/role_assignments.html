@@ -83,13 +83,35 @@
                                         {% if current_user.role in ['Director', 'School Administrator', 'Teacher'] %}
                                             <div class="d-flex gap-1 mb-1">
                                                 <a href="{{ url_for('management.view_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-primary">View</a>
-                                                <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-warning">Edit</a>
-                                                <button type="button" class="btn btn-sm btn-outline-info change-status-btn" 
-                                                        data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}" 
-                                                        data-current-status="{{ assignment.status }}">Status</button>
+                                                
+                                                {# Edit button - Directors always see it, School Administrators and Teachers only for their own classes #}
+                                                {% if current_user.role == 'Director' or (current_user.role in ['School Administrator', 'Teacher'] and assignment.class and assignment.class.teacher_id == current_user.id) %}
+                                                    <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-warning">Edit</a>
+                                                {% endif %}
+                                                
+                                                {# Status button - Directors always see it, School Administrators and Teachers only for their own classes #}
+                                                {% if current_user.role == 'Director' or (current_user.role in ['School Administrator', 'Teacher'] and assignment.class and assignment.class.teacher_id == current_user.id) %}
+                                                    <button type="button" class="btn btn-sm btn-outline-info change-status-btn" 
+                                                            data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}" 
+                                                            data-current-status="{{ assignment.status }}">Status</button>
+                                                {% endif %}
+                                                
+                                                {# Grade button - Directors always see it, School Administrators and Teachers only for their own classes #}
+                                                {% if current_user.role == 'Director' or (current_user.role in ['School Administrator', 'Teacher'] and assignment.class and assignment.class.teacher_id == current_user.id) %}
+                                                    <a href="{{ url_for('teacher.grade_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-success">Grade</a>
+                                                {% endif %}
                                             </div>
-                                            <button type="button" class="btn btn-sm btn-outline-danger remove-assignment-btn" 
-                                                    data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}">Remove</button>
+                                            
+                                            {# View Class button - Directors always see it, School Administrators and Teachers only for their own classes #}
+                                            {% if current_user.role == 'Director' or (current_user.role in ['School Administrator', 'Teacher'] and assignment.class and assignment.class.teacher_id == current_user.id) %}
+                                                <a href="{{ url_for('teacher.view_class', class_id=assignment.class_id) }}" class="btn btn-sm btn-outline-info mb-1">View Class</a>
+                                            {% endif %}
+                                            
+                                            {# Remove button - Directors always see it, School Administrators and Teachers only for their own classes #}
+                                            {% if current_user.role == 'Director' or (current_user.role in ['School Administrator', 'Teacher'] and assignment.class and assignment.class.teacher_id == current_user.id) %}
+                                                <button type="button" class="btn btn-sm btn-outline-danger remove-assignment-btn" 
+                                                        data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}">Remove</button>
+                                            {% endif %}
                                         {% elif current_user.role == 'Student' %}
                                             <a href="#" class="btn btn-sm btn-outline-primary">View Details</a>
                                             {% if assignment.status == 'active' %}

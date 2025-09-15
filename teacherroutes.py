@@ -516,6 +516,40 @@ def remove_assignment(assignment_id):
         return redirect(url_for('teacher.view_class', class_id=class_obj.id))
 
 
+@teacher_blueprint.route('/assignment/<int:assignment_id>/change-status', methods=['POST'])
+@login_required
+def change_assignment_status(assignment_id):
+    """Change assignment status"""
+    assignment = Assignment.query.get_or_404(assignment_id)
+    class_obj = assignment.class_info
+    
+    # Authorization check - Directors can change any assignment, teachers can only change their own
+    current_teacher = get_teacher_or_admin()
+    if current_user.role != 'Director' and class_obj.teacher_id != current_teacher.id:
+        flash("You are not authorized to change this assignment status.", "danger")
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    new_status = request.form.get('status')
+    
+    # Validate status
+    valid_statuses = ['Active', 'Inactive', 'Voided']
+    if new_status not in valid_statuses:
+        flash("Invalid status selected.", "danger")
+        return redirect(url_for('teacher.view_class', class_id=class_obj.id))
+    
+    try:
+        assignment.status = new_status
+        db.session.commit()
+        
+        flash(f'Assignment status changed to {new_status} successfully.', 'success')
+        return redirect(url_for('teacher.view_class', class_id=class_obj.id))
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error changing assignment status: {str(e)}', 'danger')
+        return redirect(url_for('teacher.view_class', class_id=class_obj.id))
+
+
 @teacher_blueprint.route('/grade/assignment/<int:assignment_id>', methods=['GET', 'POST'])
 @login_required
 @teacher_required

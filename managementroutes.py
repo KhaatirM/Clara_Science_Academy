@@ -2168,6 +2168,33 @@ def remove_assignment(assignment_id):
     return redirect(url_for('management.assignments'))
 
 
+@management_blueprint.route('/assignment/<int:assignment_id>/change-status', methods=['POST'])
+@login_required
+@management_required
+def change_assignment_status(assignment_id):
+    """Change assignment status"""
+    assignment = Assignment.query.get_or_404(assignment_id)
+    
+    new_status = request.form.get('status')
+    
+    # Validate status
+    valid_statuses = ['Active', 'Inactive', 'Voided']
+    if new_status not in valid_statuses:
+        flash("Invalid status selected.", "danger")
+        return redirect(url_for('management.assignments'))
+    
+    try:
+        assignment.status = new_status
+        db.session.commit()
+        
+        flash(f'Assignment status changed to {new_status} successfully.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error changing assignment status: {str(e)}', 'danger')
+    
+    return redirect(url_for('management.assignments'))
+
+
 @management_blueprint.route('/view-student/<int:student_id>')
 @login_required
 @management_required

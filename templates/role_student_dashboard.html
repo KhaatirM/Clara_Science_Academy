@@ -1259,7 +1259,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                                 {% elif days_remaining == 0 %}
                                                     <span class="badge bg-warning ms-2">Due today</span>
                                                 {% else %}
-                                                    <span class="badge bg-danger ms-2">{{ abs(days_remaining) }} days overdue</span>
+                                                    <span class="badge bg-danger ms-2">{{ (days_remaining * -1) }} days overdue</span>
                                                 {% endif %}
                                             {% else %}
                                                 <span class="text-muted">No due date</span>
@@ -1623,7 +1623,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                                             {% elif days_remaining == 0 %}
                                                                 <span class="badge bg-warning ms-2">Due today</span>
                                                             {% else %}
-                                                                <span class="badge bg-danger ms-2">{{ abs(days_remaining) }} overdue</span>
+                                                                <span class="badge bg-danger ms-2">{{ (days_remaining * -1) }} overdue</span>
                                                             {% endif %}
                                                         {% else %}
                                                             <span class="text-muted">No due date</span>

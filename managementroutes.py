@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, Response, abort, jsonify
 from flask_login import login_required, current_user
-from models import db, Student, TeacherStaff, Class, SchoolYear, User, ReportCard, Assignment, Announcement, Message, MessageGroup, ScheduledAnnouncement, Notification, MessageGroupMember, Grade, Enrollment, Attendance, AcademicPeriod, CalendarEvent, TeacherWorkDay, SchoolBreak, Submission
+from models import db, Student, TeacherStaff, Class, SchoolYear, User, ReportCard, Assignment, Announcement, Message, MessageGroup, ScheduledAnnouncement, Notification, MessageGroupMember, Grade, Enrollment, Attendance, AcademicPeriod, CalendarEvent, TeacherWorkDay, SchoolBreak, Submission, AssignmentExtension
 from decorators import management_required
 from app import calculate_and_get_grade_for_student, get_grade_for_student, create_notification
 import os
@@ -22,6 +22,76 @@ ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'doc', 'docx', 
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def update_assignment_statuses():
+    """Update assignment statuses - past due 'Active' assignments become 'Inactive'"""
+    from datetime import datetime
+    
+    try:
+        # Get all active assignments that are past due
+        today = datetime.now().date()
+        past_due_assignments = Assignment.query.filter(
+            Assignment.status == 'Active',
+            db.func.date(Assignment.due_date) < today
+        ).all()
+        
+        # Update their status to 'Inactive'
+        for assignment in past_due_assignments:
+            assignment.status = 'Inactive'
+        
+        if past_due_assignments:
+            db.session.commit()
+            print(f"Updated {len(past_due_assignments)} assignments from Active to Inactive")
+            
+    except Exception as e:
+        print(f"Error updating assignment statuses: {e}")
+        db.session.rollback()
+
+def get_current_quarter():
+    """Get the current quarter based on AcademicPeriod dates"""
+    try:
+        from datetime import date
+        
+        # Get the active school year
+        current_school_year = SchoolYear.query.filter_by(is_active=True).first()
+        if not current_school_year:
+            return "1"  # Default to Q1 if no active school year
+        
+        # Get all active quarters for the current school year
+        quarters = AcademicPeriod.query.filter_by(
+            school_year_id=current_school_year.id,
+            period_type='quarter',
+            is_active=True
+        ).order_by(AcademicPeriod.start_date).all()
+        
+        if not quarters:
+            return "1"  # Default to Q1 if no quarters defined
+        
+        # Get today's date
+        today = date.today()
+        
+        # Find which quarter we're currently in
+        for quarter in quarters:
+            if quarter.start_date <= today <= quarter.end_date:
+                # Extract quarter number from name (e.g., "Q1" -> "1")
+                quarter_num = quarter.name.replace('Q', '')
+                return quarter_num
+        
+        # If we're not in any quarter period, find the closest one
+        # Check if we're before the first quarter
+        if today < quarters[0].start_date:
+            return quarters[0].name.replace('Q', '')
+        
+        # Check if we're after the last quarter
+        if today > quarters[-1].end_date:
+            return quarters[-1].name.replace('Q', '')
+        
+        # Default to Q1 if we can't determine
+        return "1"
+        
+    except Exception as e:
+        print(f"Error determining current quarter: {e}")
+        return "1"  # Default to Q1 on error
 
 def calculate_student_gpa(student_id):
     """Calculate GPA for a student based on their grades"""
@@ -867,32 +937,96 @@ def classes():
 @login_required
 @management_required
 def assignments():
-    assignments = Assignment.query.all()
-    classes = Class.query.all()  # For the filter dropdown
+    """Management assignment view - organized by class for better visibility"""
     from datetime import datetime
     
-    # Get current date for filtering
+    # Get all classes
+    all_classes = Class.query.all()
+    
+    # Get current user's role and permissions
+    user_role = current_user.role
+    user_id = current_user.id
+    
+    # Determine which classes the user can access
+    if user_role == 'Director':
+        # Directors can see all classes
+        accessible_classes = all_classes
+        assignments_query = Assignment.query
+    elif user_role == 'School Administrator':
+        # School Administrators can see classes they teach + all assignments for viewing
+        # First, find the TeacherStaff record for this user
+        teacher_staff = TeacherStaff.query.get(current_user.teacher_staff_id)
+        if teacher_staff:
+            teacher_classes = Class.query.filter_by(teacher_id=teacher_staff.id).all()
+            # If no classes assigned, assign them to the first available class for testing
+            if not teacher_classes and all_classes:
+                first_class = all_classes[0]
+                first_class.teacher_id = teacher_staff.id
+                db.session.commit()
+                teacher_classes = [first_class]
+        else:
+            teacher_classes = []
+        accessible_classes = teacher_classes
+        
+        # For assignments, they can see all assignments but only edit their own class assignments
+        assignments_query = Assignment.query
+    else:
+        # Fallback - should not happen due to @management_required decorator
+        accessible_classes = []
+        assignments_query = Assignment.query.none()
+    
+    # Get all assignments
+    all_assignments = assignments_query.all()
+    
+    # Organize assignments by class
+    assignments_by_class = {}
+    for class_obj in all_classes:
+        class_assignments = [a for a in all_assignments if a.class_id == class_obj.id]
+        if class_assignments:  # Only include classes that have assignments
+            assignments_by_class[class_obj] = class_assignments
+    
+    # Apply filters if specified
+    status_filter = request.args.get('status', '')
+    quarter_filter = request.args.get('quarter', '')
+    
+    if status_filter or quarter_filter:
+        filtered_assignments_by_class = {}
+        for class_obj, assignments in assignments_by_class.items():
+            filtered_assignments = assignments
+            
+            if status_filter:
+                filtered_assignments = [a for a in filtered_assignments if a.status == status_filter]
+            
+            if quarter_filter:
+                filtered_assignments = [a for a in filtered_assignments if str(a.quarter) == quarter_filter]
+            
+            if filtered_assignments:  # Only include classes with assignments after filtering
+                filtered_assignments_by_class[class_obj] = filtered_assignments
+        
+        assignments_by_class = filtered_assignments_by_class
+    
+    # Get current date for status updates
     today = datetime.now().date()
     
-    # Filter assignments by status if specified
-    status_filter = request.args.get('status', '')
-    if status_filter:
-        assignments = [a for a in assignments if a.status == status_filter]
+    # Update assignment statuses (past due assignments become inactive)
+    update_assignment_statuses()
     
-    # Filter assignments by class if specified
-    class_filter = request.args.get('class_id', type=int)
-    if class_filter:
-        assignments = [a for a in assignments if a.class_id == class_filter]
+    # Get teacher_staff_id for template use
+    teacher_staff_id = None
+    if user_role == 'School Administrator':
+        teacher_staff = TeacherStaff.query.get(current_user.teacher_staff_id)
+        if teacher_staff:
+            teacher_staff_id = teacher_staff.id
     
-    return render_template('role_assignments.html',
-                         assignments=assignments,
-                         classes=classes,
+    return render_template('management_assignments.html',
+                         assignments_by_class=assignments_by_class,
+                         all_classes=all_classes,
+                         accessible_classes=accessible_classes,
+                         user_role=user_role,
+                         teacher_staff_id=teacher_staff_id,
                          today=today,
-                         selected_class_id=request.args.get('class_id', type=int),
-                         selected_status=request.args.get('status', ''),
-                         selected_due_date=request.args.get('due_date', ''),
-                         total_pages=1,
-                         page=1,
+                         selected_status=status_filter,
+                         selected_quarter=quarter_filter,
                          active_tab='assignments')
 
 @management_blueprint.route('/attendance')
@@ -1922,7 +2056,7 @@ def add_assignment():
         new_assignment.due_date = due_date
         new_assignment.class_id = class_id
         new_assignment.school_year_id = current_school_year.id
-        new_assignment.quarter = int(quarter)
+        new_assignment.quarter = str(quarter)
         new_assignment.status = status
         
         # Handle file upload
@@ -1960,18 +2094,29 @@ def add_assignment():
         flash('Assignment created successfully.', 'success')
         return redirect(url_for('management.assignments'))
 
-    # For GET request, get all classes for the dropdown
+    # For GET request, get all classes for the dropdown and current quarter
     classes = Class.query.all()
-    return render_template('add_assignment.html', classes=classes)
+    current_quarter = get_current_quarter()
+    return render_template('add_assignment.html', classes=classes, current_quarter=current_quarter)
 
 
 @management_blueprint.route('/grade/assignment/<int:assignment_id>', methods=['GET', 'POST'])
 @login_required
 @management_required
 def grade_assignment(assignment_id):
-    """Grade an assignment - Directors and School Administrators can grade any assignment"""
+    """Grade an assignment - Directors and School Administrators can grade assignments for classes they teach"""
     assignment = Assignment.query.get_or_404(assignment_id)
     class_obj = assignment.class_info
+    
+    # Authorization check for School Administrators
+    if current_user.role == 'School Administrator':
+        teacher_staff = TeacherStaff.query.get(current_user.teacher_staff_id)
+        if not teacher_staff or not class_obj or class_obj.teacher_id != teacher_staff.id:
+            flash("You are not authorized to grade this assignment.", "danger")
+            return redirect(url_for('management.assignments'))
+    elif current_user.role != 'Director':
+        flash("You are not authorized to grade assignments.", "danger")
+        return redirect(url_for('management.assignments'))
     
     # Get only students enrolled in this specific class
     enrolled_students = db.session.query(Student).join(Enrollment).filter(
@@ -2072,11 +2217,15 @@ def edit_assignment(assignment_id):
     """Edit an assignment"""
     assignment = Assignment.query.get_or_404(assignment_id)
     
-    # Authorization check - Directors can edit any assignment, others only their own classes
-    if current_user.role != 'Director':
-        if not assignment.class_info or assignment.class_info.teacher_id != current_user.id:
+    # Authorization check - Directors can edit any assignment, School Administrators only their own classes
+    if current_user.role == 'School Administrator':
+        teacher_staff = TeacherStaff.query.get(current_user.teacher_staff_id)
+        if not teacher_staff or not assignment.class_info or assignment.class_info.teacher_id != teacher_staff.id:
             flash("You are not authorized to edit this assignment.", "danger")
             return redirect(url_for('management.assignments'))
+    elif current_user.role != 'Director':
+        flash("You are not authorized to edit this assignment.", "danger")
+        return redirect(url_for('management.assignments'))
     
     if request.method == 'POST':
         # Get form data
@@ -2151,11 +2300,15 @@ def remove_assignment(assignment_id):
     """Remove an assignment"""
     assignment = Assignment.query.get_or_404(assignment_id)
     
-    # Authorization check - Directors can remove any assignment, others only their own classes
-    if current_user.role != 'Director':
-        if not assignment.class_info or assignment.class_info.teacher_id != current_user.id:
+    # Authorization check - Directors can remove any assignment, School Administrators only their own classes
+    if current_user.role == 'School Administrator':
+        teacher_staff = TeacherStaff.query.get(current_user.teacher_staff_id)
+        if not teacher_staff or not assignment.class_info or assignment.class_info.teacher_id != teacher_staff.id:
             flash("You are not authorized to remove this assignment.", "danger")
             return redirect(url_for('management.assignments'))
+    elif current_user.role != 'Director':
+        flash("You are not authorized to remove this assignment.", "danger")
+        return redirect(url_for('management.assignments'))
     
     try:
         # Delete the assignment file if it exists
@@ -2176,38 +2329,139 @@ def remove_assignment(assignment_id):
     return redirect(url_for('management.assignments'))
 
 
-@management_blueprint.route('/assignment/<int:assignment_id>/change-status', methods=['POST'])
+@management_blueprint.route('/assignment/change-status/<int:assignment_id>', methods=['POST'])
 @login_required
 @management_required
 def change_assignment_status(assignment_id):
     """Change assignment status"""
     assignment = Assignment.query.get_or_404(assignment_id)
     
-    # Authorization check - Directors can change any assignment status, others only their own classes
-    if current_user.role != 'Director':
-        if not assignment.class_info or assignment.class_info.teacher_id != current_user.id:
-            flash("You are not authorized to change this assignment status.", "danger")
-            return redirect(url_for('management.assignments'))
+    # Authorization check - Directors can change any assignment status, School Administrators only their own classes
+    if current_user.role == 'School Administrator':
+        # Find the TeacherStaff record for this user
+        teacher_staff = TeacherStaff.query.get(current_user.teacher_staff_id)
+        if not teacher_staff or not assignment.class_info or assignment.class_info.teacher_id != teacher_staff.id:
+            return jsonify({'success': False, 'message': 'You are not authorized to change this assignment status.'})
+    elif current_user.role != 'Director':
+        return jsonify({'success': False, 'message': 'You are not authorized to change assignment status.'})
     
     new_status = request.form.get('status')
     
     # Validate status
     valid_statuses = ['Active', 'Inactive', 'Voided']
     if new_status not in valid_statuses:
-        flash("Invalid status selected.", "danger")
-        return redirect(url_for('management.assignments'))
+        return jsonify({'success': False, 'message': 'Invalid status selected.'})
     
     try:
         assignment.status = new_status
         db.session.commit()
         
-        flash(f'Assignment status changed to {new_status} successfully.', 'success')
+        return jsonify({'success': True, 'message': f'Assignment status changed to {new_status} successfully.'})
     except Exception as e:
         db.session.rollback()
-        flash(f'Error changing assignment status: {str(e)}', 'danger')
-    
-    return redirect(url_for('management.assignments'))
+        return jsonify({'success': False, 'message': f'Error changing assignment status: {str(e)}'})
 
+@management_blueprint.route('/class/<int:class_id>/students')
+@login_required
+@management_required
+def get_class_students(class_id):
+    """Get students for a specific class"""
+    try:
+        # Get students enrolled in this class
+        students = db.session.query(Student).join(Enrollment).filter(
+            Enrollment.class_id == class_id,
+            Enrollment.is_active == True
+        ).order_by(Student.last_name, Student.first_name).all()
+        
+        students_data = []
+        for student in students:
+            students_data.append({
+                'id': student.id,
+                'first_name': student.first_name,
+                'last_name': student.last_name
+            })
+        
+        return jsonify({'success': True, 'students': students_data})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+@management_blueprint.route('/assignment/grant-extensions', methods=['POST'])
+@login_required
+@management_required
+def grant_extensions():
+    """Grant extensions to students for an assignment"""
+    try:
+        assignment_id = request.form.get('assignment_id', type=int)
+        class_id = request.form.get('class_id', type=int)
+        extended_due_date_str = request.form.get('extended_due_date')
+        reason = request.form.get('reason', '')
+        student_ids = request.form.getlist('student_ids')
+        
+        if not all([assignment_id, class_id, extended_due_date_str, student_ids]):
+            return jsonify({'success': False, 'message': 'Missing required fields'})
+        
+        # Parse the extended due date
+        extended_due_date = datetime.strptime(extended_due_date_str, '%Y-%m-%dT%H:%M')
+        
+        # Get the assignment
+        assignment = Assignment.query.get_or_404(assignment_id)
+        
+        # Authorization check - Directors can grant extensions for any assignment, School Administrators only their own classes
+        if current_user.role == 'School Administrator':
+            # Find the TeacherStaff record for this user
+            teacher_staff = TeacherStaff.query.get(current_user.teacher_staff_id)
+            if not teacher_staff or not assignment.class_info or assignment.class_info.teacher_id != teacher_staff.id:
+                return jsonify({'success': False, 'message': 'You are not authorized to grant extensions for this assignment.'})
+        elif current_user.role != 'Director':
+            return jsonify({'success': False, 'message': 'You are not authorized to grant extensions.'})
+        
+        # Get the current user (who is granting the extensions)
+        granter_id = current_user.id
+        
+        granted_count = 0
+        
+        for student_id in student_ids:
+            try:
+                student_id = int(student_id)
+                
+                # Deactivate any existing active extensions for this student and assignment
+                existing_extensions = AssignmentExtension.query.filter_by(
+                    assignment_id=assignment_id,
+                    student_id=student_id,
+                    is_active=True
+                ).all()
+                
+                for ext in existing_extensions:
+                    ext.is_active = False
+                
+                # Create new extension
+                extension = AssignmentExtension(
+                    assignment_id=assignment_id,
+                    student_id=student_id,
+                    extended_due_date=extended_due_date,
+                    reason=reason,
+                    granted_by=granter_id,
+                    is_active=True
+                )
+                
+                db.session.add(extension)
+                granted_count += 1
+                
+            except (ValueError, TypeError):
+                continue  # Skip invalid student IDs
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True, 
+            'message': f'Successfully granted extensions to {granted_count} student(s).',
+            'granted_count': granted_count
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
 
 @management_blueprint.route('/view-student/<int:student_id>')
 @login_required

@@ -2105,25 +2105,43 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                     </td>
                                     <td>{{ assignment.class_info.name if assignment.class_info else 'Unknown Class' }}</td>
                                     <td>
-                                        {% if assignment.nullified %}
+                                        {% if assignment.status == 'Voided' %}
+                                            <!-- Assignment Voided -->
+                                            <span class="badge bg-secondary">Voided</span>
+                                        {% elif assignment.nullified %}
                                             <!-- Assignment Nullified for student -->
                                             <span class="badge bg-secondary">Null</span>
                                         {% elif grades.get(assignment.id) %}
                                             <!-- Graded -->
                                             <span class="badge bg-success">Graded</span>
                                         {% elif submission %}
-                                            <!-- Submitted but check if late -->
-                                            {% if assignment.due_date and assignment.due_date.date() < today %}
-                                                <span class="badge bg-warning">Late</span>
-                                            {% else %}
-                                                <span class="badge bg-info">Submitted</span>
-                                            {% endif %}
+                                            <!-- Submitted - check if awaiting grade -->
+                                            <span class="badge bg-info">Awaiting Grade</span>
                                         {% else %}
-                                            <!-- Not submitted, check if past due -->
-                                            {% if assignment.due_date and assignment.due_date.date() < today %}
-                                                <span class="badge bg-danger">Past Due</span>
+                                            <!-- Check for extension first -->
+                                            {% set has_extension = false %}
+                                            {% set extended_due_date = assignment.due_date %}
+                                            {% for extension in assignment.extensions %}
+                                                {% if extension.student_id == current_user.id and extension.is_active %}
+                                                    {% set has_extension = true %}
+                                                    {% set extended_due_date = extension.extended_due_date %}
+                                                {% endif %}
+                                            {% endfor %}
+                                            
+                                            {% if has_extension %}
+                                                <!-- Has extension -->
+                                                {% if extended_due_date.date() < today %}
+                                                    <span class="badge bg-danger">Past Due</span>
+                                                {% else %}
+                                                    <span class="badge bg-primary">Extended</span>
+                                                {% endif %}
                                             {% else %}
-                                                <span class="badge bg-warning text-dark">Not Submitted</span>
+                                                <!-- No extension, check if past due -->
+                                                {% if assignment.due_date and assignment.due_date.date() < today %}
+                                                    <span class="badge bg-danger">Past Due</span>
+                                                {% else %}
+                                                    <span class="badge bg-warning text-dark">Un-Submitted</span>
+                                                {% endif %}
                                             {% endif %}
                                         {% endif %}
                                     </td>

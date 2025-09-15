@@ -70,10 +70,10 @@
                                 <label for="quarter" class="form-label">Quarter <span class="text-danger">*</span></label>
                                 <select class="form-select" id="quarter" name="quarter" required>
                                     <option value="">Select quarter</option>
-                                    <option value="1" {% if assignment.quarter == 1 %}selected{% endif %}>Q1</option>
-                                    <option value="2" {% if assignment.quarter == 2 %}selected{% endif %}>Q2</option>
-                                    <option value="3" {% if assignment.quarter == 3 %}selected{% endif %}>Q3</option>
-                                    <option value="4" {% if assignment.quarter == 4 %}selected{% endif %}>Q4</option>
+                                    <option value="1" {% if assignment.quarter == "1" or assignment.quarter == 1 %}selected{% endif %}>Q1</option>
+                                    <option value="2" {% if assignment.quarter == "2" or assignment.quarter == 2 %}selected{% endif %}>Q2</option>
+                                    <option value="3" {% if assignment.quarter == "3" or assignment.quarter == 3 %}selected{% endif %}>Q3</option>
+                                    <option value="4" {% if assignment.quarter == "4" or assignment.quarter == 4 %}selected{% endif %}>Q4</option>
                                 </select>
                             </div>
 

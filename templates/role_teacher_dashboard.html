@@ -1125,8 +1125,8 @@ document.addEventListener('DOMContentLoaded', function() {
             // Update modal content
             assignmentTitleSpan.textContent = assignmentTitle;
             
-            // Update form action
-            deleteForm.action = "{{ url_for('teacher.remove_assignment', assignment_id=0) }}".replace('0', assignmentId);
+            // Update form action with proper URL construction
+            deleteForm.action = `/teacher/assignment/remove/${assignmentId}`;
             
             // Show modal
             const modal = new bootstrap.Modal(deleteModal);

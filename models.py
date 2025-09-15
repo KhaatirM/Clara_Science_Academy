@@ -996,6 +996,27 @@ class PeerEvaluation(db.Model):
         return f"PeerEvaluation(Evaluator: {self.evaluator_id}, Evaluatee: {self.evaluatee_id})"
 
 
+class AssignmentExtension(db.Model):
+    """
+    Model for tracking assignment extensions granted to students.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    assignment_id = db.Column(db.Integer, db.ForeignKey('assignment.id'), nullable=False)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
+    extended_due_date = db.Column(db.DateTime, nullable=False)
+    reason = db.Column(db.Text, nullable=True)
+    granted_by = db.Column(db.Integer, db.ForeignKey('teacher_staff.id'), nullable=False)
+    granted_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_active = db.Column(db.Boolean, default=True)
+    
+    # Relationships
+    assignment = db.relationship('Assignment', backref='extensions')
+    student = db.relationship('Student', backref='assignment_extensions')
+    granter = db.relationship('TeacherStaff', backref='granted_extensions')
+    
+    def __repr__(self):
+        return f"AssignmentExtension(Assignment: {self.assignment_id}, Student: {self.student_id}, New Due: {self.extended_due_date})"
+
 class AssignmentRubric(db.Model):
     """
     Model for assignment rubrics.

@@ -47,10 +47,10 @@
                                 <label for="quarter" class="form-label">Quarter</label>
                                 <select class="form-control" id="quarter" name="quarter" required>
                                     <option value="">Select Quarter</option>
-                                    <option value="1">Quarter 1</option>
-                                    <option value="2">Quarter 2</option>
-                                    <option value="3">Quarter 3</option>
-                                    <option value="4">Quarter 4</option>
+                                    <option value="1" {% if current_quarter == "1" %}selected{% endif %}>Quarter 1</option>
+                                    <option value="2" {% if current_quarter == "2" %}selected{% endif %}>Quarter 2</option>
+                                    <option value="3" {% if current_quarter == "3" %}selected{% endif %}>Quarter 3</option>
+                                    <option value="4" {% if current_quarter == "4" %}selected{% endif %}>Quarter 4</option>
                                 </select>
                             </div>
                             

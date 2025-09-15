@@ -196,9 +196,9 @@
 function confirmDelete(title, assignmentId) {
     document.getElementById('assignmentTitle').textContent = title;
     {% if current_user.role in ['Director', 'School Administrator'] %}
-        document.getElementById('deleteForm').action = "{{ url_for('management.remove_assignment', assignment_id=0) }}".replace('0', assignmentId);
+        document.getElementById('deleteForm').action = `/management/assignment/remove/${assignmentId}`;
     {% elif current_user.role in ['Teacher'] %}
-        document.getElementById('deleteForm').action = "{{ url_for('teacher.remove_assignment', assignment_id=0) }}".replace('0', assignmentId);
+        document.getElementById('deleteForm').action = `/teacher/assignment/remove/${assignmentId}`;
     {% endif %}
     
     const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));

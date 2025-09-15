@@ -874,20 +874,17 @@ def assignments():
     # Get current date for filtering
     today = datetime.now().date()
     
-    # Add status to each assignment based on due date
-    for assignment in assignments:
-        if assignment.due_date:
-            due_date = assignment.due_date.date()
-            if due_date < today:
-                assignment.status = 'overdue'
-            elif due_date == today:
-                assignment.status = 'due_today'
-            else:
-                assignment.status = 'active'
-        else:
-            assignment.status = 'no_due_date'
+    # Filter assignments by status if specified
+    status_filter = request.args.get('status', '')
+    if status_filter:
+        assignments = [a for a in assignments if a.status == status_filter]
     
-    return render_template('role_dashboard.html',
+    # Filter assignments by class if specified
+    class_filter = request.args.get('class_id', type=int)
+    if class_filter:
+        assignments = [a for a in assignments if a.class_id == class_filter]
+    
+    return render_template('role_assignments.html',
                          assignments=assignments,
                          classes=classes,
                          today=today,
@@ -896,7 +893,6 @@ def assignments():
                          selected_due_date=request.args.get('due_date', ''),
                          total_pages=1,
                          page=1,
-                         section='assignments',
                          active_tab='assignments')
 
 @management_blueprint.route('/attendance')

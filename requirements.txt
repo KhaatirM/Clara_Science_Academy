@@ -2,7 +2,7 @@ Flask
 Flask-Login
 Flask-SQLAlchemy
 Flask-WTF
-# Flask-Migrate  # Temporarily disabled due to import issues
+Flask-Migrate
 gunicorn
 python-dotenv
 psycopg2-binary

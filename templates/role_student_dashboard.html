@@ -2074,8 +2074,38 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
 
 
         <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-journal-text me-2"></i>My Assignments
+                    </h5>
+                    <div class="d-flex gap-2">
+                        <select id="statusFilter" class="form-select form-select-sm" style="width: auto;">
+                            <option value="">All Statuses</option>
+                            <option value="Un-Submitted">Un-Submitted</option>
+                            <option value="Submitted or Awaiting Grade">Submitted or Awaiting Grade</option>
+                            <option value="Graded">Graded</option>
+                            <option value="Past Due">Past Due</option>
+                            <option value="Extended">Extended</option>
+                            <option value="Voided">Voided</option>
+                        </select>
+                        <select id="typeFilter" class="form-select form-select-sm" style="width: auto;">
+                            <option value="">All Types</option>
+                            <option value="pdf">PDF/Paper</option>
+                            <option value="quiz">Quiz</option>
+                            <option value="discussion">Discussion</option>
+                        </select>
+                        <select id="sortBy" class="form-select form-select-sm" style="width: auto;">
+                            <option value="due_date">Due Date</option>
+                            <option value="title">Title</option>
+                            <option value="class">Class</option>
+                            <option value="status">Status</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
             <div class="card-body">
-                <table class="table table-hover align-middle">
+                <table class="table table-hover align-middle" id="assignmentsTable">
                     <thead>
                         <tr>
                             <th>Due Date</th>
@@ -2087,12 +2117,21 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                     </thead>
                     <tbody>
                         {% if assignments_with_status %}
-                            {% for assignment, submission in assignments_with_status %}
+                            {% for assignment, submission, student_status in assignments_with_status %}
                                 <tr>
                                     <td>{{ assignment.due_date.strftime('%Y-%m-%d') if assignment.due_date else 'No due date' }}</td>
                                     <td>
                                         <div>
                                             <strong>{{ assignment.title }}</strong>
+                                            <br><small class="text-muted">
+                                                {% if assignment.assignment_type == 'quiz' %}
+                                                    <i class="bi bi-question-circle me-1"></i>Quiz Assignment
+                                                {% elif assignment.assignment_type == 'discussion' %}
+                                                    <i class="bi bi-chat-dots me-1"></i>Discussion Assignment
+                                                {% else %}
+                                                    <i class="bi bi-file-earmark-pdf me-1"></i>PDF/Paper Assignment
+                                                {% endif %}
+                                            </small>
                                             {% if assignment.attachment_filename %}
                                                 <br><small class="text-primary">
                                                     <i class="bi bi-paperclip me-1"></i>
@@ -2105,44 +2144,18 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                     </td>
                                     <td>{{ assignment.class_info.name if assignment.class_info else 'Unknown Class' }}</td>
                                     <td>
-                                        {% if assignment.status == 'Voided' %}
-                                            <!-- Assignment Voided -->
+                                        {% if student_status == 'Voided' %}
                                             <span class="badge bg-secondary">Voided</span>
-                                        {% elif assignment.nullified %}
-                                            <!-- Assignment Nullified for student -->
-                                            <span class="badge bg-secondary">Null</span>
-                                        {% elif grades.get(assignment.id) %}
-                                            <!-- Graded -->
+                                        {% elif student_status == 'Graded' %}
                                             <span class="badge bg-success">Graded</span>
-                                        {% elif submission %}
-                                            <!-- Submitted - check if awaiting grade -->
-                                            <span class="badge bg-info">Awaiting Grade</span>
+                                        {% elif student_status == 'Submitted or Awaiting Grade' %}
+                                            <span class="badge bg-info">Submitted or Awaiting Grade</span>
+                                        {% elif student_status == 'Past Due' %}
+                                            <span class="badge bg-danger">Past Due</span>
+                                        {% elif student_status == 'Extended' %}
+                                            <span class="badge bg-warning">Extended</span>
                                         {% else %}
-                                            <!-- Check for extension first -->
-                                            {% set has_extension = false %}
-                                            {% set extended_due_date = assignment.due_date %}
-                                            {% for extension in assignment.extensions %}
-                                                {% if extension.student_id == current_user.id and extension.is_active %}
-                                                    {% set has_extension = true %}
-                                                    {% set extended_due_date = extension.extended_due_date %}
-                                                {% endif %}
-                                            {% endfor %}
-                                            
-                                            {% if has_extension %}
-                                                <!-- Has extension -->
-                                                {% if extended_due_date.date() < today %}
-                                                    <span class="badge bg-danger">Past Due</span>
-                                                {% else %}
-                                                    <span class="badge bg-primary">Extended</span>
-                                                {% endif %}
-                                            {% else %}
-                                                <!-- No extension, check if past due -->
-                                                {% if assignment.due_date and assignment.due_date.date() < today %}
-                                                    <span class="badge bg-danger">Past Due</span>
-                                                {% else %}
-                                                    <span class="badge bg-warning text-dark">Un-Submitted</span>
-                                                {% endif %}
-                                            {% endif %}
+                                            <span class="badge bg-primary">Un-Submitted</span>
                                         {% endif %}
                                     </td>
                                     <td>
@@ -2150,9 +2163,19 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                             <button type="button" class="btn btn-outline-primary btn-sm" onclick="viewAssignment({{ assignment.id }}, '{{ assignment.title }}', '{{ assignment.description or '' }}', '{{ assignment.due_date.strftime('%Y-%m-%d') if assignment.due_date else 'No due date' }}', '{{ assignment.quarter or 'N/A' }}', '{{ assignment.attachment_filename or '' }}', {{ 'true' if submission else 'false' }}, {{ 'true' if grades.get(assignment.id) else 'false' }})">
                                                 <i class="bi bi-eye me-1"></i>View
                                             </button>
-                                            <button type="button" class="btn btn-outline-success btn-sm" onclick="submitAssignmentFromTable({{ assignment.id }}, '{{ assignment.title }}', {{ 'true' if submission else 'false' }})">
-                                                <i class="bi bi-upload me-1"></i>Submit
-                                            </button>
+                                            {% if assignment.assignment_type == 'quiz' %}
+                                                <button type="button" class="btn btn-outline-success btn-sm" onclick="takeQuiz({{ assignment.id }}, '{{ assignment.title }}')">
+                                                    <i class="bi bi-question-circle me-1"></i>Take Quiz
+                                                </button>
+                                            {% elif assignment.assignment_type == 'discussion' %}
+                                                <button type="button" class="btn btn-outline-success btn-sm" onclick="joinDiscussion({{ assignment.id }}, '{{ assignment.title }}')">
+                                                    <i class="bi bi-chat-dots me-1"></i>Join Discussion
+                                                </button>
+                                            {% else %}
+                                                <button type="button" class="btn btn-outline-success btn-sm" onclick="submitAssignmentFromTable({{ assignment.id }}, '{{ assignment.title }}', {{ 'true' if submission else 'false' }})">
+                                                    <i class="bi bi-upload me-1"></i>Submit
+                                                </button>
+                                            {% endif %}
                                             <button type="button" class="btn btn-outline-warning btn-sm" onclick="showExtensionRequestMessage('{{ assignment.title }}')">
                                                 <i class="bi bi-clock me-1"></i>Extension Request
                                             </button>
@@ -3952,6 +3975,100 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
         }
     });
     
+    // Assignment filtering and sorting functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const statusFilter = document.getElementById('statusFilter');
+        const typeFilter = document.getElementById('typeFilter');
+        const sortBy = document.getElementById('sortBy');
+        const table = document.getElementById('assignmentsTable');
+        
+        if (!table) return;
+        
+        function filterAndSortAssignments() {
+            const rows = Array.from(table.querySelectorAll('tbody tr'));
+            const statusValue = statusFilter.value;
+            const typeValue = typeFilter.value;
+            const sortValue = sortBy.value;
+            
+            // Filter rows
+            rows.forEach(row => {
+                let showRow = true;
+                
+                // Status filter
+                if (statusValue) {
+                    const statusBadge = row.querySelector('.badge');
+                    const statusText = statusBadge ? statusBadge.textContent.trim() : '';
+                    if (statusText !== statusValue) {
+                        showRow = false;
+                    }
+                }
+                
+                // Type filter
+                if (typeValue) {
+                    const typeText = row.querySelector('small.text-muted');
+                    if (typeText) {
+                        const typeContent = typeText.textContent.toLowerCase();
+                        if (typeValue === 'pdf' && !typeContent.includes('pdf/paper')) {
+                            showRow = false;
+                        } else if (typeValue === 'quiz' && !typeContent.includes('quiz')) {
+                            showRow = false;
+                        } else if (typeValue === 'discussion' && !typeContent.includes('discussion')) {
+                            showRow = false;
+                        }
+                    }
+                }
+                
+                row.style.display = showRow ? '' : 'none';
+            });
+            
+            // Sort visible rows
+            const visibleRows = rows.filter(row => row.style.display !== 'none');
+            visibleRows.sort((a, b) => {
+                let aValue, bValue;
+                
+                switch(sortValue) {
+                    case 'due_date':
+                        aValue = a.cells[0].textContent.trim();
+                        bValue = b.cells[0].textContent.trim();
+                        return aValue.localeCompare(bValue);
+                    case 'title':
+                        aValue = a.cells[1].querySelector('strong').textContent.trim();
+                        bValue = b.cells[1].querySelector('strong').textContent.trim();
+                        return aValue.localeCompare(bValue);
+                    case 'class':
+                        aValue = a.cells[2].textContent.trim();
+                        bValue = b.cells[2].textContent.trim();
+                        return aValue.localeCompare(bValue);
+                    case 'status':
+                        aValue = a.cells[3].querySelector('.badge').textContent.trim();
+                        bValue = b.cells[3].querySelector('.badge').textContent.trim();
+                        return aValue.localeCompare(bValue);
+                    default:
+                        return 0;
+                }
+            });
+            
+            // Reorder rows in table
+            const tbody = table.querySelector('tbody');
+            visibleRows.forEach(row => tbody.appendChild(row));
+        }
+        
+        // Add event listeners
+        if (statusFilter) statusFilter.addEventListener('change', filterAndSortAssignments);
+        if (typeFilter) typeFilter.addEventListener('change', filterAndSortAssignments);
+        if (sortBy) sortBy.addEventListener('change', filterAndSortAssignments);
+    });
+    
+    // New assignment type specific functions
+    function takeQuiz(assignmentId, assignmentTitle) {
+        // Redirect to quiz taking interface
+        window.location.href = `/student/take-quiz/${assignmentId}`;
+    }
+    
+    function joinDiscussion(assignmentId, assignmentTitle) {
+        // Redirect to discussion interface
+        window.location.href = `/student/discussion/${assignmentId}`;
+    }
 
     </script>
 </div>

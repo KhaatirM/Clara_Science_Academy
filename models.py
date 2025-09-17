@@ -412,6 +412,9 @@ class Assignment(db.Model):
     # Assignment status: Active, Inactive, Voided
     status = db.Column(db.String(20), default='Active', nullable=False)
     
+    # Assignment type: pdf, quiz, discussion
+    assignment_type = db.Column(db.String(20), default='pdf', nullable=False)
+    
     # File attachment fields
     attachment_filename = db.Column(db.String(255), nullable=True)
     attachment_original_filename = db.Column(db.String(255), nullable=True)
@@ -443,6 +446,99 @@ class Submission(db.Model):
 
     def __repr__(self):
         return f"Submission(Student: {self.student_id}, Assignment: {self.assignment_id})"
+
+
+class QuizQuestion(db.Model):
+    """
+    Model for storing quiz questions.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    assignment_id = db.Column(db.Integer, db.ForeignKey('assignment.id'), nullable=False)
+    question_text = db.Column(db.Text, nullable=False)
+    question_type = db.Column(db.String(20), nullable=False)  # multiple_choice, true_false, short_answer, essay
+    points = db.Column(db.Float, default=1.0, nullable=False)
+    order = db.Column(db.Integer, default=0, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    assignment = db.relationship('Assignment', backref='quiz_questions', lazy=True)
+    
+    def __repr__(self):
+        return f"QuizQuestion('{self.question_text[:50]}...', Type: {self.question_type})"
+
+
+class QuizOption(db.Model):
+    """
+    Model for storing quiz question options (for multiple choice and true/false).
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    question_id = db.Column(db.Integer, db.ForeignKey('quiz_question.id'), nullable=False)
+    option_text = db.Column(db.String(500), nullable=False)
+    is_correct = db.Column(db.Boolean, default=False, nullable=False)
+    order = db.Column(db.Integer, default=0, nullable=False)
+    
+    question = db.relationship('QuizQuestion', backref='options', lazy=True)
+    
+    def __repr__(self):
+        return f"QuizOption('{self.option_text[:30]}...', Correct: {self.is_correct})"
+
+
+class QuizAnswer(db.Model):
+    """
+    Model for storing student quiz answers.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
+    question_id = db.Column(db.Integer, db.ForeignKey('quiz_question.id'), nullable=False)
+    answer_text = db.Column(db.Text, nullable=True)  # For short answer and essay
+    selected_option_id = db.Column(db.Integer, db.ForeignKey('quiz_option.id'), nullable=True)  # For multiple choice and true/false
+    is_correct = db.Column(db.Boolean, nullable=True)  # Calculated when submitted
+    points_earned = db.Column(db.Float, default=0.0, nullable=False)
+    submitted_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    student = db.relationship('Student', backref='quiz_answers', lazy=True)
+    question = db.relationship('QuizQuestion', backref='answers', lazy=True)
+    selected_option = db.relationship('QuizOption', backref='selected_answers', lazy=True)
+    
+    def __repr__(self):
+        return f"QuizAnswer(Student: {self.student_id}, Question: {self.question_id}, Correct: {self.is_correct})"
+
+
+class DiscussionThread(db.Model):
+    """
+    Model for storing discussion threads.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    assignment_id = db.Column(db.Integer, db.ForeignKey('assignment.id'), nullable=False)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_pinned = db.Column(db.Boolean, default=False, nullable=False)
+    is_locked = db.Column(db.Boolean, default=False, nullable=False)
+    
+    assignment = db.relationship('Assignment', backref='discussion_threads', lazy=True)
+    student = db.relationship('Student', backref='discussion_threads', lazy=True)
+    
+    def __repr__(self):
+        return f"DiscussionThread('{self.title}', Assignment: {self.assignment_id})"
+
+
+class DiscussionPost(db.Model):
+    """
+    Model for storing discussion posts (replies to threads).
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    thread_id = db.Column(db.Integer, db.ForeignKey('discussion_thread.id'), nullable=False)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_teacher_post = db.Column(db.Boolean, default=False, nullable=False)
+    
+    thread = db.relationship('DiscussionThread', backref='posts', lazy=True)
+    student = db.relationship('Student', backref='discussion_posts', lazy=True)
+    
+    def __repr__(self):
+        return f"DiscussionPost(Thread: {self.thread_id}, Student: {self.student_id})"
 
 
 class Grade(db.Model):
@@ -1572,4 +1668,35 @@ class PerformanceBenchmark(db.Model):
     
     def __repr__(self):
         return f"PerformanceBenchmark('{self.benchmark_name}', Value: {self.benchmark_value})"
+
+
+class BugReport(db.Model):
+    """
+    Model for storing automatic bug reports and error information.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    error_type = db.Column(db.String(50), nullable=False)  # 'server_error', 'client_error', 'validation_error', 'database_error'
+    error_message = db.Column(db.Text, nullable=False)
+    error_traceback = db.Column(db.Text, nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    user_role = db.Column(db.String(50), nullable=True)
+    url = db.Column(db.String(500), nullable=True)
+    method = db.Column(db.String(10), nullable=True)  # GET, POST, etc.
+    user_agent = db.Column(db.String(500), nullable=True)
+    ip_address = db.Column(db.String(45), nullable=True)
+    request_data = db.Column(db.Text, nullable=True)  # JSON string of form data
+    browser_info = db.Column(db.Text, nullable=True)  # JSON string of browser details
+    severity = db.Column(db.String(20), default='medium', nullable=False)  # low, medium, high, critical
+    status = db.Column(db.String(20), default='open', nullable=False)  # open, investigating, resolved, closed
+    assigned_to = db.Column(db.Integer, db.ForeignKey('teacher_staff.id'), nullable=True)
+    resolution_notes = db.Column(db.Text, nullable=True)
+    resolved_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    user = db.relationship('User', backref='bug_reports')
+    assignee = db.relationship('TeacherStaff', backref='assigned_bug_reports')
+    
+    def __repr__(self):
+        return f"BugReport('{self.error_type}', User: {self.user_id}, Status: {self.status})"
 

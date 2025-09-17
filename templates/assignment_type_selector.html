@@ -1,0 +1,251 @@
+{% extends "dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-3 px-md-4 px-lg-5">
+    <!-- Header Section -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
+        <div>
+            <h3 class="mb-2 mb-md-0">
+                <i class="bi bi-plus-circle me-2"></i>Create New Assignment
+            </h3>
+            <p class="text-muted mb-0">Choose the type of assignment you want to create</p>
+        </div>
+        <div class="d-flex gap-2">
+            {% if current_user.role in ['Director', 'School Administrator'] %}
+                <a href="{{ url_for('management.assignments') }}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-left me-1"></i>Back to Assignments
+                </a>
+            {% else %}
+                <a href="{{ url_for('teacher.my_assignments') }}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-left me-1"></i>Back to Assignments
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Assignment Type Selection Cards -->
+    <div class="row g-4">
+        <!-- PDF/Paper Assignment -->
+        <div class="col-12 col-md-6 col-lg-4">
+            <div class="card h-100 assignment-type-card" data-type="pdf">
+                <div class="card-body text-center p-4">
+                    <div class="assignment-type-icon mb-3">
+                        <i class="bi bi-file-earmark-pdf text-danger" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="card-title mb-3">PDF/Paper Assignment</h5>
+                    <p class="card-text text-muted mb-4">
+                        Traditional assignment with document upload. Students can submit PDFs, Word documents, or other files.
+                    </p>
+                    <div class="features-list text-start mb-4">
+                        <h6 class="text-primary mb-2">Features:</h6>
+                        <ul class="list-unstyled small">
+                            <li><i class="bi bi-check-circle text-success me-2"></i>File upload support</li>
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Multiple file formats</li>
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Due date tracking</li>
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Grade submission</li>
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Comments & feedback</li>
+                        </ul>
+                    </div>
+                    <button class="btn btn-outline-primary w-100 select-assignment-type" data-type="pdf">
+                        <i class="bi bi-file-earmark-pdf me-2"></i>Create PDF Assignment
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Questionnaire/Quiz Assignment -->
+        <div class="col-12 col-md-6 col-lg-4">
+            <div class="card h-100 assignment-type-card" data-type="quiz">
+                <div class="card-body text-center p-4">
+                    <div class="assignment-type-icon mb-3">
+                        <i class="bi bi-question-circle text-warning" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="card-title mb-3">Questionnaire/Quiz Assignment</h5>
+                    <p class="card-text text-muted mb-4">
+                        Interactive quiz with multiple choice, true/false, and short answer questions. Auto-graded with instant feedback.
+                    </p>
+                    <div class="features-list text-start mb-4">
+                        <h6 class="text-primary mb-2">Features:</h6>
+                        <ul class="list-unstyled small">
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Multiple question types</li>
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Auto-grading system</li>
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Time limits</li>
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Instant feedback</li>
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Question bank</li>
+                        </ul>
+                    </div>
+                    <button class="btn btn-outline-warning w-100 select-assignment-type" data-type="quiz">
+                        <i class="bi bi-question-circle me-2"></i>Create Quiz Assignment
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Discussion Assignment -->
+        <div class="col-12 col-md-6 col-lg-4">
+            <div class="card h-100 assignment-type-card" data-type="discussion">
+                <div class="card-body text-center p-4">
+                    <div class="assignment-type-icon mb-3">
+                        <i class="bi bi-chat-dots text-info" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="card-title mb-3">Discussion Assignment</h5>
+                    <p class="card-text text-muted mb-4">
+                        Open-ended discussion topics with rubrics. Students engage in thoughtful dialogue and critical thinking.
+                    </p>
+                    <div class="features-list text-start mb-4">
+                        <h6 class="text-primary mb-2">Features:</h6>
+                        <ul class="list-unstyled small">
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Rubric-based grading</li>
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Peer interaction</li>
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Response tracking</li>
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Quality indicators</li>
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Discussion threads</li>
+                        </ul>
+                    </div>
+                    <button class="btn btn-outline-info w-100 select-assignment-type" data-type="discussion">
+                        <i class="bi bi-chat-dots me-2"></i>Create Discussion Assignment
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Additional Information -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h6 class="card-title text-primary mb-3">
+                        <i class="bi bi-info-circle me-2"></i>Assignment Type Guidelines
+                    </h6>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <h6 class="text-danger">PDF/Paper Assignments</h6>
+                            <p class="small text-muted">Best for essays, reports, projects, and creative work. Students upload completed documents for review and grading.</p>
+                        </div>
+                        <div class="col-md-4">
+                            <h6 class="text-warning">Quiz Assignments</h6>
+                            <p class="small text-muted">Perfect for assessments, knowledge checks, and practice tests. Questions are automatically graded with immediate feedback.</p>
+                        </div>
+                        <div class="col-md-4">
+                            <h6 class="text-info">Discussion Assignments</h6>
+                            <p class="small text-muted">Ideal for critical thinking, analysis, and collaborative learning. Students engage in meaningful academic discourse.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.assignment-type-card {
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border: 2px solid transparent;
+}
+
+.assignment-type-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    border-color: #007bff;
+}
+
+.assignment-type-card.selected {
+    border-color: #007bff;
+    background-color: #f8f9fa;
+}
+
+.assignment-type-icon {
+    transition: transform 0.3s ease;
+}
+
+.assignment-type-card:hover .assignment-type-icon {
+    transform: scale(1.1);
+}
+
+.features-list ul li {
+    margin-bottom: 0.25rem;
+}
+
+.btn.select-assignment-type {
+    transition: all 0.3s ease;
+}
+
+.btn.select-assignment-type:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .assignment-type-card {
+        margin-bottom: 1rem;
+    }
+    
+    .features-list {
+        text-align: center;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const assignmentTypeCards = document.querySelectorAll('.assignment-type-card');
+    const selectButtons = document.querySelectorAll('.select-assignment-type');
+    
+    // Add hover effects and selection
+    assignmentTypeCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.classList.add('selected');
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.classList.remove('selected');
+        });
+        
+        card.addEventListener('click', function() {
+            const type = this.dataset.type;
+            handleAssignmentTypeSelection(type);
+        });
+    });
+    
+    selectButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const type = this.dataset.type;
+            handleAssignmentTypeSelection(type);
+        });
+    });
+    
+    function handleAssignmentTypeSelection(type) {
+        // Redirect to the appropriate assignment creation page
+        switch(type) {
+            case 'pdf':
+                {% if current_user.role in ['Director', 'School Administrator'] %}
+                    window.location.href = `{{ url_for('management.add_assignment') }}`;
+                {% else %}
+                    window.location.href = `{{ url_for('teacher.add_assignment_select_class') }}`;
+                {% endif %}
+                break;
+            case 'quiz':
+                {% if current_user.role in ['Director', 'School Administrator'] %}
+                    window.location.href = `{{ url_for('management.create_quiz_assignment') }}`;
+                {% else %}
+                    window.location.href = `{{ url_for('teacher.create_quiz_assignment') }}`;
+                {% endif %}
+                break;
+            case 'discussion':
+                {% if current_user.role in ['Director', 'School Administrator'] %}
+                    window.location.href = `{{ url_for('management.create_discussion_assignment') }}`;
+                {% else %}
+                    window.location.href = `{{ url_for('teacher.create_discussion_assignment') }}`;
+                {% endif %}
+                break;
+            default:
+                console.error('Unknown assignment type:', type);
+        }
+    }
+});
+</script>
+{% endblock %}

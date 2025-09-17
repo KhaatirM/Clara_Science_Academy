@@ -1,0 +1,175 @@
+{% extends "dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- Quiz Header -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0">
+                            <i class="bi bi-question-circle me-2"></i>{{ assignment.title }}
+                        </h4>
+                        <div>
+                            <span class="badge bg-light text-dark me-2">Quiz Assignment</span>
+                            {% if submission %}
+                                <span class="badge bg-success">Submitted</span>
+                            {% elif grade %}
+                                <span class="badge bg-info">Graded</span>
+                            {% else %}
+                                <span class="badge bg-warning">Not Submitted</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Class:</strong> {{ assignment.class_info.name }}</p>
+                            <p><strong>Due Date:</strong> {{ assignment.due_date.strftime('%B %d, %Y at %I:%M %p') if assignment.due_date else 'No due date' }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Quarter:</strong> {{ assignment.quarter }}</p>
+                            <p><strong>Status:</strong> 
+                                {% if assignment.status == 'Active' %}
+                                    <span class="text-success">Active</span>
+                                {% elif assignment.status == 'Inactive' %}
+                                    <span class="text-warning">Inactive</span>
+                                {% else %}
+                                    <span class="text-secondary">{{ assignment.status }}</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    {% if assignment.description %}
+                        <div class="mt-3">
+                            <h6>Instructions:</h6>
+                            <p class="text-muted">{{ assignment.description }}</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if grade %}
+                <!-- Already Graded -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-check-circle me-2"></i>Quiz Completed and Graded
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-success">
+                            <h6>Your Grade: {{ grade.grade_percentage }}%</h6>
+                            <p class="mb-0">This quiz has been graded. You can review your answers below.</p>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <a href="{{ url_for('student.student_assignments') }}" class="btn btn-primary">
+                                <i class="bi bi-arrow-left me-1"></i>Back to Assignments
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% elif submission %}
+                <!-- Already Submitted -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-hourglass-split me-2"></i>Quiz Submitted
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <h6>Submission Status</h6>
+                            <p class="mb-0">Your quiz has been submitted and is awaiting grading by your teacher.</p>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <a href="{{ url_for('student.student_assignments') }}" class="btn btn-primary">
+                                <i class="bi bi-arrow-left me-1"></i>Back to Assignments
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+                <!-- Quiz Taking Interface -->
+                <div class="card shadow-sm">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0">
+                            <i class="bi bi-pencil-square me-2"></i>Quiz Questions
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% if questions %}
+                            <form id="quizForm" method="POST" action="{{ url_for('student.submit_quiz', assignment_id=assignment.id) }}">
+                                {% for question in questions %}
+                                    <div class="mb-4 p-3 border rounded">
+                                        <h6>Question {{ loop.index }} ({{ question.points }} point{{ 's' if question.points != 1 else '' }})</h6>
+                                        <p class="mb-3">{{ question.question_text }}</p>
+                                        
+                                        {% if question.question_type == 'multiple_choice' %}
+                                            {% for option in question.options %}
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="radio" name="question_{{ question.id }}" id="option_{{ option.id }}" value="{{ option.id }}">
+                                                    <label class="form-check-label" for="option_{{ option.id }}">{{ option.option_text }}</label>
+                                                </div>
+                                            {% endfor %}
+                                            
+                                        {% elif question.question_type == 'true_false' %}
+                                            {% for option in question.options %}
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="radio" name="question_{{ question.id }}" id="option_{{ option.id }}" value="{{ option.id }}">
+                                                    <label class="form-check-label" for="option_{{ option.id }}">{{ option.option_text }}</label>
+                                                </div>
+                                            {% endfor %}
+                                            
+                                        {% elif question.question_type == 'short_answer' %}
+                                            <div class="form-group">
+                                                <input type="text" class="form-control" name="question_{{ question.id }}" placeholder="Enter your answer here...">
+                                            </div>
+                                            
+                                        {% elif question.question_type == 'essay' %}
+                                            <div class="form-group">
+                                                <textarea class="form-control" name="question_{{ question.id }}" rows="4" placeholder="Enter your answer here..."></textarea>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                                
+                                <div class="d-flex gap-2">
+                                    <button type="submit" class="btn btn-success" onclick="return confirm('Are you sure you want to submit this quiz? You cannot change your answers after submission.')">
+                                        <i class="bi bi-check-circle me-1"></i>Submit Quiz
+                                    </button>
+                                    <a href="{{ url_for('student.student_assignments') }}" class="btn btn-outline-secondary">
+                                        <i class="bi bi-arrow-left me-1"></i>Back to Assignments
+                                    </a>
+                                </div>
+                            </form>
+                        {% else %}
+                            <div class="alert alert-warning">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                <strong>No questions found!</strong> This quiz doesn't have any questions yet.
+                            </div>
+                            <div class="d-flex gap-2">
+                                <a href="{{ url_for('student.student_assignments') }}" class="btn btn-primary">
+                                    <i class="bi bi-arrow-left me-1"></i>Back to Assignments
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function submitQuiz() {
+    if (confirm('Are you sure you want to submit this quiz? You cannot change your answers after submission.')) {
+        // This would submit the quiz answers
+        alert('Quiz submitted successfully! (This is a placeholder - actual submission will be implemented)');
+        window.location.href = "{{ url_for('student.student_assignments') }}";
+    }
+}
+</script>
+{% endblock %}

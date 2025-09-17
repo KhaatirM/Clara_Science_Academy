@@ -2,7 +2,7 @@ import os
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, abort, jsonify, send_file
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
-from models import db, Student, Class, Assignment, Submission, Grade, SchoolYear, Announcement, Notification, StudentGoal, Message, MessageGroup, MessageGroupMember, TeacherStaff, User, Enrollment, ClassSchedule, Attendance, AcademicPeriod
+from models import db, Student, Class, Assignment, Submission, Grade, SchoolYear, Announcement, Notification, StudentGoal, Message, MessageGroup, MessageGroupMember, TeacherStaff, User, Enrollment, ClassSchedule, Attendance, AcademicPeriod, QuizQuestion, QuizOption, QuizAnswer, DiscussionThread, DiscussionPost
 from decorators import student_required
 import json
 from datetime import datetime, timedelta
@@ -38,6 +38,40 @@ def calculate_gpa(grades):
     
     gpa_points = [percentage_to_gpa(grade) for grade in grades]
     return round(sum(gpa_points) / len(gpa_points), 2)
+
+def get_student_assignment_status(assignment, submission, grade):
+    """Determine the student-facing status for an assignment."""
+    from datetime import datetime
+    
+    # Check if assignment is voided
+    if assignment.status == 'Voided':
+        return 'Voided'
+    
+    # Check if assignment has been graded
+    if grade:
+        return 'Graded'
+    
+    # Check if assignment has been submitted
+    if submission:
+        return 'Submitted or Awaiting Grade'
+    
+    # Check if assignment is past due
+    if assignment.due_date < datetime.now():
+        return 'Past Due'
+    
+    # Check if assignment has an extension
+    from models import AssignmentExtension
+    extension = AssignmentExtension.query.filter_by(
+        assignment_id=assignment.id,
+        student_id=assignment.class_info.enrollments[0].student_id if assignment.class_info.enrollments else None,
+        is_active=True
+    ).first()
+    
+    if extension:
+        return 'Extended'
+    
+    # Default status for active assignments
+    return 'Un-Submitted'
 
 def get_grade_trends(student_id, class_id, limit=10):
     """Get grade trends for a specific class."""
@@ -297,11 +331,11 @@ def student_assignments():
     
     class_ids = [enrollment.class_id for enrollment in enrollments]
     
-    # Get assignments for student's classes (only Active assignments)
+    # Get assignments for student's classes (show Active and Inactive assignments to students)
     assignments = Assignment.query.filter(
         Assignment.class_id.in_(class_ids),
         Assignment.school_year_id == current_school_year.id,
-        Assignment.status == 'Active'  # Only show Active assignments to students
+        Assignment.status.in_(['Active', 'Inactive'])  # Show both Active and Inactive assignments
     ).order_by(Assignment.due_date.asc()).all()
     
     # Get all submissions for this student
@@ -316,7 +350,12 @@ def student_assignments():
     assignments_with_status = []
     for assignment in assignments:
         submission = submissions_dict.get(assignment.id)
-        assignments_with_status.append((assignment, submission))
+        grade = grades_dict.get(assignment.id)
+        
+        # Determine student-facing status
+        student_status = get_student_assignment_status(assignment, submission, grade)
+        
+        assignments_with_status.append((assignment, submission, student_status))
     
     return render_template('role_student_dashboard.html', 
                          **create_template_context(student, 'assignments', 'assignments',
@@ -783,25 +822,300 @@ def view_class_assignments(class_id):
     student = Student.query.get_or_404(current_user.student_id)
     class_obj = Class.query.get_or_404(class_id)
     
-    # Get assignments for this class
-    assignments = Assignment.query.filter_by(class_id=class_id).order_by(Assignment.due_date.desc()).all()
+    # Get assignments for this class (show Active and Inactive assignments)
+    assignments = Assignment.query.filter(
+        Assignment.class_id == class_id,
+        Assignment.status.in_(['Active', 'Inactive'])
+    ).order_by(Assignment.due_date.desc()).all()
     
     # Get submissions and grades for this student
-    student_grades = {g.assignment_id: json.loads(g.grade_data) for g in Grade.query.filter_by(student_id=student.id).all()}
+    student_grades = {g.assignment_id: g for g in Grade.query.filter_by(student_id=student.id).all()}
     student_submissions = {s.assignment_id: s for s in Submission.query.filter_by(student_id=student.id).all()}
+    
+    # Create assignments with status for template
+    assignments_with_status = []
+    for assignment in assignments:
+        submission = student_submissions.get(assignment.id)
+        grade = student_grades.get(assignment.id)
+        
+        # Determine student-facing status
+        student_status = get_student_assignment_status(assignment, submission, grade)
+        
+        assignments_with_status.append((assignment, submission, student_status))
     
     from datetime import datetime
     today = datetime.now()
     
     return render_template('role_student_dashboard.html', 
                          **create_template_context(student, 'classes', 'classes',
-                                                assignments=assignments,
+                                                assignments_with_status=assignments_with_status,
                                                 grades=student_grades,
                                                 submissions=student_submissions),
                          class_obj=class_obj, 
                          today=today,
                          show_assignments=True)
 
+
+@student_blueprint.route('/take-quiz/<int:assignment_id>')
+@login_required
+@student_required
+def take_quiz(assignment_id):
+    """Take a quiz assignment"""
+    student = Student.query.get_or_404(current_user.student_id)
+    assignment = Assignment.query.get_or_404(assignment_id)
+    
+    # Check if assignment is a quiz
+    if assignment.assignment_type != 'quiz':
+        flash("This is not a quiz assignment.", "danger")
+        return redirect(url_for('student.student_assignments'))
+    
+    # Check if student is enrolled in the class
+    enrollment = Enrollment.query.filter_by(
+        student_id=student.id,
+        class_id=assignment.class_id,
+        is_active=True
+    ).first()
+    
+    if not enrollment:
+        flash("You are not enrolled in this class.", "danger")
+        return redirect(url_for('student.student_assignments'))
+    
+    # Check if assignment is still active
+    if assignment.status not in ['Active', 'Inactive']:
+        flash("This assignment is no longer available.", "danger")
+        return redirect(url_for('student.student_assignments'))
+    
+    # Check if already submitted
+    submission = Submission.query.filter_by(
+        student_id=student.id,
+        assignment_id=assignment_id
+    ).first()
+    
+    # Check if already graded
+    grade = Grade.query.filter_by(
+        student_id=student.id,
+        assignment_id=assignment_id
+    ).first()
+    
+    # Load quiz questions
+    questions = QuizQuestion.query.filter_by(assignment_id=assignment_id).order_by(QuizQuestion.order).all()
+    
+    # Load student's existing answers if any
+    existing_answers = {}
+    if submission:
+        answers = QuizAnswer.query.filter_by(student_id=student.id, question_id=QuizQuestion.id).join(QuizQuestion).filter(QuizQuestion.assignment_id == assignment_id).all()
+        for answer in answers:
+            existing_answers[answer.question_id] = answer
+    
+    return render_template('take_quiz.html', 
+                         assignment=assignment,
+                         questions=questions,
+                         submission=submission,
+                         grade=grade,
+                         student=student,
+                         existing_answers=existing_answers)
+
+@student_blueprint.route('/submit-quiz/<int:assignment_id>', methods=['POST'])
+@login_required
+@student_required
+def submit_quiz(assignment_id):
+    """Submit quiz answers"""
+    student = Student.query.get_or_404(current_user.student_id)
+    assignment = Assignment.query.get_or_404(assignment_id)
+    
+    # Check if assignment is a quiz
+    if assignment.assignment_type != 'quiz':
+        flash("This is not a quiz assignment.", "danger")
+        return redirect(url_for('student.student_assignments'))
+    
+    # Check if already submitted
+    existing_submission = Submission.query.filter_by(
+        student_id=student.id,
+        assignment_id=assignment_id
+    ).first()
+    
+    if existing_submission:
+        flash("You have already submitted this quiz.", "warning")
+        return redirect(url_for('student.take_quiz', assignment_id=assignment_id))
+    
+    try:
+        # Get all questions for this assignment
+        questions = QuizQuestion.query.filter_by(assignment_id=assignment_id).all()
+        total_points = 0
+        earned_points = 0
+        
+        # Process each question
+        for question in questions:
+            if question.question_type in ['multiple_choice', 'true_false']:
+                # Get selected option
+                selected_option_id = request.form.get(f'question_{question.id}')
+                if selected_option_id:
+                    selected_option = QuizOption.query.get(int(selected_option_id))
+                    is_correct = selected_option and selected_option.is_correct
+                    points_earned = question.points if is_correct else 0
+                    
+                    # Save answer
+                    answer = QuizAnswer(
+                        student_id=student.id,
+                        question_id=question.id,
+                        selected_option_id=selected_option.id if selected_option else None,
+                        is_correct=is_correct,
+                        points_earned=points_earned
+                    )
+                    db.session.add(answer)
+                    
+                    if is_correct:
+                        earned_points += points_earned
+                
+            elif question.question_type in ['short_answer', 'essay']:
+                # Get text answer
+                answer_text = request.form.get(f'question_{question.id}', '')
+                points_earned = 0  # Manual grading required for text answers
+                
+                # Save answer
+                answer = QuizAnswer(
+                    student_id=student.id,
+                    question_id=question.id,
+                    answer_text=answer_text,
+                    is_correct=None,  # Will be graded manually
+                    points_earned=points_earned
+                )
+                db.session.add(answer)
+            
+            total_points += question.points
+        
+        # Create submission record
+        submission = Submission(
+            student_id=student.id,
+            assignment_id=assignment_id,
+            comments=f"Quiz submitted with {earned_points}/{total_points} points"
+        )
+        db.session.add(submission)
+        
+        # Create grade record
+        grade_percentage = (earned_points / total_points * 100) if total_points > 0 else 0
+        grade = Grade(
+            student_id=student.id,
+            assignment_id=assignment_id,
+            grade_percentage=round(grade_percentage, 2),
+            comments=f"Auto-graded quiz: {earned_points}/{total_points} points"
+        )
+        db.session.add(grade)
+        
+        db.session.commit()
+        flash('Quiz submitted successfully!', 'success')
+        return redirect(url_for('student.take_quiz', assignment_id=assignment_id))
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error submitting quiz: {str(e)}', 'danger')
+        return redirect(url_for('student.take_quiz', assignment_id=assignment_id))
+
+@student_blueprint.route('/discussion/<int:assignment_id>')
+@login_required
+@student_required
+def join_discussion(assignment_id):
+    """Join a discussion assignment"""
+    student = Student.query.get_or_404(current_user.student_id)
+    assignment = Assignment.query.get_or_404(assignment_id)
+    
+    # Check if assignment is a discussion
+    if assignment.assignment_type != 'discussion':
+        flash("This is not a discussion assignment.", "danger")
+        return redirect(url_for('student.student_assignments'))
+    
+    # Check if student is enrolled in the class
+    enrollment = Enrollment.query.filter_by(
+        student_id=student.id,
+        class_id=assignment.class_id,
+        is_active=True
+    ).first()
+    
+    if not enrollment:
+        flash("You are not enrolled in this class.", "danger")
+        return redirect(url_for('student.student_assignments'))
+    
+    # Check if assignment is still active
+    if assignment.status not in ['Active', 'Inactive']:
+        flash("This assignment is no longer available.", "danger")
+        return redirect(url_for('student.student_assignments'))
+    
+    # Load discussion threads
+    threads = DiscussionThread.query.filter_by(assignment_id=assignment_id).order_by(DiscussionThread.is_pinned.desc(), DiscussionThread.created_at.desc()).all()
+    
+    return render_template('discussion.html', 
+                         assignment=assignment,
+                         student=student,
+                         threads=threads)
+
+@student_blueprint.route('/create-thread/<int:assignment_id>', methods=['POST'])
+@login_required
+@student_required
+def create_discussion_thread(assignment_id):
+    """Create a new discussion thread"""
+    student = Student.query.get_or_404(current_user.student_id)
+    assignment = Assignment.query.get_or_404(assignment_id)
+    
+    # Check if assignment is a discussion
+    if assignment.assignment_type != 'discussion':
+        flash("This is not a discussion assignment.", "danger")
+        return redirect(url_for('student.student_assignments'))
+    
+    title = request.form.get('title', '').strip()
+    content = request.form.get('content', '').strip()
+    
+    if not title or not content:
+        flash("Please provide both title and content.", "danger")
+        return redirect(url_for('student.join_discussion', assignment_id=assignment_id))
+    
+    try:
+        thread = DiscussionThread(
+            assignment_id=assignment_id,
+            student_id=student.id,
+            title=title,
+            content=content
+        )
+        db.session.add(thread)
+        db.session.commit()
+        
+        flash('Discussion thread created successfully!', 'success')
+        return redirect(url_for('student.join_discussion', assignment_id=assignment_id))
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error creating thread: {str(e)}', 'danger')
+        return redirect(url_for('student.join_discussion', assignment_id=assignment_id))
+
+@student_blueprint.route('/reply-to-thread/<int:thread_id>', methods=['POST'])
+@login_required
+@student_required
+def reply_to_thread(thread_id):
+    """Reply to a discussion thread"""
+    student = Student.query.get_or_404(current_user.student_id)
+    thread = DiscussionThread.query.get_or_404(thread_id)
+    
+    content = request.form.get('content', '').strip()
+    
+    if not content:
+        flash("Please provide content for your reply.", "danger")
+        return redirect(url_for('student.join_discussion', assignment_id=thread.assignment_id))
+    
+    try:
+        post = DiscussionPost(
+            thread_id=thread_id,
+            student_id=student.id,
+            content=content
+        )
+        db.session.add(post)
+        db.session.commit()
+        
+        flash('Reply posted successfully!', 'success')
+        return redirect(url_for('student.join_discussion', assignment_id=thread.assignment_id))
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error posting reply: {str(e)}', 'danger')
+        return redirect(url_for('student.join_discussion', assignment_id=thread.assignment_id))
 
 @student_blueprint.route('/class/<int:class_id>/teacher')
 @login_required

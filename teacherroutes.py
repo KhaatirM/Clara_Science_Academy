@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, abort, jsonify
 from flask_login import login_required, current_user
-from models import db, TeacherStaff, Class, Student, Assignment, Grade, SchoolYear, Submission, Announcement, Notification, Message, MessageGroup, MessageGroupMember, MessageAttachment, ScheduledAnnouncement, Enrollment, Attendance, StudentGroup, StudentGroupMember, GroupAssignment, GroupSubmission, GroupGrade, AcademicPeriod, GroupTemplate, PeerEvaluation, AssignmentRubric, GroupContract, ReflectionJournal, GroupProgress, AssignmentTemplate, GroupRotation, GroupRotationHistory, PeerReview, DraftSubmission, DraftFeedback, DeadlineReminder, ReminderNotification, Feedback360, Feedback360Response, Feedback360Criteria, GroupConflict, ConflictResolution, ConflictParticipant, GroupWorkReport, IndividualContribution, TimeTracking, CollaborationMetrics, ReportExport, AnalyticsDashboard, PerformanceBenchmark, AssignmentExtension
+from models import db, TeacherStaff, Class, Student, Assignment, Grade, SchoolYear, Submission, Announcement, Notification, Message, MessageGroup, MessageGroupMember, MessageAttachment, ScheduledAnnouncement, Enrollment, Attendance, StudentGroup, StudentGroupMember, GroupAssignment, GroupSubmission, GroupGrade, AcademicPeriod, GroupTemplate, PeerEvaluation, AssignmentRubric, GroupContract, ReflectionJournal, GroupProgress, AssignmentTemplate, GroupRotation, GroupRotationHistory, PeerReview, DraftSubmission, DraftFeedback, DeadlineReminder, ReminderNotification, Feedback360, Feedback360Response, Feedback360Criteria, GroupConflict, ConflictResolution, ConflictParticipant, GroupWorkReport, IndividualContribution, TimeTracking, CollaborationMetrics, ReportExport, AnalyticsDashboard, PerformanceBenchmark, AssignmentExtension, QuizQuestion, QuizOption, QuizAnswer, DiscussionThread, DiscussionPost
 from decorators import teacher_required
 import json
 from datetime import datetime
@@ -332,6 +332,174 @@ def view_class(class_id):
         recent_attendance=recent_attendance,
         announcements=announcements
     )
+
+@teacher_blueprint.route('/assignment/type-selector')
+@login_required
+@teacher_required
+def assignment_type_selector():
+    """Assignment type selection page"""
+    return render_template('assignment_type_selector.html')
+
+@teacher_blueprint.route('/assignment/create/quiz', methods=['GET', 'POST'])
+@login_required
+@teacher_required
+def create_quiz_assignment():
+    """Create a quiz assignment"""
+    if request.method == 'POST':
+        # Handle quiz assignment creation
+        title = request.form.get('title')
+        class_id = request.form.get('class_id', type=int)
+        description = request.form.get('description', '')
+        due_date_str = request.form.get('due_date')
+        quarter = request.form.get('quarter')
+        
+        if not all([title, class_id, due_date_str, quarter]):
+            flash("Please fill in all required fields.", "danger")
+            return redirect(url_for('teacher.create_quiz_assignment'))
+        
+        try:
+            due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
+            
+            # Get the active school year
+            current_school_year = SchoolYear.query.filter_by(is_active=True).first()
+            if not current_school_year:
+                flash("Cannot create assignment: No active school year.", "danger")
+                return redirect(url_for('teacher.create_quiz_assignment'))
+            
+            # Create the assignment
+            new_assignment = Assignment(
+                title=title,
+                description=description,
+                due_date=due_date,
+                quarter=str(quarter),
+                class_id=class_id,
+                school_year_id=current_school_year.id,
+                status='Active',
+                assignment_type='quiz'
+            )
+            
+            db.session.add(new_assignment)
+            db.session.flush()  # Get the assignment ID
+            
+            # Save quiz questions
+            question_count = 0
+            for key, value in request.form.items():
+                if key.startswith('question_text_'):
+                    question_id = key.split('_')[2]
+                    question_text = value
+                    question_type = request.form.get(f'question_type_{question_id}')
+                    points = float(request.form.get(f'points_{question_id}', 1.0))
+                    
+                    # Create the question
+                    question = QuizQuestion(
+                        assignment_id=new_assignment.id,
+                        question_text=question_text,
+                        question_type=question_type,
+                        points=points,
+                        order=question_count
+                    )
+                    db.session.add(question)
+                    db.session.flush()  # Get the question ID
+                    
+                    # Save options for multiple choice and true/false
+                    if question_type in ['multiple_choice', 'true_false']:
+                        option_count = 0
+                        for option_key, option_value in request.form.items():
+                            if option_key.startswith(f'option_text_{question_id}_'):
+                                option_text = option_value
+                                option_id = option_key.split('_')[3]
+                                is_correct = request.form.get(f'correct_answer_{question_id}') == option_id
+                                
+                                option = QuizOption(
+                                    question_id=question.id,
+                                    option_text=option_text,
+                                    is_correct=is_correct,
+                                    order=option_count
+                                )
+                                db.session.add(option)
+                                option_count += 1
+                    
+                    question_count += 1
+            
+            db.session.commit()
+            flash('Quiz assignment created successfully!', 'success')
+            return redirect(url_for('teacher.my_assignments'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error creating quiz assignment: {str(e)}', 'danger')
+    
+    # GET request - show form
+    teacher = get_teacher_or_admin()
+    if is_admin():
+        classes = Class.query.all()
+    else:
+        classes = Class.query.filter_by(teacher_id=teacher.id).all()
+    
+    current_quarter = get_current_quarter()
+    return render_template('create_quiz_assignment.html', classes=classes, current_quarter=current_quarter)
+
+@teacher_blueprint.route('/assignment/create/discussion', methods=['GET', 'POST'])
+@login_required
+@teacher_required
+def create_discussion_assignment():
+    """Create a discussion assignment"""
+    if request.method == 'POST':
+        # Handle discussion assignment creation
+        title = request.form.get('title')
+        class_id = request.form.get('class_id', type=int)
+        discussion_topic = request.form.get('discussion_topic')
+        description = request.form.get('description', '')
+        due_date_str = request.form.get('due_date')
+        quarter = request.form.get('quarter')
+        
+        if not all([title, class_id, discussion_topic, due_date_str, quarter]):
+            flash("Please fill in all required fields.", "danger")
+            return redirect(url_for('teacher.create_discussion_assignment'))
+        
+        try:
+            due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
+            
+            # Get the active school year
+            current_school_year = SchoolYear.query.filter_by(is_active=True).first()
+            if not current_school_year:
+                flash("Cannot create assignment: No active school year.", "danger")
+                return redirect(url_for('teacher.create_discussion_assignment'))
+            
+            # Create the assignment
+            new_assignment = Assignment(
+                title=title,
+                description=f"{discussion_topic}\n\n{description}",
+                due_date=due_date,
+                quarter=str(quarter),
+                class_id=class_id,
+                school_year_id=current_school_year.id,
+                status='Active',
+                assignment_type='discussion'
+            )
+            
+            db.session.add(new_assignment)
+            db.session.commit()
+            
+            # TODO: Save discussion settings, rubric, and prompts
+            # This would require additional models for discussion settings, rubric criteria, etc.
+            
+            flash('Discussion assignment created successfully!', 'success')
+            return redirect(url_for('teacher.my_assignments'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error creating discussion assignment: {str(e)}', 'danger')
+    
+    # GET request - show form
+    teacher = get_teacher_or_admin()
+    if is_admin():
+        classes = Class.query.all()
+    else:
+        classes = Class.query.filter_by(teacher_id=teacher.id).all()
+    
+    current_quarter = get_current_quarter()
+    return render_template('create_discussion_assignment.html', classes=classes, current_quarter=current_quarter)
 
 @teacher_blueprint.route('/assignment/add', methods=['GET', 'POST'])
 @login_required

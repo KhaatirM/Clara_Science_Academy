@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, flash, redirect, url_for, session
 from flask_login import login_required, current_user, login_user, logout_user
-from models import db, User, MaintenanceMode, ActivityLog, BugReport, TeacherStaff
+from models import db, User, MaintenanceMode, ActivityLog, TeacherStaff
 from decorators import tech_required
 from werkzeug.security import generate_password_hash
 from app import log_activity, get_user_activity_log
@@ -872,174 +872,13 @@ def stop_impersonating():
         return redirect(url_for('auth.login'))
 
 
-# Bug Report Management Routes
+# Bug Report Management Routes - Temporarily disabled due to circular import issues
+# Will be re-enabled after database migration is complete
+
 @tech_blueprint.route('/bug-reports')
 @login_required
 @tech_required
 def bug_reports():
-    """View all bug reports with filtering and pagination."""
-    page = request.args.get('page', 1, type=int)
-    status_filter = request.args.get('status', 'all')
-    severity_filter = request.args.get('severity', 'all')
-    
-    # Build query
-    query = BugReport.query
-    
-    if status_filter != 'all':
-        query = query.filter(BugReport.status == status_filter)
-    
-    if severity_filter != 'all':
-        query = query.filter(BugReport.severity == severity_filter)
-    
-    # Order by creation date (newest first)
-    bug_reports = query.order_by(BugReport.created_at.desc()).paginate(
-        page=page, per_page=20, error_out=False
-    )
-    
-    # Get statistics
-    stats = {
-        'total': BugReport.query.count(),
-        'open': BugReport.query.filter_by(status='open').count(),
-        'investigating': BugReport.query.filter_by(status='investigating').count(),
-        'resolved': BugReport.query.filter_by(status='resolved').count(),
-        'critical': BugReport.query.filter_by(severity='critical').count(),
-        'high': BugReport.query.filter_by(severity='high').count(),
-        'medium': BugReport.query.filter_by(severity='medium').count(),
-        'low': BugReport.query.filter_by(severity='low').count()
-    }
-    
-    return render_template('tech_bug_reports.html',
-                         bug_reports=bug_reports,
-                         stats=stats,
-                         current_status=status_filter,
-                         current_severity=severity_filter)
-
-
-@tech_blueprint.route('/bug-reports/<int:bug_report_id>')
-@login_required
-@tech_required
-def view_bug_report(bug_report_id):
-    """View detailed information about a specific bug report."""
-    bug_report = BugReport.query.get_or_404(bug_report_id)
-    
-    # Get assignee information
-    assignee = None
-    if bug_report.assigned_to:
-        assignee = TeacherStaff.query.get(bug_report.assigned_to)
-    
-    return render_template('tech_view_bug_report.html',
-                         bug_report=bug_report,
-                         assignee=assignee)
-
-
-@tech_blueprint.route('/bug-reports/<int:bug_report_id>/update-status', methods=['POST'])
-@login_required
-@tech_required
-def update_bug_report_status(bug_report_id):
-    """Update the status of a bug report."""
-    bug_report = BugReport.query.get_or_404(bug_report_id)
-    
-    new_status = request.form.get('status')
-    resolution_notes = request.form.get('resolution_notes', '')
-    
-    if new_status not in ['open', 'investigating', 'resolved', 'closed']:
-        flash('Invalid status.', 'danger')
-        return redirect(url_for('tech.view_bug_report', bug_report_id=bug_report_id))
-    
-    bug_report.status = new_status
-    bug_report.resolution_notes = resolution_notes
-    
-    if new_status in ['resolved', 'closed']:
-        bug_report.resolved_at = datetime.utcnow()
-        bug_report.assigned_to = current_user.teacher_staff_id
-    
-    db.session.commit()
-    
-    flash(f'Bug report status updated to {new_status}.', 'success')
-    return redirect(url_for('tech.view_bug_report', bug_report_id=bug_report_id))
-
-
-@tech_blueprint.route('/bug-reports/<int:bug_report_id>/assign', methods=['POST'])
-@login_required
-@tech_required
-def assign_bug_report(bug_report_id):
-    """Assign a bug report to a tech staff member."""
-    bug_report = BugReport.query.get_or_404(bug_report_id)
-    
-    assignee_id = request.form.get('assignee_id', type=int)
-    
-    if assignee_id:
-        assignee = TeacherStaff.query.get(assignee_id)
-        if not assignee:
-            flash('Invalid assignee.', 'danger')
-            return redirect(url_for('tech.view_bug_report', bug_report_id=bug_report_id))
-        
-        bug_report.assigned_to = assignee_id
-        bug_report.status = 'investigating'
-        
-        # Create notification for assignee
-        if assignee.user:
-            from app import create_notification
-            create_notification(
-                user_id=assignee.user.id,
-                notification_type='bug_assignment',
-                title=f'Bug Report Assigned - #{bug_report_id}',
-                message=f'You have been assigned bug report #{bug_report_id}: {bug_report.error_message[:100]}...',
-                link=url_for('tech.view_bug_report', bug_report_id=bug_report_id)
-            )
-        
-        db.session.commit()
-        flash(f'Bug report assigned to {assignee.first_name} {assignee.last_name}.', 'success')
-    else:
-        bug_report.assigned_to = None
-        db.session.commit()
-        flash('Bug report unassigned.', 'success')
-    
-    return redirect(url_for('tech.view_bug_report', bug_report_id=bug_report_id))
-
-
-@tech_blueprint.route('/bug-reports/export')
-@login_required
-@tech_required
-def export_bug_reports():
-    """Export bug reports to CSV."""
-    import csv
-    from flask import Response
-    
-    # Get all bug reports
-    bug_reports = BugReport.query.order_by(BugReport.created_at.desc()).all()
-    
-    # Create CSV content
-    output = []
-    output.append([
-        'ID', 'Error Type', 'Error Message', 'Severity', 'Status', 'User ID', 'User Role',
-        'URL', 'Method', 'IP Address', 'Created At', 'Resolved At', 'Resolution Notes'
-    ])
-    
-    for report in bug_reports:
-        output.append([
-            report.id,
-            report.error_type,
-            report.error_message[:100] + '...' if len(report.error_message) > 100 else report.error_message,
-            report.severity,
-            report.status,
-            report.user_id or '',
-            report.user_role or '',
-            report.url or '',
-            report.method or '',
-            report.ip_address or '',
-            report.created_at.strftime('%Y-%m-%d %H:%M:%S') if report.created_at else '',
-            report.resolved_at.strftime('%Y-%m-%d %H:%M:%S') if report.resolved_at else '',
-            report.resolution_notes or ''
-        ])
-    
-    # Create CSV response
-    def generate():
-        for row in output:
-            yield ','.join(f'"{str(cell)}"' for cell in row) + '\n'
-    
-    return Response(
-        generate(),
-        mimetype='text/csv',
-        headers={'Content-Disposition': 'attachment; filename=bug_reports.csv'}
-    )
+    """View all bug reports - temporarily shows placeholder."""
+    flash('Bug reporting system is being set up. Please check back later.', 'info')
+    return redirect(url_for('tech.tech_dashboard'))

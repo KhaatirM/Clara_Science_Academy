@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 
 # Import extensions to avoid circular imports
 from extensions import db, login_manager, csrf
-# from flask_migrate import Migrate  # Temporarily disabled due to import issues
+from flask_migrate import Migrate
 
 # Import models here to avoid circular imports
 from models import User, Student, Grade, SchoolYear, ReportCard, Assignment, Notification, MaintenanceMode, ActivityLog, AssignmentExtension, BugReport
@@ -332,7 +332,7 @@ def create_app(config_class=None):
 
     # Initialize extensions with the app
     db.init_app(app)
-    # migrate = Migrate(app, db)  # Temporarily disabled due to import issues
+    migrate = Migrate(app, db)
     login_manager.init_app(app)
     csrf.init_app(app)
     # Disable automatic CSRF token rendering
@@ -603,82 +603,104 @@ def create_app(config_class=None):
     # Register global error handlers
     @app.errorhandler(500)
     def internal_server_error(error):
-        """Handle 500 server errors with automatic bug reporting."""
-        from error_handler import handle_server_error
-        bug_report = handle_server_error(error)
+        """Handle 500 server errors with bug reporting."""
+        try:
+            # Create bug report
+            bug_report = BugReport(
+                error_type='server_error',
+                error_message=str(error),
+                error_traceback=str(error),
+                severity='high',
+                status='open'
+            )
+            db.session.add(bug_report)
+            db.session.commit()
+            bug_report_id = bug_report.id
+        except Exception as e:
+            print(f"Failed to create bug report: {e}")
+            bug_report_id = None
         
         # Return user-friendly error page
         return render_template('error.html', 
                              error_code=500,
                              error_message="An internal server error occurred. Our tech team has been notified.",
-                             bug_report_id=bug_report.id if bug_report else None), 500
+                             bug_report_id=bug_report_id), 500
     
     @app.errorhandler(404)
     def not_found_error(error):
-        """Handle 404 errors with bug reporting for missing pages."""
-        from error_handler import handle_client_error
-        bug_report = handle_client_error(error)
+        """Handle 404 errors with bug reporting."""
+        try:
+            # Create bug report for 404 errors
+            bug_report = BugReport(
+                error_type='client_error',
+                error_message=f"404 Not Found: {request.url}",
+                severity='medium',
+                status='open'
+            )
+            db.session.add(bug_report)
+            db.session.commit()
+            bug_report_id = bug_report.id
+        except Exception as e:
+            print(f"Failed to create bug report: {e}")
+            bug_report_id = None
         
         return render_template('error.html', 
                              error_code=404,
                              error_message="The page you're looking for doesn't exist.",
-                             bug_report_id=bug_report.id if bug_report else None), 404
+                             bug_report_id=bug_report_id), 404
     
     @app.errorhandler(403)
     def forbidden_error(error):
         """Handle 403 forbidden errors."""
-        from error_handler import handle_client_error
-        bug_report = handle_client_error(error)
-        
         return render_template('error.html', 
                              error_code=403,
                              error_message="You don't have permission to access this resource.",
-                             bug_report_id=bug_report.id if bug_report else None), 403
+                             bug_report_id=None), 403
     
     @app.errorhandler(CSRFError)
     def csrf_error(error):
         """Handle CSRF errors."""
-        from error_handler import handle_validation_error
-        bug_report = handle_validation_error(error)
-        
         flash('CSRF token missing or invalid. Please try again.', 'danger')
         return redirect(request.url or url_for('home'))
     
     @app.errorhandler(Exception)
     def handle_unexpected_error(error):
         """Handle any unexpected errors."""
-        from error_handler import handle_server_error
-        bug_report = handle_server_error(error)
-        
+        print(f"Unexpected error: {error}")
         return render_template('error.html', 
                              error_code=500,
-                             error_message="An unexpected error occurred. Our tech team has been notified.",
-                             bug_report_id=bug_report.id if bug_report else None), 500
+                             error_message="An unexpected error occurred. Please try again later.",
+                             bug_report_id=None), 500
 
     # API endpoint for frontend error reporting
     @app.route('/api/frontend-error', methods=['POST'])
     def frontend_error_report():
         """Handle frontend error reports from JavaScript."""
         try:
-            from error_handler import capture_frontend_error
-            from flask import request
-            
             error_data = request.get_json()
             if not error_data:
                 return jsonify({'success': False, 'message': 'No error data provided'}), 400
             
-            bug_report = capture_frontend_error(error_data)
+            # Create bug report for frontend error
+            bug_report = BugReport(
+                error_type='client_error',
+                error_message=error_data.get('message', 'Unknown frontend error'),
+                error_traceback=error_data.get('stack', 'No stack trace available'),
+                severity='low',
+                status='open'
+            )
+            db.session.add(bug_report)
+            db.session.commit()
+            bug_report_id = bug_report.id
             
-            if bug_report:
-                return jsonify({
-                    'success': True, 
-                    'message': 'Error report submitted successfully',
-                    'bug_report_id': bug_report.id
-                }), 200
-            else:
-                return jsonify({'success': False, 'message': 'Failed to create bug report'}), 500
+            return jsonify({
+                'success': True, 
+                'message': 'Error report submitted successfully',
+                'bug_report_id': bug_report_id
+            }), 200
                 
         except Exception as e:
+            print(f"Failed to create frontend bug report: {e}")
             return jsonify({'success': False, 'message': str(e)}), 500
 
     return app

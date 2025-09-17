@@ -1674,6 +1674,8 @@ class BugReport(db.Model):
     """
     Model for storing automatic bug reports and error information.
     """
+    __tablename__ = 'bug_report'
+    
     id = db.Column(db.Integer, primary_key=True)
     error_type = db.Column(db.String(50), nullable=False)  # 'server_error', 'client_error', 'validation_error', 'database_error'
     error_message = db.Column(db.Text, nullable=False)

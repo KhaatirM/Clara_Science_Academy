@@ -13,7 +13,7 @@ from extensions import db, login_manager, csrf
 from flask_migrate import Migrate
 
 # Import models here to avoid circular imports
-from models import User, Student, Grade, SchoolYear, ReportCard, Assignment, Notification, MaintenanceMode, ActivityLog, AssignmentExtension, BugReport
+from models import User, Student, Grade, SchoolYear, ReportCard, Assignment, Notification, MaintenanceMode, ActivityLog, AssignmentExtension
 
 def _calculate_grades_for_subjects(grades, subjects):
     """
@@ -603,51 +603,23 @@ def create_app(config_class=None):
     # Register global error handlers
     @app.errorhandler(500)
     def internal_server_error(error):
-        """Handle 500 server errors with bug reporting."""
-        try:
-            # Create bug report
-            bug_report = BugReport(
-                error_type='server_error',
-                error_message=str(error),
-                error_traceback=str(error),
-                severity='high',
-                status='open'
-            )
-            db.session.add(bug_report)
-            db.session.commit()
-            bug_report_id = bug_report.id
-        except Exception as e:
-            print(f"Failed to create bug report: {e}")
-            bug_report_id = None
+        """Handle 500 server errors."""
+        # Log error for debugging
+        print(f"500 Error: {error}")
         
         # Return user-friendly error page
         return render_template('error.html', 
                              error_code=500,
-                             error_message="An internal server error occurred. Our tech team has been notified.",
-                             bug_report_id=bug_report_id), 500
+                             error_message="An internal server error occurred. Please try again later.",
+                             bug_report_id=None), 500
     
     @app.errorhandler(404)
     def not_found_error(error):
-        """Handle 404 errors with bug reporting."""
-        try:
-            # Create bug report for 404 errors
-            bug_report = BugReport(
-                error_type='client_error',
-                error_message=f"404 Not Found: {request.url}",
-                severity='medium',
-                status='open'
-            )
-            db.session.add(bug_report)
-            db.session.commit()
-            bug_report_id = bug_report.id
-        except Exception as e:
-            print(f"Failed to create bug report: {e}")
-            bug_report_id = None
-        
+        """Handle 404 errors."""
         return render_template('error.html', 
                              error_code=404,
                              error_message="The page you're looking for doesn't exist.",
-                             bug_report_id=bug_report_id), 404
+                             bug_report_id=None), 404
     
     @app.errorhandler(403)
     def forbidden_error(error):
@@ -672,7 +644,7 @@ def create_app(config_class=None):
                              error_message="An unexpected error occurred. Please try again later.",
                              bug_report_id=None), 500
 
-    # API endpoint for frontend error reporting
+    # API endpoint for frontend error reporting (simplified)
     @app.route('/api/frontend-error', methods=['POST'])
     def frontend_error_report():
         """Handle frontend error reports from JavaScript."""
@@ -681,26 +653,15 @@ def create_app(config_class=None):
             if not error_data:
                 return jsonify({'success': False, 'message': 'No error data provided'}), 400
             
-            # Create bug report for frontend error
-            bug_report = BugReport(
-                error_type='client_error',
-                error_message=error_data.get('message', 'Unknown frontend error'),
-                error_traceback=error_data.get('stack', 'No stack trace available'),
-                severity='low',
-                status='open'
-            )
-            db.session.add(bug_report)
-            db.session.commit()
-            bug_report_id = bug_report.id
+            # Just log the error for now
+            print(f"Frontend error: {error_data.get('message', 'Unknown error')}")
             
             return jsonify({
                 'success': True, 
-                'message': 'Error report submitted successfully',
-                'bug_report_id': bug_report_id
+                'message': 'Error logged successfully'
             }), 200
                 
         except Exception as e:
-            print(f"Failed to create frontend bug report: {e}")
             return jsonify({'success': False, 'message': str(e)}), 500
 
     return app

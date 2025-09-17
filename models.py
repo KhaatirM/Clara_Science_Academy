@@ -1670,35 +1670,6 @@ class PerformanceBenchmark(db.Model):
         return f"PerformanceBenchmark('{self.benchmark_name}', Value: {self.benchmark_value})"
 
 
-class BugReport(db.Model):
-    """
-    Model for storing automatic bug reports and error information.
-    """
-    __tablename__ = 'bug_report'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    error_type = db.Column(db.String(50), nullable=False)  # 'server_error', 'client_error', 'validation_error', 'database_error'
-    error_message = db.Column(db.Text, nullable=False)
-    error_traceback = db.Column(db.Text, nullable=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-    user_role = db.Column(db.String(50), nullable=True)
-    url = db.Column(db.String(500), nullable=True)
-    method = db.Column(db.String(10), nullable=True)  # GET, POST, etc.
-    user_agent = db.Column(db.String(500), nullable=True)
-    ip_address = db.Column(db.String(45), nullable=True)
-    request_data = db.Column(db.Text, nullable=True)  # JSON string of form data
-    browser_info = db.Column(db.Text, nullable=True)  # JSON string of browser details
-    severity = db.Column(db.String(20), default='medium', nullable=False)  # low, medium, high, critical
-    status = db.Column(db.String(20), default='open', nullable=False)  # open, investigating, resolved, closed
-    assigned_to = db.Column(db.Integer, db.ForeignKey('teacher_staff.id'), nullable=True)
-    resolution_notes = db.Column(db.Text, nullable=True)
-    resolved_at = db.Column(db.DateTime, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    # Relationships
-    user = db.relationship('User', backref='bug_reports')
-    assignee = db.relationship('TeacherStaff', backref='assigned_bug_reports')
-    
-    def __repr__(self):
-        return f"BugReport('{self.error_type}', User: {self.user_id}, Status: {self.status})"
+# BugReport model temporarily removed to fix deployment issues
+# Will be re-added after successful deployment
 

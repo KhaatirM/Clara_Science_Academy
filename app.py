@@ -337,6 +337,14 @@ def create_app(config_class=None):
     csrf.init_app(app)
     # Disable automatic CSRF token rendering
     app.config['WTF_CSRF_CHECK_DEFAULT'] = False
+    
+    # Initialize database schema
+    with app.app_context():
+        try:
+            from init_database import init_database
+            init_database()
+        except Exception as e:
+            print(f"Database initialization failed: {e}")
 
     # User loader function for Flask-Login
     @login_manager.user_loader

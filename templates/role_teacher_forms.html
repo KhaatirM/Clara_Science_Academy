@@ -17,8 +17,8 @@
           {% endif %}
           {% if assignment.attachment_filename %}
           <p class="card-text"><strong>Original Assignment Attachment:</strong> 
-                <a href="{{ url_for('static', filename='uploads/' + assignment.attachment_filename) }}" target="_blank">
-                    View Attachment
+                <a href="{{ url_for('download_assignment_file', assignment_id=assignment.id) }}" class="btn btn-outline-primary btn-sm" target="_blank">
+                    <i class="bi bi-download me-1"></i>Download {{ assignment.attachment_original_filename or assignment.attachment_filename }}
                 </a>
           </p>
           {% endif %}

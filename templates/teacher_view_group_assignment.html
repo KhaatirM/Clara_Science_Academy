@@ -81,7 +81,7 @@
               <h6>Attached File:</h6>
               <a href="{{ url_for('static', filename='uploads/' ~ group_assignment.attachment_filename) }}" 
                  target="_blank" class="btn btn-outline-primary btn-sm">
-                <i class="bi bi-download me-1"></i>{{ group_assignment.attachment_original_filename }}
+                <i class="bi bi-download me-1"></i>Download {{ group_assignment.attachment_original_filename }}
               </a>
             </div>
           {% endif %}

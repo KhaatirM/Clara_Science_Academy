@@ -124,8 +124,8 @@
                   <small class="text-muted">
                     <i class="bi bi-paperclip me-1"></i>
                     <a href="{{ url_for('static', filename='uploads/' ~ assignment.attachment_filename) }}" 
-                       target="_blank" class="text-decoration-none">
-                      {{ assignment.attachment_original_filename }}
+                       target="_blank" class="btn btn-outline-primary btn-sm">
+                      <i class="bi bi-download me-1"></i>Download {{ assignment.attachment_original_filename }}
                     </a>
                   </small>
                 </div>

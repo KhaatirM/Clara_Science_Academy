@@ -13,11 +13,11 @@
                 <!-- Assignment Details -->
                 <h5>Description</h5>
                 <p>{{ assignment.description|nl2br|safe }}</p>
-                {% if assignment.attached_file_path %}
+                {% if assignment.attachment_filename %}
                 <div class="mb-3">
                     <strong>Attachment:</strong>
-                    <a href="{{ url_for('static', filename='uploads/' + assignment.attached_file_path) }}" target="_blank">
-                        <i class="bi bi-paperclip"></i> {{ assignment.attached_file_path|regex_replace('^assign_attach_\\d+_', '') }}
+                    <a href="{{ url_for('static', filename='uploads/' + assignment.attachment_filename) }}" target="_blank">
+                        <i class="bi bi-paperclip"></i> {{ assignment.attachment_original_filename or assignment.attachment_filename }}
                     </a>
                 </div>
                 {% endif %}

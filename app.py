@@ -461,15 +461,21 @@ def create_app(config_class=None):
         """Download assignment file"""
         from flask import send_file, abort
         from models import Assignment
+        import os
         
         assignment = Assignment.query.get_or_404(assignment_id)
         
-        if not assignment.attachment_file_path or not os.path.exists(assignment.attachment_file_path):
-            abort(404)
+        if not assignment.attachment_filename:
+            abort(404, description="No attachment found for this assignment")
+        
+        file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], assignment.attachment_filename)
+        
+        if not os.path.exists(file_path):
+            abort(404, description="File not found")
         
         try:
             return send_file(
-                assignment.attachment_file_path,
+                file_path,
                 as_attachment=True,
                 download_name=assignment.attachment_original_filename or assignment.attachment_filename
             )

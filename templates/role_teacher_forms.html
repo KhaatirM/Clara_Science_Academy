@@ -15,12 +15,12 @@
           {% if assignment.description %}
             <p class="card-text"><strong>Description:</strong> {{ assignment.description|nl2br }}</p>
           {% endif %}
-          {% if assignment.attached_file_path %}
-            <p class="card-text"><strong>Original Assignment Attachment:</strong> 
-                <a href="{{ url_for('static', filename='uploads/' + assignment.attached_file_path) }}" target="_blank">
+          {% if assignment.attachment_filename %}
+          <p class="card-text"><strong>Original Assignment Attachment:</strong> 
+                <a href="{{ url_for('static', filename='uploads/' + assignment.attachment_filename) }}" target="_blank">
                     View Attachment
                 </a>
-            </p>
+          </p>
           {% endif %}
         </div>
       </div>

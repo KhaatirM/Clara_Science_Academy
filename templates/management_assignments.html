@@ -1,38 +1,44 @@
 {% extends "dashboard_layout.html" %}
 
 {% block dashboard_content %}
-<div class="container-fluid px-3 px-md-4 px-lg-5">
-    <!-- Header Section -->
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
-        <div>
-            <h3 class="mb-2 mb-md-0">
-                <i class="bi bi-journal-text me-2"></i>Assignment Management
-            </h3>
-            <p class="text-muted mb-0">
-                {% if user_role == 'Director' %}
-                    Manage all assignments across all classes
-                {% else %}
-                    Manage assignments for your classes and view all assignments
-                {% endif %}
-            </p>
-        </div>
+<div class="container-fluid px-2 px-md-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2 gap-md-0">
+        <h3 class="mb-2 mb-md-0">
+            <i class="bi bi-journal-text me-2"></i>
+            {% if user_role == 'Director' %}
+                All Assignments
+            {% else %}
+                Assignment Management
+            {% endif %}
+        </h3>
         <div class="d-flex gap-2">
             <a href="{{ url_for('teacher.assignment_type_selector') }}" class="btn btn-sm text-white" style="background: linear-gradient(135deg, #2E8B57 0%, #228B22 50%, #556B2F 100%);">
                 <i class="bi bi-plus-circle me-1 me-md-2"></i>Add Assignment
             </a>
+            <button class="btn btn-sm text-white" style="background: linear-gradient(135deg, #2E8B57 0%, #228B22 50%, #556B2F 100%);" onclick="window.history.back()">
+                <i class="bi bi-arrow-left me-1 me-md-2"></i>Back to Dashboard
+            </button>
         </div>
     </div>
 
-    <!-- Filter Section -->
-    <div class="card mb-4">
-        <div class="card-header bg-light">
-            <h6 class="mb-0"><i class="bi bi-funnel me-2"></i>Filters</h6>
-        </div>
+    <!-- Filter and Sort Controls -->
+    <div class="card mb-4" style="background-color: #f8f9fa; border: 1px solid #e9ecef;">
         <div class="card-body">
-            <form method="GET" class="row g-3">
+            <form method="GET" class="row g-3" id="filterForm">
                 <div class="col-12 col-sm-6 col-md-3">
-                    <label for="status_filter" class="form-label">Status</label>
-                    <select class="form-select" id="status_filter" name="status">
+                    <label for="class_filter" class="form-label fw-bold">Filter by Class</label>
+                    <select class="form-select" id="class_filter" name="class_id" onchange="this.form.submit()">
+                        <option value="">All Classes</option>
+                        {% for class in classes %}
+                            <option value="{{ class.id }}" {% if selected_class_id|string == class.id|string %}selected{% endif %}>
+                                {{ class.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12 col-sm-6 col-md-3">
+                    <label for="status_filter" class="form-label fw-bold">Filter by Status</label>
+                    <select class="form-select" id="status_filter" name="status" onchange="this.form.submit()">
                         <option value="">All Statuses</option>
                         <option value="Active" {% if selected_status == 'Active' %}selected{% endif %}>Active</option>
                         <option value="Inactive" {% if selected_status == 'Inactive' %}selected{% endif %}>Inactive</option>
@@ -40,167 +46,161 @@
                     </select>
                 </div>
                 <div class="col-12 col-sm-6 col-md-3">
-                    <label for="quarter_filter" class="form-label">Quarter</label>
-                    <select class="form-select" id="quarter_filter" name="quarter">
-                        <option value="">All Quarters</option>
-                        <option value="1" {% if selected_quarter == '1' %}selected{% endif %}>Q1</option>
-                        <option value="2" {% if selected_quarter == '2' %}selected{% endif %}>Q2</option>
-                        <option value="3" {% if selected_quarter == '3' %}selected{% endif %}>Q3</option>
-                        <option value="4" {% if selected_quarter == '4' %}selected{% endif %}>Q4</option>
+                    <label for="sort_by" class="form-label fw-bold">Sort by</label>
+                    <select class="form-select" id="sort_by" name="sort" onchange="this.form.submit()">
+                        <option value="due_date" {% if sort_by == 'due_date' %}selected{% endif %}>Due Date</option>
+                        <option value="title" {% if sort_by == 'title' %}selected{% endif %}>Assignment Title</option>
+                        <option value="class" {% if sort_by == 'class' %}selected{% endif %}>Class</option>
                     </select>
                 </div>
-                <div class="col-12 col-sm-6 col-md-3">
-                    <label class="form-label">&nbsp;</label>
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-search me-1"></i>Apply Filters
-                        </button>
-                        <a href="{{ url_for('management.assignments') }}" class="btn btn-outline-secondary">
-                            <i class="bi bi-x-circle me-1"></i>Clear
-                        </a>
-                    </div>
+                <div class="col-12 col-sm-6 col-md-3 d-flex align-items-end">
+                    <button type="button" class="btn btn-outline-secondary" onclick="clearFilters()">
+                        <i class="bi bi-arrow-clockwise me-1"></i>Clear Filters
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Assignments by Class -->
-    {% if assignments_by_class %}
-        <div class="row g-4">
-            {% for class_obj, assignments in assignments_by_class.items() %}
-                <div class="col-12">
-                    <div class="card h-100">
-                <div class="card-header d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
-                    <div>
-                        <h5 class="mb-1">
-                            <i class="bi bi-book me-2"></i>{{ class_obj.name }}
-                            <span class="badge bg-secondary ms-2">{{ class_obj.subject }}</span>
-                        </h5>
-                        <small class="text-muted">
-                            Teacher: {{ class_obj.teacher.first_name }} {{ class_obj.teacher.last_name if class_obj.teacher else 'Unassigned' }}
-                            | {{ assignments|length }} assignment{{ 's' if assignments|length != 1 else '' }}
-                        </small>
-                    </div>
-                    <div class="d-flex gap-2">
-                        <a href="{{ url_for('management.view_class', class_id=class_obj.id) }}" class="btn btn-sm btn-outline-primary">
-                            <i class="bi bi-eye me-1"></i>View Class
-                        </a>
-                        {% if user_role == 'Director' or (user_role == 'School Administrator' and class_obj.teacher_id == current_user.id) %}
-                            <a href="{{ url_for('management.add_assignment') }}?class_id={{ class_obj.id }}" class="btn btn-sm text-white" style="background: linear-gradient(135deg, #2E8B57 0%, #228B22 50%, #556B2F 100%);">
-                                <i class="bi bi-plus-circle me-1"></i>Add Assignment
-                            </a>
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="card-body">
-                    {% if assignments %}
-                        <div class="table-responsive">
-                            <table class="table table-hover mb-0 assignments-table">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th style="width: 35%;">Assignment</th>
-                                        <th style="width: 15%;">Due Date</th>
-                                        <th style="width: 10%;">Quarter</th>
-                                        <th style="width: 10%;">Status</th>
-                                        <th style="width: 30%;">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for assignment in assignments %}
-                                        <tr>
-                                            <td>
-                                                <div>
-                                                    <strong>{{ assignment.title }}</strong>
-                                                    {% if assignment.description %}
-                                                        <br><small class="text-muted">{{ assignment.description[:100] }}{% if assignment.description|length > 100 %}...{% endif %}</small>
-                                                    {% endif %}
-                                                    {% if assignment.attachment_filename %}
-                                                        <br><small class="text-success"><i class="bi bi-paperclip me-1"></i>Has attachment</small>
-                                                    {% endif %}
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <div>
-                                                    {{ assignment.due_date.strftime('%m/%d/%Y') }}
-                                                    <br><small class="text-muted">{{ assignment.due_date.strftime('%I:%M %p') }}</small>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <span class="badge bg-info">Q{{ assignment.quarter }}</span>
-                                            </td>
-                                            <td>
-                                                {% if assignment.status == 'Active' %}
-                                                    <span class="badge bg-success">Active</span>
-                                                {% elif assignment.status == 'Inactive' %}
-                                                    <span class="badge bg-warning text-dark">Inactive</span>
-                                                {% elif assignment.status == 'Voided' %}
-                                                    <span class="badge bg-danger">Voided</span>
-                                                {% else %}
-                                                    <span class="badge bg-secondary">{{ assignment.status|title }}</span>
-                                                {% endif %}
-                                            </td>
-                                            <td>
-                                                <div class="d-flex flex-wrap gap-1">
-                                                    <a href="{{ url_for('management.view_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-primary">
-                                                        <i class="bi bi-eye me-1"></i>View
-                                                    </a>
-                                                    
-                                                    {% if user_role == 'Director' or (user_role == 'School Administrator' and class_obj.teacher_id == teacher_staff_id) %}
-                                                        <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-warning">
-                                                            <i class="bi bi-pencil me-1"></i>Edit
-                                                        </a>
-                                                        
-                                                        <a href="{{ url_for('management.grade_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-secondary">
-                                                            <i class="bi bi-clipboard-check me-1"></i>Grade
-                                                        </a>
-                                                        
-                                                        <button type="button" class="btn btn-sm btn-outline-info change-status-btn" 
-                                                                data-assignment-id="{{ assignment.id }}" 
-                                                                data-current-status="{{ assignment.status }}"
-                                                                data-assignment-title="{{ assignment.title }}">
-                                                            <i class="bi bi-arrow-repeat me-1"></i>Status
-                                                        </button>
-                                                        
-                                                        <button type="button" class="btn btn-sm btn-outline-success extensions-btn" 
-                                                                data-assignment-id="{{ assignment.id }}" 
-                                                                data-class-id="{{ class_obj.id }}"
-                                                                data-assignment-title="{{ assignment.title }}">
-                                                            <i class="bi bi-clock-history me-1"></i>Extensions
-                                                        </button>
-                                                        
-                                                        <button type="button" class="btn btn-sm btn-outline-danger remove-assignment-btn" 
-                                                                data-assignment-id="{{ assignment.id }}" 
-                                                                data-assignment-title="{{ assignment.title }}">
-                                                            <i class="bi bi-trash me-1"></i>Remove
-                                                        </button>
-                                                    {% endif %}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    {% else %}
-                        <div class="text-center py-4">
-                            <i class="bi bi-journal-x text-muted" style="font-size: 3rem;"></i>
-                            <p class="text-muted mt-2">No assignments found for this class.</p>
-                        </div>
+    {% if assignments %}
+        <!-- Assignment Summary -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="alert alert-info d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-info-circle me-2"></i>Showing {{ assignments|length }} assignment{{ 's' if assignments|length != 1 else '' }}</span>
+                    {% if selected_class_id %}
+                        <span class="badge bg-primary">Filtered by class</span>
                     {% endif %}
-                    </div>
                 </div>
-            {% endfor %}
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-striped table-hover align-middle assignments-table">
+                <thead class="table-dark">
+                    <tr>
+                        <th class="sortable" data-sort="due_date">
+                            Due Date
+                            {% if sort_by == 'due_date' %}
+                                <i class="bi bi-arrow-{% if sort_order == 'asc' %}up{% else %}down{% endif %} ms-1"></i>
+                            {% endif %}
+                        </th>
+                        <th class="sortable" data-sort="title">
+                            Assignment Title
+                            {% if sort_by == 'title' %}
+                                <i class="bi bi-arrow-{% if sort_order == 'asc' %}up{% else %}down{% endif %} ms-1"></i>
+                            {% endif %}
+                        </th>
+                        <th class="sortable" data-sort="class">
+                            Class
+                            {% if sort_by == 'class' %}
+                                <i class="bi bi-arrow-{% if sort_order == 'asc' %}up{% else %}down{% endif %} ms-1"></i>
+                            {% endif %}
+                        </th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for assignment in assignments %}
+                        <tr>
+                            <td data-label="Due Date">{{ assignment.due_date.strftime('%m/%d/%Y %I:%M %p') }}</td>
+                            <td data-label="Assignment Title">
+                                <strong>{{ assignment.title }}</strong>
+                                <div class="d-flex flex-wrap gap-1 mt-1">
+                                    {% if assignment.assignment_type == 'quiz' %}
+                                        <span class="badge bg-warning text-dark" style="font-size: 0.7rem;">
+                                            <i class="bi bi-question-circle me-1"></i>Quiz
+                                        </span>
+                                    {% elif assignment.assignment_type == 'discussion' %}
+                                        <span class="badge bg-info" style="font-size: 0.7rem;">
+                                            <i class="bi bi-chat-dots me-1"></i>Discussion
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-primary" style="font-size: 0.7rem;">
+                                            <i class="bi bi-file-earmark-pdf me-1"></i>PDF/Paper
+                                        </span>
+                                    {% endif %}
+                                </div>
+                                {% if assignment.description %}
+                                    <br><small class="text-muted">{{ assignment.description[:100] }}{% if assignment.description|length > 100 %}...{% endif %}</small>
+                                {% endif %}
+                                {% if assignment.attachment_filename %}
+                                    <br><small class="text-primary">
+                                        <i class="bi bi-paperclip me-1"></i>
+                                        <a href="{{ url_for('download_assignment_file', assignment_id=assignment.id) }}" class="text-decoration-none">
+                                            {{ assignment.attachment_original_filename }}
+                                        </a>
+                                    </small>
+                                {% endif %}
+                            </td>
+                            <td data-label="Class">{{ assignment.class_info.name if assignment.class_info else 'N/A' }}</td>
+                            <td data-label="Status">
+                                {% if assignment.status == 'Active' %}
+                                    <span class="badge bg-success">Active</span>
+                                {% elif assignment.status == 'Inactive' %}
+                                    <span class="badge bg-warning text-dark">Inactive</span>
+                                {% elif assignment.status == 'Voided' %}
+                                    <span class="badge bg-danger">Voided</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ assignment.status|title }}</span>
+                                {% endif %}
+                            </td>
+                            <td data-label="Actions">
+                                <div class="d-flex flex-column flex-sm-row gap-1">
+                                    <a href="{{ url_for('management.view_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-secondary btn-sm">
+                                        <i class="bi bi-eye me-1"></i>View
+                                    </a>
+                                    {% if user_role == 'Director' or (user_role == 'School Administrator' and assignment.class_info and assignment.class_info.teacher_id == current_user.id) %}
+                                        <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-warning btn-sm">
+                                            <i class="bi bi-pencil-square me-1"></i>Edit
+                                        </a>
+                                        <a href="{{ url_for('management.grade_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-primary btn-sm">
+                                            <i class="bi bi-pencil me-1"></i>Grade
+                                        </a>
+                                        <button type="button" class="btn btn-outline-info btn-sm change-status-btn"
+                                                data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}" 
+                                                data-current-status="{{ assignment.status }}">
+                                            <i class="bi bi-gear me-1"></i>Status
+                                        </button>
+                                        <button type="button" class="btn btn-outline-danger btn-sm remove-assignment-btn"
+                                                data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}">
+                                            <i class="bi bi-trash me-1"></i>Remove
+                                        </button>
+                                        <button type="button" class="btn btn-outline-success btn-sm manage-extensions-btn"
+                                                data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}"
+                                                data-class-id="{{ assignment.class_id }}">
+                                            <i class="bi bi-clock-history me-1"></i>Extensions
+                                        </button>
+                                    {% endif %}
+                                    <a href="{{ url_for('management.view_class', class_id=assignment.class_id) }}" class="btn btn-outline-info btn-sm">
+                                        <i class="bi bi-eye me-1"></i>View Class
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     {% else %}
-        <div class="card">
-            <div class="card-body text-center py-5">
-                <i class="bi bi-journal-x text-muted" style="font-size: 4rem;"></i>
-                <h5 class="text-muted mt-3">No Assignments Found</h5>
-                <p class="text-muted">No assignments match your current filters or no assignments have been created yet.</p>
-                <a href="{{ url_for('management.add_assignment') }}" class="btn btn-primary">
-                    <i class="bi bi-plus-circle me-1"></i>Create First Assignment
-                </a>
-            </div>
+        <div class="alert alert-info">
+            <h5>No Assignments Found</h5>
+            <p>No assignments match your current filters. Try adjusting your search criteria or create new assignments.</p>
+            {% if classes %}
+                <div class="mt-3">
+                    <h6>Create an assignment for one of your classes:</h6>
+                    <div class="row g-2">
+                        {% for class in classes %}
+                            <div class="col-12 col-sm-6 col-md-4">
+                                <a href="{{ url_for('management.add_assignment', class_id=class.id) }}" class="btn btn-outline-primary btn-sm w-100">
+                                    <i class="bi bi-plus-circle me-1"></i>{{ class.name }}
+                                </a>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
         </div>
     {% endif %}
 </div>
@@ -732,4 +732,41 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 }
 </style>
+
+<script>
+function clearFilters() {
+    // Clear all form inputs
+    document.getElementById('class_filter').value = '';
+    document.getElementById('status_filter').value = '';
+    document.getElementById('sort_by').value = 'due_date';
+    
+    // Submit the form to reload with cleared filters
+    document.getElementById('filterForm').submit();
+}
+
+// Add sortable column functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const sortableColumns = document.querySelectorAll('.sortable');
+    
+    sortableColumns.forEach(column => {
+        column.style.cursor = 'pointer';
+        column.addEventListener('click', function() {
+            const sortBy = this.dataset.sort;
+            const currentSort = new URLSearchParams(window.location.search).get('sort');
+            const currentOrder = new URLSearchParams(window.location.search).get('order');
+            
+            let newOrder = 'asc';
+            if (currentSort === sortBy && currentOrder === 'asc') {
+                newOrder = 'desc';
+            }
+            
+            // Update URL with new sort parameters
+            const url = new URL(window.location);
+            url.searchParams.set('sort', sortBy);
+            url.searchParams.set('order', newOrder);
+            window.location.href = url.toString();
+        });
+    });
+});
+</script>
 {% endblock %}

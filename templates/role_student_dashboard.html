@@ -3,7 +3,8 @@
 {% block dashboard_content %}
 <script>
 // Global assignment view modal function - MUST be loaded first
-window.openAssignmentViewModal = function(assignmentId, assignmentTitle, assignmentDescription, assignmentDueDate, assignmentQuarter, assignmentAttachment, hasSubmission, hasGrade) {
+window.openAssignmentViewModal = function(assignmentId, assignmentTitle, assignmentDescription, assignmentDueDate, assignmentQuarter, assignmentAttachment, hasSubmission, hasGrade, assignmentType) {
+    console.log('openAssignmentViewModal called with:', {assignmentId, assignmentTitle, assignmentAttachment, assignmentType});
     const modalElement = document.getElementById('assignmentViewModal');
     
     if (!modalElement) {
@@ -16,89 +17,372 @@ window.openAssignmentViewModal = function(assignmentId, assignmentTitle, assignm
     document.getElementById('viewAssignmentTitle').textContent = assignmentTitle;
     document.getElementById('viewAssignmentQuarter').textContent = `Q${assignmentQuarter}`;
     
-    // Set description
+    // Set assignment type badge with enhanced styling
+    const typeElement = document.getElementById('viewAssignmentType');
+    if (assignmentType === 'quiz') {
+        typeElement.className = 'badge fs-6 px-3 py-2';
+        typeElement.style.background = 'linear-gradient(135deg, #ff9a56 0%, #ff6b6b 100%)';
+        typeElement.style.color = 'white';
+        typeElement.innerHTML = '<i class="bi bi-question-circle me-1"></i>Interactive Quiz';
+    } else if (assignmentType === 'discussion') {
+        typeElement.className = 'badge fs-6 px-3 py-2';
+        typeElement.style.background = 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)';
+        typeElement.style.color = 'white';
+        typeElement.innerHTML = '<i class="bi bi-chat-dots me-1"></i>Group Discussion';
+    } else {
+        typeElement.className = 'badge fs-6 px-3 py-2';
+        typeElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+        typeElement.style.color = 'white';
+        typeElement.innerHTML = '<i class="bi bi-file-earmark-pdf me-1"></i>Document Assignment';
+    }
+    
+    // Set dynamic header based on assignment type
+    const modalHeader = document.getElementById('viewModalHeader');
+    const assignmentIcon = document.getElementById('viewAssignmentIcon');
+    if (assignmentType === 'quiz') {
+        modalHeader.style.background = 'linear-gradient(135deg, #ff9a56 0%, #ff6b6b 100%)';
+        assignmentIcon.innerHTML = '<i class="bi bi-question-circle-fill"></i>';
+    } else if (assignmentType === 'discussion') {
+        modalHeader.style.background = 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)';
+        assignmentIcon.innerHTML = '<i class="bi bi-chat-dots-fill"></i>';
+    } else {
+        modalHeader.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+        assignmentIcon.innerHTML = '<i class="bi bi-file-earmark-text-fill"></i>';
+    }
+    
+    // Set description with type-specific messaging and instructions
     const descriptionElement = document.getElementById('viewAssignmentDescription');
+    const instructionsElement = document.getElementById('viewAssignmentInstructions');
+    
     if (assignmentDescription && assignmentDescription.trim()) {
-        descriptionElement.textContent = assignmentDescription;
+        descriptionElement.innerHTML = `<p class="mb-0">${assignmentDescription}</p>`;
     } else {
-        descriptionElement.textContent = 'No description provided for this assignment.';
+        descriptionElement.innerHTML = '<p class="mb-0 text-muted"><em>No specific instructions provided.</em></p>';
     }
     
-    // Set due date
-    document.getElementById('viewAssignmentDueDate').textContent = assignmentDueDate;
+    // Add type-specific instructions
+    if (assignmentType === 'quiz') {
+        instructionsElement.innerHTML = `
+            <div class="alert alert-warning border-0" style="background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);">
+                <h6 class="alert-heading"><i class="bi bi-lightbulb me-2"></i>Quiz Instructions</h6>
+                <ul class="mb-0">
+                    <li>Read each question carefully before answering</li>
+                    <li>You can review your answers before submitting</li>
+                    <li>Once submitted, you cannot change your answers</li>
+                    <li>Take your time - there's no rush!</li>
+                </ul>
+            </div>
+        `;
+    } else if (assignmentType === 'discussion') {
+        instructionsElement.innerHTML = `
+            <div class="alert alert-info border-0" style="background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);">
+                <h6 class="alert-heading"><i class="bi bi-people me-2"></i>Discussion Guidelines</h6>
+                <ul class="mb-0">
+                    <li>Share your thoughts and ideas respectfully</li>
+                    <li>Respond to your classmates' posts</li>
+                    <li>Ask questions to deepen the conversation</li>
+                    <li>Support your points with examples</li>
+                </ul>
+            </div>
+        `;
+    } else {
+        instructionsElement.innerHTML = `
+            <div class="alert alert-primary border-0" style="background: linear-gradient(135deg, #cce7ff 0%, #b3d9ff 100%);">
+                <h6 class="alert-heading"><i class="bi bi-file-earmark-check me-2"></i>Submission Guidelines</h6>
+                <ul class="mb-0">
+                    <li>Review all requirements before starting</li>
+                    <li>Download and read the assignment file</li>
+                    <li>Follow the formatting guidelines provided</li>
+                    <li>Submit your work before the due date</li>
+                </ul>
+            </div>
+        `;
+    }
     
-    // Set attachment info
+    // Set due date with enhanced formatting
+    const dueDateElement = document.getElementById('viewAssignmentDueDate');
+    dueDateElement.innerHTML = `
+        <span class="fs-5">${assignmentDueDate}</span>
+        <br><small class="opacity-75">Submit before this date and time</small>
+    `;
+    
+    // Calculate and display time remaining
+    calculateTimeRemaining(assignmentDueDate);
+    
+    // Set attachment info based on assignment type with enhanced styling
     const attachmentElement = document.getElementById('viewAssignmentAttachment');
-    if (assignmentAttachment && assignmentAttachment.trim()) {
+    const typeCardHeader = document.getElementById('viewTypeCardHeader');
+    const typeCardTitle = document.getElementById('viewTypeCardTitle');
+    const typeInstructions = document.getElementById('viewTypeInstructions');
+    
+    if (assignmentType === 'quiz') {
+        typeCardHeader.style.background = 'linear-gradient(135deg, #ff9a56 0%, #ff6b6b 100%)';
+        typeCardTitle.innerHTML = '<i class="bi bi-question-circle me-2"></i>Quiz Resources';
         attachmentElement.innerHTML = `
-            <div class="d-flex align-items-center">
-                <i class="bi bi-paperclip me-2 text-primary"></i>
-                <span class="text-muted">Assignment file attached</span>
+            <div class="text-center p-3 rounded" style="background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);">
+                <i class="bi bi-question-circle-fill fs-1 text-warning mb-2"></i>
+                <h6 class="text-dark mb-2">Interactive Quiz</h6>
+                <p class="text-dark mb-0 small">Questions will appear when you start the quiz</p>
+            </div>
+        `;
+        typeInstructions.innerHTML = `
+            <div class="mt-3">
+                <h6 class="text-warning"><i class="bi bi-clock me-2"></i>Time Management</h6>
+                <p class="small text-muted">Most quizzes have no time limit, so take your time to think through each question carefully.</p>
+            </div>
+        `;
+    } else if (assignmentType === 'discussion') {
+        typeCardHeader.style.background = 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)';
+        typeCardTitle.innerHTML = '<i class="bi bi-chat-dots me-2"></i>Discussion Forum';
+        attachmentElement.innerHTML = `
+            <div class="text-center p-3 rounded" style="background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);">
+                <i class="bi bi-chat-dots-fill fs-1 text-info mb-2"></i>
+                <h6 class="text-dark mb-2">Discussion Board</h6>
+                <p class="text-dark mb-0 small">Join the conversation with your classmates</p>
+            </div>
+        `;
+        typeInstructions.innerHTML = `
+            <div class="mt-3">
+                <h6 class="text-info"><i class="bi bi-heart me-2"></i>Participation Tips</h6>
+                <p class="small text-muted">Engage actively by posting thoughtful responses and asking follow-up questions.</p>
             </div>
         `;
     } else {
-        attachmentElement.innerHTML = `
-            <div class="text-muted">
-                <i class="bi bi-info-circle me-2"></i>No attachment provided
+        typeCardHeader.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+        typeCardTitle.innerHTML = '<i class="bi bi-file-earmark me-2"></i>Assignment Files';
+        if (assignmentAttachment && assignmentAttachment.trim()) {
+            console.log('Setting up PDF/Paper assignment attachment with ID:', assignmentId);
+            attachmentElement.innerHTML = `
+                <div class="text-center p-3 rounded" style="background: linear-gradient(135deg, #cce7ff 0%, #b3d9ff 100%);">
+                    <i class="bi bi-file-earmark-text-fill fs-1 text-primary mb-2"></i>
+                    <h6 class="text-dark mb-2">Assignment Materials</h6>
+                    <p class="text-dark mb-3 small">Download the assignment file to get started</p>
+                    <a href="/student/download-assignment-file/${assignmentId}" class="btn btn-primary btn-sm">
+                        <i class="bi bi-download me-1"></i>Download File
+                    </a>
+                </div>
+            `;
+        } else {
+            attachmentElement.innerHTML = `
+                <div class="text-center p-3 rounded" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
+                    <i class="bi bi-info-circle-fill fs-1 text-muted mb-2"></i>
+                    <h6 class="text-dark mb-2">No Files Attached</h6>
+                    <p class="text-dark mb-0 small">This assignment doesn't require additional files</p>
+                </div>
+            `;
+        }
+        typeInstructions.innerHTML = `
+            <div class="mt-3">
+                <h6 class="text-primary"><i class="bi bi-check-circle me-2"></i>Submission Checklist</h6>
+                <p class="small text-muted">Make sure to review all requirements and submit your work before the deadline.</p>
             </div>
         `;
     }
     
-    // Set submission status
+    // Set enhanced submission status with progress tracking
     const statusElement = document.getElementById('viewAssignmentStatus');
     const submissionStatusElement = document.getElementById('viewSubmissionStatus');
+    const progressBar = document.getElementById('viewProgressBar');
+    const progressText = document.getElementById('viewProgressText');
+    const progressContainer = document.getElementById('viewProgressContainer');
+    const banner = document.getElementById('viewAssignmentBanner');
+    const statusIcon = document.getElementById('viewAssignmentStatusIcon');
+    const statusTitle = document.getElementById('viewAssignmentStatusTitle');
+    const statusMessage = document.getElementById('viewAssignmentStatusMessage');
+    const submissionCardHeader = document.getElementById('viewSubmissionCardHeader');
     
-    if (hasGrade) {
-        // Graded
-        statusElement.className = 'badge bg-success';
-        statusElement.textContent = 'Graded';
-        submissionStatusElement.innerHTML = `
-            <div class="d-flex align-items-center">
-                <i class="bi bi-check-circle-fill text-success me-2"></i>
-                <span class="text-success fw-bold">This assignment has been graded!</span>
-            </div>
-        `;
-    } else if (hasSubmission) {
-        // Submitted but not graded
-        statusElement.className = 'badge bg-info';
-        statusElement.textContent = 'Submitted';
-        submissionStatusElement.innerHTML = `
-            <div class="d-flex align-items-center">
-                <i class="bi bi-hourglass-split text-info me-2"></i>
-                <span class="text-info fw-bold">Your submission is being reviewed by your teacher.</span>
-            </div>
-        `;
+    // Show/hide progress bar based on assignment type
+    if (assignmentType === 'quiz' || assignmentType === 'discussion') {
+        progressContainer.style.display = 'block';
     } else {
-        // Not submitted
-        statusElement.className = 'badge bg-warning';
-        statusElement.textContent = 'Not Submitted';
-        submissionStatusElement.innerHTML = `
-            <div class="d-flex align-items-center">
-                <i class="bi bi-exclamation-triangle text-warning me-2"></i>
-                <span class="text-warning fw-bold">You haven't submitted this assignment yet.</span>
-            </div>
-        `;
+        progressContainer.style.display = 'none';
     }
     
-    // Set action buttons
+    if (hasGrade) {
+        // Graded - Complete
+        statusElement.className = 'badge fs-6 px-3 py-2';
+        statusElement.style.background = 'linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%)';
+        statusElement.style.color = 'white';
+        statusElement.innerHTML = '<i class="bi bi-check-circle me-1"></i>Completed';
+        
+        banner.className = 'alert border-0 shadow-sm';
+        banner.style.background = 'linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%)';
+        statusIcon.innerHTML = '<i class="bi bi-check-circle-fill text-success"></i>';
+        statusTitle.textContent = 'Assignment Complete!';
+        statusMessage.textContent = 'Congratulations! Your work has been graded and reviewed.';
+        
+        submissionCardHeader.style.background = 'linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%)';
+        
+        submissionStatusElement.innerHTML = `
+            <div class="text-center p-3 rounded" style="background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);">
+                <i class="bi bi-trophy-fill fs-1 text-success mb-2"></i>
+                <h6 class="text-success mb-2">Great Job!</h6>
+                <p class="text-success mb-0 small">Your assignment has been successfully graded</p>
+            </div>
+        `;
+        
+        if (assignmentType === 'quiz' || assignmentType === 'discussion') {
+            if (assignmentType === 'quiz' && hasQuizProgress) {
+                // Show actual quiz progress
+                const progressPercentage = Math.round((quizProgressData.questions_answered / quizProgressData.total_questions) * 100);
+                progressBar.style.width = progressPercentage + '%';
+                progressBar.className = 'progress-bar bg-info';
+                progressText.textContent = `Progress: ${progressPercentage}% - ${quizProgressData.questions_answered}/${quizProgressData.total_questions} questions answered`;
+            } else {
+                // Default complete state
+                progressBar.style.width = '100%';
+                progressBar.className = 'progress-bar bg-success';
+                progressText.textContent = 'Progress: 100% - Complete!';
+            }
+        }
+        
+    } else if (hasSubmission) {
+        // Submitted but not graded - In Progress
+        statusElement.className = 'badge fs-6 px-3 py-2';
+        statusElement.style.background = 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)';
+        statusElement.style.color = 'dark';
+        statusElement.innerHTML = '<i class="bi bi-clock-history me-1"></i>Under Review';
+        
+        banner.className = 'alert border-0 shadow-sm';
+        banner.style.background = 'linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%)';
+        statusIcon.innerHTML = '<i class="bi bi-hourglass-split text-warning"></i>';
+        statusTitle.textContent = 'Work Submitted!';
+        statusMessage.textContent = 'Your submission is being reviewed by your teacher.';
+        
+        submissionCardHeader.style.background = 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)';
+        
+        submissionStatusElement.innerHTML = `
+            <div class="text-center p-3 rounded" style="background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);">
+                <i class="bi bi-hourglass-split fs-1 text-warning mb-2"></i>
+                <h6 class="text-warning mb-2">Under Review</h6>
+                <p class="text-warning mb-0 small">Your teacher is reviewing your work</p>
+            </div>
+        `;
+        
+        if (assignmentType === 'quiz' || assignmentType === 'discussion') {
+            if (assignmentType === 'quiz' && hasQuizProgress) {
+                // Show actual quiz progress
+                const progressPercentage = Math.round((quizProgressData.questions_answered / quizProgressData.total_questions) * 100);
+                progressBar.style.width = progressPercentage + '%';
+                progressBar.className = 'progress-bar bg-warning';
+                progressText.textContent = `Progress: ${progressPercentage}% - ${quizProgressData.questions_answered}/${quizProgressData.total_questions} questions answered`;
+            } else {
+                // Default submitted state
+                progressBar.style.width = '75%';
+                progressBar.className = 'progress-bar bg-warning';
+                progressText.textContent = 'Progress: 75% - Awaiting Grade';
+            }
+        }
+        
+    } else {
+        // Not submitted - Pending
+        statusElement.className = 'badge fs-6 px-3 py-2';
+        statusElement.style.background = 'linear-gradient(135deg, #ff9a56 0%, #ff6b6b 100%)';
+        statusElement.style.color = 'white';
+        statusElement.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i>Pending';
+        
+        banner.className = 'alert border-0 shadow-sm';
+        banner.style.background = 'linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%)';
+        statusIcon.innerHTML = '<i class="bi bi-exclamation-triangle-fill text-danger"></i>';
+        statusTitle.textContent = 'Ready to Start!';
+        statusMessage.textContent = 'This assignment is waiting for you to begin.';
+        
+        submissionCardHeader.style.background = 'linear-gradient(135deg, #ff9a56 0%, #ff6b6b 100%)';
+        
+        submissionStatusElement.innerHTML = `
+            <div class="text-center p-3 rounded" style="background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);">
+                <i class="bi bi-play-circle-fill fs-1 text-danger mb-2"></i>
+                <h6 class="text-danger mb-2">Ready to Begin</h6>
+                <p class="text-danger mb-0 small">Click the action button below to get started</p>
+            </div>
+        `;
+        
+        if (assignmentType === 'quiz' || assignmentType === 'discussion') {
+            if (assignmentType === 'quiz' && hasQuizProgress) {
+                // Show actual quiz progress
+                const progressPercentage = Math.round((quizProgressData.questions_answered / quizProgressData.total_questions) * 100);
+                progressBar.style.width = progressPercentage + '%';
+                progressBar.className = 'progress-bar bg-info';
+                progressText.textContent = `Progress: ${progressPercentage}% - ${quizProgressData.questions_answered}/${quizProgressData.total_questions} questions answered`;
+            } else {
+                // Default not started state
+                progressBar.style.width = '25%';
+                progressBar.className = 'progress-bar bg-danger';
+                progressText.textContent = 'Progress: 25% - Not Started';
+            }
+        }
+    }
+    
+    // Set enhanced action buttons based on assignment type
     const actionButtonsElement = document.getElementById('viewActionButtons');
     if (actionButtonsElement) {
         actionButtonsElement.innerHTML = '';
         
-        if (!hasSubmission) {
-            // Add submit button if not submitted
+        if (assignmentType === 'quiz') {
+            // Quiz-specific buttons with enhanced styling
+            if (!hasSubmission) {
+                actionButtonsElement.innerHTML += `
+                    <button type="button" class="btn btn-lg text-white shadow" 
+                            style="background: linear-gradient(135deg, #ff9a56 0%, #ff6b6b 100%);"
+                            onclick="takeQuiz(${assignmentId}, '${assignmentTitle}')">
+                        <i class="bi bi-play-circle-fill me-2"></i>Start Quiz
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="showQuizHelp()">
+                        <i class="bi bi-question-circle me-1"></i>Quiz Help
+                    </button>
+                `;
+            } else if (!hasGrade) {
+                actionButtonsElement.innerHTML += `
+                    <div class="alert alert-warning border-0 mb-2" style="background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);">
+                        <i class="bi bi-hourglass-split me-2"></i><strong>Quiz Submitted!</strong><br>
+                        <small>Your quiz is being reviewed by your teacher.</small>
+                    </div>
+                `;
+            } else {
+                actionButtonsElement.innerHTML += `
+                    <div class="alert alert-success border-0 mb-2" style="background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);">
+                        <i class="bi bi-trophy-fill me-2"></i><strong>Quiz Complete!</strong><br>
+                        <small>Congratulations! Your quiz has been graded.</small>
+                    </div>
+                `;
+            }
+        } else if (assignmentType === 'discussion') {
+            // Discussion-specific buttons with enhanced styling
             actionButtonsElement.innerHTML += `
-                <button type="button" class="btn btn-primary" onclick="switchToSubmissionModal(${assignmentId}, '${assignmentTitle}', false)">
-                    <i class="bi bi-upload me-1"></i>Submit Assignment
+                <button type="button" class="btn btn-lg text-white shadow" 
+                        style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);"
+                        onclick="joinDiscussion(${assignmentId}, '${assignmentTitle}')">
+                    <i class="bi bi-chat-dots-fill me-2"></i>Join Discussion
+                </button>
+                <button type="button" class="btn btn-outline-info btn-sm" onclick="showDiscussionHelp()">
+                    <i class="bi bi-people me-1"></i>Discussion Tips
                 </button>
             `;
-        } else if (!hasGrade) {
-            // Add resubmit button if submitted but not graded
-            actionButtonsElement.innerHTML += `
-                <button type="button" class="btn btn-warning" onclick="switchToSubmissionModal(${assignmentId}, '${assignmentTitle}', true)">
-                    <i class="bi bi-pencil me-1"></i>Resubmit Assignment
-                </button>
-            `;
+        } else {
+            // PDF/Paper assignment buttons with enhanced styling
+            if (!hasSubmission) {
+                actionButtonsElement.innerHTML += `
+                    <button type="button" class="btn btn-lg text-white shadow" 
+                            style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"
+                            onclick="switchToSubmissionModal(${assignmentId}, '${assignmentTitle}', false)">
+                        <i class="bi bi-upload me-2"></i>Submit Assignment
+                    </button>
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="showSubmissionHelp()">
+                        <i class="bi bi-info-circle me-1"></i>Submission Help
+                    </button>
+                `;
+            } else if (!hasGrade) {
+                actionButtonsElement.innerHTML += `
+                    <button type="button" class="btn btn-lg text-white shadow" 
+                            style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);"
+                            onclick="switchToSubmissionModal(${assignmentId}, '${assignmentTitle}', true)">
+                        <i class="bi bi-pencil-square me-2"></i>Resubmit Assignment
+                    </button>
+                    <div class="alert alert-info border-0 mt-2" style="background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);">
+                        <i class="bi bi-clock-history me-2"></i><small>Your submission is being reviewed.</small>
+                    </div>
+                `;
+            }
         }
     }
     
@@ -122,11 +406,70 @@ window.openAssignmentViewModal = function(assignmentId, assignmentTitle, assignm
     }
 };
 
+// Helper function to calculate time remaining
+function calculateTimeRemaining(dueDateString) {
+    const timeElement = document.getElementById('viewTimeRemaining');
+    if (!timeElement || !dueDateString) return;
+    
+    try {
+        const dueDate = new Date(dueDateString);
+        const now = new Date();
+        const diffMs = dueDate - now;
+        
+        if (diffMs < 0) {
+            timeElement.innerHTML = `
+                <span class="text-danger fw-bold">Overdue</span>
+                <br><small class="text-danger">Past due date</small>
+            `;
+        } else {
+            const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+            
+            if (days > 0) {
+                timeElement.innerHTML = `
+                    <span class="text-success fw-bold">${days} day${days !== 1 ? 's' : ''}</span>
+                    <br><small class="text-success">${hours}h ${minutes}m remaining</small>
+                `;
+            } else if (hours > 0) {
+                timeElement.innerHTML = `
+                    <span class="text-warning fw-bold">${hours}h ${minutes}m</span>
+                    <br><small class="text-warning">Less than a day left!</small>
+                `;
+            } else {
+                timeElement.innerHTML = `
+                    <span class="text-danger fw-bold">${minutes} minutes</span>
+                    <br><small class="text-danger">Due very soon!</small>
+                `;
+            }
+        }
+    } catch (error) {
+        timeElement.textContent = 'Unable to calculate';
+    }
+}
+
+// Help functions for different assignment types
+function showAssignmentHelp() {
+    alert('Assignment Help:\n\n• Read all instructions carefully\n• Check the due date and time\n• Download any attached files\n• Ask your teacher if you have questions\n• Submit your work before the deadline');
+}
+
+function showQuizHelp() {
+    alert('Quiz Help:\n\n• Read each question carefully\n• Take your time - most quizzes have no time limit\n• You can review your answers before submitting\n• Once submitted, you cannot change your answers\n• If you\'re unsure, make your best guess');
+}
+
+function showDiscussionHelp() {
+    alert('Discussion Help:\n\n• Share your thoughts and ideas respectfully\n• Respond to your classmates\' posts\n• Ask questions to deepen the conversation\n• Support your points with examples\n• Be constructive and encouraging');
+}
+
+function showSubmissionHelp() {
+    alert('Submission Help:\n\n• Review all assignment requirements\n• Download and read the assignment file\n• Follow the formatting guidelines\n• Save your work frequently\n• Submit before the deadline\n• Keep a backup copy of your work');
+}
+
 // Global view assignment function - called by View button
-window.viewAssignment = function(assignmentId, assignmentTitle, assignmentDescription, assignmentDueDate, assignmentQuarter, assignmentAttachment, hasSubmission, hasGrade) {
+window.viewAssignment = function(assignmentId, assignmentTitle, assignmentDescription, assignmentDueDate, assignmentQuarter, assignmentAttachment, hasSubmission, hasGrade, assignmentType) {
     console.log('viewAssignment function called with:', arguments);
     try {
-        openAssignmentViewModal(assignmentId, assignmentTitle, assignmentDescription, assignmentDueDate, assignmentQuarter, assignmentAttachment, hasSubmission, hasGrade);
+        openAssignmentViewModal(assignmentId, assignmentTitle, assignmentDescription, assignmentDueDate, assignmentQuarter, assignmentAttachment, hasSubmission, hasGrade, assignmentType);
     } catch (error) {
         console.error('Error in viewAssignment function:', error);
         alert('Error opening assignment view. Please try again.');
@@ -409,6 +752,257 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
 
 #submissionModal .modal-content {
     z-index: 1075 !important;
+}
+
+/* Enhanced modal animations and effects */
+#assignmentViewModal .modal-dialog {
+    margin: 2rem auto !important;
+    max-height: calc(100vh - 4rem);
+}
+
+#assignmentViewModal .modal-content {
+    animation: slideInUp 0.3s ease-out;
+    transform: translateY(0);
+    border-radius: 20px !important;
+    overflow: hidden;
+    max-height: calc(100vh - 4rem);
+    display: flex;
+    flex-direction: column;
+}
+
+#assignmentViewModal .modal-body {
+    overflow-y: auto;
+    flex: 1;
+}
+
+#assignmentViewModal .modal-header {
+    background-attachment: fixed;
+    position: relative;
+    overflow: hidden;
+}
+
+#assignmentViewModal .modal-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    animation: shine 3s infinite;
+    z-index: 1;
+}
+
+#assignmentViewModal .modal-header > * {
+    position: relative;
+    z-index: 2;
+}
+
+@keyframes slideInUp {
+    from {
+        transform: translateY(30px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes shine {
+    0% {
+        left: -100%;
+    }
+    100% {
+        left: 100%;
+    }
+}
+
+/* Enhanced card hover effects */
+#assignmentViewModal .card {
+    transition: all 0.3s ease;
+    border-radius: 15px !important;
+    border: none !important;
+}
+
+#assignmentViewModal .card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
+}
+
+/* Progress bar animation */
+#viewProgressBar {
+    transition: width 0.8s ease-in-out;
+    border-radius: 10px;
+    background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%) !important;
+}
+
+/* Button hover effects */
+#viewActionButtons .btn {
+    transition: all 0.3s ease;
+    border-radius: 12px;
+    font-weight: 600;
+    position: relative;
+    overflow: hidden;
+}
+
+#viewActionButtons .btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+}
+
+#viewActionButtons .btn:active {
+    transform: translateY(-1px);
+}
+
+/* Badge pulse animation for important status */
+.badge.pulse {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.7);
+    }
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 0 0 10px rgba(255, 107, 107, 0);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(255, 107, 107, 0);
+    }
+}
+
+/* Icon bounce animation */
+#viewAssignmentIcon {
+    animation: bounce 1s ease-in-out;
+}
+
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% {
+        transform: translateY(0);
+    }
+    40% {
+        transform: translateY(-10px);
+    }
+    60% {
+        transform: translateY(-5px);
+    }
+}
+
+/* Gradient text effect */
+.gradient-text {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Floating animation for badges */
+#viewAssignmentType, #viewAssignmentStatus, #viewAssignmentQuarter {
+    animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% {
+        transform: translateY(0px);
+    }
+    50% {
+        transform: translateY(-5px);
+    }
+}
+
+/* Responsive modal adjustments */
+@media (min-width: 1400px) {
+    #assignmentViewModal .modal-dialog {
+        max-width: 85vw !important;
+        width: 85vw !important;
+    }
+    
+    /* Only allow side-by-side layout on very large screens */
+    #assignmentViewModal .row .col-xl-7,
+    #assignmentViewModal .row .col-xl-5 {
+        flex: 0 0 auto !important;
+    }
+}
+
+@media (max-width: 1400px) {
+    #assignmentViewModal .modal-dialog {
+        max-width: 95vw !important;
+        width: 95vw !important;
+    }
+}
+
+@media (max-width: 1200px) {
+    #assignmentViewModal .modal-dialog {
+        max-width: 98vw !important;
+        width: 98vw !important;
+    }
+    
+    #assignmentViewModal .modal-body {
+        padding: 1.5rem !important;
+    }
+    
+    /* Force vertical stacking on laptop screens */
+    #assignmentViewModal .row .col-lg-8,
+    #assignmentViewModal .row .col-lg-4 {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+    }
+    
+    /* Add more spacing between stacked sections */
+    #assignmentViewModal .row .col-lg-4 {
+        margin-top: 2rem !important;
+    }
+}
+
+@media (max-width: 992px) {
+    #assignmentViewModal .modal-dialog {
+        max-width: 100vw !important;
+        width: 100vw !important;
+        margin: 0 !important;
+        height: 100vh !important;
+    }
+    
+    #assignmentViewModal .modal-content {
+        height: 100vh !important;
+        border-radius: 0 !important;
+    }
+    
+    #assignmentViewModal .modal-body {
+        padding: 1rem !important;
+    }
+    
+    #assignmentViewModal .row.g-4 {
+        --bs-gutter-x: 0.75rem;
+        --bs-gutter-y: 0.75rem;
+    }
+}
+
+@media (max-width: 768px) {
+    #assignmentViewModal .modal-dialog {
+        max-width: 100vw !important;
+        width: 100vw !important;
+        margin: 0 !important;
+        height: 100vh !important;
+    }
+    
+    #assignmentViewModal .modal-content {
+        max-height: 100vh !important;
+        height: 100vh !important;
+        border-radius: 0 !important;
+    }
+    
+    #assignmentViewModal .modal-body {
+        padding: 0.75rem !important;
+    }
+    
+    #assignmentViewModal .row.g-4 {
+        --bs-gutter-x: 0.5rem;
+        --bs-gutter-y: 0.5rem;
+    }
 }
 
 /* Fix any potential pointer-events issues */
@@ -1272,7 +1866,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                         
                                         {% if assignment.attachment_filename %}
                                         <div class="mb-2">
-                                            <a href="{{ url_for('download_assignment_file', assignment_id=assignment.id) }}" 
+                                            <a href="{{ url_for('student.download_assignment_file', assignment_id=assignment.id) }}" 
                                                class="btn btn-outline-primary btn-sm">
                                                 <i class="bi bi-download me-1"></i>Download Assignment
                                             </a>
@@ -2160,7 +2754,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                     </td>
                                     <td>
                                         <div class="d-flex gap-1">
-                                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="viewAssignment({{ assignment.id }}, '{{ assignment.title }}', '{{ assignment.description or '' }}', '{{ assignment.due_date.strftime('%Y-%m-%d') if assignment.due_date else 'No due date' }}', '{{ assignment.quarter or 'N/A' }}', '{{ assignment.attachment_filename or '' }}', {{ 'true' if submission else 'false' }}, {{ 'true' if grades.get(assignment.id) else 'false' }})">
+                                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="viewAssignment({{ assignment.id }}, '{{ assignment.title }}', '{{ assignment.description or '' }}', '{{ assignment.due_date.strftime('%Y-%m-%d') if assignment.due_date else 'No due date' }}', '{{ assignment.quarter or 'N/A' }}', '{{ assignment.attachment_filename or '' }}', {{ 'true' if submission else 'false' }}, {{ 'true' if grades.get(assignment.id) else 'false' }}, '{{ assignment.assignment_type }}')">
                                                 <i class="bi bi-eye me-1"></i>View
                                             </button>
                                             {% if assignment.assignment_type == 'quiz' %}
@@ -3725,83 +4319,157 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
 
     <!-- Assignment View Modal -->
     <div class="modal fade" id="assignmentViewModal" tabindex="-1" aria-labelledby="assignmentViewModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header bg-info text-white">
-                    <h5 class="modal-title" id="assignmentViewModalLabel">
-                        <i class="bi bi-eye me-2"></i>Assignment Details
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <!-- Assignment Title -->
-                    <div class="mb-4">
-                        <h4 id="viewAssignmentTitle" class="text-primary mb-2"></h4>
-                        <div class="d-flex flex-wrap gap-2">
-                            <span class="badge bg-secondary" id="viewAssignmentQuarter"></span>
-                            <span class="badge" id="viewAssignmentStatus"></span>
+        <div class="modal-dialog modal-xl modal-fullscreen-lg-down" style="max-width: 90vw; width: 90vw;">
+            <div class="modal-content border-0 shadow-lg">
+                <!-- Dynamic Header based on assignment type -->
+                <div class="modal-header text-white" id="viewModalHeader" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <div class="d-flex align-items-center w-100">
+                        <div class="me-3">
+                            <div id="viewAssignmentIcon" class="fs-1"></div>
                         </div>
+                        <div class="flex-grow-1">
+                            <h4 class="modal-title mb-1" id="assignmentViewModalLabel">
+                                <span id="viewAssignmentTitle"></span>
+                            </h4>
+                            <p class="mb-0 opacity-75" id="viewAssignmentSubtitle">Assignment Details & Instructions</p>
+                        </div>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-
-                    <!-- Assignment Description -->
-                    <div class="mb-4">
-                        <h6 class="fw-bold mb-2">
-                            <i class="bi bi-card-text me-2"></i>Description & Requirements
-                        </h6>
-                        <div class="card">
-                            <div class="card-body">
-                                <p id="viewAssignmentDescription" class="mb-0"></p>
+                </div>
+                
+                <div class="modal-body p-5">
+                    <!-- Assignment Status Banner -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="alert border-0 shadow-sm" id="viewAssignmentBanner" role="alert">
+                                <div class="d-flex align-items-center">
+                                    <div class="me-3">
+                                        <div id="viewAssignmentStatusIcon" class="fs-4"></div>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="alert-heading mb-1" id="viewAssignmentStatusTitle">Assignment Status</h6>
+                                        <p class="mb-0" id="viewAssignmentStatusMessage">Current status and next steps</p>
+                                    </div>
+                                    <div class="d-flex flex-wrap gap-1">
+                                        <span class="badge fs-6 px-3 py-2" id="viewAssignmentQuarter"></span>
+                                        <span class="badge fs-6 px-3 py-2" id="viewAssignmentType"></span>
+                                        <span class="badge fs-6 px-3 py-2" id="viewAssignmentStatus"></span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Assignment Details -->
-                    <div class="row mb-4">
-                        <div class="col-md-6">
-                            <div class="card h-100">
-                                <div class="card-header bg-light">
-                                    <h6 class="mb-0">
-                                        <i class="bi bi-calendar-event me-2"></i>Due Date
-                                    </h6>
+                    <!-- Main Content Grid -->
+                    <div class="row g-4">
+                        <!-- Left Column: Assignment Details -->
+                        <div class="col-12 col-lg-8 col-xl-7">
+                            <!-- Assignment Description Card -->
+                            <div class="card border-0 shadow-sm mb-4" id="viewDescriptionCard">
+                                <div class="card-header border-0" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                                    <h5 class="mb-0 text-white">
+                                        <i class="bi bi-journal-text me-2"></i>Assignment Instructions
+                                    </h5>
                                 </div>
                                 <div class="card-body">
-                                    <p class="mb-0" id="viewAssignmentDueDate"></p>
+                                    <div id="viewAssignmentDescription" class="fs-6"></div>
+                                    <div id="viewAssignmentInstructions" class="mt-3"></div>
+                                </div>
+                            </div>
+
+                            <!-- Progress & Timeline Card -->
+                            <div class="card border-0 shadow-sm" id="viewProgressCard">
+                                <div class="card-header border-0" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                                    <h5 class="mb-0 text-white">
+                                        <i class="bi bi-clock-history me-2"></i>Timeline & Progress
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <div class="d-flex align-items-center p-3 rounded" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                                                <div class="me-3">
+                                                    <i class="bi bi-calendar-check fs-2 text-white"></i>
+                                                </div>
+                                                <div>
+                                                    <h6 class="text-white mb-1">Due Date</h6>
+                                                    <p class="text-white mb-0 fw-bold" id="viewAssignmentDueDate"></p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="d-flex align-items-center p-3 rounded" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">
+                                                <div class="me-3">
+                                                    <i class="bi bi-speedometer2 fs-2 text-dark"></i>
+                                                </div>
+                                                <div>
+                                                    <h6 class="text-dark mb-1">Time Remaining</h6>
+                                                    <p class="text-dark mb-0 fw-bold" id="viewTimeRemaining">Calculating...</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="card h-100">
-                                <div class="card-header bg-light">
-                                    <h6 class="mb-0">
-                                        <i class="bi bi-file-earmark me-2"></i>Attachments
-                                    </h6>
+
+                        <!-- Right Column: Actions & Resources -->
+                        <div class="col-12 col-lg-4 col-xl-5">
+                            <!-- Assignment Type Specific Card -->
+                            <div class="card border-0 shadow-sm mb-4" id="viewTypeCard">
+                                <div class="card-header border-0" id="viewTypeCardHeader">
+                                    <h5 class="mb-0 text-white" id="viewTypeCardTitle">
+                                        <i class="bi bi-info-circle me-2"></i>Assignment Type
+                                    </h5>
                                 </div>
                                 <div class="card-body">
                                     <div id="viewAssignmentAttachment"></div>
+                                    <div id="viewTypeInstructions" class="mt-3"></div>
+                                </div>
+                            </div>
+
+                            <!-- Submission Status Card -->
+                            <div class="card border-0 shadow-sm mb-4">
+                                <div class="card-header border-0" id="viewSubmissionCardHeader">
+                                    <h5 class="mb-0 text-white">
+                                        <i class="bi bi-person-check me-2"></i>Your Progress
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div id="viewSubmissionStatus"></div>
+                                    <div class="mt-3" id="viewProgressContainer">
+                                        <div class="progress" style="height: 8px;">
+                                            <div class="progress-bar" id="viewProgressBar" role="progressbar" style="width: 0%"></div>
+                                        </div>
+                                        <small class="text-muted mt-2 d-block" id="viewProgressText">Progress: 0%</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Action Buttons Card -->
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-header border-0" style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);">
+                                    <h5 class="mb-0 text-dark">
+                                        <i class="bi bi-lightning-charge me-2"></i>Quick Actions
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div id="viewActionButtons" class="d-grid gap-2">
+                                        <!-- Buttons will be dynamically added here -->
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-
-                    <!-- Submission Status -->
-                    <div class="mb-4">
-                        <h6 class="fw-bold mb-2">
-                            <i class="bi bi-check-circle me-2"></i>Your Submission Status
-                        </h6>
-                        <div class="card">
-                            <div class="card-body">
-                                <div id="viewSubmissionStatus"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Action Buttons -->
-                    <div class="d-flex flex-wrap gap-2" id="viewActionButtons">
-                        <!-- Buttons will be dynamically added here -->
-                    </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                
+                <div class="modal-footer border-0 bg-light">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i>Close
+                    </button>
+                    <button type="button" class="btn btn-primary" id="viewHelpButton" onclick="showAssignmentHelp()">
+                        <i class="bi bi-question-circle me-1"></i>Need Help?
+                    </button>
                 </div>
             </div>
         </div>
@@ -3857,10 +4525,10 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
 
      
      // Fallback functions that work even if the event listeners fail
-     function fallbackViewAssignment(assignmentId, assignmentTitle, assignmentDescription, assignmentDueDate, assignmentQuarter, assignmentAttachment, hasSubmission, hasGrade) {
+     function fallbackViewAssignment(assignmentId, assignmentTitle, assignmentDescription, assignmentDueDate, assignmentQuarter, assignmentAttachment, hasSubmission, hasGrade, assignmentType) {
          console.log('Fallback view function called with:', arguments);
          try {
-             openAssignmentViewModal(assignmentId, assignmentTitle, assignmentDescription, assignmentDueDate, assignmentQuarter, assignmentAttachment, hasSubmission, hasGrade);
+             openAssignmentViewModal(assignmentId, assignmentTitle, assignmentDescription, assignmentDueDate, assignmentQuarter, assignmentAttachment, hasSubmission, hasGrade, assignmentType);
          } catch (error) {
              console.error('Error in fallback view function:', error);
              alert('Error opening assignment view. Please try again.');
@@ -3959,8 +4627,9 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
             const assignmentAttachment = button.dataset.assignmentAttachment;
             const hasSubmission = button.dataset.hasSubmission === 'true';
             const hasGrade = button.dataset.hasGrade === 'true';
+            const assignmentType = button.dataset.assignmentType || 'pdf';
             
-            openAssignmentViewModal(assignmentId, assignmentTitle, assignmentDescription, assignmentDueDate, assignmentQuarter, assignmentAttachment, hasSubmission, hasGrade);
+            openAssignmentViewModal(assignmentId, assignmentTitle, assignmentDescription, assignmentDueDate, assignmentQuarter, assignmentAttachment, hasSubmission, hasGrade, assignmentType);
         }
         
         function submitAssignmentSafe(assignmentId, isResubmit) {

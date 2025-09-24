@@ -95,9 +95,29 @@
                 <!-- Quiz Taking Interface -->
                 <div class="card shadow-sm">
                     <div class="card-header bg-warning text-dark">
-                        <h5 class="mb-0">
-                            <i class="bi bi-pencil-square me-2"></i>Quiz Questions
-                        </h5>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <i class="bi bi-pencil-square me-2"></i>Quiz Questions
+                            </h5>
+                            {% if assignment.allow_save_and_continue %}
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-sm btn-outline-light" id="saveProgressBtn">
+                                        <i class="bi bi-save me-1"></i>Save Progress
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-light" id="loadProgressBtn" style="display: none;">
+                                        <i class="bi bi-arrow-clockwise me-1"></i>Load Saved
+                                    </button>
+                                </div>
+                            {% endif %}
+                        </div>
+                        {% if assignment.allow_save_and_continue %}
+                            <div class="mt-2">
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar bg-success" id="quizProgressBar" role="progressbar" style="width: 0%"></div>
+                                </div>
+                                <small class="text-muted mt-1 d-block" id="quizProgressText">Progress: 0% (0 of {{ questions|length }} questions answered)</small>
+                            </div>
+                        {% endif %}
                     </div>
                     <div class="card-body">
                         {% if questions %}
@@ -164,6 +184,191 @@
 </div>
 
 <script>
+let quizProgress = {
+    answered: 0,
+    total: {{ questions|length if questions else 0 }},
+    answers: {}
+};
+
+// Initialize progress tracking
+document.addEventListener('DOMContentLoaded', function() {
+    const saveBtn = document.getElementById('saveProgressBtn');
+    const loadBtn = document.getElementById('loadProgressBtn');
+    const progressBar = document.getElementById('quizProgressBar');
+    const progressText = document.getElementById('quizProgressText');
+    
+    if (saveBtn && loadBtn && progressBar && progressText) {
+        // Load any existing progress
+        loadQuizProgress();
+        
+        // Set up event listeners for form inputs
+        const formInputs = document.querySelectorAll('#quizForm input, #quizForm textarea');
+        formInputs.forEach(input => {
+            input.addEventListener('change', updateProgress);
+            input.addEventListener('input', updateProgress);
+        });
+        
+        // Save progress button
+        saveBtn.addEventListener('click', saveQuizProgress);
+        
+        // Load progress button
+        loadBtn.addEventListener('click', loadQuizProgress);
+        
+        // Auto-save every 30 seconds
+        setInterval(saveQuizProgress, 30000);
+    }
+});
+
+function updateProgress() {
+    const formInputs = document.querySelectorAll('#quizForm input:checked, #quizForm input[type="text"], #quizForm textarea');
+    let answered = 0;
+    const answers = {};
+    
+    formInputs.forEach(input => {
+        if (input.type === 'radio' && input.checked) {
+            const questionId = input.name.replace('question_', '');
+            answers[questionId] = input.value;
+            answered++;
+        } else if (input.type === 'text' || input.tagName === 'TEXTAREA') {
+            const questionId = input.name.replace('question_', '');
+            if (input.value.trim()) {
+                answers[questionId] = input.value;
+                answered++;
+            }
+        }
+    });
+    
+    quizProgress.answered = answered;
+    quizProgress.answers = answers;
+    
+    updateProgressDisplay();
+}
+
+function updateProgressDisplay() {
+    const progressBar = document.getElementById('quizProgressBar');
+    const progressText = document.getElementById('quizProgressText');
+    
+    if (progressBar && progressText) {
+        const percentage = Math.round((quizProgress.answered / quizProgress.total) * 100);
+        progressBar.style.width = percentage + '%';
+        progressText.textContent = `Progress: ${percentage}% (${quizProgress.answered} of ${quizProgress.total} questions answered)`;
+        
+        // Change color based on progress
+        if (percentage === 100) {
+            progressBar.className = 'progress-bar bg-success';
+        } else if (percentage >= 50) {
+            progressBar.className = 'progress-bar bg-warning';
+        } else {
+            progressBar.className = 'progress-bar bg-info';
+        }
+    }
+}
+
+function saveQuizProgress() {
+    const saveBtn = document.getElementById('saveProgressBtn');
+    const loadBtn = document.getElementById('loadProgressBtn');
+    
+    if (saveBtn) {
+        saveBtn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Saving...';
+        saveBtn.disabled = true;
+    }
+    
+    // Send progress to server
+    fetch('{{ url_for("student.save_quiz_progress", assignment_id=assignment.id) }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({
+            answers: quizProgress.answers,
+            progress_percentage: Math.round((quizProgress.answered / quizProgress.total) * 100),
+            questions_answered: quizProgress.answered
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (saveBtn) {
+                saveBtn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Saved!';
+                setTimeout(() => {
+                    saveBtn.innerHTML = '<i class="bi bi-save me-1"></i>Save Progress';
+                    saveBtn.disabled = false;
+                }, 2000);
+            }
+            if (loadBtn) {
+                loadBtn.style.display = 'inline-block';
+            }
+        } else {
+            alert('Failed to save progress: ' + (data.message || 'Unknown error'));
+            if (saveBtn) {
+                saveBtn.innerHTML = '<i class="bi bi-save me-1"></i>Save Progress';
+                saveBtn.disabled = false;
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error saving progress:', error);
+        alert('Failed to save progress. Please try again.');
+        if (saveBtn) {
+            saveBtn.innerHTML = '<i class="bi bi-save me-1"></i>Save Progress';
+            saveBtn.disabled = false;
+        }
+    });
+}
+
+function loadQuizProgress() {
+    const loadBtn = document.getElementById('loadProgressBtn');
+    
+    if (loadBtn) {
+        loadBtn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Loading...';
+        loadBtn.disabled = true;
+    }
+    
+    // Load progress from server
+    fetch('{{ url_for("student.load_quiz_progress", assignment_id=assignment.id) }}')
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.progress) {
+            // Restore answers
+            Object.keys(data.progress.answers).forEach(questionId => {
+                const input = document.querySelector(`input[name="question_${questionId}"]:checked, input[name="question_${questionId}"], textarea[name="question_${questionId}"]`);
+                if (input) {
+                    if (input.type === 'radio') {
+                        const optionInput = document.querySelector(`input[name="question_${questionId}"][value="${data.progress.answers[questionId]}"]`);
+                        if (optionInput) {
+                            optionInput.checked = true;
+                        }
+                    } else {
+                        input.value = data.progress.answers[questionId];
+                    }
+                }
+            });
+            
+            // Update progress display
+            quizProgress.answers = data.progress.answers;
+            updateProgress();
+            
+            alert('Progress loaded successfully!');
+        } else {
+            alert('No saved progress found.');
+        }
+        
+        if (loadBtn) {
+            loadBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Load Saved';
+            loadBtn.disabled = false;
+        }
+    })
+    .catch(error => {
+        console.error('Error loading progress:', error);
+        alert('Failed to load progress. Please try again.');
+        if (loadBtn) {
+            loadBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Load Saved';
+            loadBtn.disabled = false;
+        }
+    });
+}
+
 function submitQuiz() {
     if (confirm('Are you sure you want to submit this quiz? You cannot change your answers after submission.')) {
         // This would submit the quiz answers

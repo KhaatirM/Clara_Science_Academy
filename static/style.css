@@ -571,6 +571,7 @@ body {
 .sidebar .nav {
     flex: 1 1 auto;
     overflow-y: auto;
+    overflow-x: hidden; /* Prevent horizontal scrolling */
     margin-bottom: 0;
     /* Custom scrollbar styling */
     scrollbar-width: thin;
@@ -717,47 +718,103 @@ body {
 }
 
 @media (max-width: 768px) {
+    /* Mobile sidebar should be collapsible and not force horizontal scroll */
     .sidebar {
-        width: 60px;
+        position: fixed;
+        left: -250px; /* Hide sidebar by default on mobile */
+        width: 250px;
+        height: 100vh;
+        z-index: 1050;
+        transition: left 0.3s ease;
+        overflow-y: auto !important; /* Force vertical scrolling */
+        overflow-x: hidden !important; /* Force no horizontal scrolling */
+        max-width: 250px; /* Ensure sidebar doesn't exceed its width */
     }
+    
+    .sidebar.show {
+        left: 0; /* Show sidebar when toggled */
+    }
+    
     .main-content {
-        margin-left: 60px;
-        width: calc(100% - 60px);
+        margin-left: 0 !important;
+        width: 100% !important;
         padding: 15px;
+        overflow-x: hidden; /* Prevent horizontal scroll on main content */
     }
-    .sidebar .sidebar-heading,
-    .sidebar .nav-link span,
-    .sidebar .logout-btn-container span {
-        display: none;
-    }
-    .sidebar .nav-link {
+    
+    /* Show sidebar toggle button on mobile */
+    .sidebar-toggle {
+        display: flex !important;
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        z-index: 1060;
+        background: #343a40;
+        border: none;
+        border-radius: 5px;
+        width: 40px;
+        height: 40px;
         justify-content: center;
-        padding: 12px 5px;
-        min-height: 50px;
-        display: flex;
         align-items: center;
     }
+    
+    .sidebar .nav {
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        max-height: calc(100vh - 120px); /* Leave space for header and logout */
+    }
+    
+    .sidebar .nav-link {
+        padding: 12px 20px;
+        display: flex;
+        align-items: center;
+        white-space: nowrap; /* Prevent text wrapping */
+        min-width: 0; /* Allow flex items to shrink */
+    }
+    
+    .sidebar .nav-link span {
+        display: inline; /* Show text on mobile when sidebar is open */
+        overflow: hidden; /* Hide overflow text */
+        text-overflow: ellipsis; /* Show ellipsis for long text */
+    }
+    
     .sidebar .nav-link .bi {
-        margin-right: 0;
-        font-size: 1.2rem;
+        margin-right: 12px;
+        font-size: 1.1rem;
+        flex-shrink: 0; /* Don't shrink icons */
     }
-    /* Hide hamburger menu on mobile */
-    .sidebar-toggle {
-        display: none !important;
+    
+    /* Overlay when sidebar is open */
+    .sidebar-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1040;
+        display: none;
     }
-    /* Ensure logout button fits properly */
-    .logout-btn-container {
-        padding: 10px 5px;
+    
+    .sidebar-overlay.show {
+        display: block;
     }
-    .logout-btn-container .btn {
-        padding: 8px 5px;
-        font-size: 0.9rem;
+    
+    /* Ensure body doesn't scroll horizontally */
+    body {
+        overflow-x: hidden !important;
     }
 }
 
 /* --- Other General Styles --- */
 .card, .table, .alert {
     word-break: break-word; /* Prevents long strings from breaking layout */
+}
+
+/* Prevent horizontal scrolling globally */
+html, body {
+    overflow-x: hidden;
+    max-width: 100%;
 }
 
 .table-responsive {

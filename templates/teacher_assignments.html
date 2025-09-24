@@ -96,6 +96,21 @@
                             <td data-label="Due Date">{{ assignment.due_date.strftime('%m/%d/%Y %I:%M %p') }}</td>
                             <td data-label="Assignment Title">
                                 <strong>{{ assignment.title }}</strong>
+                                <div class="d-flex flex-wrap gap-1 mt-1">
+                                    {% if assignment.assignment_type == 'quiz' %}
+                                        <span class="badge bg-warning text-dark" style="font-size: 0.7rem;">
+                                            <i class="bi bi-question-circle me-1"></i>Quiz
+                                        </span>
+                                    {% elif assignment.assignment_type == 'discussion' %}
+                                        <span class="badge bg-info" style="font-size: 0.7rem;">
+                                            <i class="bi bi-chat-dots me-1"></i>Discussion
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-primary" style="font-size: 0.7rem;">
+                                            <i class="bi bi-file-earmark-pdf me-1"></i>PDF/Paper
+                                        </span>
+                                    {% endif %}
+                                </div>
                                 {% if assignment.description %}
                                     <br><small class="text-muted">{{ assignment.description[:100] }}{% if assignment.description|length > 100 %}...{% endif %}</small>
                                 {% endif %}

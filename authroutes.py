@@ -27,7 +27,6 @@ def login():
         if request.method == 'POST':
             username = request.form.get('username')
             password = request.form.get('password')
-            user_id = request.form.get('user_id')
             
             # Check if username and password are provided
             if not username or not password:
@@ -38,20 +37,14 @@ def login():
             
             user = User.query.filter_by(username=username).first()
             if user and password and check_password_hash(user.password_hash, password):
-                # Tech users don't need ID validation during maintenance
-                if user.role in ['Tech', 'IT Support']:
-                    id_valid = True
-                else:
-                    # Other users would need ID validation, but they can't login during maintenance anyway
-                    id_valid = False
-                
-                if id_valid and maintenance.allow_tech_access:
+                # Tech users can access during maintenance
+                if user.role in ['Tech', 'IT Support'] and maintenance.allow_tech_access:
                     login_user(user)
                     # Log successful tech login during maintenance
                     log_activity(
                         user_id=user.id,
                         action='login_maintenance',
-                        details={'role': user.role, 'maintenance_mode': True, 'id_verified': True},
+                        details={'role': user.role, 'maintenance_mode': True},
                         ip_address=request.remote_addr,
                         user_agent=request.headers.get('User-Agent')
                     )
@@ -62,13 +55,13 @@ def login():
                     log_activity(
                         user_id=user.id if user else None,
                         action='login_failed_maintenance',
-                        details={'username': username, 'role': user.role if user else 'unknown', 'reason': 'invalid_id_or_access'},
+                        details={'username': username, 'role': user.role if user else 'unknown', 'reason': 'access_denied'},
                         ip_address=request.remote_addr,
                         user_agent=request.headers.get('User-Agent'),
                         success=False,
-                        error_message='Invalid ID or access denied during maintenance'
+                        error_message='Access denied during maintenance'
                     )
-                    flash('Invalid ID number or access denied during maintenance.', 'warning')
+                    flash('Access denied during maintenance. Only technical staff can login.', 'warning')
                     return redirect(url_for('auth.login'))
             else:
                 # Log failed login attempt during maintenance
@@ -97,10 +90,9 @@ def login():
         try:
             username = request.form.get('username')
             password = request.form.get('password')
-            user_id = request.form.get('user_id')
             
             # Debug: Print form data
-            print(f"DEBUG: Received form data - username: '{username}', password: '{password}', user_id: '{user_id}'")
+            print(f"DEBUG: Received form data - username: '{username}', password: '{password}'")
             print(f"DEBUG: Form data dict: {dict(request.form)}")
             
             # Check if username and password are provided
@@ -110,71 +102,37 @@ def login():
                 return render_template('login.html')
             
             user = User.query.filter_by(username=username).first()
+            print(f"DEBUG: User found: {user}")
+            if user:
+                print(f"DEBUG: User details - ID: {user.id}, Role: {user.role}, Password hash exists: {bool(user.password_hash)}")
             
             if user and check_password_hash(user.password_hash, password):
-                # Skip ID validation for Tech users (both 'Tech' and 'IT Support' roles)
-                if user.role in ['Tech', 'IT Support']:
-                    id_valid = True
-                else:
-                    # Validate ID number for all other roles
-                    id_valid = False
-                    
-                    if user.role == 'Student' and user.student_profile:
-                        # Check student ID
-                        if user.student_profile.student_id == user_id:
-                            id_valid = True
-                    elif user.teacher_staff_id:
-                        # Check staff ID
-                        teacher_staff = TeacherStaff.query.get(user.teacher_staff_id)
-                        if teacher_staff and teacher_staff.staff_id == user_id:
-                            id_valid = True
-                    
-                    # For non-Tech users, ID is required
-                    if not user_id:
-                        id_valid = False
+                # Convert remember to boolean
+                remember = bool(request.form.get('remember'))
+                login_user(user, remember=remember)
                 
-                if id_valid:
-                    # Convert remember to boolean
-                    remember = bool(request.form.get('remember'))
-                    login_user(user, remember=remember)
-                    
-                    # Increment login count
-                    user.login_count += 1
-                    db.session.commit()
-                    
-                    # Log successful login
-                    log_activity(
-                        user_id=user.id,
-                        action='login',
-                        details={'role': user.role, 'remember': remember, 'id_verified': True, 'login_count': user.login_count},
-                        ip_address=request.remote_addr,
-                        user_agent=request.headers.get('User-Agent')
-                    )
-                    
-                    # Check if user has temporary password or is first-time login
-                    if user.is_temporary_password or user.login_count == 1:
-                        flash('You are using a temporary password or this is your first login. Please change your password for security.', 'warning')
-                        return redirect(url_for('auth.dashboard'))
-                    else:
-                        flash('Logged in successfully.', 'success')
-                        return redirect(url_for('auth.dashboard'))
+                # Increment login count
+                user.login_count += 1
+                db.session.commit()
+                
+                # Log successful login
+                log_activity(
+                    user_id=user.id,
+                    action='login',
+                    details={'role': user.role, 'remember': remember, 'login_count': user.login_count},
+                    ip_address=request.remote_addr,
+                    user_agent=request.headers.get('User-Agent')
+                )
+                
+                # Check if user has temporary password or is first-time login
+                if user.is_temporary_password or user.login_count == 1:
+                    flash('You are using a temporary password or this is your first login. Please change your password for security.', 'warning')
+                    return redirect(url_for('auth.dashboard'))
                 else:
-                    # Log failed login attempt - invalid ID (only for non-Tech users)
-                    if user.role not in ['Tech', 'IT Support']:
-                        log_activity(
-                            user_id=user.id if user else None,
-                            action='login_failed',
-                            details={'username': username, 'reason': 'invalid_id'},
-                            ip_address=request.remote_addr,
-                            user_agent=request.headers.get('User-Agent'),
-                            success=False,
-                            error_message='Invalid ID number'
-                        )
-                        flash('Invalid ID number for this user.', 'danger')
-                    else:
-                        # This shouldn't happen for Tech users, but just in case
-                        flash('Login failed. Please try again.', 'danger')
+                    flash('Logged in successfully.', 'success')
+                    return redirect(url_for('auth.dashboard'))
             else:
+                print(f"DEBUG: Login failed - User: {user}, Password check: {user and check_password_hash(user.password_hash, password) if user else 'No user found'}")
                 # Log failed login attempt - invalid credentials
                 log_activity(
                     user_id=None,

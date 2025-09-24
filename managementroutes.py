@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, Response, abort, jsonify
 from flask_login import login_required, current_user
-from models import db, Student, TeacherStaff, Class, SchoolYear, User, ReportCard, Assignment, Announcement, Message, MessageGroup, ScheduledAnnouncement, Notification, MessageGroupMember, Grade, Enrollment, Attendance, AcademicPeriod, CalendarEvent, TeacherWorkDay, SchoolBreak, Submission, AssignmentExtension, QuizQuestion, QuizOption, QuizAnswer, DiscussionThread, DiscussionPost
+from models import db, Student, TeacherStaff, Class, SchoolYear, User, ReportCard, Assignment, Announcement, Message, MessageGroup, ScheduledAnnouncement, Notification, MessageGroupMember, Grade, Enrollment, Attendance, SchoolDayAttendance, AcademicPeriod, CalendarEvent, TeacherWorkDay, SchoolBreak, Submission, AssignmentExtension, QuizQuestion, QuizOption, QuizAnswer, DiscussionThread, DiscussionPost
 from decorators import management_required
 from app import calculate_and_get_grade_for_student, get_grade_for_student, create_notification
 import os
@@ -966,6 +966,11 @@ def create_quiz_assignment():
                 flash("Cannot create assignment: No active school year.", "danger")
                 return redirect(url_for('management.create_quiz_assignment'))
             
+            # Get save and continue settings
+            allow_save_and_continue = request.form.get('allow_save_and_continue') == 'on'
+            max_save_attempts = int(request.form.get('max_save_attempts', 10))
+            save_timeout_minutes = int(request.form.get('save_timeout_minutes', 30))
+            
             # Create the assignment
             new_assignment = Assignment(
                 title=title,
@@ -975,7 +980,10 @@ def create_quiz_assignment():
                 class_id=class_id,
                 school_year_id=current_school_year.id,
                 status='Active',
-                assignment_type='quiz'
+                assignment_type='quiz',
+                allow_save_and_continue=allow_save_and_continue,
+                max_save_attempts=max_save_attempts,
+                save_timeout_minutes=save_timeout_minutes
             )
             
             db.session.add(new_assignment)
@@ -1095,7 +1103,7 @@ def create_discussion_assignment():
 @login_required
 @management_required
 def assignments():
-    """Management assignment view - organized by class for better visibility"""
+    """Management assignment view - similar to teacher assignments with filtering and sorting"""
     from datetime import datetime
     
     # Get all classes
@@ -1113,7 +1121,10 @@ def assignments():
     elif user_role == 'School Administrator':
         # School Administrators can see classes they teach + all assignments for viewing
         # First, find the TeacherStaff record for this user
-        teacher_staff = TeacherStaff.query.get(current_user.teacher_staff_id)
+        teacher_staff = None
+        if current_user.teacher_staff_id:
+            teacher_staff = TeacherStaff.query.get(current_user.teacher_staff_id)
+        
         if teacher_staff:
             teacher_classes = Class.query.filter_by(teacher_id=teacher_staff.id).all()
             # If no classes assigned, assign them to the first available class for testing
@@ -1133,35 +1144,44 @@ def assignments():
         accessible_classes = []
         assignments_query = Assignment.query.none()
     
-    # Get all assignments
-    all_assignments = assignments_query.all()
+    # Get filter parameters
+    selected_class_id = request.args.get('class_id', '')
+    selected_status = request.args.get('status', '')
+    sort_by = request.args.get('sort', 'due_date')
+    sort_order = request.args.get('order', 'desc')
     
-    # Organize assignments by class
-    assignments_by_class = {}
-    for class_obj in all_classes:
-        class_assignments = [a for a in all_assignments if a.class_id == class_obj.id]
-        if class_assignments:  # Only include classes that have assignments
-            assignments_by_class[class_obj] = class_assignments
+    # Ensure selected_class_id is a string for template comparison
+    selected_class_id = str(selected_class_id) if selected_class_id else ''
     
-    # Apply filters if specified
-    status_filter = request.args.get('status', '')
-    quarter_filter = request.args.get('quarter', '')
+    # Build assignments query
+    assignments_query = assignments_query.join(Class, Assignment.class_id == Class.id)
     
-    if status_filter or quarter_filter:
-        filtered_assignments_by_class = {}
-        for class_obj, assignments in assignments_by_class.items():
-            filtered_assignments = assignments
-            
-            if status_filter:
-                filtered_assignments = [a for a in filtered_assignments if a.status == status_filter]
-            
-            if quarter_filter:
-                filtered_assignments = [a for a in filtered_assignments if str(a.quarter) == quarter_filter]
-            
-            if filtered_assignments:  # Only include classes with assignments after filtering
-                filtered_assignments_by_class[class_obj] = filtered_assignments
-        
-        assignments_by_class = filtered_assignments_by_class
+    # Apply filters
+    if selected_class_id:
+        assignments_query = assignments_query.filter(Assignment.class_id == selected_class_id)
+    
+    if selected_status:
+        assignments_query = assignments_query.filter(Assignment.status == selected_status)
+    
+    # Apply sorting
+    if sort_by == 'due_date':
+        if sort_order == 'asc':
+            assignments_query = assignments_query.order_by(Assignment.due_date.asc())
+        else:
+            assignments_query = assignments_query.order_by(Assignment.due_date.desc())
+    elif sort_by == 'title':
+        if sort_order == 'asc':
+            assignments_query = assignments_query.order_by(Assignment.title.asc())
+        else:
+            assignments_query = assignments_query.order_by(Assignment.title.desc())
+    elif sort_by == 'class':
+        if sort_order == 'asc':
+            assignments_query = assignments_query.order_by(Class.name.asc())
+        else:
+            assignments_query = assignments_query.order_by(Class.name.desc())
+    
+    # Get assignments
+    assignments = assignments_query.all()
     
     # Get current date for status updates
     today = datetime.now().date()
@@ -1172,20 +1192,396 @@ def assignments():
     # Get teacher_staff_id for template use
     teacher_staff_id = None
     if user_role == 'School Administrator':
-        teacher_staff = TeacherStaff.query.get(current_user.teacher_staff_id)
-        if teacher_staff:
-            teacher_staff_id = teacher_staff.id
+        if current_user.teacher_staff_id:
+            teacher_staff = TeacherStaff.query.get(current_user.teacher_staff_id)
+            if teacher_staff:
+                teacher_staff_id = teacher_staff.id
     
     return render_template('management_assignments.html',
-                         assignments_by_class=assignments_by_class,
-                         all_classes=all_classes,
+                         assignments=assignments,
+                         classes=all_classes,
                          accessible_classes=accessible_classes,
                          user_role=user_role,
                          teacher_staff_id=teacher_staff_id,
                          today=today,
-                         selected_status=status_filter,
-                         selected_quarter=quarter_filter,
+                         selected_class_id=selected_class_id,
+                         selected_status=selected_status,
+                         sort_by=sort_by,
+                         sort_order=sort_order,
                          active_tab='assignments')
+
+@management_blueprint.route('/unified-attendance', methods=['GET', 'POST'])
+@login_required
+@management_required
+def unified_attendance():
+    """Unified attendance management combining school day, class period, and reports"""
+    from datetime import datetime, date
+    
+    # Handle School Day Attendance POST requests
+    if request.method == 'POST' and 'attendance_date' in request.form:
+        attendance_date_str = request.form.get('attendance_date')
+        if not attendance_date_str:
+            flash('Please select a date.', 'danger')
+            return redirect(url_for('management.unified_attendance'))
+        
+        attendance_date = datetime.strptime(attendance_date_str, '%Y-%m-%d').date()
+        
+        # Get all students
+        students = Student.query.all()
+        
+        # Process attendance records
+        updated_count = 0
+        created_count = 0
+        
+        for student in students:
+            student_id = student.id
+            status = request.form.get(f'status-{student_id}')
+            notes = request.form.get(f'notes-{student_id}', '').strip()
+            
+            if status:
+                # Check if record already exists
+                existing_record = SchoolDayAttendance.query.filter_by(
+                    student_id=student_id,
+                    date=attendance_date
+                ).first()
+                
+                if existing_record:
+                    # Update existing record
+                    existing_record.status = status
+                    existing_record.notes = notes
+                    existing_record.recorded_by = current_user.id
+                    existing_record.updated_at = datetime.utcnow()
+                    updated_count += 1
+                else:
+                    # Create new record
+                    new_record = SchoolDayAttendance(
+                        student_id=student_id,
+                        date=attendance_date,
+                        status=status,
+                        notes=notes,
+                        recorded_by=current_user.id
+                    )
+                    db.session.add(new_record)
+                    created_count += 1
+        
+        try:
+            db.session.commit()
+            if created_count > 0 and updated_count > 0:
+                flash(f'Successfully recorded attendance for {created_count} students and updated {updated_count} existing records.', 'success')
+            elif created_count > 0:
+                flash(f'Successfully recorded attendance for {created_count} students.', 'success')
+            elif updated_count > 0:
+                flash(f'Successfully updated attendance for {updated_count} students.', 'success')
+            else:
+                flash('No attendance changes were made.', 'info')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error saving attendance: {str(e)}', 'danger')
+        
+        return redirect(url_for('management.unified_attendance', date=attendance_date_str))
+    
+    # GET request - show unified attendance form
+    
+    # School Day Attendance Data
+    selected_date_str = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
+    try:
+        selected_date = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
+    except ValueError:
+        selected_date = datetime.now().date()
+        selected_date_str = selected_date.strftime('%Y-%m-%d')
+    
+    # Get all students
+    students = Student.query.order_by(Student.last_name, Student.first_name).all()
+    
+    # Get existing attendance records for the selected date
+    existing_records = {}
+    if selected_date:
+        records = SchoolDayAttendance.query.filter_by(date=selected_date).all()
+        existing_records = {record.student_id: record for record in records}
+    
+    # Calculate school day statistics
+    total_students = len(students)
+    present_count = sum(1 for record in existing_records.values() if record.status == 'Present')
+    absent_count = sum(1 for record in existing_records.values() if record.status == 'Absent')
+    late_count = sum(1 for record in existing_records.values() if record.status == 'Late')
+    excused_count = sum(1 for record in existing_records.values() if record.status == 'Excused Absence')
+    
+    attendance_stats = {
+        'total': total_students,
+        'present': present_count,
+        'absent': absent_count,
+        'late': late_count,
+        'excused': excused_count
+    }
+    
+    # Class Period Attendance Data
+    classes = Class.query.all()
+    today_date = datetime.now().strftime('%Y-%m-%d')
+    
+    # Calculate attendance stats for each class
+    for class_obj in classes:
+        # Get student count
+        class_obj.student_count = db.session.query(Student).join(Enrollment).filter(
+            Enrollment.class_id == class_obj.id,
+            Enrollment.is_active == True
+        ).count()
+        
+        # Check if attendance was taken today
+        today_attendance = Attendance.query.filter_by(
+            class_id=class_obj.id,
+            date=datetime.now().date()
+        ).count()
+        class_obj.attendance_taken_today = today_attendance > 0
+        
+        # Get today's attendance stats
+        if class_obj.attendance_taken_today:
+            present_count = Attendance.query.filter_by(
+                class_id=class_obj.id,
+                date=datetime.now().date(),
+                status='Present'
+            ).count()
+            absent_count = Attendance.query.filter(
+                Attendance.class_id == class_obj.id,
+                Attendance.date == datetime.now().date(),
+                Attendance.status.in_(['Unexcused Absence', 'Excused Absence'])
+            ).count()
+            class_obj.today_present = present_count
+            class_obj.today_absent = absent_count
+        else:
+            class_obj.today_present = 0
+            class_obj.today_absent = 0
+    
+    # Calculate overall stats
+    today_attendance_count = sum(1 for c in classes if c.attendance_taken_today)
+    pending_classes_count = len(classes) - today_attendance_count
+    
+    # Calculate overall attendance rate
+    total_attendance_records = Attendance.query.filter_by(date=datetime.now().date()).count()
+    present_records = Attendance.query.filter_by(date=datetime.now().date(), status='Present').count()
+    overall_attendance_rate = round((present_records / total_attendance_records * 100), 1) if total_attendance_records > 0 else 0
+    
+    # Attendance Reports Data
+    all_students = Student.query.all()
+    all_classes = Class.query.all()
+    all_statuses = ['Present', 'Late', 'Unexcused Absence', 'Excused Absence', 'Suspended']
+
+    # Query and filter attendance records
+    query = Attendance.query
+    # (Filters can be added here in the future)
+    records = query.all()
+
+    # Calculate summary stats from the database
+    summary_stats = {
+        'total_records': len(records),
+        'present': query.filter_by(status='Present').count(),
+        'late': query.filter_by(status='Late').count(),
+        'unexcused_absence': query.filter_by(status='Unexcused Absence').count(),
+        'excused_absence': query.filter_by(status='Excused Absence').count(),
+        'suspended': query.filter_by(status='Suspended').count()
+    }
+    
+    return render_template('unified_attendance.html',
+                         students=students,
+                         selected_date=selected_date,
+                         selected_date_str=selected_date_str,
+                         existing_records=existing_records,
+                         attendance_stats=attendance_stats,
+                         classes=classes,
+                         today_date=today_date,
+                         today_attendance_count=today_attendance_count,
+                         pending_classes_count=pending_classes_count,
+                         overall_attendance_rate=overall_attendance_rate,
+                         all_students=all_students,
+                         all_classes=all_classes,
+                         all_statuses=all_statuses,
+                         summary_stats=summary_stats,
+                         records=records,
+                         active_tab='attendance')
+
+@management_blueprint.route('/mark-all-present/<int:class_id>', methods=['POST'])
+@login_required
+@management_required
+def mark_all_present(class_id):
+    """Mark all students as present for a specific class on a given date"""
+    from datetime import datetime
+    
+    try:
+        # Get the class
+        class_obj = Class.query.get_or_404(class_id)
+        
+        # Get the date from form data or use today
+        date_str = request.form.get('date', datetime.now().strftime('%Y-%m-%d'))
+        try:
+            attendance_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            attendance_date = datetime.now().date()
+        
+        # Get all enrolled students for this class
+        enrolled_students = db.session.query(Student).join(Enrollment).filter(
+            Enrollment.class_id == class_id,
+            Enrollment.is_active == True
+        ).all()
+        
+        if not enrolled_students:
+            flash(f'No students enrolled in {class_obj.name}.', 'warning')
+            return redirect(url_for('management.unified_attendance'))
+        
+        # Process each student
+        updated_count = 0
+        created_count = 0
+        
+        for student in enrolled_students:
+            # Check if attendance record already exists
+            existing_record = Attendance.query.filter_by(
+                student_id=student.id,
+                class_id=class_id,
+                date=attendance_date
+            ).first()
+            
+            if existing_record:
+                # Update existing record to Present
+                existing_record.status = 'Present'
+                existing_record.notes = 'Marked all present'
+                updated_count += 1
+            else:
+                # Create new record
+                new_record = Attendance(
+                    student_id=student.id,
+                    class_id=class_id,
+                    date=attendance_date,
+                    status='Present',
+                    notes='Marked all present',
+                    teacher_id=class_obj.teacher_id
+                )
+                db.session.add(new_record)
+                created_count += 1
+        
+        # Commit changes
+        db.session.commit()
+        
+        if created_count > 0 and updated_count > 0:
+            flash(f'Successfully marked {created_count + updated_count} students as present for {class_obj.name}.', 'success')
+        elif created_count > 0:
+            flash(f'Successfully marked {created_count} students as present for {class_obj.name}.', 'success')
+        elif updated_count > 0:
+            flash(f'Successfully updated {updated_count} students to present for {class_obj.name}.', 'success')
+        else:
+            flash(f'No students to mark present for {class_obj.name}.', 'info')
+            
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error marking students as present: {str(e)}', 'danger')
+    
+    # Redirect back to unified attendance
+    return redirect(url_for('management.unified_attendance'))
+
+@management_blueprint.route('/school-day-attendance', methods=['GET', 'POST'])
+@login_required
+@management_required
+def school_day_attendance():
+    """Manage school-day attendance for all students"""
+    from datetime import datetime, date
+    
+    if request.method == 'POST':
+        attendance_date_str = request.form.get('attendance_date')
+        if not attendance_date_str:
+            flash('Please select a date.', 'danger')
+            return redirect(url_for('management.school_day_attendance'))
+        
+        attendance_date = datetime.strptime(attendance_date_str, '%Y-%m-%d').date()
+        
+        # Get all students
+        students = Student.query.all()
+        
+        # Process attendance records
+        updated_count = 0
+        created_count = 0
+        
+        for student in students:
+            student_id = student.id
+            status = request.form.get(f'status_{student_id}')
+            notes = request.form.get(f'notes_{student_id}', '').strip()
+            
+            if status:
+                # Check if record already exists
+                existing_record = SchoolDayAttendance.query.filter_by(
+                    student_id=student_id,
+                    date=attendance_date
+                ).first()
+                
+                if existing_record:
+                    # Update existing record
+                    existing_record.status = status
+                    existing_record.notes = notes
+                    existing_record.recorded_by = current_user.id
+                    existing_record.updated_at = datetime.utcnow()
+                    updated_count += 1
+                else:
+                    # Create new record
+                    new_record = SchoolDayAttendance(
+                        student_id=student_id,
+                        date=attendance_date,
+                        status=status,
+                        notes=notes,
+                        recorded_by=current_user.id
+                    )
+                    db.session.add(new_record)
+                    created_count += 1
+        
+        try:
+            db.session.commit()
+            if created_count > 0 and updated_count > 0:
+                flash(f'Successfully recorded attendance for {created_count} students and updated {updated_count} existing records.', 'success')
+            elif created_count > 0:
+                flash(f'Successfully recorded attendance for {created_count} students.', 'success')
+            elif updated_count > 0:
+                flash(f'Successfully updated attendance for {updated_count} students.', 'success')
+            else:
+                flash('No attendance changes were made.', 'info')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error saving attendance: {str(e)}', 'danger')
+        
+        return redirect(url_for('management.school_day_attendance', date=attendance_date_str))
+    
+    # GET request - show attendance form
+    selected_date_str = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
+    try:
+        selected_date = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
+    except ValueError:
+        selected_date = datetime.now().date()
+        selected_date_str = selected_date.strftime('%Y-%m-%d')
+    
+    # Get all students
+    students = Student.query.order_by(Student.last_name, Student.first_name).all()
+    
+    # Get existing attendance records for the selected date
+    existing_records = {}
+    if selected_date:
+        records = SchoolDayAttendance.query.filter_by(date=selected_date).all()
+        existing_records = {record.student_id: record for record in records}
+    
+    # Calculate statistics
+    total_students = len(students)
+    present_count = sum(1 for record in existing_records.values() if record.status == 'Present')
+    absent_count = sum(1 for record in existing_records.values() if record.status == 'Absent')
+    late_count = sum(1 for record in existing_records.values() if record.status == 'Late')
+    excused_count = sum(1 for record in existing_records.values() if record.status == 'Excused Absence')
+    
+    attendance_stats = {
+        'total': total_students,
+        'present': present_count,
+        'absent': absent_count,
+        'late': late_count,
+        'excused': excused_count
+    }
+    
+    return render_template('school_day_attendance.html',
+                         students=students,
+                         selected_date=selected_date,
+                         selected_date_str=selected_date_str,
+                         existing_records=existing_records,
+                         attendance_stats=attendance_stats)
 
 @management_blueprint.route('/attendance')
 @login_required
@@ -2268,7 +2664,9 @@ def grade_assignment(assignment_id):
     
     # Authorization check for School Administrators
     if current_user.role == 'School Administrator':
-        teacher_staff = TeacherStaff.query.get(current_user.teacher_staff_id)
+        teacher_staff = None
+        if current_user.teacher_staff_id:
+            teacher_staff = TeacherStaff.query.get(current_user.teacher_staff_id)
         if not teacher_staff or not class_obj or class_obj.teacher_id != teacher_staff.id:
             flash("You are not authorized to grade this assignment.", "danger")
             return redirect(url_for('management.assignments'))
@@ -2377,7 +2775,9 @@ def edit_assignment(assignment_id):
     
     # Authorization check - Directors can edit any assignment, School Administrators only their own classes
     if current_user.role == 'School Administrator':
-        teacher_staff = TeacherStaff.query.get(current_user.teacher_staff_id)
+        teacher_staff = None
+        if current_user.teacher_staff_id:
+            teacher_staff = TeacherStaff.query.get(current_user.teacher_staff_id)
         if not teacher_staff or not assignment.class_info or assignment.class_info.teacher_id != teacher_staff.id:
             flash("You are not authorized to edit this assignment.", "danger")
             return redirect(url_for('management.assignments'))
@@ -2451,6 +2851,13 @@ def edit_assignment(assignment_id):
                          school_years=school_years)
 
 
+@management_blueprint.route('/assignment/remove/<int:assignment_id>', methods=['POST'])
+@login_required
+@management_required
+def remove_assignment_alt(assignment_id):
+    """Remove an assignment - alternative route"""
+    return remove_assignment(assignment_id)
+
 @management_blueprint.route('/remove-assignment/<int:assignment_id>', methods=['POST'])
 @login_required
 @management_required
@@ -2460,7 +2867,9 @@ def remove_assignment(assignment_id):
     
     # Authorization check - Directors can remove any assignment, School Administrators only their own classes
     if current_user.role == 'School Administrator':
-        teacher_staff = TeacherStaff.query.get(current_user.teacher_staff_id)
+        teacher_staff = None
+        if current_user.teacher_staff_id:
+            teacher_staff = TeacherStaff.query.get(current_user.teacher_staff_id)
         if not teacher_staff or not assignment.class_info or assignment.class_info.teacher_id != teacher_staff.id:
             flash("You are not authorized to remove this assignment.", "danger")
             return redirect(url_for('management.assignments'))
@@ -2497,7 +2906,9 @@ def change_assignment_status(assignment_id):
     # Authorization check - Directors can change any assignment status, School Administrators only their own classes
     if current_user.role == 'School Administrator':
         # Find the TeacherStaff record for this user
-        teacher_staff = TeacherStaff.query.get(current_user.teacher_staff_id)
+        teacher_staff = None
+        if current_user.teacher_staff_id:
+            teacher_staff = TeacherStaff.query.get(current_user.teacher_staff_id)
         if not teacher_staff or not assignment.class_info or assignment.class_info.teacher_id != teacher_staff.id:
             return jsonify({'success': False, 'message': 'You are not authorized to change this assignment status.'})
     elif current_user.role != 'Director':
@@ -2568,7 +2979,9 @@ def grant_extensions():
         # Authorization check - Directors can grant extensions for any assignment, School Administrators only their own classes
         if current_user.role == 'School Administrator':
             # Find the TeacherStaff record for this user
-            teacher_staff = TeacherStaff.query.get(current_user.teacher_staff_id)
+            teacher_staff = None
+            if current_user.teacher_staff_id:
+                teacher_staff = TeacherStaff.query.get(current_user.teacher_staff_id)
             if not teacher_staff or not assignment.class_info or assignment.class_info.teacher_id != teacher_staff.id:
                 return jsonify({'success': False, 'message': 'You are not authorized to grant extensions for this assignment.'})
         elif current_user.role != 'Director':

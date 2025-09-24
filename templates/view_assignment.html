@@ -36,6 +36,28 @@
                     <div class="row g-3">
                         <div class="col-12">
                             <h4 class="text-primary">{{ assignment.title }}</h4>
+                            <div class="d-flex flex-wrap gap-2 mb-2">
+                                {% if assignment.assignment_type == 'quiz' %}
+                                    <span class="badge bg-warning text-dark">
+                                        <i class="bi bi-question-circle me-1"></i>Quiz Assignment
+                                    </span>
+                                {% elif assignment.assignment_type == 'discussion' %}
+                                    <span class="badge bg-info">
+                                        <i class="bi bi-chat-dots me-1"></i>Discussion Assignment
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-primary">
+                                        <i class="bi bi-file-earmark-pdf me-1"></i>PDF/Paper Assignment
+                                    </span>
+                                {% endif %}
+                                {% if assignment.status == 'Active' %}
+                                    <span class="badge bg-success">Active</span>
+                                {% elif assignment.status == 'Inactive' %}
+                                    <span class="badge bg-warning text-dark">Inactive</span>
+                                {% elif assignment.status == 'Voided' %}
+                                    <span class="badge bg-danger">Voided</span>
+                                {% endif %}
+                            </div>
                             {% if assignment.description %}
                                 <p class="text-muted mb-3">{{ assignment.description }}</p>
                             {% endif %}
@@ -71,19 +93,57 @@
                             <p class="mb-0">Q{{ assignment.quarter }}</p>
                         </div>
                         
-                        {% if assignment.attachment_filename %}
                         <div class="col-12">
                             <div class="d-flex align-items-center mb-2">
-                                <i class="bi bi-paperclip me-2 text-primary"></i>
-                                <strong>Attachment:</strong>
+                                {% if assignment.assignment_type == 'quiz' %}
+                                    <i class="bi bi-question-circle me-2 text-warning"></i>
+                                    <strong>Quiz Information:</strong>
+                                {% elif assignment.assignment_type == 'discussion' %}
+                                    <i class="bi bi-chat-dots me-2 text-info"></i>
+                                    <strong>Discussion Information:</strong>
+                                {% else %}
+                                    <i class="bi bi-paperclip me-2 text-primary"></i>
+                                    <strong>Attachment:</strong>
+                                {% endif %}
                             </div>
-                            <a href="{{ url_for('download_assignment_file', assignment_id=assignment.id) }}" 
-                               class="btn btn-outline-primary btn-sm">
-                                <i class="bi bi-download me-1"></i>
-                                {{ assignment.attachment_original_filename or assignment.attachment_filename }}
-                            </a>
+                            {% if assignment.assignment_type == 'quiz' %}
+                                <div class="alert alert-warning">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    This is a quiz assignment. Students will be able to take the quiz online when they access this assignment.
+                                </div>
+                                {% if assignment.attachment_filename %}
+                                    <a href="{{ url_for('download_assignment_file', assignment_id=assignment.id) }}" 
+                                       class="btn btn-outline-warning btn-sm">
+                                        <i class="bi bi-download me-1"></i>
+                                        Download Quiz Materials
+                                    </a>
+                                {% endif %}
+                            {% elif assignment.assignment_type == 'discussion' %}
+                                <div class="alert alert-info">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    This is a discussion assignment. Students can participate in online discussions and share their thoughts on the topic.
+                                </div>
+                                {% if assignment.attachment_filename %}
+                                    <a href="{{ url_for('download_assignment_file', assignment_id=assignment.id) }}" 
+                                       class="btn btn-outline-info btn-sm">
+                                        <i class="bi bi-download me-1"></i>
+                                        Download Discussion Materials
+                                    </a>
+                                {% endif %}
+                            {% else %}
+                                {% if assignment.attachment_filename %}
+                                    <a href="{{ url_for('download_assignment_file', assignment_id=assignment.id) }}" 
+                                       class="btn btn-outline-primary btn-sm">
+                                        <i class="bi bi-download me-1"></i>
+                                        {{ assignment.attachment_original_filename or assignment.attachment_filename }}
+                                    </a>
+                                {% else %}
+                                    <div class="text-muted">
+                                        <i class="bi bi-info-circle me-2"></i>No attachment provided
+                                    </div>
+                                {% endif %}
+                            {% endif %}
                         </div>
-                        {% endif %}
                     </div>
                 </div>
             </div>

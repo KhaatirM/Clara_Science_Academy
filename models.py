@@ -415,6 +415,11 @@ class Assignment(db.Model):
     # Assignment type: pdf, quiz, discussion
     assignment_type = db.Column(db.String(20), default='pdf', nullable=False)
     
+    # Quiz save and continue settings
+    allow_save_and_continue = db.Column(db.Boolean, default=False, nullable=False)
+    max_save_attempts = db.Column(db.Integer, default=10, nullable=False)
+    save_timeout_minutes = db.Column(db.Integer, default=30, nullable=False)
+    
     # File attachment fields
     attachment_filename = db.Column(db.String(255), nullable=True)
     attachment_original_filename = db.Column(db.String(255), nullable=True)
@@ -501,6 +506,32 @@ class QuizAnswer(db.Model):
     
     def __repr__(self):
         return f"QuizAnswer(Student: {self.student_id}, Question: {self.question_id}, Correct: {self.is_correct})"
+
+
+class QuizProgress(db.Model):
+    """
+    Model for tracking student progress on quiz assignments with save and continue functionality.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
+    assignment_id = db.Column(db.Integer, db.ForeignKey('assignment.id'), nullable=False)
+    current_question_id = db.Column(db.Integer, db.ForeignKey('quiz_question.id'), nullable=True)
+    answers_data = db.Column(db.Text, nullable=True)  # JSON string of saved answers
+    progress_percentage = db.Column(db.Integer, default=0, nullable=False)
+    questions_answered = db.Column(db.Integer, default=0, nullable=False)
+    total_questions = db.Column(db.Integer, default=0, nullable=False)
+    last_saved_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_submitted = db.Column(db.Boolean, default=False, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    student = db.relationship('Student', backref='quiz_progress')
+    assignment = db.relationship('Assignment', backref='quiz_progress')
+    current_question = db.relationship('QuizQuestion', backref='progress_tracking')
+    
+    def __repr__(self):
+        return f"QuizProgress(Student: {self.student_id}, Assignment: {self.assignment_id}, Progress: {self.progress_percentage}%)"
 
 
 class DiscussionThread(db.Model):
@@ -868,6 +899,30 @@ class Attendance(db.Model):
 
     def __repr__(self):
         return f"Attendance(Student: {self.student_id}, Class: {self.class_id}, Date: {self.date}, Status: {self.status})"
+
+
+class SchoolDayAttendance(db.Model):
+    """
+    Model for tracking school-day attendance (whether student came to school that day)
+    This is separate from class-period attendance
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
+    date = db.Column(db.Date, nullable=False)
+    status = db.Column(db.String(32), nullable=False)  # Present, Absent, Late, Excused Absence
+    notes = db.Column(db.Text, nullable=True)
+    recorded_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    student = db.relationship('Student', backref='school_day_attendance')
+    recorder = db.relationship('User', backref='recorded_attendance')
+
+    # Ensure one record per student per day
+    __table_args__ = (db.UniqueConstraint('student_id', 'date', name='unique_student_date'),)
+
+    def __repr__(self):
+        return f"SchoolDayAttendance(Student: {self.student_id}, Date: {self.date}, Status: {self.status})"
 
 
 class SystemConfig(db.Model):

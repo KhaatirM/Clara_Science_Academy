@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, abort, jsonify
 from flask_login import login_required, current_user
-from models import db, TeacherStaff, Class, Student, Assignment, Grade, SchoolYear, Submission, Announcement, Notification, Message, MessageGroup, MessageGroupMember, MessageAttachment, ScheduledAnnouncement, Enrollment, Attendance, StudentGroup, StudentGroupMember, GroupAssignment, GroupSubmission, GroupGrade, AcademicPeriod, GroupTemplate, PeerEvaluation, AssignmentRubric, GroupContract, ReflectionJournal, GroupProgress, AssignmentTemplate, GroupRotation, GroupRotationHistory, PeerReview, DraftSubmission, DraftFeedback, DeadlineReminder, ReminderNotification, Feedback360, Feedback360Response, Feedback360Criteria, GroupConflict, ConflictResolution, ConflictParticipant, GroupWorkReport, IndividualContribution, TimeTracking, CollaborationMetrics, ReportExport, AnalyticsDashboard, PerformanceBenchmark, AssignmentExtension, QuizQuestion, QuizOption, QuizAnswer, DiscussionThread, DiscussionPost
+from models import db, TeacherStaff, Class, Student, Assignment, Grade, SchoolYear, Submission, Announcement, Notification, Message, MessageGroup, MessageGroupMember, MessageAttachment, ScheduledAnnouncement, Enrollment, Attendance, SchoolDayAttendance, StudentGroup, StudentGroupMember, GroupAssignment, GroupSubmission, GroupGrade, AcademicPeriod, GroupTemplate, PeerEvaluation, AssignmentRubric, GroupContract, ReflectionJournal, GroupProgress, AssignmentTemplate, GroupRotation, GroupRotationHistory, PeerReview, DraftSubmission, DraftFeedback, DeadlineReminder, ReminderNotification, Feedback360, Feedback360Response, Feedback360Criteria, GroupConflict, ConflictResolution, ConflictParticipant, GroupWorkReport, IndividualContribution, TimeTracking, CollaborationMetrics, ReportExport, AnalyticsDashboard, PerformanceBenchmark, AssignmentExtension, QuizQuestion, QuizOption, QuizAnswer, DiscussionThread, DiscussionPost
 from decorators import teacher_required
 import json
 from datetime import datetime
@@ -20,7 +20,9 @@ def get_teacher_or_admin():
     if current_user.role in ['Director', 'School Administrator']:
         return None
     else:
-        return TeacherStaff.query.filter_by(id=current_user.teacher_staff_id).first_or_404()
+        if current_user.teacher_staff_id:
+            return TeacherStaff.query.filter_by(id=current_user.teacher_staff_id).first()
+        return None
 
 def is_authorized_for_class(class_obj):
     """Check if current user is authorized to access a specific class."""
@@ -28,7 +30,9 @@ def is_authorized_for_class(class_obj):
         return True  # Directors have access to all classes
     elif current_user.role == 'School Administrator':
         # School Administrators can access classes they are assigned to as teachers
-        teacher_staff = TeacherStaff.query.get(current_user.teacher_staff_id)
+        teacher_staff = None
+        if current_user.teacher_staff_id:
+            teacher_staff = TeacherStaff.query.get(current_user.teacher_staff_id)
         return teacher_staff and class_obj.teacher_id == teacher_staff.id
     else:
         # Regular teachers can only access their own classes
@@ -366,6 +370,11 @@ def create_quiz_assignment():
                 flash("Cannot create assignment: No active school year.", "danger")
                 return redirect(url_for('teacher.create_quiz_assignment'))
             
+            # Get save and continue settings
+            allow_save_and_continue = request.form.get('allow_save_and_continue') == 'on'
+            max_save_attempts = int(request.form.get('max_save_attempts', 10))
+            save_timeout_minutes = int(request.form.get('save_timeout_minutes', 30))
+            
             # Create the assignment
             new_assignment = Assignment(
                 title=title,
@@ -375,7 +384,10 @@ def create_quiz_assignment():
                 class_id=class_id,
                 school_year_id=current_school_year.id,
                 status='Active',
-                assignment_type='quiz'
+                assignment_type='quiz',
+                allow_save_and_continue=allow_save_and_continue,
+                max_save_attempts=max_save_attempts,
+                save_timeout_minutes=save_timeout_minutes
             )
             
             db.session.add(new_assignment)
@@ -961,6 +973,12 @@ def take_attendance(class_id):
     # Load existing records for this class/date
     existing_records = {rec.student_id: rec for rec in Attendance.query.filter_by(class_id=class_id, date=attendance_date).all()}
     
+    # Load school-day attendance records for the same date
+    school_day_records = {}
+    if attendance_date:
+        school_day_attendance = SchoolDayAttendance.query.filter_by(date=attendance_date).all()
+        school_day_records = {record.student_id: record for record in school_day_attendance}
+    
     # Calculate attendance statistics
     total_students = len(students)
     present_count = sum(1 for record in existing_records.values() if record.status == "Present")
@@ -1052,6 +1070,7 @@ def take_attendance(class_id):
         attendance_date_str=attendance_date_str,
         statuses=statuses,
         existing_records=existing_records,
+        school_day_records=school_day_records,
         attendance_stats=attendance_stats
     )
 
@@ -1463,6 +1482,88 @@ def attendance():
                          overall_attendance_rate=overall_attendance_rate,
                          section='attendance',
                          active_tab='attendance')
+
+@teacher_blueprint.route('/mark-all-present/<int:class_id>', methods=['POST'])
+@login_required
+@teacher_required
+def mark_all_present(class_id):
+    """Mark all students as present for a specific class on a given date"""
+    from datetime import datetime
+    
+    try:
+        # Get the class and check if teacher is authorized
+        class_obj = Class.query.get_or_404(class_id)
+        
+        # Check if current user is authorized for this class
+        if not is_authorized_for_class(class_obj):
+            flash('You are not authorized to take attendance for this class.', 'danger')
+            return redirect(url_for('teacher.attendance'))
+        
+        # Get the date from form data or use today
+        date_str = request.form.get('date', datetime.now().strftime('%Y-%m-%d'))
+        try:
+            attendance_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            attendance_date = datetime.now().date()
+        
+        # Get all enrolled students for this class
+        enrolled_students = db.session.query(Student).join(Enrollment).filter(
+            Enrollment.class_id == class_id,
+            Enrollment.is_active == True
+        ).all()
+        
+        if not enrolled_students:
+            flash(f'No students enrolled in {class_obj.name}.', 'warning')
+            return redirect(url_for('teacher.attendance'))
+        
+        # Process each student
+        updated_count = 0
+        created_count = 0
+        
+        for student in enrolled_students:
+            # Check if attendance record already exists
+            existing_record = Attendance.query.filter_by(
+                student_id=student.id,
+                class_id=class_id,
+                date=attendance_date
+            ).first()
+            
+            if existing_record:
+                # Update existing record to Present
+                existing_record.status = 'Present'
+                existing_record.notes = 'Marked all present'
+                updated_count += 1
+            else:
+                # Create new record
+                new_record = Attendance(
+                    student_id=student.id,
+                    class_id=class_id,
+                    date=attendance_date,
+                    status='Present',
+                    notes='Marked all present',
+                    teacher_id=class_obj.teacher_id
+                )
+                db.session.add(new_record)
+                created_count += 1
+        
+        # Commit changes
+        db.session.commit()
+        
+        if created_count > 0 and updated_count > 0:
+            flash(f'Successfully marked {created_count + updated_count} students as present for {class_obj.name}.', 'success')
+        elif created_count > 0:
+            flash(f'Successfully marked {created_count} students as present for {class_obj.name}.', 'success')
+        elif updated_count > 0:
+            flash(f'Successfully updated {updated_count} students to present for {class_obj.name}.', 'success')
+        else:
+            flash(f'No students to mark present for {class_obj.name}.', 'info')
+            
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error marking students as present: {str(e)}', 'danger')
+    
+    # Redirect back to teacher attendance
+    return redirect(url_for('teacher.attendance'))
 
 @teacher_blueprint.route('/quick-attendance/<int:class_id>', methods=['POST'])
 @login_required

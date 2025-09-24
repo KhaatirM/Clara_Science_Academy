@@ -23,10 +23,13 @@
 </head>
 <body>
     <div class="dashboard-flex-wrapper d-flex flex-row">
+        <!-- Mobile sidebar overlay -->
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleMobileSidebar()"></div>
+        
         <div class="sidebar" id="sidebar">
             <h3 class="sidebar-heading text-center">{{ dashboard_title or current_user.role }}</h3>
-            <!-- Sidebar toggle - only visible on desktop/laptop -->
-            <div class="sidebar-toggle d-none d-md-block" onclick="toggleSidebar()">
+            <!-- Sidebar toggle - visible on all screen sizes -->
+            <div class="sidebar-toggle" onclick="window.innerWidth <= 768 ? toggleMobileSidebar() : toggleSidebar()">
                 <div class="hamburger" id="hamburger-icon">
                     <span></span>
                     <span></span>
@@ -43,8 +46,7 @@
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.teachers' %}active{% endif %}" href="{{ url_for('management.teachers') }}"><i class="bi bi-person-badge-fill"></i><span> Teachers & Staff</span></a></li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.classes' %}active{% endif %}" href="{{ url_for('management.classes') }}"><i class="bi bi-house-door-fill"></i><span> Classes</span></a></li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.assignments' %}active{% endif %}" href="{{ url_for('management.assignments') }}"><i class="bi bi-journal-check"></i><span> Assignments</span></a></li>
-                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.attendance' %}active{% endif %}" href="{{ url_for('management.attendance') }}"><i class="bi bi-calendar-check-fill"></i><span> Attendance</span></a></li>
-                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.attendance_reports' %}active{% endif %}" href="{{ url_for('management.attendance_reports') }}"><i class="bi bi-file-earmark-bar-graph-fill"></i><span> Attendance Reports</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.unified_attendance' %}active{% endif %}" href="{{ url_for('management.unified_attendance') }}"><i class="bi bi-calendar-check-fill"></i><span> Attendance</span></a></li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.report_cards' %}active{% endif %}" href="{{ url_for('management.report_cards') }}"><i class="bi bi-mortarboard-fill"></i><span> Report Cards</span></a></li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.admissions' %}active{% endif %}" href="{{ url_for('management.admissions') }}"><i class="bi bi-person-plus-fill"></i><span> Admissions</span></a></li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.billing' %}active{% endif %}" href="{{ url_for('management.billing') }}"><i class="bi bi-currency-dollar"></i><span> Billing & Financials</span></a></li>
@@ -60,8 +62,7 @@
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.teachers' %}active{% endif %}" href="{{ url_for('management.teachers') }}"><i class="bi bi-person-badge-fill"></i><span> Teachers & Staff</span></a></li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.classes' %}active{% endif %}" href="{{ url_for('management.classes') }}"><i class="bi bi-house-door-fill"></i><span> Classes</span></a></li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.assignments' %}active{% endif %}" href="{{ url_for('management.assignments') }}"><i class="bi bi-journal-check"></i><span> Assignments</span></a></li>
-                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.attendance' %}active{% endif %}" href="{{ url_for('management.attendance') }}"><i class="bi bi-calendar-check-fill"></i><span> Attendance</span></a></li>
-                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.attendance_reports' %}active{% endif %}" href="{{ url_for('management.attendance_reports') }}"><i class="bi bi-file-earmark-bar-graph-fill"></i><span> Attendance Reports</span></a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.unified_attendance' %}active{% endif %}" href="{{ url_for('management.unified_attendance') }}"><i class="bi bi-calendar-check-fill"></i><span> Attendance</span></a></li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.report_cards' %}active{% endif %}" href="{{ url_for('management.report_cards') }}"><i class="bi bi-mortarboard-fill"></i><span> Report Cards</span></a></li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.admissions' %}active{% endif %}" href="{{ url_for('management.admissions') }}"><i class="bi bi-person-plus-fill"></i><span> Admissions</span></a></li>
                     <li class="nav-item"><a class="nav-link {% if request.endpoint == 'management.calendar' %}active{% endif %}" href="{{ url_for('management.calendar') }}"><i class="bi bi-calendar-event-fill"></i><span> School Calendar</span></a></li>
@@ -171,6 +172,26 @@
             // Save state to localStorage
             localStorage.setItem('sidebarCollapsed', isCollapsed);
         }
+        
+        function toggleMobileSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            
+            sidebar.classList.toggle('show');
+            overlay.classList.toggle('show');
+        }
+        
+        // Close mobile sidebar when clicking on a nav link
+        document.addEventListener('DOMContentLoaded', function() {
+            const navLinks = document.querySelectorAll('.sidebar .nav-link');
+            navLinks.forEach(link => {
+                link.addEventListener('click', function() {
+                    if (window.innerWidth <= 768) {
+                        toggleMobileSidebar();
+                    }
+                });
+            });
+        });
         
         // Always collapse sidebar on mobile and hide hamburger
         function forceSidebarCollapsedOnMobile() {

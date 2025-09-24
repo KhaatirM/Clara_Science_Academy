@@ -115,6 +115,32 @@
                                 </div>
                             </div>
                         </div>
+                        
+                        <!-- Save and Continue Settings -->
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="allow_save_and_continue" name="allow_save_and_continue" checked>
+                                    <label class="form-check-label" for="allow_save_and_continue">
+                                        <strong>Allow Save and Continue</strong>
+                                    </label>
+                                    <div class="form-text">Students can save their progress and return to complete the quiz later</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="saveContinueSettings" class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="max_save_attempts" class="form-label">Maximum Save Attempts</label>
+                                <input type="number" class="form-control" id="max_save_attempts" name="max_save_attempts" min="1" max="50" value="10">
+                                <small class="form-text text-muted">How many times students can save their progress</small>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="save_timeout_minutes" class="form-label">Save Timeout (minutes)</label>
+                                <input type="number" class="form-control" id="save_timeout_minutes" name="save_timeout_minutes" min="5" max="120" value="30">
+                                <small class="form-text text-muted">How long saved progress remains valid</small>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -673,6 +699,21 @@ document.addEventListener('DOMContentLoaded', function() {
         
         quizPreview.innerHTML = previewHTML;
     }
+    
+    // Save and continue settings toggle
+    const allowSaveContinue = document.getElementById('allow_save_and_continue');
+    const saveContinueSettings = document.getElementById('saveContinueSettings');
+    
+    function toggleSaveContinueSettings() {
+        if (allowSaveContinue.checked) {
+            saveContinueSettings.style.display = 'block';
+        } else {
+            saveContinueSettings.style.display = 'none';
+        }
+    }
+    
+    allowSaveContinue.addEventListener('change', toggleSaveContinueSettings);
+    toggleSaveContinueSettings(); // Initialize on page load
     
     // Form submission
     form.addEventListener('submit', function(e) {

@@ -129,7 +129,7 @@
                                class="btn btn-outline-secondary btn-sm">
                                 <i class="bi bi-eye me-1"></i>View Class
                             </a>
-                            <button class="btn btn-outline-info btn-sm" onclick="alert('Quick actions coming soon!')">
+                            <button class="btn btn-outline-info btn-sm" onclick="markAllPresent({{ class_item.id }})">
                                 <i class="bi bi-check-all me-1"></i>All Present
                             </button>
                         </div>
@@ -167,6 +167,40 @@ function loadDateAttendance() {
     const selectedDate = document.getElementById('attendance-date').value;
     if (selectedDate) {
         window.location.href = window.location.pathname + '?date=' + selectedDate;
+    }
+}
+
+// Mark All Present functionality
+function markAllPresent(classId) {
+    if (confirm('Are you sure you want to mark all students as present for this class?')) {
+        // Get the current date from the attendance date input
+        const currentDate = document.getElementById('attendance-date').value;
+        
+        // Create a form to submit the request
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/teacher/mark-all-present/${classId}`;
+        
+        // Add the date field
+        const dateInput = document.createElement('input');
+        dateInput.type = 'hidden';
+        dateInput.name = 'date';
+        dateInput.value = currentDate;
+        form.appendChild(dateInput);
+        
+        // Add CSRF token if available
+        const csrfToken = document.querySelector('meta[name=csrf-token]');
+        if (csrfToken) {
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrf_token';
+            csrfInput.value = csrfToken.getAttribute('content');
+            form.appendChild(csrfInput);
+        }
+        
+        // Submit the form
+        document.body.appendChild(form);
+        form.submit();
     }
 }
 

@@ -2,7 +2,7 @@ import os
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, abort, jsonify, send_file
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
-from models import db, Student, Class, Assignment, Submission, Grade, SchoolYear, Announcement, Notification, StudentGoal, Message, MessageGroup, MessageGroupMember, TeacherStaff, User, Enrollment, ClassSchedule, Attendance, AcademicPeriod, QuizQuestion, QuizOption, QuizAnswer, DiscussionThread, DiscussionPost
+from models import db, Student, Class, Assignment, Submission, Grade, SchoolYear, Announcement, Notification, StudentGoal, Message, MessageGroup, MessageGroupMember, TeacherStaff, User, Enrollment, ClassSchedule, Attendance, AcademicPeriod, QuizQuestion, QuizOption, QuizAnswer, QuizProgress, DiscussionThread, DiscussionPost
 from decorators import student_required
 import json
 from datetime import datetime, timedelta
@@ -914,6 +914,109 @@ def take_quiz(assignment_id):
                          grade=grade,
                          student=student,
                          existing_answers=existing_answers)
+
+@student_blueprint.route('/save-quiz-progress/<int:assignment_id>', methods=['POST'])
+@login_required
+@student_required
+def save_quiz_progress(assignment_id):
+    """Save quiz progress for later continuation"""
+    try:
+        student = Student.query.get_or_404(current_user.student_id)
+        assignment = Assignment.query.get_or_404(assignment_id)
+        
+        # Check if assignment allows save and continue
+        if not assignment.allow_save_and_continue:
+            return jsonify({'success': False, 'message': 'This quiz does not allow save and continue'})
+        
+        data = request.get_json()
+        answers = data.get('answers', {})
+        progress_percentage = data.get('progress_percentage', 0)
+        questions_answered = data.get('questions_answered', 0)
+        
+        # Get total questions count
+        total_questions = QuizQuestion.query.filter_by(assignment_id=assignment_id).count()
+        
+        # Check if progress already exists
+        progress = QuizProgress.query.filter_by(
+            student_id=student.id,
+            assignment_id=assignment_id
+        ).first()
+        
+        if progress:
+            # Update existing progress
+            progress.answers_data = json.dumps(answers)
+            progress.progress_percentage = progress_percentage
+            progress.questions_answered = questions_answered
+            progress.total_questions = total_questions
+            progress.last_saved_at = datetime.utcnow()
+            progress.updated_at = datetime.utcnow()
+        else:
+            # Create new progress
+            progress = QuizProgress(
+                student_id=student.id,
+                assignment_id=assignment_id,
+                answers_data=json.dumps(answers),
+                progress_percentage=progress_percentage,
+                questions_answered=questions_answered,
+                total_questions=total_questions,
+                last_saved_at=datetime.utcnow()
+            )
+            db.session.add(progress)
+        
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Progress saved successfully'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Error saving progress: {str(e)}'})
+
+@student_blueprint.route('/load-quiz-progress/<int:assignment_id>')
+@login_required
+@student_required
+def load_quiz_progress(assignment_id):
+    """Load saved quiz progress"""
+    try:
+        student = Student.query.get_or_404(current_user.student_id)
+        assignment = Assignment.query.get_or_404(assignment_id)
+        
+        # Check if assignment allows save and continue
+        if not assignment.allow_save_and_continue:
+            return jsonify({'success': False, 'message': 'This quiz does not allow save and continue'})
+        
+        # Get saved progress
+        progress = QuizProgress.query.filter_by(
+            student_id=student.id,
+            assignment_id=assignment_id,
+            is_submitted=False
+        ).first()
+        
+        if progress:
+            # Check if progress is still valid (not expired)
+            time_diff = datetime.utcnow() - progress.last_saved_at
+            timeout_minutes = assignment.save_timeout_minutes or 30
+            
+            if time_diff.total_seconds() > (timeout_minutes * 60):
+                # Progress expired, delete it
+                db.session.delete(progress)
+                db.session.commit()
+                return jsonify({'success': False, 'message': 'Saved progress has expired'})
+            
+            # Return progress data
+            return jsonify({
+                'success': True,
+                'progress': {
+                    'answers': json.loads(progress.answers_data) if progress.answers_data else {},
+                    'progress_percentage': progress.progress_percentage,
+                    'questions_answered': progress.questions_answered,
+                    'total_questions': progress.total_questions,
+                    'last_saved_at': progress.last_saved_at.isoformat()
+                }
+            })
+        else:
+            return jsonify({'success': False, 'message': 'No saved progress found'})
+            
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Error loading progress: {str(e)}'})
 
 @student_blueprint.route('/submit-quiz/<int:assignment_id>', methods=['POST'])
 @login_required

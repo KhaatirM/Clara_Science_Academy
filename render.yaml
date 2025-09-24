@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: csastudentmanagement
+    env: python
+    plan: free
+    buildCommand: |
+      pip install -r requirements.txt
+      python fix_production_assignment_columns_postgres.py || echo "Database fix completed or skipped"
+    startCommand: python run.py
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: PYTHON_VERSION
+        value: 3.11.0
+    healthCheckPath: /home

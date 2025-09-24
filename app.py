@@ -312,6 +312,79 @@ def get_user_activity_log(user_id=None, action=None, start_date=None, end_date=N
     return query.order_by(ActivityLog.timestamp.desc()).limit(limit).all()
 
 
+def run_production_database_fix():
+    """
+    Run production database fix to add missing columns.
+    Only runs in production environment when DATABASE_URL is available.
+    """
+    # Check if we're in production environment
+    if not os.getenv('DATABASE_URL'):
+        return
+    
+    # Check if we're running on Render (production)
+    if not os.getenv('RENDER'):
+        return
+    
+    print("🔧 Running production database fix...")
+    
+    try:
+        import psycopg2
+        from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+        
+        # Get database URL
+        database_url = os.getenv('DATABASE_URL')
+        if database_url.startswith('postgresql://'):
+            database_url = database_url.replace('postgresql://', 'postgres://')
+        
+        # Connect to database
+        conn = psycopg2.connect(database_url)
+        conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+        cursor = conn.cursor()
+        
+        # Check if columns already exist
+        cursor.execute("""
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'assignment' 
+            AND column_name IN ('allow_save_and_continue', 'max_save_attempts', 'save_timeout_minutes')
+        """)
+        
+        existing_columns = [row[0] for row in cursor.fetchall()]
+        
+        # Add missing columns
+        columns_to_add = []
+        
+        if 'allow_save_and_continue' not in existing_columns:
+            columns_to_add.append("allow_save_and_continue BOOLEAN DEFAULT FALSE")
+            
+        if 'max_save_attempts' not in existing_columns:
+            columns_to_add.append("max_save_attempts INTEGER DEFAULT 3")
+            
+        if 'save_timeout_minutes' not in existing_columns:
+            columns_to_add.append("save_timeout_minutes INTEGER DEFAULT 30")
+        
+        if not columns_to_add:
+            print("✓ All required columns already exist")
+            cursor.close()
+            conn.close()
+            return
+        
+        # Add missing columns
+        for column_def in columns_to_add:
+            column_name = column_def.split()[0]
+            print(f"Adding column: {column_name}")
+            cursor.execute(f"ALTER TABLE assignment ADD COLUMN {column_def}")
+            print(f"✓ Added column: {column_name}")
+        
+        cursor.close()
+        conn.close()
+        print("✅ Production database fix completed successfully!")
+        
+    except ImportError:
+        print("⚠️  psycopg2 not available, skipping database fix")
+    except Exception as e:
+        print(f"❌ Database fix failed: {e}")
+
 def create_app(config_class=None):
     """
     Factory function to create the Flask application.
@@ -345,6 +418,12 @@ def create_app(config_class=None):
             init_database()
         except Exception as e:
             print(f"Database initialization failed: {e}")
+        
+        # Run production database fix if needed
+        try:
+            run_production_database_fix()
+        except Exception as e:
+            print(f"Production database fix failed: {e}")
 
     # User loader function for Flask-Login
     @login_manager.user_loader

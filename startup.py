@@ -26,20 +26,34 @@ def run_database_fix():
             
             print("✓ DATABASE_URL found, running database fix...")
             
-            # Run the database fix script
-            result = subprocess.run([
-                sys.executable, 
-                'fix_production_assignment_columns_postgres.py'
-            ], capture_output=True, text=True, timeout=60)
+            # Run the database fix scripts
+            scripts_to_run = [
+                'fix_production_assignment_columns_postgres.py',
+                'fix_school_day_attendance_table.py'
+            ]
             
-            if result.returncode == 0:
-                print("✅ Database fix completed successfully!")
-                print(result.stdout)
+            all_success = True
+            for script in scripts_to_run:
+                print(f"🔧 Running {script}...")
+                result = subprocess.run([
+                    sys.executable, 
+                    script
+                ], capture_output=True, text=True, timeout=60)
+                
+                if result.returncode == 0:
+                    print(f"✅ {script} completed successfully!")
+                    if result.stdout.strip():
+                        print(result.stdout)
+                else:
+                    print(f"❌ {script} failed:")
+                    print(result.stderr)
+                    all_success = False
+            
+            if all_success:
+                print("✅ All database fixes completed successfully!")
                 return True
             else:
-                print("❌ Database fix failed:")
-                print(result.stderr)
-                print("Continuing with application startup...")
+                print("⚠️  Some database fixes failed, continuing with startup...")
                 return False
                 
         else:

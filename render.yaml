@@ -5,8 +5,7 @@ services:
     plan: free
     buildCommand: |
       pip install -r requirements.txt
-      python fix_production_assignment_columns_postgres.py || echo "Database fix completed or skipped"
-    startCommand: python run.py
+    startCommand: python startup.py
     envVars:
       - key: FLASK_ENV
         value: production

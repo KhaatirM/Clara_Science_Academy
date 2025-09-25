@@ -142,14 +142,24 @@ teacher_blueprint = Blueprint('teacher', __name__)
 @login_required
 @teacher_required
 def teacher_dashboard():
-    # Update assignment statuses before displaying
-    update_assignment_statuses()
-    
-    # Debug logging
-    print(f"Teacher dashboard accessed by user: {current_user.username}, role: {current_user.role}, teacher_staff_id: {current_user.teacher_staff_id}")
-    
-    # Get teacher object or None for administrators
-    teacher = get_teacher_or_admin()
+    try:
+        # Update assignment statuses before displaying
+        update_assignment_statuses()
+        
+        # Get teacher object or None for administrators
+        teacher = get_teacher_or_admin()
+        
+    except Exception as e:
+        print(f"Error in teacher dashboard: {e}")
+        flash("An error occurred while loading the dashboard.", "danger")
+        return render_template('role_teacher_dashboard.html', 
+                             teacher=None, 
+                             classes=[], 
+                             recent_activity=[], 
+                             notifications=[], 
+                             teacher_data={}, 
+                             monthly_stats={}, 
+                             weekly_stats={})
     # Directors and School Administrators see all classes, teachers only see their assigned classes
     if is_admin():
         classes = Class.query.all()
@@ -157,10 +167,18 @@ def teacher_dashboard():
         recent_assignments = Assignment.query.order_by(Assignment.due_date.desc()).limit(5).all()
         assignments = Assignment.query.all()
     else:
-        classes = Class.query.filter_by(teacher_id=teacher.id).all()
-        class_ids = [c.id for c in classes]
-        recent_assignments = Assignment.query.filter(Assignment.class_id.in_(class_ids)).order_by(Assignment.due_date.desc()).limit(5).all()
-        assignments = Assignment.query.filter(Assignment.class_id.in_(class_ids)).all()
+        # Check if teacher object exists
+        if teacher is None:
+            # If user is a Teacher but has no teacher_staff_id, show empty dashboard
+            classes = []
+            class_ids = []
+            recent_assignments = []
+            assignments = []
+        else:
+            classes = Class.query.filter_by(teacher_id=teacher.id).all()
+            class_ids = [c.id for c in classes]
+            recent_assignments = Assignment.query.filter(Assignment.class_id.in_(class_ids)).order_by(Assignment.due_date.desc()).limit(5).all()
+            assignments = Assignment.query.filter(Assignment.class_id.in_(class_ids)).all()
     
     # Get recent grades (simplified)
     recent_grades = []

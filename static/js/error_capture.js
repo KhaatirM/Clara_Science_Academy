@@ -167,7 +167,7 @@
             try {
                 const observer = new PerformanceObserver(function(list) {
                     for (const entry of list.getEntries()) {
-                        if (entry.duration > 50) { // Tasks longer than 50ms
+                        if (entry.duration > 200) { // Tasks longer than 200ms
                             const errorData = createErrorData(new Error('Long task detected'), {
                                 type: 'performance_issue',
                                 duration: entry.duration,

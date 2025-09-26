@@ -14,7 +14,38 @@ import re
 # import pdfplumber
 from sqlalchemy import text
 from werkzeug.security import generate_password_hash
-from add_academic_periods import add_academic_periods_for_year
+# from add_academic_periods import add_academic_periods_for_year  # Function removed during cleanup
+
+def add_academic_periods_for_year(school_year_id):
+    """Create default academic periods for a school year"""
+    from models import AcademicPeriod, SchoolYear
+    from datetime import datetime, date
+    
+    # Get the school year to extract start and end dates
+    school_year = SchoolYear.query.get(school_year_id)
+    if not school_year:
+        return
+    
+    # Create quarters (Q1, Q2, Q3, Q4)
+    quarters = [
+        ('Q1', date(school_year.start_date.year, school_year.start_date.month, 1), date(school_year.start_date.year, school_year.start_date.month + 2, 28)),
+        ('Q2', date(school_year.start_date.year, school_year.start_date.month + 3, 1), date(school_year.start_date.year, school_year.start_date.month + 5, 30)),
+        ('Q3', date(school_year.start_date.year, school_year.start_date.month + 6, 1), date(school_year.start_date.year, school_year.start_date.month + 8, 30)),
+        ('Q4', date(school_year.start_date.year, school_year.start_date.month + 9, 1), date(school_year.end_date.year, school_year.end_date.month, school_year.end_date.day))
+    ]
+    
+    for name, start_date, end_date in quarters:
+        period = AcademicPeriod(
+            school_year_id=school_year_id,
+            name=name,
+            period_type='quarter',
+            start_date=start_date,
+            end_date=end_date,
+            is_active=True
+        )
+        db.session.add(period)
+    
+    db.session.commit()
 
 # File upload configuration
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'}

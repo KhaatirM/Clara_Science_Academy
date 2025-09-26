@@ -463,8 +463,11 @@ def create_quiz_assignment():
     teacher = get_teacher_or_admin()
     if is_admin():
         classes = Class.query.all()
-    else:
+    elif teacher is not None:
         classes = Class.query.filter_by(teacher_id=teacher.id).all()
+    else:
+        # Teacher user without teacher_staff_id - show empty results
+        classes = []
     
     current_quarter = get_current_quarter()
     return render_template('create_quiz_assignment.html', classes=classes, current_quarter=current_quarter)
@@ -525,8 +528,11 @@ def create_discussion_assignment():
     teacher = get_teacher_or_admin()
     if is_admin():
         classes = Class.query.all()
-    else:
+    elif teacher is not None:
         classes = Class.query.filter_by(teacher_id=teacher.id).all()
+    else:
+        # Teacher user without teacher_staff_id - show empty results
+        classes = []
     
     current_quarter = get_current_quarter()
     return render_template('create_discussion_assignment.html', classes=classes, current_quarter=current_quarter)
@@ -547,8 +553,11 @@ def add_assignment_select_class():
     teacher = get_teacher_or_admin()
     if is_admin():
         classes = Class.query.all()
-    else:
+    elif teacher is not None:
         classes = Class.query.filter_by(teacher_id=teacher.id).all()
+    else:
+        # Teacher user without teacher_staff_id - show empty results
+        classes = []
     
     return render_template('add_assignment_select_class.html', classes=classes)
 
@@ -1102,8 +1111,11 @@ def my_classes():
     # Directors and School Administrators see all classes, teachers only see their assigned classes
     if current_user.role in ['Director', 'School Administrator']:
         classes = Class.query.all()
-    else:
+    elif teacher is not None:
         classes = Class.query.filter_by(teacher_id=teacher.id).all()
+    else:
+        # Teacher user without teacher_staff_id - show empty results
+        classes = []
     
     return render_template('role_teacher_dashboard.html', 
                          teacher=teacher, 
@@ -1154,10 +1166,14 @@ def my_assignments():
     if current_user.role == 'Director':
         classes = Class.query.all()
         assignments_query = Assignment.query
-    else:
+    elif teacher is not None:
         classes = Class.query.filter_by(teacher_id=teacher.id).all()
         class_ids = [c.id for c in classes]
         assignments_query = Assignment.query.filter(Assignment.class_id.in_(class_ids))
+    else:
+        # Teacher user without teacher_staff_id - show empty results
+        classes = []
+        assignments_query = Assignment.query.filter(Assignment.id == -1)  # No results
     
     # Apply class filter if specified
     if class_filter:
@@ -1297,12 +1313,17 @@ def my_grades():
         classes = Class.query.all()
         assignments = Assignment.query.all()
         grades = Grade.query.all()
-    else:
+    elif teacher is not None:
         classes = Class.query.filter_by(teacher_id=teacher.id).all()
         class_ids = [c.id for c in classes]
         assignments = Assignment.query.filter(Assignment.class_id.in_(class_ids)).all()
         assignment_ids = [a.id for a in assignments]
         grades = Grade.query.filter(Grade.assignment_id.in_(assignment_ids)).all()
+    else:
+        # Teacher user without teacher_staff_id - show empty results
+        classes = []
+        assignments = []
+        grades = []
     
     return render_template('role_teacher_dashboard.html', 
                          teacher=teacher,
@@ -1333,10 +1354,13 @@ def student_grades():
         classes = Class.query.all()
         if class_filter:
             classes = [c for c in classes if c.id == class_filter]
-    else:
+    elif teacher is not None:
         classes = Class.query.filter_by(teacher_id=teacher.id).all()
         if class_filter:
             classes = [c for c in classes if c.id == class_filter]
+    else:
+        # Teacher user without teacher_staff_id - show empty results
+        classes = []
     
     # Get all students enrolled in these classes
     class_ids = [c.id for c in classes]
@@ -2181,7 +2205,11 @@ def teacher_groups():
     groups = [membership.group for membership in group_memberships if membership.group.is_active]
     
     # Get teacher's classes for creating new groups
-    classes = Class.query.filter_by(teacher_id=teacher.id).all()
+    if teacher is not None:
+        classes = Class.query.filter_by(teacher_id=teacher.id).all()
+    else:
+        # Teacher user without teacher_staff_id - show empty results
+        classes = []
     
     return render_template('teacher_groups.html',
                          teacher=teacher,
@@ -2263,8 +2291,11 @@ def create_message_group():
     # Directors can create groups for any class
     if current_user.role == 'Director':
         classes = Class.query.all()
-    else:
+    elif teacher is not None:
         classes = Class.query.filter_by(teacher_id=teacher.id).all()
+    else:
+        # Teacher user without teacher_staff_id - show empty results
+        classes = []
     
     return render_template('teacher_create_group.html',
                          teacher=teacher,
@@ -2398,8 +2429,11 @@ def create_announcement():
     # Directors can create announcements for any class
     if current_user.role == 'Director':
         classes = Class.query.all()
-    else:
+    elif teacher is not None:
         classes = Class.query.filter_by(teacher_id=teacher.id).all()
+    else:
+        # Teacher user without teacher_staff_id - show empty results
+        classes = []
     
     return render_template('teacher_create_announcement.html',
                          teacher=teacher,
@@ -2451,8 +2485,11 @@ def schedule_announcement():
     # Directors can schedule announcements for any class
     if current_user.role == 'Director':
         classes = Class.query.all()
-    else:
+    elif teacher is not None:
         classes = Class.query.filter_by(teacher_id=teacher.id).all()
+    else:
+        # Teacher user without teacher_staff_id - show empty results
+        classes = []
     
     return render_template('teacher_schedule_announcement.html',
                          teacher=teacher,

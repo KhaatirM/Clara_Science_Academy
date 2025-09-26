@@ -29,7 +29,8 @@ def run_database_fix():
             # Run the database fix scripts
             scripts_to_run = [
                 'fix_production_assignment_columns_postgres.py',
-                'fix_school_day_attendance_table.py'
+                'fix_school_day_attendance_table.py',
+                'fix_bug_report_table_schema.py'
             ]
             
             all_success = True
@@ -51,6 +52,16 @@ def run_database_fix():
             
             if all_success:
                 print("✅ All database fixes completed successfully!")
+                
+                # Additional fallback: Ensure all tables exist
+                try:
+                    print("🔧 Ensuring all database tables exist...")
+                    from models import db
+                    db.create_all()
+                    print("✅ Database tables verified!")
+                except Exception as e:
+                    print(f"⚠️  Warning: Could not verify database tables: {e}")
+                
                 return True
             else:
                 print("⚠️  Some database fixes failed, continuing with startup...")

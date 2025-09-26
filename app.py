@@ -414,8 +414,9 @@ def create_app(config_class=None):
     # Initialize database schema
     with app.app_context():
         try:
-            from init_database import init_database
-            init_database()
+            # Initialize database tables
+            db.create_all()
+            print("Database tables created successfully")
         except Exception as e:
             print(f"Database initialization failed: {e}")
         

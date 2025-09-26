@@ -2,24 +2,32 @@
 
 {% block dashboard_content %}
 <div class="container-fluid px-3 px-md-4 px-lg-5">
-    <!-- Header Section -->
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
-        <div>
-            <h3 class="mb-2 mb-md-0">
-                <i class="bi bi-question-circle me-2"></i>Create Quiz Assignment
-            </h3>
-            <p class="text-muted mb-0">Build an interactive quiz with multiple question types</p>
-        </div>
-        <div class="d-flex gap-2">
-            {% if current_user.role in ['Director', 'School Administrator'] %}
-                <a href="{{ url_for('management.assignment_type_selector') }}" class="btn btn-outline-secondary btn-sm">
-                    <i class="bi bi-arrow-left me-1"></i>Back to Assignment Types
-                </a>
-            {% else %}
-                <a href="{{ url_for('teacher.assignment_type_selector') }}" class="btn btn-outline-secondary btn-sm">
-                    <i class="bi bi-arrow-left me-1"></i>Back to Assignment Types
-                </a>
-            {% endif %}
+    <!-- Enhanced Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <div class="card-body text-white p-4">
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
+                        <div>
+                            <h2 class="mb-2 mb-md-0 fw-bold">
+                                <i class="bi bi-quiz me-3"></i>Create Quiz Assignment
+                            </h2>
+                            <p class="mb-0 opacity-75">Design engaging quizzes with multiple question types and smart features</p>
+                        </div>
+                        <div class="d-flex gap-2 mt-3 mt-md-0">
+                            {% if current_user.role in ['Director', 'School Administrator'] %}
+                                <a href="{{ url_for('management.assignment_type_selector') }}" class="btn btn-light btn-sm">
+                                    <i class="bi bi-arrow-left me-1"></i>Back to Assignment Types
+                                </a>
+                            {% else %}
+                                <a href="{{ url_for('teacher.assignment_type_selector') }}" class="btn btn-light btn-sm">
+                                    <i class="bi bi-arrow-left me-1"></i>Back to Assignment Types
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -31,20 +39,26 @@
             <!-- Main Form Column -->
             <div class="col-12 col-lg-8">
                 <!-- Basic Assignment Info -->
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Assignment Details</h5>
+                <div class="card mb-4 border-0 shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0 fw-bold"><i class="bi bi-info-circle me-2"></i>Quiz Information</h5>
                     </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="title" class="form-label">Quiz Title <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="title" name="title" required>
+                    <div class="card-body p-4">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="title" class="form-label fw-semibold">
+                                    <i class="bi bi-pencil-square me-1 text-primary"></i>Quiz Title <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control form-control-lg" id="title" name="title" 
+                                       placeholder="Enter an engaging quiz title..." required>
+                                <div class="form-text">Make it descriptive and engaging for students</div>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="class_id" class="form-label">Class <span class="text-danger">*</span></label>
-                                <select class="form-select" id="class_id" name="class_id" required>
-                                    <option value="">Select a class</option>
+                            <div class="col-md-6">
+                                <label for="class_id" class="form-label fw-semibold">
+                                    <i class="bi bi-book me-1 text-primary"></i>Class <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select form-select-lg" id="class_id" name="class_id" required>
+                                    <option value="">Choose a class...</option>
                                     {% for class in classes %}
                                         <option value="{{ class.id }}">{{ class.name }} - {{ class.subject }}</option>
                                     {% endfor %}
@@ -52,19 +66,27 @@
                             </div>
                         </div>
                         
-                        <div class="mb-3">
-                            <label for="description" class="form-label">Quiz Description</label>
-                            <textarea class="form-control" id="description" name="description" rows="3" placeholder="Describe what this quiz covers and any special instructions..."></textarea>
+                        <div class="mt-4">
+                            <label for="description" class="form-label fw-semibold">
+                                <i class="bi bi-card-text me-1 text-primary"></i>Quiz Description
+                            </label>
+                            <textarea class="form-control" id="description" name="description" rows="3" 
+                                      placeholder="Describe what this quiz covers, learning objectives, and any special instructions for students..."></textarea>
+                            <div class="form-text">Help students understand what they'll be tested on</div>
                         </div>
                         
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="due_date" class="form-label">Due Date <span class="text-danger">*</span></label>
-                                <input type="datetime-local" class="form-control" id="due_date" name="due_date" required>
+                        <div class="row g-3 mt-3">
+                            <div class="col-md-6">
+                                <label for="due_date" class="form-label fw-semibold">
+                                    <i class="bi bi-calendar-event me-1 text-primary"></i>Due Date <span class="text-danger">*</span>
+                                </label>
+                                <input type="datetime-local" class="form-control form-control-lg" id="due_date" name="due_date" required>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="quarter" class="form-label">Quarter <span class="text-danger">*</span></label>
-                                <select class="form-select" id="quarter" name="quarter" required>
+                            <div class="col-md-6">
+                                <label for="quarter" class="form-label fw-semibold">
+                                    <i class="bi bi-calendar3 me-1 text-primary"></i>Quarter <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select form-select-lg" id="quarter" name="quarter" required>
                                     <option value="1" {% if current_quarter == "1" %}selected{% endif %}>Quarter 1</option>
                                     <option value="2" {% if current_quarter == "2" %}selected{% endif %}>Quarter 2</option>
                                     <option value="3" {% if current_quarter == "3" %}selected{% endif %}>Quarter 3</option>
@@ -76,136 +98,229 @@
                 </div>
 
                 <!-- Quiz Settings -->
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="mb-0"><i class="bi bi-gear me-2"></i>Quiz Settings</h5>
+                <div class="card mb-4 border-0 shadow-sm">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0 fw-bold"><i class="bi bi-gear me-2"></i>Quiz Configuration</h5>
                     </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label for="time_limit" class="form-label">Time Limit (minutes)</label>
-                                <input type="number" class="form-control" id="time_limit" name="time_limit" min="1" max="300" placeholder="No limit">
-                                <small class="form-text text-muted">Leave empty for no time limit</small>
+                    <div class="card-body p-4">
+                        <!-- Time and Attempt Settings -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4">
+                                <label for="time_limit" class="form-label fw-semibold">
+                                    <i class="bi bi-clock me-1 text-success"></i>Time Limit
+                                </label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="time_limit" name="time_limit" 
+                                           min="1" max="300" placeholder="No limit">
+                                    <span class="input-group-text">minutes</span>
+                                </div>
+                                <div class="form-text">Leave empty for unlimited time</div>
                             </div>
-                            <div class="col-md-4 mb-3">
-                                <label for="attempts" class="form-label">Max Attempts</label>
-                                <input type="number" class="form-control" id="attempts" name="attempts" min="1" max="10" value="1">
+                            <div class="col-md-4">
+                                <label for="attempts" class="form-label fw-semibold">
+                                    <i class="bi bi-arrow-repeat me-1 text-success"></i>Max Attempts
+                                </label>
+                                <input type="number" class="form-control" id="attempts" name="attempts" 
+                                       min="1" max="10" value="1">
+                                <div class="form-text">How many times students can take this quiz</div>
                             </div>
-                            <div class="col-md-4 mb-3">
-                                <label for="passing_score" class="form-label">Passing Score (%)</label>
-                                <input type="number" class="form-control" id="passing_score" name="passing_score" min="0" max="100" value="70">
+                            <div class="col-md-4">
+                                <label for="passing_score" class="form-label fw-semibold">
+                                    <i class="bi bi-trophy me-1 text-success"></i>Passing Score
+                                </label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="passing_score" name="passing_score" 
+                                           min="0" max="100" value="70">
+                                    <span class="input-group-text">%</span>
+                                </div>
+                                <div class="form-text">Minimum score to pass</div>
                             </div>
                         </div>
                         
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <div class="form-check">
+                        <!-- Advanced Options -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-12">
+                                <h6 class="fw-semibold text-muted mb-3">Advanced Options</h6>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
                                     <input class="form-check-input" type="checkbox" id="shuffle_questions" name="shuffle_questions">
-                                    <label class="form-check-label" for="shuffle_questions">
-                                        Shuffle Questions
+                                    <label class="form-check-label fw-semibold" for="shuffle_questions">
+                                        <i class="bi bi-shuffle me-2 text-info"></i>Shuffle Questions
                                     </label>
+                                    <div class="form-text">Randomize question order for each student</div>
                                 </div>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <div class="form-check">
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
                                     <input class="form-check-input" type="checkbox" id="show_correct_answers" name="show_correct_answers" checked>
-                                    <label class="form-check-label" for="show_correct_answers">
-                                        Show Correct Answers After Submission
+                                    <label class="form-check-label fw-semibold" for="show_correct_answers">
+                                        <i class="bi bi-eye me-2 text-info"></i>Show Correct Answers
                                     </label>
+                                    <div class="form-text">Display answers after submission</div>
                                 </div>
                             </div>
                         </div>
                         
                         <!-- Save and Continue Settings -->
-                        <div class="row">
-                            <div class="col-12 mb-3">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="allow_save_and_continue" name="allow_save_and_continue" checked>
-                                    <label class="form-check-label" for="allow_save_and_continue">
-                                        <strong>Allow Save and Continue</strong>
+                        <div class="border-top pt-4">
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="allow_save_and_continue" name="allow_save_and_continue" checked>
+                                <label class="form-check-label fw-bold" for="allow_save_and_continue">
+                                    <i class="bi bi-save me-2 text-warning"></i>Allow Save and Continue
+                                </label>
+                                <div class="form-text">Students can save progress and return later</div>
+                            </div>
+                            
+                            <div id="saveContinueSettings" class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="max_save_attempts" class="form-label fw-semibold">
+                                        <i class="bi bi-save2 me-1 text-warning"></i>Max Save Attempts
                                     </label>
-                                    <div class="form-text">Students can save their progress and return to complete the quiz later</div>
+                                    <input type="number" class="form-control" id="max_save_attempts" name="max_save_attempts" 
+                                           min="1" max="50" value="10">
+                                    <div class="form-text">How many times students can save</div>
                                 </div>
-                            </div>
-                        </div>
-                        
-                        <div id="saveContinueSettings" class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="max_save_attempts" class="form-label">Maximum Save Attempts</label>
-                                <input type="number" class="form-control" id="max_save_attempts" name="max_save_attempts" min="1" max="50" value="10">
-                                <small class="form-text text-muted">How many times students can save their progress</small>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="save_timeout_minutes" class="form-label">Save Timeout (minutes)</label>
-                                <input type="number" class="form-control" id="save_timeout_minutes" name="save_timeout_minutes" min="5" max="120" value="30">
-                                <small class="form-text text-muted">How long saved progress remains valid</small>
+                                <div class="col-md-6">
+                                    <label for="save_timeout_minutes" class="form-label fw-semibold">
+                                        <i class="bi bi-hourglass me-1 text-warning"></i>Save Timeout
+                                    </label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" id="save_timeout_minutes" name="save_timeout_minutes" 
+                                               min="5" max="120" value="30">
+                                        <span class="input-group-text">minutes</span>
+                                    </div>
+                                    <div class="form-text">How long saved progress stays valid</div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Questions Section -->
-                <div class="card mb-4">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0"><i class="bi bi-question-square me-2"></i>Quiz Questions</h5>
-                        <button type="button" class="btn btn-primary btn-sm" id="addQuestionBtn">
-                            <i class="bi bi-plus-circle me-1"></i>Add Question
+                <div class="card mb-4 border-0 shadow-sm">
+                    <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 fw-bold"><i class="bi bi-question-square me-2"></i>Quiz Questions</h5>
+                        <button type="button" class="btn btn-light btn-lg fw-bold" id="addQuestionBtn">
+                            <i class="bi bi-plus-circle me-2"></i>Add Question
                         </button>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body p-4">
                         <div id="questionsContainer">
-                            <div class="text-center text-muted py-4">
-                                <i class="bi bi-question-circle" style="font-size: 2rem;"></i>
-                                <p class="mt-2">No questions added yet. Click "Add Question" to get started.</p>
+                            <div class="text-center text-muted py-5">
+                                <div class="mb-3">
+                                    <i class="bi bi-question-circle text-muted" style="font-size: 4rem; opacity: 0.3;"></i>
+                                </div>
+                                <h5 class="text-muted mb-2">No questions added yet</h5>
+                                <p class="text-muted mb-4">Click "Add Question" to start building your quiz</p>
+                                <button type="button" class="btn btn-outline-primary btn-lg" id="addFirstQuestionBtn">
+                                    <i class="bi bi-plus-circle me-2"></i>Add Your First Question
+                                </button>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Sidebar -->
+            <!-- Enhanced Sidebar -->
             <div class="col-12 col-lg-4">
                 <!-- Quiz Preview -->
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h6 class="mb-0"><i class="bi bi-eye me-2"></i>Quiz Preview</h6>
+                <div class="card mb-4 border-0 shadow-sm">
+                    <div class="card-header bg-info text-white">
+                        <h6 class="mb-0 fw-bold"><i class="bi bi-eye me-2"></i>Live Preview</h6>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body p-3">
                         <div id="quizPreview">
-                            <p class="text-muted small">Quiz details will appear here as you fill out the form.</p>
+                            <div class="text-center text-muted py-3">
+                                <i class="bi bi-eye-slash mb-2 d-block" style="font-size: 2rem; opacity: 0.5;"></i>
+                                <p class="small mb-0">Quiz preview will appear here as you build it</p>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Question Types Help -->
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Question Types</h6>
+                <!-- Question Types Guide -->
+                <div class="card mb-4 border-0 shadow-sm">
+                    <div class="card-header bg-secondary text-white">
+                        <h6 class="mb-0 fw-bold"><i class="bi bi-lightbulb me-2"></i>Question Types Guide</h6>
                     </div>
-                    <div class="card-body">
-                        <div class="small">
-                            <div class="mb-2">
-                                <strong>Multiple Choice:</strong> One correct answer from multiple options
+                    <div class="card-body p-3">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <div class="d-flex align-items-start">
+                                    <div class="flex-shrink-0">
+                                        <i class="bi bi-list-ul text-primary fs-5"></i>
+                                    </div>
+                                    <div class="flex-grow-1 ms-2">
+                                        <strong class="small">Multiple Choice</strong>
+                                        <p class="small text-muted mb-0">One correct answer from multiple options</p>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="mb-2">
-                                <strong>True/False:</strong> Simple true or false questions
+                            <div class="col-12">
+                                <div class="d-flex align-items-start">
+                                    <div class="flex-shrink-0">
+                                        <i class="bi bi-check2-square text-success fs-5"></i>
+                                    </div>
+                                    <div class="flex-grow-1 ms-2">
+                                        <strong class="small">True/False</strong>
+                                        <p class="small text-muted mb-0">Simple true or false questions</p>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="mb-2">
-                                <strong>Short Answer:</strong> Brief text responses
+                            <div class="col-12">
+                                <div class="d-flex align-items-start">
+                                    <div class="flex-shrink-0">
+                                        <i class="bi bi-chat-text text-warning fs-5"></i>
+                                    </div>
+                                    <div class="flex-grow-1 ms-2">
+                                        <strong class="small">Short Answer</strong>
+                                        <p class="small text-muted mb-0">Brief text responses</p>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="mb-2">
-                                <strong>Essay:</strong> Longer, detailed responses
+                            <div class="col-12">
+                                <div class="d-flex align-items-start">
+                                    <div class="flex-shrink-0">
+                                        <i class="bi bi-file-text text-danger fs-5"></i>
+                                    </div>
+                                    <div class="flex-grow-1 ms-2">
+                                        <strong class="small">Essay</strong>
+                                        <p class="small text-muted mb-0">Longer, detailed responses</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Stats -->
+                <div class="card mb-4 border-0 shadow-sm">
+                    <div class="card-header bg-dark text-white">
+                        <h6 class="mb-0 fw-bold"><i class="bi bi-graph-up me-2"></i>Quiz Stats</h6>
+                    </div>
+                    <div class="card-body p-3">
+                        <div class="row text-center">
+                            <div class="col-6">
+                                <div class="border-end">
+                                    <h4 class="mb-0 text-primary" id="questionCount">0</h4>
+                                    <small class="text-muted">Questions</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <h4 class="mb-0 text-success" id="totalPoints">0</h4>
+                                <small class="text-muted">Total Points</small>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Action Buttons -->
-                <div class="card">
-                    <div class="card-body">
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-success" id="createQuizBtn">
-                                <i class="bi bi-check-circle me-1"></i>Create Quiz Assignment
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body p-4">
+                        <div class="d-grid gap-3">
+                            <button type="submit" class="btn btn-success btn-lg fw-bold" id="createQuizBtn">
+                                <i class="bi bi-check-circle me-2"></i>Create Quiz Assignment
                             </button>
                             {% if current_user.role in ['Director', 'School Administrator'] %}
                                 <a href="{{ url_for('management.assignment_type_selector') }}" class="btn btn-outline-secondary">
@@ -224,16 +339,19 @@
     </form>
 </div>
 
-<!-- Question Template (Hidden) -->
+<!-- Enhanced Question Template (Hidden) -->
 <template id="questionTemplate">
-    <div class="question-item card mb-3" data-question-id="">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h6 class="mb-0">Question <span class="question-number"></span></h6>
+    <div class="question-item card mb-4 border-0 shadow-sm" data-question-id="" style="border-left: 4px solid #007bff !important;">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+                <span class="badge bg-primary me-2 question-number-badge">1</span>
+                <h6 class="mb-0 fw-bold">Question <span class="question-number"></span></h6>
+            </div>
             <div class="btn-group btn-group-sm">
-                <button type="button" class="btn btn-outline-secondary move-question-up" title="Move Up">
+                <button type="button" class="btn btn-outline-primary move-question-up" title="Move Up">
                     <i class="bi bi-arrow-up"></i>
                 </button>
-                <button type="button" class="btn btn-outline-secondary move-question-down" title="Move Down">
+                <button type="button" class="btn btn-outline-primary move-question-down" title="Move Down">
                     <i class="bi bi-arrow-down"></i>
                 </button>
                 <button type="button" class="btn btn-outline-danger delete-question" title="Delete Question">
@@ -241,25 +359,38 @@
                 </button>
             </div>
         </div>
-        <div class="card-body">
-            <div class="mb-3">
-                <label class="form-label">Question Type</label>
-                <select class="form-select question-type" name="question_type[]">
-                    <option value="multiple_choice">Multiple Choice</option>
-                    <option value="true_false">True/False</option>
-                    <option value="short_answer">Short Answer</option>
-                    <option value="essay">Essay</option>
-                </select>
+        <div class="card-body p-4">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">
+                        <i class="bi bi-list-ul me-1 text-primary"></i>Question Type
+                    </label>
+                    <select class="form-select question-type" name="question_type[]">
+                        <option value="multiple_choice">Multiple Choice</option>
+                        <option value="true_false">True/False</option>
+                        <option value="short_answer">Short Answer</option>
+                        <option value="essay">Essay</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">
+                        <i class="bi bi-star me-1 text-warning"></i>Points <span class="text-danger">*</span>
+                    </label>
+                    <div class="input-group">
+                        <input type="number" class="form-control question-points" name="question_points[]" min="1" max="100" value="1" required>
+                        <span class="input-group-text">pts</span>
+                    </div>
+                </div>
             </div>
             
-            <div class="mb-3">
-                <label class="form-label">Question Text <span class="text-danger">*</span></label>
-                <textarea class="form-control question-text" name="question_text[]" rows="3" required></textarea>
-            </div>
-            
-            <div class="mb-3">
-                <label class="form-label">Points <span class="text-danger">*</span></label>
-                <input type="number" class="form-control question-points" name="question_points[]" min="1" max="100" value="1" required>
+            <div class="mt-4">
+                <label class="form-label fw-semibold">
+                    <i class="bi bi-question-circle me-1 text-primary"></i>Question Text <span class="text-danger">*</span>
+                </label>
+                <textarea class="form-control question-text" name="question_text[]" rows="3" 
+                          placeholder="Enter your question here..." required></textarea>
+                <div class="form-text">Be clear and specific in your question wording</div>
             </div>
             
             <!-- Multiple Choice Options -->
@@ -417,6 +548,14 @@ document.addEventListener('DOMContentLoaded', function() {
     addQuestionBtn.addEventListener('click', function() {
         addQuestion();
     });
+    
+    // Add first question button
+    const addFirstQuestionBtn = document.getElementById('addFirstQuestionBtn');
+    if (addFirstQuestionBtn) {
+        addFirstQuestionBtn.addEventListener('click', function() {
+            addQuestion();
+        });
+    }
     
     function addQuestion() {
         questionCounter++;
@@ -671,33 +810,86 @@ document.addEventListener('DOMContentLoaded', function() {
         const questions = questionsContainer.querySelectorAll('.question-item');
         questions.forEach((question, index) => {
             const questionNumber = question.querySelector('.question-number');
-            questionNumber.textContent = index + 1;
+            const questionNumberBadge = question.querySelector('.question-number-badge');
+            const number = index + 1;
+            if (questionNumber) questionNumber.textContent = number;
+            if (questionNumberBadge) questionNumberBadge.textContent = number;
         });
     }
     
     function updateQuizPreview() {
         const questions = questionsContainer.querySelectorAll('.question-item');
         let previewHTML = '';
+        let totalPoints = 0;
         
         if (questions.length === 0) {
-            previewHTML = '<p class="text-muted small">No questions added yet.</p>';
+            previewHTML = `
+                <div class="text-center text-muted py-3">
+                    <i class="bi bi-eye-slash mb-2 d-block" style="font-size: 2rem; opacity: 0.5;"></i>
+                    <p class="small mb-0">Quiz preview will appear here as you build it</p>
+                </div>
+            `;
         } else {
-            previewHTML = '<h6>Quiz Preview:</h6>';
+            previewHTML = '<h6 class="fw-bold mb-3">Quiz Preview:</h6>';
             questions.forEach((question, index) => {
                 const questionText = question.querySelector('.question-text').value || 'Untitled Question';
                 const questionType = question.querySelector('.question-type').value;
-                const questionPoints = question.querySelector('.question-points').value || '1';
+                const questionPoints = parseFloat(question.querySelector('.question-points').value) || 1;
+                totalPoints += questionPoints;
+                
+                const typeIcon = getQuestionTypeIcon(questionType);
+                const typeColor = getQuestionTypeColor(questionType);
                 
                 previewHTML += `
-                    <div class="preview-question">
-                        <strong>Q${index + 1}:</strong> ${questionText}
-                        <br><small class="text-muted">${questionType.replace('_', ' ').toUpperCase()} - ${questionPoints} point${questionPoints != 1 ? 's' : ''}</small>
+                    <div class="preview-question border-bottom pb-2 mb-2">
+                        <div class="d-flex align-items-start">
+                            <span class="badge bg-primary me-2">${index + 1}</span>
+                            <div class="flex-grow-1">
+                                <strong class="small">${questionText}</strong>
+                                <div class="d-flex align-items-center mt-1">
+                                    <i class="bi ${typeIcon} me-1 text-${typeColor}"></i>
+                                    <small class="text-muted me-2">${questionType.replace('_', ' ').toUpperCase()}</small>
+                                    <span class="badge bg-secondary">${questionPoints} pt${questionPoints != 1 ? 's' : ''}</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 `;
             });
         }
         
         quizPreview.innerHTML = previewHTML;
+        
+        // Update stats
+        updateQuizStats(questions.length, totalPoints);
+    }
+    
+    function getQuestionTypeIcon(type) {
+        const icons = {
+            'multiple_choice': 'bi-list-ul',
+            'true_false': 'bi-check2-square',
+            'short_answer': 'bi-chat-text',
+            'essay': 'bi-file-text'
+        };
+        return icons[type] || 'bi-question-circle';
+    }
+    
+    function getQuestionTypeColor(type) {
+        const colors = {
+            'multiple_choice': 'primary',
+            'true_false': 'success',
+            'short_answer': 'warning',
+            'essay': 'danger'
+        };
+        return colors[type] || 'secondary';
+    }
+    
+    function updateQuizStats(questionCount, totalPoints) {
+        const questionCountEl = document.getElementById('questionCount');
+        const totalPointsEl = document.getElementById('totalPoints');
+        
+        if (questionCountEl) questionCountEl.textContent = questionCount;
+        if (totalPointsEl) totalPointsEl.textContent = totalPoints;
     }
     
     // Save and continue settings toggle

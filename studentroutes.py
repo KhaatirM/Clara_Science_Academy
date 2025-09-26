@@ -903,7 +903,10 @@ def take_quiz(assignment_id):
     # Load student's existing answers if any
     existing_answers = {}
     if submission:
-        answers = QuizAnswer.query.filter_by(student_id=student.id, question_id=QuizQuestion.id).join(QuizQuestion).filter(QuizQuestion.assignment_id == assignment_id).all()
+        answers = QuizAnswer.query.join(QuizQuestion).filter(
+            QuizAnswer.student_id == student.id,
+            QuizQuestion.assignment_id == assignment_id
+        ).all()
         for answer in answers:
             existing_answers[answer.question_id] = answer
     
@@ -1053,22 +1056,26 @@ def submit_quiz(assignment_id):
                 # Get selected option
                 selected_option_id = request.form.get(f'question_{question.id}')
                 if selected_option_id:
-                    selected_option = QuizOption.query.get(int(selected_option_id))
-                    is_correct = selected_option and selected_option.is_correct
-                    points_earned = question.points if is_correct else 0
-                    
-                    # Save answer
-                    answer = QuizAnswer(
-                        student_id=student.id,
-                        question_id=question.id,
-                        selected_option_id=selected_option.id if selected_option else None,
-                        is_correct=is_correct,
-                        points_earned=points_earned
-                    )
-                    db.session.add(answer)
-                    
-                    if is_correct:
-                        earned_points += points_earned
+                    try:
+                        selected_option = QuizOption.query.get(int(selected_option_id))
+                        is_correct = selected_option and selected_option.is_correct
+                        points_earned = question.points if is_correct else 0
+                        
+                        # Save answer
+                        answer = QuizAnswer(
+                            student_id=student.id,
+                            question_id=question.id,
+                            selected_option_id=selected_option.id if selected_option else None,
+                            is_correct=is_correct,
+                            points_earned=points_earned
+                        )
+                        db.session.add(answer)
+                        
+                        if is_correct:
+                            earned_points += points_earned
+                    except (ValueError, TypeError):
+                        # Handle invalid option ID
+                        pass
                 
             elif question.question_type in ['short_answer', 'essay']:
                 # Get text answer

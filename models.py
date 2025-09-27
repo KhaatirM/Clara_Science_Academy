@@ -346,16 +346,38 @@ class SchoolBreak(db.Model):
 class Class(db.Model):
     """
     Model for storing class information.
+    Enhanced to support multiple teachers and substitute teachers.
     """
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(150), nullable=False)
     subject = db.Column(db.String(100), nullable=False)
-    teacher_id = db.Column(db.Integer, db.ForeignKey('teacher_staff.id'), nullable=False)
+    teacher_id = db.Column(db.Integer, db.ForeignKey('teacher_staff.id'), nullable=False)  # Primary teacher
     school_year_id = db.Column(db.Integer, db.ForeignKey('school_year.id'), nullable=False)
     # grade_levels = db.Column(db.String(100), nullable=True)  # Temporarily commented out until migration is applied
+    
+    # Class metadata
+    room_number = db.Column(db.String(20), nullable=True)
+    schedule = db.Column(db.String(200), nullable=True)  # e.g., "Mon/Wed/Fri 9:00-10:00"
+    max_students = db.Column(db.Integer, default=30, nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
-    teacher = db.relationship('TeacherStaff', backref='classes', lazy=True)
+    # Relationships
+    teacher = db.relationship('TeacherStaff', backref='primary_classes', lazy=True, foreign_keys=[teacher_id])
     school_year = db.relationship('SchoolYear', backref='classes', lazy=True)
+    
+    # Many-to-many relationships for multiple teachers
+    additional_teachers = db.relationship('TeacherStaff', 
+                                        secondary='class_additional_teachers',
+                                        backref='additional_classes',
+                                        lazy='dynamic')
+    
+    substitute_teachers = db.relationship('TeacherStaff',
+                                        secondary='class_substitute_teachers', 
+                                        backref='substitute_classes',
+                                        lazy='dynamic')
 
     def get_grade_levels(self):
         """Return grade levels as a list of integers"""
@@ -374,6 +396,22 @@ class Class(db.Model):
 
     def __repr__(self):
         return f"Class('{self.name}', Subject: '{self.subject}')"
+
+
+# Association tables for many-to-many relationships
+class_additional_teachers = db.Table('class_additional_teachers',
+    db.Column('class_id', db.Integer, db.ForeignKey('class.id'), primary_key=True),
+    db.Column('teacher_id', db.Integer, db.ForeignKey('teacher_staff.id'), primary_key=True),
+    db.Column('role', db.String(50), default='co-teacher', nullable=False),  # co-teacher, assistant, etc.
+    db.Column('assigned_at', db.DateTime, default=datetime.utcnow, nullable=False)
+)
+
+class_substitute_teachers = db.Table('class_substitute_teachers',
+    db.Column('class_id', db.Integer, db.ForeignKey('class.id'), primary_key=True),
+    db.Column('teacher_id', db.Integer, db.ForeignKey('teacher_staff.id'), primary_key=True),
+    db.Column('priority', db.Integer, default=1, nullable=False),  # 1 = first choice, 2 = second choice, etc.
+    db.Column('assigned_at', db.DateTime, default=datetime.utcnow, nullable=False)
+)
 
 
 class ClassSchedule(db.Model):

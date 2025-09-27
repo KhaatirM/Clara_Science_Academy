@@ -958,11 +958,152 @@ def teachers():
 @login_required
 @management_required
 def classes():
+    """Enhanced classes management page for Directors and School Administrators."""
     classes = Class.query.all()
-    return render_template('role_dashboard.html', 
+    return render_template('enhanced_classes.html', 
                          classes=classes,
                          section='classes',
                          active_tab='classes')
+
+@management_blueprint.route('/api/teachers')
+@login_required
+@management_required
+def api_teachers():
+    """API endpoint to get teachers for dropdowns."""
+    teachers = TeacherStaff.query.all()
+    return jsonify([{
+        'id': teacher.id,
+        'name': teacher.name,
+        'role': teacher.role
+    } for teacher in teachers])
+
+@management_blueprint.route('/add-class', methods=['GET', 'POST'])
+@login_required
+@management_required
+def add_class():
+    """Add a new class with enhanced features."""
+    if request.method == 'POST':
+        try:
+            name = request.form.get('name', '').strip()
+            subject = request.form.get('subject', '').strip()
+            teacher_id = request.form.get('teacher_id', type=int)
+            room_number = request.form.get('room_number', '').strip()
+            schedule = request.form.get('schedule', '').strip()
+            max_students = request.form.get('max_students', 30, type=int)
+            description = request.form.get('description', '').strip()
+            
+            if not name or not subject or not teacher_id:
+                flash('Please fill in all required fields.', 'danger')
+                return redirect(url_for('management.add_class'))
+            
+            # Get current school year
+            current_school_year = SchoolYear.query.filter_by(is_active=True).first()
+            if not current_school_year:
+                flash('Cannot create class: No active school year.', 'danger')
+                return redirect(url_for('management.add_class'))
+            
+            # Create new class
+            new_class = Class(
+                name=name,
+                subject=subject,
+                teacher_id=teacher_id,
+                school_year_id=current_school_year.id,
+                room_number=room_number if room_number else None,
+                schedule=schedule if schedule else None,
+                max_students=max_students,
+                description=description if description else None,
+                is_active=True
+            )
+            
+            db.session.add(new_class)
+            db.session.commit()
+            
+            flash(f'Class "{name}" created successfully!', 'success')
+            return redirect(url_for('management.classes'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error creating class: {str(e)}', 'danger')
+            return redirect(url_for('management.add_class'))
+    
+    # GET request - show form
+    teachers = TeacherStaff.query.all()
+    return render_template('add_class.html', teachers=teachers)
+
+@management_blueprint.route('/class/<int:class_id>/manage')
+@login_required
+@management_required
+def manage_class(class_id):
+    """Manage a specific class - teachers, students, etc."""
+    class_obj = Class.query.get_or_404(class_id)
+    return render_template('manage_class.html', class_obj=class_obj)
+
+@management_blueprint.route('/class/<int:class_id>/edit', methods=['GET', 'POST'])
+@login_required
+@management_required
+def edit_class(class_id):
+    """Edit a specific class."""
+    class_obj = Class.query.get_or_404(class_id)
+    
+    if request.method == 'POST':
+        try:
+            class_obj.name = request.form.get('name', '').strip()
+            class_obj.subject = request.form.get('subject', '').strip()
+            class_obj.teacher_id = request.form.get('teacher_id', type=int)
+            class_obj.room_number = request.form.get('room_number', '').strip() or None
+            class_obj.schedule = request.form.get('schedule', '').strip() or None
+            class_obj.max_students = request.form.get('max_students', 30, type=int)
+            class_obj.description = request.form.get('description', '').strip() or None
+            class_obj.is_active = 'is_active' in request.form
+            
+            db.session.commit()
+            flash(f'Class "{class_obj.name}" updated successfully!', 'success')
+            return redirect(url_for('management.classes'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error updating class: {str(e)}', 'danger')
+            return redirect(url_for('management.edit_class', class_id=class_id))
+    
+    # GET request - show edit form
+    teachers = TeacherStaff.query.all()
+    return render_template('edit_class.html', class_obj=class_obj, teachers=teachers)
+
+@management_blueprint.route('/class/<int:class_id>/roster')
+@login_required
+@management_required
+def class_roster(class_id):
+    """View and manage class roster."""
+    class_obj = Class.query.get_or_404(class_id)
+    enrollments = Enrollment.query.filter_by(class_id=class_id).all()
+    return render_template('class_roster.html', class_obj=class_obj, enrollments=enrollments)
+
+@management_blueprint.route('/class/<int:class_id>/grades')
+@login_required
+@management_required
+def class_grades(class_id):
+    """View class grades."""
+    class_obj = Class.query.get_or_404(class_id)
+    # Add grade viewing logic here
+    return render_template('class_grades.html', class_obj=class_obj)
+
+@management_blueprint.route('/class/<int:class_id>/remove', methods=['POST'])
+@login_required
+@management_required
+def remove_class(class_id):
+    """Remove a class."""
+    class_obj = Class.query.get_or_404(class_id)
+    
+    try:
+        class_name = class_obj.name
+        db.session.delete(class_obj)
+        db.session.commit()
+        flash(f'Class "{class_name}" removed successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error removing class: {str(e)}', 'danger')
+    
+    return redirect(url_for('management.classes'))
 
 @management_blueprint.route('/assignment/type-selector')
 @login_required

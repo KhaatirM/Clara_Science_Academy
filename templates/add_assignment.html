@@ -40,7 +40,7 @@
                 <div class="card mb-4 border-0 shadow-sm">
                     <div class="card-header bg-primary text-white">
                         <h5 class="mb-0 fw-bold"><i class="bi bi-info-circle me-2"></i>Assignment Information</h5>
-                    </div>
+                </div>
                     <div class="card-body p-4">
                         <div class="row g-3">
                             <div class="col-12">
@@ -115,10 +115,10 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </div>
-
-                <!-- File Upload Section -->
+                                </div>
+                            </div>
+                            
+                            <!-- File Upload Section -->
                 <div class="card mb-4 border-0 shadow-sm">
                     <div class="card-header bg-success text-white">
                         <h5 class="mb-0 fw-bold"><i class="bi bi-cloud-upload me-2"></i>Assignment Files</h5>
@@ -164,12 +164,12 @@
                                         </div>
                                     </div>
                                 </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
+                            
             <!-- Enhanced Sidebar -->
             <div class="col-12 col-lg-4">
                 <!-- Assignment Preview -->
@@ -213,9 +213,9 @@
                                     <div class="flex-grow-1 ms-2">
                                         <strong class="small">Realistic Deadlines</strong>
                                         <p class="small text-muted mb-0">Set appropriate due dates for the scope</p>
-                                    </div>
                                 </div>
                             </div>
+                        </div>
                             <div class="col-12">
                                 <div class="d-flex align-items-start">
                                     <div class="flex-shrink-0">
@@ -326,34 +326,34 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     function handleFileUpload(file) {
-        // Validate file size (16 MB limit)
-        if (file.size > 16 * 1024 * 1024) {
+            // Validate file size (16 MB limit)
+            if (file.size > 16 * 1024 * 1024) {
             showAlert('File size exceeds 16 MB limit. Please choose a smaller file.', 'danger');
             fileInput.value = '';
-            return;
-        }
-        
-        // Validate file type
-        const allowedTypes = [
-            'application/pdf',
-            'application/msword',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'text/plain',
-            'image/jpeg',
-            'image/jpg',
-            'image/png',
-            'image/gif',
-            'application/vnd.ms-excel',
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'application/vnd.ms-powerpoint',
-            'application/vnd.openxmlformats-officedocument.presentationml.presentation'
-        ];
-        
-        if (!allowedTypes.includes(file.type) && file.type !== '') {
+                return;
+            }
+            
+            // Validate file type
+            const allowedTypes = [
+                'application/pdf',
+                'application/msword',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'text/plain',
+                'image/jpeg',
+                'image/jpg',
+                'image/png',
+                'image/gif',
+                'application/vnd.ms-excel',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'application/vnd.ms-powerpoint',
+                'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+            ];
+            
+            if (!allowedTypes.includes(file.type) && file.type !== '') {
             showAlert('File type not supported. Please choose a different file.', 'danger');
             fileInput.value = '';
-            return;
-        }
+                return;
+            }
         
         // Show file preview
         showFilePreview(file);
@@ -368,7 +368,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function hideFilePreview() {
-        filePreview.style.display = 'none';
+            filePreview.style.display = 'none';
         updateAssignmentPreview();
     }
     

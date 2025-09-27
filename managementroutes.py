@@ -2660,63 +2660,6 @@ def settings():
                          active_tab='settings')
 
 
-@management_blueprint.route('/add-class', methods=['GET', 'POST'])
-@login_required
-@management_required
-def add_class():
-    """Add a new class"""
-    # Query all teachers (role='Teacher')
-    teachers = TeacherStaff.query.all()
-    available_teachers = []
-    for t in teachers:
-        user = User.query.filter_by(teacher_staff_id=t.id).first()
-        username = user.username if user else ''
-        name = f"{t.first_name} {t.last_name}"
-        available_teachers.append({'id': t.id, 'name': name, 'username': username})
-
-    if request.method == 'POST':
-        class_name = request.form.get('class_name', '').strip()
-        subject = request.form.get('subject', '').strip()
-        teacher_id = request.form.get('teacher_id', type=int)
-        grade_levels = request.form.getlist('grade_levels')  # Get multiple selected values
-
-        # Validate required fields
-        if not all([class_name, subject, teacher_id]):
-            flash('Class name, subject, and teacher are required.', 'danger')
-            return render_template('add_class.html', available_teachers=available_teachers)
-
-        # Fetch the currently active school year
-        current_school_year = SchoolYear.query.filter_by(is_active=True).first()
-        if not current_school_year:
-            # UPDATED ERROR MESSAGE
-            flash_message = (
-                'Cannot add class: There is no active school year. '
-                f'<a href="{url_for("management.school_years")}" class="alert-link">'
-                'Please create or set an active school year here.</a>'
-            )
-            flash(flash_message, "danger")
-            return redirect(url_for('management.classes'))
-
-        # Create the class
-        new_class = Class(
-            name=class_name,
-            subject=subject,
-            teacher_id=teacher_id,
-            school_year_id=current_school_year.id  # Add the active school year ID
-        )
-        
-        # Handle grade levels
-        if grade_levels:
-            # Convert to integers and sort
-            grade_list = sorted([int(grade) for grade in grade_levels if grade.isdigit()])
-            new_class.set_grade_levels(grade_list)
-        
-        db.session.add(new_class)
-        db.session.commit()
-        flash('Class added successfully!', 'success')
-        return redirect(url_for('management.classes'))
-
-    return render_template('add_class.html', available_teachers=available_teachers)
 
 
 
@@ -2730,14 +2673,6 @@ def class_grades_view(class_id):
     return render_template('class_grades_view.html', class_id=class_id)
 
 
-@management_blueprint.route('/remove-class/<int:class_id>', methods=['POST'])
-@login_required
-@management_required
-def remove_class(class_id):
-    """Remove a class"""
-    # This would delete the class from the database
-    flash('Class removed successfully.', 'success')
-    return redirect(url_for('management.classes'))
 
 
 @management_blueprint.route('/add-assignment', methods=['GET', 'POST'])
@@ -4200,60 +4135,6 @@ def view_class(class_id):
                          role_prefix=None)
 
 
-@management_blueprint.route('/edit-class/<int:class_id>', methods=['GET', 'POST'])
-@login_required
-@management_required
-def edit_class(class_id):
-    """Edit class information"""
-    class_info = Class.query.get_or_404(class_id)
-    
-    if request.method == 'POST':
-        # Get form data
-        name = request.form.get('name', '').strip()
-        subject = request.form.get('subject', '').strip()
-        teacher_id = request.form.get('teacher_id', type=int)
-        grade_levels = request.form.getlist('grade_levels')  # Get multiple selected values
-        
-        # Validate required fields
-        if not all([name, subject, teacher_id]):
-            flash('Class name, subject, and teacher are required.', 'danger')
-            return redirect(request.url)
-        
-        try:
-            # Update class information
-            class_info.name = name
-            class_info.subject = subject
-            class_info.teacher_id = teacher_id
-            
-            # Handle grade levels
-            if grade_levels:
-                # Convert to integers and sort
-                grade_list = sorted([int(grade) for grade in grade_levels if grade.isdigit()])
-                class_info.set_grade_levels(grade_list)
-            else:
-                class_info.grade_levels = None
-            
-            db.session.commit()
-            flash('Class updated successfully!', 'success')
-            return redirect(url_for('management.classes'))
-            
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Error updating class: {str(e)}', 'danger')
-            return redirect(request.url)
-    
-    # For GET request, get all teachers for the dropdown
-    teachers = TeacherStaff.query.all()
-    available_teachers = []
-    for t in teachers:
-        user = User.query.filter_by(teacher_staff_id=t.id).first()
-        username = user.username if user else ''
-        name = f"{t.first_name} {t.last_name}"
-        available_teachers.append({'id': t.id, 'name': name, 'username': username})
-    
-    return render_template('edit_class.html', 
-                         class_info=class_info,
-                         available_teachers=available_teachers)
 
 
 @management_blueprint.route('/manage-class-roster/<int:class_id>', methods=['GET', 'POST'])

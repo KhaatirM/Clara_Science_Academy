@@ -434,6 +434,11 @@ def create_app(config_class=None):
                     
                     if missing_columns:
                         print(f"Adding missing class table columns: {missing_columns}")
+                        
+                        # Check database type for correct SQL syntax
+                        db_url = str(db.engine.url)
+                        is_postgres = 'postgresql' in db_url
+                        
                         with db.engine.connect() as connection:
                             for col in missing_columns:
                                 try:
@@ -448,9 +453,15 @@ def create_app(config_class=None):
                                     elif col == 'is_active':
                                         connection.execute(text("ALTER TABLE class ADD COLUMN is_active BOOLEAN DEFAULT TRUE"))
                                     elif col == 'created_at':
-                                        connection.execute(text("ALTER TABLE class ADD COLUMN created_at DATETIME"))
+                                        if is_postgres:
+                                            connection.execute(text("ALTER TABLE class ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
+                                        else:
+                                            connection.execute(text("ALTER TABLE class ADD COLUMN created_at DATETIME"))
                                     elif col == 'updated_at':
-                                        connection.execute(text("ALTER TABLE class ADD COLUMN updated_at DATETIME"))
+                                        if is_postgres:
+                                            connection.execute(text("ALTER TABLE class ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
+                                        else:
+                                            connection.execute(text("ALTER TABLE class ADD COLUMN updated_at DATETIME"))
                                     print(f"✓ Added column: {col}")
                                 except Exception as col_error:
                                     print(f"⚠ Error adding column {col}: {col_error}")

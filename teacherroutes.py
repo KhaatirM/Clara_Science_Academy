@@ -411,14 +411,26 @@ def create_quiz_assignment():
             db.session.add(new_assignment)
             db.session.flush()  # Get the assignment ID
             
+            # Debug: Print all form data
+            print(f"DEBUG: Quiz creation form data:")
+            for key, value in request.form.items():
+                print(f"  {key}: {value}")
+            
             # Save quiz questions
             question_count = 0
             for key, value in request.form.items():
-                if key.startswith('question_text_'):
-                    question_id = key.split('_')[2]
+                if key.startswith('question_text_') and not key.endswith('[]'):
+                    # Extract question ID from the field name (e.g., question_text_1 -> 1)
+                    question_id = key.split('_')[-1]
                     question_text = value
                     question_type = request.form.get(f'question_type_{question_id}')
                     points = float(request.form.get(f'question_points_{question_id}', 1.0))
+                    
+                    print(f"DEBUG: Processing question {question_count}:")
+                    print(f"  ID: {question_id}")
+                    print(f"  Text: {question_text}")
+                    print(f"  Type: {question_type}")
+                    print(f"  Points: {points}")
                     
                     # Create the question
                     question = QuizQuestion(
@@ -435,20 +447,33 @@ def create_quiz_assignment():
                     if question_type in ['multiple_choice', 'true_false']:
                         option_count = 0
                         for option_key, option_value in request.form.items():
-                            if option_key.startswith(f'option_text_{question_id}[]'):
-                                option_text = option_value
+                            if option_key == f'option_text_{question_id}[]':
+                                # Handle array of options
+                                if isinstance(option_value, list):
+                                    options_list = option_value
+                                else:
+                                    options_list = [option_value]
+                                
                                 # Find the correct answer for this question
                                 correct_answer = request.form.get(f'correct_answer_{question_id}')
-                                is_correct = str(option_count) == correct_answer
                                 
-                                option = QuizOption(
-                                    question_id=question.id,
-                                    option_text=option_text,
-                                    is_correct=is_correct,
-                                    order=option_count
-                                )
-                                db.session.add(option)
-                                option_count += 1
+                                print(f"DEBUG: Processing options for question {question_id}:")
+                                print(f"  Correct answer: {correct_answer}")
+                                print(f"  Options: {options_list}")
+                                
+                                for option_text in options_list:
+                                    if option_text and option_text.strip():
+                                        is_correct = str(option_count) == correct_answer
+                                        print(f"    Option {option_count}: '{option_text}' (correct: {is_correct})")
+                                        
+                                        option = QuizOption(
+                                            question_id=question.id,
+                                            option_text=option_text.strip(),
+                                            is_correct=is_correct,
+                                            order=option_count
+                                        )
+                                        db.session.add(option)
+                                        option_count += 1
                     
                     question_count += 1
             

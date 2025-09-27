@@ -1013,6 +1013,7 @@ class StudentGroupMember(db.Model):
 class GroupAssignment(db.Model):
     """
     Model for assignments that are specifically for groups.
+    Enhanced to support all assignment types: PDF/Paper, Quiz, Discussion.
     """
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
@@ -1025,6 +1026,17 @@ class GroupAssignment(db.Model):
     school_year_id = db.Column(db.Integer, db.ForeignKey('school_year.id'), nullable=False)
     is_locked = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Assignment status: Active, Inactive, Voided
+    status = db.Column(db.String(20), default='Active', nullable=False)
+    
+    # Assignment type: pdf, quiz, discussion
+    assignment_type = db.Column(db.String(20), default='pdf', nullable=False)
+    
+    # Quiz save and continue settings (for quiz type)
+    allow_save_and_continue = db.Column(db.Boolean, default=False, nullable=False)
+    max_save_attempts = db.Column(db.Integer, default=10, nullable=False)
+    save_timeout_minutes = db.Column(db.Integer, default=30, nullable=False)
     
     # Group-specific fields
     group_size_min = db.Column(db.Integer, default=2)  # Minimum students per group
@@ -1043,9 +1055,65 @@ class GroupAssignment(db.Model):
     class_info = db.relationship('Class', backref='group_assignments')
     school_year = db.relationship('SchoolYear', backref='group_assignments')
     academic_period = db.relationship('AcademicPeriod', backref='group_assignments')
+    quiz_questions = db.relationship('GroupQuizQuestion', backref='group_assignment', lazy=True, cascade='all, delete-orphan')
     
     def __repr__(self):
         return f"GroupAssignment('{self.title}', Class: {self.class_id})"
+
+
+class GroupQuizQuestion(db.Model):
+    """
+    Model for storing quiz questions for group assignments.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    group_assignment_id = db.Column(db.Integer, db.ForeignKey('group_assignment.id'), nullable=False)
+    question_text = db.Column(db.Text, nullable=False)
+    question_type = db.Column(db.String(20), nullable=False)  # multiple_choice, true_false, short_answer, essay
+    points = db.Column(db.Float, default=1.0, nullable=False)
+    order = db.Column(db.Integer, default=0, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f"GroupQuizQuestion('{self.question_text[:50]}...', Type: {self.question_type})"
+
+
+class GroupQuizOption(db.Model):
+    """
+    Model for storing quiz question options for group assignments.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    question_id = db.Column(db.Integer, db.ForeignKey('group_quiz_question.id'), nullable=False)
+    option_text = db.Column(db.String(500), nullable=False)
+    is_correct = db.Column(db.Boolean, default=False, nullable=False)
+    order = db.Column(db.Integer, default=0, nullable=False)
+    
+    question = db.relationship('GroupQuizQuestion', backref='options', lazy=True)
+    
+    def __repr__(self):
+        return f"GroupQuizOption('{self.option_text[:30]}...', Correct: {self.is_correct})"
+
+
+class GroupQuizAnswer(db.Model):
+    """
+    Model for storing group quiz answers.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    group_id = db.Column(db.Integer, db.ForeignKey('student_group.id'), nullable=True)  # Group that answered
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=True)  # Individual student (for individual submissions)
+    question_id = db.Column(db.Integer, db.ForeignKey('group_quiz_question.id'), nullable=False)
+    answer_text = db.Column(db.Text, nullable=True)  # For short answer and essay
+    selected_option_id = db.Column(db.Integer, db.ForeignKey('group_quiz_option.id'), nullable=True)  # For multiple choice and true/false
+    is_correct = db.Column(db.Boolean, nullable=True)  # Calculated when submitted
+    points_earned = db.Column(db.Float, default=0.0, nullable=False)
+    submitted_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    group = db.relationship('StudentGroup', backref='quiz_answers', lazy=True)
+    student = db.relationship('Student', backref='group_quiz_answers', lazy=True)
+    question = db.relationship('GroupQuizQuestion', backref='answers', lazy=True)
+    selected_option = db.relationship('GroupQuizOption', backref='selected_answers', lazy=True)
+    
+    def __repr__(self):
+        return f"GroupQuizAnswer(Group: {self.group_id}, Student: {self.student_id}, Question: {self.question_id})"
 
 
 class GroupSubmission(db.Model):

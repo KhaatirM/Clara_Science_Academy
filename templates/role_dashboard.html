@@ -1007,11 +1007,73 @@
                                                 </a>
                                             {% endif %}
                                             {% if current_user.role in ['Director', 'School Administrator', 'Teacher'] %}
-                                                <a href="{{ url_for('management.view_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-primary flex-fill">View</a>
-                                                <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-warning flex-fill">Edit</a>
-                                                <a href="{{ url_for('management.grade_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-success flex-fill">Grade</a>
-                                                <button type="button" class="btn btn-sm btn-outline-danger flex-fill remove-assignment-btn" 
-                                                        data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}">Remove</button>
+                                                <div class="assignment-actions">
+                                                    <!-- Primary Actions Row -->
+                                                    <div class="d-flex gap-1 mb-1">
+                                                        <a href="{{ url_for('management.view_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-primary" title="View Assignment">
+                                                            <i class="bi bi-eye"></i>
+                                                        </a>
+                                                        <a href="{{ url_for('management.view_class', class_id=assignment.class_id) }}" class="btn btn-sm btn-outline-info" title="View Class">
+                                                            <i class="bi bi-people"></i>
+                                                        </a>
+                                                    </div>
+                                                    
+                                                    <!-- Management Actions for Directors and School Administrators -->
+                                                    {% if current_user.role in ['Director', 'School Administrator'] %}
+                                                        <div class="d-flex gap-1 mb-1">
+                                                            <a href="{{ url_for('management.grade_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-success" title="Grade Assignment">
+                                                                <i class="bi bi-pencil"></i>
+                                                            </a>
+                                                            <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-warning" title="Edit Assignment">
+                                                                <i class="bi bi-pencil-square"></i>
+                                                            </a>
+                                                        </div>
+                                                        
+                                                        <div class="d-flex gap-1">
+                                                            <button type="button" class="btn btn-sm btn-outline-info change-status-btn" title="Change Status"
+                                                                    data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}" 
+                                                                    data-current-status="{{ assignment.status }}">
+                                                                <i class="bi bi-gear"></i>
+                                                            </button>
+                                                            <button type="button" class="btn btn-sm btn-outline-success manage-extensions-btn" title="Manage Extensions"
+                                                                    data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}"
+                                                                    data-class-id="{{ assignment.class_id }}">
+                                                                <i class="bi bi-clock-history"></i>
+                                                            </button>
+                                                            <button type="button" class="btn btn-sm btn-outline-danger remove-assignment-btn" title="Remove Assignment"
+                                                                    data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}">
+                                                                <i class="bi bi-trash"></i>
+                                                            </button>
+                                                        </div>
+                                                        
+                                                    {% elif current_user.role == 'Teacher' %}
+                                                        <div class="d-flex gap-1 mb-1">
+                                                            <a href="{{ url_for('management.grade_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-success" title="Grade Assignment">
+                                                                <i class="bi bi-pencil"></i>
+                                                            </a>
+                                                            <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-warning" title="Edit Assignment">
+                                                                <i class="bi bi-pencil-square"></i>
+                                                            </a>
+                                                        </div>
+                                                        
+                                                        <div class="d-flex gap-1">
+                                                            <button type="button" class="btn btn-sm btn-outline-info change-status-btn" title="Change Status"
+                                                                    data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}" 
+                                                                    data-current-status="{{ assignment.status }}">
+                                                                <i class="bi bi-gear"></i>
+                                                            </button>
+                                                            <button type="button" class="btn btn-sm btn-outline-success manage-extensions-btn" title="Manage Extensions"
+                                                                    data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}"
+                                                                    data-class-id="{{ assignment.class_id }}">
+                                                                <i class="bi bi-clock-history"></i>
+                                                            </button>
+                                                            <button type="button" class="btn btn-sm btn-outline-danger remove-assignment-btn" title="Remove Assignment"
+                                                                    data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}">
+                                                                <i class="bi bi-trash"></i>
+                                                            </button>
+                                                        </div>
+                                                    {% endif %}
+                                                </div>
                                             {% elif current_user.role == 'Student' %}
                                                 <a href="#" class="btn btn-sm btn-outline-primary">View Details</a>
                                                 {% if assignment.due_date and assignment.due_date.date() >= today %}

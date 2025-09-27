@@ -98,44 +98,88 @@
                                     {% endif %}
                                 </td>
                                 <td data-label="Actions">
-                                    <div class="d-flex flex-column gap-1">
+                                    <div class="assignment-actions">
                                         {% if current_user.role in ['Director', 'School Administrator', 'Teacher'] %}
+                                            <!-- Primary Actions Row -->
                                             <div class="d-flex gap-1 mb-1">
-                                                <a href="{{ url_for('management.view_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-primary">View</a>
-                                                
-                                                {# Edit button - Directors always see it, School Administrators and Teachers only for their own classes #}
-                                                {% if current_user.role == 'Director' or (current_user.role in ['School Administrator', 'Teacher'] and assignment.class_info and assignment.class_info.teacher_id == current_user.id) %}
-                                                    <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-warning">Edit</a>
-                                                {% endif %}
-                                                
-                                                {# Status button - Directors always see it, School Administrators and Teachers only for their own classes #}
-                                                {% if current_user.role == 'Director' or (current_user.role in ['School Administrator', 'Teacher'] and assignment.class_info and assignment.class_info.teacher_id == current_user.id) %}
-                                                    <button type="button" class="btn btn-sm btn-outline-info change-status-btn" 
-                                                            data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}" 
-                                                            data-current-status="{{ assignment.status }}">Status</button>
-                                                {% endif %}
-                                                
-                                                {# Grade button - Directors always see it, School Administrators and Teachers only for their own classes #}
-                                                {% if current_user.role == 'Director' or (current_user.role in ['School Administrator', 'Teacher'] and assignment.class_info and assignment.class_info.teacher_id == current_user.id) %}
-                                                    <a href="{{ url_for('teacher.grade_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-success">Grade</a>
-                                                {% endif %}
+                                                <a href="{{ url_for('management.view_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-primary" title="View Assignment">
+                                                    <i class="bi bi-eye"></i>
+                                                </a>
+                                                <a href="{{ url_for('teacher.view_class', class_id=assignment.class_id) }}" class="btn btn-sm btn-outline-info" title="View Class">
+                                                    <i class="bi bi-people"></i>
+                                                </a>
                                             </div>
                                             
-                                            {# View Class button - Directors always see it, School Administrators and Teachers only for their own classes #}
-                                            {% if current_user.role == 'Director' or (current_user.role in ['School Administrator', 'Teacher'] and assignment.class_info and assignment.class_info.teacher_id == current_user.id) %}
-                                                <a href="{{ url_for('teacher.view_class', class_id=assignment.class_id) }}" class="btn btn-sm btn-outline-info mb-1">View Class</a>
+                                            <!-- Management Actions for Directors and School Administrators -->
+                                            {% if current_user.role in ['Director', 'School Administrator'] %}
+                                                <div class="d-flex gap-1 mb-1">
+                                                    <a href="{{ url_for('teacher.grade_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-success" title="Grade Assignment">
+                                                        <i class="bi bi-pencil"></i>
+                                                    </a>
+                                                    <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-warning" title="Edit Assignment">
+                                                        <i class="bi bi-pencil-square"></i>
+                                                    </a>
+                                                </div>
+                                                
+                                                <div class="d-flex gap-1">
+                                                    <button type="button" class="btn btn-sm btn-outline-info change-status-btn" title="Change Status"
+                                                            data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}" 
+                                                            data-current-status="{{ assignment.status }}">
+                                                        <i class="bi bi-gear"></i>
+                                                    </button>
+                                                    <button type="button" class="btn btn-sm btn-outline-success manage-extensions-btn" title="Manage Extensions"
+                                                            data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}"
+                                                            data-class-id="{{ assignment.class_id }}">
+                                                        <i class="bi bi-clock-history"></i>
+                                                    </button>
+                                                    <button type="button" class="btn btn-sm btn-outline-danger remove-assignment-btn" title="Remove Assignment"
+                                                            data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </div>
+                                                
+                                            {% elif current_user.role == 'Teacher' %}
+                                                {# Teachers only see actions for their own classes #}
+                                                {% if assignment.class_info and assignment.class_info.teacher_id == current_user.id %}
+                                                    <div class="d-flex gap-1 mb-1">
+                                                        <a href="{{ url_for('teacher.grade_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-success" title="Grade Assignment">
+                                                            <i class="bi bi-pencil"></i>
+                                                        </a>
+                                                        <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-warning" title="Edit Assignment">
+                                                            <i class="bi bi-pencil-square"></i>
+                                                        </a>
+                                                    </div>
+                                                    
+                                                    <div class="d-flex gap-1">
+                                                        <button type="button" class="btn btn-sm btn-outline-info change-status-btn" title="Change Status"
+                                                                data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}" 
+                                                                data-current-status="{{ assignment.status }}">
+                                                            <i class="bi bi-gear"></i>
+                                                        </button>
+                                                        <button type="button" class="btn btn-sm btn-outline-success manage-extensions-btn" title="Manage Extensions"
+                                                                data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}"
+                                                                data-class-id="{{ assignment.class_id }}">
+                                                            <i class="bi bi-clock-history"></i>
+                                                        </button>
+                                                        <button type="button" class="btn btn-sm btn-outline-danger remove-assignment-btn" title="Remove Assignment"
+                                                                data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                {% endif %}
                                             {% endif %}
                                             
-                                            {# Remove button - Directors always see it, School Administrators and Teachers only for their own classes #}
-                                            {% if current_user.role == 'Director' or (current_user.role in ['School Administrator', 'Teacher'] and assignment.class_info and assignment.class_info.teacher_id == current_user.id) %}
-                                                <button type="button" class="btn btn-sm btn-outline-danger remove-assignment-btn" 
-                                                        data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}">Remove</button>
-                                            {% endif %}
                                         {% elif current_user.role == 'Student' %}
-                                            <a href="#" class="btn btn-sm btn-outline-primary">View Details</a>
-                                            {% if assignment.status == 'active' %}
-                                                <a href="#" class="btn btn-sm btn-outline-success mt-1">Submit Work</a>
-                                            {% endif %}
+                                            <div class="d-flex gap-1">
+                                                <a href="#" class="btn btn-sm btn-outline-primary" title="View Details">
+                                                    <i class="bi bi-eye"></i>
+                                                </a>
+                                                {% if assignment.status == 'active' %}
+                                                    <a href="#" class="btn btn-sm btn-outline-success" title="Submit Work">
+                                                        <i class="bi bi-upload"></i>
+                                                    </a>
+                                                {% endif %}
+                                            </div>
                                         {% endif %}
                                     </div>
                                 </td>

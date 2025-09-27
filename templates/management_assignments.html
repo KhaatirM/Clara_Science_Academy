@@ -147,35 +147,45 @@
                                 {% endif %}
                             </td>
                             <td data-label="Actions">
-                                <div class="d-flex flex-column flex-sm-row gap-1">
-                                    <a href="{{ url_for('management.view_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-secondary btn-sm">
-                                        <i class="bi bi-eye me-1"></i>View
-                                    </a>
-                                    {% if user_role == 'Director' or (user_role == 'School Administrator' and assignment.class_info and assignment.class_info.teacher_id == current_user.id) %}
-                                        <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-warning btn-sm">
-                                            <i class="bi bi-pencil-square me-1"></i>Edit
+                                <div class="assignment-actions">
+                                    <!-- Primary Actions Row -->
+                                    <div class="d-flex gap-1 mb-1">
+                                        <a href="{{ url_for('management.view_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-secondary btn-sm" title="View Assignment Details">
+                                            <i class="bi bi-eye"></i>
                                         </a>
-                                        <a href="{{ url_for('management.grade_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-primary btn-sm">
-                                            <i class="bi bi-pencil me-1"></i>Grade
+                                        <a href="{{ url_for('management.view_class', class_id=assignment.class_id) }}" class="btn btn-outline-info btn-sm" title="View Class">
+                                            <i class="bi bi-people"></i>
                                         </a>
-                                        <button type="button" class="btn btn-outline-info btn-sm change-status-btn"
-                                                data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}" 
-                                                data-current-status="{{ assignment.status }}">
-                                            <i class="bi bi-gear me-1"></i>Status
-                                        </button>
-                                        <button type="button" class="btn btn-outline-danger btn-sm remove-assignment-btn"
-                                                data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}">
-                                            <i class="bi bi-trash me-1"></i>Remove
-                                        </button>
-                                        <button type="button" class="btn btn-outline-success btn-sm manage-extensions-btn"
-                                                data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}"
-                                                data-class-id="{{ assignment.class_id }}">
-                                            <i class="bi bi-clock-history me-1"></i>Extensions
-                                        </button>
+                                    </div>
+                                    
+                                    <!-- Management Actions for Directors and School Administrators -->
+                                    {% if user_role in ['Director', 'School Administrator'] %}
+                                        <div class="d-flex gap-1 mb-1">
+                                            <a href="{{ url_for('management.grade_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-primary btn-sm" title="Grade Assignment">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-warning btn-sm" title="Edit Assignment">
+                                                <i class="bi bi-pencil-square"></i>
+                                            </a>
+                                        </div>
+                                        
+                                        <div class="d-flex gap-1">
+                                            <button type="button" class="btn btn-outline-info btn-sm change-status-btn" title="Change Status"
+                                                    data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}" 
+                                                    data-current-status="{{ assignment.status }}">
+                                                <i class="bi bi-gear"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-success btn-sm manage-extensions-btn" title="Manage Extensions"
+                                                    data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}"
+                                                    data-class-id="{{ assignment.class_id }}">
+                                                <i class="bi bi-clock-history"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-danger btn-sm remove-assignment-btn" title="Remove Assignment"
+                                                    data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
                                     {% endif %}
-                                    <a href="{{ url_for('management.view_class', class_id=assignment.class_id) }}" class="btn btn-outline-info btn-sm">
-                                        <i class="bi bi-eye me-1"></i>View Class
-                                    </a>
                                 </div>
                             </td>
                         </tr>
@@ -770,3 +780,69 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
+
+<style>
+/* Assignment Actions Styling */
+.assignment-actions {
+    min-width: 120px;
+    max-width: 140px;
+}
+
+.assignment-actions .btn {
+    min-width: 32px;
+    height: 32px;
+    padding: 0.25rem 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.assignment-actions .btn i {
+    font-size: 0.875rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .assignment-actions {
+        min-width: 100px;
+        max-width: 120px;
+    }
+    
+    .assignment-actions .btn {
+        min-width: 28px;
+        height: 28px;
+        padding: 0.2rem 0.4rem;
+    }
+    
+    .assignment-actions .btn i {
+        font-size: 0.75rem;
+    }
+}
+
+/* Table responsive improvements */
+.assignments-table {
+    table-layout: fixed;
+}
+
+.assignments-table th:nth-child(1) { width: 15%; } /* Due Date */
+.assignments-table th:nth-child(2) { width: 35%; } /* Assignment Title */
+.assignments-table th:nth-child(3) { width: 20%; } /* Class */
+.assignments-table th:nth-child(4) { width: 10%; } /* Status */
+.assignments-table th:nth-child(5) { width: 20%; } /* Actions */
+
+@media (max-width: 992px) {
+    .assignments-table th:nth-child(1) { width: 18%; }
+    .assignments-table th:nth-child(2) { width: 32%; }
+    .assignments-table th:nth-child(3) { width: 18%; }
+    .assignments-table th:nth-child(4) { width: 12%; }
+    .assignments-table th:nth-child(5) { width: 20%; }
+}
+
+@media (max-width: 768px) {
+    .assignments-table th:nth-child(1) { width: 20%; }
+    .assignments-table th:nth-child(2) { width: 30%; }
+    .assignments-table th:nth-child(3) { width: 20%; }
+    .assignments-table th:nth-child(4) { width: 10%; }
+    .assignments-table th:nth-child(5) { width: 20%; }
+}
+</style>

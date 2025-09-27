@@ -2693,15 +2693,8 @@ def grade_assignment(assignment_id):
     assignment = Assignment.query.get_or_404(assignment_id)
     class_obj = assignment.class_info
     
-    # Authorization check for School Administrators
-    if current_user.role == 'School Administrator':
-        teacher_staff = None
-        if current_user.teacher_staff_id:
-            teacher_staff = TeacherStaff.query.get(current_user.teacher_staff_id)
-        if not teacher_staff or not class_obj or class_obj.teacher_id != teacher_staff.id:
-            flash("You are not authorized to grade this assignment.", "danger")
-            return redirect(url_for('management.assignments'))
-    elif current_user.role != 'Director':
+    # Authorization check - Directors and School Administrators can grade any assignment
+    if current_user.role not in ['Director', 'School Administrator']:
         flash("You are not authorized to grade assignments.", "danger")
         return redirect(url_for('management.assignments'))
     
@@ -2804,15 +2797,8 @@ def edit_assignment(assignment_id):
     """Edit an assignment"""
     assignment = Assignment.query.get_or_404(assignment_id)
     
-    # Authorization check - Directors can edit any assignment, School Administrators only their own classes
-    if current_user.role == 'School Administrator':
-        teacher_staff = None
-        if current_user.teacher_staff_id:
-            teacher_staff = TeacherStaff.query.get(current_user.teacher_staff_id)
-        if not teacher_staff or not assignment.class_info or assignment.class_info.teacher_id != teacher_staff.id:
-            flash("You are not authorized to edit this assignment.", "danger")
-            return redirect(url_for('management.assignments'))
-    elif current_user.role != 'Director':
+    # Authorization check - Directors and School Administrators can edit any assignment
+    if current_user.role not in ['Director', 'School Administrator']:
         flash("You are not authorized to edit this assignment.", "danger")
         return redirect(url_for('management.assignments'))
     
@@ -2896,15 +2882,8 @@ def remove_assignment(assignment_id):
     """Remove an assignment"""
     assignment = Assignment.query.get_or_404(assignment_id)
     
-    # Authorization check - Directors can remove any assignment, School Administrators only their own classes
-    if current_user.role == 'School Administrator':
-        teacher_staff = None
-        if current_user.teacher_staff_id:
-            teacher_staff = TeacherStaff.query.get(current_user.teacher_staff_id)
-        if not teacher_staff or not assignment.class_info or assignment.class_info.teacher_id != teacher_staff.id:
-            flash("You are not authorized to remove this assignment.", "danger")
-            return redirect(url_for('management.assignments'))
-    elif current_user.role != 'Director':
+    # Authorization check - Directors and School Administrators can remove any assignment
+    if current_user.role not in ['Director', 'School Administrator']:
         flash("You are not authorized to remove this assignment.", "danger")
         return redirect(url_for('management.assignments'))
     
@@ -2934,15 +2913,8 @@ def change_assignment_status(assignment_id):
     """Change assignment status"""
     assignment = Assignment.query.get_or_404(assignment_id)
     
-    # Authorization check - Directors can change any assignment status, School Administrators only their own classes
-    if current_user.role == 'School Administrator':
-        # Find the TeacherStaff record for this user
-        teacher_staff = None
-        if current_user.teacher_staff_id:
-            teacher_staff = TeacherStaff.query.get(current_user.teacher_staff_id)
-        if not teacher_staff or not assignment.class_info or assignment.class_info.teacher_id != teacher_staff.id:
-            return jsonify({'success': False, 'message': 'You are not authorized to change this assignment status.'})
-    elif current_user.role != 'Director':
+    # Authorization check - Directors and School Administrators can change any assignment status
+    if current_user.role not in ['Director', 'School Administrator']:
         return jsonify({'success': False, 'message': 'You are not authorized to change assignment status.'})
     
     new_status = request.form.get('status')
@@ -3007,15 +2979,8 @@ def grant_extensions():
         # Get the assignment
         assignment = Assignment.query.get_or_404(assignment_id)
         
-        # Authorization check - Directors can grant extensions for any assignment, School Administrators only their own classes
-        if current_user.role == 'School Administrator':
-            # Find the TeacherStaff record for this user
-            teacher_staff = None
-            if current_user.teacher_staff_id:
-                teacher_staff = TeacherStaff.query.get(current_user.teacher_staff_id)
-            if not teacher_staff or not assignment.class_info or assignment.class_info.teacher_id != teacher_staff.id:
-                return jsonify({'success': False, 'message': 'You are not authorized to grant extensions for this assignment.'})
-        elif current_user.role != 'Director':
+        # Authorization check - Directors and School Administrators can grant extensions for any assignment
+        if current_user.role not in ['Director', 'School Administrator']:
             return jsonify({'success': False, 'message': 'You are not authorized to grant extensions.'})
         
         # Get the current user (who is granting the extensions)

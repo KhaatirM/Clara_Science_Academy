@@ -47,19 +47,29 @@ def enhance_group_assignments():
             for column in new_columns:
                 if column not in existing_columns:
                     if column == 'assignment_type':
-                        db.engine.execute(f"ALTER TABLE group_assignment ADD COLUMN {column} VARCHAR(20) DEFAULT 'pdf' NOT NULL")
+                        with db.engine.connect() as connection:
+                            connection.execute(db.text(f"ALTER TABLE group_assignment ADD COLUMN {column} VARCHAR(20) DEFAULT 'pdf' NOT NULL"))
+                            connection.commit()
                         print(f"Added column: {column}")
                     elif column == 'status':
-                        db.engine.execute(f"ALTER TABLE group_assignment ADD COLUMN {column} VARCHAR(20) DEFAULT 'Active' NOT NULL")
+                        with db.engine.connect() as connection:
+                            connection.execute(db.text(f"ALTER TABLE group_assignment ADD COLUMN {column} VARCHAR(20) DEFAULT 'Active' NOT NULL"))
+                            connection.commit()
                         print(f"Added column: {column}")
                     elif column == 'allow_save_and_continue':
-                        db.engine.execute(f"ALTER TABLE group_assignment ADD COLUMN {column} BOOLEAN DEFAULT FALSE NOT NULL")
+                        with db.engine.connect() as connection:
+                            connection.execute(db.text(f"ALTER TABLE group_assignment ADD COLUMN {column} BOOLEAN DEFAULT FALSE NOT NULL"))
+                            connection.commit()
                         print(f"Added column: {column}")
                     elif column == 'max_save_attempts':
-                        db.engine.execute(f"ALTER TABLE group_assignment ADD COLUMN {column} INTEGER DEFAULT 10 NOT NULL")
+                        with db.engine.connect() as connection:
+                            connection.execute(db.text(f"ALTER TABLE group_assignment ADD COLUMN {column} INTEGER DEFAULT 10 NOT NULL"))
+                            connection.commit()
                         print(f"Added column: {column}")
                     elif column == 'save_timeout_minutes':
-                        db.engine.execute(f"ALTER TABLE group_assignment ADD COLUMN {column} INTEGER DEFAULT 30 NOT NULL")
+                        with db.engine.connect() as connection:
+                            connection.execute(db.text(f"ALTER TABLE group_assignment ADD COLUMN {column} INTEGER DEFAULT 30 NOT NULL"))
+                            connection.commit()
                         print(f"Added column: {column}")
                 else:
                     print(f"Column {column} already exists")

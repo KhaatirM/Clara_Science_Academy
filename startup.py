@@ -30,7 +30,8 @@ def run_database_fix():
             scripts_to_run = [
                 'fix_production_assignment_columns_postgres.py',
                 'fix_school_day_attendance_table.py',
-                'fix_bug_report_table_schema.py'
+                'fix_bug_report_table_schema.py',
+                'fix_class_table_schema.py'
             ]
             
             all_success = True

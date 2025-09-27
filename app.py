@@ -417,6 +417,51 @@ def create_app(config_class=None):
             # Initialize database tables
             db.create_all()
             print("Database tables created successfully")
+            
+            # Fix class table schema if needed
+            try:
+                from sqlalchemy import inspect, text
+                inspector = inspect(db.engine)
+                
+                if 'class' in inspector.get_table_names():
+                    columns = [col['name'] for col in inspector.get_columns('class')]
+                    missing_columns = []
+                    
+                    required_columns = ['room_number', 'schedule', 'max_students', 'description', 'is_active', 'created_at', 'updated_at']
+                    for col in required_columns:
+                        if col not in columns:
+                            missing_columns.append(col)
+                    
+                    if missing_columns:
+                        print(f"Adding missing class table columns: {missing_columns}")
+                        with db.engine.connect() as connection:
+                            for col in missing_columns:
+                                try:
+                                    if col == 'room_number':
+                                        connection.execute(text("ALTER TABLE class ADD COLUMN room_number VARCHAR(20)"))
+                                    elif col == 'schedule':
+                                        connection.execute(text("ALTER TABLE class ADD COLUMN schedule VARCHAR(200)"))
+                                    elif col == 'max_students':
+                                        connection.execute(text("ALTER TABLE class ADD COLUMN max_students INTEGER DEFAULT 30"))
+                                    elif col == 'description':
+                                        connection.execute(text("ALTER TABLE class ADD COLUMN description TEXT"))
+                                    elif col == 'is_active':
+                                        connection.execute(text("ALTER TABLE class ADD COLUMN is_active BOOLEAN DEFAULT TRUE"))
+                                    elif col == 'created_at':
+                                        connection.execute(text("ALTER TABLE class ADD COLUMN created_at DATETIME"))
+                                    elif col == 'updated_at':
+                                        connection.execute(text("ALTER TABLE class ADD COLUMN updated_at DATETIME"))
+                                    print(f"✓ Added column: {col}")
+                                except Exception as col_error:
+                                    print(f"⚠ Error adding column {col}: {col_error}")
+                            connection.commit()
+                        print("✓ Class table schema updated successfully")
+                    else:
+                        print("✓ Class table schema is up to date")
+                        
+            except Exception as schema_error:
+                print(f"⚠ Error updating class table schema: {schema_error}")
+                
         except Exception as e:
             print(f"Database initialization failed: {e}")
         

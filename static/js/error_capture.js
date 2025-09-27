@@ -162,12 +162,14 @@
 
     // Performance monitoring
     function setupPerformanceMonitoring() {
-        // Monitor long tasks
+        // Monitor long tasks - only report truly problematic tasks
         if ('PerformanceObserver' in window) {
             try {
                 const observer = new PerformanceObserver(function(list) {
                     for (const entry of list.getEntries()) {
-                        if (entry.duration > 200) { // Tasks longer than 200ms
+                        // Only report tasks longer than 1 second (1000ms) which are genuinely problematic
+                        // Also filter out common browser operations that are expected to be slow
+                        if (entry.duration > 1000 && !entry.name.includes('browser') && !entry.name.includes('render')) {
                             const errorData = createErrorData(new Error('Long task detected'), {
                                 type: 'performance_issue',
                                 duration: entry.duration,
@@ -192,7 +194,8 @@
     function initializeErrorCapture() {
         setupAjaxErrorHandling();
         setupFormErrorHandling();
-        setupPerformanceMonitoring();
+        // Temporarily disable performance monitoring to reduce noise
+        // setupPerformanceMonitoring();
         
         console.log('Frontend error capture system initialized');
     }

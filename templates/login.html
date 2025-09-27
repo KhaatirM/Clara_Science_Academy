@@ -6,17 +6,9 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 
-<!-- Slideshow Background -->
+<!-- Optimized Background -->
 <div class="slideshow-container">
-    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image1.png');"></div>
-    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image2.png');"></div>
-    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image3.png');"></div>
-    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image4.png');"></div>
-    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image5.png');"></div>
-    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image6.png');"></div>
-    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image7.png');"></div>
-    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image8.png');"></div>
-    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image9.png');"></div>
+    <div class="slideshow-image active" style="background-image: url('/static/img/backimg/image1.png');"></div>
     <div class="slideshow-overlay"></div>
 </div>
 
@@ -537,26 +529,8 @@ body {
       subtree: true
     });
 
-    // Slideshow functionality
-    const slideshowImages = document.querySelectorAll('.slideshow-image');
-    let currentSlide = 0;
-    
-    function showSlide(index) {
-        slideshowImages.forEach((img, i) => {
-            img.classList.toggle('active', i === index);
-        });
-    }
-    
-    function nextSlide() {
-        currentSlide = (currentSlide + 1) % slideshowImages.length;
-        showSlide(currentSlide);
-    }
-    
-    // Initialize slideshow
-    showSlide(0);
-    
-    // Change slide every 5 seconds
-    setInterval(nextSlide, 5000);
+    // Slideshow functionality removed for performance optimization
+    // Using static background image instead of animated slideshow
   });
 </script>
 {% endblock %}

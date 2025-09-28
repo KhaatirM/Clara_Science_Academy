@@ -325,7 +325,7 @@ def run_production_database_fix():
     if not os.getenv('RENDER'):
         return
     
-    print("🔧 Running production database fix...")
+    print("Running production database fix...")
     
     try:
         import psycopg2
@@ -364,7 +364,7 @@ def run_production_database_fix():
             columns_to_add.append("save_timeout_minutes INTEGER DEFAULT 30")
         
         if not columns_to_add:
-            print("✓ All required columns already exist")
+            print("All required columns already exist")
             cursor.close()
             conn.close()
             return
@@ -374,16 +374,16 @@ def run_production_database_fix():
             column_name = column_def.split()[0]
             print(f"Adding column: {column_name}")
             cursor.execute(f"ALTER TABLE assignment ADD COLUMN {column_def}")
-            print(f"✓ Added column: {column_name}")
+            print(f"Added column: {column_name}")
         
         cursor.close()
         conn.close()
-        print("✅ Production database fix completed successfully!")
+        print("Production database fix completed successfully!")
         
     except ImportError:
-        print("⚠️  psycopg2 not available, skipping database fix")
+        print("psycopg2 not available, skipping database fix")
     except Exception as e:
-        print(f"❌ Database fix failed: {e}")
+        print(f"Database fix failed: {e}")
 
 def create_app(config_class=None):
     """
@@ -462,19 +462,21 @@ def create_app(config_class=None):
                                             connection.execute(text("ALTER TABLE class ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
                                         else:
                                             connection.execute(text("ALTER TABLE class ADD COLUMN updated_at DATETIME"))
-                                    print(f"✓ Added column: {col}")
+                                    print(f"Added column: {col}")
                                 except Exception as col_error:
-                                    print(f"⚠ Error adding column {col}: {col_error}")
+                                    print(f"Error adding column {col}: {col_error}")
                             connection.commit()
-                        print("✓ Class table schema updated successfully")
+                        print("Class table schema updated successfully")
                     else:
-                        print("✓ Class table schema is up to date")
+                        print("Class table schema is up to date")
                         
             except Exception as schema_error:
-                print(f"⚠ Error updating class table schema: {schema_error}")
+                print(f"Error updating class table schema: {schema_error}")
                 
         except Exception as e:
-            print(f"Database initialization failed: {e}")
+            # Re-raise the exception immediately to force a visible traceback in the console.
+            print(f"FATAL DATABASE ERROR DURING INITIALIZATION: {e}")
+            raise e  # <- CRITICAL: Re-raises the error to kill the process and dump the traceback.
         
         # Run production database fix if needed
         try:
@@ -490,8 +492,8 @@ def create_app(config_class=None):
     # Import and register blueprints
     from authroutes import auth_blueprint
     from studentroutes import student_blueprint
-    from teacherroutes import teacher_blueprint
-    from managementroutes import management_blueprint
+    from teacher_routes import teacher_blueprint
+    from management_routes import management_blueprint
     from techroutes import tech_blueprint
 
     app.register_blueprint(auth_blueprint)
@@ -546,7 +548,7 @@ def create_app(config_class=None):
     def internal_error(error):
         """Handle 500 Internal Server errors."""
         db.session.rollback()
-        return render_template('home.html'), 500
+        return render_template('shared/home.html'), 500
     
     @app.errorhandler(CSRFError)
     def handle_csrf_error(error):
@@ -578,18 +580,18 @@ def create_app(config_class=None):
             # Allow tech users to bypass maintenance mode (always allowed)
             if current_user.is_authenticated and current_user.role in ['Tech', 'IT Support', 'Director']:
                 print("Tech user bypassing maintenance mode")
-                return render_template('home.html')
+                return render_template('shared/home.html')
             
             # Calculate progress percentage using UTC time
             total_duration = (maintenance.end_time - maintenance.start_time).total_seconds()
             elapsed = (datetime.now(timezone.utc) - maintenance.start_time).total_seconds()
             progress_percentage = min(100, max(0, int((elapsed / total_duration) * 100)))
             
-            return render_template('maintenance.html', 
+            return render_template('shared/maintenance.html', 
                                  maintenance=maintenance, 
                                  progress_percentage=progress_percentage)
         
-        return render_template('home.html')
+        return render_template('shared/home.html')
 
     @app.route('/assignment/file/<int:assignment_id>')
     @login_required
@@ -758,7 +760,7 @@ def create_app(config_class=None):
         print(f"500 Error: {error}")
         
         # Return user-friendly error page
-        return render_template('error.html', 
+        return render_template('shared/error.html', 
                              error_code=500,
                              error_message="An internal server error occurred. Please try again later.",
                              bug_report_id=None), 500
@@ -766,7 +768,7 @@ def create_app(config_class=None):
     @app.errorhandler(404)
     def not_found_error(error):
         """Handle 404 errors."""
-        return render_template('error.html', 
+        return render_template('shared/error.html', 
                              error_code=404,
                              error_message="The page you're looking for doesn't exist.",
                              bug_report_id=None), 404
@@ -774,7 +776,7 @@ def create_app(config_class=None):
     @app.errorhandler(403)
     def forbidden_error(error):
         """Handle 403 forbidden errors."""
-        return render_template('error.html', 
+        return render_template('shared/error.html', 
                              error_code=403,
                              error_message="You don't have permission to access this resource.",
                              bug_report_id=None), 403
@@ -789,7 +791,7 @@ def create_app(config_class=None):
     def handle_unexpected_error(error):
         """Handle any unexpected errors."""
         print(f"Unexpected error: {error}")
-        return render_template('error.html', 
+        return render_template('shared/error.html', 
                              error_code=500,
                              error_message="An unexpected error occurred. Please try again later.",
                              bug_report_id=None), 500

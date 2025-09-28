@@ -1,0 +1,424 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+    <h3 class="mb-4">{% if edit_mode %}Update Student Information{% else %}Add New Student{% endif %}</h3>
+
+    {# The form_action will be set by the Flask route (e.g., url_for('add_student_director') or url_for('edit_student_director', student_numeric_id=student_data.id)) #}
+    <form method="POST" action="{{ url_for('management.add_student') }}" enctype="multipart/form-data" class="needs-validation" novalidate>
+
+        <div class="row g-3">
+            <h4 class="mt-4 mb-3 border-bottom pb-2">Student Information</h4>
+            <div class="col-12 col-md-4">
+                <label for="student_first_name" class="form-label">First Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="student_first_name" name="student_first_name" 
+                       value="{{ student_data.student_first_name if student_data else '' }}" required>
+                <div class="invalid-feedback">First name is required.</div>
+            </div>
+            <div class="col-12 col-md-4">
+                <label for="student_middle_name" class="form-label">Middle Name/Initial</label>
+                <input type="text" class="form-control" id="student_middle_name" name="student_middle_name"
+                       value="{{ student_data.student_middle_name if student_data else '' }}">
+            </div>
+            <div class="col-12 col-md-4">
+                <label for="student_last_name" class="form-label">Last Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="student_last_name" name="student_last_name"
+                       value="{{ student_data.student_last_name if student_data else '' }}" required>
+                <div class="invalid-feedback">Last name is required.</div>
+            </div>
+
+            <div class="col-12 col-md-4">
+                <label for="grade_level" class="form-label">Current Grade Level <span class="text-danger">*</span></label>
+                <select class="form-select" id="grade_level" name="grade_level" required>
+                    <option value="">Choose...</option>
+                    {% set grades = ["Kindergarten", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th", "11th", "12th"] %}
+                    {% for grade in grades %}
+                        <option value="{{ grade }}" {% if student_data and student_data.grade == grade %}selected{% endif %}>{{ grade.replace("st", "st Grade").replace("nd", "nd Grade").replace("rd", "rd Grade").replace("th", "th Grade") if grade not in ["Kindergarten"] else grade }}</option>
+                    {% endfor %}
+                </select>
+                <div class="invalid-feedback">Please select a grade level.</div>
+            </div>
+            <div class="col-12 col-md-4">
+                <label for="gender" class="form-label">Gender</label>
+                <select class="form-select" id="gender" name="gender">
+                    <option value="">Choose...</option>
+                    {% set genders = ["Male", "Female", "Non-binary", "Prefer not to say", "Other"] %}
+                    {% for g in genders %}
+                    <option value="{{ g }}" {% if student_data and student_data.gender == g %}selected{% endif %}>{{ g }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12 col-md-4">
+                <label for="ethnicity" class="form-label">Ethnicity</label>
+                <input type="text" class="form-control" id="ethnicity" name="ethnicity" placeholder="e.g., Hispanic, Asian, Caucasian"
+                       value="{{ student_data.ethnicity if student_data else '' }}">
+            </div>
+
+            <div class="col-12 col-md-6">
+                <label for="student_image" class="form-label">Student Image (shoulder view & up)</label>
+                <input class="form-control" type="file" id="student_image" name="student_image" accept="image/*">
+                {% if edit_mode and student_data and student_data.image and student_data.image != 'default.jpg' %}
+                    <div class="form-text mt-1">Current image: <strong>{{ student_data.image }}</strong>. Upload a new file to replace it.</div>
+                    <img src="{{ url_for('static', filename='uploads/' + student_data.image) }}" alt="Current Student Image" class="img-thumbnail mt-2 max-width-100" style="max-height: 100px;">
+                {% elif edit_mode and student_data and student_data.image == 'default.jpg' %}
+                     <div class="form-text mt-1">Currently using default image. Upload a new file to replace it.</div>
+                     <img src="{{ url_for('static', filename='uploads/' + student_data.image) }}" alt="Default Student Image" class="img-thumbnail mt-2 max-width-100" style="max-height: 100px;">
+                {% else %}
+                    <div class="form-text">Upload a clear photo of the student.</div>
+                {% endif %}
+            </div>
+            <div class="col-12 col-md-6">
+                <label for="dob" class="form-label">Date of Birth <span class="text-danger">*</span></label>
+                <input type="date" class="form-control" id="dob" name="dob" 
+                       value="{{ student_data.dob if student_data else '' }}" required>
+                <div class="invalid-feedback">Date of birth is required.</div>
+            </div>
+            
+            <div class="col-12 col-md-6">
+                <label for="previous_school" class="form-label">Previous School Name</label>
+                <input type="text" class="form-control" id="previous_school" name="previous_school"
+                       value="{{ student_data.previous_school if student_data else '' }}">
+            </div>
+            <div class="col-12 col-md-6">
+                <label for="transcript" class="form-label">Transcript (PDF, DOCX, JPG, PNG)</label>
+                <input class="form-control" type="file" id="transcript" name="transcript" accept=".pdf,.doc,.docx,image/*">
+                {% if edit_mode and student_data and student_data.transcript_filename %}
+                    <div class="form-text mt-1">Current transcript: <a href="{{ url_for('static', filename='uploads/' + student_data.transcript_filename) }}" target="_blank">{{ student_data.transcript_filename }}</a>. Upload a new file to replace it.</div>
+                {% elif edit_mode %}
+                     <div class="form-text mt-1">No transcript currently uploaded.</div>
+                {% endif %}
+            </div>
+
+            <h4 class="mt-5 mb-3 border-bottom pb-2">Student Address</h4>
+
+            <div class="col-12">
+                <label for="street_address" class="form-label">Street Address <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="street_address" name="street_address" placeholder="1234 Main St" value="{{ student_data.street_address if student_data else '' }}" required>
+                <div class="invalid-feedback">Street address is required.</div>
+            </div>
+
+            <div class="col-12">
+                <label for="apt_unit_suite" class="form-label">Apt, Unit, Suite, etc. <span class="text-muted">(Optional)</span></label>
+                <input type="text" class="form-control" id="apt_unit_suite" name="apt_unit_suite" placeholder="Apartment, studio, or floor" value="{{ student_data.apt_unit_suite if student_data else '' }}">
+            </div>
+
+            <div class="col-12 col-md-4">
+                <label for="state" class="form-label">State <span class="text-danger">*</span></label>
+                <select class="form-select" id="state" name="state" required>
+                    <option value="">Choose State...</option>
+                    <option value="AL" {% if student_data and student_data.state == 'AL' %}selected{% endif %}>Alabama</option>
+                    <option value="AK" {% if student_data and student_data.state == 'AK' %}selected{% endif %}>Alaska</option>
+                    <option value="AZ" {% if student_data and student_data.state == 'AZ' %}selected{% endif %}>Arizona</option>
+                    <option value="AR" {% if student_data and student_data.state == 'AR' %}selected{% endif %}>Arkansas</option>
+                    <option value="CA" {% if student_data and student_data.state == 'CA' %}selected{% endif %}>California</option>
+                    <option value="CO" {% if student_data and student_data.state == 'CO' %}selected{% endif %}>Colorado</option>
+                    <option value="CT" {% if student_data and student_data.state == 'CT' %}selected{% endif %}>Connecticut</option>
+                    <option value="DE" {% if student_data and student_data.state == 'DE' %}selected{% endif %}>Delaware</option>
+                    <option value="FL" {% if student_data and student_data.state == 'FL' %}selected{% endif %}>Florida</option>
+                    <option value="GA" {% if student_data and student_data.state == 'GA' %}selected{% endif %}>Georgia</option>
+                    <option value="HI" {% if student_data and student_data.state == 'HI' %}selected{% endif %}>Hawaii</option>
+                    <option value="ID" {% if student_data and student_data.state == 'ID' %}selected{% endif %}>Idaho</option>
+                    <option value="IL" {% if student_data and student_data.state == 'IL' %}selected{% endif %}>Illinois</option>
+                    <option value="IN" {% if student_data and student_data.state == 'IN' %}selected{% endif %}>Indiana</option>
+                    <option value="IA" {% if student_data and student_data.state == 'IA' %}selected{% endif %}>Iowa</option>
+                    <option value="KS" {% if student_data and student_data.state == 'KS' %}selected{% endif %}>Kansas</option>
+                    <option value="KY" {% if student_data and student_data.state == 'KY' %}selected{% endif %}>Kentucky</option>
+                    <option value="LA" {% if student_data and student_data.state == 'LA' %}selected{% endif %}>Louisiana</option>
+                    <option value="ME" {% if student_data and student_data.state == 'ME' %}selected{% endif %}>Maine</option>
+                    <option value="MD" {% if student_data and student_data.state == 'MD' %}selected{% endif %}>Maryland</option>
+                    <option value="MA" {% if student_data and student_data.state == 'MA' %}selected{% endif %}>Massachusetts</option>
+                    <option value="MI" {% if student_data and student_data.state == 'MI' %}selected{% endif %}>Michigan</option>
+                    <option value="MN" {% if student_data and student_data.state == 'MN' %}selected{% endif %}>Minnesota</option>
+                    <option value="MS" {% if student_data and student_data.state == 'MS' %}selected{% endif %}>Mississippi</option>
+                    <option value="MO" {% if student_data and student_data.state == 'MO' %}selected{% endif %}>Missouri</option>
+                    <option value="MT" {% if student_data and student_data.state == 'MT' %}selected{% endif %}>Montana</option>
+                    <option value="NE" {% if student_data and student_data.state == 'NE' %}selected{% endif %}>Nebraska</option>
+                    <option value="NV" {% if student_data and student_data.state == 'NV' %}selected{% endif %}>Nevada</option>
+                    <option value="NH" {% if student_data and student_data.state == 'NH' %}selected{% endif %}>New Hampshire</option>
+                    <option value="NJ" {% if student_data and student_data.state == 'NJ' %}selected{% endif %}>New Jersey</option>
+                    <option value="NM" {% if student_data and student_data.state == 'NM' %}selected{% endif %}>New Mexico</option>
+                    <option value="NY" {% if student_data and student_data.state == 'NY' %}selected{% endif %}>New York</option>
+                    <option value="NC" {% if student_data and student_data.state == 'NC' %}selected{% endif %}>North Carolina</option>
+                    <option value="ND" {% if student_data and student_data.state == 'ND' %}selected{% endif %}>North Dakota</option>
+                    <option value="OH" {% if student_data and student_data.state == 'OH' %}selected{% endif %}>Ohio</option>
+                    <option value="OK" {% if student_data and student_data.state == 'OK' %}selected{% endif %}>Oklahoma</option>
+                    <option value="OR" {% if student_data and student_data.state == 'OR' %}selected{% endif %}>Oregon</option>
+                    <option value="PA" {% if student_data and student_data.state == 'PA' %}selected{% endif %}>Pennsylvania</option>
+                    <option value="RI" {% if student_data and student_data.state == 'RI' %}selected{% endif %}>Rhode Island</option>
+                    <option value="SC" {% if student_data and student_data.state == 'SC' %}selected{% endif %}>South Carolina</option>
+                    <option value="SD" {% if student_data and student_data.state == 'SD' %}selected{% endif %}>South Dakota</option>
+                    <option value="TN" {% if student_data and student_data.state == 'TN' %}selected{% endif %}>Tennessee</option>
+                    <option value="TX" {% if student_data and student_data.state == 'TX' %}selected{% endif %}>Texas</option>
+                    <option value="UT" {% if student_data and student_data.state == 'UT' %}selected{% endif %}>Utah</option>
+                    <option value="VT" {% if student_data and student_data.state == 'VT' %}selected{% endif %}>Vermont</option>
+                    <option value="VA" {% if student_data and student_data.state == 'VA' %}selected{% endif %}>Virginia</option>
+                    <option value="WA" {% if student_data and student_data.state == 'WA' %}selected{% endif %}>Washington</option>
+                    <option value="WV" {% if student_data and student_data.state == 'WV' %}selected{% endif %}>West Virginia</option>
+                    <option value="WI" {% if student_data and student_data.state == 'WI' %}selected{% endif %}>Wisconsin</option>
+                    <option value="WY" {% if student_data and student_data.state == 'WY' %}selected{% endif %}>Wyoming</option>
+                </select>
+                <div class="invalid-feedback">Please select a state.</div>
+            </div>
+
+            <div class="col-12 col-md-5">
+                <label for="city" class="form-label">City <span class="text-danger">*</span></label>
+                <select class="form-select" id="city" name="city" required>
+                    <option value="">Choose State First...</option>
+                </select>
+                <div class="invalid-feedback">Please select a city.</div>
+            </div>
+
+            <div class="col-12 col-md-3">
+                <label for="zip_code" class="form-label">Zip Code <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="zip_code" name="zip_code" value="{{ student_data.zip_code if student_data else '' }}" required>
+                <div class="invalid-feedback">Zip code is required.</div>
+            </div>
+            
+            <div class="col-12">
+                 <label for="email" class="form-label">Email <span class="text-muted">(Optional)</span></label>
+                 <input type="email" class="form-control" id="email" name="email" placeholder="you@example.com" value="{{ student_data.email if student_data else '' }}">
+            </div>
+
+            <h4 class="mt-5 mb-3 border-bottom pb-2">Parent/Guardian Information</h4>
+            
+            <!-- Parent 1 Information -->
+            <h5 class="mt-3 mb-2">Parent 1</h5>
+            <div class="col-12 col-md-6">
+                <label for="parent1_first_name" class="form-label">First Name</label>
+                <input type="text" class="form-control" id="parent1_first_name" name="parent1_first_name"
+                       value="{{ student_data.parent1_first_name if student_data else '' }}">
+            </div>
+            <div class="col-12 col-md-6">
+                <label for="parent1_last_name" class="form-label">Last Name</label>
+                <input type="text" class="form-control" id="parent1_last_name" name="parent1_last_name"
+                       value="{{ student_data.parent1_last_name if student_data else '' }}">
+            </div>
+            <div class="col-12 col-md-6">
+                <label for="parent1_email" class="form-label">Email</label>
+                <input type="email" class="form-control" id="parent1_email" name="parent1_email"
+                       value="{{ student_data.parent1_email if student_data else '' }}">
+            </div>
+            <div class="col-12 col-md-6">
+                <label for="parent1_phone" class="form-label">Phone</label>
+                <input type="tel" class="form-control" id="parent1_phone" name="parent1_phone"
+                       value="{{ student_data.parent1_phone if student_data else '' }}">
+            </div>
+            <div class="col-12 col-md-6">
+                <label for="parent1_relationship" class="form-label">Relationship</label>
+                <select class="form-select" id="parent1_relationship" name="parent1_relationship">
+                    <option value="">Choose...</option>
+                    <option value="Mother" {% if student_data and student_data.parent1_relationship == 'Mother' %}selected{% endif %}>Mother</option>
+                    <option value="Father" {% if student_data and student_data.parent1_relationship == 'Father' %}selected{% endif %}>Father</option>
+                </select>
+            </div>
+            
+            <!-- Parent 2 Information -->
+            <h5 class="mt-4 mb-2">Parent 2</h5>
+            <div class="col-12 col-md-6">
+                <label for="parent2_first_name" class="form-label">First Name</label>
+                <input type="text" class="form-control" id="parent2_first_name" name="parent2_first_name"
+                       value="{{ student_data.parent2_first_name if student_data else '' }}">
+            </div>
+            <div class="col-12 col-md-6">
+                <label for="parent2_last_name" class="form-label">Last Name</label>
+                <input type="text" class="form-control" id="parent2_last_name" name="parent2_last_name"
+                       value="{{ student_data.parent2_last_name if student_data else '' }}">
+            </div>
+            <div class="col-12 col-md-6">
+                <label for="parent2_email" class="form-label">Email</label>
+                <input type="email" class="form-control" id="parent2_email" name="parent2_email"
+                       value="{{ student_data.parent2_email if student_data else '' }}">
+            </div>
+            <div class="col-12 col-md-6">
+                <label for="parent2_phone" class="form-label">Phone</label>
+                <input type="tel" class="form-control" id="parent2_phone" name="parent2_phone"
+                       value="{{ student_data.parent2_phone if student_data else '' }}">
+            </div>
+            <div class="col-12 col-md-6">
+                <label for="parent2_relationship" class="form-label">Relationship</label>
+                <select class="form-select" id="parent2_relationship" name="parent2_relationship">
+                    <option value="">Choose...</option>
+                    <option value="Mother" {% if student_data and student_data.parent2_relationship == 'Mother' %}selected{% endif %}>Mother</option>
+                    <option value="Father" {% if student_data and student_data.parent2_relationship == 'Father' %}selected{% endif %}>Father</option>
+                </select>
+            </div>
+            
+            <!-- Emergency Contact -->
+            <h5 class="mt-4 mb-2">Emergency Contact</h5>
+            <div class="col-12 col-md-6">
+                <label for="emergency_first_name" class="form-label">First Name</label>
+                <input type="text" class="form-control" id="emergency_first_name" name="emergency_first_name"
+                       value="{{ student_data.emergency_first_name if student_data else '' }}">
+            </div>
+            <div class="col-12 col-md-6">
+                <label for="emergency_last_name" class="form-label">Last Name</label>
+                <input type="text" class="form-control" id="emergency_last_name" name="emergency_last_name"
+                       value="{{ student_data.emergency_last_name if student_data else '' }}">
+            </div>
+            <div class="col-12 col-md-6">
+                <label for="emergency_email" class="form-label">Email</label>
+                <input type="email" class="form-control" id="emergency_email" name="emergency_email"
+                       value="{{ student_data.emergency_email if student_data else '' }}">
+            </div>
+            <div class="col-12 col-md-6">
+                <label for="emergency_phone" class="form-label">Phone</label>
+                <input type="tel" class="form-control" id="emergency_phone" name="emergency_phone"
+                       value="{{ student_data.emergency_phone if student_data else '' }}">
+            </div>
+            <div class="col-12 col-md-6">
+                <label for="emergency_relationship" class="form-label">Relationship</label>
+                <select class="form-select" id="emergency_relationship" name="emergency_relationship">
+                    <option value="">Choose...</option>
+                    <option value="Parent" {% if student_data and student_data.emergency_relationship == 'Parent' %}selected{% endif %}>Parent</option>
+                    <option value="Guardian" {% if student_data and student_data.emergency_relationship == 'Guardian' %}selected{% endif %}>Guardian</option>
+                    <option value="Grandparent" {% if student_data and student_data.emergency_relationship == 'Grandparent' %}selected{% endif %}>Grandparent</option>
+                    <option value="Aunt/Uncle" {% if student_data and student_data.emergency_relationship == 'Aunt/Uncle' %}selected{% endif %}>Aunt/Uncle</option>
+                    <option value="Sibling" {% if student_data and student_data.emergency_relationship == 'Sibling' %}selected{% endif %}>Sibling</option>
+                    <option value="Other" {% if student_data and student_data.emergency_relationship == 'Other' %}selected{% endif %}>Other</option>
+                </select>
+            </div>
+
+            <h4 class="mt-5 mb-3 border-bottom pb-2">Additional Information</h4>
+            <div class="col-12">
+                <label for="medical_concerns" class="form-label">Medical Concerns</label>
+                <textarea class="form-control" id="medical_concerns" name="medical_concerns" rows="3" placeholder="List any allergies, medications, or pertinent medical conditions...">{{ student_data.medical_concerns if student_data else '' }}</textarea>
+            </div>
+            <div class="col-12">
+                <label for="notes" class="form-label">Notes</label>
+                <textarea class="form-control" id="notes" name="notes" rows="3" placeholder="Any other relevant information...">{{ student_data.notes if student_data else '' }}</textarea>
+            </div>
+        </div>
+
+        <hr class="my-4">
+
+        <button class="btn btn-primary btn-lg" type="submit">
+            {% if edit_mode %}Update Student{% else %}Add Student{% endif %}
+        </button>
+        {# The Cancel/Discard button should link back to the student list for the current role #}
+        <a href="{{ url_for('management.students') }}" class="btn btn-secondary btn-lg ms-2" role="button">
+            {% if edit_mode %}Cancel{% else %}Discard{% endif %}
+        </a>
+    </form>
+
+    <script>
+    // Example starter JavaScript for disabling form submissions if there are invalid fields
+    (function () {
+      'use strict'
+      var forms = document.querySelectorAll('.needs-validation')
+      Array.prototype.slice.call(forms)
+        .forEach(function (form) {
+          form.addEventListener('submit', function (event) {
+            if (!form.checkValidity()) {
+              event.preventDefault()
+              event.stopPropagation()
+            }
+            form.classList.add('was-validated')
+          }, false)
+        })
+    })()
+
+    // State and City dropdown functionality
+    const stateCityData = {
+        'AL': ['Birmingham', 'Montgomery', 'Huntsville', 'Mobile', 'Tuscaloosa', 'Auburn', 'Dothan', 'Decatur', 'Madison', 'Florence'],
+        'AK': ['Anchorage', 'Fairbanks', 'Juneau', 'Sitka', 'Ketchikan', 'Kodiak', 'Bethel', 'Kotzebue', 'Nome', 'Barrow'],
+        'AZ': ['Phoenix', 'Tucson', 'Mesa', 'Chandler', 'Scottsdale', 'Glendale', 'Gilbert', 'Tempe', 'Peoria', 'Surprise'],
+        'AR': ['Little Rock', 'Fort Smith', 'Fayetteville', 'Springdale', 'Jonesboro', 'North Little Rock', 'Conway', 'Rogers', 'Pine Bluff', 'Bentonville'],
+        'CA': ['Los Angeles', 'San Diego', 'San Jose', 'San Francisco', 'Fresno', 'Sacramento', 'Long Beach', 'Oakland', 'Bakersfield', 'Anaheim'],
+        'CO': ['Denver', 'Colorado Springs', 'Aurora', 'Fort Collins', 'Lakewood', 'Thornton', 'Arvada', 'Westminster', 'Pueblo', 'Boulder'],
+        'CT': ['Bridgeport', 'New Haven', 'Stamford', 'Hartford', 'Waterbury', 'Norwalk', 'Danbury', 'New Britain', 'Bristol', 'Meriden'],
+        'DE': ['Wilmington', 'Dover', 'Newark', 'Middletown', 'Smyrna', 'Milford', 'Seaford', 'Georgetown', 'Elsmere', 'New Castle'],
+        'FL': ['Jacksonville', 'Miami', 'Tampa', 'Orlando', 'St. Petersburg', 'Hialeah', 'Tallahassee', 'Fort Lauderdale', 'Port St. Lucie', 'Cape Coral'],
+        'GA': ['Atlanta', 'Augusta', 'Columbus', 'Macon', 'Savannah', 'Athens', 'Sandy Springs', 'Roswell', 'Albany', 'Johns Creek'],
+        'HI': ['Honolulu', 'Hilo', 'Kailua', 'Kapolei', 'Kaneohe', 'Mililani Town', 'Ewa Gentry', 'Kihei', 'Makaha', 'Wahiawa'],
+        'ID': ['Boise', 'Meridian', 'Nampa', 'Idaho Falls', 'Pocatello', 'Caldwell', 'Coeur d\'Alene', 'Twin Falls', 'Lewiston', 'Post Falls'],
+        'IL': ['Chicago', 'Aurora', 'Rockford', 'Joliet', 'Naperville', 'Springfield', 'Peoria', 'Elgin', 'Waukegan', 'Champaign'],
+        'IN': ['Indianapolis', 'Fort Wayne', 'Evansville', 'South Bend', 'Carmel', 'Bloomington', 'Fishers', 'Hammond', 'Gary', 'Lafayette'],
+        'IA': ['Des Moines', 'Cedar Rapids', 'Davenport', 'Sioux City', 'Iowa City', 'Waterloo', 'Ames', 'West Des Moines', 'Council Bluffs', 'Dubuque'],
+        'KS': ['Wichita', 'Overland Park', 'Kansas City', 'Olathe', 'Topeka', 'Lawrence', 'Shawnee', 'Manhattan', 'Lenexa', 'Salina'],
+        'KY': ['Louisville', 'Lexington', 'Bowling Green', 'Owensboro', 'Covington', 'Richmond', 'Georgetown', 'Florence', 'Elizabethtown', 'Nicholasville'],
+        'LA': ['New Orleans', 'Baton Rouge', 'Shreveport', 'Lafayette', 'Lake Charles', 'Kenner', 'Bossier City', 'Monroe', 'Alexandria', 'Houma'],
+        'ME': ['Portland', 'Lewiston', 'Bangor', 'Auburn', 'Biddeford', 'Sanford', 'Brunswick', 'Augusta', 'Scarborough', 'Gorham'],
+        'MD': ['Baltimore', 'Frederick', 'Rockville', 'Gaithersburg', 'Bowie', 'Hagerstown', 'Annapolis', 'College Park', 'Salisbury', 'Laurel'],
+        'MA': ['Boston', 'Worcester', 'Springfield', 'Lowell', 'Cambridge', 'New Bedford', 'Brockton', 'Quincy', 'Lynn', 'Fall River'],
+        'MI': ['Detroit', 'Grand Rapids', 'Warren', 'Sterling Heights', 'Lansing', 'Ann Arbor', 'Flint', 'Dearborn', 'Livonia', 'Westland'],
+        'MN': ['Minneapolis', 'Saint Paul', 'Rochester', 'Duluth', 'Bloomington', 'Brooklyn Park', 'Plymouth', 'St. Cloud', 'Eagan', 'Woodbury'],
+        'MS': ['Jackson', 'Gulfport', 'Southaven', 'Hattiesburg', 'Biloxi', 'Meridian', 'Tupelo', 'Greenville', 'Horn Lake', 'Greenwood'],
+        'MO': ['Kansas City', 'St. Louis', 'Springfield', 'Columbia', 'Independence', 'Lee\'s Summit', 'O\'Fallon', 'St. Joseph', 'St. Charles', 'St. Peters'],
+        'MT': ['Billings', 'Missoula', 'Great Falls', 'Bozeman', 'Butte', 'Helena', 'Kalispell', 'Havre', 'Anaconda', 'Miles City'],
+        'NE': ['Omaha', 'Lincoln', 'Bellevue', 'Grand Island', 'Kearney', 'Fremont', 'Norfolk', 'Columbus', 'Hastings', 'North Platte'],
+        'NV': ['Las Vegas', 'Henderson', 'Reno', 'North Las Vegas', 'Sparks', 'Carson City', 'Fernley', 'Elko', 'Mesquite', 'Boulder City'],
+        'NH': ['Manchester', 'Nashua', 'Concord', 'Dover', 'Rochester', 'Keene', 'Derry', 'Portsmouth', 'Laconia', 'Lebanon'],
+        'NJ': ['Newark', 'Jersey City', 'Paterson', 'Elizabeth', 'Edison', 'Woodbridge', 'Lakewood', 'Toms River', 'Hamilton', 'Trenton'],
+        'NM': ['Albuquerque', 'Las Cruces', 'Rio Rancho', 'Santa Fe', 'Roswell', 'Farmington', 'South Valley', 'Clovis', 'Hobbs', 'Alamogordo'],
+        'NY': ['New York City', 'Buffalo', 'Rochester', 'Yonkers', 'Syracuse', 'Albany', 'New Rochelle', 'Mount Vernon', 'Schenectady', 'Utica'],
+        'NC': ['Charlotte', 'Raleigh', 'Greensboro', 'Durham', 'Winston-Salem', 'Fayetteville', 'Cary', 'Wilmington', 'High Point', 'Greenville'],
+        'ND': ['Fargo', 'Bismarck', 'Grand Forks', 'Minot', 'West Fargo', 'Williston', 'Dickinson', 'Mandan', 'Jamestown', 'Wahpeton'],
+        'OH': ['Columbus', 'Cleveland', 'Cincinnati', 'Toledo', 'Akron', 'Dayton', 'Parma', 'Canton', 'Lorain', 'Hamilton'],
+        'OK': ['Oklahoma City', 'Tulsa', 'Norman', 'Broken Arrow', 'Lawton', 'Edmond', 'Moore', 'Midwest City', 'Enid', 'Stillwater'],
+        'OR': ['Portland', 'Salem', 'Eugene', 'Gresham', 'Hillsboro', 'Beaverton', 'Bend', 'Medford', 'Springfield', 'Corvallis'],
+        'PA': ['Philadelphia', 'Pittsburgh', 'Allentown', 'Erie', 'Reading', 'Scranton', 'Bethlehem', 'Lancaster', 'Harrisburg', 'Altoona'],
+        'RI': ['Providence', 'Warwick', 'Cranston', 'Pawtucket', 'East Providence', 'Woonsocket', 'Coventry', 'Cumberland', 'North Providence', 'West Warwick'],
+        'SC': ['Columbia', 'Charleston', 'North Charleston', 'Mount Pleasant', 'Rock Hill', 'Greenville', 'Summerville', 'Sumter', 'Hilton Head Island', 'Florence'],
+        'SD': ['Sioux Falls', 'Rapid City', 'Aberdeen', 'Brookings', 'Watertown', 'Mitchell', 'Yankton', 'Pierre', 'Huron', 'Vermillion'],
+        'TN': ['Nashville', 'Memphis', 'Knoxville', 'Chattanooga', 'Clarksville', 'Murfreesboro', 'Franklin', 'Jackson', 'Johnson City', 'Hendersonville'],
+        'TX': ['Houston', 'San Antonio', 'Dallas', 'Austin', 'Fort Worth', 'El Paso', 'Arlington', 'Corpus Christi', 'Plano', 'Laredo'],
+        'UT': ['Salt Lake City', 'West Valley City', 'Provo', 'West Jordan', 'Orem', 'Sandy', 'Ogden', 'St. George', 'Layton', 'South Jordan'],
+        'VT': ['Burlington', 'South Burlington', 'Rutland', 'Barre', 'Montpelier', 'Winooski', 'St. Albans', 'Newport', 'Vergennes', 'Middlebury'],
+        'VA': ['Virginia Beach', 'Norfolk', 'Arlington', 'Richmond', 'Newport News', 'Alexandria', 'Hampton', 'Roanoke', 'Portsmouth', 'Suffolk'],
+        'WA': ['Seattle', 'Spokane', 'Tacoma', 'Vancouver', 'Bellevue', 'Kent', 'Everett', 'Renton', 'Yakima', 'Federal Way'],
+        'WV': ['Charleston', 'Huntington', 'Parkersburg', 'Morgantown', 'Wheeling', 'Weirton', 'Fairmont', 'Martinsburg', 'Beckley', 'Clarksburg'],
+        'WI': ['Milwaukee', 'Madison', 'Green Bay', 'Kenosha', 'Racine', 'Appleton', 'Waukesha', 'Oshkosh', 'Eau Claire', 'Janesville'],
+        'WY': ['Cheyenne', 'Casper', 'Laramie', 'Gillette', 'Rock Springs', 'Sheridan', 'Green River', 'Evanston', 'Riverton', 'Cody']
+    };
+
+    // Function to populate city dropdown based on selected state
+    function updateCityDropdown() {
+        const stateSelect = document.getElementById('state');
+        const citySelect = document.getElementById('city');
+        const selectedState = stateSelect.value;
+        
+        // Clear current city options
+        citySelect.innerHTML = '<option value="">Choose City...</option>';
+        
+        if (selectedState && stateCityData[selectedState]) {
+            // Add cities for selected state
+            stateCityData[selectedState].forEach(city => {
+                const option = document.createElement('option');
+                option.value = city;
+                option.textContent = city;
+                citySelect.appendChild(option);
+            });
+            
+            // Enable city dropdown
+            citySelect.disabled = false;
+        } else {
+            // Disable city dropdown if no state selected
+            citySelect.disabled = true;
+        }
+    }
+
+    // Add event listener to state dropdown
+    document.addEventListener('DOMContentLoaded', function() {
+        const stateSelect = document.getElementById('state');
+        if (stateSelect) {
+            stateSelect.addEventListener('change', updateCityDropdown);
+            
+            // If editing existing student data, populate city dropdown
+            const citySelect = document.getElementById('city');
+            if (stateSelect.value && citySelect) {
+                updateCityDropdown();
+                
+                // Set the current city value if editing
+                const currentCity = '{{ student_data.city if student_data else "" }}';
+                if (currentCity) {
+                    // Wait a moment for the dropdown to populate, then set the value
+                    setTimeout(() => {
+                        citySelect.value = currentCity;
+                    }, 100);
+                }
+            }
+        }
+    });
+    </script>
+</div>
+{% endblock %}

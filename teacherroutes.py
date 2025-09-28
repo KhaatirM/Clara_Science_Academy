@@ -1,12 +1,51 @@
+# Core Flask imports
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, abort, jsonify
 from flask_login import login_required, current_user
-from models import db, TeacherStaff, Class, Student, Assignment, Grade, SchoolYear, Submission, Announcement, Notification, Message, MessageGroup, MessageGroupMember, MessageAttachment, ScheduledAnnouncement, Enrollment, Attendance, SchoolDayAttendance, StudentGroup, StudentGroupMember, GroupAssignment, GroupSubmission, GroupGrade, AcademicPeriod, GroupTemplate, PeerEvaluation, AssignmentRubric, GroupContract, ReflectionJournal, GroupProgress, AssignmentTemplate, GroupRotation, GroupRotationHistory, PeerReview, DraftSubmission, DraftFeedback, DeadlineReminder, ReminderNotification, Feedback360, Feedback360Response, Feedback360Criteria, GroupConflict, ConflictResolution, ConflictParticipant, GroupWorkReport, IndividualContribution, TimeTracking, CollaborationMetrics, ReportExport, AnalyticsDashboard, PerformanceBenchmark, AssignmentExtension, QuizQuestion, QuizOption, QuizAnswer, DiscussionThread, DiscussionPost, GroupQuizQuestion, GroupQuizOption, GroupQuizAnswer
+
+# Database and model imports - organized by category
+from models import (
+    # Core database
+    db,
+    # User and staff models
+    TeacherStaff, Student, User,
+    # Academic structure
+    Class, SchoolYear, AcademicPeriod, Enrollment,
+    # Assignment system
+    Assignment, AssignmentTemplate, AssignmentRubric, AssignmentExtension,
+    Submission, Grade, 
+    # Quiz system
+    QuizQuestion, QuizOption, QuizAnswer,
+    # Group work system
+    StudentGroup, StudentGroupMember, GroupAssignment, GroupSubmission, GroupGrade,
+    GroupTemplate, GroupContract, GroupProgress, GroupRotation, GroupRotationHistory,
+    # Communication system
+    Announcement, Notification, Message, MessageGroup, MessageGroupMember, 
+    MessageAttachment, ScheduledAnnouncement,
+    # Attendance system
+    Attendance, SchoolDayAttendance,
+    # Advanced features
+    PeerEvaluation, PeerReview, ReflectionJournal, DraftSubmission, DraftFeedback,
+    DeadlineReminder, ReminderNotification, Feedback360, Feedback360Response, 
+    Feedback360Criteria, GroupConflict, ConflictResolution, ConflictParticipant,
+    GroupWorkReport, IndividualContribution, TimeTracking, CollaborationMetrics,
+    ReportExport, AnalyticsDashboard, PerformanceBenchmark,
+    # Discussion system
+    DiscussionThread, DiscussionPost,
+    # Group quiz system
+    GroupQuizQuestion, GroupQuizOption, GroupQuizAnswer
+)
+
+# Authentication and decorators
 from decorators import teacher_required
+
+# Standard library imports
 import json
-from datetime import datetime
 import os
-from werkzeug.utils import secure_filename
 import time
+from datetime import datetime
+
+# Werkzeug utilities
+from werkzeug.utils import secure_filename
 
 # File upload configuration
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'}
@@ -152,7 +191,7 @@ def teacher_dashboard():
     except Exception as e:
         print(f"Error in teacher dashboard: {e}")
         flash("An error occurred while loading the dashboard.", "danger")
-        return render_template('role_teacher_dashboard.html', 
+        return render_template('management/role_teacher_dashboard.html', 
                              teacher=None, 
                              classes=[], 
                              recent_activity=[], 
@@ -295,7 +334,7 @@ def teacher_dashboard():
         'due_assignments': due_assignments
     }
     
-    return render_template('role_teacher_dashboard.html', 
+    return render_template('management/role_teacher_dashboard.html', 
                          teacher=teacher, 
                          teacher_data=teacher_data,
                          classes=classes,
@@ -347,7 +386,7 @@ def view_class(class_id):
     announcements = Announcement.query.filter_by(class_id=class_id).order_by(Announcement.timestamp.desc()).limit(5).all()
 
     return render_template(
-        'teacher_class_roster_view.html',
+        'teachers/teacher_class_roster_view.html',
         class_item=class_obj,
         enrolled_students=enrolled_students,
         assignments=assignments,
@@ -360,7 +399,7 @@ def view_class(class_id):
 @teacher_required
 def assignment_type_selector():
     """Assignment type selection page"""
-    return render_template('assignment_type_selector.html')
+    return render_template('shared/assignment_type_selector.html')
 
 @teacher_blueprint.route('/assignment/create/quiz', methods=['GET', 'POST'])
 @login_required
@@ -415,6 +454,8 @@ def create_quiz_assignment():
             print(f"DEBUG: Quiz creation form data:")
             for key, value in request.form.items():
                 print(f"  {key}: {value}")
+            
+            print(f"DEBUG: Found {len([k for k in request.form.keys() if k.startswith('question_text_') and not k.endswith('[]')])} questions")
             
             # Save quiz questions
             question_count = 0
@@ -477,12 +518,16 @@ def create_quiz_assignment():
                     
                     question_count += 1
             
+            print(f"DEBUG: Successfully processed {question_count} questions")
             db.session.commit()
             flash('Quiz assignment created successfully!', 'success')
             return redirect(url_for('teacher.my_assignments'))
             
         except Exception as e:
             db.session.rollback()
+            print(f"DEBUG: Error creating quiz assignment: {str(e)}")
+            import traceback
+            traceback.print_exc()
             flash(f'Error creating quiz assignment: {str(e)}', 'danger')
     
     # GET request - show form
@@ -496,7 +541,7 @@ def create_quiz_assignment():
         classes = []
     
     current_quarter = get_current_quarter()
-    return render_template('create_quiz_assignment.html', classes=classes, current_quarter=current_quarter)
+    return render_template('shared/create_quiz_assignment.html', classes=classes, current_quarter=current_quarter)
 
 @teacher_blueprint.route('/assignment/create/discussion', methods=['GET', 'POST'])
 @login_required
@@ -561,7 +606,7 @@ def create_discussion_assignment():
         classes = []
     
     current_quarter = get_current_quarter()
-    return render_template('create_discussion_assignment.html', classes=classes, current_quarter=current_quarter)
+    return render_template('shared/create_discussion_assignment.html', classes=classes, current_quarter=current_quarter)
 
 @teacher_blueprint.route('/assignment/add', methods=['GET', 'POST'])
 @login_required
@@ -585,7 +630,7 @@ def add_assignment_select_class():
         # Teacher user without teacher_staff_id - show empty results
         classes = []
     
-    return render_template('add_assignment_select_class.html', classes=classes)
+    return render_template('shared/add_assignment_select_class.html', classes=classes)
 
 @teacher_blueprint.route('/class/<int:class_id>/assignment/add', methods=['GET', 'POST'])
 @login_required
@@ -686,7 +731,7 @@ def add_assignment(class_id):
     # Get current quarter for pre-selection
     current_quarter = get_current_quarter()
     
-    return render_template('add_assignment.html', class_obj=class_obj, current_quarter=current_quarter)
+    return render_template('shared/add_assignment.html', class_obj=class_obj, current_quarter=current_quarter)
 
 
 @teacher_blueprint.route('/assignment/view/<int:assignment_id>')
@@ -714,7 +759,7 @@ def view_assignment(assignment_id):
     # Get current date for status calculations
     today = datetime.now().date()
     
-    return render_template('view_assignment.html', 
+    return render_template('shared/view_assignment.html', 
                          assignment=assignment,
                          class_info=class_info,
                          teacher=teacher,
@@ -805,7 +850,7 @@ def edit_assignment(assignment_id):
     print(f"  Status: {assignment.status}")
     print(f"  Due Date: {assignment.due_date}")
     
-    return render_template('edit_assignment.html', 
+    return render_template('shared/edit_assignment.html', 
                          assignment=assignment,
                          classes=classes,
                          school_years=school_years)
@@ -952,7 +997,7 @@ def grade_assignment(assignment_id):
     grades = {g.student_id: json.loads(g.grade_data) for g in Grade.query.filter_by(assignment_id=assignment_id).all()}
     submissions = {s.student_id: s for s in Submission.query.filter_by(assignment_id=assignment_id).all()}
     
-    return render_template('teacher_grade_assignment.html', 
+    return render_template('teachers/teacher_grade_assignment.html', 
                          assignment=assignment, 
                          class_obj=class_obj,
                          students=students, 
@@ -1143,7 +1188,7 @@ def my_classes():
         # Teacher user without teacher_staff_id - show empty results
         classes = []
     
-    return render_template('role_teacher_dashboard.html', 
+    return render_template('management/role_teacher_dashboard.html', 
                          teacher=teacher, 
                          classes=classes,
                          section='classes',
@@ -1220,7 +1265,7 @@ def my_assignments():
     assignments = assignments_query.all()
     
     from datetime import datetime
-    return render_template('teacher_assignments.html',
+    return render_template('teachers/teacher_assignments.html',
                          teacher=teacher,
                          classes=classes,
                          assignments=assignments,
@@ -1351,7 +1396,7 @@ def my_grades():
         assignments = []
         grades = []
     
-    return render_template('role_teacher_dashboard.html', 
+    return render_template('management/role_teacher_dashboard.html', 
                          teacher=teacher,
                          classes=classes,
                          assignments=assignments,
@@ -1469,7 +1514,7 @@ def student_grades():
             else:
                 student_gpas_by_class[class_id][student_id] = 0.0
     
-    return render_template('role_teacher_dashboard.html', 
+    return render_template('management/role_teacher_dashboard.html', 
                          teacher=teacher,
                          classes=classes,
                          assignments=assignments,
@@ -1542,7 +1587,7 @@ def attendance():
     present_records = Attendance.query.filter_by(date=datetime.now().date(), status='Present').count()
     overall_attendance_rate = round((present_records / total_attendance_records * 100), 1) if total_attendance_records > 0 else 0
     
-    return render_template('attendance_hub_simple.html',
+    return render_template('shared/attendance_hub_simple.html',
                          classes=classes,
                          today_date=today_date,
                          today_attendance_count=today_attendance_count,
@@ -1801,7 +1846,7 @@ def students_directory():
     for student in students:
         student_gpas[student.id] = calculate_student_gpa(student.id)
     
-    return render_template('role_teacher_dashboard.html', 
+    return render_template('management/role_teacher_dashboard.html', 
                          teacher=current_user,
                          students=students,
                          student_gpas=student_gpas,
@@ -1837,7 +1882,7 @@ def teachers_staff_directory():
     # Order by last name, then first name
     teachers_staff = query.order_by(TeacherStaff.last_name, TeacherStaff.first_name).all()
     
-    return render_template('role_teacher_dashboard.html', 
+    return render_template('management/role_teacher_dashboard.html', 
                          teacher=current_user,
                          teachers_staff=teachers_staff,
                          search_query=search_query,
@@ -1992,7 +2037,7 @@ def calendar():
                 week_data.append({'day_num': day, 'is_current_month': True, 'is_today': is_today, 'events': events})
         calendar_data['weeks'].append(week_data)
 
-    return render_template('role_teacher_dashboard.html',
+    return render_template('management/role_teacher_dashboard.html',
                          teacher=current_user,
                          calendar_data=calendar_data,
                          month_name=month_name,
@@ -2008,7 +2053,7 @@ def calendar():
 @teacher_required
 def teacher_communications():
     """Communications tab - Under Development."""
-    return render_template('under_development.html',
+    return render_template('shared/under_development.html',
                          section='communications',
                          active_tab='communications')
 
@@ -2050,7 +2095,7 @@ def teacher_messages():
     
     messages = query.all()
     
-    return render_template('teacher_messages.html',
+    return render_template('teachers/teacher_messages.html',
                          teacher=teacher,
                          messages=messages,
                          message_type=message_type,
@@ -2136,7 +2181,7 @@ def send_message():
     teachers = TeacherStaff.query.all()
     groups = MessageGroup.query.filter_by(is_active=True).all()
     
-    return render_template('teacher_send_message.html',
+    return render_template('teachers/teacher_send_message.html',
                          teacher=teacher,
                          students=students,
                          teachers=teachers,
@@ -2163,7 +2208,7 @@ def view_message(message_id):
         message.read_at = datetime.utcnow()
         db.session.commit()
     
-    return render_template('teacher_view_message.html',
+    return render_template('teachers/teacher_view_message.html',
                          teacher=teacher,
                          message=message,
                          section='communications',
@@ -2237,7 +2282,7 @@ def teacher_groups():
         # Teacher user without teacher_staff_id - show empty results
         classes = []
     
-    return render_template('teacher_groups.html',
+    return render_template('teachers/teacher_groups.html',
                          teacher=teacher,
                          groups=groups,
                          classes=classes,
@@ -2323,7 +2368,7 @@ def create_message_group():
         # Teacher user without teacher_staff_id - show empty results
         classes = []
     
-    return render_template('teacher_create_group.html',
+    return render_template('teachers/teacher_create_group.html',
                          teacher=teacher,
                          classes=classes,
                          section='communications',
@@ -2353,7 +2398,7 @@ def view_group(group_id):
     # Get group members
     members = MessageGroupMember.query.filter_by(group_id=group_id).all()
     
-    return render_template('teacher_view_group.html',
+    return render_template('teachers/teacher_view_group.html',
                          teacher=teacher,
                          group=group,
                          messages=messages,
@@ -2461,7 +2506,7 @@ def create_announcement():
         # Teacher user without teacher_staff_id - show empty results
         classes = []
     
-    return render_template('teacher_create_announcement.html',
+    return render_template('teachers/teacher_create_announcement.html',
                          teacher=teacher,
                          classes=classes,
                          section='communications',
@@ -2517,7 +2562,7 @@ def schedule_announcement():
         # Teacher user without teacher_staff_id - show empty results
         classes = []
     
-    return render_template('teacher_schedule_announcement.html',
+    return render_template('teachers/teacher_schedule_announcement.html',
                          teacher=teacher,
                          classes=classes,
                          section='communications',
@@ -2568,7 +2613,7 @@ def settings():
     """Teacher settings page."""
     teacher = get_teacher_or_admin()
     
-    return render_template('teacher_settings.html',
+    return render_template('teachers/teacher_settings.html',
                          teacher=teacher,
                          section='settings',
                          active_tab='settings')
@@ -2596,7 +2641,7 @@ def class_groups(class_id):
     enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
     enrolled_students = [enrollment.student for enrollment in enrollments if enrollment.student is not None]
     
-    return render_template('teacher_class_groups.html',
+    return render_template('teachers/teacher_class_groups.html',
                          class_obj=class_obj,
                          groups=groups,
                          enrolled_students=enrolled_students)
@@ -2622,13 +2667,13 @@ def create_student_group(class_id):
         
         if not name:
             flash('Group name is required.', 'danger')
-            return render_template('teacher_create_group.html', class_obj=class_obj)
+            return render_template('teachers/teacher_create_group.html', class_obj=class_obj)
         
         # Check if group name already exists for this class
         existing_group = StudentGroup.query.filter_by(class_id=class_id, name=name, is_active=True).first()
         if existing_group:
             flash('A group with this name already exists in this class.', 'danger')
-            return render_template('teacher_create_group.html', class_obj=class_obj)
+            return render_template('teachers/teacher_create_group.html', class_obj=class_obj)
         
         # Create the group
         group = StudentGroup(
@@ -2645,7 +2690,7 @@ def create_student_group(class_id):
         flash(f'Group "{name}" created successfully!', 'success')
         return redirect(url_for('teacher.class_groups', class_id=class_id))
     
-    return render_template('teacher_create_group.html', class_obj=class_obj)
+    return render_template('teachers/teacher_create_group.html', class_obj=class_obj)
 
 
 @teacher_blueprint.route('/group/<int:group_id>/manage', methods=['GET', 'POST'])
@@ -2720,7 +2765,7 @@ def manage_group(group_id):
                     flash('Group leader updated successfully!', 'success')
                     return redirect(url_for('teacher.manage_group', group_id=group_id))
     
-    return render_template('teacher_manage_group.html',
+    return render_template('teachers/teacher_manage_group.html',
                          group=group,
                          current_members=current_members,
                          enrolled_students=enrolled_students,
@@ -2777,7 +2822,7 @@ def class_group_assignments(class_id):
         flash('Group assignments feature is not yet available. Please run the database migration first.', 'warning')
         group_assignments = []
     
-    return render_template('teacher_class_group_assignments.html',
+    return render_template('teachers/teacher_class_group_assignments.html',
                          class_obj=class_obj,
                          group_assignments=group_assignments,
                          moment=datetime.utcnow(),
@@ -2817,7 +2862,7 @@ def create_group_assignment(class_id):
         
         if not title or not due_date_str or not quarter:
             flash('Title, due date, and quarter are required.', 'danger')
-            return render_template('teacher_create_group_assignment.html', 
+            return render_template('teachers/teacher_create_group_assignment.html', 
                                  class_obj=class_obj, 
                                  academic_periods=academic_periods)
         
@@ -2825,7 +2870,7 @@ def create_group_assignment(class_id):
             due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
         except ValueError:
             flash('Invalid due date format.', 'danger')
-            return render_template('teacher_create_group_assignment.html', 
+            return render_template('teachers/teacher_create_group_assignment.html', 
                                  class_obj=class_obj, 
                                  academic_periods=academic_periods)
         
@@ -2880,7 +2925,7 @@ def create_group_assignment(class_id):
         flash(f'Group assignment "{title}" created successfully!', 'success')
         return redirect(url_for('teacher.class_group_assignments', class_id=class_id))
     
-    return render_template('teacher_create_group_assignment.html', 
+    return render_template('teachers/teacher_create_group_assignment.html', 
                          class_obj=class_obj, 
                          academic_periods=academic_periods)
 
@@ -2898,7 +2943,7 @@ def group_assignment_type_selector(class_id):
         flash('You do not have access to this class.', 'danger')
         return redirect(url_for('teacher.teacher_dashboard'))
     
-    return render_template('group_assignment_type_selector.html', 
+    return render_template('shared/group_assignment_type_selector.html', 
                          class_obj=class_obj)
 
 
@@ -2935,7 +2980,7 @@ def create_group_pdf_assignment(class_id):
         
         if not title or not due_date_str or not quarter:
             flash('Title, due date, and quarter are required.', 'danger')
-            return render_template('create_group_pdf_assignment.html', 
+            return render_template('shared/create_group_pdf_assignment.html', 
                                  class_obj=class_obj, 
                                  academic_periods=academic_periods)
         
@@ -2943,7 +2988,7 @@ def create_group_pdf_assignment(class_id):
             due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
         except ValueError:
             flash('Invalid due date format.', 'danger')
-            return render_template('create_group_pdf_assignment.html', 
+            return render_template('shared/create_group_pdf_assignment.html', 
                                  class_obj=class_obj, 
                                  academic_periods=academic_periods)
         
@@ -2999,7 +3044,7 @@ def create_group_pdf_assignment(class_id):
         flash(f'Group PDF assignment "{title}" created successfully!', 'success')
         return redirect(url_for('teacher.class_group_assignments', class_id=class_id))
     
-    return render_template('create_group_pdf_assignment.html', 
+    return render_template('shared/create_group_pdf_assignment.html', 
                          class_obj=class_obj, 
                          academic_periods=academic_periods)
 
@@ -3044,7 +3089,7 @@ def create_group_quiz_assignment(class_id):
         
         if not title or not due_date_str or not quarter:
             flash('Title, due date, and quarter are required.', 'danger')
-            return render_template('create_group_quiz_assignment.html', 
+            return render_template('shared/create_group_quiz_assignment.html', 
                                  class_obj=class_obj, 
                                  academic_periods=academic_periods)
         
@@ -3052,7 +3097,7 @@ def create_group_quiz_assignment(class_id):
             due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
         except ValueError:
             flash('Invalid due date format.', 'danger')
-            return render_template('create_group_quiz_assignment.html', 
+            return render_template('shared/create_group_quiz_assignment.html', 
                                  class_obj=class_obj, 
                                  academic_periods=academic_periods)
         
@@ -3126,7 +3171,7 @@ def create_group_quiz_assignment(class_id):
         flash(f'Group quiz assignment "{title}" created successfully!', 'success')
         return redirect(url_for('teacher.class_group_assignments', class_id=class_id))
     
-    return render_template('create_group_quiz_assignment.html', 
+    return render_template('shared/create_group_quiz_assignment.html', 
                          class_obj=class_obj, 
                          academic_periods=academic_periods)
 
@@ -3173,7 +3218,7 @@ def create_group_discussion_assignment(class_id):
         
         if not title or not due_date_str or not quarter:
             flash('Title, due date, and quarter are required.', 'danger')
-            return render_template('create_group_discussion_assignment.html', 
+            return render_template('shared/create_group_discussion_assignment.html', 
                                  class_obj=class_obj, 
                                  academic_periods=academic_periods)
         
@@ -3181,7 +3226,7 @@ def create_group_discussion_assignment(class_id):
             due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
         except ValueError:
             flash('Invalid due date format.', 'danger')
-            return render_template('create_group_discussion_assignment.html', 
+            return render_template('shared/create_group_discussion_assignment.html', 
                                  class_obj=class_obj, 
                                  academic_periods=academic_periods)
         
@@ -3225,7 +3270,7 @@ def create_group_discussion_assignment(class_id):
         flash(f'Group discussion assignment "{title}" created successfully!', 'success')
         return redirect(url_for('teacher.class_group_assignments', class_id=class_id))
     
-    return render_template('create_group_discussion_assignment.html', 
+    return render_template('shared/create_group_discussion_assignment.html', 
                          class_obj=class_obj, 
                          academic_periods=academic_periods)
 
@@ -3249,7 +3294,7 @@ def view_group_assignment(assignment_id):
     # Get groups for this class
     groups = StudentGroup.query.filter_by(class_id=group_assignment.class_id, is_active=True).all()
     
-    return render_template('teacher_view_group_assignment.html',
+    return render_template('teachers/teacher_view_group_assignment.html',
                          group_assignment=group_assignment,
                          submissions=submissions,
                          groups=groups)
@@ -3321,7 +3366,7 @@ def grade_group_assignment(assignment_id):
         flash('Grades saved successfully!', 'success')
         return redirect(url_for('teacher.view_group_assignment', assignment_id=assignment_id))
     
-    return render_template('teacher_grade_group_assignment.html',
+    return render_template('teachers/teacher_grade_group_assignment.html',
                          group_assignment=group_assignment,
                          groups=groups,
                          grades_by_student=grades_by_student)
@@ -3416,7 +3461,7 @@ def group_analytics(class_id):
             'submissions_count': len([s for s in group.submissions if s.submitted_at])
         })
     
-    return render_template('teacher_group_analytics.html',
+    return render_template('teachers/teacher_group_analytics.html',
                          class_obj=class_obj,
                          analytics_data=analytics_data)
 
@@ -3517,7 +3562,7 @@ def auto_create_groups(class_id):
     enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
     students = [enrollment.student for enrollment in enrollments if enrollment.student is not None]
     
-    return render_template('teacher_auto_create_groups.html',
+    return render_template('teachers/teacher_auto_create_groups.html',
                          class_obj=class_obj,
                          students=students)
 
@@ -3536,7 +3581,7 @@ def class_group_templates(class_id):
     
     templates = GroupTemplate.query.filter_by(class_id=class_id, is_active=True).all()
     
-    return render_template('teacher_group_templates.html',
+    return render_template('teachers/teacher_group_templates.html',
                          class_obj=class_obj,
                          templates=templates)
 
@@ -3577,7 +3622,7 @@ def create_group_template(class_id):
             db.session.rollback()
             flash(f'Error creating template: {str(e)}', 'danger')
     
-    return render_template('teacher_create_group_template.html',
+    return render_template('teachers/teacher_create_group_template.html',
                          class_obj=class_obj)
 
 
@@ -3631,7 +3676,7 @@ def create_assignment_rubric(assignment_id):
             db.session.rollback()
             flash(f'Error creating rubric: {str(e)}', 'danger')
     
-    return render_template('teacher_create_rubric.html',
+    return render_template('teachers/teacher_create_rubric.html',
                          assignment=assignment)
 
 
@@ -3678,7 +3723,7 @@ def create_group_contract(group_id):
     # Get available assignments for this group's class
     assignments = GroupAssignment.query.filter_by(class_id=group.class_id).all()
     
-    return render_template('teacher_create_group_contract.html',
+    return render_template('teachers/teacher_create_group_contract.html',
                          group=group,
                          assignments=assignments)
 
@@ -3706,7 +3751,7 @@ def view_peer_evaluations(assignment_id):
             evaluations_by_group[eval.group_id] = []
         evaluations_by_group[eval.group_id].append(eval)
     
-    return render_template('teacher_peer_evaluations.html',
+    return render_template('teachers/teacher_peer_evaluations.html',
                          assignment=assignment,
                          evaluations_by_group=evaluations_by_group)
 
@@ -3754,7 +3799,7 @@ def view_group_progress(assignment_id):
             ).first()
         })
     
-    return render_template('teacher_group_progress.html',
+    return render_template('teachers/teacher_group_progress.html',
                          assignment=assignment,
                          progress_data=progress_data)
 
@@ -3856,7 +3901,7 @@ def class_assignment_templates(class_id):
     
     templates = AssignmentTemplate.query.filter_by(class_id=class_id, is_active=True).all()
     
-    return render_template('teacher_assignment_templates.html',
+    return render_template('teachers/teacher_assignment_templates.html',
                          class_obj=class_obj,
                          templates=templates)
 
@@ -3912,7 +3957,7 @@ def create_assignment_template(class_id):
             db.session.rollback()
             flash(f'Error creating template: {str(e)}', 'danger')
     
-    return render_template('teacher_create_assignment_template.html',
+    return render_template('teachers/teacher_create_assignment_template.html',
                          class_obj=class_obj)
 
 
@@ -3962,7 +4007,7 @@ def use_assignment_template(template_id):
     academic_periods = AcademicPeriod.query.filter_by(is_active=True).all()
     template_data = json.loads(template.template_data)
     
-    return render_template('teacher_use_assignment_template.html',
+    return render_template('teachers/teacher_use_assignment_template.html',
                          template=template,
                          template_data=template_data,
                          school_years=school_years,
@@ -3983,7 +4028,7 @@ def class_group_rotations(class_id):
 
     rotations = GroupRotation.query.filter_by(class_id=class_id, is_active=True).order_by(GroupRotation.created_at.desc()).all()
     
-    return render_template('teacher_class_group_rotations.html',
+    return render_template('teachers/teacher_class_group_rotations.html',
                          class_obj=class_obj,
                          rotations=rotations)
 
@@ -4027,7 +4072,7 @@ def create_group_rotation(class_id):
             db.session.rollback()
             flash(f'Error creating group rotation: {str(e)}', 'danger')
 
-    return render_template('teacher_create_group_rotation.html',
+    return render_template('teachers/teacher_create_group_rotation.html',
                          class_obj=class_obj)
 
 @teacher_blueprint.route('/group-rotation/<int:rotation_id>/execute', methods=['POST'])
@@ -4138,7 +4183,7 @@ def view_rotation_history(rotation_id):
 
     history = GroupRotationHistory.query.filter_by(rotation_id=rotation_id).order_by(GroupRotationHistory.rotation_date.desc()).all()
     
-    return render_template('teacher_rotation_history.html',
+    return render_template('teachers/teacher_rotation_history.html',
                          class_obj=class_obj,
                          rotation=rotation,
                          history=history)
@@ -4196,7 +4241,7 @@ def view_peer_reviews(assignment_id):
             reviews_by_reviewer[review.reviewer_id] = []
         reviews_by_reviewer[review.reviewer_id].append(review)
     
-    return render_template('teacher_peer_reviews.html',
+    return render_template('teachers/teacher_peer_reviews.html',
                          class_obj=class_obj,
                          group_assignment=group_assignment,
                          peer_reviews=peer_reviews,
@@ -4266,7 +4311,7 @@ def create_peer_review(assignment_id):
     # Get groups and students for the assignment
     groups = StudentGroup.query.filter_by(class_id=class_obj.id, is_active=True).all()
     
-    return render_template('teacher_create_peer_review.html',
+    return render_template('teachers/teacher_create_peer_review.html',
                          class_obj=class_obj,
                          group_assignment=group_assignment,
                          groups=groups)
@@ -4302,7 +4347,7 @@ def edit_peer_review(review_id):
             db.session.rollback()
             flash(f'Error updating peer review: {str(e)}', 'danger')
 
-    return render_template('teacher_edit_peer_review.html',
+    return render_template('teachers/teacher_edit_peer_review.html',
                          class_obj=class_obj,
                          group_assignment=group_assignment,
                          peer_review=peer_review)
@@ -4348,7 +4393,7 @@ def view_draft_submissions(assignment_id):
     # Get all draft submissions for this assignment
     draft_submissions = DraftSubmission.query.filter_by(group_assignment_id=assignment_id).order_by(DraftSubmission.submitted_at.desc()).all()
     
-    return render_template('teacher_draft_submissions.html',
+    return render_template('teachers/teacher_draft_submissions.html',
                          class_obj=class_obj,
                          group_assignment=group_assignment,
                          draft_submissions=draft_submissions)
@@ -4393,7 +4438,7 @@ def provide_draft_feedback(draft_id):
             db.session.rollback()
             flash(f'Error providing feedback: {str(e)}', 'danger')
 
-    return render_template('teacher_provide_draft_feedback.html',
+    return render_template('teachers/teacher_provide_draft_feedback.html',
                          class_obj=class_obj,
                          group_assignment=group_assignment,
                          draft_submission=draft_submission)
@@ -4488,7 +4533,7 @@ def class_deadline_reminders(class_id):
         reminders = []
         upcoming_reminders = []
     
-    return render_template('teacher_class_deadline_reminders.html',
+    return render_template('teachers/teacher_class_deadline_reminders.html',
                          class_obj=class_obj,
                          reminders=reminders,
                          upcoming_reminders=upcoming_reminders,
@@ -4523,7 +4568,7 @@ def create_deadline_reminder(class_id):
             
             if not all([reminder_title, reminder_message, reminder_date]):
                 flash('All fields are required.', 'danger')
-                return render_template('teacher_create_deadline_reminder.html',
+                return render_template('teachers/teacher_create_deadline_reminder.html',
                                      class_obj=class_obj,
                                      assignments=assignments,
                                      group_assignments=group_assignments)
@@ -4533,7 +4578,7 @@ def create_deadline_reminder(class_id):
                 reminder_datetime = datetime.strptime(reminder_date, '%Y-%m-%dT%H:%M')
             except ValueError:
                 flash('Invalid date format.', 'danger')
-                return render_template('teacher_create_deadline_reminder.html',
+                return render_template('teachers/teacher_create_deadline_reminder.html',
                                      class_obj=class_obj,
                                      assignments=assignments,
                                      group_assignments=group_assignments)
@@ -4561,7 +4606,7 @@ def create_deadline_reminder(class_id):
             db.session.rollback()
             flash(f'Error creating reminder: {str(e)}', 'danger')
     
-    return render_template('teacher_create_deadline_reminder.html',
+    return render_template('teachers/teacher_create_deadline_reminder.html',
                          class_obj=class_obj,
                          assignments=assignments,
                          group_assignments=group_assignments)
@@ -4599,7 +4644,7 @@ def edit_deadline_reminder(reminder_id):
                     reminder.reminder_date = datetime.strptime(reminder_date, '%Y-%m-%dT%H:%M')
                 except ValueError:
                     flash('Invalid date format.', 'danger')
-                    return render_template('teacher_edit_deadline_reminder.html',
+                    return render_template('teachers/teacher_edit_deadline_reminder.html',
                                          reminder=reminder,
                                          class_obj=class_obj,
                                          assignments=assignments,
@@ -4613,7 +4658,7 @@ def edit_deadline_reminder(reminder_id):
             db.session.rollback()
             flash(f'Error updating reminder: {str(e)}', 'danger')
     
-    return render_template('teacher_edit_deadline_reminder.html',
+    return render_template('teachers/teacher_edit_deadline_reminder.html',
                          reminder=reminder,
                          class_obj=class_obj,
                          assignments=assignments,
@@ -4732,7 +4777,7 @@ def class_360_feedback(class_id):
     enrollments = Enrollment.query.filter_by(class_id=class_id).all()
     students = [enrollment.student for enrollment in enrollments if enrollment.student]
     
-    return render_template('teacher_class_360_feedback.html',
+    return render_template('teachers/teacher_class_360_feedback.html',
                          class_obj=class_obj,
                          feedback_sessions=feedback_sessions,
                          students=students)
@@ -4764,7 +4809,7 @@ def create_360_feedback(class_id):
             
             if not all([title, target_student_id, feedback_type]):
                 flash('Title, target student, and feedback type are required.', 'danger')
-                return render_template('teacher_create_360_feedback.html',
+                return render_template('teachers/teacher_create_360_feedback.html',
                                      class_obj=class_obj,
                                      students=students)
             
@@ -4775,7 +4820,7 @@ def create_360_feedback(class_id):
                     due_datetime = datetime.strptime(due_date, '%Y-%m-%dT%H:%M')
                 except ValueError:
                     flash('Invalid due date format.', 'danger')
-                    return render_template('teacher_create_360_feedback.html',
+                    return render_template('teachers/teacher_create_360_feedback.html',
                                          class_obj=class_obj,
                                          students=students)
             
@@ -4800,7 +4845,7 @@ def create_360_feedback(class_id):
             db.session.rollback()
             flash(f'Error creating feedback session: {str(e)}', 'danger')
     
-    return render_template('teacher_create_360_feedback.html',
+    return render_template('teachers/teacher_create_360_feedback.html',
                          class_obj=class_obj,
                          students=students)
 
@@ -4828,7 +4873,7 @@ def view_360_feedback(session_id):
     enrollments = Enrollment.query.filter_by(class_id=feedback_session.class_id).all()
     students = [enrollment.student for enrollment in enrollments if enrollment.student]
     
-    return render_template('teacher_view_360_feedback.html',
+    return render_template('teachers/teacher_view_360_feedback.html',
                          feedback_session=feedback_session,
                          class_obj=class_obj,
                          responses=responses,
@@ -4861,7 +4906,7 @@ def create_360_feedback_criteria(session_id):
             
             if not criteria_name:
                 flash('Criteria name is required.', 'danger')
-                return render_template('teacher_create_360_feedback_criteria.html',
+                return render_template('teachers/teacher_create_360_feedback_criteria.html',
                                      feedback_session=feedback_session,
                                      class_obj=class_obj)
             
@@ -4887,7 +4932,7 @@ def create_360_feedback_criteria(session_id):
             db.session.rollback()
             flash(f'Error creating criteria: {str(e)}', 'danger')
     
-    return render_template('teacher_create_360_feedback_criteria.html',
+    return render_template('teachers/teacher_create_360_feedback_criteria.html',
                          feedback_session=feedback_session,
                          class_obj=class_obj)
 
@@ -4967,7 +5012,7 @@ def class_reflection_journals(class_id):
     enrollments = Enrollment.query.filter_by(class_id=class_id).all()
     students = [enrollment.student for enrollment in enrollments if enrollment.student]
     
-    return render_template('teacher_class_reflection_journals.html',
+    return render_template('teachers/teacher_class_reflection_journals.html',
                          class_obj=class_obj,
                          journals=journals,
                          students=students)
@@ -4986,7 +5031,7 @@ def view_reflection_journal(journal_id):
         flash('You do not have access to this reflection journal.', 'danger')
         return redirect(url_for('teacher.teacher_dashboard'))
     
-    return render_template('teacher_view_reflection_journal.html',
+    return render_template('teachers/teacher_view_reflection_journal.html',
                          journal=journal,
                          class_obj=class_obj)
 
@@ -5031,7 +5076,7 @@ def group_assignment_reflection_journals(assignment_id):
     # Get all reflection journals for this assignment
     journals = ReflectionJournal.query.filter_by(group_assignment_id=assignment_id).order_by(ReflectionJournal.submitted_at.desc()).all()
     
-    return render_template('teacher_group_assignment_reflection_journals.html',
+    return render_template('teachers/teacher_group_assignment_reflection_journals.html',
                          group_assignment=group_assignment,
                          class_obj=class_obj,
                          journals=journals)
@@ -5059,7 +5104,7 @@ def class_conflicts(class_id):
     enrollments = Enrollment.query.filter_by(class_id=class_id).all()
     students = [enrollment.student for enrollment in enrollments if enrollment.student]
     
-    return render_template('teacher_class_conflicts.html',
+    return render_template('teachers/teacher_class_conflicts.html',
                          class_obj=class_obj,
                          conflicts=conflicts,
                          students=students)
@@ -5084,7 +5129,7 @@ def view_conflict(conflict_id):
     # Get participants
     participants = ConflictParticipant.query.filter_by(conflict_id=conflict_id).all()
     
-    return render_template('teacher_view_conflict.html',
+    return render_template('teachers/teacher_view_conflict.html',
                          conflict=conflict,
                          class_obj=class_obj,
                          resolution_steps=resolution_steps,
@@ -5126,7 +5171,7 @@ def resolve_conflict(conflict_id):
             db.session.rollback()
             flash(f'Error updating conflict resolution: {str(e)}', 'danger')
     
-    return render_template('teacher_resolve_conflict.html',
+    return render_template('teachers/teacher_resolve_conflict.html',
                          conflict=conflict,
                          class_obj=class_obj)
 
@@ -5155,7 +5200,7 @@ def add_conflict_resolution_step(conflict_id):
             
             if not all([resolution_step, step_description, step_type]):
                 flash('Resolution step, description, and type are required.', 'danger')
-                return render_template('teacher_add_conflict_resolution_step.html',
+                return render_template('teachers/teacher_add_conflict_resolution_step.html',
                                      conflict=conflict,
                                      class_obj=class_obj)
             
@@ -5166,7 +5211,7 @@ def add_conflict_resolution_step(conflict_id):
                     follow_up_datetime = datetime.strptime(follow_up_date, '%Y-%m-%dT%H:%M')
                 except ValueError:
                     flash('Invalid follow-up date format.', 'danger')
-                    return render_template('teacher_add_conflict_resolution_step.html',
+                    return render_template('teachers/teacher_add_conflict_resolution_step.html',
                                          conflict=conflict,
                                          class_obj=class_obj)
             
@@ -5192,7 +5237,7 @@ def add_conflict_resolution_step(conflict_id):
             db.session.rollback()
             flash(f'Error adding resolution step: {str(e)}', 'danger')
     
-    return render_template('teacher_add_conflict_resolution_step.html',
+    return render_template('teachers/teacher_add_conflict_resolution_step.html',
                          conflict=conflict,
                          class_obj=class_obj)
 
@@ -5249,7 +5294,7 @@ def class_reports(class_id):
         StudentGroup.class_id == class_id
     ).order_by(TimeTracking.start_time.desc()).limit(10).all()
     
-    return render_template('teacher_class_reports.html',
+    return render_template('teachers/teacher_class_reports.html',
                          class_obj=class_obj,
                          reports=reports,
                          recent_contributions=recent_contributions,
@@ -5283,7 +5328,7 @@ def class_analytics(class_id):
     # Get saved dashboards
     dashboards = AnalyticsDashboard.query.filter_by(class_id=class_id).order_by(AnalyticsDashboard.last_accessed.desc()).all()
     
-    return render_template('teacher_class_analytics.html',
+    return render_template('teachers/teacher_class_analytics.html',
                          class_obj=class_obj,
                          groups=groups,
                          group_assignments=group_assignments,
@@ -5313,7 +5358,7 @@ def class_contributions(class_id):
     enrollments = Enrollment.query.filter_by(class_id=class_id).all()
     students = [enrollment.student for enrollment in enrollments if enrollment.student]
     
-    return render_template('teacher_class_contributions.html',
+    return render_template('teachers/teacher_class_contributions.html',
                          class_obj=class_obj,
                          contributions=contributions,
                          students=students)
@@ -5340,7 +5385,7 @@ def class_time_tracking(class_id):
     enrollments = Enrollment.query.filter_by(class_id=class_id).all()
     students = [enrollment.student for enrollment in enrollments if enrollment.student]
     
-    return render_template('teacher_class_time_tracking.html',
+    return render_template('teachers/teacher_class_time_tracking.html',
                          class_obj=class_obj,
                          time_tracking=time_tracking,
                          students=students)
@@ -5367,7 +5412,7 @@ def create_report(class_id):
             
             if not all([report_name, report_type, report_period_start, report_period_end]):
                 flash('All fields are required.', 'danger')
-                return render_template('teacher_create_report.html', class_obj=class_obj)
+                return render_template('teachers/teacher_create_report.html', class_obj=class_obj)
             
             # Parse dates
             start_date = datetime.strptime(report_period_start, '%Y-%m-%d')
@@ -5397,7 +5442,7 @@ def create_report(class_id):
             db.session.rollback()
             flash(f'Error generating report: {str(e)}', 'danger')
     
-    return render_template('teacher_create_report.html', class_obj=class_obj)
+    return render_template('teachers/teacher_create_report.html', class_obj=class_obj)
 
 
 @teacher_blueprint.route('/report/<int:report_id>')
@@ -5416,7 +5461,7 @@ def view_report(report_id):
     # Parse report data
     report_data = json.loads(report.report_data) if report.report_data else {}
     
-    return render_template('teacher_view_report.html',
+    return render_template('teachers/teacher_view_report.html',
                          report=report,
                          class_obj=class_obj,
                          report_data=report_data)

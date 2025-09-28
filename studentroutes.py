@@ -1,11 +1,37 @@
+# Standard library imports
 import os
-from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, abort, jsonify, send_file
-from flask_login import login_required, current_user
-from werkzeug.utils import secure_filename
-from models import db, Student, Class, Assignment, Submission, Grade, SchoolYear, Announcement, Notification, StudentGoal, Message, MessageGroup, MessageGroupMember, TeacherStaff, User, Enrollment, ClassSchedule, Attendance, AcademicPeriod, QuizQuestion, QuizOption, QuizAnswer, QuizProgress, DiscussionThread, DiscussionPost
-from decorators import student_required
 import json
 from datetime import datetime, timedelta
+
+# Core Flask imports
+from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, abort, jsonify, send_file
+from flask_login import login_required, current_user
+
+# Database and model imports - organized by category
+from models import (
+    # Core database
+    db,
+    # User models
+    Student, User, TeacherStaff,
+    # Academic structure
+    Class, SchoolYear, AcademicPeriod, Enrollment, ClassSchedule,
+    # Assignment system
+    Assignment, Submission, Grade, StudentGoal,
+    # Quiz system
+    QuizQuestion, QuizOption, QuizAnswer, QuizProgress,
+    # Communication system
+    Announcement, Notification, Message, MessageGroup, MessageGroupMember,
+    # Attendance system
+    Attendance,
+    # Discussion system
+    DiscussionThread, DiscussionPost
+)
+
+# Authentication and decorators
+from decorators import student_required
+
+# Werkzeug utilities
+from werkzeug.utils import secure_filename
 
 student_blueprint = Blueprint('student', __name__)
 
@@ -159,7 +185,7 @@ def student_dashboard():
     current_school_year = SchoolYear.query.filter_by(is_active=True).first()
     if not current_school_year:
         flash("No active school year found.", "warning")
-        return render_template('role_student_dashboard.html', 
+        return render_template('students/role_student_dashboard.html', 
                              **create_template_context(student, 'home', 'home'))
 
     # Get student's enrolled classes using the Enrollment model
@@ -292,7 +318,7 @@ def student_dashboard():
         ((Announcement.target_group == 'class') & (Announcement.class_id.in_(class_ids)))
     ).order_by(Announcement.timestamp.desc()).all()
 
-    return render_template('role_student_dashboard.html', 
+    return render_template('students/role_student_dashboard.html', 
                          **create_template_context(student, 'home', 'home',
                              grades=grades, 
                              attendance_summary=attendance_summary, 
@@ -318,7 +344,7 @@ def student_assignments():
     current_school_year = SchoolYear.query.filter_by(is_active=True).first()
     if not current_school_year:
         flash("No active school year found.", "warning")
-        return render_template('role_student_dashboard.html', 
+        return render_template('students/role_student_dashboard.html', 
                              **create_template_context(student, 'assignments', 'assignments'))
     
     # Get student's enrolled classes
@@ -357,7 +383,7 @@ def student_assignments():
         
         assignments_with_status.append((assignment, submission, student_status))
     
-    return render_template('role_student_dashboard.html', 
+    return render_template('students/role_student_dashboard.html', 
                          **create_template_context(student, 'assignments', 'assignments',
                              assignments_with_status=assignments_with_status,
                              grades=grades_dict,
@@ -369,7 +395,7 @@ def student_assignments():
 def student_classes():
     student = Student.query.get_or_404(current_user.student_id)
     classes = Class.query.all()  # Simplified - should filter by enrollment
-    return render_template('role_student_dashboard.html', 
+    return render_template('students/role_student_dashboard.html', 
                          **create_template_context(student, 'classes', 'classes',
                              my_classes=classes))  # Template expects 'my_classes'
 
@@ -405,7 +431,7 @@ def student_grades():
     
     if not enrollments:
         flash('No classes found for current school year.', 'info')
-        return render_template('role_student_dashboard.html', 
+        return render_template('students/role_student_dashboard.html', 
                              **create_template_context(student, 'grades', 'grades'))
     
     # Calculate grades for each class organized by quarters and semesters
@@ -542,7 +568,7 @@ def student_grades():
     # Calculate overall GPA
     gpa = calculate_gpa(all_class_averages) if all_class_averages else 0.0
     
-    return render_template('role_student_dashboard.html', 
+    return render_template('students/role_student_dashboard.html', 
                          **create_template_context(student, 'grades', 'grades',
                              grades_by_class=grades_by_class,
                              gpa=gpa,
@@ -554,7 +580,7 @@ def student_grades():
 @student_required
 def student_schedule():
     student = Student.query.get_or_404(current_user.student_id)
-    return render_template('role_student_dashboard.html', 
+    return render_template('students/role_student_dashboard.html', 
                          **create_template_context(student, 'schedule', 'schedule'))
 
 @student_blueprint.route('/school-calendar')
@@ -718,7 +744,7 @@ def student_school_calendar():
     # Get active school year for template context
     active_school_year = SchoolYear.query.filter_by(is_active=True).first()
     
-    return render_template('role_calendar.html', 
+    return render_template('management/role_calendar.html', 
                          calendar_data=calendar_data,
                          prev_month=prev_month,
                          next_month=next_month,
@@ -733,7 +759,7 @@ def student_school_calendar():
 @student_required
 def student_settings():
     student = Student.query.get_or_404(current_user.student_id)
-    return render_template('role_student_dashboard.html', 
+    return render_template('students/role_student_dashboard.html', 
                          **create_template_context(student, 'settings', 'settings'))
 
 @student_blueprint.route('/class/<int:class_id>')
@@ -800,7 +826,7 @@ def view_class(class_id):
     from datetime import datetime
     today = datetime.now()
     
-    return render_template('role_student_dashboard.html', 
+    return render_template('students/role_student_dashboard.html', 
                          **create_template_context(student, 'classes', 'classes', 
                                                 grades=student_grades,
                                                 assignments=assignments,
@@ -846,7 +872,7 @@ def view_class_assignments(class_id):
     from datetime import datetime
     today = datetime.now()
     
-    return render_template('role_student_dashboard.html', 
+    return render_template('students/role_student_dashboard.html', 
                          **create_template_context(student, 'classes', 'classes',
                                                 assignments_with_status=assignments_with_status,
                                                 grades=student_grades,
@@ -910,7 +936,7 @@ def take_quiz(assignment_id):
         for answer in answers:
             existing_answers[answer.question_id] = answer
     
-    return render_template('take_quiz.html', 
+    return render_template('shared/take_quiz.html', 
                          assignment=assignment,
                          questions=questions,
                          submission=submission,
@@ -1153,7 +1179,7 @@ def join_discussion(assignment_id):
     # Load discussion threads
     threads = DiscussionThread.query.filter_by(assignment_id=assignment_id).order_by(DiscussionThread.is_pinned.desc(), DiscussionThread.created_at.desc()).all()
     
-    return render_template('discussion.html', 
+    return render_template('shared/discussion.html', 
                          assignment=assignment,
                          student=student,
                          threads=threads)
@@ -1240,7 +1266,7 @@ def view_class_teacher(class_id):
     if class_obj.teacher_id:
         teacher = TeacherStaff.query.get(class_obj.teacher_id)
     
-    return render_template('role_student_dashboard.html', 
+    return render_template('students/role_student_dashboard.html', 
                          **create_template_context(student, 'classes', 'classes'),
                          class_obj=class_obj, 
                          teacher=teacher,
@@ -1419,7 +1445,7 @@ def delete_goal(goal_id):
 @student_required
 def student_communications():
     """Communications tab - Under Development."""
-    return render_template('under_development.html',
+    return render_template('shared/under_development.html',
                          section='communications',
                          active_tab='communications')
 
@@ -1433,7 +1459,7 @@ def student_messages():
     # Get all messages for the student
     messages = Message.query.filter_by(recipient_id=current_user.id).order_by(Message.created_at.desc()).all()
     
-    return render_template('role_student_dashboard.html',
+    return render_template('students/role_student_dashboard.html',
                          **create_template_context(student, 'messages', 'communications',
                              grades={},
                              attendance_summary={},
@@ -1465,7 +1491,7 @@ def student_view_message(message_id):
         message.is_read = True
         db.session.commit()
     
-    return render_template('role_student_dashboard.html',
+    return render_template('students/role_student_dashboard.html',
                          **create_template_context(student, 'view_message', 'communications',
                              grades={},
                              attendance_summary={},
@@ -1492,7 +1518,7 @@ def student_groups():
         MessageGroupMember.user_id == current_user.id
     ).all()
     
-    return render_template('role_student_dashboard.html',
+    return render_template('students/role_student_dashboard.html',
                          **create_template_context(student, 'groups', 'communications',
                              grades={},
                              attendance_summary={},
@@ -1527,7 +1553,7 @@ def student_view_group(group_id):
     # Get group messages
     messages = Message.query.filter_by(group_id=group_id).order_by(Message.created_at.desc()).all()
     
-    return render_template('role_student_dashboard.html',
+    return render_template('students/role_student_dashboard.html',
                          **create_template_context(student, 'view_group', 'communications',
                              grades={},
                              attendance_summary={},
@@ -1560,7 +1586,7 @@ def student_announcements():
         ((Announcement.target_group == 'class') & (Announcement.class_id.in_(class_ids)))
     ).order_by(Announcement.timestamp.desc()).all()
     
-    return render_template('role_student_dashboard.html',
+    return render_template('students/role_student_dashboard.html',
                          **create_template_context(student, 'announcements', 'communications',
                              grades={},
                              attendance_summary={},
@@ -1617,7 +1643,7 @@ def student_send_message():
     students = Student.query.all()
     teachers = TeacherStaff.query.all()
     
-    return render_template('role_student_dashboard.html',
+    return render_template('students/role_student_dashboard.html',
                          **create_template_context(student, 'send_message', 'communications',
                              grades={},
                              attendance_summary={},
@@ -1686,7 +1712,7 @@ def student_create_group():
     # Get potential members (other students)
     students = Student.query.filter(Student.id != student.id).all()
     
-    return render_template('role_student_dashboard.html',
+    return render_template('students/role_student_dashboard.html',
                          **create_template_context(student, 'create_group', 'communications',
                              grades={},
                              attendance_summary={},
@@ -1751,7 +1777,7 @@ def student_sent_messages():
     # Get messages sent by the student
     sent_messages = Message.query.filter_by(sender_id=current_user.id).order_by(Message.created_at.desc()).all()
     
-    return render_template('role_student_dashboard.html',
+    return render_template('students/role_student_dashboard.html',
                          **create_template_context(student, 'sent_messages', 'communications',
                              grades={},
                              attendance_summary={},

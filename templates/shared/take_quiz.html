@@ -1,0 +1,939 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- Quiz Header -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0">
+                            <i class="bi bi-question-circle me-2"></i>{{ assignment.title }}
+                        </h4>
+                        <div>
+                            <span class="badge bg-light text-dark me-2">Quiz Assignment</span>
+                            {% if submission %}
+                                <span class="badge bg-success">Submitted</span>
+                            {% elif grade %}
+                                <span class="badge bg-info">Graded</span>
+                            {% else %}
+                                <span class="badge bg-warning">Not Submitted</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Class:</strong> {{ assignment.class_info.name }}</p>
+                            <p><strong>Due Date:</strong> {{ assignment.due_date.strftime('%B %d, %Y at %I:%M %p') if assignment.due_date else 'No due date' }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Quarter:</strong> {{ assignment.quarter }}</p>
+                            <p><strong>Status:</strong> 
+                                {% if assignment.status == 'Active' %}
+                                    <span class="text-success">Active</span>
+                                {% elif assignment.status == 'Inactive' %}
+                                    <span class="text-warning">Inactive</span>
+                                {% else %}
+                                    <span class="text-secondary">{{ assignment.status }}</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    {% if assignment.description %}
+                        <div class="mt-3">
+                            <h6>Instructions:</h6>
+                            <p class="text-muted">{{ assignment.description }}</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if grade %}
+                <!-- Already Graded -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-check-circle me-2"></i>Quiz Completed and Graded
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-success">
+                            <h6>Your Grade: {{ grade.grade_percentage }}%</h6>
+                            <p class="mb-0">This quiz has been graded. You can review your answers below.</p>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <a href="{{ url_for('student.student_assignments') }}" class="btn btn-primary">
+                                <i class="bi bi-arrow-left me-1"></i>Back to Assignments
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% elif submission %}
+                <!-- Already Submitted -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-hourglass-split me-2"></i>Quiz Submitted
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <h6>Submission Status</h6>
+                            <p class="mb-0">Your quiz has been submitted and is awaiting grading by your teacher.</p>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <a href="{{ url_for('student.student_assignments') }}" class="btn btn-primary">
+                                <i class="bi bi-arrow-left me-1"></i>Back to Assignments
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+                <!-- Quiz Taking Interface -->
+                <div class="card shadow-sm">
+                    <div class="card-header bg-warning text-dark">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <i class="bi bi-pencil-square me-2"></i>Quiz Questions
+                            </h5>
+                            <div class="d-flex gap-2 align-items-center">
+                                <!-- Quiz Timer -->
+                                {% if assignment.time_limit_minutes %}
+                                    <div class="timer-display" id="quizTimer">
+                                        <i class="bi bi-clock me-1"></i>
+                                        <span id="timeRemaining">{{ assignment.time_limit_minutes }}:00</span>
+                                    </div>
+                                {% endif %}
+                                
+                                {% if assignment.allow_save_and_continue %}
+                                    <button type="button" class="btn btn-sm btn-outline-light" id="saveProgressBtn">
+                                        <i class="bi bi-save me-1"></i>Save Progress
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-light" id="loadProgressBtn" style="display: none;">
+                                        <i class="bi bi-arrow-clockwise me-1"></i>Load Saved
+                                    </button>
+                                {% endif %}
+                                
+                                <!-- Review Mode Toggle -->
+                                <button type="button" class="btn btn-sm btn-outline-light" id="reviewModeBtn">
+                                    <i class="bi bi-eye me-1"></i>Review
+                                </button>
+                                
+                                <!-- Keyboard Shortcuts Help -->
+                                <button type="button" class="btn btn-sm btn-outline-light" id="shortcutsHelpBtn" title="Keyboard Shortcuts">
+                                    <i class="bi bi-keyboard me-1"></i>Shortcuts
+                                </button>
+                            </div>
+                        </div>
+                        {% if assignment.allow_save_and_continue %}
+                            <div class="mt-2">
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar bg-success" id="quizProgressBar" role="progressbar" style="width: 0%"></div>
+                                </div>
+                                <small class="text-muted mt-1 d-block" id="quizProgressText">Progress: 0% (0 of {{ questions|length }} questions answered)</small>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="card-body">
+                        {% if questions %}
+                            <!-- Question Navigation -->
+                            <div class="question-navigation mb-4" id="questionNavigation">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <button type="button" class="btn btn-outline-primary" id="prevQuestionBtn" disabled>
+                                        <i class="bi bi-chevron-left me-1"></i>Previous
+                                    </button>
+                                    <div class="question-counter">
+                                        <span id="currentQuestionNumber">1</span> of <span id="totalQuestions">{{ questions|length }}</span>
+                                    </div>
+                                    <button type="button" class="btn btn-outline-primary" id="nextQuestionBtn">
+                                        Next<i class="bi bi-chevron-right ms-1"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <form id="quizForm" method="POST" action="{{ url_for('student.submit_quiz', assignment_id=assignment.id) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                {% for question in questions %}
+                                    <div class="mb-4 p-4 border rounded shadow-sm question-card" data-question-id="{{ question.id }}" data-question-number="{{ loop.index }}" style="display: {{ 'block' if loop.index == 1 else 'none' }};">
+                                        <div class="d-flex justify-content-between align-items-start mb-3">
+                                            <h6 class="mb-0 fw-bold">
+                                                <span class="badge bg-primary me-2">{{ loop.index }}</span>
+                                                Question {{ loop.index }}
+                                            </h6>
+                                            <span class="badge bg-success">{{ question.points }} point{{ 's' if question.points != 1 else '' }}</span>
+                                        </div>
+                                        <p class="mb-4 fs-5">{{ question.question_text }}</p>
+                                        
+                                        {% if question.question_type == 'multiple_choice' %}
+                                            <div class="options-container">
+                                                {% for option in question.options %}
+                                                    <div class="form-check mb-3 p-3 border rounded option-item">
+                                                        <input class="form-check-input" type="radio" name="question_{{ question.id }}" 
+                                                               id="option_{{ option.id }}" value="{{ option.id }}"
+                                                               {% if existing_answers.get(question.id) and existing_answers[question.id].selected_option_id == option.id %}checked{% endif %}>
+                                                        <label class="form-check-label w-100" for="option_{{ option.id }}">
+                                                            <span class="option-letter me-2">{{ loop.index0|string|replace('0', 'A')|replace('1', 'B')|replace('2', 'C')|replace('3', 'D')|replace('4', 'E')|replace('5', 'F') }}</span>
+                                                            {{ option.option_text }}
+                                                        </label>
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                            
+                                        {% elif question.question_type == 'true_false' %}
+                                            <div class="options-container">
+                                                {% for option in question.options %}
+                                                    <div class="form-check mb-3 p-3 border rounded option-item">
+                                                        <input class="form-check-input" type="radio" name="question_{{ question.id }}" 
+                                                               id="option_{{ option.id }}" value="{{ option.id }}"
+                                                               {% if existing_answers.get(question.id) and existing_answers[question.id].selected_option_id == option.id %}checked{% endif %}>
+                                                        <label class="form-check-label w-100" for="option_{{ option.id }}">
+                                                            <i class="bi {% if 'true' in option.option_text.lower() %}bi-check-circle text-success{% else %}bi-x-circle text-danger{% endif %} me-2"></i>
+                                                            {{ option.option_text }}
+                                                        </label>
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                            
+                                        {% elif question.question_type == 'short_answer' %}
+                                            <div class="form-group">
+                                                <input type="text" class="form-control form-control-lg" name="question_{{ question.id }}" 
+                                                       placeholder="Enter your answer here..." 
+                                                       value="{% if existing_answers.get(question.id) %}{{ existing_answers[question.id].answer_text }}{% endif %}">
+                                                <div class="form-text">Provide a brief, clear answer</div>
+                                            </div>
+                                            
+                                        {% elif question.question_type == 'essay' %}
+                                            <div class="form-group">
+                                                <textarea class="form-control" name="question_{{ question.id }}" rows="6" 
+                                                          placeholder="Enter your detailed answer here...">{% if existing_answers.get(question.id) %}{{ existing_answers[question.id].answer_text }}{% endif %}</textarea>
+                                                <div class="form-text">Provide a comprehensive, well-structured answer</div>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                                
+                                <!-- Review Mode Summary -->
+                                <div class="review-summary" id="reviewSummary" style="display: none;">
+                                    <div class="card border-info">
+                                        <div class="card-header bg-info text-white">
+                                            <h6 class="mb-0"><i class="bi bi-eye me-2"></i>Quiz Review Summary</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <h6>Answer Status:</h6>
+                                                    <div id="answerStatusList">
+                                                        <!-- Will be populated by JavaScript -->
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <h6>Quick Navigation:</h6>
+                                                    <div id="quickNavButtons" class="d-flex flex-wrap gap-1">
+                                                        <!-- Will be populated by JavaScript -->
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="d-flex gap-2">
+                                    <button type="submit" class="btn btn-success" id="submitQuizBtn" onclick="return confirm('Are you sure you want to submit this quiz? You cannot change your answers after submission.')">
+                                        <i class="bi bi-check-circle me-1"></i>Submit Quiz
+                                    </button>
+                                    <a href="{{ url_for('student.student_assignments') }}" class="btn btn-outline-secondary">
+                                        <i class="bi bi-arrow-left me-1"></i>Back to Assignments
+                                    </a>
+                                </div>
+                                
+                                <!-- Keyboard Shortcuts Help Modal -->
+                                <div class="keyboard-shortcuts-help mt-3" id="keyboardShortcutsHelp" style="display: none;">
+                                    <div class="card border-secondary">
+                                        <div class="card-header bg-secondary text-white">
+                                            <h6 class="mb-0"><i class="bi bi-keyboard me-2"></i>Keyboard Shortcuts</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <h6>Navigation:</h6>
+                                                    <ul class="list-unstyled">
+                                                        <li><kbd>←</kbd> Previous question</li>
+                                                        <li><kbd>→</kbd> Next question</li>
+                                                        <li><kbd>R</kbd> Toggle review mode</li>
+                                                    </ul>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <h6>Actions:</h6>
+                                                    <ul class="list-unstyled">
+                                                        <li><kbd>Ctrl+S</kbd> Save progress</li>
+                                                        <li><kbd>Tab</kbd> Navigate options</li>
+                                                        <li><kbd>Space</kbd> Select option</li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        {% else %}
+                            <div class="alert alert-warning">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                <strong>No questions found!</strong> This quiz doesn't have any questions yet.
+                            </div>
+                            <div class="d-flex gap-2">
+                                <a href="{{ url_for('student.student_assignments') }}" class="btn btn-primary">
+                                    <i class="bi bi-arrow-left me-1"></i>Back to Assignments
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+let quizProgress = {
+    answered: 0,
+    total: {{ questions|length if questions else 0 }},
+    answers: {}
+};
+
+let quizState = {
+    currentQuestion: 1,
+    totalQuestions: {{ questions|length if questions else 0 }},
+    isReviewMode: false,
+    timer: null,
+    timeRemaining: {{ assignment.time_limit_minutes * 60 if assignment.time_limit_minutes else 0 }},
+    isTimerActive: {{ 'true' if assignment.time_limit_minutes else 'false' }}
+};
+
+// Initialize quiz interface
+document.addEventListener('DOMContentLoaded', function() {
+    const saveBtn = document.getElementById('saveProgressBtn');
+    const loadBtn = document.getElementById('loadProgressBtn');
+    const progressBar = document.getElementById('quizProgressBar');
+    const progressText = document.getElementById('quizProgressText');
+    const prevBtn = document.getElementById('prevQuestionBtn');
+    const nextBtn = document.getElementById('nextQuestionBtn');
+    const reviewBtn = document.getElementById('reviewModeBtn');
+    const reviewSummary = document.getElementById('reviewSummary');
+    const timerDisplay = document.getElementById('quizTimer');
+    
+    // Initialize timer if enabled
+    if (quizState.isTimerActive && timerDisplay) {
+        startQuizTimer();
+    }
+    
+    // Initialize question navigation
+    if (prevBtn && nextBtn) {
+        prevBtn.addEventListener('click', () => navigateQuestion(-1));
+        nextBtn.addEventListener('click', () => navigateQuestion(1));
+        updateNavigationButtons();
+    }
+    
+    // Initialize review mode
+    if (reviewBtn && reviewSummary) {
+        reviewBtn.addEventListener('click', toggleReviewMode);
+    }
+    
+    // Initialize keyboard shortcuts help
+    const shortcutsHelpBtn = document.getElementById('shortcutsHelpBtn');
+    const shortcutsHelp = document.getElementById('keyboardShortcutsHelp');
+    if (shortcutsHelpBtn && shortcutsHelp) {
+        shortcutsHelpBtn.addEventListener('click', toggleShortcutsHelp);
+    }
+    
+    // Set up keyboard shortcuts
+    document.addEventListener('keydown', handleKeyboardShortcuts);
+    
+    if (saveBtn && loadBtn && progressBar && progressText) {
+        // Load any existing progress
+        loadQuizProgress();
+        
+        // Set up event listeners for form inputs
+        const formInputs = document.querySelectorAll('#quizForm input, #quizForm textarea');
+        formInputs.forEach(input => {
+            input.addEventListener('change', updateProgress);
+            input.addEventListener('input', updateProgress);
+        });
+        
+        // Save progress button
+        saveBtn.addEventListener('click', saveQuizProgress);
+        
+        // Load progress button
+        loadBtn.addEventListener('click', loadQuizProgress);
+        
+        // Auto-save every 30 seconds
+        setInterval(saveQuizProgress, 30000);
+    }
+});
+
+function updateProgress() {
+    const formInputs = document.querySelectorAll('#quizForm input:checked, #quizForm input[type="text"], #quizForm textarea');
+    let answered = 0;
+    const answers = {};
+    
+    formInputs.forEach(input => {
+        if (input.type === 'radio' && input.checked) {
+            const questionId = input.name.replace('question_', '');
+            answers[questionId] = input.value;
+            answered++;
+        } else if (input.type === 'text' || input.tagName === 'TEXTAREA') {
+            const questionId = input.name.replace('question_', '');
+            if (input.value.trim()) {
+                answers[questionId] = input.value;
+                answered++;
+            }
+        }
+    });
+    
+    quizProgress.answered = answered;
+    quizProgress.answers = answers;
+    
+    updateProgressDisplay();
+}
+
+function updateProgressDisplay() {
+    const progressBar = document.getElementById('quizProgressBar');
+    const progressText = document.getElementById('quizProgressText');
+    
+    if (progressBar && progressText) {
+        const percentage = Math.round((quizProgress.answered / quizProgress.total) * 100);
+        progressBar.style.width = percentage + '%';
+        progressText.textContent = `Progress: ${percentage}% (${quizProgress.answered} of ${quizProgress.total} questions answered)`;
+        
+        // Change color based on progress
+        if (percentage === 100) {
+            progressBar.className = 'progress-bar bg-success';
+        } else if (percentage >= 50) {
+            progressBar.className = 'progress-bar bg-warning';
+        } else {
+            progressBar.className = 'progress-bar bg-info';
+        }
+    }
+}
+
+function saveQuizProgress() {
+    const saveBtn = document.getElementById('saveProgressBtn');
+    const loadBtn = document.getElementById('loadProgressBtn');
+    
+    if (saveBtn) {
+        saveBtn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Saving...';
+        saveBtn.disabled = true;
+    }
+    
+    // Send progress to server
+    fetch('{{ url_for("student.save_quiz_progress", assignment_id=assignment.id) }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({
+            answers: quizProgress.answers,
+            progress_percentage: Math.round((quizProgress.answered / quizProgress.total) * 100),
+            questions_answered: quizProgress.answered
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (saveBtn) {
+                saveBtn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Saved!';
+                setTimeout(() => {
+                    saveBtn.innerHTML = '<i class="bi bi-save me-1"></i>Save Progress';
+                    saveBtn.disabled = false;
+                }, 2000);
+            }
+            if (loadBtn) {
+                loadBtn.style.display = 'inline-block';
+            }
+        } else {
+            alert('Failed to save progress: ' + (data.message || 'Unknown error'));
+            if (saveBtn) {
+                saveBtn.innerHTML = '<i class="bi bi-save me-1"></i>Save Progress';
+                saveBtn.disabled = false;
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error saving progress:', error);
+        alert('Failed to save progress. Please try again.');
+        if (saveBtn) {
+            saveBtn.innerHTML = '<i class="bi bi-save me-1"></i>Save Progress';
+            saveBtn.disabled = false;
+        }
+    });
+}
+
+function loadQuizProgress() {
+    const loadBtn = document.getElementById('loadProgressBtn');
+    
+    if (loadBtn) {
+        loadBtn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Loading...';
+        loadBtn.disabled = true;
+    }
+    
+    // Load progress from server
+    fetch('{{ url_for("student.load_quiz_progress", assignment_id=assignment.id) }}')
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.progress) {
+            // Restore answers
+            Object.keys(data.progress.answers).forEach(questionId => {
+                const input = document.querySelector(`input[name="question_${questionId}"]:checked, input[name="question_${questionId}"], textarea[name="question_${questionId}"]`);
+                if (input) {
+                    if (input.type === 'radio') {
+                        const optionInput = document.querySelector(`input[name="question_${questionId}"][value="${data.progress.answers[questionId]}"]`);
+                        if (optionInput) {
+                            optionInput.checked = true;
+                        }
+                    } else {
+                        input.value = data.progress.answers[questionId];
+                    }
+                }
+            });
+            
+            // Update progress display
+            quizProgress.answers = data.progress.answers;
+            updateProgress();
+            
+            alert('Progress loaded successfully!');
+        } else {
+            alert('No saved progress found.');
+        }
+        
+        if (loadBtn) {
+            loadBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Load Saved';
+            loadBtn.disabled = false;
+        }
+    })
+    .catch(error => {
+        console.error('Error loading progress:', error);
+        alert('Failed to load progress. Please try again.');
+        if (loadBtn) {
+            loadBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Load Saved';
+            loadBtn.disabled = false;
+        }
+    });
+}
+
+// Timer Functions
+function startQuizTimer() {
+    if (!quizState.isTimerActive) return;
+    
+    quizState.timer = setInterval(() => {
+        quizState.timeRemaining--;
+        updateTimerDisplay();
+        
+        if (quizState.timeRemaining <= 0) {
+            clearInterval(quizState.timer);
+            alert('Time is up! The quiz will be submitted automatically.');
+            document.getElementById('quizForm').submit();
+        }
+    }, 1000);
+}
+
+function updateTimerDisplay() {
+    const timerElement = document.getElementById('timeRemaining');
+    if (timerElement) {
+        const minutes = Math.floor(quizState.timeRemaining / 60);
+        const seconds = quizState.timeRemaining % 60;
+        timerElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        
+        // Change color when time is running low
+        const timerDisplay = document.getElementById('quizTimer');
+        if (timerDisplay) {
+            if (quizState.timeRemaining <= 60) {
+                timerDisplay.className = 'timer-display text-danger';
+            } else if (quizState.timeRemaining <= 300) {
+                timerDisplay.className = 'timer-display text-warning';
+            } else {
+                timerDisplay.className = 'timer-display text-dark';
+            }
+        }
+    }
+}
+
+// Question Navigation Functions
+function navigateQuestion(direction) {
+    const newQuestion = quizState.currentQuestion + direction;
+    if (newQuestion >= 1 && newQuestion <= quizState.totalQuestions) {
+        // Hide current question
+        const currentCard = document.querySelector(`[data-question-number="${quizState.currentQuestion}"]`);
+        if (currentCard) {
+            currentCard.style.display = 'none';
+        }
+        
+        // Show new question
+        const newCard = document.querySelector(`[data-question-number="${newQuestion}"]`);
+        if (newCard) {
+            newCard.style.display = 'block';
+            newCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        
+        quizState.currentQuestion = newQuestion;
+        updateNavigationButtons();
+        updateQuestionCounter();
+    }
+}
+
+function updateNavigationButtons() {
+    const prevBtn = document.getElementById('prevQuestionBtn');
+    const nextBtn = document.getElementById('nextQuestionBtn');
+    
+    if (prevBtn) {
+        prevBtn.disabled = quizState.currentQuestion === 1;
+    }
+    if (nextBtn) {
+        nextBtn.disabled = quizState.currentQuestion === quizState.totalQuestions;
+    }
+}
+
+function updateQuestionCounter() {
+    const currentNumber = document.getElementById('currentQuestionNumber');
+    if (currentNumber) {
+        currentNumber.textContent = quizState.currentQuestion;
+    }
+}
+
+// Review Mode Functions
+function toggleReviewMode() {
+    const reviewBtn = document.getElementById('reviewModeBtn');
+    const reviewSummary = document.getElementById('reviewSummary');
+    const questionNavigation = document.getElementById('questionNavigation');
+    
+    quizState.isReviewMode = !quizState.isReviewMode;
+    
+    if (quizState.isReviewMode) {
+        // Enter review mode
+        if (reviewBtn) {
+            reviewBtn.innerHTML = '<i class="bi bi-pencil-square me-1"></i>Exit Review';
+            reviewBtn.className = 'btn btn-sm btn-warning';
+        }
+        if (reviewSummary) {
+            reviewSummary.style.display = 'block';
+            generateReviewSummary();
+        }
+        if (questionNavigation) {
+            questionNavigation.style.display = 'none';
+        }
+        
+        // Show all questions
+        const questionCards = document.querySelectorAll('.question-card');
+        questionCards.forEach(card => {
+            card.style.display = 'block';
+        });
+    } else {
+        // Exit review mode
+        if (reviewBtn) {
+            reviewBtn.innerHTML = '<i class="bi bi-eye me-1"></i>Review';
+            reviewBtn.className = 'btn btn-sm btn-outline-light';
+        }
+        if (reviewSummary) {
+            reviewSummary.style.display = 'none';
+        }
+        if (questionNavigation) {
+            questionNavigation.style.display = 'block';
+        }
+        
+        // Show only current question
+        const questionCards = document.querySelectorAll('.question-card');
+        questionCards.forEach(card => {
+            const questionNumber = parseInt(card.dataset.questionNumber);
+            card.style.display = questionNumber === quizState.currentQuestion ? 'block' : 'none';
+        });
+    }
+}
+
+function generateReviewSummary() {
+    const answerStatusList = document.getElementById('answerStatusList');
+    const quickNavButtons = document.getElementById('quickNavButtons');
+    
+    if (!answerStatusList || !quickNavButtons) return;
+    
+    // Generate answer status list
+    let statusHTML = '';
+    let navHTML = '';
+    
+    for (let i = 1; i <= quizState.totalQuestions; i++) {
+        const questionCard = document.querySelector(`[data-question-number="${i}"]`);
+        const questionId = questionCard ? questionCard.dataset.questionId : null;
+        
+        // Check if question is answered
+        let isAnswered = false;
+        if (questionId) {
+            const radioInputs = questionCard.querySelectorAll('input[type="radio"]:checked');
+            const textInputs = questionCard.querySelectorAll('input[type="text"], textarea');
+            
+            if (radioInputs.length > 0) {
+                isAnswered = true;
+            } else {
+                textInputs.forEach(input => {
+                    if (input.value.trim()) {
+                        isAnswered = true;
+                    }
+                });
+            }
+        }
+        
+        // Add to status list
+        const statusIcon = isAnswered ? 'bi-check-circle text-success' : 'bi-circle text-muted';
+        statusHTML += `<div class="d-flex align-items-center mb-1">
+            <i class="bi ${statusIcon} me-2"></i>
+            <span>Question ${i}: ${isAnswered ? 'Answered' : 'Not Answered'}</span>
+        </div>`;
+        
+        // Add to quick navigation
+        const buttonClass = isAnswered ? 'btn-success' : 'btn-outline-secondary';
+        navHTML += `<button type="button" class="btn btn-sm ${buttonClass}" onclick="jumpToQuestion(${i})">${i}</button>`;
+    }
+    
+    answerStatusList.innerHTML = statusHTML;
+    quickNavButtons.innerHTML = navHTML;
+}
+
+function jumpToQuestion(questionNumber) {
+    if (questionNumber >= 1 && questionNumber <= quizState.totalQuestions) {
+        quizState.currentQuestion = questionNumber;
+        
+        // Hide all questions
+        const questionCards = document.querySelectorAll('.question-card');
+        questionCards.forEach(card => {
+            card.style.display = 'none';
+        });
+        
+        // Show target question
+        const targetCard = document.querySelector(`[data-question-number="${questionNumber}"]`);
+        if (targetCard) {
+            targetCard.style.display = 'block';
+            targetCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        
+        updateNavigationButtons();
+        updateQuestionCounter();
+    }
+}
+
+// Keyboard Shortcuts Help
+function toggleShortcutsHelp() {
+    const shortcutsHelp = document.getElementById('keyboardShortcutsHelp');
+    if (shortcutsHelp) {
+        shortcutsHelp.style.display = shortcutsHelp.style.display === 'none' ? 'block' : 'none';
+    }
+}
+
+// Keyboard Shortcuts
+function handleKeyboardShortcuts(event) {
+    // Only handle shortcuts when not in an input field
+    if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+        return;
+    }
+    
+    switch(event.key) {
+        case 'ArrowLeft':
+            event.preventDefault();
+            navigateQuestion(-1);
+            break;
+        case 'ArrowRight':
+            event.preventDefault();
+            navigateQuestion(1);
+            break;
+        case 'r':
+        case 'R':
+            event.preventDefault();
+            toggleReviewMode();
+            break;
+        case 's':
+        case 'S':
+            if (event.ctrlKey || event.metaKey) {
+                event.preventDefault();
+                saveQuizProgress();
+            }
+            break;
+        case 'h':
+        case 'H':
+            event.preventDefault();
+            toggleShortcutsHelp();
+            break;
+        case 'Escape':
+            // Hide shortcuts help if visible
+            const shortcutsHelp = document.getElementById('keyboardShortcutsHelp');
+            if (shortcutsHelp && shortcutsHelp.style.display !== 'none') {
+                shortcutsHelp.style.display = 'none';
+            }
+            break;
+    }
+}
+
+function submitQuiz() {
+    if (confirm('Are you sure you want to submit this quiz? You cannot change your answers after submission.')) {
+        // This would submit the quiz answers
+        alert('Quiz submitted successfully! (This is a placeholder - actual submission will be implemented)');
+        window.location.href = "{{ url_for('student.student_assignments') }}";
+    }
+}
+</script>
+
+<style>
+.question-card {
+    transition: all 0.3s ease;
+    border-left: 4px solid #007bff !important;
+}
+
+.question-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+}
+
+.option-item {
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.option-item:hover {
+    background-color: #f8f9fa;
+    border-color: #007bff !important;
+}
+
+.option-item:has(input:checked) {
+    background-color: #e3f2fd;
+    border-color: #007bff !important;
+    box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+}
+
+.option-letter {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background-color: #6c757d;
+    color: white;
+    border-radius: 50%;
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+
+.option-item:has(input:checked) .option-letter {
+    background-color: #007bff;
+}
+
+.progress-bar {
+    transition: width 0.3s ease;
+}
+
+#quizProgressBar {
+    background: linear-gradient(90deg, #28a745, #20c997);
+}
+
+.form-control:focus, .form-check-input:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    border: none;
+    transition: all 0.3s ease;
+}
+
+.btn-success:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(40,167,69,0.3);
+}
+
+/* Timer Styles */
+.timer-display {
+    font-weight: bold;
+    font-size: 1.1rem;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    background-color: rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+}
+
+.timer-display.text-danger {
+    background-color: rgba(220, 53, 69, 0.1);
+    animation: pulse 1s infinite;
+}
+
+.timer-display.text-warning {
+    background-color: rgba(255, 193, 7, 0.1);
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+/* Question Navigation Styles */
+.question-navigation {
+    background-color: #f8f9fa;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    border: 1px solid #dee2e6;
+}
+
+.question-counter {
+    font-weight: bold;
+    font-size: 1.1rem;
+    color: #495057;
+}
+
+/* Review Mode Styles */
+.review-summary {
+    margin: 1rem 0;
+}
+
+.review-summary .card {
+    border: 2px solid #17a2b8;
+}
+
+#quickNavButtons .btn {
+    min-width: 40px;
+    margin: 2px;
+}
+
+/* Enhanced Question Card Styles */
+.question-card {
+    transition: all 0.3s ease;
+    border-left: 4px solid #007bff !important;
+}
+
+.question-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+}
+
+/* Keyboard Shortcut Hints */
+.keyboard-hint {
+    font-size: 0.75rem;
+    color: #6c757d;
+    font-style: italic;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .question-navigation {
+        padding: 0.5rem;
+    }
+    
+    .timer-display {
+        font-size: 0.9rem;
+        padding: 0.25rem 0.5rem;
+    }
+    
+    #quickNavButtons .btn {
+        min-width: 35px;
+        font-size: 0.8rem;
+    }
+}
+</style>
+{% endblock %}

@@ -1,0 +1,536 @@
+{% extends "shared/base.html" %}
+
+{% block content %}
+<!-- Cache busting for security updates -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+
+<!-- Optimized Background -->
+<div class="slideshow-container">
+    <div class="slideshow-image active" style="background-image: url('/static/img/backimg/image1.png');"></div>
+    <div class="slideshow-overlay"></div>
+</div>
+
+<style>
+/* Hide CSRF token from being visible */
+input[name="csrf_token"] {
+    display: none !important;
+    visibility: hidden !important;
+    position: absolute !important;
+    left: -9999px !important;
+}
+
+/* Hide any plain text CSRF tokens that might appear */
+body * {
+    font-family: inherit;
+}
+
+/* Additional protection against visible CSRF tokens */
+[style*="display: none"] {
+    display: none !important;
+}
+
+/* Hide any text that looks like a CSRF token */
+body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.01);
+    z-index: 9999;
+    pointer-events: none;
+}
+
+/* Hide any visible CSRF tokens that might appear as text */
+body *:not(input):not(script):not(style) {
+    font-family: inherit;
+}
+
+/* Additional CSS to hide any stray text that might be CSRF tokens */
+.login-container * {
+    position: relative;
+    z-index: 1;
+}
+
+/* Modern Login Page Styles */
+body {
+    background: transparent;
+    min-height: 100vh;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.login-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.login-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 24px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    overflow: hidden;
+    max-width: 450px;
+    width: 100%;
+    animation: slideUp 0.6s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.login-header {
+    background: linear-gradient(135deg, #2E8B57 0%, #228B22 50%, #556B2F 100%);
+    color: white;
+    padding: 40px 40px 30px;
+    text-align: center;
+    position: relative;
+}
+
+.login-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/><circle cx="50" cy="10" r="0.5" fill="white" opacity="0.1"/><circle cx="10" cy="60" r="0.5" fill="white" opacity="0.1"/><circle cx="90" cy="40" r="0.5" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+    opacity: 0.3;
+}
+
+.login-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0;
+    position: relative;
+    z-index: 1;
+}
+
+.login-subtitle {
+    font-size: 0.95rem;
+    opacity: 0.9;
+    margin: 8px 0 0;
+    position: relative;
+    z-index: 1;
+}
+
+.login-body {
+    padding: 40px;
+}
+
+.form-group {
+    margin-bottom: 24px;
+}
+
+.form-label {
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+}
+
+.form-control {
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background: #fafafa;
+}
+
+.form-control:focus {
+    border-color: #2E8B57;
+    box-shadow: 0 0 0 3px rgba(46, 139, 87, 0.1);
+    background: white;
+    transform: translateY(-1px);
+}
+
+.form-control::placeholder {
+    color: #9ca3af;
+}
+
+.input-group {
+    position: relative;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.password-toggle:hover {
+    color: #374151;
+    background: #f3f4f6;
+}
+
+.form-text {
+    font-size: 0.8rem;
+    color: #6b7280;
+    margin-top: 6px;
+}
+
+.btn-login {
+    background: linear-gradient(135deg, #2E8B57 0%, #228B22 50%, #556B2F 100%);
+    border: none;
+    border-radius: 12px;
+    padding: 16px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: white;
+    width: 100%;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-login::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+.btn-login:hover::before {
+    left: 100%;
+}
+
+.btn-login:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(46, 139, 87, 0.3);
+}
+
+.btn-login:active {
+    transform: translateY(0);
+}
+
+.security-badge {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 20px;
+}
+
+.security-features {
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 24px;
+    border-left: 4px solid #10b981;
+}
+
+.security-features h6 {
+    color: #374151;
+    font-weight: 600;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.security-features ul {
+    margin: 0;
+    padding-left: 20px;
+    color: #6b7280;
+    font-size: 0.9rem;
+}
+
+.security-features li {
+    margin-bottom: 6px;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .login-container {
+        padding: 10px;
+    }
+    
+    .login-card {
+        border-radius: 20px;
+    }
+    
+    .login-header {
+        padding: 30px 30px 20px;
+    }
+    
+    .login-title {
+        font-size: 1.75rem;
+    }
+    
+    .login-body {
+        padding: 30px;
+    }
+}
+
+/* Loading animation */
+.btn-login.loading {
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.btn-login.loading::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    top: 50%;
+    left: 50%;
+    margin-left: -10px;
+    margin-top: -10px;
+    border: 2px solid transparent;
+    border-top: 2px solid #ffffff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+</style>
+<div class="login-container">
+  <div class="login-card">
+    <div class="login-header">
+      <h1 class="login-title">Welcome Back</h1>
+      <p class="login-subtitle">Sign in to your account</p>
+    </div>
+    
+    <div class="login-body">
+      <div class="security-badge">
+        <i class="bi bi-shield-check"></i>
+        Enhanced Security Enabled
+      </div>
+      
+      <form method="POST" action="/login" id="loginForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        
+        <div class="form-group">
+          <label for="username" class="form-label">Username</label>
+          <input type="text" name="username" id="username" class="form-control" 
+                 placeholder="Enter your username" autocomplete="username" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="password" class="form-label">Password</label>
+          <div class="input-group">
+            <input type="password" name="password" id="password" class="form-control" 
+                   placeholder="Enter your password" autocomplete="current-password" required>
+            <button class="password-toggle" type="button" id="togglePassword" 
+                    data-bs-toggle="tooltip" data-bs-placement="top" title="Show Password">
+              <i class="bi bi-eye" id="passwordIcon"></i>
+            </button>
+          </div>
+        </div>
+        
+        
+        <button type="submit" class="btn-login" id="loginBtn">
+          <span class="btn-text">Sign In</span>
+        </button>
+      </form>
+      
+      <div class="security-features">
+        <h6><i class="bi bi-lock"></i> Security Features</h6>
+        <ul>
+          <li>Secure authentication system</li>
+          <li>Automatic role detection</li>
+          <li>Secure password requirements</li>
+          <li>Session management and monitoring</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="mobileWarningModal" tabindex="-1" aria-labelledby="mobileWarningModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="mobileWarningModalLabel">Compatibility Notice</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>For the best experience, we recommend using a desktop or laptop computer. This site is not fully optimized for mobile devices (Version 1.03).</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">I Understand</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+      return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    // Password visibility toggle functionality
+    const togglePassword = document.getElementById('togglePassword');
+    const password = document.getElementById('password');
+    const passwordIcon = document.getElementById('passwordIcon');
+    const tooltip = bootstrap.Tooltip.getInstance(togglePassword);
+
+    togglePassword.addEventListener('click', function() {
+      // Toggle password visibility
+      const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
+      password.setAttribute('type', type);
+      
+      // Toggle icon
+      if (type === 'text') {
+        passwordIcon.classList.remove('bi-eye');
+        passwordIcon.classList.add('bi-eye-slash');
+        tooltip.setContent({ '.tooltip-inner': 'Hide Password' });
+      } else {
+        passwordIcon.classList.remove('bi-eye-slash');
+        passwordIcon.classList.add('bi-eye');
+        tooltip.setContent({ '.tooltip-inner': 'Show Password' });
+      }
+    });
+
+    // Form submission with loading state
+    const loginForm = document.getElementById('loginForm');
+    const loginBtn = document.getElementById('loginBtn');
+    const btnText = document.querySelector('.btn-text');
+
+    // Simple form submission without interference
+    loginForm.addEventListener('submit', function(e) {
+      // Debug: Check form data
+      const formData = new FormData(loginForm);
+      console.log('Form data being submitted:');
+      for (let [key, value] of formData.entries()) {
+        console.log(key + ': ' + value);
+      }
+      
+      // Add loading state but don't prevent submission
+      loginBtn.classList.add('loading');
+      btnText.textContent = 'Signing In...';
+    });
+
+    // Add focus effects to form inputs
+    const formInputs = document.querySelectorAll('.form-control');
+    formInputs.forEach(input => {
+      input.addEventListener('focus', function() {
+        this.parentElement.classList.add('focused');
+      });
+      
+      input.addEventListener('blur', function() {
+        this.parentElement.classList.remove('focused');
+      });
+    });
+
+    // Add floating label effect
+    formInputs.forEach(input => {
+      input.addEventListener('input', function() {
+        if (this.value) {
+          this.classList.add('has-value');
+        } else {
+          this.classList.remove('has-value');
+        }
+      });
+    });
+
+    // Mobile warning popup logic
+    if (window.innerWidth < 768) {
+        var myModal = new bootstrap.Modal(document.getElementById('mobileWarningModal'), {
+            keyboard: false
+        });
+        myModal.show();
+    }
+
+    // Add subtle animations to form elements
+    const formGroups = document.querySelectorAll('.form-group');
+    formGroups.forEach((group, index) => {
+      group.style.opacity = '0';
+      group.style.transform = 'translateY(20px)';
+      
+      setTimeout(() => {
+        group.style.transition = 'all 0.4s ease';
+        group.style.opacity = '1';
+        group.style.transform = 'translateY(0)';
+      }, 100 + (index * 100));
+    });
+
+    // Enter key support is handled naturally by the form
+
+    // Remove any CSRF token text that might appear
+    function removeCSRFTokenText() {
+      // Check the entire document, not just login body
+      const walker = document.createTreeWalker(
+        document.body,
+        NodeFilter.SHOW_TEXT,
+        null,
+        false
+      );
+      
+      let node;
+      while (node = walker.nextNode()) {
+        if (node.textContent && node.textContent.trim()) {
+          const text = node.textContent.trim();
+          // Match CSRF token pattern (base64-like with dots)
+          if (text.match(/^[A-Za-z0-9+/=]+\.[A-Za-z0-9+/=]+\.[A-Za-z0-9+/=]+$/) && text.length > 20) {
+            console.log('Removing CSRF token text:', text);
+            node.remove();
+          }
+        }
+      }
+    }
+    
+    // Run immediately and after delays to catch any dynamically added content
+    removeCSRFTokenText();
+    setTimeout(removeCSRFTokenText, 100);
+    setTimeout(removeCSRFTokenText, 500);
+    setTimeout(removeCSRFTokenText, 1000);
+    
+    // Also run on DOM mutations
+    const observer = new MutationObserver(function(mutations) {
+      mutations.forEach(function(mutation) {
+        if (mutation.type === 'childList') {
+          removeCSRFTokenText();
+        }
+      });
+    });
+    
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+
+    // Slideshow functionality removed for performance optimization
+    // Using static background image instead of animated slideshow
+  });
+</script>
+{% endblock %}

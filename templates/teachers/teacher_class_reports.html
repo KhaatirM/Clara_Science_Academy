@@ -1,0 +1,225 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
+    <h3 class="mb-2 mb-md-0"><i class="bi bi-graph-up me-2"></i>Reports & Analytics - {{ class_obj.name }}</h3>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('teacher.create_report', class_id=class_obj.id) }}" class="btn btn-success btn-sm">
+        <i class="bi bi-plus-circle me-1"></i>Create Report
+      </a>
+      <a href="{{ url_for('teacher.class_analytics', class_id=class_obj.id) }}" class="btn btn-info btn-sm">
+        <i class="bi bi-bar-chart me-1"></i>Analytics Dashboard
+      </a>
+      <a href="{{ url_for('teacher.view_class', class_id=class_obj.id) }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Back to Class
+      </a>
+    </div>
+  </div>
+
+  <!-- Quick Stats -->
+  <div class="row g-3 g-md-4 mb-4">
+    <div class="col-12 col-md-3">
+      <div class="card shadow-sm">
+        <div class="card-body text-center">
+          <h4 class="text-primary">{{ reports|length }}</h4>
+          <p class="mb-0">Total Reports</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-3">
+      <div class="card shadow-sm">
+        <div class="card-body text-center">
+          <h4 class="text-success">{{ recent_contributions|length }}</h4>
+          <p class="mb-0">Recent Contributions</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-3">
+      <div class="card shadow-sm">
+        <div class="card-body text-center">
+          <h4 class="text-info">{{ recent_time_tracking|length }}</h4>
+          <p class="mb-0">Time Entries</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-3">
+      <div class="card shadow-sm">
+        <div class="card-body text-center">
+          <h4 class="text-warning">
+            {% set total_time = recent_time_tracking|sum(attribute='duration_minutes') %}
+            {{ (total_time / 60)|round(1) if total_time else 0 }}h
+          </h4>
+          <p class="mb-0">Total Time Tracked</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reports List -->
+  <div class="row g-4">
+    <div class="col-12 col-lg-8">
+      <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0"><i class="bi bi-file-text me-2"></i>Generated Reports</h5>
+        </div>
+        <div class="card-body">
+          {% if reports %}
+            <div class="table-responsive">
+              <table class="table table-hover">
+                <thead>
+                  <tr>
+                    <th>Report Name</th>
+                    <th>Type</th>
+                    <th>Period</th>
+                    <th>Generated</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for report in reports %}
+                    <tr>
+                      <td>
+                        <div class="fw-bold">{{ report.report_name }}</div>
+                        <small class="text-muted">ID: {{ report.id }}</small>
+                      </td>
+                      <td>
+                        <span class="badge bg-info">{{ report.report_type.replace('_', ' ').title() }}</span>
+                      </td>
+                      <td>
+                        <small class="text-muted">
+                          {{ report.report_period_start.strftime('%m/%d/%Y') }} - 
+                          {{ report.report_period_end.strftime('%m/%d/%Y') }}
+                        </small>
+                      </td>
+                      <td>
+                        <small class="text-muted">{{ report.generated_at.strftime('%m/%d/%Y %I:%M %p') }}</small>
+                      </td>
+                      <td>
+                        {% if report.is_exported %}
+                          <span class="badge bg-success">Exported</span>
+                        {% else %}
+                          <span class="badge bg-warning">Available</span>
+                        {% endif %}
+                      </td>
+                      <td>
+                        <div class="btn-group" role="group">
+                          <a href="{{ url_for('teacher.view_report', report_id=report.id) }}" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-eye"></i>
+                          </a>
+                          <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+                              <i class="bi bi-download"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                              <li><a class="dropdown-item" href="{{ url_for('teacher.export_report', report_id=report.id, format='pdf') }}">PDF</a></li>
+                              <li><a class="dropdown-item" href="{{ url_for('teacher.export_report', report_id=report.id, format='excel') }}">Excel</a></li>
+                              <li><a class="dropdown-item" href="{{ url_for('teacher.export_report', report_id=report.id, format='csv') }}">CSV</a></li>
+                            </ul>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <div class="text-center py-5">
+              <i class="bi bi-file-text display-1 text-muted"></i>
+              <h5 class="mt-3 text-muted">No Reports Generated</h5>
+              <p class="text-muted">Create your first comprehensive report to get started.</p>
+              <a href="{{ url_for('teacher.create_report', class_id=class_obj.id) }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-1"></i>Create Report
+              </a>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Actions & Recent Activity -->
+    <div class="col-12 col-lg-4">
+      <!-- Quick Actions -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-success text-white">
+          <h6 class="mb-0"><i class="bi bi-lightning me-2"></i>Quick Actions</h6>
+        </div>
+        <div class="card-body">
+          <div class="d-grid gap-2">
+            <a href="{{ url_for('teacher.create_report', class_id=class_obj.id) }}" class="btn btn-primary btn-sm">
+              <i class="bi bi-plus-circle me-1"></i>Create New Report
+            </a>
+            <a href="{{ url_for('teacher.class_analytics', class_id=class_obj.id) }}" class="btn btn-info btn-sm">
+              <i class="bi bi-bar-chart me-1"></i>Analytics Dashboard
+            </a>
+            <a href="{{ url_for('teacher.class_contributions', class_id=class_obj.id) }}" class="btn btn-success btn-sm">
+              <i class="bi bi-people me-1"></i>Contributions Tracking
+            </a>
+            <a href="{{ url_for('teacher.class_time_tracking', class_id=class_obj.id) }}" class="btn btn-warning btn-sm">
+              <i class="bi bi-clock me-1"></i>Time Tracking
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Contributions -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-info text-white">
+          <h6 class="mb-0"><i class="bi bi-activity me-2"></i>Recent Contributions</h6>
+        </div>
+        <div class="card-body">
+          {% if recent_contributions %}
+            <div class="list-group list-group-flush">
+              {% for contribution in recent_contributions %}
+                <div class="list-group-item px-0">
+                  <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                      <h6 class="mb-1">{{ contribution.student.first_name }} {{ contribution.student.last_name }}</h6>
+                      <p class="mb-1 small">{{ contribution.contribution_type.replace('_', ' ').title() }}</p>
+                      <small class="text-muted">{{ contribution.recorded_at.strftime('%m/%d %I:%M %p') }}</small>
+                    </div>
+                    {% if contribution.contribution_quality %}
+                      <span class="badge bg-primary">{{ contribution.contribution_quality }}/5</span>
+                    {% endif %}
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="text-muted mb-0">No recent contributions recorded.</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Recent Time Tracking -->
+      <div class="card shadow-sm">
+        <div class="card-header bg-warning text-white">
+          <h6 class="mb-0"><i class="bi bi-clock me-2"></i>Recent Time Tracking</h6>
+        </div>
+        <div class="card-body">
+          {% if recent_time_tracking %}
+            <div class="list-group list-group-flush">
+              {% for time_entry in recent_time_tracking %}
+                <div class="list-group-item px-0">
+                  <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                      <h6 class="mb-1">{{ time_entry.student.first_name }} {{ time_entry.student.last_name }}</h6>
+                      <p class="mb-1 small">{{ time_entry.activity_type.replace('_', ' ').title() }}</p>
+                      <small class="text-muted">{{ time_entry.start_time.strftime('%m/%d %I:%M %p') }}</small>
+                    </div>
+                    <span class="badge bg-warning">{{ time_entry.duration_minutes }}min</span>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="text-muted mb-0">No recent time tracking entries.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

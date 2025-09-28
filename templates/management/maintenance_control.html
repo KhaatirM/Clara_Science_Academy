@@ -1,0 +1,230 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4 mt-4">
+    <div class="row g-3 g-md-4">
+        <div class="col-12">
+            <h1 class="mb-4">Maintenance Mode Control</h1>
+            <div class="alert alert-warning">
+                <h5><i class="bi bi-exclamation-triangle"></i> System Maintenance</h5>
+                <p>Control system maintenance mode to temporarily restrict access while keeping the home page available.</p>
+            </div>
+        </div>
+    </div>
+    {% if maintenance %}
+    <div class="row g-3 g-md-4 mb-4">
+        <div class="col-12">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="card-title mb-0"><i class="bi bi-tools"></i> Maintenance Mode Active</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td><strong>Start Time:</strong></td>
+                                    <td>{{ maintenance.start_time.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>End Time:</strong></td>
+                                    <td>{{ maintenance.end_time.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Duration:</strong></td>
+                                    <td>{{ maintenance.duration_minutes }} minutes</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Reason:</strong></td>
+                                    <td>{{ maintenance.reason }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="alert alert-info">
+                                <strong>Maintenance Message:</strong><br>
+                                {{ maintenance.maintenance_message }}
+                            </div>
+                            <div class="d-grid">
+                                <form method="POST" action="{{ url_for('tech.stop_maintenance') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <button type="submit" class="btn btn-success" onclick="return confirm('Stop maintenance mode? Users will be able to access the system again.')">
+                                        <i class="bi bi-play-circle"></i> Stop Maintenance Mode
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    <div class="row g-3 g-md-4">
+        <div class="col-12 col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Start Maintenance Mode</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('tech.start_maintenance') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <div class="mb-3">
+                                    <label for="duration_type" class="form-label">Maintenance Duration</label>
+                                    <select class="form-select" id="duration_type" name="duration_type" required onchange="toggleCustomDuration()">
+                                        <option value="30">30 minutes</option>
+                                        <option value="60" selected>1 hour</option>
+                                        <option value="120">2 hours</option>
+                                        <option value="240">4 hours</option>
+                                        <option value="480">8 hours</option>
+                                        <option value="1440">24 hours (1 day)</option>
+                                        <option value="4320">3 days</option>
+                                        <option value="7200">5 days</option>
+                                        <option value="custom">Custom duration (max 7 days)</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3" id="custom_duration_group" style="display: none;">
+                                    <label for="custom_duration" class="form-label">Custom Duration (hours)</label>
+                                    <input type="number" class="form-control" id="custom_duration" name="custom_duration" 
+                                           min="1" max="168" placeholder="Enter hours (max 168 = 7 days)">
+                                    <div class="form-text">Maximum 168 hours (7 days)</div>
+                                </div>
+                                <input type="hidden" id="duration_minutes" name="duration_minutes" value="60">
+                                <div class="mb-3">
+                                    <label for="reason" class="form-label">Reason for Maintenance</label>
+                                    <select class="form-select" id="reason" name="reason" required>
+                                        <option value="Scheduled maintenance">Scheduled maintenance</option>
+                                        <option value="System updates">System updates</option>
+                                        <option value="Database maintenance">Database maintenance</option>
+                                        <option value="Security updates">Security updates</option>
+                                        <option value="Emergency maintenance">Emergency maintenance</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <div class="mb-3">
+                                    <label for="maintenance_message" class="form-label">Message to Display</label>
+                                    <textarea class="form-control" id="maintenance_message" name="maintenance_message" rows="3" required>System is under maintenance. Please check back later.</textarea>
+                                </div>
+                                <div class="alert alert-info">
+                                    <i class="bi bi-info-circle"></i>
+                                    <strong>Tech Access:</strong> Tech users will always be able to access the system during maintenance mode.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-end">
+                            <button type="submit" class="btn btn-warning" onclick="return confirm('Start maintenance mode? This will restrict access for all users except Tech users.')">
+                                <i class="bi bi-tools"></i> Start Maintenance Mode
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Maintenance Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <h6><i class="bi bi-info-circle"></i> What happens during maintenance?</h6>
+                        <ul class="mb-0">
+                            <li>Home page remains accessible</li>
+                            <li>Login is disabled for regular users</li>
+                            <li><strong>Tech users always have access</strong></li>
+                            <li>Maintenance message is displayed</li>
+                            <li>Automatic end time based on duration</li>
+                            <li>Maximum duration: 7 days</li>
+                        </ul>
+                    </div>
+                    <div class="alert alert-warning">
+                        <h6><i class="bi bi-exclamation-triangle"></i> Important Notes</h6>
+                        <ul class="mb-0">
+                            <li>Maintenance mode affects all regular users</li>
+                            <li>Tech users can always bypass maintenance</li>
+                            <li>Maximum maintenance duration: 7 days</li>
+                            <li>Set appropriate duration and reason</li>
+                            <li>Provide clear maintenance message</li>
+                            <li>Monitor system during maintenance</li>
+                        </ul>
+                    </div>
+                    <div class="alert alert-success">
+                        <h6><i class="bi bi-shield-check"></i> Tech User Benefits</h6>
+                        <ul class="mb-0">
+                            <li>Always able to login during maintenance</li>
+                            <li>Can stop maintenance mode anytime</li>
+                            <li>Full system access maintained</li>
+                            <li>Can monitor maintenance progress</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleCustomDuration() {
+    const durationType = document.getElementById('duration_type');
+    const customDurationGroup = document.getElementById('custom_duration_group');
+    const durationMinutes = document.getElementById('duration_minutes');
+    const customDuration = document.getElementById('custom_duration');
+    
+    if (durationType.value === 'custom') {
+        customDurationGroup.style.display = 'block';
+        customDuration.required = true;
+    } else {
+        customDurationGroup.style.display = 'none';
+        customDuration.required = false;
+        durationMinutes.value = durationType.value;
+    }
+}
+
+function updateDurationMinutes() {
+    const durationType = document.getElementById('duration_type');
+    const customDuration = document.getElementById('custom_duration');
+    const durationMinutes = document.getElementById('duration_minutes');
+    
+    if (durationType.value === 'custom') {
+        const hours = parseInt(customDuration.value);
+        if (hours && hours > 0 && hours <= 168) {
+            durationMinutes.value = hours * 60;
+        }
+    } else {
+        durationMinutes.value = durationType.value;
+    }
+}
+
+// Add event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    const durationType = document.getElementById('duration_type');
+    const customDuration = document.getElementById('custom_duration');
+    
+    durationType.addEventListener('change', toggleCustomDuration);
+    customDuration.addEventListener('input', updateDurationMinutes);
+    
+    // Form validation
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        const durationType = document.getElementById('duration_type');
+        const customDuration = document.getElementById('custom_duration');
+        
+        if (durationType.value === 'custom') {
+            const hours = parseInt(customDuration.value);
+            if (!hours || hours < 1 || hours > 168) {
+                e.preventDefault();
+                alert('Please enter a valid duration between 1 and 168 hours (7 days maximum).');
+                customDuration.focus();
+                return false;
+            }
+        }
+        
+        return confirm('Start maintenance mode? This will restrict access for all users except Tech users.');
+    });
+});
+</script>
+{% endblock %} 

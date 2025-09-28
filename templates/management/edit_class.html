@@ -1,0 +1,141 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block title %}Edit Class - {{ class_info.name }}{% endblock %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
+        <h3 class="mb-2 mb-md-0"><i class="bi bi-pencil-fill me-2"></i>Edit Class: {{ class_info.name }}</h3>
+        <a href="{{ url_for('management.view_class', class_id=class_info.id) }}" class="btn btn-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i> Back to Class Details
+        </a>
+    </div>
+
+    <div class="row g-3 g-md-4">
+        <div class="col-12 col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-gear-fill me-2"></i>Edit Class Information</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label for="name" class="form-label">Class Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="name" name="name" 
+                                       value="{{ class_info.name }}" required>
+                                <div class="form-text">The name of the class (e.g., "Grade 3 Math")</div>
+                            </div>
+                            
+                            <div class="col-12 col-md-6">
+                                <label for="subject" class="form-label">Subject <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="subject" name="subject" 
+                                       value="{{ class_info.subject or '' }}" required>
+                                <div class="form-text">The subject being taught (e.g., "Mathematics")</div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="teacher_id" class="form-label">Assigned Teacher <span class="text-danger">*</span></label>
+                            <select class="form-select" id="teacher_id" name="teacher_id" required>
+                                <option value="">Select a teacher...</option>
+                                {% for teacher in available_teachers %}
+                                    <option value="{{ teacher.id }}" 
+                                            {% if class_info.teacher_id == teacher.id %}selected{% endif %}>
+                                        {{ teacher.name }} ({{ teacher.username }})
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">Choose the teacher who will be responsible for this class</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="grade_levels" class="form-label">Grade Levels</label>
+                            <select class="form-select" id="grade_levels" name="grade_levels" multiple size="6" style="min-height: 120px;">
+                                {% for grade in range(1, 13) %}
+                                    <option value="{{ grade }}" 
+                                            {% if grade in class_info.get_grade_levels() %}selected{% endif %}>
+                                        Grade {{ grade }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Hold Ctrl (or Cmd on Mac) to select multiple grade levels. 
+                                This class can serve students from the selected grades.
+                            </div>
+                        </div>
+
+                        <div class="d-flex flex-column flex-md-row justify-content-between gap-2">
+                            <a href="{{ url_for('management.view_class', class_id=class_info.id) }}" class="btn btn-secondary">
+                                <i class="bi bi-x-circle me-1"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle me-1"></i> Update Class
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="bi bi-info-circle-fill me-2"></i>Current Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Class Name:</strong><br>
+                        <span class="text-muted">{{ class_info.name }}</span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Subject:</strong><br>
+                        <span class="text-muted">{{ class_info.subject or 'Not set' }}</span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Current Teacher:</strong><br>
+                        <span class="text-muted">
+                            {% if class_info.teacher_id %}
+                                {% for teacher in available_teachers %}
+                                    {% if teacher.id == class_info.teacher_id %}
+                                        {{ teacher.name }}
+                                    {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                Not assigned
+                            {% endif %}
+                        </span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Grade Levels:</strong><br>
+                        <span class="text-muted">{{ class_info.get_grade_levels_display() }}</span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>School Year:</strong><br>
+                        <span class="text-muted">
+                            {% if class_info.school_year %}
+                                {{ class_info.school_year.name }}
+                            {% else %}
+                                Not set
+                            {% endif %}
+                        </span>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <strong>Note:</strong> Changes to class information will affect all assignments and student records associated with this class.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

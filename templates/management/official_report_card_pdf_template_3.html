@@ -6,7 +6,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='report_card_styles.css', _external=True) }}">
 </head>
 <body>
-    {% include '_report_card_header.html' %}
+    {% include 'management/_report_card_header.html' %}
 
     <p class="report-period-line"><strong>Report Period:</strong> {{ report_card.quarter }} - {{ report_card.generated_date.strftime('%B %d, %Y') }}</p>
 

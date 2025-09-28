@@ -8,7 +8,7 @@
 <body>
     {% set header_title = "UNOFFICIAL STUDENT TRANSCRIPT" %}
     {% set show_unofficial_watermark = True %}
-    {% include '_report_card_header.html' %}
+    {% include 'management/_report_card_header.html' %}
 
     <p class="report-period-line"><strong>Report Period:</strong> {{ report_card.quarter }} - {{ report_card.generated_date.strftime('%m/%d/%Y') }}</p>
 

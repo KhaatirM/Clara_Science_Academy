@@ -18,4 +18,3 @@ if __name__ == '__main__':
     # Development mode - run with Flask's built-in server
     # The debug setting is now guaranteed to be True via DevelopmentConfig
     app.run(debug=app.config.get('DEBUG', True))
-

@@ -1,0 +1,235 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
+    <h3 class="mb-2 mb-md-0"><i class="bi bi-people me-2"></i>Contributions Tracking - {{ class_obj.name }}</h3>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('management.admin_class_analytics', class_id=class_obj.id) if role_prefix else url_for('teacher.class_analytics', class_id=class_obj.id) }}" class="btn btn-outline-info btn-sm">
+        <i class="bi bi-bar-chart me-1"></i>Analytics
+      </a>
+      <a href="{{ url_for('management.view_class', class_id=class_obj.id) if role_prefix else url_for('teacher.view_class', class_id=class_obj.id) }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Back to Class
+      </a>
+    </div>
+  </div>
+
+  <!-- Overview Stats -->
+  <div class="row g-3 g-md-4 mb-4">
+    <div class="col-12 col-md-3">
+      <div class="card shadow-sm">
+        <div class="card-body text-center">
+          <h4 class="text-primary">{{ contributions|length }}</h4>
+          <p class="mb-0">Total Contributions</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-3">
+      <div class="card shadow-sm">
+        <div class="card-body text-center">
+          <h4 class="text-success">{{ students|length }}</h4>
+          <p class="mb-0">Students Tracked</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-3">
+      <div class="card shadow-sm">
+        <div class="card-body text-center">
+          <h4 class="text-info">
+            {% set avg_quality = contributions|selectattr('contribution_quality')|map(attribute='contribution_quality')|list %}
+            {% if avg_quality %}
+              {{ (avg_quality|sum / avg_quality|length)|round(1) }}
+            {% else %}
+              0
+            {% endif %}
+          </h4>
+          <p class="mb-0">Avg Quality Rating</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-3">
+      <div class="card shadow-sm">
+        <div class="card-body text-center">
+          <h4 class="text-warning">
+            {% set total_time = contributions|selectattr('time_spent_minutes')|map(attribute='time_spent_minutes')|list %}
+            {% if total_time %}
+              {{ (total_time|sum / 60)|round(1) }}h
+            {% else %}
+              0h
+            {% endif %}
+          </h4>
+          <p class="mb-0">Total Time Tracked</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contributions List -->
+  <div class="card shadow-sm">
+    <div class="card-header bg-primary text-white">
+      <h5 class="mb-0"><i class="bi bi-list-check me-2"></i>Individual Contributions</h5>
+    </div>
+    <div class="card-body">
+      {% if contributions %}
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>Student</th>
+                <th>Group</th>
+                <th>Assignment</th>
+                <th>Contribution Type</th>
+                <th>Description</th>
+                <th>Time Spent</th>
+                <th>Quality</th>
+                <th>Peer Rating</th>
+                <th>Teacher Rating</th>
+                <th>Recorded</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for contribution in contributions %}
+                <tr>
+                  <td>
+                    <div class="fw-bold">{{ contribution.student.first_name }} {{ contribution.student.last_name }}</div>
+                    <small class="text-muted">ID: {{ contribution.student.student_id }}</small>
+                  </td>
+                  <td>
+                    <span class="badge bg-secondary">{{ contribution.group.name }}</span>
+                  </td>
+                  <td>
+                    <div class="fw-bold">{{ contribution.group_assignment.title }}</div>
+                    <small class="text-muted">{{ contribution.group_assignment.description[:50] }}{% if contribution.group_assignment.description|length > 50 %}...{% endif %}</small>
+                  </td>
+                  <td>
+                    <span class="badge bg-info">{{ contribution.contribution_type.replace('_', ' ').title() }}</span>
+                  </td>
+                  <td>
+                    <div class="text-truncate" style="max-width: 200px;" title="{{ contribution.contribution_description }}">
+                      {{ contribution.contribution_description }}
+                    </div>
+                  </td>
+                  <td>
+                    {% if contribution.time_spent_minutes %}
+                      <span class="badge bg-warning">{{ contribution.time_spent_minutes }}min</span>
+                    {% else %}
+                      <span class="text-muted">N/A</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if contribution.contribution_quality %}
+                      <div class="progress" style="height: 20px; width: 60px;">
+                        <div class="progress-bar" role="progressbar" style="width: {{ (contribution.contribution_quality / 5 * 100)|round(1) }}%">
+                          {{ contribution.contribution_quality }}/5
+                        </div>
+                      </div>
+                    {% else %}
+                      <span class="text-muted">N/A</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if contribution.peer_rating %}
+                      <span class="badge bg-success">{{ contribution.peer_rating|round(1) }}/5</span>
+                    {% else %}
+                      <span class="text-muted">N/A</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if contribution.teacher_rating %}
+                      <span class="badge bg-primary">{{ contribution.teacher_rating|round(1) }}/5</span>
+                    {% else %}
+                      <span class="text-muted">N/A</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <small class="text-muted">{{ contribution.recorded_at.strftime('%m/%d/%Y %I:%M %p') }}</small>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="text-center py-5">
+          <i class="bi bi-people display-1 text-muted"></i>
+          <h5 class="mt-3 text-muted">No Contributions Recorded</h5>
+          <p class="text-muted">Individual contributions will appear here once students start working on group assignments.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Contribution Types Breakdown -->
+  {% if contributions %}
+  <div class="row g-4 mt-4">
+    <div class="col-12 col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-header bg-info text-white">
+          <h6 class="mb-0"><i class="bi bi-pie-chart me-2"></i>Contribution Types</h6>
+        </div>
+        <div class="card-body">
+          {% set contribution_types = contributions|groupby('contribution_type') %}
+          {% for type, type_contributions in contribution_types %}
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span>{{ type.replace('_', ' ').title() }}</span>
+              <span class="badge bg-info">{{ type_contributions|list|length }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-header bg-success text-white">
+          <h6 class="mb-0"><i class="bi bi-graph-up me-2"></i>Quality Distribution</h6>
+        </div>
+        <div class="card-body">
+          {% set quality_ratings = contributions|selectattr('contribution_quality')|groupby('contribution_quality') %}
+          {% for rating, rating_contributions in quality_ratings %}
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span>{{ rating }}/5 Stars</span>
+              <span class="badge bg-success">{{ rating_contributions|list|length }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Quick Actions -->
+  <div class="row g-4 mt-4">
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-header bg-warning text-white">
+          <h6 class="mb-0"><i class="bi bi-lightning me-2"></i>Quick Actions</h6>
+        </div>
+        <div class="card-body">
+          <div class="row g-2">
+            <div class="col-12 col-md-3">
+              <a href="{{ url_for('management.admin_class_analytics', class_id=class_obj.id) if role_prefix else url_for('teacher.class_analytics', class_id=class_obj.id) }}" class="btn btn-info btn-sm w-100">
+                <i class="bi bi-bar-chart me-1"></i>Analytics Dashboard
+              </a>
+            </div>
+            <div class="col-12 col-md-3">
+              <a href="{{ url_for('management.admin_class_time_tracking', class_id=class_obj.id) if role_prefix else url_for('teacher.class_time_tracking', class_id=class_obj.id) }}" class="btn btn-warning btn-sm w-100">
+                <i class="bi bi-clock me-1"></i>Time Tracking
+              </a>
+            </div>
+            <div class="col-12 col-md-3">
+              <a href="{{ url_for('management.admin_create_report', class_id=class_obj.id) if role_prefix else url_for('teacher.create_report', class_id=class_obj.id) }}" class="btn btn-success btn-sm w-100">
+                <i class="bi bi-file-text me-1"></i>Create Report
+              </a>
+            </div>
+            <div class="col-12 col-md-3">
+              <a href="{{ url_for('management.admin_class_groups', class_id=class_obj.id) if role_prefix else url_for('teacher.class_groups', class_id=class_obj.id) }}" class="btn btn-secondary btn-sm w-100">
+                <i class="bi bi-people-fill me-1"></i>Manage Groups
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

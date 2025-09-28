@@ -1,0 +1,207 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
+    <h3 class="mb-2 mb-md-0"><i class="bi bi-journal-text me-2"></i>Reflection Journals - {{ group_assignment.title }}</h3>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('teacher.view_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Back to Assignment
+      </a>
+    </div>
+  </div>
+
+  <!-- Assignment Overview -->
+  <div class="row g-3 g-md-4 mb-4">
+    <div class="col-12 col-md-3">
+      <div class="card shadow-sm">
+        <div class="card-body text-center">
+          <h4 class="text-primary">{{ journals|length }}</h4>
+          <p class="mb-0">Total Journals</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-3">
+      <div class="card shadow-sm">
+        <div class="card-body text-center">
+          <h4 class="text-success">
+            {% set avg_collaboration = journals|map(attribute='collaboration_rating')|list|sum / journals|length if journals|length > 0 else 0 %}
+            {{ "%.1f"|format(avg_collaboration) }}
+          </h4>
+          <p class="mb-0">Avg Collaboration</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-3">
+      <div class="card shadow-sm">
+        <div class="card-body text-center">
+          <h4 class="text-info">
+            {% set avg_learning = journals|map(attribute='learning_rating')|list|sum / journals|length if journals|length > 0 else 0 %}
+            {{ "%.1f"|format(avg_learning) }}
+          </h4>
+          <p class="mb-0">Avg Learning</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-3">
+      <div class="card shadow-sm">
+        <div class="card-body text-center">
+          <h4 class="text-warning">
+            {% set unique_groups = journals|map(attribute='group_id')|unique|list|length %}
+            {{ unique_groups }}
+          </h4>
+          <p class="mb-0">Groups</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Assignment Details -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-header bg-primary text-white">
+      <h5 class="mb-0"><i class="bi bi-file-text me-2"></i>Assignment Information</h5>
+    </div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-12 col-md-6">
+          <strong>Title:</strong><br>
+          <span class="fs-5">{{ group_assignment.title }}</span>
+        </div>
+        <div class="col-12 col-md-6">
+          <strong>Due Date:</strong><br>
+          <span class="badge bg-{% if group_assignment.due_date and group_assignment.due_date > moment %}success{% else %}warning{% endif %} fs-6">
+            {{ group_assignment.due_date.strftime('%m/%d/%Y %I:%M %p') if group_assignment.due_date else 'No due date' }}
+          </span>
+        </div>
+        {% if group_assignment.description %}
+        <div class="col-12">
+          <strong>Description:</strong><br>
+          <p class="mb-0">{{ group_assignment.description }}</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Reflection Journals List -->
+  <div class="card shadow-sm">
+    <div class="card-header bg-success text-white">
+      <h5 class="mb-0"><i class="bi bi-journal-text me-2"></i>Student Reflection Journals</h5>
+    </div>
+    <div class="card-body">
+      {% if journals %}
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>Student</th>
+                <th>Group</th>
+                <th>Collaboration</th>
+                <th>Learning</th>
+                <th>Submitted</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for journal in journals %}
+                <tr>
+                  <td>
+                    <div class="fw-bold">{{ journal.student.first_name }} {{ journal.student.last_name }}</div>
+                    <small class="text-muted">ID: {{ journal.student.student_id }}</small>
+                  </td>
+                  <td>
+                    <span class="badge bg-secondary">{{ journal.group.name }}</span>
+                  </td>
+                  <td>
+                    <div class="d-flex align-items-center">
+                      <span class="badge bg-{% if journal.collaboration_rating >= 4 %}success{% elif journal.collaboration_rating >= 3 %}warning{% else %}danger{% endif %} me-2">
+                        {{ journal.collaboration_rating }}/5
+                      </span>
+                      <div class="progress" style="width: 60px; height: 8px;">
+                        <div class="progress-bar bg-{% if journal.collaboration_rating >= 4 %}success{% elif journal.collaboration_rating >= 3 %}warning{% else %}danger{% endif %}" 
+                             style="width: {{ (journal.collaboration_rating / 5) * 100 }}%"></div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="d-flex align-items-center">
+                      <span class="badge bg-{% if journal.learning_rating >= 4 %}success{% elif journal.learning_rating >= 3 %}warning{% else %}danger{% endif %} me-2">
+                        {{ journal.learning_rating }}/5
+                      </span>
+                      <div class="progress" style="width: 60px; height: 8px;">
+                        <div class="progress-bar bg-{% if journal.learning_rating >= 4 %}success{% elif journal.learning_rating >= 3 %}warning{% else %}danger{% endif %}" 
+                             style="width: {{ (journal.learning_rating / 5) * 100 }}%"></div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <small class="text-muted">{{ journal.submitted_at.strftime('%m/%d/%Y %I:%M %p') }}</small>
+                  </td>
+                  <td>
+                    <div class="btn-group" role="group">
+                      <a href="{{ url_for('teacher.view_reflection_journal', journal_id=journal.id) }}" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-eye"></i>
+                      </a>
+                      <form method="POST" action="{{ url_for('teacher.delete_reflection_journal', journal_id=journal.id) }}" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this reflection journal?')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <button type="submit" class="btn btn-outline-danger btn-sm" title="Delete">
+                          <i class="bi bi-trash"></i>
+                        </button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="text-center py-5">
+          <i class="bi bi-journal-text display-1 text-muted"></i>
+          <h5 class="mt-3 text-muted">No Reflection Journals Found</h5>
+          <p class="text-muted">Reflection journals will appear here once students submit them for this assignment.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="row g-3 g-md-4 mt-4">
+    <div class="col-12 col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-header bg-info text-white">
+          <h6 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Reflection Insights</h6>
+        </div>
+        <div class="card-body">
+          <ul class="mb-0">
+            <li>Monitor student self-assessment</li>
+            <li>Identify collaboration patterns</li>
+            <li>Track learning outcomes</li>
+            <li>Support student growth</li>
+            <li>Improve group dynamics</li>
+            <li>Enhance future assignments</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-header bg-warning text-white">
+          <h6 class="mb-0"><i class="bi bi-gear me-2"></i>Quick Actions</h6>
+        </div>
+        <div class="card-body">
+          <div class="d-grid gap-2">
+            <a href="{{ url_for('teacher.view_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-primary btn-sm">
+              <i class="bi bi-file-text me-1"></i>View Assignment
+            </a>
+            <a href="{{ url_for('teacher.class_reflection_journals', class_id=class_obj.id) }}" class="btn btn-success btn-sm">
+              <i class="bi bi-list me-1"></i>All Class Journals
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,315 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
+    <h3 class="mb-2 mb-md-0"><i class="bi bi-play-circle me-2"></i>Use Assignment Template</h3>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('teacher.class_assignment_templates', class_id=class_obj.id) }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Back to Templates
+      </a>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-12 col-lg-8">
+      <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0"><i class="bi bi-journal-plus me-2"></i>Create Assignment from Template</h5>
+        </div>
+        <div class="card-body">
+          <!-- Template Preview -->
+          <div class="alert alert-info mb-4">
+            <h6><i class="bi bi-info-circle me-2"></i>Using Template: {{ template.name }}</h6>
+            {% if template.description %}
+              <p class="mb-0">{{ template.description }}</p>
+            {% endif %}
+          </div>
+
+          <form method="POST" id="assignmentForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <!-- Basic Information -->
+            <div class="row g-3 mb-4">
+              <div class="col-12">
+                <h6 class="text-primary border-bottom pb-2 mb-3">
+                  <i class="bi bi-info-circle me-2"></i>Assignment Details
+                </h6>
+              </div>
+              <div class="col-12 col-md-6">
+                <label for="title" class="form-label">Assignment Title <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="title" name="title" value="{{ template_data.title }}" required>
+              </div>
+              <div class="col-12 col-md-6">
+                <label for="description" class="form-label">Description <span class="text-danger">*</span></label>
+                <textarea class="form-control" id="description" name="description" rows="3" required>{{ template_data.description }}</textarea>
+              </div>
+            </div>
+
+            <!-- Collaboration Settings -->
+            <div class="row g-3 mb-4">
+              <div class="col-12">
+                <h6 class="text-primary border-bottom pb-2 mb-3">
+                  <i class="bi bi-people me-2"></i>Collaboration Settings
+                </h6>
+              </div>
+              <div class="col-12 col-md-6">
+                <label for="collaboration_type" class="form-label">Collaboration Type <span class="text-danger">*</span></label>
+                <select class="form-select" id="collaboration_type" name="collaboration_type" required onchange="toggleGroupSettings()">
+                  <option value="group" {% if template_data.collaboration_type == 'group' %}selected{% endif %}>Group Work</option>
+                  <option value="individual" {% if template_data.collaboration_type == 'individual' %}selected{% endif %}>Individual Work</option>
+                  <option value="mixed" {% if template_data.collaboration_type == 'mixed' %}selected{% endif %}>Mixed (Both Options)</option>
+                </select>
+              </div>
+              <div class="col-12 col-md-6">
+                <div class="form-check mt-4">
+                  <input class="form-check-input" type="checkbox" id="allow_individual" name="allow_individual" {% if template_data.allow_individual %}checked{% endif %}>
+                  <label class="form-check-label" for="allow_individual">
+                    Allow Individual Submissions
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Group Settings -->
+            <div id="groupSettings" class="row g-3 mb-4">
+              <div class="col-12">
+                <h6 class="text-primary border-bottom pb-2 mb-3">
+                  <i class="bi bi-diagram-3 me-2"></i>Group Settings
+                </h6>
+              </div>
+              <div class="col-12 col-md-6">
+                <label for="group_size_min" class="form-label">Minimum Group Size</label>
+                <input type="number" class="form-control" id="group_size_min" name="group_size_min" min="2" max="10" value="{{ template_data.group_size_min }}">
+              </div>
+              <div class="col-12 col-md-6">
+                <label for="group_size_max" class="form-label">Maximum Group Size</label>
+                <input type="number" class="form-control" id="group_size_max" name="group_size_max" min="2" max="10" value="{{ template_data.group_size_max }}">
+              </div>
+            </div>
+
+            <!-- Academic Period -->
+            <div class="row g-3 mb-4">
+              <div class="col-12">
+                <h6 class="text-primary border-bottom pb-2 mb-3">
+                  <i class="bi bi-calendar3 me-2"></i>Academic Period
+                </h6>
+              </div>
+              <div class="col-12 col-md-6">
+                <label for="quarter" class="form-label">Quarter</label>
+                <select class="form-select" id="quarter" name="quarter">
+                  <option value="">Select Quarter</option>
+                  <option value="Q1" {% if template_data.quarter == 'Q1' %}selected{% endif %}>Quarter 1</option>
+                  <option value="Q2" {% if template_data.quarter == 'Q2' %}selected{% endif %}>Quarter 2</option>
+                  <option value="Q3" {% if template_data.quarter == 'Q3' %}selected{% endif %}>Quarter 3</option>
+                  <option value="Q4" {% if template_data.quarter == 'Q4' %}selected{% endif %}>Quarter 4</option>
+                </select>
+              </div>
+              <div class="col-12 col-md-6">
+                <label for="semester" class="form-label">Semester</label>
+                <select class="form-select" id="semester" name="semester">
+                  <option value="">Select Semester</option>
+                  <option value="S1" {% if template_data.semester == 'S1' %}selected{% endif %}>Semester 1</option>
+                  <option value="S2" {% if template_data.semester == 'S2' %}selected{% endif %}>Semester 2</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Timeline -->
+            <div class="row g-3 mb-4">
+              <div class="col-12">
+                <h6 class="text-primary border-bottom pb-2 mb-3">
+                  <i class="bi bi-clock me-2"></i>Timeline
+                </h6>
+              </div>
+              <div class="col-12 col-md-6">
+                <label for="due_date" class="form-label">Due Date <span class="text-danger">*</span></label>
+                <input type="datetime-local" class="form-control" id="due_date" name="due_date" required>
+              </div>
+              <div class="col-12 col-md-6">
+                <label for="due_days" class="form-label">Days from Now</label>
+                <input type="number" class="form-control" id="due_days" name="due_days" min="1" max="365" value="{{ template_data.due_days }}" onchange="updateDueDate()">
+                <div class="form-text">Auto-calculate due date</div>
+              </div>
+            </div>
+
+            <!-- Features -->
+            <div class="row g-3 mb-4">
+              <div class="col-12">
+                <h6 class="text-primary border-bottom pb-2 mb-3">
+                  <i class="bi bi-star me-2"></i>Assignment Features
+                </h6>
+              </div>
+              <div class="col-12">
+                <div class="row g-3">
+                  <div class="col-12 col-md-6">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="has_attachment" name="has_attachment" {% if template_data.has_attachment %}checked{% endif %}>
+                      <label class="form-check-label" for="has_attachment">
+                        <i class="bi bi-paperclip me-1"></i>Allow File Attachments
+                      </label>
+                    </div>
+                  </div>
+                  <div class="col-12 col-md-6">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="attachment_required" name="attachment_required" {% if template_data.attachment_required %}checked{% endif %}>
+                      <label class="form-check-label" for="attachment_required">
+                        <i class="bi bi-exclamation-circle me-1"></i>Require Attachments
+                      </label>
+                    </div>
+                  </div>
+                  <div class="col-12 col-md-6">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="rubric_included" name="rubric_included" {% if template_data.rubric_included %}checked{% endif %}>
+                      <label class="form-check-label" for="rubric_included">
+                        <i class="bi bi-list-check me-1"></i>Include Rubric
+                      </label>
+                    </div>
+                  </div>
+                  <div class="col-12 col-md-6">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="peer_evaluation" name="peer_evaluation" {% if template_data.peer_evaluation %}checked{% endif %}>
+                      <label class="form-check-label" for="peer_evaluation">
+                        <i class="bi bi-people me-1"></i>Peer Evaluation
+                      </label>
+                    </div>
+                  </div>
+                  <div class="col-12 col-md-6">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="progress_tracking" name="progress_tracking" {% if template_data.progress_tracking %}checked{% endif %}>
+                      <label class="form-check-label" for="progress_tracking">
+                        <i class="bi bi-graph-up me-1"></i>Progress Tracking
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-1"></i>Create Assignment
+              </button>
+              <a href="{{ url_for('teacher.class_assignment_templates', class_id=class_obj.id) }}" class="btn btn-outline-secondary">
+                <i class="bi bi-x-circle me-1"></i>Cancel
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Template Info Panel -->
+    <div class="col-12 col-lg-4">
+      <div class="card shadow-sm">
+        <div class="card-header bg-info text-white">
+          <h6 class="mb-0"><i class="bi bi-journal-bookmark me-2"></i>Template Information</h6>
+        </div>
+        <div class="card-body">
+          <h6>{{ template.name }}</h6>
+          {% if template.description %}
+            <p class="text-muted">{{ template.description }}</p>
+          {% endif %}
+          
+          <div class="mb-3">
+            <small class="text-muted">Type:</small>
+            <div>
+              {% if template_data.collaboration_type == 'group' %}
+                <span class="badge bg-info">Group Work</span>
+              {% elif template_data.collaboration_type == 'individual' %}
+                <span class="badge bg-warning">Individual Work</span>
+              {% else %}
+                <span class="badge bg-secondary">Mixed</span>
+              {% endif %}
+            </div>
+          </div>
+          
+          {% if template_data.collaboration_type != 'individual' %}
+            <div class="mb-3">
+              <small class="text-muted">Group Size:</small>
+              <div class="fw-bold">{{ template_data.group_size_min }}-{{ template_data.group_size_max }} students</div>
+            </div>
+          {% endif %}
+          
+          <div class="mb-3">
+            <small class="text-muted">Default Timeline:</small>
+            <div class="fw-bold">{{ template_data.due_days }} days</div>
+          </div>
+          
+          <div class="mb-3">
+            <small class="text-muted">Features:</small>
+            <div class="mt-1">
+              {% if template_data.rubric_included %}
+                <span class="badge bg-success me-1 mb-1">Rubric</span>
+              {% endif %}
+              {% if template_data.peer_evaluation %}
+                <span class="badge bg-info me-1 mb-1">Peer Eval</span>
+              {% endif %}
+              {% if template_data.progress_tracking %}
+                <span class="badge bg-warning me-1 mb-1">Progress</span>
+              {% endif %}
+              {% if template_data.has_attachment %}
+                <span class="badge bg-secondary me-1 mb-1">Attachments</span>
+              {% endif %}
+            </div>
+          </div>
+          
+          <small class="text-muted">
+            Created: {{ template.created_at.strftime('%m/%d/%Y') }}
+          </small>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mt-3">
+        <div class="card-header bg-warning text-white">
+          <h6 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Quick Tips</h6>
+        </div>
+        <div class="card-body">
+          <ul class="mb-0 small">
+            <li>Review and adjust settings as needed</li>
+            <li>Set appropriate due dates</li>
+            <li>Enable features you want to use</li>
+            <li>Consider your class size for group settings</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleGroupSettings() {
+  const collaborationType = document.getElementById('collaboration_type').value;
+  const groupSettings = document.getElementById('groupSettings');
+  
+  if (collaborationType === 'individual') {
+    groupSettings.style.display = 'none';
+  } else {
+    groupSettings.style.display = 'block';
+  }
+}
+
+function updateDueDate() {
+  const days = parseInt(document.getElementById('due_days').value);
+  if (days && days > 0) {
+    const now = new Date();
+    const dueDate = new Date(now.getTime() + (days * 24 * 60 * 60 * 1000));
+    
+    // Format for datetime-local input
+    const year = dueDate.getFullYear();
+    const month = String(dueDate.getMonth() + 1).padStart(2, '0');
+    const day = String(dueDate.getDate()).padStart(2, '0');
+    const hours = String(dueDate.getHours()).padStart(2, '0');
+    const minutes = String(dueDate.getMinutes()).padStart(2, '0');
+    
+    document.getElementById('due_date').value = `${year}-${month}-${day}T${hours}:${minutes}`;
+  }
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+  toggleGroupSettings();
+  updateDueDate();
+});
+</script>
+{% endblock %}

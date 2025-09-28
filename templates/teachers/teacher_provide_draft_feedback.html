@@ -1,0 +1,186 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
+    <h3 class="mb-2 mb-md-0"><i class="bi bi-chat-dots me-2"></i>Provide Draft Feedback</h3>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('teacher.view_draft_submissions', assignment_id=group_assignment.id) }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Back to Drafts
+      </a>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-12 col-lg-8">
+      <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0"><i class="bi bi-chat-dots me-2"></i>Feedback Form</h5>
+        </div>
+        <div class="card-body">
+          <!-- Draft Submission Info -->
+          <div class="alert alert-info mb-4">
+            <h6><i class="bi bi-info-circle me-2"></i>Draft Submission Details</h6>
+            <p class="mb-0">
+              <strong>Student:</strong> {{ draft_submission.student.first_name }} {{ draft_submission.student.last_name }}<br>
+              <strong>Group:</strong> {{ draft_submission.group.name }}<br>
+              <strong>Assignment:</strong> {{ group_assignment.title }}<br>
+              <strong>Submitted:</strong> {{ draft_submission.submitted_at.strftime('%m/%d/%Y %I:%M %p') }}
+            </p>
+          </div>
+
+          <!-- Draft Content Preview -->
+          <div class="card mb-4">
+            <div class="card-header bg-light">
+              <h6 class="mb-0"><i class="bi bi-file-earmark-text me-2"></i>Draft Content</h6>
+            </div>
+            <div class="card-body">
+              <div class="border rounded p-3" style="max-height: 300px; overflow-y: auto;">
+                {{ draft_submission.draft_content|replace('\n', '<br>')|safe }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Feedback Form -->
+          <form method="POST" id="feedbackForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="row g-3 mb-4">
+              <div class="col-12">
+                <h6 class="text-primary border-bottom pb-2 mb-3">
+                  <i class="bi bi-chat-dots me-2"></i>Feedback Details
+                </h6>
+              </div>
+              <div class="col-12 col-md-6">
+                <label for="feedback_type" class="form-label">Feedback Type <span class="text-danger">*</span></label>
+                <select class="form-select" id="feedback_type" name="feedback_type" required>
+                  <option value="general">General Feedback</option>
+                  <option value="specific">Specific Comments</option>
+                  <option value="improvement">Improvement Suggestions</option>
+                </select>
+                <div class="form-text">Choose the type of feedback you're providing</div>
+              </div>
+              <div class="col-12 col-md-6">
+                <div class="form-check mt-4">
+                  <input class="form-check-input" type="checkbox" id="is_approved" name="is_approved">
+                  <label class="form-check-label" for="is_approved">
+                    <i class="bi bi-check-circle me-1"></i>Approve this draft
+                  </label>
+                  <div class="form-text">Mark this draft as approved and ready for final submission</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+              <div class="col-12">
+                <h6 class="text-primary border-bottom pb-2 mb-3">
+                  <i class="bi bi-pencil me-2"></i>Feedback Content
+                </h6>
+              </div>
+              <div class="col-12">
+                <label for="feedback_content" class="form-label">Feedback <span class="text-danger">*</span></label>
+                <textarea class="form-control" id="feedback_content" name="feedback_content" rows="8" required placeholder="Provide constructive feedback on the draft submission..."></textarea>
+                <div class="form-text">Be specific and constructive in your feedback</div>
+              </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-save me-1"></i>Submit Feedback
+              </button>
+              <a href="{{ url_for('teacher.view_draft_submissions', assignment_id=group_assignment.id) }}" class="btn btn-outline-secondary">
+                <i class="bi bi-x-circle me-1"></i>Cancel
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Help Panel -->
+    <div class="col-12 col-lg-4">
+      <div class="card shadow-sm">
+        <div class="card-header bg-info text-white">
+          <h6 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Feedback Guidelines</h6>
+        </div>
+        <div class="card-body">
+          <h6>General Feedback</h6>
+          <p class="small mb-3">Overall assessment of the work, including strengths and areas for improvement.</p>
+          
+          <h6>Specific Comments</h6>
+          <p class="small mb-3">Detailed feedback on specific sections, ideas, or elements of the work.</p>
+          
+          <h6>Improvement Suggestions</h6>
+          <p class="small mb-3">Actionable recommendations for enhancing the quality of the work.</p>
+          
+          <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <strong>Remember:</strong> Provide constructive, helpful feedback that encourages learning.
+          </div>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mt-3">
+        <div class="card-header bg-success text-white">
+          <h6 class="mb-0"><i class="bi bi-star me-2"></i>Feedback Tips</h6>
+        </div>
+        <div class="card-body">
+          <ul class="mb-0 small">
+            <li>Be specific and actionable</li>
+            <li>Balance criticism with praise</li>
+            <li>Focus on the work, not the person</li>
+            <li>Provide examples when possible</li>
+            <li>Encourage revision and improvement</li>
+            <li>Use respectful language</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mt-3">
+        <div class="card-header bg-warning text-white">
+          <h6 class="mb-0"><i class="bi bi-gear me-2"></i>Quick Actions</h6>
+        </div>
+        <div class="card-body">
+          <div class="d-grid gap-2">
+            <button type="button" class="btn btn-outline-primary btn-sm" onclick="setQuickFeedback('positive')">
+              <i class="bi bi-hand-thumbs-up me-1"></i>Positive Feedback
+            </button>
+            <button type="button" class="btn btn-outline-warning btn-sm" onclick="setQuickFeedback('improvement')">
+              <i class="bi bi-arrow-up-circle me-1"></i>Improvement Focus
+            </button>
+            <button type="button" class="btn btn-outline-info btn-sm" onclick="setQuickFeedback('specific')">
+              <i class="bi bi-list-ul me-1"></i>Specific Comments
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function setQuickFeedback(type) {
+  const feedbackType = document.getElementById('feedback_type');
+  const feedbackContent = document.getElementById('feedback_content');
+  
+  switch(type) {
+    case 'positive':
+      feedbackType.value = 'general';
+      feedbackContent.value = 'Great work on this draft! I can see you\'ve put a lot of effort into this. Here are some specific strengths I noticed:\n\n• [Add specific strengths]\n• [Add specific strengths]\n\nTo make this even better, consider:\n\n• [Add improvement suggestions]\n• [Add improvement suggestions]\n\nKeep up the excellent work!';
+      break;
+      
+    case 'improvement':
+      feedbackType.value = 'improvement';
+      feedbackContent.value = 'This draft shows good potential. Here are some areas where you can improve:\n\n• [Add specific improvement areas]\n• [Add specific improvement areas]\n\nSpecific suggestions:\n\n• [Add actionable suggestions]\n• [Add actionable suggestions]\n\nI look forward to seeing your revisions!';
+      break;
+      
+    case 'specific':
+      feedbackType.value = 'specific';
+      feedbackContent.value = 'Here are my specific comments on your draft:\n\nSection 1: [Add specific feedback]\nSection 2: [Add specific feedback]\nSection 3: [Add specific feedback]\n\nOverall, this is a solid foundation. Focus on [specific area] for your next revision.';
+      break;
+  }
+}
+</script>
+{% endblock %}
+
+

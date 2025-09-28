@@ -1,13 +1,24 @@
-from flask import Blueprint, render_template, request, flash, redirect, url_for, session
-from flask_login import login_required, current_user, login_user, logout_user
-from models import db, User, MaintenanceMode, ActivityLog, TeacherStaff
-from decorators import tech_required
-from werkzeug.security import generate_password_hash
-from app import log_activity, get_user_activity_log
+# Standard library imports
 import os
 import shutil
-from datetime import datetime, timedelta
 import json
+from datetime import datetime, timedelta
+
+# Core Flask imports
+from flask import Blueprint, render_template, request, flash, redirect, url_for, session
+from flask_login import login_required, current_user, login_user, logout_user
+
+# Database and model imports
+from models import db, User, MaintenanceMode, ActivityLog, TeacherStaff
+
+# Authentication and decorators
+from decorators import tech_required
+
+# Application imports
+from app import log_activity, get_user_activity_log
+
+# Werkzeug utilities
+from werkzeug.security import generate_password_hash
 
 tech_blueprint = Blueprint('tech', __name__)
 
@@ -25,7 +36,7 @@ def tech_dashboard():
     if maintenance:
         print(f"Maintenance allow_tech_access: {maintenance.allow_tech_access}")
     
-    return render_template('tech_dashboard.html', users=users, maintenance=maintenance)
+    return render_template('tech/tech_dashboard.html', users=users, maintenance=maintenance)
 
 @tech_blueprint.route('/activity/log')
 @login_required
@@ -69,7 +80,7 @@ def activity_log():
     actions = db.session.query(ActivityLog.action).distinct().all()
     actions = [action[0] for action in actions]
     
-    return render_template('activity_log.html', 
+    return render_template('tech/activity_log.html', 
                          logs=logs, 
                          users=users, 
                          actions=actions,
@@ -218,7 +229,7 @@ def system_status():
             'error': str(e)
         }
     
-    return render_template('system_status.html', **system_data)
+    return render_template('management/system_status.html', **system_data)
 
 @tech_blueprint.route('/error/reports')
 @login_required
@@ -298,7 +309,7 @@ def error_reports():
     # Sort by timestamp (newest first)
     all_entries.sort(key=lambda x: x['timestamp'], reverse=True)
     
-    return render_template('it_error_reports.html', 
+    return render_template('tech/it_error_reports.html', 
                          all_entries=all_entries,
                          error_stats=error_stats,
                          bug_stats=bug_stats,
@@ -501,7 +512,7 @@ def view_database_logs():
             'report_cards': ReportCard.query.count()
         }
         
-        return render_template('database_logs.html', logs=db_logs, stats=db_stats)
+        return render_template('management/database_logs.html', logs=db_logs, stats=db_stats)
     except Exception as e:
         flash(f'Error viewing database logs: {str(e)}', 'danger')
         return redirect(url_for('tech.tech_dashboard'))
@@ -559,7 +570,7 @@ def reset_user_password(user_id):
 @tech_required
 def view_user_details(user_id):
     user = User.query.get_or_404(user_id)
-    return render_template('user_details.html', user=user)
+    return render_template('management/user_details.html', user=user)
 
 @tech_blueprint.route('/system/config')
 @login_required
@@ -587,7 +598,7 @@ def system_config():
         'server': 'Development' if config_info['debug_mode'] == 'Development Server' else 'Production'
     }
     
-    return render_template('system_config.html', config=config_info, system_info=system_info)
+    return render_template('management/system_config.html', config=config_info, system_info=system_info)
 
 @tech_blueprint.route('/system/config/update', methods=['POST'])
 @login_required
@@ -677,7 +688,7 @@ def user_management():
         return redirect(url_for('tech.user_management'))
 
     users = User.query.all()
-    return render_template('user_management.html', users=users)
+    return render_template('management/user_management.html', users=users)
 
 @tech_blueprint.route('/user/delete/<int:user_id>', methods=['POST'])
 @login_required
@@ -706,7 +717,7 @@ def delete_user(user_id):
 @tech_required
 def maintenance_control():
     maintenance = MaintenanceMode.query.filter_by(is_active=True).first()
-    return render_template('maintenance_control.html', maintenance=maintenance)
+    return render_template('management/maintenance_control.html', maintenance=maintenance)
 
 @tech_blueprint.route('/maintenance/start', methods=['POST'])
 @login_required

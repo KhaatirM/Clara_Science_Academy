@@ -1,19 +1,48 @@
+# Core Flask imports
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, Response, abort, jsonify
 from flask_login import login_required, current_user
-from models import db, Student, TeacherStaff, Class, SchoolYear, User, ReportCard, Assignment, Announcement, Message, MessageGroup, ScheduledAnnouncement, Notification, MessageGroupMember, Grade, Enrollment, Attendance, SchoolDayAttendance, AcademicPeriod, CalendarEvent, TeacherWorkDay, SchoolBreak, Submission, AssignmentExtension, QuizQuestion, QuizOption, QuizAnswer, DiscussionThread, DiscussionPost
+
+# Database and model imports - organized by category
+from models import (
+    # Core database
+    db,
+    # User and staff models
+    Student, TeacherStaff, User,
+    # Academic structure
+    Class, SchoolYear, AcademicPeriod, Enrollment,
+    # Assignment system
+    Assignment, AssignmentExtension, Submission, Grade, ReportCard,
+    # Quiz system
+    QuizQuestion, QuizOption, QuizAnswer,
+    # Communication system
+    Announcement, Message, MessageGroup, MessageGroupMember, ScheduledAnnouncement, Notification,
+    # Attendance system
+    Attendance, SchoolDayAttendance,
+    # Calendar and scheduling
+    CalendarEvent, TeacherWorkDay, SchoolBreak,
+    # Discussion system
+    DiscussionThread, DiscussionPost
+)
+
+# Authentication and decorators
 from decorators import management_required
+
+# Application imports
 from app import calculate_and_get_grade_for_student, get_grade_for_student, create_notification
+
+# Standard library imports
 import os
 import json
+import time
+import re
+from datetime import datetime, timedelta, date
+
+# Werkzeug utilities
 from werkzeug.security import generate_password_hash
 from werkzeug.utils import secure_filename
-from datetime import datetime, timedelta, date
-import time # Added for time.time()
-import re
-# import PyPDF2
-# import pdfplumber
+
+# SQLAlchemy
 from sqlalchemy import text
-from werkzeug.security import generate_password_hash
 # from add_academic_periods import add_academic_periods_for_year  # Function removed during cleanup
 
 def add_academic_periods_for_year(school_year_id):
@@ -239,7 +268,7 @@ def management_dashboard():
         'due_assignments': due_assignments
     }
     
-    return render_template('role_dashboard.html', 
+    return render_template('management/role_dashboard.html', 
                          stats=stats,
                          monthly_stats=monthly_stats,
                          weekly_stats=weekly_stats,
@@ -434,7 +463,7 @@ def add_student():
             flash(f'Error adding student: {str(e)}', 'danger')
             return redirect(request.url)
     
-    return render_template('add_student.html')
+    return render_template('students/add_student.html')
 
 @management_blueprint.route('/add-teacher-staff', methods=['GET', 'POST'])
 @login_required
@@ -575,7 +604,7 @@ def add_teacher_staff():
             flash(f'Error adding {assigned_role.lower()}: {str(e)}', 'danger')
             return redirect(request.url)
     
-    return render_template('add_teacher_staff.html')
+    return render_template('management/add_teacher_staff.html')
 
 @management_blueprint.route('/edit-teacher-staff/<int:staff_id>')
 @login_required
@@ -643,7 +672,7 @@ def generate_report_card_form():
         else:
             flash('Could not find the generated report card.', 'danger')
 
-    return render_template('report_card_generate_form.html', students=students, school_years=school_years)
+    return render_template('management/report_card_generate_form.html', students=students, school_years=school_years)
 
 @management_blueprint.route('/report/card/view/<int:report_card_id>')
 @login_required
@@ -656,7 +685,7 @@ def view_report_card(report_card_id):
     # Dummy attendance data for now
     attendance = {"Present": 45, "Absent": 2, "Tardy": 1}
 
-    return render_template('report_card_detail.html', report_card=report_card, grades=grades, attendance=attendance)
+    return render_template('management/report_card_detail.html', report_card=report_card, grades=grades, attendance=attendance)
 
 # @management_blueprint.route('/report/card/pdf/<int:report_card_id>')
 # @login_required
@@ -791,7 +820,7 @@ def students():
     students_with_accounts = len([s for s in students if s.user])
     students_without_accounts = total_students - students_with_accounts
     
-    return render_template('role_dashboard.html', 
+    return render_template('management/role_dashboard.html', 
                          students=students,
                          search_query=search_query,
                          search_type=search_type,
@@ -939,7 +968,7 @@ def teachers():
     teachers_with_accounts = len([t for t in teachers if t.user])
     teachers_without_accounts = total_teachers - teachers_with_accounts
     
-    return render_template('role_dashboard.html', 
+    return render_template('management/role_dashboard.html', 
                          teachers=teachers,
                          search_query=search_query,
                          search_type=search_type,
@@ -960,7 +989,7 @@ def teachers():
 def classes():
     """Enhanced classes management page for Directors and School Administrators."""
     classes = Class.query.all()
-    return render_template('enhanced_classes.html', 
+    return render_template('management/enhanced_classes.html', 
                          classes=classes,
                          section='classes',
                          active_tab='classes')
@@ -1028,7 +1057,7 @@ def add_class():
     
     # GET request - show form
     teachers = TeacherStaff.query.all()
-    return render_template('add_class.html', teachers=teachers)
+    return render_template('management/add_class.html', teachers=teachers)
 
 @management_blueprint.route('/class/<int:class_id>/manage')
 @login_required
@@ -1067,7 +1096,7 @@ def edit_class(class_id):
     
     # GET request - show edit form
     teachers = TeacherStaff.query.all()
-    return render_template('edit_class.html', class_obj=class_obj, teachers=teachers)
+    return render_template('management/edit_class.html', class_obj=class_obj, teachers=teachers)
 
 @management_blueprint.route('/class/<int:class_id>/roster')
 @login_required
@@ -1110,7 +1139,7 @@ def remove_class(class_id):
 @management_required
 def assignment_type_selector():
     """Assignment type selection page for management"""
-    return render_template('assignment_type_selector.html')
+    return render_template('shared/assignment_type_selector.html')
 
 @management_blueprint.route('/assignment/create/quiz', methods=['GET', 'POST'])
 @login_required
@@ -1212,7 +1241,7 @@ def create_quiz_assignment():
     # GET request - show form
     classes = Class.query.all()
     current_quarter = get_current_quarter()
-    return render_template('create_quiz_assignment.html', classes=classes, current_quarter=current_quarter)
+    return render_template('shared/create_quiz_assignment.html', classes=classes, current_quarter=current_quarter)
 
 @management_blueprint.route('/assignment/create/discussion', methods=['GET', 'POST'])
 @login_required
@@ -1269,7 +1298,7 @@ def create_discussion_assignment():
     # GET request - show form
     classes = Class.query.all()
     current_quarter = get_current_quarter()
-    return render_template('create_discussion_assignment.html', classes=classes, current_quarter=current_quarter)
+    return render_template('shared/create_discussion_assignment.html', classes=classes, current_quarter=current_quarter)
 
 @management_blueprint.route('/assignments')
 @login_required
@@ -1369,7 +1398,7 @@ def assignments():
             if teacher_staff:
                 teacher_staff_id = teacher_staff.id
     
-    return render_template('management_assignments.html',
+    return render_template('management/management_assignments.html',
                          assignments=assignments,
                          classes=all_classes,
                          accessible_classes=accessible_classes,
@@ -1552,7 +1581,7 @@ def unified_attendance():
         'suspended': query.filter_by(status='Suspended').count()
     }
     
-    return render_template('unified_attendance.html',
+    return render_template('shared/unified_attendance.html',
                          students=students,
                          selected_date=selected_date,
                          selected_date_str=selected_date_str,
@@ -1748,7 +1777,7 @@ def school_day_attendance():
         'excused': excused_count
     }
     
-    return render_template('school_day_attendance.html',
+    return render_template('shared/school_day_attendance.html',
                          students=students,
                          selected_date=selected_date,
                          selected_date_str=selected_date_str,
@@ -1809,7 +1838,7 @@ def attendance():
     present_records = Attendance.query.filter_by(date=datetime.now().date(), status='Present').count()
     overall_attendance_rate = round((present_records / total_attendance_records * 100), 1) if total_attendance_records > 0 else 0
     
-    return render_template('attendance_hub_simple.html',
+    return render_template('shared/attendance_hub_simple.html',
                          classes=classes,
                          today_date=today_date,
                          today_attendance_count=today_attendance_count,
@@ -1841,7 +1870,7 @@ def attendance_reports():
         'suspended': query.filter_by(status='Suspended').count()
     }
 
-    return render_template('attendance_report_view.html',
+    return render_template('shared/attendance_report_view.html',
                          all_students=all_students,
                          all_classes=all_classes,
                          all_statuses=all_statuses,
@@ -1865,7 +1894,7 @@ def report_cards():
     classes = Class.query.all()
     quarters = ['Q1', 'Q2', 'Q3', 'Q4']
     
-    return render_template('role_dashboard.html', 
+    return render_template('management/role_dashboard.html', 
                          report_cards=report_cards,
                          school_years=school_years,
                          students=students,
@@ -1878,7 +1907,7 @@ def report_cards():
 @login_required
 @management_required
 def admissions():
-    return render_template('role_dashboard.html',
+    return render_template('management/role_dashboard.html',
                          section='admissions',
                          active_tab='admissions')
 
@@ -1948,7 +1977,7 @@ def calendar():
         if year.start_date and year.end_date:
             year.total_days = (year.end_date - year.start_date).days
     
-    return render_template('role_calendar.html', 
+    return render_template('management/role_calendar.html', 
                          calendar_data=calendar_data,
                          prev_month=prev_month,
                          next_month=next_month,
@@ -1991,7 +2020,7 @@ def teacher_work_days():
     # Get all teacher work days for the active school year
     work_days = TeacherWorkDay.query.filter_by(school_year_id=active_year.id).order_by(TeacherWorkDay.date).all()
     
-    return render_template('management_teacher_work_days.html',
+    return render_template('management/management_teacher_work_days.html',
                          work_days=work_days,
                          school_year=active_year,
                          section='calendar',
@@ -2097,7 +2126,7 @@ def school_breaks():
     # Get all school breaks for the active school year
     breaks = SchoolBreak.query.filter_by(school_year_id=active_year.id).order_by(SchoolBreak.start_date).all()
     
-    return render_template('management_school_breaks.html',
+    return render_template('management/management_school_breaks.html',
                          breaks=breaks,
                          school_year=active_year,
                          section='calendar',
@@ -2187,7 +2216,7 @@ def delete_school_break(break_id):
 @management_required
 def communications():
     """Communications tab - Under Development."""
-    return render_template('under_development.html',
+    return render_template('shared/under_development.html',
                          section='communications',
                          active_tab='communications')
 
@@ -2203,7 +2232,7 @@ def management_messages():
         (Message.sender_id == current_user.id)
     ).order_by(Message.created_at.desc()).all()
     
-    return render_template('management_messages.html',
+    return render_template('management/management_messages.html',
                          messages=messages,
                          section='communications',
                          active_tab='messages')
@@ -2252,7 +2281,7 @@ def management_send_message():
     # Get all users for recipient selection
     users = User.query.filter(User.id != current_user.id).all()
     
-    return render_template('management_send_message.html',
+    return render_template('management/management_send_message.html',
                          users=users,
                          section='communications',
                          active_tab='messages')
@@ -2275,7 +2304,7 @@ def management_view_message(message_id):
         message.read_at = datetime.utcnow()
         db.session.commit()
     
-    return render_template('management_view_message.html',
+    return render_template('management/management_view_message.html',
                          message=message,
                          section='communications',
                          active_tab='messages')
@@ -2339,7 +2368,7 @@ def management_groups():
     # Get user's group memberships
     memberships = MessageGroupMember.query.filter_by(user_id=current_user.id).all()
     
-    return render_template('management_groups.html',
+    return render_template('management/management_groups.html',
                          groups=groups,
                          memberships=memberships,
                          section='communications',
@@ -2396,7 +2425,7 @@ def management_create_group():
     # Get all users for member selection
     users = User.query.filter(User.id != current_user.id).all()
     
-    return render_template('management_create_group.html',
+    return render_template('management/management_create_group.html',
                          users=users,
                          section='communications',
                          active_tab='groups')
@@ -2424,7 +2453,7 @@ def management_view_group(group_id):
     # Get group members
     members = MessageGroupMember.query.filter_by(group_id=group_id).all()
     
-    return render_template('management_view_group.html',
+    return render_template('management/management_view_group.html',
                          group=group,
                          messages=messages,
                          members=members,
@@ -2522,7 +2551,7 @@ def management_create_announcement():
     
     classes = Class.query.all()
     
-    return render_template('management_create_announcement.html',
+    return render_template('management/management_create_announcement.html',
                          classes=classes,
                          section='communications',
                          active_tab='announcements')
@@ -2568,7 +2597,7 @@ def management_schedule_announcement():
     
     classes = Class.query.all()
     
-    return render_template('management_schedule_announcement.html',
+    return render_template('management/management_schedule_announcement.html',
                          classes=classes,
                          section='communications',
                          active_tab='announcements')
@@ -2621,7 +2650,7 @@ def billing():
     invoices = []  # Will be populated when billing models are created
     pending_invoices = []
     
-    return render_template('role_dashboard.html',
+    return render_template('management/role_dashboard.html',
                          students=students,
                          invoices=invoices,
                          pending_invoices=pending_invoices,
@@ -2655,7 +2684,7 @@ def record_payment():
 @login_required
 @management_required
 def settings():
-    return render_template('role_dashboard.html',
+    return render_template('management/role_dashboard.html',
                          section='settings',
                          active_tab='settings')
 
@@ -2670,7 +2699,7 @@ def settings():
 @management_required
 def class_grades_view(class_id):
     """View class grades"""
-    return render_template('class_grades_view.html', class_id=class_id)
+    return render_template('students/class_grades_view.html', class_id=class_id)
 
 
 
@@ -2758,7 +2787,7 @@ def add_assignment():
     # For GET request, get all classes for the dropdown and current quarter
     classes = Class.query.all()
     current_quarter = get_current_quarter()
-    return render_template('add_assignment.html', classes=classes, current_quarter=current_quarter)
+    return render_template('shared/add_assignment.html', classes=classes, current_quarter=current_quarter)
 
 
 @management_blueprint.route('/grade/assignment/<int:assignment_id>', methods=['GET', 'POST'])
@@ -2830,7 +2859,7 @@ def grade_assignment(assignment_id):
     grades = {g.student_id: json.loads(g.grade_data) for g in Grade.query.filter_by(assignment_id=assignment_id).all()}
     submissions = {s.student_id: s for s in Submission.query.filter_by(assignment_id=assignment_id).all()}
     
-    return render_template('teacher_grade_assignment.html', 
+    return render_template('teachers/teacher_grade_assignment.html', 
                          assignment=assignment, 
                          class_obj=class_obj,
                          students=students, 
@@ -2858,7 +2887,7 @@ def view_assignment(assignment_id):
     # Get current date for status calculations
     today = datetime.now().date()
     
-    return render_template('view_assignment.html', 
+    return render_template('shared/view_assignment.html', 
                          assignment=assignment,
                          class_info=class_info,
                          teacher=teacher,
@@ -2938,7 +2967,7 @@ def edit_assignment(assignment_id):
     classes = Class.query.all()
     school_years = SchoolYear.query.all()
     
-    return render_template('edit_assignment.html', 
+    return render_template('shared/edit_assignment.html', 
                          assignment=assignment,
                          classes=classes,
                          school_years=school_years)
@@ -3409,7 +3438,7 @@ def school_years():
         if year.start_date and year.end_date:
             year.total_days = (year.end_date - year.start_date).days
     
-    return render_template('management_school_years.html', 
+    return render_template('management/management_school_years.html', 
                          school_years=school_years,
                          active_school_year=active_school_year)
 
@@ -4126,7 +4155,7 @@ def view_class(class_id):
     # Get current date for assignment status comparison
     today = datetime.now().date()
     
-    return render_template('view_class.html', 
+    return render_template('management/view_class.html', 
                          class_info=class_info,
                          teacher=teacher,
                          enrolled_students=enrolled_students,
@@ -4264,7 +4293,7 @@ def manage_class_roster(class_id):
         name = f"{t.first_name} {t.last_name}"
         available_teachers.append({'id': t.id, 'name': name, 'username': username})
     
-    return render_template('manage_class_roster.html', 
+    return render_template('management/manage_class_roster.html', 
                          class_info=class_info,
                          all_students=all_students,
                          enrolled_students=enrolled_students,

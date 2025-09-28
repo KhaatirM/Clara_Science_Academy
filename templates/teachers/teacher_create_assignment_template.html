@@ -1,0 +1,337 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
+    <h3 class="mb-2 mb-md-0"><i class="bi bi-journal-bookmark me-2"></i>Create Assignment Template</h3>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('teacher.class_assignment_templates', class_id=class_obj.id) }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Back to Templates
+      </a>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-12 col-lg-8">
+      <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0"><i class="bi bi-gear me-2"></i>Template Configuration</h5>
+        </div>
+        <div class="card-body">
+          <form method="POST" id="templateForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <!-- Basic Information -->
+            <div class="row g-3 mb-4">
+              <div class="col-12">
+                <h6 class="text-primary border-bottom pb-2 mb-3">
+                  <i class="bi bi-info-circle me-2"></i>Basic Information
+                </h6>
+              </div>
+              <div class="col-12 col-md-6">
+                <label for="name" class="form-label">Template Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="name" name="name" required>
+                <div class="form-text">Give your template a descriptive name</div>
+              </div>
+              <div class="col-12 col-md-6">
+                <label for="description" class="form-label">Description</label>
+                <input type="text" class="form-control" id="description" name="description">
+                <div class="form-text">Brief description of this template</div>
+              </div>
+            </div>
+
+            <!-- Assignment Structure -->
+            <div class="row g-3 mb-4">
+              <div class="col-12">
+                <h6 class="text-primary border-bottom pb-2 mb-3">
+                  <i class="bi bi-journal-text me-2"></i>Assignment Structure
+                </h6>
+              </div>
+              <div class="col-12 col-md-6">
+                <label for="title" class="form-label">Default Title</label>
+                <input type="text" class="form-control" id="title" name="title" placeholder="e.g., Research Project">
+                <div class="form-text">Default assignment title</div>
+              </div>
+              <div class="col-12 col-md-6">
+                <label for="template_description" class="form-label">Default Description</label>
+                <input type="text" class="form-control" id="template_description" name="template_description" placeholder="e.g., Complete a research project on...">
+                <div class="form-text">Default assignment description</div>
+              </div>
+            </div>
+
+            <!-- Collaboration Settings -->
+            <div class="row g-3 mb-4">
+              <div class="col-12">
+                <h6 class="text-primary border-bottom pb-2 mb-3">
+                  <i class="bi bi-people me-2"></i>Collaboration Settings
+                </h6>
+              </div>
+              <div class="col-12 col-md-6">
+                <label for="collaboration_type" class="form-label">Collaboration Type <span class="text-danger">*</span></label>
+                <select class="form-select" id="collaboration_type" name="collaboration_type" required onchange="toggleGroupSettings()">
+                  <option value="group">Group Work</option>
+                  <option value="individual">Individual Work</option>
+                  <option value="mixed">Mixed (Both Options)</option>
+                </select>
+              </div>
+              <div class="col-12 col-md-6">
+                <div class="form-check mt-4">
+                  <input class="form-check-input" type="checkbox" id="allow_individual" name="allow_individual">
+                  <label class="form-check-label" for="allow_individual">
+                    Allow Individual Submissions
+                  </label>
+                  <div class="form-text">Students can choose to work individually</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Group Settings -->
+            <div id="groupSettings" class="row g-3 mb-4">
+              <div class="col-12">
+                <h6 class="text-primary border-bottom pb-2 mb-3">
+                  <i class="bi bi-diagram-3 me-2"></i>Group Settings
+                </h6>
+              </div>
+              <div class="col-12 col-md-6">
+                <label for="group_size_min" class="form-label">Minimum Group Size</label>
+                <input type="number" class="form-control" id="group_size_min" name="group_size_min" min="2" max="10" value="2">
+              </div>
+              <div class="col-12 col-md-6">
+                <label for="group_size_max" class="form-label">Maximum Group Size</label>
+                <input type="number" class="form-control" id="group_size_max" name="group_size_max" min="2" max="10" value="4">
+              </div>
+            </div>
+
+            <!-- Academic Period -->
+            <div class="row g-3 mb-4">
+              <div class="col-12">
+                <h6 class="text-primary border-bottom pb-2 mb-3">
+                  <i class="bi bi-calendar3 me-2"></i>Academic Period
+                </h6>
+              </div>
+              <div class="col-12 col-md-6">
+                <label for="quarter" class="form-label">Default Quarter</label>
+                <select class="form-select" id="quarter" name="quarter">
+                  <option value="">Select Quarter</option>
+                  <option value="Q1">Quarter 1</option>
+                  <option value="Q2">Quarter 2</option>
+                  <option value="Q3">Quarter 3</option>
+                  <option value="Q4">Quarter 4</option>
+                </select>
+              </div>
+              <div class="col-12 col-md-6">
+                <label for="semester" class="form-label">Default Semester</label>
+                <select class="form-select" id="semester" name="semester">
+                  <option value="">Select Semester</option>
+                  <option value="S1">Semester 1</option>
+                  <option value="S2">Semester 2</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Timeline -->
+            <div class="row g-3 mb-4">
+              <div class="col-12">
+                <h6 class="text-primary border-bottom pb-2 mb-3">
+                  <i class="bi bi-clock me-2"></i>Timeline
+                </h6>
+              </div>
+              <div class="col-12 col-md-6">
+                <label for="due_days" class="form-label">Default Due Days</label>
+                <input type="number" class="form-control" id="due_days" name="due_days" min="1" max="365" value="7">
+                <div class="form-text">Default number of days from creation to due date</div>
+              </div>
+            </div>
+
+            <!-- Features -->
+            <div class="row g-3 mb-4">
+              <div class="col-12">
+                <h6 class="text-primary border-bottom pb-2 mb-3">
+                  <i class="bi bi-star me-2"></i>Template Features
+                </h6>
+              </div>
+              <div class="col-12">
+                <div class="row g-3">
+                  <div class="col-12 col-md-6">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="has_attachment" name="has_attachment">
+                      <label class="form-check-label" for="has_attachment">
+                        <i class="bi bi-paperclip me-1"></i>Allow File Attachments
+                      </label>
+                    </div>
+                  </div>
+                  <div class="col-12 col-md-6">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="attachment_required" name="attachment_required">
+                      <label class="form-check-label" for="attachment_required">
+                        <i class="bi bi-exclamation-circle me-1"></i>Require Attachments
+                      </label>
+                    </div>
+                  </div>
+                  <div class="col-12 col-md-6">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="rubric_included" name="rubric_included">
+                      <label class="form-check-label" for="rubric_included">
+                        <i class="bi bi-list-check me-1"></i>Include Rubric
+                      </label>
+                    </div>
+                  </div>
+                  <div class="col-12 col-md-6">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="peer_evaluation" name="peer_evaluation">
+                      <label class="form-check-label" for="peer_evaluation">
+                        <i class="bi bi-people me-1"></i>Peer Evaluation
+                      </label>
+                    </div>
+                  </div>
+                  <div class="col-12 col-md-6">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="progress_tracking" name="progress_tracking">
+                      <label class="form-check-label" for="progress_tracking">
+                        <i class="bi bi-graph-up me-1"></i>Progress Tracking
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-save me-1"></i>Save Template
+              </button>
+              <a href="{{ url_for('teacher.class_assignment_templates', class_id=class_obj.id) }}" class="btn btn-outline-secondary">
+                <i class="bi bi-x-circle me-1"></i>Cancel
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Help Panel -->
+    <div class="col-12 col-lg-4">
+      <div class="card shadow-sm">
+        <div class="card-header bg-info text-white">
+          <h6 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Template Tips</h6>
+        </div>
+        <div class="card-body">
+          <h6>Creating Effective Templates</h6>
+          <ul class="mb-3">
+            <li>Use descriptive names</li>
+            <li>Set appropriate group sizes</li>
+            <li>Include common features</li>
+            <li>Set realistic timelines</li>
+          </ul>
+          
+          <h6>Template Features</h6>
+          <ul class="mb-3">
+            <li><strong>Rubric:</strong> Pre-configured grading criteria</li>
+            <li><strong>Peer Evaluation:</strong> Student feedback system</li>
+            <li><strong>Progress Tracking:</strong> Monitor group progress</li>
+            <li><strong>Attachments:</strong> File submission support</li>
+          </ul>
+          
+          <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong>Tip:</strong> Templates save time and ensure consistency across assignments.
+          </div>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mt-3">
+        <div class="card-header bg-warning text-white">
+          <h6 class="mb-0"><i class="bi bi-gear me-2"></i>Quick Settings</h6>
+        </div>
+        <div class="card-body">
+          <div class="d-grid gap-2">
+            <button type="button" class="btn btn-outline-primary btn-sm" onclick="setQuickSettings('research')">
+              <i class="bi bi-search me-1"></i>Research Project
+            </button>
+            <button type="button" class="btn btn-outline-success btn-sm" onclick="setQuickSettings('presentation')">
+              <i class="bi bi-presentation me-1"></i>Presentation
+            </button>
+            <button type="button" class="btn btn-outline-info btn-sm" onclick="setQuickSettings('lab')">
+              <i class="bi bi-flask me-1"></i>Lab Report
+            </button>
+            <button type="button" class="btn btn-outline-warning btn-sm" onclick="setQuickSettings('discussion')">
+              <i class="bi bi-chat-dots me-1"></i>Discussion
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleGroupSettings() {
+  const collaborationType = document.getElementById('collaboration_type').value;
+  const groupSettings = document.getElementById('groupSettings');
+  
+  if (collaborationType === 'individual') {
+    groupSettings.style.display = 'none';
+  } else {
+    groupSettings.style.display = 'block';
+  }
+}
+
+function setQuickSettings(type) {
+  const form = document.getElementById('templateForm');
+  
+  switch(type) {
+    case 'research':
+      document.getElementById('name').value = 'Research Project Template';
+      document.getElementById('title').value = 'Research Project';
+      document.getElementById('collaboration_type').value = 'group';
+      document.getElementById('group_size_min').value = 2;
+      document.getElementById('group_size_max').value = 4;
+      document.getElementById('due_days').value = 14;
+      document.getElementById('has_attachment').checked = true;
+      document.getElementById('attachment_required').checked = true;
+      document.getElementById('rubric_included').checked = true;
+      document.getElementById('peer_evaluation').checked = true;
+      break;
+      
+    case 'presentation':
+      document.getElementById('name').value = 'Presentation Template';
+      document.getElementById('title').value = 'Group Presentation';
+      document.getElementById('collaboration_type').value = 'group';
+      document.getElementById('group_size_min').value = 3;
+      document.getElementById('group_size_max').value = 5;
+      document.getElementById('due_days').value = 10;
+      document.getElementById('has_attachment').checked = true;
+      document.getElementById('rubric_included').checked = true;
+      document.getElementById('peer_evaluation').checked = true;
+      break;
+      
+    case 'lab':
+      document.getElementById('name').value = 'Lab Report Template';
+      document.getElementById('title').value = 'Lab Report';
+      document.getElementById('collaboration_type').value = 'mixed';
+      document.getElementById('group_size_min').value = 2;
+      document.getElementById('group_size_max').value = 3;
+      document.getElementById('due_days').value = 7;
+      document.getElementById('has_attachment').checked = true;
+      document.getElementById('attachment_required').checked = true;
+      document.getElementById('rubric_included').checked = true;
+      break;
+      
+    case 'discussion':
+      document.getElementById('name').value = 'Discussion Template';
+      document.getElementById('title').value = 'Class Discussion';
+      document.getElementById('collaboration_type').value = 'individual';
+      document.getElementById('due_days').value = 3;
+      document.getElementById('progress_tracking').checked = true;
+      break;
+  }
+  
+  toggleGroupSettings();
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+  toggleGroupSettings();
+});
+</script>
+{% endblock %}

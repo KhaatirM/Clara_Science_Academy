@@ -1,0 +1,240 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4 mt-4">
+    <div class="row g-3 g-md-4">
+        <div class="col-12">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
+                <h1 class="mb-2 mb-md-0">User Details</h1>
+                <a href="{{ url_for('tech.user_management') }}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to User Management
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="row g-3 g-md-4">
+        <div class="col-12 col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">User Information</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Login Credentials Summary -->
+                    <div class="alert alert-info mb-4">
+                        <h6><i class="bi bi-key"></i> Login Credentials</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>Username:</strong> <code>{{ user.username }}</code>
+                            </div>
+                            <div class="col-md-6">
+                                <strong>ID Number:</strong> 
+                                {% if user.student_profile and user.student_profile.student_id %}
+                                    <code>{{ user.student_profile.student_id }}</code>
+                                {% elif user.teacher_staff_profile and user.teacher_staff_profile.staff_id %}
+                                    <code>{{ user.teacher_staff_profile.staff_id }}</code>
+                                {% else %}
+                                    <span class="text-muted">Not required for Tech users</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td><strong>User ID:</strong></td>
+                                    <td>{{ user.id }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Username:</strong></td>
+                                    <td>{{ user.username }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Role:</strong></td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if user.role == 'Director' %}bg-danger
+                                            {% elif user.role == 'School Administrator' %}bg-warning
+                                            {% elif user.role == 'Teacher' %}bg-info
+                                            {% elif user.role == 'Student' %}bg-success
+                                            {% elif user.role == 'Tech' %}bg-secondary
+                                            {% else %}bg-light text-dark{% endif %}">
+                                            {{ user.role }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Status:</strong></td>
+                                    <td><span class="badge bg-success">Active</span></td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td><strong>Created:</strong></td>
+                                    <td>N/A</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Last Login:</strong></td>
+                                    <td>N/A</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Login Count:</strong></td>
+                                    <td>N/A</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% if user.student_profile %}
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Student Profile</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td><strong>Name:</strong></td>
+                                    <td>{{ user.student_profile.first_name }} {{ user.student_profile.last_name }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Grade Level:</strong></td>
+                                    <td>{{ user.student_profile.grade_level }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Student ID (Login):</strong></td>
+                                    <td>
+                                        <code class="bg-light p-1 rounded">{{ user.student_profile.student_id or 'N/A' }}</code>
+                                        {% if user.student_profile.student_id %}
+                                        <button class="btn btn-sm btn-outline-secondary ms-2" onclick="copyToClipboard('{{ user.student_profile.student_id }}')" title="Copy ID">
+                                            <i class="bi bi-clipboard"></i>
+                                        </button>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>State ID:</strong></td>
+                                    <td>{{ user.student_profile.state_id or 'N/A' }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td><strong>Date of Birth:</strong></td>
+                                    <td>{{ user.student_profile.dob or 'N/A' }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Address:</strong></td>
+                                    <td>{{ user.student_profile.address or 'N/A' }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% if user.teacher_staff_profile %}
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Teacher/Staff Profile</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td><strong>Name:</strong></td>
+                                    <td>{{ user.teacher_staff_profile.first_name }} {{ user.teacher_staff_profile.last_name }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Staff ID (Login):</strong></td>
+                                    <td>
+                                        <code class="bg-light p-1 rounded">{{ user.teacher_staff_profile.staff_id or 'N/A' }}</code>
+                                        {% if user.teacher_staff_profile.staff_id %}
+                                        <button class="btn btn-sm btn-outline-secondary ms-2" onclick="copyToClipboard('{{ user.teacher_staff_profile.staff_id }}')" title="Copy ID">
+                                            <i class="bi bi-clipboard"></i>
+                                        </button>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Email:</strong></td>
+                                    <td>{{ user.teacher_staff_profile.email }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        <div class="col-12 col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <form method="POST" action="{{ url_for('tech.reset_user_password', user_id=user.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <button type="submit" class="btn btn-warning w-100" onclick="return confirm('Reset password for {{ user.username }}?')">
+                                <i class="bi bi-key"></i> Reset Password
+                            </button>
+                        </form>
+                        <button class="btn btn-info w-100" onclick="alert('View login history - functionality to be implemented')">
+                            <i class="bi bi-clock-history"></i> Login History
+                        </button>
+                        <button class="btn btn-primary w-100" onclick="alert('Edit user - functionality to be implemented')">
+                            <i class="bi bi-pencil"></i> Edit User
+                        </button>
+                        <form method="POST" action="{{ url_for('tech.delete_user', user_id=user.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <button type="submit" class="btn btn-danger w-100" onclick="return confirm('Delete user {{ user.username }}? This action cannot be undone.')">
+                                <i class="bi bi-trash"></i> Delete User
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Recent Activity</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <small>No recent activity recorded.</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(function() {
+        // Show a temporary success message
+        const button = event.target.closest('button');
+        const originalHTML = button.innerHTML;
+        button.innerHTML = '<i class="bi bi-check"></i>';
+        button.classList.remove('btn-outline-secondary');
+        button.classList.add('btn-success');
+        
+        setTimeout(function() {
+            button.innerHTML = originalHTML;
+            button.classList.remove('btn-success');
+            button.classList.add('btn-outline-secondary');
+        }, 2000);
+    }).catch(function(err) {
+        console.error('Could not copy text: ', err);
+        alert('Failed to copy to clipboard');
+    });
+}
+</script>
+{% endblock %} 

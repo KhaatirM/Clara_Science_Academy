@@ -1,0 +1,121 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
+        <h3 class="mb-2 mb-md-0">Settings</h3>
+        <div>
+            <button class="btn btn-primary" onclick="window.history.back()">
+                <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
+            </button>
+        </div>
+    </div>
+    <div class="row g-3 g-md-4">
+        <div class="col-12 col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Account Settings</h5>
+                </div>
+                <div class="card-body">
+                    <form>
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="username" value="{{ current_user.username }}" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" value="teacher@clarascience.edu" placeholder="Enter email">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Change Password</label>
+                            <div>
+                                <a href="{{ url_for('auth.change_password') }}" class="btn btn-warning">
+                                    <i class="bi bi-lock-fill me-2"></i>Change Password
+                                </a>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Update Account</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Preferences</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Email Notifications</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="emailAssignments" checked>
+                            <label class="form-check-label" for="emailAssignments">
+                                Assignment submissions
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="emailGrades" checked>
+                            <label class="form-check-label" for="emailGrades">
+                                Grade updates
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="emailAttendance">
+                            <label class="form-check-label" for="emailAttendance">
+                                Attendance alerts
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="timezone" class="form-label">Timezone</label>
+                        <select class="form-select" id="timezone">
+                            <option value="UTC-6">Central Time (UTC-6)</option>
+                            <option value="UTC-5">Eastern Time (UTC-5)</option>
+                            <option value="UTC-8">Pacific Time (UTC-8)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="language" class="form-label">Language</label>
+                        <select class="form-select" id="language">
+                            <option value="en">English</option>
+                            <option value="es">Spanish</option>
+                            <option value="fr">French</option>
+                        </select>
+                    </div>
+                    <button type="button" class="btn btn-success">Save Preferences</button>
+                </div>
+            </div>
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5>Data & Privacy</h5>
+                </div>
+                <div class="card-body">
+                    <button class="btn btn-outline-primary btn-sm me-2 mb-2">
+                        <i class="bi bi-download me-1"></i>Export My Data
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+// Placeholder for settings functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Form submission handling
+    const forms = document.querySelectorAll('form');
+    forms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            alert('Settings update functionality will be implemented soon!');
+        });
+    });
+    // Save preferences button
+    const savePrefsBtn = document.querySelector('.btn-success');
+    if (savePrefsBtn) {
+        savePrefsBtn.addEventListener('click', function() {
+            alert('Preferences saved successfully!');
+        });
+    }
+});
+</script>
+{% endblock %} 

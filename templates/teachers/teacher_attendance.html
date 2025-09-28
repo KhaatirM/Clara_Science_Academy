@@ -1,0 +1,44 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
+        <h3 class="mb-2 mb-md-0">Attendance Management</h3>
+        <div>
+            <button class="btn btn-primary" onclick="window.history.back()">
+                <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
+            </button>
+        </div>
+    </div>
+    {% if classes %}
+        <div class="row g-3 g-md-4">
+            {% for class in classes %}
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="card h-100">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="card-title mb-0">{{ class.name }}</h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text"><strong>Subject:</strong> {{ class.subject }}</p>
+                            <p class="card-text"><strong>School Year:</strong> {{ class.school_year.name if class.school_year else 'N/A' }}</p>
+                            <div class="mt-3 d-flex flex-column flex-md-row gap-2">
+                                <a href="{{ url_for('teacher.take_attendance', class_id=class.id) }}" class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-clipboard-check me-1"></i>Take Attendance
+                                </a>
+                                <a href="{{ url_for('teacher.view_class', class_id=class.id) }}" class="btn btn-outline-info btn-sm">
+                                    <i class="bi bi-eye me-1"></i>View Class
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            <h5>No Classes Assigned</h5>
+            <p>You don't have any classes assigned to you yet. Please contact the school administrator.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %} 

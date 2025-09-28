@@ -1,0 +1,359 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+    <div class="row justify-content-center g-3 g-md-4">
+        <div class="col-12 col-md-10 col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header text-white" style="background: linear-gradient(135deg, #2E8B57 0%, #228B22 50%, #556B2F 100%);">
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
+                        <h5 class="mb-2 mb-md-0"><i class="bi bi-pencil-square me-2"></i>Send New Message</h5>
+                        <a href="{{ url_for('teacher.teacher_communications') }}" class="btn btn-light btn-sm">
+                            <i class="bi bi-arrow-left me-1"></i>Back to Communications
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <!-- Message Type Selection -->
+                        <div class="mb-3">
+                            <label class="form-label">Message Type</label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="message_type" id="direct" value="direct" checked>
+                                <label class="btn btn-outline-primary" for="direct">
+                                    <i class="bi bi-person me-1"></i>Direct Message
+                                </label>
+                                <input type="radio" class="btn-check" name="message_type" id="group" value="group">
+                                <label class="btn btn-outline-info" for="group">
+                                    <i class="bi bi-people me-1"></i>Group Message
+                                </label>
+                            </div>
+                        </div>
+                        <!-- Recipient Selection -->
+                        <div class="mb-3" id="recipient-section">
+                            <label for="recipient_id" class="form-label">Recipient</label>
+                            <select class="form-select" id="recipient_id" name="recipient_id" required>
+                                <option value="">Choose a recipient...</option>
+                                <optgroup label="Students">
+                                    {% for student in students %}
+                                        {% if student.user %}
+                                            <option value="{{ student.user.id }}">
+                                                {{ student.first_name }} {{ student.last_name }} (Student)
+                                            </option>
+                                        {% endif %}
+                                    {% endfor %}
+                                </optgroup>
+                                <optgroup label="Teachers & Staff">
+                                    {% for teacher in teachers %}
+                                        {% if teacher.user and teacher.user.id != current_user.id %}
+                                            <option value="{{ teacher.user.id }}">
+                                                {{ teacher.first_name }} {{ teacher.last_name }} ({{ teacher.role }})
+                                            </option>
+                                        {% endif %}
+                                    {% endfor %}
+                                </optgroup>
+                            </select>
+                        </div>
+                        <!-- Group Selection (Hidden by default) -->
+                        <div class="mb-3 display-none" id="group-section">
+                            <label for="group_id" class="form-label">Select Group</label>
+                            <select class="form-select" id="group_id" name="group_id">
+                                <option value="">Choose a group...</option>
+                                {% for group in groups %}
+                                    <option value="{{ group.id }}">{{ group.name }} ({{ group.group_type }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <!-- Subject -->
+                        <div class="mb-3">
+                            <label for="subject" class="form-label">Subject (Optional)</label>
+                            <input type="text" class="form-control" id="subject" name="subject" 
+                                   placeholder="Enter message subject...">
+                        </div>
+                        <!-- Message Content -->
+                        <div class="mb-3">
+                            <label for="content" class="form-label">Message Content</label>
+                            <textarea class="form-control" id="content" name="content" rows="8" 
+                                      placeholder="Type your message here..." required></textarea>
+                            <div class="form-text">
+                                <small class="text-muted">
+                                    <span id="char-count">0</span> characters
+                                </small>
+                            </div>
+                        </div>
+                        <!-- File Attachments -->
+                        <div class="mb-3">
+                            <label class="form-label">Attachments (Optional)</label>
+                            <div class="input-group">
+                                <input type="file" class="form-control" id="attachments" name="attachments" 
+                                       multiple accept=".txt,.pdf,.png,.jpg,.jpeg,.gif,.doc,.docx,.xls,.xlsx,.ppt,.pptx">
+                                <button class="btn btn-outline-secondary" type="button" onclick="clearAttachments()">
+                                    <i class="bi bi-trash"></i> Clear
+                                </button>
+                            </div>
+                            <div class="form-text">
+                                <small class="text-muted">
+                                    Allowed file types: PDF, Images, Office documents (Max 10MB per file)
+                                </small>
+                            </div>
+                            <div id="attachment-preview" class="mt-2"></div>
+                        </div>
+                        <!-- Message Options -->
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="urgent" name="urgent">
+                                <label class="form-check-label" for="urgent">
+                                    <i class="bi bi-exclamation-triangle text-warning me-1"></i>Mark as Urgent
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="read_receipt" name="read_receipt">
+                                <label class="form-check-label" for="read_receipt">
+                                    <i class="bi bi-check-circle text-info me-1"></i>Request Read Receipt
+                                </label>
+                            </div>
+                        </div>
+                        <!-- Action Buttons -->
+                        <div class="d-flex flex-column flex-md-row justify-content-between gap-2">
+                            <button type="button" class="btn btn-outline-secondary">
+                                <i class="bi bi-save me-1"></i>Save Draft
+                            </button>
+                            <div class="d-flex flex-column flex-md-row gap-2">
+                                <button type="button" class="btn btn-outline-primary" onclick="previewMessage()">
+                                    <i class="bi bi-eye me-1"></i>Preview
+                                </button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-send me-1"></i>Send Message
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <!-- Draft Messages -->
+            <div class="card shadow-sm mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-save me-2"></i>Saved Drafts</h6>
+                </div>
+                <div class="card-body">
+                    <div id="drafts-list">
+                        <!-- Drafts will be loaded here -->
+                        <p class="text-muted text-center">No saved drafts</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Preview Modal -->
+<div class="modal fade" id="previewModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Message Preview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <strong>To:</strong> <span id="preview-recipient"></span>
+                </div>
+                <div class="mb-3">
+                    <strong>Subject:</strong> <span id="preview-subject"></span>
+                </div>
+                <div class="mb-3">
+                    <strong>Message:</strong>
+                    <div class="border rounded p-3 bg-light" id="preview-content"></div>
+                </div>
+                <div id="preview-attachments"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="sendFromPreview()">Send Message</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Character counter
+document.getElementById('content').addEventListener('input', function() {
+    const count = this.value.length;
+    document.getElementById('char-count').textContent = count;
+});
+
+// Message type toggle
+document.querySelectorAll('input[name="message_type"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        const recipientSection = document.getElementById('recipient-section');
+        const groupSection = document.getElementById('group-section');
+        
+        if (this.value === 'group') {
+            recipientSection.style.display = 'none';
+            groupSection.style.display = 'block';
+            document.getElementById('recipient_id').removeAttribute('required');
+            document.getElementById('group_id').setAttribute('required', 'required');
+        } else {
+            recipientSection.style.display = 'block';
+            groupSection.style.display = 'none';
+            document.getElementById('recipient_id').setAttribute('required', 'required');
+            document.getElementById('group_id').removeAttribute('required');
+        }
+    });
+});
+
+// File attachment preview
+document.getElementById('attachments').addEventListener('change', function() {
+    const preview = document.getElementById('attachment-preview');
+    preview.innerHTML = '';
+    
+    for (let file of this.files) {
+        const div = document.createElement('div');
+        div.className = 'alert alert-info d-flex justify-content-between align-items-center';
+        div.innerHTML = `
+            <span><i class="bi bi-paperclip me-1"></i>${file.name} (${(file.size / 1024).toFixed(1)} KB)</span>
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeFile(this)">
+                <i class="bi bi-x"></i>
+            </button>
+        `;
+        preview.appendChild(div);
+    }
+});
+
+function removeFile(button) {
+    button.parentElement.remove();
+    // Note: This doesn't actually remove the file from the input, just the preview
+    // In a real implementation, you'd need to handle this more carefully
+}
+
+function clearAttachments() {
+    document.getElementById('attachments').value = '';
+    document.getElementById('attachment-preview').innerHTML = '';
+}
+
+function saveDraft() {
+    const formData = {
+        recipient_id: document.getElementById('recipient_id').value,
+        subject: document.getElementById('subject').value,
+        content: document.getElementById('content').value,
+        message_type: document.querySelector('input[name="message_type"]:checked').value,
+        timestamp: new Date().toISOString()
+    };
+    
+    const drafts = JSON.parse(localStorage.getItem('message_drafts') || '[]');
+    drafts.push(formData);
+    localStorage.setItem('message_drafts', JSON.stringify(drafts));
+    
+    alert('Draft saved successfully!');
+    loadDrafts();
+}
+
+function loadDrafts() {
+    const drafts = JSON.parse(localStorage.getItem('message_drafts') || '[]');
+    const draftsList = document.getElementById('drafts-list');
+    
+    if (drafts.length === 0) {
+        draftsList.innerHTML = '<p class="text-muted text-center">No saved drafts</p>';
+        return;
+    }
+    
+    draftsList.innerHTML = '';
+    drafts.forEach((draft, index) => {
+        const div = document.createElement('div');
+        div.className = 'draft-item border-bottom pb-2 mb-2';
+        div.innerHTML = `
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <strong>${draft.subject || 'No Subject'}</strong><br>
+                    <small class="text-muted">${draft.content.substring(0, 50)}...</small><br>
+                    <small class="text-muted">${new Date(draft.timestamp).toLocaleString()}</small>
+                </div>
+                <div>
+                    <button class="btn btn-sm btn-outline-primary" onclick="loadDraft(${index})">
+                        <i class="bi bi-arrow-clockwise"></i> Load
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteDraft(${index})">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+        draftsList.appendChild(div);
+    });
+}
+
+function loadDraft(index) {
+    const drafts = JSON.parse(localStorage.getItem('message_drafts') || '[]');
+    const draft = drafts[index];
+    
+    document.getElementById('recipient_id').value = draft.recipient_id;
+    document.getElementById('subject').value = draft.subject;
+    document.getElementById('content').value = draft.content;
+    
+    // Set message type
+    document.querySelector(`input[value="${draft.message_type}"]`).checked = true;
+    document.querySelector(`input[value="${draft.message_type}"]`).dispatchEvent(new Event('change'));
+    
+    alert('Draft loaded successfully!');
+}
+
+function deleteDraft(index) {
+    if (confirm('Delete this draft?')) {
+        const drafts = JSON.parse(localStorage.getItem('message_drafts') || '[]');
+        drafts.splice(index, 1);
+        localStorage.setItem('message_drafts', JSON.stringify(drafts));
+        loadDrafts();
+    }
+}
+
+function previewMessage() {
+    const recipient = document.getElementById('recipient_id');
+    const subject = document.getElementById('subject');
+    const content = document.getElementById('content');
+    
+    document.getElementById('preview-recipient').textContent = 
+        recipient.options[recipient.selectedIndex]?.text || 'No recipient selected';
+    document.getElementById('preview-subject').textContent = subject.value || 'No subject';
+    document.getElementById('preview-content').textContent = content.value;
+    
+    // Show attachments preview
+    const attachments = document.getElementById('attachments');
+    const previewAttachments = document.getElementById('preview-attachments');
+    previewAttachments.innerHTML = '';
+    
+    if (attachments.files.length > 0) {
+        previewAttachments.innerHTML = '<strong>Attachments:</strong><br>';
+        for (let file of attachments.files) {
+            previewAttachments.innerHTML += `<small class="text-muted">• ${file.name}</small><br>`;
+        }
+    }
+    
+    new bootstrap.Modal(document.getElementById('previewModal')).show();
+}
+
+function sendFromPreview() {
+    document.querySelector('form').submit();
+}
+
+// Load drafts on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadDrafts();
+    
+    // Check for reply_to parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const replyTo = urlParams.get('reply_to');
+    if (replyTo) {
+        document.getElementById('recipient_id').value = replyTo;
+    }
+});
+</script>
+
+<style>
+.draft-item:hover {
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    padding: 8px;
+    margin: -8px;
+}
+</style>
+{% endblock %} 

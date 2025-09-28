@@ -1,0 +1,238 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- Discussion Header -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0">
+                            <i class="bi bi-chat-dots me-2"></i>{{ assignment.title }}
+                        </h4>
+                        <div>
+                            <span class="badge bg-light text-dark">Discussion Assignment</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Class:</strong> {{ assignment.class_info.name }}</p>
+                            <p><strong>Due Date:</strong> {{ assignment.due_date.strftime('%B %d, %Y at %I:%M %p') if assignment.due_date else 'No due date' }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Quarter:</strong> {{ assignment.quarter }}</p>
+                            <p><strong>Status:</strong> 
+                                {% if assignment.status == 'Active' %}
+                                    <span class="text-success">Active</span>
+                                {% elif assignment.status == 'Inactive' %}
+                                    <span class="text-warning">Inactive</span>
+                                {% else %}
+                                    <span class="text-secondary">{{ assignment.status }}</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Discussion Topic -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-lightbulb me-2"></i>Discussion Topic
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if assignment.description %}
+                        <div class="discussion-topic">
+                            {{ assignment.description|replace('\n', '<br>')|safe }}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No discussion topic provided.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Discussion Threads -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-secondary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="bi bi-chat-square-text me-2"></i>Discussion Threads
+                        </h5>
+                        <button class="btn btn-light btn-sm" onclick="showNewThreadModal()">
+                            <i class="bi bi-plus-circle me-1"></i>Start New Thread
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if threads %}
+                        <div class="discussion-threads">
+                            {% for thread in threads %}
+                                <div class="thread-item border rounded p-3 mb-3 {% if thread.is_pinned %}border-warning{% endif %}">
+                                    {% if thread.is_pinned %}
+                                        <div class="d-flex align-items-center mb-2">
+                                            <i class="bi bi-pin-fill text-warning me-2"></i>
+                                            <small class="text-warning fw-bold">PINNED</small>
+                                        </div>
+                                    {% endif %}
+                                    
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h6 class="mb-0">{{ thread.title }}</h6>
+                                        <small class="text-muted">{{ thread.created_at.strftime('%B %d, %Y at %I:%M %p') }}</small>
+                                    </div>
+                                    
+                                    <p class="mb-2">{{ thread.content }}</p>
+                                    
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">
+                                            <i class="bi bi-person me-1"></i>{{ thread.student.first_name }} {{ thread.student.last_name }}
+                                            <span class="ms-3">
+                                                <i class="bi bi-chat me-1"></i>{{ thread.posts|length }} repl{{ 'ies' if thread.posts|length != 1 else 'y' }}
+                                            </span>
+                                        </small>
+                                        
+                                        <div class="d-flex gap-2">
+                                            <button class="btn btn-outline-primary btn-sm" onclick="showReplyModal({{ thread.id }}, '{{ thread.title }}')">
+                                                <i class="bi bi-reply me-1"></i>Reply
+                                            </button>
+                                            {% if not thread.is_locked %}
+                                                <button class="btn btn-outline-secondary btn-sm" onclick="toggleThread({{ thread.id }})">
+                                                    <i class="bi bi-eye me-1"></i>View Thread
+                                                </button>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Thread replies (initially hidden) -->
+                                    <div id="thread-{{ thread.id }}-replies" class="mt-3" style="display: none;">
+                                        <div class="border-top pt-3">
+                                            <h6 class="mb-3">Replies ({{ thread.posts|length }})</h6>
+                                            {% for post in thread.posts %}
+                                                <div class="reply-item p-2 mb-2 bg-light rounded">
+                                                    <div class="d-flex justify-content-between align-items-start mb-1">
+                                                        <small class="fw-bold">
+                                                            {{ post.student.first_name }} {{ post.student.last_name }}
+                                                            {% if post.is_teacher_post %}
+                                                                <span class="badge bg-primary ms-1">Teacher</span>
+                                                            {% endif %}
+                                                        </small>
+                                                        <small class="text-muted">{{ post.created_at.strftime('%B %d, %Y at %I:%M %p') }}</small>
+                                                    </div>
+                                                    <p class="mb-0">{{ post.content }}</p>
+                                                </div>
+                                            {% endfor %}
+                                            
+                                            <!-- Reply form -->
+                                            <form method="POST" action="{{ url_for('student.reply_to_thread', thread_id=thread.id) }}" class="mt-3">
+                                                <div class="form-group">
+                                                    <textarea class="form-control" name="content" rows="3" placeholder="Write your reply..." required></textarea>
+                                                </div>
+                                                <div class="d-flex gap-2">
+                                                    <button type="submit" class="btn btn-primary btn-sm">
+                                                        <i class="bi bi-send me-1"></i>Post Reply
+                                                    </button>
+                                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="hideThread({{ thread.id }})">
+                                                        <i class="bi bi-x me-1"></i>Close
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <strong>No discussion threads yet!</strong> Be the first to start a conversation about this topic.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Participation Guidelines -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Participation Guidelines
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0">
+                        <li>Be respectful and constructive in your posts</li>
+                        <li>Stay on topic and contribute meaningfully to the discussion</li>
+                        <li>Use proper grammar and spelling</li>
+                        <li>Cite sources when making claims</li>
+                        <li>Respond to your classmates' posts thoughtfully</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <div class="mt-4">
+                <a href="{{ url_for('student.student_assignments') }}" class="btn btn-primary">
+                    <i class="bi bi-arrow-left me-1"></i>Back to Assignments
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- New Thread Modal -->
+<div class="modal fade" id="newThreadModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Start New Discussion Thread</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="newThreadForm" method="POST" action="{{ url_for('student.create_discussion_thread', assignment_id=assignment.id) }}">
+                    <div class="mb-3">
+                        <label for="threadTitle" class="form-label">Thread Title</label>
+                        <input type="text" class="form-control" id="threadTitle" name="title" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="threadContent" class="form-label">Your Post</label>
+                        <textarea class="form-control" id="threadContent" name="content" rows="5" required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" form="newThreadForm" class="btn btn-primary">Post Thread</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showNewThreadModal() {
+    const modal = new bootstrap.Modal(document.getElementById('newThreadModal'));
+    modal.show();
+}
+
+function toggleThread(threadId) {
+    const repliesDiv = document.getElementById(`thread-${threadId}-replies`);
+    if (repliesDiv.style.display === 'none') {
+        repliesDiv.style.display = 'block';
+    } else {
+        repliesDiv.style.display = 'none';
+    }
+}
+
+function hideThread(threadId) {
+    const repliesDiv = document.getElementById(`thread-${threadId}-replies`);
+    repliesDiv.style.display = 'none';
+}
+
+function showReplyModal(threadId, threadTitle) {
+    // For now, just toggle the thread view
+    toggleThread(threadId);
+}
+</script>
+{% endblock %}

@@ -1,0 +1,731 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-3 px-md-4 px-lg-5">
+    <!-- Enhanced Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);">
+                <div class="card-body text-white p-4">
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
+        <div>
+                            <h2 class="mb-2 mb-md-0 fw-bold">
+                                <i class="bi bi-chat-dots me-3"></i>Create Discussion Assignment
+                            </h2>
+                            <p class="mb-0 opacity-75">Design engaging discussions with rubric-based grading and interactive prompts</p>
+        </div>
+                        <div class="d-flex gap-2 mt-3 mt-md-0">
+            {% if current_user.role in ['Director', 'School Administrator'] %}
+                                <a href="{{ url_for('management.assignment_type_selector') }}" class="btn btn-light btn-sm">
+                    <i class="bi bi-arrow-left me-1"></i>Back to Assignment Types
+                </a>
+            {% else %}
+                                <a href="{{ url_for('teacher.assignment_type_selector') }}" class="btn btn-light btn-sm">
+                    <i class="bi bi-arrow-left me-1"></i>Back to Assignment Types
+                </a>
+            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <form id="discussionAssignmentForm" method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <input type="hidden" name="assignment_type" value="discussion">
+        
+        <div class="row">
+            <!-- Main Form Column -->
+            <div class="col-12 col-lg-8">
+                <!-- Discussion Information -->
+                <div class="card mb-4 border-0 shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0 fw-bold"><i class="bi bi-info-circle me-2"></i>Discussion Information</h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="title" class="form-label fw-semibold">
+                                    <i class="bi bi-pencil-square me-1 text-primary"></i>Discussion Title <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control form-control-lg" id="title" name="title" 
+                                       placeholder="e.g., Climate Change Impact on Local Communities" required>
+                                <div class="form-text">Make it engaging and thought-provoking</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="class_id" class="form-label fw-semibold">
+                                    <i class="bi bi-book me-1 text-primary"></i>Class <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select form-select-lg" id="class_id" name="class_id" required>
+                                    <option value="">Choose a class...</option>
+                                    {% for class in classes %}
+                                        <option value="{{ class.id }}">{{ class.name }} - {{ class.subject }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <label for="discussion_topic" class="form-label fw-semibold">
+                                <i class="bi bi-chat-quote me-1 text-primary"></i>Discussion Topic/Question <span class="text-danger">*</span>
+                            </label>
+                            <textarea class="form-control" id="discussion_topic" name="discussion_topic" rows="4" 
+                                      placeholder="Pose a thought-provoking question or present a topic for discussion..." required></textarea>
+                            <div class="form-text">This is the main question or topic that will drive the discussion</div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <label for="description" class="form-label fw-semibold">
+                                <i class="bi bi-card-text me-1 text-primary"></i>Additional Instructions
+                            </label>
+                            <textarea class="form-control" id="description" name="description" rows="3" 
+                                      placeholder="Provide additional context, resources, or specific guidelines for the discussion..."></textarea>
+                            <div class="form-text">Include any specific requirements, resources, or guidelines for students</div>
+                        </div>
+                        
+                        <div class="row g-3 mt-3">
+                            <div class="col-md-6">
+                                <label for="due_date" class="form-label fw-semibold">
+                                    <i class="bi bi-calendar-event me-1 text-primary"></i>Due Date <span class="text-danger">*</span>
+                                </label>
+                                <input type="datetime-local" class="form-control form-control-lg" id="due_date" name="due_date" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="quarter" class="form-label fw-semibold">
+                                    <i class="bi bi-calendar3 me-1 text-primary"></i>Quarter <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select form-select-lg" id="quarter" name="quarter" required>
+                                    <option value="1" {% if current_quarter == "1" %}selected{% endif %}>Quarter 1</option>
+                                    <option value="2" {% if current_quarter == "2" %}selected{% endif %}>Quarter 2</option>
+                                    <option value="3" {% if current_quarter == "3" %}selected{% endif %}>Quarter 3</option>
+                                    <option value="4" {% if current_quarter == "4" %}selected{% endif %}>Quarter 4</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Discussion Settings -->
+                <div class="card mb-4 border-0 shadow-sm">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0 fw-bold"><i class="bi bi-gear me-2"></i>Discussion Configuration</h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <!-- Participation Requirements -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-12">
+                                <h6 class="fw-semibold text-muted mb-3">Participation Requirements</h6>
+                    </div>
+                            <div class="col-md-4">
+                                <label for="min_posts" class="form-label fw-semibold">
+                                    <i class="bi bi-chat-dots me-1 text-success"></i>Minimum Posts
+                                </label>
+                                <div class="input-group">
+                                <input type="number" class="form-control" id="min_posts" name="min_posts" min="1" max="20" value="2">
+                                    <span class="input-group-text">posts</span>
+                                </div>
+                                <div class="form-text">Minimum posts each student must make</div>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="min_words" class="form-label fw-semibold">
+                                    <i class="bi bi-file-text me-1 text-success"></i>Minimum Words
+                                </label>
+                                <div class="input-group">
+                                <input type="number" class="form-control" id="min_words" name="min_words" min="10" max="1000" value="100">
+                                    <span class="input-group-text">words</span>
+                                </div>
+                                <div class="form-text">Minimum word count per post</div>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="max_posts" class="form-label fw-semibold">
+                                    <i class="bi bi-chat-square me-1 text-success"></i>Maximum Posts
+                                </label>
+                                <div class="input-group">
+                                <input type="number" class="form-control" id="max_posts" name="max_posts" min="1" max="50" value="10">
+                                    <span class="input-group-text">posts</span>
+                                </div>
+                                <div class="form-text">Maximum posts per student (0 = unlimited)</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Discussion Features -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-12">
+                                <h6 class="fw-semibold text-muted mb-3">Discussion Features</h6>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="allow_replies" name="allow_replies" checked>
+                                    <label class="form-check-label fw-semibold" for="allow_replies">
+                                        <i class="bi bi-reply me-2 text-info"></i>Allow Student Replies
+                                    </label>
+                                    <div class="form-text">Students can reply to each other's posts</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="require_citations" name="require_citations">
+                                    <label class="form-check-label fw-semibold" for="require_citations">
+                                        <i class="bi bi-book me-2 text-info"></i>Require Citations
+                                    </label>
+                                    <div class="form-text">Students must cite sources in their posts</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Moderation Settings -->
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <h6 class="fw-semibold text-muted mb-3">Moderation & Privacy</h6>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="anonymous_posts" name="anonymous_posts">
+                                    <label class="form-check-label fw-semibold" for="anonymous_posts">
+                                        <i class="bi bi-person-x me-2 text-warning"></i>Allow Anonymous Posts
+                                    </label>
+                                    <div class="form-text">Students can post anonymously</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="moderate_posts" name="moderate_posts">
+                                    <label class="form-check-label fw-semibold" for="moderate_posts">
+                                        <i class="bi bi-shield-check me-2 text-warning"></i>Moderate Posts
+                                    </label>
+                                    <div class="form-text">Review posts before they appear</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rubric Section -->
+                <div class="card mb-4 border-0 shadow-sm">
+                    <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 fw-bold"><i class="bi bi-list-check me-2"></i>Grading Rubric</h5>
+                        <button type="button" class="btn btn-light btn-lg fw-bold" id="addRubricCriteriaBtn">
+                            <i class="bi bi-plus-circle me-2"></i>Add Criteria
+                        </button>
+                    </div>
+                    <div class="card-body p-4">
+                        <div id="rubricContainer">
+                            <div class="text-center text-muted py-5">
+                                <div class="mb-3">
+                                    <i class="bi bi-list-check text-muted" style="font-size: 4rem; opacity: 0.3;"></i>
+                                </div>
+                                <h5 class="text-muted mb-2">No rubric criteria added yet</h5>
+                                <p class="text-muted mb-4">Click "Add Criteria" to create a comprehensive grading rubric</p>
+                                <button type="button" class="btn btn-outline-warning btn-lg" id="addFirstCriteriaBtn">
+                                    <i class="bi bi-plus-circle me-2"></i>Add Your First Criteria
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Discussion Prompts -->
+                <div class="card mb-4 border-0 shadow-sm">
+                    <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 fw-bold"><i class="bi bi-chat-quote me-2"></i>Discussion Prompts</h5>
+                        <button type="button" class="btn btn-light btn-lg fw-bold" id="addPromptBtn">
+                            <i class="bi bi-plus-circle me-2"></i>Add Prompt
+                        </button>
+                    </div>
+                    <div class="card-body p-4">
+                        <div id="promptsContainer">
+                            <div class="text-center text-muted py-5">
+                                <div class="mb-3">
+                                    <i class="bi bi-chat-quote text-muted" style="font-size: 4rem; opacity: 0.3;"></i>
+                                </div>
+                                <h5 class="text-muted mb-2">No discussion prompts added yet</h5>
+                                <p class="text-muted mb-4">Add prompts to guide student thinking and encourage deeper discussion</p>
+                                <button type="button" class="btn btn-outline-info btn-lg" id="addFirstPromptBtn">
+                                    <i class="bi bi-plus-circle me-2"></i>Add Your First Prompt
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Enhanced Sidebar -->
+            <div class="col-12 col-lg-4">
+                <!-- Discussion Preview -->
+                <div class="card mb-4 border-0 shadow-sm">
+                    <div class="card-header bg-info text-white">
+                        <h6 class="mb-0 fw-bold"><i class="bi bi-eye me-2"></i>Live Preview</h6>
+                    </div>
+                    <div class="card-body p-3">
+                        <div id="discussionPreview">
+                            <div class="text-center text-muted py-3">
+                                <i class="bi bi-eye-slash mb-2 d-block" style="font-size: 2rem; opacity: 0.5;"></i>
+                                <p class="small mb-0">Discussion preview will appear here as you build it</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Discussion Stats -->
+                <div class="card mb-4 border-0 shadow-sm">
+                    <div class="card-header bg-dark text-white">
+                        <h6 class="mb-0 fw-bold"><i class="bi bi-graph-up me-2"></i>Discussion Stats</h6>
+                    </div>
+                    <div class="card-body p-3">
+                        <div class="row text-center">
+                            <div class="col-6">
+                                <div class="border-end">
+                                    <h4 class="mb-0 text-warning" id="criteriaCount">0</h4>
+                                    <small class="text-muted">Rubric Criteria</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <h4 class="mb-0 text-info" id="promptsCount">0</h4>
+                                <small class="text-muted">Discussion Prompts</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Discussion Tips -->
+                <div class="card mb-4 border-0 shadow-sm">
+                    <div class="card-header bg-secondary text-white">
+                        <h6 class="mb-0 fw-bold"><i class="bi bi-lightbulb me-2"></i>Discussion Best Practices</h6>
+                    </div>
+                    <div class="card-body p-3">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <div class="d-flex align-items-start">
+                                    <div class="flex-shrink-0">
+                                        <i class="bi bi-lightbulb text-warning fs-5"></i>
+                                    </div>
+                                    <div class="flex-grow-1 ms-2">
+                                        <strong class="small">Engaging Topics</strong>
+                                        <p class="small text-muted mb-0">Choose topics that encourage critical thinking</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="d-flex align-items-start">
+                                    <div class="flex-shrink-0">
+                                        <i class="bi bi-list-check text-success fs-5"></i>
+                                    </div>
+                                    <div class="flex-grow-1 ms-2">
+                                        <strong class="small">Clear Guidelines</strong>
+                                        <p class="small text-muted mb-0">Set specific expectations for participation</p>
+                                    </div>
+                                </div>
+                    </div>
+                            <div class="col-12">
+                                <div class="d-flex align-items-start">
+                                    <div class="flex-shrink-0">
+                                        <i class="bi bi-shield-check text-info fs-5"></i>
+                            </div>
+                                    <div class="flex-grow-1 ms-2">
+                                        <strong class="small">Quality Control</strong>
+                                        <p class="small text-muted mb-0">Consider moderating posts for quality</p>
+                            </div>
+                            </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body p-4">
+                        <div class="d-grid gap-3">
+                            <button type="submit" class="btn btn-success btn-lg fw-bold" id="createDiscussionBtn">
+                                <i class="bi bi-check-circle me-2"></i>Create Discussion Assignment
+                            </button>
+                            {% if current_user.role in ['Director', 'School Administrator'] %}
+                                <a href="{{ url_for('management.assignment_type_selector') }}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-x-circle me-1"></i>Cancel
+                                </a>
+                            {% else %}
+                                <a href="{{ url_for('teacher.assignment_type_selector') }}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-x-circle me-1"></i>Cancel
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Rubric Criteria Template -->
+<template id="rubricCriteriaTemplate">
+    <div class="rubric-criteria-item card mb-3" data-criteria-id="">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">Criteria <span class="criteria-number"></span></h6>
+            <button type="button" class="btn btn-outline-danger btn-sm delete-criteria">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label class="form-label">Criteria Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control criteria-name" name="criteria_name[]" required placeholder="e.g., Critical Thinking, Participation, Quality of Writing">
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Description <span class="text-danger">*</span></label>
+                <textarea class="form-control criteria-description" name="criteria_description[]" rows="2" required placeholder="Describe what students need to demonstrate..."></textarea>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Points <span class="text-danger">*</span></label>
+                    <input type="number" class="form-control criteria-points" name="criteria_points[]" min="1" max="100" value="10" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Weight (%)</label>
+                    <input type="number" class="form-control criteria-weight" name="criteria_weight[]" min="1" max="100" value="25">
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<!-- Discussion Prompt Template -->
+<template id="discussionPromptTemplate">
+    <div class="discussion-prompt-item card mb-3" data-prompt-id="">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">Prompt <span class="prompt-number"></span></h6>
+            <button type="button" class="btn btn-outline-danger btn-sm delete-prompt">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label class="form-label">Prompt Text <span class="text-danger">*</span></label>
+                <textarea class="form-control prompt-text" name="prompt_text[]" rows="3" required placeholder="Enter a discussion prompt to guide student thinking..."></textarea>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Prompt Type</label>
+                <select class="form-select prompt-type" name="prompt_type[]">
+                    <option value="general">General Discussion</option>
+                    <option value="critical_thinking">Critical Thinking</option>
+                    <option value="personal_reflection">Personal Reflection</option>
+                    <option value="analysis">Analysis</option>
+                    <option value="synthesis">Synthesis</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</template>
+
+<style>
+.rubric-criteria-item, .discussion-prompt-item {
+    border-left: 4px solid #28a745;
+}
+
+.rubric-criteria-item .card-header, .discussion-prompt-item .card-header {
+    background-color: #f8f9fa;
+}
+
+#discussionPreview {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.preview-section {
+    border-bottom: 1px solid #dee2e6;
+    padding: 0.5rem 0;
+}
+
+.preview-section:last-child {
+    border-bottom: none;
+}
+
+.rubric-criteria-item, .discussion-prompt-item {
+    border-left: 4px solid #ffc107 !important;
+    transition: all 0.3s ease;
+}
+
+.rubric-criteria-item:hover, .discussion-prompt-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+}
+
+.rubric-criteria-item .card-header, .discussion-prompt-item .card-header {
+    background-color: #f8f9fa;
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    border: none;
+    transition: all 0.3s ease;
+}
+
+.btn-success:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(40,167,69,0.3);
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+}
+
+.preview-section {
+    border-bottom: 1px solid #dee2e6;
+    padding: 0.5rem 0;
+}
+
+.preview-section:last-child {
+    border-bottom: none;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let criteriaCounter = 0;
+    let promptCounter = 0;
+    
+    const rubricContainer = document.getElementById('rubricContainer');
+    const promptsContainer = document.getElementById('promptsContainer');
+    const rubricTemplate = document.getElementById('rubricCriteriaTemplate');
+    const promptTemplate = document.getElementById('discussionPromptTemplate');
+    const addRubricBtn = document.getElementById('addRubricCriteriaBtn');
+    const addPromptBtn = document.getElementById('addPromptBtn');
+    const discussionPreview = document.getElementById('discussionPreview');
+    const form = document.getElementById('discussionAssignmentForm');
+    
+    // Add rubric criteria
+    addRubricBtn.addEventListener('click', function() {
+        addRubricCriteria();
+    });
+    
+    // Add first criteria button
+    const addFirstCriteriaBtn = document.getElementById('addFirstCriteriaBtn');
+    if (addFirstCriteriaBtn) {
+        addFirstCriteriaBtn.addEventListener('click', function() {
+            addRubricCriteria();
+        });
+    }
+    
+    // Add discussion prompt
+    addPromptBtn.addEventListener('click', function() {
+        addDiscussionPrompt();
+    });
+    
+    // Add first prompt button
+    const addFirstPromptBtn = document.getElementById('addFirstPromptBtn');
+    if (addFirstPromptBtn) {
+        addFirstPromptBtn.addEventListener('click', function() {
+            addDiscussionPrompt();
+        });
+    }
+    
+    function addRubricCriteria() {
+        criteriaCounter++;
+        const criteriaElement = rubricTemplate.content.cloneNode(true);
+        const criteriaItem = criteriaElement.querySelector('.rubric-criteria-item');
+        const criteriaNumber = criteriaElement.querySelector('.criteria-number');
+        
+        criteriaItem.dataset.criteriaId = criteriaCounter;
+        criteriaNumber.textContent = criteriaCounter;
+        
+        // Set up event listeners
+        setupRubricEventListeners(criteriaElement);
+        
+        // Remove "no criteria" message if it exists
+        const noCriteriaMsg = rubricContainer.querySelector('.text-center');
+        if (noCriteriaMsg) {
+            noCriteriaMsg.remove();
+        }
+        
+        rubricContainer.appendChild(criteriaElement);
+        updateDiscussionPreview();
+    }
+    
+    function addDiscussionPrompt() {
+        promptCounter++;
+        const promptElement = promptTemplate.content.cloneNode(true);
+        const promptItem = promptElement.querySelector('.discussion-prompt-item');
+        const promptNumber = promptElement.querySelector('.prompt-number');
+        
+        promptItem.dataset.promptId = promptCounter;
+        promptNumber.textContent = promptCounter;
+        
+        // Set up event listeners
+        setupPromptEventListeners(promptElement);
+        
+        // Remove "no prompts" message if it exists
+        const noPromptsMsg = promptsContainer.querySelector('.text-center');
+        if (noPromptsMsg) {
+            noPromptsMsg.remove();
+        }
+        
+        promptsContainer.appendChild(promptElement);
+        updateDiscussionPreview();
+    }
+    
+    function setupRubricEventListeners(criteriaElement) {
+        const deleteBtn = criteriaElement.querySelector('.delete-criteria');
+        const criteriaName = criteriaElement.querySelector('.criteria-name');
+        const criteriaDescription = criteriaElement.querySelector('.criteria-description');
+        const criteriaPoints = criteriaElement.querySelector('.criteria-points');
+        
+        deleteBtn.addEventListener('click', function() {
+            if (confirm('Are you sure you want to delete this criteria?')) {
+                criteriaElement.querySelector('.rubric-criteria-item').remove();
+                updateCriteriaNumbers();
+                updateDiscussionPreview();
+            }
+        });
+        
+        // Update preview on changes
+        criteriaName.addEventListener('input', updateDiscussionPreview);
+        criteriaDescription.addEventListener('input', updateDiscussionPreview);
+        criteriaPoints.addEventListener('input', updateDiscussionPreview);
+    }
+    
+    function setupPromptEventListeners(promptElement) {
+        const deleteBtn = promptElement.querySelector('.delete-prompt');
+        const promptText = promptElement.querySelector('.prompt-text');
+        
+        deleteBtn.addEventListener('click', function() {
+            if (confirm('Are you sure you want to delete this prompt?')) {
+                promptElement.querySelector('.discussion-prompt-item').remove();
+                updatePromptNumbers();
+                updateDiscussionPreview();
+            }
+        });
+        
+        // Update preview on changes
+        promptText.addEventListener('input', updateDiscussionPreview);
+    }
+    
+    function updateCriteriaNumbers() {
+        const criteria = rubricContainer.querySelectorAll('.rubric-criteria-item');
+        criteria.forEach((item, index) => {
+            const criteriaNumber = item.querySelector('.criteria-number');
+            criteriaNumber.textContent = index + 1;
+        });
+    }
+    
+    function updatePromptNumbers() {
+        const prompts = promptsContainer.querySelectorAll('.discussion-prompt-item');
+        prompts.forEach((item, index) => {
+            const promptNumber = item.querySelector('.prompt-number');
+            promptNumber.textContent = index + 1;
+        });
+    }
+    
+    function updateDiscussionPreview() {
+        const title = document.getElementById('title').value || 'Untitled Discussion';
+        const topic = document.getElementById('discussion_topic').value || 'No topic specified';
+        const minPosts = document.getElementById('min_posts').value || '2';
+        const minWords = document.getElementById('min_words').value || '100';
+        const dueDate = document.getElementById('due_date').value;
+        
+        let previewHTML = `
+            <div class="preview-section border-bottom pb-2 mb-2">
+                <h6 class="fw-bold">${title}</h6>
+                <p class="small text-muted mb-0">${topic}</p>
+            </div>
+            <div class="preview-section border-bottom pb-2 mb-2">
+                <strong class="small">Participation Requirements:</strong>
+                <ul class="small mb-0">
+                    <li>Minimum ${minPosts} posts required</li>
+                    <li>Minimum ${minWords} words per post</li>
+                </ul>
+            </div>
+        `;
+        
+        if (dueDate) {
+            const date = new Date(dueDate);
+            previewHTML += `
+                <div class="preview-section border-bottom pb-2 mb-2">
+                    <strong class="small">Due Date:</strong>
+                    <p class="small text-muted mb-0">${date.toLocaleDateString()} at ${date.toLocaleTimeString()}</p>
+                </div>
+            `;
+        }
+        
+        // Add rubric criteria
+        const criteria = rubricContainer.querySelectorAll('.rubric-criteria-item');
+        if (criteria.length > 0) {
+            previewHTML += '<div class="preview-section border-bottom pb-2 mb-2"><strong class="small">Grading Rubric:</strong><ul class="small mb-0">';
+            criteria.forEach(item => {
+                const name = item.querySelector('.criteria-name').value || 'Untitled Criteria';
+                const points = item.querySelector('.criteria-points').value || '0';
+                previewHTML += `<li>${name} (${points} points)</li>`;
+            });
+            previewHTML += '</ul></div>';
+        }
+        
+        // Add discussion prompts
+        const prompts = promptsContainer.querySelectorAll('.discussion-prompt-item');
+        if (prompts.length > 0) {
+            previewHTML += '<div class="preview-section"><strong class="small">Discussion Prompts:</strong><ul class="small mb-0">';
+            prompts.forEach(item => {
+                const text = item.querySelector('.prompt-text').value || 'Untitled Prompt';
+                previewHTML += `<li>${text}</li>`;
+            });
+            previewHTML += '</ul></div>';
+        }
+        
+        discussionPreview.innerHTML = previewHTML;
+        
+        // Update stats
+        updateDiscussionStats(criteria.length, prompts.length);
+    }
+    
+    function updateDiscussionStats(criteriaCount, promptsCount) {
+        const criteriaCountEl = document.getElementById('criteriaCount');
+        const promptsCountEl = document.getElementById('promptsCount');
+        
+        if (criteriaCountEl) criteriaCountEl.textContent = criteriaCount;
+        if (promptsCountEl) promptsCountEl.textContent = promptsCount;
+    }
+    
+    // Update preview on form changes
+    const formInputs = form.querySelectorAll('input, textarea, select');
+    formInputs.forEach(input => {
+        input.addEventListener('input', updateDiscussionPreview);
+        input.addEventListener('change', updateDiscussionPreview);
+    });
+    
+    // Form submission
+    form.addEventListener('submit', function(e) {
+        const criteria = rubricContainer.querySelectorAll('.rubric-criteria-item');
+        
+        if (criteria.length === 0) {
+            e.preventDefault();
+            alert('Please add at least one rubric criteria for grading.');
+            return;
+        }
+        
+        // Validate criteria
+        let isValid = true;
+        criteria.forEach((item, index) => {
+            const name = item.querySelector('.criteria-name').value.trim();
+            const description = item.querySelector('.criteria-description').value.trim();
+            
+            if (!name || !description) {
+                isValid = false;
+                alert(`Rubric criteria ${index + 1} needs both a name and description.`);
+                return;
+            }
+        });
+        
+        if (!isValid) {
+            e.preventDefault();
+            return;
+        }
+        
+        // Show loading state
+        const submitBtn = document.getElementById('createDiscussionBtn');
+        submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Creating Discussion...';
+        submitBtn.disabled = true;
+    });
+});
+</script>
+{% endblock %}

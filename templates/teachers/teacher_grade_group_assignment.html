@@ -1,0 +1,186 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
+    <h3 class="mb-2 mb-md-0"><i class="bi bi-check-circle me-2"></i>Grade Assignment: {{ group_assignment.title }}</h3>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('teacher.view_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Back to Assignment
+      </a>
+    </div>
+  </div>
+
+  <!-- Assignment Info -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-header bg-primary text-white">
+      <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Assignment Information</h5>
+    </div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-12 col-md-6">
+          <strong>Due Date:</strong> {{ group_assignment.due_date.strftime('%B %d, %Y at %I:%M %p') }}
+        </div>
+        <div class="col-12 col-md-6">
+          <strong>Academic Period:</strong> 
+          <span class="badge bg-primary">{{ group_assignment.quarter }}</span>
+          {% if group_assignment.semester %}
+            <span class="badge bg-secondary">{{ group_assignment.semester }}</span>
+          {% endif %}
+        </div>
+        <div class="col-12 col-md-6">
+          <strong>Group Size:</strong> {{ group_assignment.group_size_min }} - {{ group_assignment.group_size_max }} students
+        </div>
+        <div class="col-12 col-md-6">
+          <strong>Type:</strong> 
+          <span class="badge bg-info">{{ group_assignment.collaboration_type.title() }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <div class="row g-3 g-md-4">
+      {% for group in groups %}
+        <div class="col-12">
+          <div class="card shadow-sm">
+            <div class="card-header bg-success text-white">
+              <h5 class="mb-0">
+                <i class="bi bi-people me-2"></i>{{ group.name }}
+                <small class="opacity-75">({{ group.members|length }} members)</small>
+              </h5>
+            </div>
+            <div class="card-body">
+              {% if group.members %}
+                <div class="table-responsive">
+                  <table class="table table-hover">
+                    <thead class="table-light">
+                      <tr>
+                        <th>Student</th>
+                        <th>Student ID</th>
+                        <th>Role</th>
+                        <th>Score (0-100)</th>
+                        <th>Comments</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for member in group.members %}
+                        <tr>
+                          <td>
+                            <div class="d-flex align-items-center">
+                              {% if member.student.photo_filename %}
+                                <img src="{{ url_for('static', filename='uploads/' ~ member.student.photo_filename) }}" 
+                                     class="rounded-circle me-2" width="32" height="32" alt="Photo">
+                              {% else %}
+                                <span class="avatar me-2">{{ member.student.first_name[0] }}{{ member.student.last_name[0] }}</span>
+                              {% endif %}
+                              <span>{{ member.student.first_name }} {{ member.student.last_name }}</span>
+                            </div>
+                          </td>
+                          <td>{{ member.student.student_id or 'N/A' }}</td>
+                          <td>
+                            {% if member.is_leader %}
+                              <span class="badge bg-warning text-dark">
+                                <i class="bi bi-star-fill me-1"></i>Leader
+                              </span>
+                            {% else %}
+                              <span class="badge bg-secondary">Member</span>
+                            {% endif %}
+                          </td>
+                          <td>
+                            {% set existing_grade = grades_by_student.get(member.student_id) %}
+                            <input type="number" 
+                                   class="form-control form-control-sm" 
+                                   name="score_{{ member.student_id }}" 
+                                   value="{% if existing_grade %}{{ (existing_grade.grade_data|from_json).score }}{% endif %}"
+                                   min="0" max="100" step="0.1" 
+                                   placeholder="0-100">
+                          </td>
+                          <td>
+                            <textarea class="form-control form-control-sm" 
+                                      name="comments_{{ member.student_id }}" 
+                                      rows="2" 
+                                      placeholder="Optional comments">{% if existing_grade %}{{ existing_grade.comments or '' }}{% endif %}</textarea>
+                          </td>
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              {% else %}
+                <div class="text-muted text-center py-3">
+                  <i class="bi bi-people text-muted" style="font-size: 2rem;"></i>
+                  <p class="mb-0">No members in this group.</p>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- Submit Button -->
+    <div class="row mt-4">
+      <div class="col-12">
+        <div class="card shadow-sm">
+          <div class="card-body text-center">
+            <p class="text-muted mb-3">Review all grades and comments before submitting.</p>
+            <button type="submit" class="btn btn-success btn-lg">
+              <i class="bi bi-check-circle me-2"></i>Save All Grades
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+
+<style>
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background-color: #6c757d;
+  color: white;
+  border-radius: 50%;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+</style>
+
+<script>
+// Auto-save functionality (optional)
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const inputs = form.querySelectorAll('input, textarea');
+    
+    // Add change event listeners to all inputs
+    inputs.forEach(input => {
+        input.addEventListener('change', function() {
+            // You could add auto-save functionality here
+            console.log('Grade changed:', this.name, this.value);
+        });
+    });
+    
+    // Form validation
+    form.addEventListener('submit', function(e) {
+        const scoreInputs = form.querySelectorAll('input[type="number"]');
+        let hasValidScores = false;
+        
+        scoreInputs.forEach(input => {
+            if (input.value && input.value >= 0 && input.value <= 100) {
+                hasValidScores = true;
+            }
+        });
+        
+        if (!hasValidScores) {
+            e.preventDefault();
+            alert('Please enter at least one valid score (0-100) before saving.');
+        }
+    });
+});
+</script>
+{% endblock %}

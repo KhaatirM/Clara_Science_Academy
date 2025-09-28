@@ -1,11 +1,22 @@
+# Standard library imports
+from datetime import datetime
+
+# Core Flask imports
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
 from flask_wtf.csrf import CSRFError
+
+# Database and model imports
 from models import User, TeacherStaff, db, MaintenanceMode, BugReport
-from werkzeug.security import check_password_hash, generate_password_hash
-from datetime import datetime
-from app import log_activity
+
+# Authentication and decorators
 from decorators import is_teacher_role
+
+# Application imports
+from app import log_activity
+
+# Werkzeug utilities
+from werkzeug.security import check_password_hash, generate_password_hash
 
 auth_blueprint = Blueprint('auth', __name__)
 
@@ -31,7 +42,7 @@ def login():
             # Check if username and password are provided
             if not username or not password:
                 flash('Username and password are required.', 'danger')
-                return render_template('maintenance.html', 
+                return render_template('shared/maintenance.html', 
                                      maintenance=maintenance, 
                                      progress_percentage=0)
             
@@ -82,7 +93,7 @@ def login():
         elapsed = (datetime.now() - maintenance.start_time).total_seconds()
         progress_percentage = min(100, max(0, int((elapsed / total_duration) * 100)))
         
-        return render_template('maintenance.html', 
+        return render_template('shared/maintenance.html', 
                              maintenance=maintenance, 
                              progress_percentage=progress_percentage)
     
@@ -99,7 +110,7 @@ def login():
             if not username or not password:
                 print(f"DEBUG: Missing credentials - username: {bool(username)}, password: {bool(password)}")
                 flash('Username and password are required.', 'danger')
-                return render_template('login.html')
+                return render_template('shared/login.html')
             
             user = User.query.filter_by(username=username).first()
             print(f"DEBUG: User found: {user}")
@@ -146,9 +157,9 @@ def login():
                 flash('Invalid username or password.', 'danger')
         except CSRFError:
             flash('Invalid request. Please try again.', 'danger')
-            return render_template('login.html')
+            return render_template('shared/login.html')
             
-    return render_template('login.html')
+    return render_template('shared/login.html')
 
 @auth_blueprint.route('/logout')
 @login_required
@@ -169,7 +180,7 @@ def logout():
 @auth_blueprint.route('/')
 @auth_blueprint.route('/home')
 def home():
-    return render_template('home.html')
+    return render_template('shared/home.html')
 
 @auth_blueprint.route('/dashboard')
 @login_required
@@ -186,7 +197,7 @@ def dashboard():
         return redirect(url_for('tech.tech_dashboard'))
     else:
         # Fallback for unknown roles
-        return render_template('home.html')
+        return render_template('shared/home.html')
 
 
 @auth_blueprint.route('/change-password-popup', methods=['POST'])
@@ -349,7 +360,7 @@ def bug_reports():
         bug_reports = BugReport.query.filter_by(user_id=current_user.id).order_by(BugReport.created_at.desc()).all()
         can_manage = False
     
-    return render_template('bug_reports.html', 
+    return render_template('tech/bug_reports.html', 
                          bug_reports=bug_reports, 
                          can_manage=can_manage,
                          current_user=current_user)
@@ -462,7 +473,7 @@ def change_password():
             return redirect(url_for('auth.change_password'))
     
     # GET request - show password change form
-    return render_template('change_password.html')
+    return render_template('shared/change_password.html')
 
 @auth_blueprint.route('/change-password', methods=['POST'])
 @login_required

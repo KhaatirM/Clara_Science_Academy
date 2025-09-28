@@ -1,0 +1,3027 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block dashboard_content %}
+    <!-- DEBUG: Current section is "{{ section }}" -->
+    {% if section == 'home' %}
+        <!-- Home Dashboard -->
+        <div class="container-fluid px-2 px-md-4">
+            <!-- Enhanced Header Section -->
+            <div class="dashboard-header mb-4">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h1 class="dashboard-title mb-2">
+                            <i class="bi bi-house-door-fill me-3"></i>
+                            Welcome to Your Dashboard
+                        </h1>
+                        <p class="dashboard-subtitle text-muted">{{ current_user.role }} Portal</p>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <div class="dashboard-time">
+                            <i class="bi bi-clock me-2"></i>
+                            <span id="current-time"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Enhanced Role-specific welcome message -->
+            <div class="welcome-card mb-4">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body p-4">
+                                <div class="row align-items-center">
+                                    <div class="col-md-8">
+                                        {% if current_user.role == 'Director' %}
+                                            <h4 class="card-title mb-3" style="color: #2E8B57;">
+                                                <i class="bi bi-award-fill me-2"></i>
+                                                Director Dashboard
+                                            </h4>
+                                            <p class="card-text lead">You have full administrative access to manage students, teachers, classes, and system settings. Monitor school performance and make data-driven decisions.</p>
+                                        {% elif current_user.role == 'School Administrator' %}
+                                            <h4 class="card-title text-success mb-3">
+                                                <i class="bi bi-person-badge-fill me-2"></i>
+                                                Administrator Dashboard
+                                            </h4>
+                                            <p class="card-text lead">You can manage students, teachers, classes, and oversee academic operations. Keep track of school activities and student progress.</p>
+                                        {% elif current_user.role == 'Teacher' %}
+                                            <h4 class="card-title text-info mb-3">
+                                                <i class="bi bi-mortarboard-fill me-2"></i>
+                                                Teacher Dashboard
+                                            </h4>
+                                            <p class="card-text lead">Manage your classes, assignments, grades, and student interactions. Track student progress and create engaging learning experiences.</p>
+                                        {% elif current_user.role == 'Student' %}
+                                            <h4 class="card-title text-warning mb-3">
+                                                <i class="bi bi-book-fill me-2"></i>
+                                                Student Dashboard
+                                            </h4>
+                                            <p class="card-text lead">View your classes, assignments, grades, and academic progress. Stay organized and track your learning journey.</p>
+                                        {% elif current_user.role in ['Tech', 'IT Support'] %}
+                                            <h4 class="card-title text-secondary mb-3">
+                                                <i class="bi bi-gear-fill me-2"></i>
+                                                Tech Support Dashboard
+                                            </h4>
+                                            <p class="card-text lead">Manage system maintenance, user accounts, and technical support. Keep the system running smoothly for all users.</p>
+                                        {% endif %}
+                                        
+                                        <!-- User ID Display -->
+                                        <div class="mt-3">
+                                            <div class="alert alert-light border">
+                                                <h6 class="mb-1"><i class="bi bi-person-badge me-2"></i>Your ID Number:</h6>
+                                                <span class="fw-bold fs-5" style="color: #2E8B57;">
+                                                    {% if current_user.role == 'Student' and current_user.student_profile %}
+                                                        {{ current_user.student_profile.student_id or 'N/A' }}
+                                                    {% elif current_user.role in ['Teacher', 'School Administrator', 'Director'] %}
+                                                        {% if current_user.teacher_staff and current_user.teacher_staff.staff_id %}
+                                                            {{ current_user.teacher_staff.staff_id }}
+                                                        {% else %}
+                                                            STAFF-{{ current_user.id }}
+                                                        {% endif %}
+                                                    {% else %}
+                                                        {{ current_user.id }}
+                                                    {% endif %}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 text-center">
+                                        <div class="welcome-icon">
+                                            {% if current_user.role == 'Director' %}
+                                                <i class="bi bi-award-fill display-1" style="color: #2E8B57;"></i>
+                                            {% elif current_user.role == 'School Administrator' %}
+                                                <i class="bi bi-person-badge-fill display-1 text-success"></i>
+                                            {% elif current_user.role == 'Teacher' %}
+                                                <i class="bi bi-mortarboard-fill display-1 text-info"></i>
+                                            {% elif current_user.role == 'Student' %}
+                                                <i class="bi bi-book-fill display-1 text-warning"></i>
+                                            {% elif current_user.role in ['Tech', 'IT Support'] %}
+                                                <i class="bi bi-gear-fill display-1 text-secondary"></i>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Enhanced Statistics Cards -->
+            <div class="row g-3 g-md-4 mb-4">
+                {% if current_user.role in ['Director', 'School Administrator'] %}
+                    <div class="col-12 col-sm-6 col-lg-3">
+                        <div class="stats-card card border-0 shadow-sm h-100">
+                            <div class="card-body text-center p-4">
+                                <div class="stats-icon mb-3">
+                                    <i class="bi bi-people-fill"></i>
+                                </div>
+                                <h2 class="stats-number text-primary mb-2">{{ stats.students if stats else 0 }}</h2>
+                                <p class="stats-label text-muted mb-0">Total Students</p>
+                                <div class="stats-trend mt-2">
+                                    <small class="text-success">
+                                        <i class="bi bi-arrow-up"></i> +5% this month
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-sm-6 col-lg-3">
+                        <div class="stats-card card border-0 shadow-sm h-100">
+                            <div class="card-body text-center p-4">
+                                <div class="stats-icon mb-3">
+                                    <i class="bi bi-person-badge-fill"></i>
+                                </div>
+                                <h2 class="stats-number text-success mb-2">{{ stats.teachers if stats else 0 }}</h2>
+                                <p class="stats-label text-muted mb-0">Teachers & Staff</p>
+                                <div class="stats-trend mt-2">
+                                    <small class="text-success">
+                                        <i class="bi bi-arrow-up"></i> +2% this month
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-sm-6 col-lg-3">
+                        <div class="stats-card card border-0 shadow-sm h-100">
+                            <div class="card-body text-center p-4">
+                                <div class="stats-icon mb-3">
+                                    <i class="bi bi-house-door-fill"></i>
+                                </div>
+                                <h2 class="stats-number text-warning mb-2">{{ stats.classes if stats else 0 }}</h2>
+                                <p class="stats-label text-muted mb-0">Total Classes</p>
+                                <div class="stats-trend mt-2">
+                                    <small class="text-success">
+                                        <i class="bi bi-arrow-up"></i> +3% this month
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-sm-6 col-lg-3">
+                        <div class="stats-card card border-0 shadow-sm h-100">
+                            <div class="card-body text-center p-4">
+                                <div class="stats-icon mb-3">
+                                    <i class="bi bi-journal-check"></i>
+                                </div>
+                                <h2 class="stats-number text-info mb-2">{{ stats.assignments if stats else 0 }}</h2>
+                                <p class="stats-label text-muted mb-0">Active Assignments</p>
+                                <div class="stats-trend mt-2">
+                                    <small class="text-success">
+                                        <i class="bi bi-arrow-up"></i> +12% this month
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% elif current_user.role == 'Teacher' %}
+                    <div class="col-12 col-sm-6 col-lg-4">
+                        <div class="card text-white bg-primary h-100">
+                            <div class="card-body text-center">
+                                <i class="bi bi-house-door-fill fs-1"></i>
+                                <h3 class="card-title">{{ teacher_data.classes|length if teacher_data else 0 }}</h3>
+                                <p class="card-text">My Classes</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-sm-6 col-lg-4">
+                        <div class="card text-white bg-success h-100">
+                            <div class="card-body text-center">
+                                <i class="bi bi-people-fill fs-1"></i>
+                                <h3 class="card-title">{{ teacher_data.total_students if teacher_data else 0 }}</h3>
+                                <p class="card-text">Total Students</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-sm-6 col-lg-4">
+                        <div class="card text-white bg-warning h-100">
+                            <div class="card-body text-center">
+                                <i class="bi bi-journal-check fs-1"></i>
+                                <h3 class="card-title">{{ teacher_data.active_assignments if teacher_data else 0 }}</h3>
+                                <p class="card-text">Active Assignments</p>
+                            </div>
+                        </div>
+                    </div>
+                {% elif current_user.role == 'Student' %}
+                    <div class="col-12 col-sm-6 col-lg-4">
+                        <div class="card text-white bg-primary h-100">
+                            <div class="card-body text-center">
+                                <i class="bi bi-house-door-fill fs-1"></i>
+                                <h3 class="card-title">{{ student_data.classes|length if student_data else 0 }}</h3>
+                                <p class="card-text">My Classes</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-sm-6 col-lg-4">
+                        <div class="card text-white bg-success h-100">
+                            <div class="card-body text-center">
+                                <i class="bi bi-journal-check fs-1"></i>
+                                <h3 class="card-title">{{ student_data.active_assignments if student_data else 0 }}</h3>
+                                <p class="card-text">Active Assignments</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-sm-6 col-lg-4">
+                        <div class="card text-white bg-warning h-100">
+                            <div class="card-body text-center">
+                                <i class="bi bi-mortarboard-fill fs-1"></i>
+                                <h3 class="card-title">{{ student_data.average_grade if student_data else 'N/A' }}</h3>
+                                <p class="card-text">Average Grade</p>
+                            </div>
+                        </div>
+                    </div>
+                {% elif current_user.role in ['Tech', 'IT Support'] %}
+                    <div class="col-12 col-sm-6 col-lg-4">
+                        <div class="card text-white bg-danger h-100">
+                            <div class="card-body text-center">
+                                <i class="bi bi-bug-fill fs-1"></i>
+                                <h3 class="card-title">{{ tech_data.error_reports if tech_data else 0 }}</h3>
+                                <p class="card-text">Error Reports</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-sm-6 col-lg-4">
+                        <div class="card text-white bg-warning h-100">
+                            <div class="card-body text-center">
+                                <i class="bi bi-people-fill fs-1"></i>
+                                <h3 class="card-title">{{ tech_data.total_users if tech_data else 0 }}</h3>
+                                <p class="card-text">Total Users</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-sm-6 col-lg-4">
+                        <div class="card text-white bg-info h-100">
+                            <div class="card-body text-center">
+                                <i class="bi bi-arrow-up-circle-fill fs-1"></i>
+                                <h3 class="card-title">{{ tech_data.system_updates if tech_data else 0 }}</h3>
+                                <p class="card-text">System Updates</p>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Quick Actions</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex flex-wrap gap-2">
+                                {% if current_user.role in ['Director', 'School Administrator'] %}
+                                    <a href="{{ url_for('management.add_student') }}" class="btn btn-outline-primary">Add New Student</a>
+                                    <a href="{{ url_for('management.add_teacher_staff') }}" class="btn btn-outline-success">Add New Staff</a>
+                                    <a href="{{ url_for('management.add_class') }}" class="btn btn-outline-info">Add New Class</a>
+                                    <a href="{{ url_for('management.add_assignment') }}" class="btn btn-outline-warning">Add New Assignment</a>
+                                {% elif current_user.role == 'Teacher' %}
+                                    <a href="{{ url_for('teacher.my_assignments') }}" class="btn btn-outline-primary">View Assignments</a>
+                                    <a href="{{ url_for('teacher.my_classes') }}" class="btn btn-outline-success">View My Classes</a>
+                                    <a href="{{ url_for('teacher.my_grades') }}" class="btn btn-outline-info">View Grades</a>
+                                    <a href="{{ url_for('teacher.attendance') }}" class="btn btn-outline-warning">Take Attendance</a>
+                                {% elif current_user.role == 'Student' %}
+                                    <a href="{{ url_for('student.student_classes') }}" class="btn btn-outline-primary">View My Classes</a>
+                                    <a href="{{ url_for('student.student_assignments') }}" class="btn btn-outline-success">View Assignments</a>
+                                    <a href="{{ url_for('student.student_dashboard') }}" class="btn btn-outline-info">View My Grades</a>
+                                    <a href="{{ url_for('student.student_dashboard') }}" class="btn btn-outline-warning">Submit Work</a>
+                                {% elif current_user.role in ['Tech', 'IT Support'] %}
+                                    <a href="{{ url_for('tech.error_reports') }}" class="btn btn-outline-danger">View Error Reports</a>
+                                    <a href="{{ url_for('tech.system_status') }}" class="btn btn-outline-warning">System Status</a>
+                                    <a href="{{ url_for('tech.user_management') }}" class="btn btn-outline-info">User Management</a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="row g-3 g-md-4">
+                <div class="col-12 col-lg-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Recent Activity</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if recent_activity %}
+                                <ul class="list-group list-group-flush">
+                                    {% for activity in recent_activity %}
+                                        <li class="list-group-item">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <strong>{{ activity.title }}</strong>
+                                                    <br>
+                                                    <small class="text-muted">{{ activity.description }}</small>
+                                                </div>
+                                                <small class="text-muted">{{ activity.timestamp.strftime('%Y-%m-%d %H:%M') if activity.timestamp else 'N/A' }}</small>
+                                            </div>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <p class="text-muted">No recent activity to display.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-lg-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Quick Stats</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if current_user.role in ['Director', 'School Administrator'] %}
+                                <p><strong>New Students This Month:</strong> {{ monthly_stats.new_students if monthly_stats else 0 }}</p>
+                                <p><strong>Assignments Due This Week:</strong> {{ weekly_stats.due_assignments if weekly_stats else 0 }}</p>
+                                <p><strong>Attendance Rate:</strong> {{ monthly_stats.attendance_rate if monthly_stats else 'N/A' }}%</p>
+                                <p><strong>Average Grade:</strong> {{ monthly_stats.average_grade if monthly_stats else 'N/A' }}</p>
+                            {% elif current_user.role == 'Teacher' %}
+                                <p><strong>Classes Teaching:</strong> {{ teacher_data.classes|length if teacher_data else 0 }}</p>
+                                <p><strong>Students Total:</strong> {{ teacher_data.total_students if teacher_data else 0 }}</p>
+                                <p><strong>Assignments Created:</strong> {{ teacher_data.total_assignments if teacher_data else 0 }}</p>
+                                <p><strong>Grades Entered:</strong> {{ teacher_data.grades_entered if teacher_data else 0 }}</p>
+                            {% elif current_user.role == 'Student' %}
+                                <p><strong>Classes Enrolled:</strong> {{ student_data.classes|length if student_data else 0 }}</p>
+                                <p><strong>Assignments Due:</strong> {{ student_data.due_assignments if student_data else 0 }}</p>
+                                <p><strong>Completed Assignments:</strong> {{ student_data.completed_assignments if student_data else 0 }}</p>
+                                <p><strong>Attendance Rate:</strong> {{ student_data.attendance_rate if student_data else 'N/A' }}%</p>
+                            {% elif current_user.role in ['Tech', 'IT Support'] %}
+                                <p><strong>System Status:</strong> <span class="badge bg-success">Online</span></p>
+                                <p><strong>Last Backup:</strong> {{ tech_data.last_backup if tech_data else 'N/A' }}</p>
+                                <p><strong>Active Users:</strong> {{ tech_data.active_users if tech_data else 0 }}</p>
+                                <p><strong>System Load:</strong> {{ tech_data.system_load if tech_data else 'N/A' }}%</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    {% elif section == 'students' %}
+        <!-- Students Management View -->
+        <h2 class="mb-4">Students Management</h2>
+
+        <!-- Search Bar -->
+        <!-- Enhanced Search Interface -->
+        <div class="card shadow-sm mb-3">
+            <div class="card-header bg-light">
+                <h6 class="mb-0"><i class="bi bi-search me-2"></i>Advanced Student Search</h6>
+            </div>
+            <div class="card-body">
+                <form method="GET" action="{{ url_for('management.students') }}" class="row g-3">
+                    <!-- Search Query -->
+                    <div class="col-md-4">
+                        <label for="search" class="form-label">Search Term</label>
+                        <input type="text" 
+                               class="form-control" 
+                               id="search" 
+                               name="search" 
+                               value="{{ search_query or '' }}" 
+                               placeholder="Enter search term..."
+                               autocomplete="off">
+                    </div>
+                    
+                    <!-- Search Type -->
+                    <div class="col-md-2">
+                        <label for="search_type" class="form-label">Search In</label>
+                        <select class="form-select" id="search_type" name="search_type">
+                            <option value="all" {% if search_type == 'all' %}selected{% endif %}>All Fields</option>
+                            <option value="name" {% if search_type == 'name' %}selected{% endif %}>Student Name</option>
+                            <option value="contact" {% if search_type == 'contact' %}selected{% endif %}>Contact Info</option>
+                            <option value="phone" {% if search_type == 'phone' %}selected{% endif %}>Phone Numbers</option>
+                            <option value="address" {% if search_type == 'address' %}selected{% endif %}>Address</option>
+                            <option value="parents" {% if search_type == 'parents' %}selected{% endif %}>Parent Names</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Grade Level Filter -->
+                    <div class="col-md-2">
+                        <label for="grade_level" class="form-label">Grade Level</label>
+                        <select class="form-select" id="grade_level" name="grade_level">
+                            <option value="">All Grades</option>
+                            <option value="1" {% if grade_filter == '1' %}selected{% endif %}>1st Grade</option>
+                            <option value="2" {% if grade_filter == '2' %}selected{% endif %}>2nd Grade</option>
+                            <option value="3" {% if grade_filter == '3' %}selected{% endif %}>3rd Grade</option>
+                            <option value="4" {% if grade_filter == '4' %}selected{% endif %}>4th Grade</option>
+                            <option value="5" {% if grade_filter == '5' %}selected{% endif %}>5th Grade</option>
+                            <option value="6" {% if grade_filter == '6' %}selected{% endif %}>6th Grade</option>
+                            <option value="7" {% if grade_filter == '7' %}selected{% endif %}>7th Grade</option>
+                            <option value="8" {% if grade_filter == '8' %}selected{% endif %}>8th Grade</option>
+                            <option value="9" {% if grade_filter == '9' %}selected{% endif %}>9th Grade</option>
+                            <option value="10" {% if grade_filter == '10' %}selected{% endif %}>10th Grade</option>
+                            <option value="11" {% if grade_filter == '11' %}selected{% endif %}>11th Grade</option>
+                            <option value="12" {% if grade_filter == '12' %}selected{% endif %}>12th Grade</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Status Filter -->
+                    <div class="col-md-2">
+                        <label for="status" class="form-label">Account Status</label>
+                        <select class="form-select" id="status" name="status">
+                            <option value="">All Students</option>
+                            <option value="has_account" {% if status_filter == 'has_account' %}selected{% endif %}>Has Account</option>
+                            <option value="no_account" {% if status_filter == 'no_account' %}selected{% endif %}>No Account</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Sort Options -->
+                    <div class="col-md-2">
+                        <label for="sort" class="form-label">Sort By</label>
+                        <select class="form-select" id="sort" name="sort">
+                            <option value="name" {% if sort_by == 'name' %}selected{% endif %}>Name</option>
+                            <option value="grade" {% if sort_by == 'grade' %}selected{% endif %}>Grade Level</option>
+                            <option value="id" {% if sort_by == 'id' %}selected{% endif %}>Student ID</option>
+                            <option value="gpa" {% if sort_by == 'gpa' %}selected{% endif %}>GPA</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Sort Order -->
+                    <div class="col-md-2">
+                        <label for="order" class="form-label">Order</label>
+                        <select class="form-select" id="order" name="order">
+                            <option value="asc" {% if sort_order == 'asc' %}selected{% endif %}>Ascending</option>
+                            <option value="desc" {% if sort_order == 'desc' %}selected{% endif %}>Descending</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="col-12">
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-search me-2"></i>Search
+                            </button>
+                            <a href="{{ url_for('management.students') }}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-clockwise me-2"></i>Reset
+                            </a>
+                            <button type="button" class="btn btn-outline-info" data-bs-toggle="collapse" data-bs-target="#searchTips">
+                                <i class="bi bi-info-circle me-2"></i>Search Tips
+                            </button>
+                        </div>
+                    </div>
+                </form>
+                
+                <!-- Search Tips -->
+                <div class="collapse mt-3" id="searchTips">
+                    <div class="alert alert-info">
+                        <h6><i class="bi bi-lightbulb me-2"></i>Search Tips:</h6>
+                        <ul class="mb-0">
+                            <li><strong>All Fields:</strong> Search across student names, contact info, addresses, and parent information</li>
+                            <li><strong>Student Name:</strong> Search by first or last name</li>
+                            <li><strong>Contact Info:</strong> Search by student or parent email addresses</li>
+                            <li><strong>Phone Numbers:</strong> Search by parent or emergency contact phone numbers</li>
+                            <li><strong>Address:</strong> Search by street, city, state, or zip code</li>
+                            <li><strong>Parent Names:</strong> Search by parent first or last names</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Enhanced Search Results Info -->
+        <div class="row mb-3">
+            <div class="col-md-8">
+                {% if search_query or grade_filter or status_filter %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Search Results:</strong> Found {{ total_students }} student(s)
+                        {% if search_query %} matching "{{ search_query }}"{% endif %}
+                        {% if grade_filter %} in grade {{ grade_filter }}{% endif %}
+                        {% if status_filter == 'has_account' %} with accounts{% endif %}
+                        {% if status_filter == 'no_account' %} without accounts{% endif %}
+                    </div>
+                {% endif %}
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-light">
+                    <div class="card-body py-2">
+                        <div class="row text-center">
+                            <div class="col-6">
+                                <small class="text-muted">Total</small><br>
+                                <strong>{{ total_students }}</strong>
+                            </div>
+                            <div class="col-6">
+                                <small class="text-muted">With Accounts</small><br>
+                                <strong class="text-success">{{ students_with_accounts }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-people-fill me-2"></i>All Students</h5>
+                    <a href="{{ url_for('management.add_student') }}" class="btn btn-light btn-sm">
+                        <i class="bi bi-plus-circle me-1"></i>Add Student
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Grade Level</th>
+                                <th>Date of Birth</th>
+                                <th>Student ID</th>
+                                <th>GPA</th>
+                                <th>Username</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for student in students %}
+                                <tr>
+                                    <td>{{ student.first_name }} {{ student.last_name }}</td>
+                                    <td>{{ student.grade_level or 'N/A' }}</td>
+                                    <td>{{ student.dob or 'N/A' }}</td>
+                                    <td>{{ student.student_id or 'N/A' }}</td>
+                                    <td>
+                                        {% if student.gpa %}
+                                            <span class="badge {% if student.gpa >= 3.5 %}bg-success{% elif student.gpa >= 2.0 %}bg-warning{% else %}bg-danger{% endif %}">
+                                                {{ "%.2f"|format(student.gpa) }}
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">N/A</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if student.user %}
+                                            <span class="badge bg-info">{{ student.user.username }}</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">No Account</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="viewStudent({{ student.id }})">View</button>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="editStudent({{ student.id }})">Edit</button>
+                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeStudent({{ student.id }}, '{{ student.first_name }} {{ student.last_name }}')">Remove</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted">No students found.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    {% elif section == 'teachers' %}
+        <!-- Teachers & Staff Management View -->
+        <h2 class="mb-4">Teachers & Staff Management</h2>
+
+        <!-- Advanced Teacher Search -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-search me-2"></i>Advanced Teacher & Staff Search</h5>
+            </div>
+            <div class="card-body">
+                <form method="GET" action="{{ url_for('management.teachers') }}" id="teacherSearchForm">
+                    <div class="row g-3">
+                        <!-- Search Query -->
+                        <div class="col-md-6">
+                            <label for="search" class="form-label">Search Query</label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="search" 
+                                   name="search" 
+                                   value="{{ search_query or '' }}" 
+                                   placeholder="Enter search term..."
+                                   autocomplete="off">
+                        </div>
+                        
+                        <!-- Search Type -->
+                        <div class="col-md-6">
+                            <label for="search_type" class="form-label">Search In</label>
+                            <select class="form-select" id="search_type" name="search_type">
+                                <option value="all" {% if search_type == 'all' %}selected{% endif %}>All Fields</option>
+                                <option value="name" {% if search_type == 'name' %}selected{% endif %}>Staff Name</option>
+                                <option value="contact" {% if search_type == 'contact' %}selected{% endif %}>Contact Info</option>
+                                <option value="role" {% if search_type == 'role' %}selected{% endif %}>Role & Position</option>
+                                <option value="department" {% if search_type == 'department' %}selected{% endif %}>Department</option>
+                                <option value="subject" {% if search_type == 'subject' %}selected{% endif %}>Subject</option>
+                                <option value="address" {% if search_type == 'address' %}selected{% endif %}>Address</option>
+                                <option value="emergency" {% if search_type == 'emergency' %}selected{% endif %}>Emergency Contact</option>
+                                <option value="staff_id" {% if search_type == 'staff_id' %}selected{% endif %}>Staff ID</option>
+                                <option value="employment" {% if search_type == 'employment' %}selected{% endif %}>Employment Type</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Department Filter -->
+                        <div class="col-md-4">
+                            <label for="department" class="form-label">Department</label>
+                            <select class="form-select" id="department" name="department">
+                                <option value="">All Departments</option>
+                                <option value="Mathematics" {% if department_filter == 'Mathematics' %}selected{% endif %}>Mathematics</option>
+                                <option value="Science" {% if department_filter == 'Science' %}selected{% endif %}>Science</option>
+                                <option value="English" {% if department_filter == 'English' %}selected{% endif %}>English</option>
+                                <option value="History & Social Studies" {% if department_filter == 'History & Social Studies' %}selected{% endif %}>History & Social Studies</option>
+                                <option value="Physical Education & Health" {% if department_filter == 'Physical Education & Health' %}selected{% endif %}>Physical Education & Health</option>
+                                <option value="Music & Arts" {% if department_filter == 'Music & Arts' %}selected{% endif %}>Music & Arts</option>
+                                <option value="Computer Science & Technology" {% if department_filter == 'Computer Science & Technology' %}selected{% endif %}>Computer Science & Technology</option>
+                                <option value="Administration" {% if department_filter == 'Administration' %}selected{% endif %}>Administration</option>
+                                <option value="Counseling" {% if department_filter == 'Counseling' %}selected{% endif %}>Counseling</option>
+                                <option value="Special Education" {% if department_filter == 'Special Education' %}selected{% endif %}>Special Education</option>
+                                <option value="Foreign Language" {% if department_filter == 'Foreign Language' %}selected{% endif %}>Foreign Language</option>
+                                <option value="Business" {% if department_filter == 'Business' %}selected{% endif %}>Business</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Role Filter -->
+                        <div class="col-md-4">
+                            <label for="role" class="form-label">Role</label>
+                            <select class="form-select" id="role" name="role">
+                                <option value="">All Roles</option>
+                                <option value="Director" {% if role_filter == 'Director' %}selected{% endif %}>Director</option>
+                                <option value="School Administrator" {% if role_filter == 'School Administrator' %}selected{% endif %}>School Administrator</option>
+                                <option value="Math Teacher" {% if role_filter == 'Math Teacher' %}selected{% endif %}>Math Teacher</option>
+                                <option value="Physics Teacher" {% if role_filter == 'Physics Teacher' %}selected{% endif %}>Physics Teacher</option>
+                                <option value="English Language Arts Teacher" {% if role_filter == 'English Language Arts Teacher' %}selected{% endif %}>English Language Arts Teacher</option>
+                                <option value="History Teacher" {% if role_filter == 'History Teacher' %}selected{% endif %}>History Teacher</option>
+                                <option value="Science Teacher" {% if role_filter == 'Science Teacher' %}selected{% endif %}>Science Teacher</option>
+                                <option value="Substitute Teacher" {% if role_filter == 'Substitute Teacher' %}selected{% endif %}>Substitute Teacher</option>
+                                <option value="School Counselor" {% if role_filter == 'School Counselor' %}selected{% endif %}>School Counselor</option>
+                                <option value="IT Support" {% if role_filter == 'IT Support' %}selected{% endif %}>IT Support</option>
+                                <option value="Other Staff" {% if role_filter == 'Other Staff' %}selected{% endif %}>Other Staff</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Employment Type Filter -->
+                        <div class="col-md-4">
+                            <label for="employment" class="form-label">Employment Type</label>
+                            <select class="form-select" id="employment" name="employment">
+                                <option value="">All Types</option>
+                                <option value="Full Time" {% if employment_filter == 'Full Time' %}selected{% endif %}>Full Time</option>
+                                <option value="Part Time" {% if employment_filter == 'Part Time' %}selected{% endif %}>Part Time</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Sort Options -->
+                        <div class="col-md-6">
+                            <label for="sort" class="form-label">Sort By</label>
+                            <select class="form-select" id="sort" name="sort">
+                                <option value="name" {% if sort_by == 'name' %}selected{% endif %}>Name</option>
+                                <option value="role" {% if sort_by == 'role' %}selected{% endif %}>Role</option>
+                                <option value="department" {% if sort_by == 'department' %}selected{% endif %}>Department</option>
+                                <option value="hire_date" {% if sort_by == 'hire_date' %}selected{% endif %}>Hire Date</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Sort Order -->
+                        <div class="col-md-6">
+                            <label for="order" class="form-label">Order</label>
+                            <select class="form-select" id="order" name="order">
+                                <option value="asc" {% if sort_order == 'asc' %}selected{% endif %}>Ascending</option>
+                                <option value="desc" {% if sort_order == 'desc' %}selected{% endif %}>Descending</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        <div class="col-12">
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-search me-2"></i>Search
+                                </button>
+                                <a href="{{ url_for('management.teachers') }}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-arrow-clockwise me-2"></i>Reset
+                                </a>
+                                <button type="button" class="btn btn-outline-info" data-bs-toggle="collapse" data-bs-target="#searchTips">
+                                    <i class="bi bi-info-circle me-2"></i>Search Tips
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Search Tips -->
+                    <div class="collapse mt-3" id="searchTips">
+                        <div class="alert alert-info">
+                            <h6><i class="bi bi-lightbulb me-2"></i>Search Tips:</h6>
+                            <ul class="mb-0">
+                                <li><strong>All Fields:</strong> Searches across all staff information including name, contact, role, department, address, emergency contacts, and employment details</li>
+                                <li><strong>Staff Name:</strong> Search by first name, last name, or middle initial</li>
+                                <li><strong>Contact Info:</strong> Search by email address or phone number</li>
+                                <li><strong>Role & Position:</strong> Search by assigned role or position title</li>
+                                <li><strong>Department:</strong> Search within specific departments</li>
+                                <li><strong>Subject:</strong> Search by subjects taught</li>
+                                <li><strong>Address:</strong> Search by street, apartment/unit, city, state, or zip code</li>
+                                <li><strong>Emergency Contact:</strong> Search by emergency contact name, phone, email, or relationship</li>
+                                <li><strong>Staff ID:</strong> Search by staff identification number</li>
+                                <li><strong>Employment Type:</strong> Search by Full Time or Part Time employment status</li>
+                                <li><strong>Keyboard Shortcuts:</strong> Ctrl/Cmd + F to focus search, Escape to clear</li>
+                            </ul>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Search Results Info -->
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <div class="alert alert-success mb-0">
+                    <i class="bi bi-people-fill me-2"></i>
+                    <strong>Total Staff:</strong> {{ total_teachers or teachers|length }}
+                    {% if teachers_with_accounts is defined %}
+                        | <strong>With Accounts:</strong> {{ teachers_with_accounts }}
+                        | <strong>Without Accounts:</strong> {{ teachers_without_accounts }}
+                    {% endif %}
+                </div>
+            </div>
+            {% if search_query or department_filter or role_filter or employment_filter %}
+            <div class="col-md-6">
+                <div class="alert alert-info mb-0">
+                    <i class="bi bi-funnel me-2"></i>
+                    <strong>Active Filters:</strong>
+                    {% if search_query %}<span class="badge bg-primary me-1">Search: "{{ search_query }}"</span>{% endif %}
+                    {% if department_filter %}<span class="badge bg-secondary me-1">Dept: "{{ department_filter }}"</span>{% endif %}
+                    {% if role_filter %}<span class="badge bg-warning me-1">Role: "{{ role_filter }}"</span>{% endif %}
+                    {% if employment_filter %}<span class="badge bg-info me-1">Type: "{{ employment_filter }}"</span>{% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-header bg-success text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-person-badge-fill me-2"></i>Teachers & Staff Directory</h5>
+                    <a href="{{ url_for('management.add_teacher_staff') }}" class="btn btn-light btn-sm">
+                        <i class="bi bi-plus-circle me-1"></i>Add Staff
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <style>
+                    .teachers-table {
+                        font-size: 0.9rem;
+                    }
+                    .teachers-table th {
+                        font-weight: 600;
+                        border-bottom: 2px solid #dee2e6;
+                    }
+                    .teachers-table td {
+                        vertical-align: middle;
+                        padding: 0.75rem 0.5rem;
+                    }
+                    .teachers-table .badge {
+                        font-size: 0.75rem;
+                    }
+                    .teachers-table .btn-group-sm .btn {
+                        padding: 0.25rem 0.5rem;
+                        font-size: 0.75rem;
+                    }
+                    @media (max-width: 768px) {
+                        .teachers-table {
+                            font-size: 0.8rem;
+                        }
+                        .teachers-table th,
+                        .teachers-table td {
+                            padding: 0.5rem 0.25rem;
+                        }
+                    }
+                </style>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle teachers-table">
+                        <thead class="table-dark">
+                            <tr>
+                                <th style="min-width: 200px;">Name</th>
+                                <th style="min-width: 120px;">Role</th>
+                                <th style="min-width: 150px;">Department</th>
+                                <th style="min-width: 180px;">Email</th>
+                                <th style="min-width: 100px;">Username</th>
+                                <th style="min-width: 100px;">Employment</th>
+                                <th style="min-width: 80px;">Status</th>
+                                <th style="min-width: 200px;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for teacher in teachers %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="me-3">
+                                                {% if teacher.image %}
+                                                    <img src="{{ url_for('static', filename='uploads/' + teacher.image) }}" 
+                                                         alt="{{ teacher.first_name }} {{ teacher.last_name }}" 
+                                                         class="rounded-circle" 
+                                                         style="width: 40px; height: 40px; object-fit: cover;">
+                                                {% else %}
+                                                    <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center" 
+                                                         style="width: 40px; height: 40px;">
+                                                        <i class="bi bi-person-fill text-white"></i>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                            <div>
+                                                <div class="fw-bold text-dark">{{ teacher.first_name }}{% if teacher.middle_initial %} {{ teacher.middle_initial }}.{% endif %} {{ teacher.last_name }}</div>
+                                                {% if teacher.staff_id %}
+                                                    <small class="text-muted">ID: {{ teacher.staff_id }}</small>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if teacher.user %}
+                                            {% set badge_class = 'bg-danger' if teacher.user.role == 'Director' else 'bg-warning' if teacher.user.role == 'School Administrator' else 'bg-info' if teacher.user.role == 'Teacher' else 'bg-secondary' if teacher.user.role == 'Tech' else 'bg-light text-dark' %}
+                                            <span class="badge {{ badge_class }} mb-1 d-block">
+                                                {{ teacher.user.role }}
+                                            </span>
+                                            {% if teacher.assigned_role and teacher.assigned_role != teacher.user.role %}
+                                                <small class="text-muted d-block">{{ teacher.assigned_role }}</small>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="badge bg-warning mb-1 d-block">No Account</span>
+                                            {% if teacher.assigned_role %}
+                                                <small class="text-muted d-block">{{ teacher.assigned_role }}</small>
+                                            {% endif %}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if teacher.department %}
+                                            {% set departments = teacher.department.split(',') %}
+                                            {% for dept in departments %}
+                                                <span class="badge bg-info mb-1 d-block text-wrap" style="max-width: 140px; white-space: normal; line-height: 1.2;">{{ dept.strip() }}</span>
+                                            {% endfor %}
+                                        {% else %}
+                                            <span class="text-muted">N/A</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="text-truncate" style="max-width: 170px;" title="{{ teacher.email or 'N/A' }}">
+                                            {{ teacher.email or 'N/A' }}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if teacher.user %}
+                                            <span class="badge bg-primary">{{ teacher.user.username }}</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">No Account</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if teacher.employment_type %}
+                                            <span class="badge bg-secondary">{{ teacher.employment_type }}</span>
+                                        {% else %}
+                                            <span class="text-muted">N/A</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-success">Active</span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex flex-column gap-1">
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <button type="button" class="btn btn-outline-primary" onclick="viewTeacher({{ teacher.id }})" title="View Details">
+                                                    <i class="bi bi-eye"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-outline-secondary" onclick="editTeacher({{ teacher.id }})" title="Edit">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-outline-danger" onclick="removeTeacher({{ teacher.id }}, '{{ teacher.first_name }} {{ teacher.last_name }}')" title="Remove">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted py-4">
+                                        <i class="bi bi-search display-4 text-muted"></i>
+                                        <p class="mt-2 mb-0">No teachers or staff found matching your criteria.</p>
+                                        <small>Try adjusting your search filters or clearing them to see all staff.</small>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    {% elif section == 'classes' %}
+        <!-- Classes Management View -->
+        <h2 class="mb-4">Classes Management</h2>
+
+        <div class="card shadow-sm">
+            <div class="card-header bg-warning text-dark">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-house-door-fill me-2"></i>All Classes</h5>
+                    <a href="{{ url_for('management.add_class') }}" class="btn btn-light btn-sm">
+                        <i class="bi bi-plus-circle me-1"></i>Add Class
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for class in classes %}
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header bg-light">
+                                    <h6 class="card-title mb-0">{{ class.name }}</h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="card-text">
+                                        <strong>Subject:</strong> {{ class.subject or 'N/A' }}<br>
+                                        <strong>Grade Level:</strong> {{ class.grade_level or 'N/A' }}<br>
+                                        <strong>Teacher:</strong> {{ class.teacher.first_name }} {{ class.teacher.last_name if class.teacher else 'N/A' }}
+                                    </p>
+                                    <div class="btn-group w-100" role="group">
+                                        <a href="{{ url_for('management.view_class', class_id=class.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                                        <a href="{{ url_for('management.edit_class', class_id=class.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                                        <a href="{{ url_for('management.manage_class_roster', class_id=class.id) }}" class="btn btn-sm btn-outline-info">Roster</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="col">
+                            <div class="alert alert-info">
+                                No classes found.
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+    {% elif section == 'assignments' %}
+        <!-- Assignments Management View -->
+        <h2 class="mb-4">Assignments Management</h2>
+
+        <div class="card shadow-sm">
+            <div class="card-header bg-info text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-journal-check me-2"></i>All Assignments</h5>
+                    <a href="{{ url_for('management.add_assignment') }}" class="btn btn-light btn-sm">
+                        <i class="bi bi-plus-circle me-1"></i>Add Assignment
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Class</th>
+                                <th>Due Date</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for assignment in assignments %}
+                                <tr>
+                                    <td>{{ assignment.title }}</td>
+                                    <td>{{ assignment.class_info.name if assignment.class_info else 'N/A' }}</td>
+                                    <td>{{ assignment.due_date.strftime('%Y-%m-%d') if assignment.due_date else 'N/A' }}</td>
+                                    <td>
+                                        {% if assignment.due_date and assignment.due_date.date() < today %}
+                                            <span class="badge bg-danger">Past Due</span>
+                                        {% elif assignment.due_date and assignment.due_date.date() == today %}
+                                            <span class="badge bg-warning">Due Today</span>
+                                        {% elif assignment.due_date %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">No Due Date</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="d-flex gap-1">
+                                            {% if assignment.attachment_filename %}
+                                                <a href="{{ url_for('download_assignment_file', assignment_id=assignment.id) }}" 
+                                                   class="btn btn-sm btn-outline-info flex-fill" 
+                                                   title="Download Attachment: {{ assignment.attachment_original_filename or assignment.attachment_filename }}">
+                                                    <i class="bi bi-paperclip me-1"></i>Attachment
+                                                </a>
+                                            {% endif %}
+                                            {% if current_user.role in ['Director', 'School Administrator', 'Teacher'] %}
+                                                <div class="assignment-actions">
+                                                    <!-- Primary Actions Row -->
+                                                    <div class="d-flex gap-1 mb-1">
+                                                        <a href="{{ url_for('management.view_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-primary" title="View Assignment">
+                                                            <i class="bi bi-eye"></i>
+                                                        </a>
+                                                        <a href="{{ url_for('management.view_class', class_id=assignment.class_id) }}" class="btn btn-sm btn-outline-info" title="View Class">
+                                                            <i class="bi bi-people"></i>
+                                                        </a>
+                                                    </div>
+                                                    
+                                                    <!-- Management Actions for Directors and School Administrators -->
+                                                    {% if current_user.role in ['Director', 'School Administrator'] %}
+                                                        <div class="d-flex gap-1 mb-1">
+                                                            <a href="{{ url_for('management.grade_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-success" title="Grade Assignment">
+                                                                <i class="bi bi-pencil"></i>
+                                                            </a>
+                                                            <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-warning" title="Edit Assignment">
+                                                                <i class="bi bi-pencil-square"></i>
+                                                            </a>
+                                                        </div>
+                                                        
+                                                        <div class="d-flex gap-1">
+                                                            <button type="button" class="btn btn-sm btn-outline-info change-status-btn" title="Change Status"
+                                                                    data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}" 
+                                                                    data-current-status="{{ assignment.status }}">
+                                                                <i class="bi bi-gear"></i>
+                                                            </button>
+                                                            <button type="button" class="btn btn-sm btn-outline-success manage-extensions-btn" title="Manage Extensions"
+                                                                    data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}"
+                                                                    data-class-id="{{ assignment.class_id }}">
+                                                                <i class="bi bi-clock-history"></i>
+                                                            </button>
+                                                            <button type="button" class="btn btn-sm btn-outline-danger remove-assignment-btn" title="Remove Assignment"
+                                                                    data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}">
+                                                                <i class="bi bi-trash"></i>
+                                                            </button>
+                                                        </div>
+                                                        
+                                                    {% elif current_user.role == 'Teacher' %}
+                                                        <div class="d-flex gap-1 mb-1">
+                                                            <a href="{{ url_for('management.grade_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-success" title="Grade Assignment">
+                                                                <i class="bi bi-pencil"></i>
+                                                            </a>
+                                                            <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-warning" title="Edit Assignment">
+                                                                <i class="bi bi-pencil-square"></i>
+                                                            </a>
+                                                        </div>
+                                                        
+                                                        <div class="d-flex gap-1">
+                                                            <button type="button" class="btn btn-sm btn-outline-info change-status-btn" title="Change Status"
+                                                                    data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}" 
+                                                                    data-current-status="{{ assignment.status }}">
+                                                                <i class="bi bi-gear"></i>
+                                                            </button>
+                                                            <button type="button" class="btn btn-sm btn-outline-success manage-extensions-btn" title="Manage Extensions"
+                                                                    data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}"
+                                                                    data-class-id="{{ assignment.class_id }}">
+                                                                <i class="bi bi-clock-history"></i>
+                                                            </button>
+                                                            <button type="button" class="btn btn-sm btn-outline-danger remove-assignment-btn" title="Remove Assignment"
+                                                                    data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}">
+                                                                <i class="bi bi-trash"></i>
+                                                            </button>
+                                                        </div>
+                                                    {% endif %}
+                                                </div>
+                                            {% elif current_user.role == 'Student' %}
+                                                <a href="#" class="btn btn-sm btn-outline-primary">View Details</a>
+                                                {% if assignment.due_date and assignment.due_date.date() >= today %}
+                                                    <a href="#" class="btn btn-sm btn-outline-success">Submit Work</a>
+                                                {% endif %}
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted">No assignments found.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete Confirmation Modal -->
+        <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Are you sure you want to remove "<span id="assignmentTitle"></span>"?</p>
+                        <p class="text-danger"><strong>This action cannot be undone.</strong></p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <form id="deleteForm" method="POST" style="display: inline;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <button type="submit" class="btn btn-danger">Delete Assignment</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const removeButtons = document.querySelectorAll('.remove-assignment-btn');
+            
+            removeButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const assignmentId = this.dataset.assignmentId;
+                    const assignmentTitle = this.dataset.assignmentTitle;
+                    
+                    document.getElementById('assignmentTitle').textContent = assignmentTitle;
+                    document.getElementById('deleteForm').action = `/management/assignment/remove/${assignmentId}`;
+                    
+                    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+                    deleteModal.show();
+                });
+            });
+        });
+        </script>
+
+    {% elif section == 'attendance' %}
+        <!-- Attendance Management View -->
+        <h2 class="mb-4">Attendance Management</h2>
+
+        <div class="alert alert-info">
+            <h5><i class="bi bi-calendar-check-fill me-2"></i>Attendance Tracking</h5>
+            <p>Manage attendance for all classes and generate reports.</p>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Take Attendance</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>Select a class to take attendance:</p>
+                        <div class="list-group">
+                            {% for class in classes %}
+                                <a href="{{ url_for('teacher.take_attendance', class_id=class.id) }}" class="list-group-item list-group-item-action">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-1">{{ class.name }}</h6>
+                                            <small class="text-muted">{{ class.subject }}</small>
+                                        </div>
+                                        <span class="badge bg-primary rounded-pill">{{ class.enrolled_student_count }} students</span>
+                                    </div>
+                                </a>
+                            {% else %}
+                                <div class="list-group-item text-muted">No classes available for attendance.</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">Attendance Reports</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>Generate and view attendance reports:</p>
+                        <div class="d-grid gap-2">
+                            <a href="#" class="btn btn-outline-success">Daily Report</a>
+                            <a href="#" class="btn btn-outline-success">Weekly Report</a>
+                            <a href="#" class="btn btn-outline-success">Monthly Report</a>
+                            <a href="#" class="btn btn-outline-success">Student Report</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    {% elif section == 'admissions' %}
+        <!-- Admissions View -->
+        <h2 class="mb-4">Admissions</h2>
+
+        <div class="alert alert-info">
+            <h5><i class="bi bi-person-plus-fill me-2"></i>Student Admissions</h5>
+            <p>Manage student admissions and enrollment.</p>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Add New Student</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>Register a new student in the system.</p>
+                        <a href="{{ url_for('management.add_student') }}" class="btn btn-primary">
+                            <i class="bi bi-plus-circle me-2"></i>Add Student
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">Admissions Status</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-6">
+                                <h4 class="text-primary">0</h4>
+                                <small class="text-muted">Pending Applications</small>
+                            </div>
+                            <div class="col-6">
+                                <h4 class="text-success">0</h4>
+                                <small class="text-muted">Approved Applications</small>
+                            </div>
+                        </div>
+                        <hr>
+                        <div class="row text-center">
+                            <div class="col-6">
+                                <h4 class="text-warning">0</h4>
+                                <small class="text-muted">Under Review</small>
+                            </div>
+                            <div class="col-6">
+                                <h4 class="text-info">0</h4>
+                                <small class="text-muted">Total Applications</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    {% elif section == 'attendance_reports' %}
+        <!-- Attendance Reports View -->
+        <h2 class="mb-4">Attendance Reports</h2>
+
+        <div class="alert alert-info">
+            <h5><i class="bi bi-file-earmark-bar-graph-fill me-2"></i>Attendance Reports</h5>
+            <p>Generate and view detailed attendance reports.</p>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Generate Reports</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="GET" action="{{ url_for('management.attendance_reports') }}">
+                            <div class="mb-3">
+                                <label for="student_filter" class="form-label">Filter by Student</label>
+                                <select class="form-select" id="student_filter" name="student_id">
+                                    <option value="">All Students</option>
+                                    {% for student in all_students %}
+                                        <option value="{{ student.id }}">{{ student.first_name }} {{ student.last_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="class_filter" class="form-label">Filter by Class</label>
+                                <select class="form-select" id="class_filter" name="class_id">
+                                    <option value="">All Classes</option>
+                                    {% for class in all_classes %}
+                                        <option value="{{ class.id }}">{{ class.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="status_filter" class="form-label">Filter by Status</label>
+                                <select class="form-select" id="status_filter" name="status">
+                                    <option value="">All Statuses</option>
+                                    {% for status in all_statuses %}
+                                        <option value="{{ status }}">{{ status }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="start_date" class="form-label">Start Date</label>
+                                        <input type="date" class="form-control" id="start_date" name="start_date">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="end_date" class="form-label">End Date</label>
+                                        <input type="date" class="form-control" id="end_date" name="end_date">
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Generate Report</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">Summary Statistics</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-6">
+                                <h4 class="text-primary">{{ summary_stats.total_records }}</h4>
+                                <small class="text-muted">Total Records</small>
+                            </div>
+                            <div class="col-6">
+                                <h4 class="text-danger">{{ summary_stats.unexcused_absences }}</h4>
+                                <small class="text-muted">Unexcused Absences</small>
+                            </div>
+                        </div>
+                        <hr>
+                        <div class="row text-center">
+                            <div class="col-6">
+                                <h4 class="text-warning">{{ summary_stats.excused_absences }}</h4>
+                                <small class="text-muted">Excused Absences</small>
+                            </div>
+                            <div class="col-6">
+                                <h4 class="text-info">{{ summary_stats.tardies }}</h4>
+                                <small class="text-muted">Tardies</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if records %}
+        <div class="card shadow-sm mt-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">Attendance Records</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Student</th>
+                                <th>Class</th>
+                                <th>Status</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in records %}
+                            <tr>
+                                <td>{{ record.date }}</td>
+                                <td>{{ record.student_name }}</td>
+                                <td>{{ record.class_name }}</td>
+                                <td>
+                                    {% set status_badge = 'bg-success' if record.status == 'Present' else 'bg-danger' if record.status == 'Absent' else 'bg-warning' if record.status == 'Tardy' else 'bg-secondary' %}
+                                    <span class="badge {{ status_badge }}">
+                                        {{ record.status }}
+                                    </span>
+                                </td>
+                                <td>{{ record.notes or 'N/A' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+    {% elif section == 'report_cards' %}
+        <!-- Report Cards Management View -->
+        <h2 class="mb-4">Report Cards Management</h2>
+
+        <div class="alert alert-info">
+            <h5><i class="bi bi-mortarboard-fill me-2"></i>Report Card Generation</h5>
+            <p>Generate and manage student report cards.</p>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0">Generate Report Cards</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ url_for('management.generate_report_card_form') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <div class="mb-3">
+                                <label for="student_id" class="form-label">Select Student</label>
+                                <select class="form-select" id="student_id" name="student_id" required>
+                                    <option value="">Choose a student...</option>
+                                    {% for student in students %}
+                                        <option value="{{ student.id }}">{{ student.first_name }} {{ student.last_name }} - Grade {{ student.grade_level }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="school_year" class="form-label">School Year</label>
+                                <select class="form-select" id="school_year" name="school_year" required>
+                                    <option value="">Choose school year...</option>
+                                    {% for year in school_years %}
+                                        <option value="{{ year.id }}">{{ year.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="quarter" class="form-label">Quarter</label>
+                                <select class="form-select" id="quarter" name="quarter" required>
+                                    <option value="">Choose quarter...</option>
+                                    <option value="1">Q1</option>
+                                    <option value="2">Q2</option>
+                                    <option value="3">Q3</option>
+                                    <option value="4">Q4</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-warning">Generate Report Card</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">Recent Report Cards</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group">
+                            {% for report in recent_reports %}
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-1">{{ report.student.first_name }} {{ report.student.last_name }}</h6>
+                                            <small class="text-muted">{{ report.school_year.name }} - Q{{ report.quarter }}</small>
+                                        </div>
+                                        <a href="{{ url_for('management.view_report_card', report_id=report.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <div class="text-muted">No recent report cards.</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    {% elif section == 'billing' %}
+        <!-- Billing & Financials View -->
+        <h2 class="mb-4">Billing & Financials</h2>
+
+        <div class="alert alert-info">
+            <h5><i class="bi bi-currency-dollar me-2"></i>Financial Management</h5>
+            <p>Manage tuition, fees, and financial records.</p>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">Tuition Management</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>Manage student tuition and payment plans.</p>
+                        <div class="d-grid gap-2">
+                            <a href="#" class="btn btn-outline-success">View Tuition Records</a>
+                            <a href="#" class="btn btn-outline-success">Generate Invoices</a>
+                            <a href="#" class="btn btn-outline-success">Payment History</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0">Financial Reports</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>Generate financial reports and analytics.</p>
+                        <div class="d-grid gap-2">
+                            <a href="#" class="btn btn-outline-warning">Revenue Report</a>
+                            <a href="#" class="btn btn-outline-warning">Expense Report</a>
+                            <a href="#" class="btn btn-outline-warning">Budget Analysis</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    {% elif section == 'calendar' %}
+        <!-- School Calendar View -->
+        <h2 class="mb-4">School Calendar</h2>
+
+        <div class="alert alert-info">
+            <h5><i class="bi bi-calendar-event-fill me-2"></i>Academic Calendar</h5>
+            <p>View and manage school events, holidays, and important dates.</p>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <h6>Upcoming Events</h6>
+                        <div class="list-group">
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">Parent-Teacher Conference</h6>
+                                        <small class="text-muted">October 15, 2024</small>
+                                    </div>
+                                    <span class="badge bg-primary">Event</span>
+                                </div>
+                            </div>
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">Thanksgiving Break</h6>
+                                        <small class="text-muted">November 25-29, 2024</small>
+                                    </div>
+                                    <span class="badge bg-warning">Holiday</span>
+                                </div>
+                            </div>
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">Winter Break</h6>
+                                        <small class="text-muted">December 23 - January 5, 2025</small>
+                                    </div>
+                                    <span class="badge bg-info">Break</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <h6>Quick Actions</h6>
+                        <div class="d-grid gap-2">
+                            <a href="#" class="btn btn-outline-primary">Add Event</a>
+                            <a href="#" class="btn btn-outline-secondary">Export Calendar</a>
+                            <a href="#" class="btn btn-outline-info">View Full Calendar</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    {% elif section == 'communications' %}
+        <!-- Communications View -->
+        <h2 class="mb-4">Communications</h2>
+
+        <div class="alert alert-info">
+            <h5><i class="bi bi-chat-dots-fill me-2"></i>Communication Center</h5>
+            <p>Send messages to students, parents, and staff members.</p>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Send Message</h5>
+                    </div>
+                    <div class="card-body">
+                        <form>
+                            <div class="mb-3">
+                                <label for="recipient" class="form-label">Recipient</label>
+                                <select class="form-select" id="recipient">
+                                    <option value="">Select recipient...</option>
+                                    <option value="all_students">All Students</option>
+                                    <option value="all_parents">All Parents</option>
+                                    <option value="all_teachers">All Teachers</option>
+                                    <option value="specific">Specific Person</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="subject" class="form-label">Subject</label>
+                                <input type="text" class="form-control" id="subject" placeholder="Message subject">
+                            </div>
+                            <div class="mb-3">
+                                <label for="message" class="form-label">Message</label>
+                                <textarea class="form-control" id="message" rows="4" placeholder="Enter your message"></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Send Message</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">Recent Messages</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group">
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">School Announcement</h6>
+                                        <small class="text-muted">Sent to All Students - 2 hours ago</small>
+                                    </div>
+                                    <span class="badge bg-success">Sent</span>
+                                </div>
+                            </div>
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">Parent Update</h6>
+                                        <small class="text-muted">Sent to All Parents - 1 day ago</small>
+                                    </div>
+                                    <span class="badge bg-success">Sent</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    {% elif section == 'settings' %}
+        <!-- Settings View -->
+        <h2 class="mb-4">Settings</h2>
+
+        <div class="alert alert-info">
+            <h5><i class="bi bi-gear-fill me-2"></i>System Settings</h5>
+            <p>Configure system preferences and account settings.</p>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0">Account Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <form>
+                            <div class="mb-3">
+                                <label for="username" class="form-label">Username</label>
+                                <input type="text" class="form-control" id="username" value="{{ current_user.username }}" readonly>
+                            </div>
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="email" value="{{ current_user.email or '' }}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Change Password</label>
+                                <div>
+                                    <a href="{{ url_for('auth.change_password') }}" class="btn btn-warning">
+                                        <i class="bi bi-lock-fill me-2"></i>Change Password
+                                    </a>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-secondary">Update Settings</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0">System Preferences</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Notifications</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="email_notifications" checked>
+                                <label class="form-check-label" for="email_notifications">
+                                    Email Notifications
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="sms_notifications">
+                                <label class="form-check-label" for="sms_notifications">
+                                    SMS Notifications
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="timezone" class="form-label">Timezone</label>
+                            <select class="form-select" id="timezone">
+                                <option value="EST">Eastern Standard Time</option>
+                                <option value="CST">Central Standard Time</option>
+                                <option value="MST">Mountain Standard Time</option>
+                                <option value="PST">Pacific Standard Time</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-warning">Save Preferences</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    {% else %}
+        <!-- Generic fallback content for other sections -->
+        <div class="alert alert-warning">
+            <h4>Debug Information:</h4>
+            <p><strong>Section:</strong> "{{ section }}"</p>
+            <p><strong>Active Tab:</strong> "{{ active_tab }}"</p>
+            <p><strong>User Role:</strong> {{ current_user.role }}</p>
+            <hr>
+            <p>Content for the '{{ section }}' section is currently under development. Please check back later!</p>
+        </div>
+    {% endif %}
+    <!-- Student/Teacher View Modal -->
+    <div class="modal fade" id="profileViewModal" tabindex="-1" aria-labelledby="profileViewModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+          <div class="modal-header bg-primary text-white">
+            <h5 class="modal-title" id="profileViewModalLabel">
+              <i class="bi bi-person-circle me-2"></i>Profile Details
+            </h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body max-height-70vh" id="profileViewModalBody">
+            <!-- Content will be loaded by JS -->
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+              <i class="bi bi-x-circle me-1"></i>Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Student/Teacher Edit Modal -->
+    <div class="modal fade" id="profileEditModal" tabindex="-1" aria-labelledby="profileEditModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+          <div class="modal-header bg-primary text-white">
+            <h5 class="modal-title" id="profileEditModalLabel">
+              <i class="bi bi-pencil-square me-2"></i>Edit Profile
+            </h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <form id="profileEditForm">
+            <div class="modal-body max-height-70vh" id="profileEditModalBody">
+              <!-- Form fields will be loaded by JS -->
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                <i class="bi bi-x-circle me-1"></i>Cancel
+              </button>
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-circle me-1"></i>Save Changes
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+{% endblock %} 
+
+{% block scripts %}
+    {{ super() }}
+    {% raw %}
+    <script>
+    function viewStudent(studentId) {
+        console.log('viewStudent called with', studentId);
+        fetch(`/management/view-student/${studentId}`)
+            .then(response => response.json())
+            .then(data => {
+                let safeData = data || {};
+                let classes = (safeData.assigned_classes || []).map(c => `<li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-book me-2"></i>${c.name || 'Unknown'}</span>
+                    <span class="badge bg-primary rounded-pill">${c.subject || 'Unknown'}</span>
+                  </li>`).join('');
+                let photo = safeData.photo_filename ? `<img src='/static/uploads/${safeData.photo_filename}' class='rounded mx-auto d-block mb-3' style='max-width:120px;'>` : '';
+                
+                // Format parent information
+                let parent1Info = '';
+                if (safeData.parent1_first_name || safeData.parent1_last_name) {
+                    parent1Info = `
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-person me-2 text-muted"></i>
+                                <strong>Parent 1:</strong>
+                                <span class="ms-2">${safeData.parent1_first_name || ''} ${safeData.parent1_last_name || ''}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-heart me-2 text-muted"></i>
+                                <strong>Relationship:</strong>
+                                <span class="ms-2">${safeData.parent1_relationship || 'N/A'}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-envelope me-2 text-muted"></i>
+                                <strong>Email:</strong>
+                                <span class="ms-2">${safeData.parent1_email || 'N/A'}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-telephone me-2 text-muted"></i>
+                                <strong>Phone:</strong>
+                                <span class="ms-2">${safeData.parent1_phone || 'N/A'}</span>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                let parent2Info = '';
+                if (safeData.parent2_first_name || safeData.parent2_last_name) {
+                    parent2Info = `
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-person me-2 text-muted"></i>
+                                <strong>Parent 2:</strong>
+                                <span class="ms-2">${safeData.parent2_first_name || ''} ${safeData.parent2_last_name || ''}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-heart me-2 text-muted"></i>
+                                <strong>Relationship:</strong>
+                                <span class="ms-2">${safeData.parent2_relationship || 'N/A'}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-envelope me-2 text-muted"></i>
+                                <strong>Email:</strong>
+                                <span class="ms-2">${safeData.parent2_email || 'N/A'}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-telephone me-2 text-muted"></i>
+                                <strong>Phone:</strong>
+                                <span class="ms-2">${safeData.parent2_phone || 'N/A'}</span>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                // Format emergency contact
+                let emergencyInfo = '';
+                if (safeData.emergency_first_name || safeData.emergency_last_name) {
+                    emergencyInfo = `
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-exclamation-triangle me-2 text-warning"></i>
+                                <strong>Emergency Contact:</strong>
+                                <span class="ms-2">${safeData.emergency_first_name || ''} ${safeData.emergency_last_name || ''}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-heart me-2 text-muted"></i>
+                                <strong>Relationship:</strong>
+                                <span class="ms-2">${safeData.emergency_relationship || 'N/A'}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-envelope me-2 text-muted"></i>
+                                <strong>Email:</strong>
+                                <span class="ms-2">${safeData.emergency_email || 'N/A'}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-telephone me-2 text-muted"></i>
+                                <strong>Phone:</strong>
+                                <span class="ms-2">${safeData.emergency_phone || 'N/A'}</span>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                // Format address
+                let addressInfo = '';
+                if (safeData.street || safeData.city || safeData.state) {
+                    let fullAddress = [];
+                    if (safeData.street) fullAddress.push(safeData.street);
+                    if (safeData.apt_unit) fullAddress.push(safeData.apt_unit);
+                    if (safeData.city || safeData.state || safeData.zip_code) {
+                        let cityStateZip = [];
+                        if (safeData.city) cityStateZip.push(safeData.city);
+                        if (safeData.state) cityStateZip.push(safeData.state);
+                        if (safeData.zip_code) cityStateZip.push(safeData.zip_code);
+                        fullAddress.push(cityStateZip.join(', '));
+                    }
+                    addressInfo = `<div class="col-12">
+                        <div class="d-flex align-items-start">
+                            <i class="bi bi-geo-alt me-2 text-muted mt-1"></i>
+                            <div>
+                                <strong>Address:</strong>
+                                <div class="ms-2">${fullAddress.join(', ')}</div>
+                            </div>
+                        </div>
+                    </div>`;
+                }
+                
+                let html = `
+                    <div class="container-fluid">
+                        <!-- Header Section -->
+                        <div class="row mb-4">
+                            <div class="col-12 text-center">
+                                ${photo}
+                                <div class="position-relative d-inline-block">
+                                    <i class="bi bi-person-circle text-primary" style="font-size: 4rem;"></i>
+                                    <div class="position-absolute top-0 start-100 translate-middle">
+                                        <span class="badge bg-success rounded-pill">Active</span>
+                                    </div>
+                                </div>
+                                <h4 class="mt-2 mb-0">${safeData.first_name || ''} ${safeData.last_name || ''}</h4>
+                                <p class="text-muted mb-0">Grade ${safeData.grade_level || 'N/A'}</p>
+                            </div>
+                        </div>
+
+                        <!-- Basic Information Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="border-bottom pb-2 mb-3">
+                                    <i class="bi bi-info-circle me-2 text-primary"></i>Basic Information
+                                </h6>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-card-text me-2 text-muted"></i>
+                                            <strong>Student ID:</strong>
+                                            <span class="ms-2 badge bg-secondary">${safeData.student_id || 'N/A'}</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-calendar-event me-2 text-muted"></i>
+                                            <strong>Date of Birth:</strong>
+                                            <span class="ms-2">${safeData.dob || 'N/A'}</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-person-badge me-2 text-muted"></i>
+                                            <strong>Age:</strong>
+                                            <span class="ms-2">${safeData.age || 'N/A'}</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-star me-2 text-muted"></i>
+                                            <strong>GPA:</strong>
+                                            <span class="ms-2 badge bg-success">${safeData.gpa || 'N/A'}</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-envelope me-2 text-muted"></i>
+                                            <strong>Email:</strong>
+                                            <span class="ms-2">${safeData.email || 'N/A'}</span>
+                                        </div>
+                                    </div>
+                                    ${addressInfo}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Academic Information Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="border-bottom pb-2 mb-3">
+                                    <i class="bi bi-book me-2 text-primary"></i>Academic Information
+                                </h6>
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <div class="d-flex align-items-start">
+                                            <i class="bi bi-book me-2 text-muted mt-1"></i>
+                                            <div>
+                                                <strong>Assigned Classes:</strong>
+                                                ${classes ? `<ul class="list-group list-group-flush mt-2">${classes}</ul>` : '<p class="text-muted mt-2"><i class="bi bi-info-circle me-2"></i>No classes assigned</p>'}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        ${parent1Info ? `
+                        <!-- Parent 1 Information Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="border-bottom pb-2 mb-3">
+                                    <i class="bi bi-person-heart me-2 text-primary"></i>Parent 1 Information
+                                </h6>
+                                <div class="row g-3">
+                                    ${parent1Info}
+                                </div>
+                            </div>
+                        </div>
+                        ` : ''}
+
+                        ${parent2Info ? `
+                        <!-- Parent 2 Information Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="border-bottom pb-2 mb-3">
+                                    <i class="bi bi-person-heart me-2 text-primary"></i>Parent 2 Information
+                                </h6>
+                                <div class="row g-3">
+                                    ${parent2Info}
+                                </div>
+                            </div>
+                        </div>
+                        ` : ''}
+
+                        ${emergencyInfo ? `
+                        <!-- Emergency Contact Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="border-bottom pb-2 mb-3">
+                                    <i class="bi bi-exclamation-triangle me-2 text-warning"></i>Emergency Contact
+                                </h6>
+                                <div class="alert alert-warning mb-0">
+                                    <i class="bi bi-person-heart me-2"></i>
+                                    ${safeData.emergency_first_name || ''} ${safeData.emergency_last_name || ''} (${safeData.emergency_relationship || 'N/A'})
+                                </div>
+                            </div>
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
+                
+                document.getElementById('profileViewModalLabel').innerText = 'Student Details';
+                document.getElementById('profileViewModalBody').innerHTML = html;
+                var modal = new bootstrap.Modal(document.getElementById('profileViewModal'));
+                modal.show();
+            })
+            .catch(error => {
+                console.error('Error fetching student details:', error);
+                alert('Could not load student details.');
+            });
+    }
+
+    function viewTeacher(teacherId) {
+        console.log('viewTeacher called with', teacherId);
+        fetch(`/management/view-teacher/${teacherId}`)
+            .then(response => response.json())
+            .then(data => {
+                // Safely handle null/undefined values
+                const safeData = {
+                    first_name: data.first_name || 'N/A',
+                    last_name: data.last_name || 'N/A',
+                    age: data.age || 'N/A',
+                    dob: data.dob || 'N/A',
+                    id: data.id || 'N/A',
+                    role: data.role || 'N/A',
+                    total_students: data.total_students || 'N/A',
+                    username: data.username || 'N/A',
+                    emergency_contact: data.emergency_contact || 'N/A',
+                    assigned_classes: data.assigned_classes || [],
+                    staff_id: data.staff_id || 'N/A',
+                    department: data.department || 'N/A',
+                    position: data.position || 'N/A',
+                    hire_date: data.hire_date || 'N/A',
+                    email: data.email || 'N/A',
+                    phone: data.phone || 'N/A',
+                    address: data.address || 'N/A'
+                };
+                
+                let classes = safeData.assigned_classes.length > 0 
+                    ? safeData.assigned_classes.map(c => `<li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-book me-2"></i>${c.name || 'Unknown'}</span>
+                        <span class="badge bg-primary rounded-pill">${c.subject || 'Unknown'}</span>
+                      </li>`).join('')
+                    : '<li class="list-group-item text-muted"><i class="bi bi-info-circle me-2"></i>No classes assigned</li>';
+                    
+                let html = `
+                    <div class="container-fluid">
+                        <!-- Header Section -->
+                        <div class="row mb-4">
+                            <div class="col-12 text-center">
+                                <div class="position-relative d-inline-block">
+                                    <i class="bi bi-person-circle text-primary" style="font-size: 4rem;"></i>
+                                    <div class="position-absolute top-0 start-100 translate-middle">
+                                        <span class="badge bg-success rounded-pill">Active</span>
+                                    </div>
+                                </div>
+                                <h4 class="mt-2 mb-0">${safeData.first_name} ${safeData.last_name}</h4>
+                                <p class="text-muted mb-0">${safeData.position || 'Staff Member'}</p>
+                            </div>
+                        </div>
+
+                        <!-- Basic Information Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="border-bottom pb-2 mb-3">
+                                    <i class="bi bi-info-circle me-2 text-primary"></i>Basic Information
+                                </h6>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-card-text me-2 text-muted"></i>
+                                            <strong>Staff ID:</strong>
+                                            <span class="ms-2 badge bg-secondary">${safeData.staff_id}</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-person-badge me-2 text-muted"></i>
+                                            <strong>Role:</strong>
+                                            <span class="ms-2 badge bg-info">${safeData.role}</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-start">
+                                            <i class="bi bi-building me-2 text-muted mt-1"></i>
+                                            <div>
+                                                <strong>Department(s):</strong>
+                                                <div class="ms-2" id="department-badges">
+                                                    ${safeData.department || 'N/A'}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-calendar-event me-2 text-muted"></i>
+                                            <strong>Hire Date:</strong>
+                                            <span class="ms-2">${safeData.hire_date}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Contact Information Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="border-bottom pb-2 mb-3">
+                                    <i class="bi bi-envelope me-2 text-primary"></i>Contact Information
+                                </h6>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-envelope me-2 text-muted"></i>
+                                            <strong>Email:</strong>
+                                            <span class="ms-2">${safeData.email}</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-telephone me-2 text-muted"></i>
+                                            <strong>Phone:</strong>
+                                            <span class="ms-2">${safeData.phone}</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-person me-2 text-muted"></i>
+                                            <strong>Username:</strong>
+                                            <span class="ms-2 badge bg-light text-dark">${safeData.username}</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="d-flex align-items-start">
+                                            <i class="bi bi-geo-alt me-2 text-muted mt-1"></i>
+                                            <div>
+                                                <strong>Address:</strong>
+                                                <div class="ms-2">${safeData.address}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Emergency Contact Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="border-bottom pb-2 mb-3">
+                                    <i class="bi bi-exclamation-triangle me-2 text-warning"></i>Emergency Contact
+                                </h6>
+                                <div class="alert alert-info mb-0">
+                                    <i class="bi bi-person-heart me-2"></i>
+                                    ${safeData.emergency_contact}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Professional Information Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="border-bottom pb-2 mb-3">
+                                    <i class="bi bi-briefcase me-2 text-primary"></i>Professional Information
+                                </h6>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-people me-2 text-muted"></i>
+                                            <strong>Students:</strong>
+                                            <span class="ms-2 badge bg-success">${safeData.total_students}</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="d-flex align-items-start">
+                                            <i class="bi bi-book me-2 text-muted mt-1"></i>
+                                            <div>
+                                                <strong>Assigned Classes:</strong>
+                                                <ul class="list-group list-group-flush mt-2">
+                                                    ${classes}
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('profileViewModalLabel').innerText = `${safeData.first_name} ${safeData.last_name} (Teacher/Staff)`;
+                document.getElementById('profileViewModalBody').innerHTML = html;
+                var modal = new bootstrap.Modal(document.getElementById('profileViewModal'));
+                modal.show();
+                
+                // Process department badges after modal is shown
+                setTimeout(() => {
+                    const departmentBadges = document.getElementById('department-badges');
+                    if (departmentBadges && safeData.department && safeData.department !== 'N/A') {
+                        const departments = safeData.department.split(', ');
+                        const badgeHtml = departments.map(dept => 
+                            `<span class="badge bg-primary me-1 mb-1">${dept.trim()}</span>`
+                        ).join('');
+                        departmentBadges.innerHTML = badgeHtml;
+                    }
+                }, 100);
+            })
+            .catch(err => {
+                console.error('Error fetching teacher:', err);
+                alert('Could not load teacher/staff details.');
+            });
+    }
+
+    function editStudent(studentId) {
+        fetch(`/management/view-student/${studentId}`)
+            .then(response => response.json())
+            .then(data => {
+                // Populate the edit modal form fields
+                document.getElementById('profileEditModalLabel').innerText = 'Edit Student';
+                let form = document.getElementById('profileEditForm');
+                let body = document.getElementById('profileEditModalBody');
+                body.innerHTML = `
+                  <div class='row'>
+                    <div class='col-md-6 mb-3'>
+                      <label>First Name</label>
+                      <input type='text' class='form-control' name='first_name' value='${data.first_name || ''}' disabled>
+                    </div>
+                    <div class='col-md-6 mb-3'>
+                      <label>Last Name</label>
+                      <input type='text' class='form-control' name='last_name' value='${data.last_name || ''}' disabled>
+                    </div>
+                    <div class='col-md-6 mb-3'>
+                      <label>Date of Birth</label>
+                      <input type='date' class='form-control' name='dob' value='${data.dob || ''}'>
+                    </div>
+                    <div class='col-md-6 mb-3'>
+                      <label>Grade Level</label>
+                      <input type='text' class='form-control' name='grade_level' value='${data.grade_level || ''}'>
+                    </div>
+                    <div class='col-md-6 mb-3'>
+                      <label>Student ID</label>
+                      <input type='text' class='form-control' name='student_id' value='${data.student_id || ''}' disabled>
+                    </div>
+                  </div>
+                  
+                  <h6 class='mt-4 mb-3'>Parent Information</h6>
+                  <div class='row'>
+                    <div class='col-md-6 mb-3'>
+                      <label>Parent 1 First Name</label>
+                      <input type='text' class='form-control' name='parent1_first_name' value='${data.parent1_first_name || ''}'>
+                    </div>
+                    <div class='col-md-6 mb-3'>
+                      <label>Parent 1 Last Name</label>
+                      <input type='text' class='form-control' name='parent1_last_name' value='${data.parent1_last_name || ''}'>
+                    </div>
+                    <div class='col-md-6 mb-3'>
+                      <label>Parent 1 Email</label>
+                      <input type='email' class='form-control' name='parent1_email' value='${data.parent1_email || ''}'>
+                    </div>
+                    <div class='col-md-6 mb-3'>
+                      <label>Parent 1 Phone</label>
+                      <input type='tel' class='form-control' name='parent1_phone' value='${data.parent1_phone || ''}'>
+                    </div>
+                    <div class='col-md-6 mb-3'>
+                      <label>Parent 1 Relationship</label>
+                      <select class='form-control' name='parent1_relationship'>
+                        <option value='Mother' ${(data.parent1_relationship || '') === 'Mother' ? 'selected' : ''}>Mother</option>
+                        <option value='Father' ${(data.parent1_relationship || '') === 'Father' ? 'selected' : ''}>Father</option>
+                      </select>
+                    </div>
+                  </div>
+                  
+                  <div class='row'>
+                    <div class='col-md-6 mb-3'>
+                      <label>Parent 2 First Name</label>
+                      <input type='text' class='form-control' name='parent2_first_name' value='${data.parent2_first_name || ''}'>
+                    </div>
+                    <div class='col-md-6 mb-3'>
+                      <label>Parent 2 Last Name</label>
+                      <input type='text' class='form-control' name='parent2_last_name' value='${data.parent2_last_name || ''}'>
+                    </div>
+                    <div class='col-md-6 mb-3'>
+                      <label>Parent 2 Email</label>
+                      <input type='email' class='form-control' name='parent2_email' value='${data.parent2_email || ''}'>
+                    </div>
+                    <div class='col-md-6 mb-3'>
+                      <label>Parent 2 Phone</label>
+                      <input type='tel' class='form-control' name='parent2_phone' value='${data.parent2_phone || ''}'>
+                    </div>
+                    <div class='col-md-6 mb-3'>
+                      <label>Parent 2 Relationship</label>
+                      <select class='form-control' name='parent2_relationship'>
+                        <option value='Mother' ${(data.parent2_relationship || '') === 'Mother' ? 'selected' : ''}>Mother</option>
+                        <option value='Father' ${(data.parent2_relationship || '') === 'Father' ? 'selected' : ''}>Father</option>
+                      </select>
+                    </div>
+                  </div>
+                  
+                  <h6 class='mt-4 mb-3'>Emergency Contact</h6>
+                  <div class='row'>
+                    <div class='col-md-6 mb-3'>
+                      <label>Emergency Contact First Name</label>
+                      <input type='text' class='form-control' name='emergency_first_name' value='${data.emergency_first_name || ''}'>
+                    </div>
+                    <div class='col-md-6 mb-3'>
+                      <label>Emergency Contact Last Name</label>
+                      <input type='text' class='form-control' name='emergency_last_name' value='${data.emergency_last_name || ''}'>
+                    </div>
+                    <div class='col-md-6 mb-3'>
+                      <label>Emergency Contact Email</label>
+                      <input type='email' class='form-control' name='emergency_email' value='${data.emergency_email || ''}'>
+                    </div>
+                    <div class='col-md-6 mb-3'>
+                      <label>Emergency Contact Phone</label>
+                      <input type='tel' class='form-control' name='emergency_phone' value='${data.emergency_phone || ''}'>
+                    </div>
+                    <div class='col-md-6 mb-3'>
+                      <label>Emergency Contact Relationship</label>
+                      <select class='form-control' name='emergency_relationship'>
+                        <option value='Parent' ${(data.emergency_relationship || '') === 'Parent' ? 'selected' : ''}>Parent</option>
+                        <option value='Guardian' ${(data.emergency_relationship || '') === 'Guardian' ? 'selected' : ''}>Guardian</option>
+                        <option value='Grandparent' ${(data.emergency_relationship || '') === 'Grandparent' ? 'selected' : ''}>Grandparent</option>
+                        <option value='Aunt/Uncle' ${(data.emergency_relationship || '') === 'Aunt/Uncle' ? 'selected' : ''}>Aunt/Uncle</option>
+                        <option value='Sibling' ${(data.emergency_relationship || '') === 'Sibling' ? 'selected' : ''}>Sibling</option>
+                        <option value='Other' ${(data.emergency_relationship || '') === 'Other' ? 'selected' : ''}>Other</option>
+                      </select>
+                    </div>
+                  </div>
+                  
+                  <h6 class='mt-4 mb-3'>Address</h6>
+                  <div class='row'>
+                    <div class='col-md-6 mb-3'>
+                      <label>Street Address</label>
+                      <input type='text' class='form-control' name='street' value='${data.street || ''}'>
+                    </div>
+                    <div class='col-md-6 mb-3'>
+                      <label>Apt, Unit, Suite, etc.</label>
+                      <input type='text' class='form-control' name='apt_unit' value='${data.apt_unit || ''}'>
+                    </div>
+                    <div class='col-md-4 mb-3'>
+                      <label>City</label>
+                      <input type='text' class='form-control' name='city' value='${data.city || ''}'>
+                    </div>
+                    <div class='col-md-4 mb-3'>
+                      <label>State</label>
+                      <input type='text' class='form-control' name='state' value='${data.state || ''}'>
+                    </div>
+                    <div class='col-md-4 mb-3'>
+                      <label>Zip Code</label>
+                      <input type='text' class='form-control' name='zip_code' value='${data.zip_code || ''}'>
+                    </div>
+                  </div>
+                `;
+                form.onsubmit = function(e) {
+                  e.preventDefault();
+                  let formData = new FormData(form);
+                  fetch(`/management/edit-student/${studentId}`, {
+                    method: 'POST',
+                    body: formData
+                  })
+                  .then(response => response.json())
+                  .then(result => {
+                    if (result.success) {
+                      location.reload();
+                    } else {
+                      alert('Error: ' + result.message);
+                    }
+                  })
+                  .catch(() => alert('Could not update student.'));
+                };
+                var modal = new bootstrap.Modal(document.getElementById('profileEditModal'));
+                modal.show();
+            })
+            .catch(() => alert('Could not load student details.'));
+    }
+
+    function editTeacher(teacherId) {
+        fetch(`/management/view-teacher/${teacherId}`)
+            .then(response => response.json())
+            .then(data => {
+                // Populate the edit modal form fields
+                document.getElementById('profileEditModalLabel').innerText = 'Edit Teacher/Staff';
+                let form = document.getElementById('profileEditForm');
+                let body = document.getElementById('profileEditModalBody');
+                body.innerHTML = `
+                    <div class="container-fluid">
+                        <!-- Basic Information Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="border-bottom pb-2 mb-3">
+                                    <i class="bi bi-info-circle me-2 text-primary"></i>Basic Information
+                                </h6>
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label class="form-label">First Name <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" name="first_name" value="${data.first_name || ''}" required>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label">M.I.</label>
+                                        <input type="text" class="form-control" name="middle_initial" value="${data.middle_initial || ''}" maxlength="1">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Last Name <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" name="last_name" value="${data.last_name || ''}" required>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Date of Birth</label>
+                                        <input type="date" class="form-control" name="dob" value="${data.dob || ''}">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">SSN</label>
+                                        <input type="text" class="form-control" name="staff_ssn" value="${data.staff_ssn || ''}" placeholder="XXX-XX-XXXX">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Email <span class="text-danger">*</span></label>
+                                        <input type="email" class="form-control" name="email" value="${data.email || ''}" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Phone Number</label>
+                                        <input type="tel" class="form-control" name="phone" value="${data.phone || ''}" placeholder="e.g., 555-123-4567">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Professional Information Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="border-bottom pb-2 mb-3">
+                                    <i class="bi bi-briefcase me-2 text-primary"></i>Professional Information
+                                </h6>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Assigned Role <span class="text-danger">*</span></label>
+                                        <select class="form-select" name="assigned_role" required>
+                                            <option value="">Choose role...</option>
+                                            <option value="Director" ${(data.assigned_role || '') === 'Director' ? 'selected' : ''}>Director</option>
+                                            <option value="School Administrator" ${(data.assigned_role || '') === 'School Administrator' ? 'selected' : ''}>School Administrator</option>
+                                            <option value="Math Teacher" ${(data.assigned_role || '') === 'Math Teacher' ? 'selected' : ''}>Math Teacher</option>
+                                            <option value="Physics Teacher" ${(data.assigned_role || '') === 'Physics Teacher' ? 'selected' : ''}>Physics Teacher</option>
+                                            <option value="English Language Arts Teacher" ${(data.assigned_role || '') === 'English Language Arts Teacher' ? 'selected' : ''}>English Language Arts Teacher</option>
+                                            <option value="History Teacher" ${(data.assigned_role || '') === 'History Teacher' ? 'selected' : ''}>History Teacher</option>
+                                            <option value="Science Teacher" ${(data.assigned_role || '') === 'Science Teacher' ? 'selected' : ''}>Science Teacher</option>
+                                            <option value="Substitute Teacher" ${(data.assigned_role || '') === 'Substitute Teacher' ? 'selected' : ''}>Substitute Teacher</option>
+                                            <option value="School Counselor" ${(data.assigned_role || '') === 'School Counselor' ? 'selected' : ''}>School Counselor</option>
+                                            <option value="IT Support" ${(data.assigned_role || '') === 'IT Support' ? 'selected' : ''}>IT Support</option>
+                                            <option value="Other Staff" ${(data.assigned_role || '') === 'Other Staff' ? 'selected' : ''}>Other Staff</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label d-block">Department(s) <span class="text-danger">*</span></label>
+                                        <div class="row g-3 px-2">
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="Mathematics" id="dept_math_edit" ${(data.department || '').includes('Mathematics') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="dept_math_edit">Mathematics</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="Science" id="dept_science_edit" ${(data.department || '').includes('Science') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="dept_science_edit">Science</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="English" id="dept_english_edit" ${(data.department || '').includes('English') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="dept_english_edit">English</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="History & Social Studies" id="dept_history_edit" ${(data.department || '').includes('History & Social Studies') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="dept_history_edit">History & Social Studies</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="Physical Education & Health" id="dept_pe_edit" ${(data.department || '').includes('Physical Education & Health') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="dept_pe_edit">Physical Education & Health</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="Music & Arts" id="dept_arts_edit" ${(data.department || '').includes('Music & Arts') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="dept_arts_edit">Music & Arts</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="Computer Science & Technology" id="dept_tech_edit" ${(data.department || '').includes('Computer Science & Technology') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="dept_tech_edit">Computer Science & Technology</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="Administration" id="dept_admin_edit" ${(data.department || '').includes('Administration') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="dept_admin_edit">Administration</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="Counseling" id="dept_counsel_edit" ${(data.department || '').includes('Counseling') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="dept_counsel_edit">Counseling</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="Special Education" id="dept_sped_edit" ${(data.department || '').includes('Special Education') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="dept_sped_edit">Special Education</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="Foreign Language" id="dept_lang_edit" ${(data.department || '').includes('Foreign Language') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="dept_lang_edit">Foreign Language</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="Business" id="dept_business_edit" ${(data.department || '').includes('Business') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="dept_business_edit">Business</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Position</label>
+                                        <input type="text" class="form-control" name="position" value="${data.position || ''}" placeholder="e.g., Lead Teacher, Assistant Principal">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Primary Subject(s) Taught</label>
+                                        <input type="text" class="form-control" name="subject" value="${data.subject || ''}" placeholder="e.g., Algebra I, Chemistry">
+                                </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Employment Type</label>
+                                        <select class="form-select" name="employment_type">
+                                            <option value="">Choose...</option>
+                                            <option value="Full Time" ${(data.employment_type || '') === 'Full Time' ? 'selected' : ''}>Full Time</option>
+                                            <option value="Part Time" ${(data.employment_type || '') === 'Part Time' ? 'selected' : ''}>Part Time</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Hire Date</label>
+                                        <input type="date" class="form-control" name="hire_date" value="${data.hire_date || ''}">
+                                    </div>
+                                </div>
+                                
+                                <!-- Grades Taught Section -->
+                                <div class="row mb-4">
+                                    <div class="col-12">
+                                        <h6 class="border-bottom pb-2 mb-3">
+                                            <i class="bi bi-mortarboard me-2 text-primary"></i>Grades Taught
+                                        </h6>
+                                        <div class="row g-2 px-2">
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="grades_taught" value="Kindergarten" id="grade_k_edit" ${(data.grades_taught || '').includes('Kindergarten') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="grade_k_edit">Kindergarten</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="grades_taught" value="1st" id="grade_1_edit" ${(data.grades_taught || '').includes('1st') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="grade_1_edit">1st</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="grades_taught" value="2nd" id="grade_2_edit" ${(data.grades_taught || '').includes('2nd') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="grade_2_edit">2nd</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="grades_taught" value="3rd" id="grade_3_edit" ${(data.grades_taught || '').includes('3rd') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="grade_3_edit">3rd</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="grades_taught" value="4th" id="grade_4_edit" ${(data.grades_taught || '').includes('4th') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="grade_4_edit">4th</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="grades_taught" value="5th" id="grade_5_edit" ${(data.grades_taught || '').includes('5th') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="grade_5_edit">5th</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="grades_taught" value="6th" id="grade_6_edit" ${(data.grades_taught || '').includes('6th') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="grade_6_edit">6th</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="grades_taught" value="7th" id="grade_7_edit" ${(data.grades_taught || '').includes('7th') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="grade_7_edit">7th</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="grades_taught" value="8th" id="grade_8_edit" ${(data.grades_taught || '').includes('8th') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="grade_8_edit">8th</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="grades_taught" value="9th" id="grade_9_edit" ${(data.grades_taught || '').includes('9th') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="grade_9_edit">9th</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="grades_taught" value="10th" id="grade_10_edit" ${(data.grades_taught || '').includes('10th') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="grade_10_edit">10th</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="grades_taught" value="11th" id="grade_11_edit" ${(data.grades_taught || '').includes('11th') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="grade_11_edit">11th</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="grades_taught" value="12th" id="grade_12_edit" ${(data.grades_taught || '').includes('12th') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="grade_12_edit">12th</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-sm-4 col-md-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="grades_taught" value="N/A - Staff" id="grade_na_edit" ${(data.grades_taught || '').includes('N/A - Staff') ? 'checked' : ''}>
+                                                    <label class="form-check-label" for="grade_na_edit">N/A - Staff</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Address Information Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="border-bottom pb-2 mb-3">
+                                    <i class="bi bi-geo-alt me-2 text-primary"></i>Address Information
+                                </h6>
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <label class="form-label">Street Address</label>
+                                        <input type="text" class="form-control" name="street_address" value="${data.street || ''}" placeholder="123 Main Street">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Apt, Unit, Suite, etc.</label>
+                                        <input type="text" class="form-control" name="apt_unit_suite" value="${data.apt_unit || ''}" placeholder="Apt 4B">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">City</label>
+                                        <input type="text" class="form-control" name="city" value="${data.city || ''}" placeholder="Springfield">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">State</label>
+                                        <select class="form-select" name="state">
+                                            <option value="">Choose state...</option>
+                                            <option value="AL" ${(data.state || '') === 'AL' ? 'selected' : ''}>Alabama</option>
+                                            <option value="AK" ${(data.state || '') === 'AK' ? 'selected' : ''}>Alaska</option>
+                                            <option value="AZ" ${(data.state || '') === 'AZ' ? 'selected' : ''}>Arizona</option>
+                                            <option value="AR" ${(data.state || '') === 'AR' ? 'selected' : ''}>Arkansas</option>
+                                            <option value="CA" ${(data.state || '') === 'CA' ? 'selected' : ''}>California</option>
+                                            <option value="CO" ${(data.state || '') === 'CO' ? 'selected' : ''}>Colorado</option>
+                                            <option value="CT" ${(data.state || '') === 'CT' ? 'selected' : ''}>Connecticut</option>
+                                            <option value="DE" ${(data.state || '') === 'DE' ? 'selected' : ''}>Delaware</option>
+                                            <option value="FL" ${(data.state || '') === 'FL' ? 'selected' : ''}>Florida</option>
+                                            <option value="GA" ${(data.state || '') === 'GA' ? 'selected' : ''}>Georgia</option>
+                                            <option value="HI" ${(data.state || '') === 'HI' ? 'selected' : ''}>Hawaii</option>
+                                            <option value="ID" ${(data.state || '') === 'ID' ? 'selected' : ''}>Idaho</option>
+                                            <option value="IL" ${(data.state || '') === 'IL' ? 'selected' : ''}>Illinois</option>
+                                            <option value="IN" ${(data.state || '') === 'IN' ? 'selected' : ''}>Indiana</option>
+                                            <option value="IA" ${(data.state || '') === 'IA' ? 'selected' : ''}>Iowa</option>
+                                            <option value="KS" ${(data.state || '') === 'KS' ? 'selected' : ''}>Kansas</option>
+                                            <option value="KY" ${(data.state || '') === 'KY' ? 'selected' : ''}>Kentucky</option>
+                                            <option value="LA" ${(data.state || '') === 'LA' ? 'selected' : ''}>Louisiana</option>
+                                            <option value="ME" ${(data.state || '') === 'ME' ? 'selected' : ''}>Maine</option>
+                                            <option value="MD" ${(data.state || '') === 'MD' ? 'selected' : ''}>Maryland</option>
+                                            <option value="MA" ${(data.state || '') === 'MA' ? 'selected' : ''}>Massachusetts</option>
+                                            <option value="MI" ${(data.state || '') === 'MI' ? 'selected' : ''}>Michigan</option>
+                                            <option value="MN" ${(data.state || '') === 'MN' ? 'selected' : ''}>Minnesota</option>
+                                            <option value="MS" ${(data.state || '') === 'MS' ? 'selected' : ''}>Mississippi</option>
+                                            <option value="MO" ${(data.state || '') === 'MO' ? 'selected' : ''}>Missouri</option>
+                                            <option value="MT" ${(data.state || '') === 'MT' ? 'selected' : ''}>Montana</option>
+                                            <option value="NE" ${(data.state || '') === 'NE' ? 'selected' : ''}>Nebraska</option>
+                                            <option value="NV" ${(data.state || '') === 'NV' ? 'selected' : ''}>Nevada</option>
+                                            <option value="NH" ${(data.state || '') === 'NH' ? 'selected' : ''}>New Hampshire</option>
+                                            <option value="NJ" ${(data.state || '') === 'NJ' ? 'selected' : ''}>New Jersey</option>
+                                            <option value="NM" ${(data.state || '') === 'NM' ? 'selected' : ''}>New Mexico</option>
+                                            <option value="NY" ${(data.state || '') === 'NY' ? 'selected' : ''}>New York</option>
+                                            <option value="NC" ${(data.state || '') === 'NC' ? 'selected' : ''}>North Carolina</option>
+                                            <option value="ND" ${(data.state || '') === 'ND' ? 'selected' : ''}>North Dakota</option>
+                                            <option value="OH" ${(data.state || '') === 'OH' ? 'selected' : ''}>Ohio</option>
+                                            <option value="OK" ${(data.state || '') === 'OK' ? 'selected' : ''}>Oklahoma</option>
+                                            <option value="OR" ${(data.state || '') === 'OR' ? 'selected' : ''}>Oregon</option>
+                                            <option value="PA" ${(data.state || '') === 'PA' ? 'selected' : ''}>Pennsylvania</option>
+                                            <option value="RI" ${(data.state || '') === 'RI' ? 'selected' : ''}>Rhode Island</option>
+                                            <option value="SC" ${(data.state || '') === 'SC' ? 'selected' : ''}>South Carolina</option>
+                                            <option value="SD" ${(data.state || '') === 'SD' ? 'selected' : ''}>South Dakota</option>
+                                            <option value="TN" ${(data.state || '') === 'TN' ? 'selected' : ''}>Tennessee</option>
+                                            <option value="TX" ${(data.state || '') === 'TX' ? 'selected' : ''}>Texas</option>
+                                            <option value="UT" ${(data.state || '') === 'UT' ? 'selected' : ''}>Utah</option>
+                                            <option value="VT" ${(data.state || '') === 'VT' ? 'selected' : ''}>Vermont</option>
+                                            <option value="VA" ${(data.state || '') === 'VA' ? 'selected' : ''}>Virginia</option>
+                                            <option value="WA" ${(data.state || '') === 'WA' ? 'selected' : ''}>Washington</option>
+                                            <option value="WV" ${(data.state || '') === 'WV' ? 'selected' : ''}>West Virginia</option>
+                                            <option value="WI" ${(data.state || '') === 'WI' ? 'selected' : ''}>Wisconsin</option>
+                                            <option value="WY" ${(data.state || '') === 'WY' ? 'selected' : ''}>Wyoming</option>
+                                            <option value="DC" ${(data.state || '') === 'DC' ? 'selected' : ''}>District of Columbia</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Zip Code</label>
+                                        <input type="text" class="form-control" name="zip_code" value="${data.zip_code || ''}" placeholder="62701">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Emergency Contact Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="border-bottom pb-2 mb-3">
+                                    <i class="bi bi-exclamation-triangle me-2 text-warning"></i>Emergency Contact
+                                </h6>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">First Name <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" name="emergency_contact_name" value="${data.emergency_first_name || ''}" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Last Name <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" name="emergency_contact_last_name" value="${data.emergency_last_name || ''}" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Relationship</label>
+                                        <select class="form-select" name="emergency_contact_relationship">
+                                            <option value="">Choose relationship...</option>
+                                            <option value="Spouse" ${(data.emergency_relationship || '') === 'Spouse' ? 'selected' : ''}>Spouse</option>
+                                            <option value="Parent" ${(data.emergency_relationship || '') === 'Parent' ? 'selected' : ''}>Parent</option>
+                                            <option value="Sibling" ${(data.emergency_relationship || '') === 'Sibling' ? 'selected' : ''}>Sibling</option>
+                                            <option value="Partner" ${(data.emergency_relationship || '') === 'Partner' ? 'selected' : ''}>Partner</option>
+                                            <option value="Friend" ${(data.emergency_relationship || '') === 'Friend' ? 'selected' : ''}>Friend</option>
+                                            <option value="Other" ${(data.emergency_relationship || '') === 'Other' ? 'selected' : ''}>Other</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Phone Number <span class="text-danger">*</span></label>
+                                        <input type="tel" class="form-control" name="emergency_contact_phone" value="${data.emergency_phone || ''}" required placeholder="e.g., 555-123-4567">
+                                    </div>
+                                    <div class="col-md-12">
+                                        <label class="form-label">Email</label>
+                                        <input type="email" class="form-control" name="emergency_contact_email" value="${data.emergency_email || ''}" placeholder="emergency@example.com">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                form.onsubmit = function(e) {
+                    e.preventDefault();
+                    let formData = new FormData(form);
+                    fetch(`/management/edit-teacher/${teacherId}`, {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(result => {
+                        if (result.success) {
+                            location.reload();
+                        } else {
+                            alert('Error: ' + result.message);
+                        }
+                    })
+                    .catch(() => alert('Could not update teacher/staff.'));
+                };
+                var modal = new bootstrap.Modal(document.getElementById('profileEditModal'));
+                modal.show();
+            })
+            .catch(() => alert('Could not load teacher details.'));
+    }
+
+    function removeTeacher(teacherId, teacherName) {
+        if (confirm(`Are you sure you want to remove ${teacherName}? This action cannot be undone.`)) {
+            fetch(`/management/remove-teacher-staff/${teacherId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    location.reload();
+                } else {
+                    alert('Error removing teacher/staff member.');
+                }
+            })
+            .catch(() => alert('Could not remove teacher/staff member.'));
+        }
+    }
+
+    function removeStudent(studentId, studentName) {
+        if (confirm(`Are you sure you want to remove ${studentName}? This action cannot be undone.`)) {
+            fetch(`/management/remove-student/${studentId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    location.reload();
+                } else {
+                    alert('Error removing student.');
+                }
+            })
+            .catch(() => alert('Could not remove student.'));
+        }
+    }
+    
+    // Enhanced Search JavaScript
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchForm = document.querySelector('form[action*="students"]');
+        if (searchForm) {
+            const filterSelects = searchForm.querySelectorAll('select[name="search_type"], select[name="grade_level"], select[name="status"], select[name="sort"], select[name="order"]');
+            
+            filterSelects.forEach(select => {
+                select.addEventListener('change', function() {
+                    searchForm.submit();
+                });
+            });
+            
+            // Add search suggestions
+            const searchInput = document.getElementById('search');
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
+                    const query = this.value.trim();
+                    if (query.length >= 2) {
+                        this.style.borderColor = '#28a745';
+                    } else {
+                        this.style.borderColor = '';
+                    }
+                });
+            }
+        }
+        
+        // Add keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            // Ctrl/Cmd + F to focus search
+            if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+                e.preventDefault();
+                const searchInput = document.getElementById('search');
+                if (searchInput) {
+                    searchInput.focus();
+                }
+            }
+            
+            // Escape to clear search
+            if (e.key === 'Escape') {
+                const searchInput = document.getElementById('search');
+                if (searchInput && searchInput.value) {
+                    searchInput.value = '';
+                    const searchForm = document.querySelector('form[action*="students"]');
+                    if (searchForm) {
+                        searchForm.submit();
+                    }
+                }
+            }
+        });
+    });
+    </script>
+    {% endraw %}
+
+    <!-- Enhanced Teacher Search JavaScript -->
+    {% if section == 'teachers' %}
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const teacherSearchForm = document.getElementById('teacherSearchForm');
+        const searchInput = document.getElementById('search');
+        const searchTypeSelect = document.getElementById('search_type');
+        const departmentSelect = document.getElementById('department');
+        const roleSelect = document.getElementById('role');
+        const employmentSelect = document.getElementById('employment');
+        const sortSelect = document.getElementById('sort');
+        const orderSelect = document.getElementById('order');
+
+        // Auto-submit form when filter dropdowns change
+        [searchTypeSelect, departmentSelect, roleSelect, employmentSelect, sortSelect, orderSelect].forEach(element => {
+            if (element) {
+                element.addEventListener('change', function() {
+                    teacherSearchForm.submit();
+                });
+            }
+        });
+
+        // Visual feedback for search input
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                if (this.value.length >= 2) {
+                    this.style.borderColor = '#28a745';
+                    this.style.borderWidth = '2px';
+                } else {
+                    this.style.borderColor = '';
+                    this.style.borderWidth = '';
+                }
+            });
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            // Ctrl/Cmd + F to focus search input
+            if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+                e.preventDefault();
+                if (searchInput) {
+                    searchInput.focus();
+                    searchInput.select();
+                }
+            }
+            
+            // Escape to clear search and re-submit
+            if (e.key === 'Escape') {
+                if (searchInput && searchInput.value) {
+                    searchInput.value = '';
+                    const teacherSearchForm = document.querySelector('form[action*="teachers"]');
+                    if (teacherSearchForm) {
+                        teacherSearchForm.submit();
+                    }
+                }
+            }
+        });
+    });
+    </script>
+    {% endif %}
+
+    <!-- Enhanced Dashboard JavaScript -->
+    <script>
+    // Real-time clock functionality
+    function updateTime() {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+        });
+        const timeElement = document.getElementById('current-time');
+        if (timeElement) {
+            timeElement.textContent = timeString;
+        }
+    }
+
+    // Update time immediately and then every second
+    updateTime();
+    setInterval(updateTime, 1000);
+
+    // Add smooth animations to stats cards
+    document.addEventListener('DOMContentLoaded', function() {
+        const statsCards = document.querySelectorAll('.stats-card');
+        
+        // Animate cards on scroll
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry, index) => {
+                if (entry.isIntersecting) {
+                    setTimeout(() => {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }, index * 100);
+                }
+            });
+        }, { threshold: 0.1 });
+        
+        statsCards.forEach(card => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            card.style.transition = 'all 0.6s ease';
+            observer.observe(card);
+        });
+    });
+    </script>
+{% endblock %} 

@@ -1,0 +1,746 @@
+{% extends "shared/base.html" %}
+
+{% block title %}
+    Welcome - Clara Science Academy
+{% endblock %}
+
+{% block content %}
+<!-- This template no longer needs its own <link> tag as it's handled by base.html -->
+
+<!-- Slideshow Background -->
+<div class="slideshow-container">
+    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image1.png');"></div>
+    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image2.png');"></div>
+    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image3.png');"></div>
+    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image4.png');"></div>
+    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image5.png');"></div>
+    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image6.png');"></div>
+    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image7.png');"></div>
+    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image8.png');"></div>
+    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image9.png');"></div>
+    <div class="slideshow-overlay"></div>
+</div>
+
+<!-- Hero Section -->
+<div class="hero-section">
+    <div class="container hero-content">
+        <div class="hero-text">
+            <h1 class="display-4 display-md-3">Empowering Minds, Shaping Futures</h1>
+            <p class="lead">
+                Welcome to Clara Science Academy's comprehensive student management portal. <br class="d-none d-md-block">
+                A centralized hub for academic excellence, seamless administration, and educational innovation.
+            </p>
+            <div class="hero-features">
+                <div class="hero-feature">
+                    <i class="fas fa-graduation-cap"></i>
+                    <span>Academic Excellence</span>
+                </div>
+                <div class="hero-feature">
+                    <i class="fas fa-users"></i>
+                    <span>Community Focus</span>
+                </div>
+                <div class="hero-feature">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Data-Driven Results</span>
+                </div>
+            </div>
+            <hr class="my-4 border-color-white-50">
+        </div>
+        
+        {% if current_user.is_authenticated %}
+            {% set role_name = current_user.role|lower|replace(' ', '_') %}
+            {% if role_name == 'school_administrator' %}
+                {% set dashboard_url = url_for('management.management_dashboard') %}
+            {% elif role_name == 'director' %}
+                {% set dashboard_url = url_for('management.management_dashboard') %}
+            {% elif role_name == 'teacher' %}
+                {% set dashboard_url = url_for('teacher.teacher_dashboard') %}
+            {% elif role_name == 'student' %}
+                {% set dashboard_url = url_for('student.student_dashboard') %}
+            {% elif role_name == 'tech' %}
+                {% set dashboard_url = url_for('tech.tech_dashboard') %}
+            {% else %}
+                {% set dashboard_url = url_for('auth.dashboard') %}
+            {% endif %}
+            <div class="hero-actions">
+                <p class="mb-3">Welcome back, {{ current_user.username }}! ({{ current_user.role }})</p>
+                <a class="btn btn-primary btn-lg me-3" href="{{ dashboard_url }}" role="button">
+                    <i class="fas fa-tachometer-alt me-2"></i>Go to Your Dashboard
+                </a>
+                <a class="btn btn-outline-light btn-lg" href="{{ url_for('auth.logout') }}" role="button">
+                    <i class="fas fa-sign-out-alt me-2"></i>Logout
+                </a>
+            </div>
+        {% else %}
+            <div class="hero-actions">
+                <p class="mb-3">Access your personalized educational portal</p>
+                <a class="btn btn-primary btn-lg me-3" href="{{ url_for('auth.login') }}" role="button">
+                    <i class="fas fa-sign-in-alt me-2"></i>Secure Login
+                </a>
+                <button class="btn btn-outline-light btn-lg" data-bs-toggle="modal" data-bs-target="#contactModal">
+                    <i class="fas fa-envelope me-2"></i>Contact Us
+                </button>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- About Section -->
+<div class="about-section py-5">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <h2 class="section-title mb-4">About Clara Science Academy</h2>
+                <p class="lead">Excellence in Education Since Our Founding</p>
+                <p>Clara Science Academy is a premier educational institution dedicated to fostering academic excellence, critical thinking, and scientific inquiry. Our comprehensive curriculum and innovative teaching methods prepare students for success in an ever-evolving world.</p>
+                <p>We believe that every student has the potential to achieve greatness when provided with the right tools, guidance, and environment. Our commitment to personalized education ensures that each student receives the attention and support they need to thrive.</p>
+                <div class="row mt-4">
+                    <div class="col-6">
+                        <div class="stat-item text-center">
+                            <h3 class="stat-number">N/A</h3>
+                            <p class="stat-label">Students Enrolled</p>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stat-item text-center">
+                            <h3 class="stat-number">N/A</h3>
+                            <p class="stat-label">Expert Teachers</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="about-image">
+                    <div class="image-placeholder">
+                        <i class="fas fa-graduation-cap"></i>
+                        <p>Academy Campus</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Features Section -->
+<div class="features-section">
+    <div class="container">
+        <div class="row text-center g-4">
+            <div class="col-12 mb-5">
+                <h2 class="section-title">Why Choose Clara Science Academy?</h2>
+                <p class="section-subtitle">Comprehensive tools and features designed for modern education management</p>
+            </div>
+            <!-- Feature 1: Student Management -->
+            <div class="col-12 col-sm-6 col-lg-4">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-user-graduate"></i>
+                    </div>
+                    <h3>Student Management</h3>
+                    <p>Easily manage student records, enrollment, and academic progress all in one place.</p>
+                </div>
+            </div>
+            <!-- Feature 2: Teacher & Class Tools -->
+            <div class="col-12 col-sm-6 col-lg-4">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-chalkboard-teacher"></i>
+                    </div>
+                    <h3>Teacher & Class Tools</h3>
+                    <p>Empower teachers with tools for class management, assignments, and grading.</p>
+                </div>
+            </div>
+            <!-- Feature 3: Comprehensive Reporting -->
+            <div class="col-12 col-sm-6 col-lg-4">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-chart-pie"></i>
+                    </div>
+                    <h3>Comprehensive Reporting</h3>
+                    <p>Generate detailed reports for attendance, grades, and overall school performance.</p>
+                </div>
+            </div>
+            <!-- Feature 4: Advanced Analytics -->
+            <div class="col-12 col-sm-6 col-lg-4">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h3>Advanced Analytics</h3>
+                    <p>Track student performance trends and identify areas for improvement with data-driven insights.</p>
+                </div>
+            </div>
+            <!-- Feature 5: Communication Hub -->
+            <div class="col-12 col-sm-6 col-lg-4">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-comments"></i>
+                    </div>
+                    <h3>Communication Hub</h3>
+                    <p>Seamless communication between students, teachers, and parents through integrated messaging.</p>
+                </div>
+            </div>
+            <!-- Feature 6: Secure Platform -->
+            <div class="col-12 col-sm-6 col-lg-4">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h3>Secure Platform</h3>
+                    <p>Enterprise-grade security ensures student data privacy and platform reliability.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Programs Section -->
+<div class="programs-section py-5 bg-light">
+    <div class="container">
+        <div class="row">
+            <div class="col-12 text-center mb-5">
+                <h2 class="section-title">Our Academic Programs</h2>
+                <p class="section-subtitle">Comprehensive curriculum designed to prepare students for future success</p>
+            </div>
+        </div>
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-2-4">
+                <div class="program-card">
+                    <div class="program-icon">
+                        <i class="fas fa-flask"></i>
+                    </div>
+                    <h4>Science & Technology</h4>
+                    <p>Advanced courses in physics, chemistry, biology, and computer science with hands-on laboratory experiences.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-2-4">
+                <div class="program-card">
+                    <div class="program-icon">
+                        <i class="fas fa-calculator"></i>
+                    </div>
+                    <h4>Mathematics</h4>
+                    <p>Comprehensive math curriculum from basic arithmetic to advanced calculus and statistics.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-2-4">
+                <div class="program-card">
+                    <div class="program-icon">
+                        <i class="fas fa-book"></i>
+                    </div>
+                    <h4>Language Arts</h4>
+                    <p>Literature, writing, and communication skills development for academic and professional success.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-2-4">
+                <div class="program-card">
+                    <div class="program-icon">
+                        <i class="fas fa-globe-americas"></i>
+                    </div>
+                    <h4>Social Sciences</h4>
+                    <p>History, geography, civics, and social studies to develop well-rounded global citizens.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-2-4">
+                <div class="program-card">
+                    <div class="program-icon">
+                        <i class="fas fa-code"></i>
+                    </div>
+                    <h4>Programming</h4>
+                    <p>Modern programming languages, software development, web technologies, and computational thinking skills.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Technology Section -->
+<div class="technology-section py-5">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <div class="tech-image">
+                    <div class="image-placeholder">
+                        <i class="fas fa-laptop"></i>
+                        <p>Modern Technology</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <h2 class="section-title mb-4">Cutting-Edge Technology</h2>
+                <p class="lead">Digital Innovation in Education</p>
+                <p>Our student management system leverages the latest technology to provide seamless, efficient, and secure educational administration. From real-time attendance tracking to comprehensive grade management, we've integrated modern solutions to enhance the learning experience.</p>
+                <ul class="tech-features">
+                    <li><i class="fas fa-check-circle"></i> Real-time attendance tracking</li>
+                    <li><i class="fas fa-check-circle"></i> Digital grade books and report cards</li>
+                    <li><i class="fas fa-check-circle"></i> Mobile-responsive design</li>
+                    <li><i class="fas fa-check-circle"></i> Secure cloud-based platform</li>
+                    <li><i class="fas fa-check-circle"></i> Advanced analytics and reporting</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Community Leadership Section -->
+<div class="testimonials-section py-5">
+    <div class="container">
+        <div class="row">
+            <div class="col-12 text-center mb-5">
+                <h2 class="section-title">Our Leadership Team</h2>
+                <p class="section-subtitle">Meet the dedicated professionals leading Clara Science Academy</p>
+            </div>
+        </div>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="testimonial-card">
+                    <div class="testimonial-content">
+                        <p>"Leading Clara Science Academy with a vision for educational excellence and innovation. We are committed to providing the best learning environment for our students."</p>
+                    </div>
+                    <div class="testimonial-author">
+                        <div class="author-info">
+                            <h5>Omar. P</h5>
+                            <p>Board of Directors</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="testimonial-card">
+                    <div class="testimonial-content">
+                        <p>"As Principal, I ensure that every student receives the highest quality education and support. Our comprehensive management system helps us achieve this goal effectively."</p>
+                    </div>
+                    <div class="testimonial-author">
+                        <div class="author-info">
+                            <h5>Varsty. C</h5>
+                            <p>Principal</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="testimonial-card">
+                    <div class="testimonial-content">
+                        <p>"Technology is the backbone of modern education. Our advanced student management system ensures seamless operations and enhanced learning experiences for all stakeholders."</p>
+                    </div>
+                    <div class="testimonial-author">
+                        <div class="author-info">
+                            <h5>Khaatir. H</h5>
+                            <p>IT Department Head</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Contact Section -->
+<div class="contact-section py-5">
+    <div class="container">
+        <div class="row">
+            <div class="col-12 text-center mb-5">
+                <h2 class="section-title">Contact Clara Science Academy</h2>
+                <p class="section-subtitle">Get in touch with us for more information</p>
+            </div>
+        </div>
+        <div class="row g-4">
+            <div class="col-md-3">
+                <div class="contact-card">
+                    <div class="contact-icon">
+                        <i class="fas fa-map-marker-alt"></i>
+                    </div>
+                    <h4>Visit Us</h4>
+                    <p>3015 East Bessemer Ave.<br>Greensboro, NC 27405</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="contact-card">
+                    <div class="contact-icon">
+                        <i class="fas fa-phone"></i>
+                    </div>
+                    <h4>Call Us</h4>
+                    <p><a href="tel:1-800-567-5110">1-800-567-5110</a></p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="contact-card">
+                    <div class="contact-icon">
+                        <i class="fas fa-envelope"></i>
+                    </div>
+                    <h4>Email Us</h4>
+                    <p><a href="mailto:info@clarascienceacademy.com">info@clarascienceacademy.com</a></p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="contact-card">
+                    <div class="contact-icon">
+                        <i class="fas fa-globe"></i>
+                    </div>
+                    <h4>Visit Our Website</h4>
+                    <p><a href="https://www.clarascienceacademy.com" target="_blank">www.clarascienceacademy.com</a></p>
+                </div>
+            </div>
+        </div>
+        <div class="row mt-5">
+            <div class="col-12 text-center">
+                <div class="contact-hours">
+                    <h4>Office Hours</h4>
+                    <p>Monday - Thursday: 8:00 AM - 3:30 PM<br>
+                    Friday: 8:00 AM - 12:00 PM<br>
+                    Saturday & Sunday: Closed</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Call to Action Section -->
+<div class="cta-section py-5 bg-primary text-white">
+    <div class="container text-center">
+        <div class="row">
+            <div class="col-12">
+                <h2 class="mb-4">Ready to Get Started?</h2>
+                <p class="lead mb-4">Join Clara Science Academy and experience the future of education management.</p>
+                {% if not current_user.is_authenticated %}
+                <a class="btn btn-light btn-lg me-3" href="{{ url_for('auth.login') }}" role="button">
+                    <i class="fas fa-sign-in-alt me-2"></i>Login to Portal
+                </a>
+                {% endif %}
+                <button class="btn btn-outline-light btn-lg me-3" data-bs-toggle="modal" data-bs-target="#contactModal">
+                    <i class="fas fa-envelope me-2"></i>Contact Us
+                </button>
+                <a class="btn btn-outline-light btn-lg" href="https://www.clarascienceacademy.com" target="_blank" role="button">
+                    <i class="fas fa-globe me-2"></i>Visit Our Website
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Contact Modal -->
+<div class="modal fade" id="contactModal" tabindex="-1" aria-labelledby="contactModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="contactModalLabel">
+                    <i class="fas fa-envelope me-2"></i>Contact Clara Science Academy
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row g-4">
+                    <!-- Contact Information -->
+                    <div class="col-md-6">
+                        <h6 class="text-success mb-3">
+                            <i class="fas fa-info-circle me-2"></i>Get In Touch
+                        </h6>
+                        <div class="contact-info">
+                            <div class="contact-item mb-3">
+                                <div class="contact-icon-wrapper">
+                                    <i class="fas fa-map-marker-alt text-success"></i>
+                                </div>
+                                <div class="contact-details">
+                                    <strong>Address</strong><br>
+                                    3015 East Bessemer Ave.<br>
+                                    Greensboro, NC 27405
+                                </div>
+                            </div>
+                            
+                            <div class="contact-item mb-3">
+                                <div class="contact-icon-wrapper">
+                                    <i class="fas fa-phone text-success"></i>
+                                </div>
+                                <div class="contact-details">
+                                    <strong>Phone</strong><br>
+                                    <a href="tel:1-800-567-5110" class="text-decoration-none">1-800-567-5110</a>
+                                </div>
+                            </div>
+                            
+                            <div class="contact-item mb-3">
+                                <div class="contact-icon-wrapper">
+                                    <i class="fas fa-envelope text-success"></i>
+                                </div>
+                                <div class="contact-details">
+                                    <strong>Email</strong><br>
+                                    <a href="mailto:info@clarascienceacademy.com" class="text-decoration-none">info@clarascienceacademy.com</a>
+                                </div>
+                            </div>
+                            
+                            <div class="contact-item mb-3">
+                                <div class="contact-icon-wrapper">
+                                    <i class="fas fa-globe text-success"></i>
+                                </div>
+                                <div class="contact-details">
+                                    <strong>Website</strong><br>
+                                    <a href="https://www.clarascienceacademy.com" target="_blank" class="text-decoration-none">www.clarascienceacademy.com</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Office Hours -->
+                    <div class="col-md-6">
+                        <h6 class="text-success mb-3">
+                            <i class="fas fa-clock me-2"></i>Office Hours
+                        </h6>
+                        <div class="office-hours">
+                            <div class="hours-item mb-2">
+                                <strong>Monday - Thursday:</strong><br>
+                                8:00 AM - 3:30 PM
+                            </div>
+                            <div class="hours-item mb-2">
+                                <strong>Friday:</strong><br>
+                                8:00 AM - 12:00 PM
+                            </div>
+                            <div class="hours-item mb-2">
+                                <strong>Saturday & Sunday:</strong><br>
+                                Closed
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <h6 class="text-success mb-3">
+                                <i class="fas fa-user-tie me-2"></i>Leadership Team
+                            </h6>
+                            <div class="leadership-info">
+                                <div class="leader-item mb-2">
+                                    <strong>Omar. P</strong><br>
+                                    <small class="text-muted">Board of Directors</small>
+                                </div>
+                                <div class="leader-item mb-2">
+                                    <strong>Varsty. C</strong><br>
+                                    <small class="text-muted">Principal</small>
+                                </div>
+                                <div class="leader-item mb-2">
+                                    <strong>Khaatir. H</strong><br>
+                                    <small class="text-muted">IT Department Head</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Quick Actions -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <h6 class="text-success mb-3">
+                            <i class="fas fa-bolt me-2"></i>Quick Actions
+                        </h6>
+                        <div class="d-flex flex-wrap gap-2">
+                            <a href="mailto:info@clarascienceacademy.com" class="btn btn-success btn-sm">
+                                <i class="fas fa-envelope me-1"></i>Send Email
+                            </a>
+                            <a href="tel:1-800-567-5110" class="btn btn-outline-success btn-sm">
+                                <i class="fas fa-phone me-1"></i>Call Now
+                            </a>
+                            <a href="https://www.clarascienceacademy.com" target="_blank" class="btn btn-outline-success btn-sm">
+                                <i class="fas fa-globe me-1"></i>Visit Website
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Update Modal -->
+<div class="modal fade" id="updateModal" tabindex="-1" aria-labelledby="updateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="updateModalLabel">
+                    <i class="fas fa-rocket me-2"></i>Update #16 - Clara Science Academy
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="update-intro mb-4">
+                    <h6 class="text-success mb-2">
+                        <i class="fas fa-calendar-alt me-2"></i>Latest Updates - September 26, 2025
+                    </h6>
+                    <p class="text-muted mb-0">Major enhancements to assignment creation and quiz taking! Here's what's new:</p>
+                </div>
+                
+                <div class="update-sections">
+                    <!-- Assignment Creation Enhancements -->
+                    <div class="update-section mb-4">
+                        <h6 class="text-success mb-3">
+                            <i class="fas fa-plus-circle me-2"></i>Assignment Creation Overhaul
+                        </h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Modern Quiz Creation:</strong> Completely redesigned quiz assignment interface with live preview and dynamic question management
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Enhanced PDF/Paper Assignments:</strong> Beautiful drag-and-drop file upload with real-time validation and preview
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Improved Discussion Assignments:</strong> Advanced rubric builder, discussion prompts, and comprehensive settings
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Live Preview System:</strong> Real-time preview of assignments as you build them
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Quiz Taking Enhancements -->
+                    <div class="update-section mb-4">
+                        <h6 class="text-success mb-3">
+                            <i class="fas fa-question-circle me-2"></i>Quiz Taking Experience
+                        </h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Timer Display:</strong> Visual countdown timer with color-coded warnings and auto-submission
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Question Navigation:</strong> Previous/Next buttons with smooth transitions and progress tracking
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Review Mode:</strong> Comprehensive review system with answer status and quick navigation
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Keyboard Shortcuts:</strong> Arrow keys for navigation, R for review mode, Ctrl+S to save progress
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Visual Design Improvements -->
+                    <div class="update-section mb-4">
+                        <h6 class="text-success mb-3">
+                            <i class="fas fa-paint-brush me-2"></i>Visual Design Improvements
+                        </h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Modern Card Design:</strong> Beautiful gradient headers, rounded corners, and professional styling
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Enhanced Form Controls:</strong> Larger inputs, better spacing, and intuitive icons throughout
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Interactive Elements:</strong> Hover effects, smooth transitions, and visual feedback
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Responsive Design:</strong> Optimized for all screen sizes with mobile-friendly controls
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- User Experience Enhancements -->
+                    <div class="update-section mb-4">
+                        <h6 class="text-success mb-3">
+                            <i class="fas fa-user-friends me-2"></i>User Experience Enhancements
+                        </h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Intuitive Navigation:</strong> Clear visual hierarchy and logical flow for all assignment types
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Progress Tracking:</strong> Real-time progress indicators and completion status
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Helpful Guidance:</strong> Built-in tips, best practices, and contextual help
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Accessibility Features:</strong> Keyboard navigation, screen reader support, and ARIA labels
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Technical Improvements -->
+                    <div class="update-section mb-4">
+                        <h6 class="text-success mb-3">
+                            <i class="fas fa-code me-2"></i>Technical Improvements
+                        </h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Enhanced JavaScript:</strong> Improved form validation, error handling, and user feedback
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Better Performance:</strong> Optimized loading times and smoother interactions
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Cross-Browser Compatibility:</strong> Tested and optimized for all major browsers
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Mobile Optimization:</strong> Touch-friendly controls and responsive layouts
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="update-footer mt-4 p-3 bg-light rounded">
+                    <h6 class="text-success mb-2">
+                        <i class="fas fa-heart me-2"></i>Thank You!
+                    </h6>
+                    <p class="mb-0 text-muted">
+                        We're excited to share these major improvements to assignment creation and quiz taking! 
+                        The new interfaces are designed to be more intuitive, visually appealing, and efficient for both teachers and students. 
+                        If you have any feedback or suggestions, please don't hesitate to contact our support team.
+                    </p>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-success" data-bs-dismiss="modal">
+                    <i class="fas fa-check me-2"></i>Got It!
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Update popup functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Show update popup on page load
+    const updateModal = new bootstrap.Modal(document.getElementById('updateModal'));
+    updateModal.show();
+});
+
+// Slideshow functionality for homepage
+document.addEventListener('DOMContentLoaded', function() {
+    const slideshowImages = document.querySelectorAll('.slideshow-image');
+    let currentSlide = 0;
+    
+    function showSlide(index) {
+        slideshowImages.forEach((img, i) => {
+            img.classList.toggle('active', i === index);
+        });
+    }
+    
+    function nextSlide() {
+        currentSlide = (currentSlide + 1) % slideshowImages.length;
+        showSlide(currentSlide);
+    }
+    
+    // Initialize slideshow
+    showSlide(0);
+    
+    // Change slide every 5 seconds
+    setInterval(nextSlide, 5000);
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,81 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+    <div class="row g-3 g-md-4">
+        <!-- Sidebar -->
+        <div class="col-12 col-lg-3">
+            <div class="card shadow-sm">
+                <div class="card-header text-white" style="background: linear-gradient(135deg, #2E8B57 0%, #228B22 50%, #556B2F 100%);">
+                    <h5 class="mb-0"><i class="bi bi-people-fill me-2"></i>Groups</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        <a href="{{ url_for('management.communications') }}" 
+                           class="list-group-item list-group-item-action">
+                            <i class="bi bi-arrow-left me-2"></i>Back to Communications
+                        </a>
+                        <a href="{{ url_for('management.management_create_group') }}" 
+                           class="list-group-item list-group-item-action">
+                            <i class="bi bi-plus-circle me-2"></i>Create New Group
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-12 col-lg-9">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
+                        <h5 class="mb-2 mb-md-0"><i class="bi bi-people-fill me-2"></i>Message Groups</h5>
+                        <a href="{{ url_for('management.management_create_group') }}" class="btn btn-sm text-white" style="background: linear-gradient(135deg, #2E8B57 0%, #228B22 50%, #556B2F 100%);">
+                            <i class="bi bi-plus-circle me-1"></i>Create Group
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if groups %}
+                        <div class="row g-3 g-md-4">
+                            {% for group in groups %}
+                                <div class="col-12 col-md-6 col-lg-4">
+                                    <div class="card h-100">
+                                        <div class="card-header bg-light">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <h6 class="card-title mb-0">{{ group.name }}</h6>
+                                                {% if group.created_by == current_user.id %}
+                                                    <span class="badge bg-primary">Admin</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="card-body">
+                                            <p class="card-text small">{{ group.description or 'No description' }}</p>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <small class="text-muted">
+                                                    {{ group.members|length if group.members else 0 }} members
+                                                </small>
+                                                <a href="{{ url_for('management.management_view_group', group_id=group.id) }}" 
+                                                   class="btn btn-sm btn-outline-primary">View Group</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="bi bi-people display-1 text-muted"></i>
+                            <h4 class="text-muted mt-3">No Groups Yet</h4>
+                            <p class="text-muted">Create a group to start collaborating with multiple people.</p>
+                            <a href="{{ url_for('management.management_create_group') }}" class="btn btn-success">
+                                <i class="bi bi-plus-circle me-2"></i>Create Your First Group
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

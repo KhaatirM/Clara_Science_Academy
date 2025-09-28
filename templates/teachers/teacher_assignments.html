@@ -1,0 +1,791 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2 gap-md-0">
+        <h3 class="mb-2 mb-md-0">My Assignments</h3>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('teacher.assignment_type_selector') }}" class="btn btn-sm text-white" style="background: linear-gradient(135deg, #2E8B57 0%, #228B22 50%, #556B2F 100%);">
+                <i class="bi bi-plus-circle me-1 me-md-2"></i>Add Assignment
+            </a>
+            <button class="btn btn-sm text-white" style="background: linear-gradient(135deg, #2E8B57 0%, #228B22 50%, #556B2F 100%);" onclick="window.history.back()">
+                <i class="bi bi-arrow-left me-1 me-md-2"></i>Back to Dashboard
+            </button>
+        </div>
+    </div>
+
+    <!-- Filter and Sort Controls -->
+    <div class="card mb-4" style="background-color: #f8f9fa; border: 1px solid #e9ecef;">
+        <div class="card-body">
+            <form method="GET" class="row g-3" id="filterForm">
+                <div class="col-12 col-sm-6 col-md-3">
+                    <label for="class_filter" class="form-label fw-bold">Filter by Class</label>
+                    <select class="form-select" id="class_filter" name="class_id" onchange="this.form.submit()">
+                        <option value="">All Classes</option>
+                        {% for class in classes %}
+                            <option value="{{ class.id }}" {% if selected_class_id|string == class.id|string %}selected{% endif %}>
+                                {{ class.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12 col-sm-6 col-md-3">
+                    <label for="sort_by" class="form-label fw-bold">Sort by</label>
+                    <select class="form-select" id="sort_by" name="sort" onchange="this.form.submit()">
+                        <option value="due_date" {% if sort_by == 'due_date' %}selected{% endif %}>Due Date</option>
+                        <option value="title" {% if sort_by == 'title' %}selected{% endif %}>Assignment Title</option>
+                    </select>
+                </div>
+                <div class="col-12 col-sm-6 col-md-3">
+                    <label for="sort_order" class="form-label fw-bold">Order</label>
+                    <select class="form-select" id="sort_order" name="order" onchange="this.form.submit()">
+                        <option value="desc" {% if sort_order == 'desc' %}selected{% endif %}>
+                            {% if sort_by == 'due_date' %}Latest First{% else %}Z to A{% endif %}
+                        </option>
+                        <option value="asc" {% if sort_order == 'asc' %}selected{% endif %}>
+                            {% if sort_by == 'due_date' %}Earliest First{% else %}A to Z{% endif %}
+                        </option>
+                    </select>
+                </div>
+                <div class="col-12 col-sm-6 col-md-3 d-flex align-items-end">
+                    <button type="button" class="btn btn-outline-secondary" onclick="clearFilters()">
+                        <i class="bi bi-arrow-clockwise me-1"></i>Clear Filters
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if assignments %}
+        <!-- Assignment Summary -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="alert alert-info d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-info-circle me-2"></i>Showing {{ assignments|length }} assignment{{ 's' if assignments|length != 1 else '' }}</span>
+                    {% if selected_class_id %}
+                        <span class="badge bg-primary">Filtered by class</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-striped table-hover align-middle assignments-table">
+                <thead class="table-dark">
+                    <tr>
+                        <th class="sortable" data-sort="due_date">
+                            Due Date
+                            {% if sort_by == 'due_date' %}
+                                <i class="bi bi-arrow-{% if sort_order == 'asc' %}up{% else %}down{% endif %} ms-1"></i>
+                            {% endif %}
+                        </th>
+                        <th class="sortable" data-sort="title">
+                            Assignment Title
+                            {% if sort_by == 'title' %}
+                                <i class="bi bi-arrow-{% if sort_order == 'asc' %}up{% else %}down{% endif %} ms-1"></i>
+                            {% endif %}
+                        </th>
+                        <th>Class</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for assignment in assignments %}
+                        <tr>
+                            <td data-label="Due Date">{{ assignment.due_date.strftime('%m/%d/%Y %I:%M %p') }}</td>
+                            <td data-label="Assignment Title">
+                                <strong>{{ assignment.title }}</strong>
+                                <div class="d-flex flex-wrap gap-1 mt-1">
+                                    {% if assignment.assignment_type == 'quiz' %}
+                                        <span class="badge bg-warning text-dark" style="font-size: 0.7rem;">
+                                            <i class="bi bi-question-circle me-1"></i>Quiz
+                                        </span>
+                                    {% elif assignment.assignment_type == 'discussion' %}
+                                        <span class="badge bg-info" style="font-size: 0.7rem;">
+                                            <i class="bi bi-chat-dots me-1"></i>Discussion
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-primary" style="font-size: 0.7rem;">
+                                            <i class="bi bi-file-earmark-pdf me-1"></i>PDF/Paper
+                                        </span>
+                                    {% endif %}
+                                </div>
+                                {% if assignment.description %}
+                                    <br><small class="text-muted">{{ assignment.description[:100] }}{% if assignment.description|length > 100 %}...{% endif %}</small>
+                                {% endif %}
+                                {% if assignment.attachment_filename %}
+                                    <br><small class="text-primary">
+                                        <i class="bi bi-paperclip me-1"></i>
+                                        <a href="{{ url_for('download_assignment_file', assignment_id=assignment.id) }}" class="text-decoration-none">
+                                            {{ assignment.attachment_original_filename }}
+                                        </a>
+                                    </small>
+                                {% endif %}
+                            </td>
+                            <td data-label="Class">{{ assignment.class_info.name }}</td>
+                            <td data-label="Status">
+                                {% if assignment.status == 'Active' %}
+                                    <span class="badge bg-success">Active</span>
+                                {% elif assignment.status == 'Inactive' %}
+                                    <span class="badge bg-warning text-dark">Inactive</span>
+                                {% elif assignment.status == 'Voided' %}
+                                    <span class="badge bg-danger">Voided</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ assignment.status|title }}</span>
+                                {% endif %}
+                            </td>
+                            <td data-label="Actions">
+                                <div class="d-flex flex-column flex-sm-row gap-1">
+                                    <a href="{{ url_for('teacher.view_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-secondary btn-sm">
+                                        <i class="bi bi-eye me-1"></i>View
+                                    </a>
+                                    <a href="{{ url_for('teacher.grade_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-primary btn-sm">
+                                        <i class="bi bi-pencil me-1"></i>Grade
+                                    </a>
+                                    <a href="{{ url_for('teacher.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-warning btn-sm">
+                                        <i class="bi bi-pencil-square me-1"></i>Edit
+                                    </a>
+                                    <button type="button" class="btn btn-outline-info btn-sm change-status-btn"
+                                            data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}" 
+                                            data-current-status="{{ assignment.status }}">
+                                        <i class="bi bi-gear me-1"></i>Status
+                                    </button>
+                                    <button type="button" class="btn btn-outline-danger btn-sm remove-assignment-btn"
+                                            data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}">
+                                        <i class="bi bi-trash me-1"></i>Remove
+                                    </button>
+                                    <button type="button" class="btn btn-outline-success btn-sm manage-extensions-btn"
+                                            data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}"
+                                            data-class-id="{{ assignment.class_id }}">
+                                        <i class="bi bi-clock-history me-1"></i>Extensions
+                                    </button>
+                                    <a href="{{ url_for('teacher.view_class', class_id=assignment.class_id) }}" class="btn btn-outline-info btn-sm">
+                                        <i class="bi bi-eye me-1"></i>View Class
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            <h5>No Assignments Created</h5>
+            <p>You haven't created any assignments yet. Create assignments for your classes to get started.</p>
+            {% if classes %}
+                <div class="mt-3">
+                    <h6>Create an assignment for one of your classes:</h6>
+                    <div class="row g-2">
+                        {% for class in classes %}
+                            <div class="col-12 col-sm-6 col-md-4">
+                                <a href="{{ url_for('teacher.add_assignment', class_id=class.id) }}" class="btn btn-outline-primary btn-sm w-100">
+                                    <i class="bi bi-plus-circle me-1"></i>{{ class.name }}
+                                </a>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+
+<!-- Status Change Modal -->
+<div class="modal fade" id="statusChangeModal" tabindex="-1" aria-labelledby="statusChangeModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="statusChangeModalLabel">Change Assignment Status</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Assignment: <strong id="statusAssignmentTitle"></strong></p>
+                <p>Current Status: <span id="currentStatusBadge"></span></p>
+                <form id="statusChangeForm" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <div class="mb-3">
+                        <label for="newStatus" class="form-label">New Status</label>
+                        <select class="form-select" id="newStatus" name="status" required>
+                            <option value="Active">Active - Students can submit work</option>
+                            <option value="Inactive">Inactive - Students cannot submit work</option>
+                            <option value="Voided">Voided - Does not affect grades (0/0 for all students)</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmStatusChange">Change Status</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the assignment "<span id="assignmentTitle"></span>"?</p>
+                <p class="text-danger"><small>This action cannot be undone.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <button type="submit" class="btn btn-danger">Delete Assignment</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Extension Management Modal -->
+<div class="modal fade" id="extensionModal" tabindex="-1" aria-labelledby="extensionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="extensionModalLabel">Manage Extensions</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <h6>Assignment: <span id="extensionAssignmentTitle"></span></h6>
+                    <p class="text-muted">Select students and set new due dates for extensions.</p>
+                </div>
+                
+                <form id="extensionForm" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <input type="hidden" id="extensionAssignmentId" name="assignment_id">
+                    
+                    <div class="mb-3">
+                        <label for="extensionDate" class="form-label">New Due Date</label>
+                        <input type="datetime-local" class="form-control" id="extensionDate" name="extended_due_date" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="extensionReason" class="form-label">Reason (Optional)</label>
+                        <textarea class="form-control" id="extensionReason" name="reason" rows="3" placeholder="Enter reason for extension..."></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label mb-0">Select Students</label>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-primary" id="selectedCount">0 selected</span>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="clearSelection">Clear All</button>
+                            </div>
+                        </div>
+                        
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="selectAllStudents">
+                            <label class="form-check-label fw-bold" for="selectAllStudents">
+                                Select All Students
+                            </label>
+                        </div>
+                        
+                        <div class="border rounded p-3" style="max-height: 300px; overflow-y: auto;">
+                            <div id="studentsList">
+                                <!-- Students will be loaded here -->
+                            </div>
+                        </div>
+                        
+                        <!-- Selected Students Summary -->
+                        <div id="selectedStudentsSummary" class="mt-3" style="display: none;">
+                            <h6 class="text-success">Selected Students:</h6>
+                            <div id="selectedStudentsList" class="d-flex flex-wrap gap-1">
+                                <!-- Selected students will be shown here -->
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="grantExtensions">Grant Extensions</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle remove assignment button clicks
+    const removeButtons = document.querySelectorAll('.remove-assignment-btn');
+    const deleteModal = document.getElementById('deleteModal');
+    const assignmentTitleSpan = document.getElementById('assignmentTitle');
+    const deleteForm = document.getElementById('deleteForm');
+    
+    removeButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const assignmentId = this.getAttribute('data-assignment-id');
+            const assignmentTitle = this.getAttribute('data-assignment-title');
+            
+            // Update modal content
+            assignmentTitleSpan.textContent = assignmentTitle;
+            
+            // Update form action with proper URL construction
+            deleteForm.action = `/teacher/assignment/remove/${assignmentId}`;
+            
+            // Show modal
+            const modal = new bootstrap.Modal(deleteModal);
+            modal.show();
+        });
+    });
+
+    // Status change functionality
+    const statusButtons = document.querySelectorAll('.change-status-btn');
+    const statusModal = document.getElementById('statusChangeModal');
+    const statusAssignmentTitle = document.getElementById('statusAssignmentTitle');
+    const currentStatusBadge = document.getElementById('currentStatusBadge');
+    const statusChangeForm = document.getElementById('statusChangeForm');
+    const newStatusSelect = document.getElementById('newStatus');
+    const confirmStatusChange = document.getElementById('confirmStatusChange');
+    
+    statusButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const assignmentId = this.dataset.assignmentId;
+            const assignmentTitle = this.dataset.assignmentTitle;
+            const currentStatus = this.dataset.currentStatus;
+            
+            // Update modal content
+            statusAssignmentTitle.textContent = assignmentTitle;
+            
+            // Update current status badge
+            let badgeClass = 'badge bg-secondary';
+            if (currentStatus === 'Active') badgeClass = 'badge bg-success';
+            else if (currentStatus === 'Inactive') badgeClass = 'badge bg-warning text-dark';
+            else if (currentStatus === 'Voided') badgeClass = 'badge bg-danger';
+            
+            currentStatusBadge.innerHTML = `<span class="${badgeClass}">${currentStatus}</span>`;
+            
+            // Set current status as selected in dropdown
+            newStatusSelect.value = currentStatus;
+            
+            // Update form action
+            statusChangeForm.action = `{{ url_for('teacher.change_assignment_status', assignment_id=0) }}`.replace('0', assignmentId);
+            
+            // Show modal
+            const modal = new bootstrap.Modal(statusModal);
+            modal.show();
+        });
+    });
+    
+    confirmStatusChange.addEventListener('click', function() {
+        const newStatus = newStatusSelect.value;
+        const currentStatus = newStatusSelect.options[newStatusSelect.selectedIndex].text.split(' - ')[0];
+        
+        if (confirm(`Are you sure you want to change the status to "${currentStatus}"?`)) {
+            // Show loading state
+            confirmStatusChange.disabled = true;
+            confirmStatusChange.textContent = 'Changing...';
+            
+            statusChangeForm.submit();
+        }
+    });
+
+    // Table header sorting functionality
+    const sortableHeaders = document.querySelectorAll('.sortable');
+    sortableHeaders.forEach(header => {
+        header.style.cursor = 'pointer';
+        header.addEventListener('click', function() {
+            const sortBy = this.dataset.sort;
+            const currentSort = '{{ sort_by }}';
+            const currentOrder = '{{ sort_order }}';
+            
+            // Determine new order
+            let newOrder = 'asc';
+            if (currentSort === sortBy && currentOrder === 'asc') {
+                newOrder = 'desc';
+            }
+            
+            // Update URL with new sort parameters
+            const url = new URL(window.location);
+            url.searchParams.set('sort', sortBy);
+            url.searchParams.set('order', newOrder);
+            window.location.href = url.toString();
+        });
+    });
+
+    // Extension management functionality
+    const extensionButtons = document.querySelectorAll('.manage-extensions-btn');
+    const extensionModal = document.getElementById('extensionModal');
+    const extensionAssignmentTitle = document.getElementById('extensionAssignmentTitle');
+    const extensionAssignmentId = document.getElementById('extensionAssignmentId');
+    const studentsList = document.getElementById('studentsList');
+    const selectAllStudents = document.getElementById('selectAllStudents');
+    const grantExtensionsBtn = document.getElementById('grantExtensions');
+    const selectedCount = document.getElementById('selectedCount');
+    const clearSelection = document.getElementById('clearSelection');
+    const selectedStudentsSummary = document.getElementById('selectedStudentsSummary');
+    const selectedStudentsList = document.getElementById('selectedStudentsList');
+
+    extensionButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const assignmentId = this.dataset.assignmentId;
+            const assignmentTitle = this.dataset.assignmentTitle;
+            const classId = this.dataset.classId;
+            
+            // Update modal content
+            extensionAssignmentTitle.textContent = assignmentTitle;
+            extensionAssignmentId.value = assignmentId;
+            
+            // Reset selection state
+            resetSelectionState();
+            
+            // Load students for this class
+            loadStudentsForClass(classId);
+            
+            // Show modal
+            const modal = new bootstrap.Modal(extensionModal);
+            modal.show();
+        });
+    });
+
+    // Select all students functionality
+    selectAllStudents.addEventListener('change', function() {
+        const studentCheckboxes = document.querySelectorAll('#studentsList input[type="checkbox"]');
+        studentCheckboxes.forEach(checkbox => {
+            checkbox.checked = this.checked;
+        });
+        updateSelectionDisplay();
+    });
+
+    // Clear selection functionality
+    clearSelection.addEventListener('click', function() {
+        const studentCheckboxes = document.querySelectorAll('#studentsList input[type="checkbox"]');
+        studentCheckboxes.forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        selectAllStudents.checked = false;
+        updateSelectionDisplay();
+    });
+
+    // Grant extensions functionality
+    grantExtensionsBtn.addEventListener('click', function() {
+        const selectedStudents = Array.from(document.querySelectorAll('#studentsList input[type="checkbox"]:checked'))
+            .map(checkbox => checkbox.value);
+        
+        if (selectedStudents.length === 0) {
+            alert('Please select at least one student.');
+            return;
+        }
+        
+        const extendedDueDate = document.getElementById('extensionDate').value;
+        if (!extendedDueDate) {
+            alert('Please select a new due date.');
+            return;
+        }
+        
+        // Get selected student names for confirmation
+        const selectedStudentNames = Array.from(document.querySelectorAll('#studentsList input[type="checkbox"]:checked'))
+            .map(checkbox => checkbox.dataset.studentName);
+        
+        const studentList = selectedStudentNames.length <= 5 
+            ? selectedStudentNames.join(', ')
+            : `${selectedStudentNames.slice(0, 5).join(', ')} and ${selectedStudentNames.length - 5} more`;
+        
+        if (confirm(`Grant extensions to ${selectedStudents.length} student(s) until ${extendedDueDate}?\n\nStudents: ${studentList}`)) {
+            // Show loading state
+            grantExtensionsBtn.disabled = true;
+            grantExtensionsBtn.innerHTML = '<i class="spinner-border spinner-border-sm me-1"></i>Granting...';
+            
+            // Submit the form
+            const form = document.getElementById('extensionForm');
+            const formData = new FormData(form);
+            
+            // Add selected students to form data
+            selectedStudents.forEach(studentId => {
+                formData.append('student_ids', studentId);
+            });
+            
+            // Submit via fetch
+            fetch('{{ url_for("teacher.grant_extensions") }}', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(`Extensions granted successfully to ${data.granted_count} student(s)!`);
+                    location.reload();
+                } else {
+                    alert('Error granting extensions: ' + (data.error || 'Unknown error'));
+                    // Reset button state
+                    grantExtensionsBtn.disabled = false;
+                    grantExtensionsBtn.innerHTML = 'Grant Extensions';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error granting extensions. Please try again.');
+                // Reset button state
+                grantExtensionsBtn.disabled = false;
+                grantExtensionsBtn.innerHTML = 'Grant Extensions';
+            });
+        }
+    });
+
+    // Function to load students for a class
+    function loadStudentsForClass(classId) {
+        fetch(`/teacher/class/${classId}/students`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    studentsList.innerHTML = '';
+                    data.students.forEach(student => {
+                        const studentDiv = document.createElement('div');
+                        studentDiv.className = 'form-check';
+                        studentDiv.innerHTML = `
+                            <input class="form-check-input student-checkbox" type="checkbox" value="${student.id}" id="student_${student.id}" data-student-name="${student.first_name} ${student.last_name}">
+                            <label class="form-check-label" for="student_${student.id}">
+                                ${student.first_name} ${student.last_name}
+                            </label>
+                        `;
+                        studentsList.appendChild(studentDiv);
+                    });
+                    
+                    // Add event listeners to individual checkboxes
+                    const studentCheckboxes = document.querySelectorAll('.student-checkbox');
+                    studentCheckboxes.forEach(checkbox => {
+                        checkbox.addEventListener('change', function() {
+                            updateSelectionDisplay();
+                        });
+                    });
+                    
+                    updateSelectionDisplay();
+                } else {
+                    studentsList.innerHTML = '<p class="text-muted">Error loading students.</p>';
+                }
+            })
+            .catch(error => {
+                console.error('Error loading students:', error);
+                studentsList.innerHTML = '<p class="text-muted">Error loading students.</p>';
+            });
+    }
+
+    // Function to update selection display
+    function updateSelectionDisplay() {
+        const selectedCheckboxes = document.querySelectorAll('#studentsList input[type="checkbox"]:checked');
+        const totalCheckboxes = document.querySelectorAll('#studentsList input[type="checkbox"]').length;
+        const selectedCount_num = selectedCheckboxes.length;
+        
+        // Update count badge
+        selectedCount.textContent = `${selectedCount_num} selected`;
+        
+        // Update select all checkbox state
+        if (selectedCount_num === 0) {
+            selectAllStudents.indeterminate = false;
+            selectAllStudents.checked = false;
+        } else if (selectedCount_num === totalCheckboxes) {
+            selectAllStudents.indeterminate = false;
+            selectAllStudents.checked = true;
+        } else {
+            selectAllStudents.indeterminate = true;
+            selectAllStudents.checked = false;
+        }
+        
+        // Update selected students summary
+        if (selectedCount_num > 0) {
+            selectedStudentsSummary.style.display = 'block';
+            selectedStudentsList.innerHTML = '';
+            
+            selectedCheckboxes.forEach(checkbox => {
+                const studentName = checkbox.dataset.studentName;
+                const studentId = checkbox.value;
+                const studentBadge = document.createElement('span');
+                studentBadge.className = 'badge bg-success me-1 mb-1';
+                studentBadge.innerHTML = `${studentName} <button type="button" class="btn-close btn-close-white ms-1" style="font-size: 0.7em;" onclick="deselectStudent('${studentId}')"></button>`;
+                selectedStudentsList.appendChild(studentBadge);
+            });
+        } else {
+            selectedStudentsSummary.style.display = 'none';
+        }
+    }
+
+    // Function to deselect a specific student
+    window.deselectStudent = function(studentId) {
+        const checkbox = document.getElementById(`student_${studentId}`);
+        if (checkbox) {
+            checkbox.checked = false;
+            updateSelectionDisplay();
+        }
+    };
+
+    // Function to reset selection state
+    function resetSelectionState() {
+        selectedCount.textContent = '0 selected';
+        selectAllStudents.checked = false;
+        selectAllStudents.indeterminate = false;
+        selectedStudentsSummary.style.display = 'none';
+        selectedStudentsList.innerHTML = '';
+    }
+});
+
+// Clear filters function
+function clearFilters() {
+    const url = new URL(window.location);
+    url.searchParams.delete('class_id');
+    url.searchParams.delete('sort');
+    url.searchParams.delete('order');
+    window.location.href = url.toString();
+}
+</script>
+{% endblock %}
+
+<style>
+/* Responsive Table for Assignments */
+@media (max-width: 768px) {
+  .assignments-table {
+    border: 0;
+  }
+  .assignments-table thead {
+    border: none;
+    clip: rect(0 0 0 0);
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    padding: 0;
+    position: absolute;
+    width: 1px;
+  }
+  .assignments-table tr {
+    border-bottom: 3px solid #ddd;
+    display: block;
+    margin-bottom: .625em;
+    background-color: #f8f9fa;
+    border-radius: .25rem;
+    padding: .5rem;
+  }
+  .assignments-table td {
+    border-bottom: 1px solid #ddd;
+    display: block;
+    font-size: .8em;
+    text-align: right;
+  }
+  .assignments-table td::before {
+    content: attr(data-label);
+    float: left;
+    font-weight: bold;
+    text-transform: uppercase;
+  }
+  .assignments-table td:last-child {
+    border-bottom: 0;
+  }
+}
+
+/* Sortable header styling */
+.sortable {
+    transition: background-color 0.2s ease;
+    position: relative;
+}
+
+.sortable:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.sortable::after {
+    content: '';
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    opacity: 0.5;
+}
+
+/* Filter card styling */
+.card {
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Assignment summary styling */
+.alert-info {
+    border-radius: 8px;
+    border: none;
+    background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+}
+
+/* Button hover effects */
+.btn {
+    transition: all 0.2s ease;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+/* Table improvements */
+.assignments-table {
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.assignments-table thead th {
+    border: none;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.assignments-table tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+.assignments-table tbody tr:hover {
+    background-color: rgba(46, 139, 87, 0.05);
+}
+
+/* Extension Modal Styling */
+#extensionModal .modal-dialog {
+    max-width: 800px;
+}
+
+#extensionModal .form-check {
+    padding: 0.5rem;
+    border-radius: 0.375rem;
+    transition: background-color 0.2s ease;
+}
+
+#extensionModal .form-check:hover {
+    background-color: rgba(0, 123, 255, 0.1);
+}
+
+#extensionModal .student-checkbox:checked + .form-check-label {
+    font-weight: 600;
+    color: #198754;
+}
+
+#extensionModal #selectedStudentsSummary {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 1rem;
+}
+
+#extensionModal .badge {
+    font-size: 0.875em;
+    padding: 0.5em 0.75em;
+}
+
+#extensionModal .btn-close {
+    padding: 0.25em;
+    margin-left: 0.25em;
+}
+
+#extensionModal .spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+}
+</style> 

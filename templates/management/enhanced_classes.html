@@ -769,7 +769,7 @@ function createClass() {
 
 // Load teachers for dropdown
 document.addEventListener('DOMContentLoaded', function() {
-    fetch('/api/teachers')
+    fetch('/management/api/teachers')
         .then(response => response.json())
         .then(teachers => {
             const select = document.getElementById('primaryTeacher');

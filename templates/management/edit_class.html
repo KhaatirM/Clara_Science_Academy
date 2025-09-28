@@ -43,7 +43,7 @@
                                 {% for teacher in available_teachers %}
                                     <option value="{{ teacher.id }}" 
                                             {% if class_info.teacher_id == teacher.id %}selected{% endif %}>
-                                        {{ teacher.first_name + ' ' + teacher.last_name }} ({{ teacher.username }})
+                                        {{ teacher.first_name + ' ' + teacher.last_name }} ({{ teacher.user.username if teacher.user else 'No User' }})
                                     </option>
                                 {% endfor %}
                             </select>

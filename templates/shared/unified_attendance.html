@@ -241,7 +241,7 @@
                                 <p class="card-text mb-1"><strong>Subject:</strong> {{ class_item.subject }}</p>
                                 <p class="card-text mb-1"><strong>Grade Level:</strong> {{ class_item.get_grade_levels_display() }}</p>
                                 <p class="card-text mb-1"><strong>Students:</strong> {{ class_item.student_count or 0 }}</p>
-                                <p class="card-text mb-0"><strong>Teacher:</strong> {{ class_item.teacher.name if class_item.teacher else 'N/A' }}</p>
+                                <p class="card-text mb-0"><strong>Teacher:</strong> {{ (class_item.teacher.first_name + ' ' + class_item.teacher.last_name) if class_item.teacher else 'N/A' }}</p>
                             </div>
                             
                             <!-- Quick Stats -->
@@ -411,7 +411,7 @@
                                         </span>
                                     </td>
                                     <td>{{ record.notes or '-' }}</td>
-                                    <td>{{ record.teacher.name if record.teacher else 'N/A' }}</td>
+                                    <td>{{ (record.teacher.first_name + ' ' + record.teacher.last_name) if record.teacher else 'N/A' }}</td>
                                 </tr>
                                 {% else %}
                                 <tr>

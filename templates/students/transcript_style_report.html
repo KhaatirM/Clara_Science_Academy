@@ -49,7 +49,7 @@
         <tbody>
             {% for class_id, data in class_grades_data.items() %}
             <tr>
-                <td>{{ data.class_obj.name }} / {{ data.class_obj.teacher.name }}</td>
+                <td>{{ data.class_obj.name }} / {{ (data.class_obj.teacher.first_name + ' ' + data.class_obj.teacher.last_name) if data.class_obj.teacher else 'N/A' }}</td>
                 <td>{{ data.grades.Q1 }}</td>
                 <td>{{ data.grades.Q2 }}</td>
                 <td>{{ data.grades.Q3 }}</td>

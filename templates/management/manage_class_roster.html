@@ -150,7 +150,7 @@
                                 {% if class_info.teacher_id %}
                                     {% for teacher in available_teachers %}
                                         {% if teacher.id == class_info.teacher_id %}
-                                            {{ teacher.name }}
+                                            {{ teacher.first_name + ' ' + teacher.last_name }}
                                         {% endif %}
                                     {% endfor %}
                                 {% else %}

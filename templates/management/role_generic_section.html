@@ -19,7 +19,7 @@
           <div class="list-group-item">
             <h5 class="mb-1">{{ item.name }} {% if item.class_code %}({{ item.class_code }}){% endif %}</h5>
             <p class="mb-1">Subject: {{ item.subject }} | Grade: {{ item.grade_level }}</p>
-            <p class="mb-1">Teacher: {{ item.teacher.name if item.teacher else 'N/A' }}</p>
+            <p class="mb-1">Teacher: {{ (item.teacher.first_name + ' ' + item.teacher.last_name) if item.teacher else 'N/A' }}</p>
             <small>Students: {{ item.students.count() }}</small>
           </div>
         {% endfor %}

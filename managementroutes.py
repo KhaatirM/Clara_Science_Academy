@@ -1002,7 +1002,8 @@ def api_teachers():
     teachers = TeacherStaff.query.all()
     return jsonify([{
         'id': teacher.id,
-        'name': teacher.name,
+        'first_name': teacher.first_name,
+        'last_name': teacher.last_name,
         'role': teacher.role
     } for teacher in teachers])
 

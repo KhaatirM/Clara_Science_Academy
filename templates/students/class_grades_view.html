@@ -15,7 +15,7 @@
       <h5 class="card-title">{{ class_item.name }} ({{ class_item.class_code }})</h5>
       <p class="card-text"><strong>Subject:</strong> {{ class_item.subject }}</p>
       <p class="card-text"><strong>Grade Level:</strong> {{ class_item.grade_level }}</p>
-      <p class="card-text"><strong>Teacher:</strong> {{ class_item.teacher.name if class_item.teacher else 'N/A' }}</p>
+      <p class="card-text"><strong>Teacher:</strong> {{ (class_item.teacher.first_name + ' ' + class_item.teacher.last_name) if class_item.teacher else 'N/A' }}</p>
       <p class="card-text"><strong>Enrolled Students:</strong> {{ students_in_class|length }}</p>
     </div>
   </div>

@@ -123,9 +123,9 @@
         {% for class in classes %}
         <div class="col-12 col-lg-6 col-xl-4 class-card" 
              data-subject="{{ class.subject }}" 
-             data-teacher="{{ class.teacher.name if class.teacher else '' }}"
+             data-teacher="{{ (class.teacher.first_name + ' ' + class.teacher.last_name) if class.teacher else '' }}"
              data-status="{{ 'active' if class.is_active else 'inactive' }}"
-             data-search="{{ (class.name + ' ' + class.subject + ' ' + (class.teacher.name if class.teacher else '')).lower() }}">
+             data-search="{{ (class.name + ' ' + class.subject + ' ' + ((class.teacher.first_name + ' ' + class.teacher.last_name) if class.teacher else '')).lower() }}">
             
             <div class="enhanced-class-card h-100">
                 <!-- Class Header -->
@@ -162,7 +162,7 @@
                                     <i class="fas fa-user-circle"></i>
                                 </div>
                                 <div class="teacher-details">
-                                    <div class="teacher-name">{{ class.teacher.name }}</div>
+                                    <div class="teacher-name">{{ class.teacher.first_name + ' ' + class.teacher.last_name if class.teacher else 'No Teacher' }}</div>
                                     <div class="teacher-role">{{ class.teacher.role }}</div>
                                 </div>
                             {% else %}
@@ -184,7 +184,7 @@
                             {% for teacher in class.additional_teachers %}
                             <div class="teacher-chip">
                                 <i class="fas fa-user me-1"></i>
-                                {{ teacher.name }}
+                                {{ teacher.first_name + ' ' + teacher.last_name }}
                             </div>
                             {% endfor %}
                         </div>
@@ -201,7 +201,7 @@
                             {% for teacher in class.substitute_teachers %}
                             <div class="teacher-chip substitute-chip">
                                 <i class="fas fa-user-clock me-1"></i>
-                                {{ teacher.name }}
+                                {{ teacher.first_name + ' ' + teacher.last_name }}
                             </div>
                             {% endfor %}
                         </div>
@@ -776,7 +776,7 @@ document.addEventListener('DOMContentLoaded', function() {
             teachers.forEach(teacher => {
                 const option = document.createElement('option');
                 option.value = teacher.id;
-                option.textContent = teacher.name;
+                option.textContent = teacher.first_name + ' ' + teacher.last_name;
                 select.appendChild(option);
             });
         })

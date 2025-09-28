@@ -21,7 +21,7 @@
                 </div>
                 <div class="card-body d-flex flex-column">
                     <div class="flex-grow-1">
-                        <p class="card-text mb-2"><strong>Teacher:</strong> {{ class.teacher.name if class.teacher else 'Not Assigned' }}</p>
+                        <p class="card-text mb-2"><strong>Teacher:</strong> {{ (class.teacher.first_name + ' ' + class.teacher.last_name) if class.teacher else 'Not Assigned' }}</p>
                         <p class="card-text mb-2"><strong>Subject:</strong> {{ class.subject or 'N/A' }}</p>
                         <p class="card-text mb-2"><strong>Students:</strong> {{ class.students|length if class.students else 0 }}</p>
                         <p class="card-text mb-3"><strong>Schedule:</strong> {{ class.schedule or 'N/A' }}</p>

@@ -16,7 +16,7 @@
                     <a href="{{ url_for('take_attendance', role_prefix_raw=role_prefix, class_id=class_item.id) }}" class="list-group-item list-group-item-action d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
                         <div>
                             <h5 class="mb-1">{{ class_item.name }}</h5>
-                            <small>Subject: {{ class_item.subject }} | Grade: {{ class_item.grade_level }} | Teacher: {{ class_item.teacher.name or 'N/A' }}</small>
+                            <small>Subject: {{ class_item.subject }} | Grade: {{ class_item.grade_level }} | Teacher: {{ (class_item.teacher.first_name + ' ' + class_item.teacher.last_name) if class_item.teacher else 'N/A' }}</small>
                         </div>
                         <span class="btn btn-primary btn-sm align-self-start align-self-md-center">
                             Take Attendance <i class="fas fa-arrow-right ml-1"></i>

@@ -37,7 +37,7 @@
           <tbody>
             {% for teacher in teachers_staff %}
               <tr>
-                <td>{{ teacher.name }}</td>
+                <td>{{ teacher.first_name + ' ' + teacher.last_name }}</td>
                 <td>{{ teacher.role or 'N/A' }}</td>
                 <td>{{ teacher.email }}</td>
               </tr>

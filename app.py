@@ -492,7 +492,7 @@ def create_app(config_class=None):
     # Import and register blueprints
     from authroutes import auth_blueprint
     from studentroutes import student_blueprint
-    from teacher_routes import teacher_blueprint
+    from teacherroutes import teacher_blueprint
     from managementroutes import management_blueprint
     from techroutes import tech_blueprint
 

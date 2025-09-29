@@ -182,15 +182,15 @@
                                                     {% endif %}
                                                     <div class="mt-1">
                                                         {% if assignment.assignment_type == 'quiz' %}
-                                                            <span class="badge bg-warning bg-opacity-20 text-warning border border-warning">
+                                                            <span class="badge bg-warning bg-opacity-20 text-dark border border-warning">
                                                                 <i class="fas fa-question-circle me-1"></i>Quiz
                                                             </span>
                                                         {% elif assignment.assignment_type == 'discussion' %}
-                                                            <span class="badge bg-info bg-opacity-20 text-info border border-info">
+                                                            <span class="badge bg-info bg-opacity-20 text-dark border border-info">
                                                                 <i class="fas fa-comments me-1"></i>Discussion
                                                             </span>
                                                         {% else %}
-                                                            <span class="badge bg-primary bg-opacity-20 text-primary border border-primary">
+                                                            <span class="badge bg-primary bg-opacity-20 text-dark border border-primary">
                                                                 <i class="fas fa-file-alt me-1"></i>Document
                                                             </span>
                                                         {% endif %}
@@ -203,17 +203,17 @@
                                                 {% set due_date = assignment.due_date.date() if assignment.due_date.date else assignment.due_date %}
                                                 {% set days_until_due = (due_date - today).days %}
                                                 {% if days_until_due < 0 %}
-                                                    <span class="badge bg-danger bg-opacity-20 text-danger border border-danger">
+                                                    <span class="badge bg-danger bg-opacity-20 text-dark border border-danger">
                                                         <i class="fas fa-exclamation-triangle me-1"></i>
                                                         {{ assignment.due_date.strftime('%m/%d/%Y') }} ({{ -days_until_due }} days overdue)
                                                     </span>
                                                 {% elif days_until_due == 0 %}
-                                                    <span class="badge bg-warning bg-opacity-20 text-warning border border-warning">
+                                                    <span class="badge bg-warning bg-opacity-20 text-dark border border-warning">
                                                         <i class="fas fa-clock me-1"></i>
                                                         Due Today
                                                     </span>
                                                 {% elif days_until_due <= 3 %}
-                                                    <span class="badge bg-warning bg-opacity-20 text-warning border border-warning">
+                                                    <span class="badge bg-warning bg-opacity-20 text-dark border border-warning">
                                                         <i class="fas fa-clock me-1"></i>
                                                         {{ assignment.due_date.strftime('%m/%d/%Y') }} ({{ days_until_due }} days)
                                                     </span>
@@ -231,23 +231,23 @@
                                         </td>
                                         <td class="align-middle">
                                             {% if status == 'completed' %}
-                                                <span class="badge bg-success bg-opacity-20 text-success border border-success">
+                                                <span class="badge bg-success bg-opacity-20 text-dark border border-success">
                                                     <i class="fas fa-check-circle me-1"></i>Completed (1/1)
                                                 </span>
                                             {% elif status == 'Past Due' %}
-                                                <span class="badge bg-danger bg-opacity-20 text-danger border border-danger">
+                                                <span class="badge bg-danger bg-opacity-20 text-dark border border-danger">
                                                     <i class="fas fa-exclamation-triangle me-1"></i>Past Due
                                                 </span>
                                             {% elif status == 'Submitted or Awaiting Grade' %}
-                                                <span class="badge bg-info bg-opacity-20 text-info border border-info">
+                                                <span class="badge bg-info bg-opacity-20 text-dark border border-info">
                                                     <i class="fas fa-paper-plane me-1"></i>Submitted
                                                 </span>
                                             {% elif status == 'Extended' %}
-                                                <span class="badge bg-warning bg-opacity-20 text-warning border border-warning">
+                                                <span class="badge bg-warning bg-opacity-20 text-dark border border-warning">
                                                     <i class="fas fa-clock me-1"></i>Extended
                                                 </span>
                                             {% else %}
-                                                <span class="badge bg-warning bg-opacity-20 text-warning border border-warning">
+                                                <span class="badge bg-warning bg-opacity-20 text-dark border border-warning">
                                                     <i class="fas fa-clock me-1"></i>Pending
                                                 </span>
                                             {% endif %}

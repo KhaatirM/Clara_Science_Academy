@@ -254,21 +254,29 @@
                                         </td>
                                         <td class="align-middle">
                                             <div class="btn-group" role="group">
-                                                <button onclick="viewAssignment({{ assignment.id }}, '{{ assignment.title }}', '{{ assignment.description or '' }}', '{{ assignment.due_date.strftime('%m/%d/%Y') if assignment.due_date else 'No due date' }}', '{{ assignment.assignment_type }}')" 
-                                                        class="btn btn-outline-primary btn-sm" title="View Assignment">
-                                                    <i class="fas fa-eye"></i>
+                                                <!-- View Assignment Button - Always present -->
+                                                <button onclick="viewAssignmentDetails({{ assignment.id }}, '{{ assignment.title }}', '{{ assignment.description or '' }}', '{{ assignment.due_date.strftime('%m/%d/%Y') if assignment.due_date else 'No due date' }}', '{{ assignment.assignment_type }}', '{{ assignment.status }}')" 
+                                                        class="btn btn-outline-primary btn-sm" title="View Assignment Details">
+                                                    <i class="fas fa-eye me-1"></i>View
                                                 </button>
-                                                {% if status in ['pending', 'past_due'] %}
-                                                <button onclick="startAssignment({{ assignment.id }}, '{{ assignment.assignment_type }}')" 
-                                                        class="btn btn-outline-success btn-sm" title="Start Assignment">
-                                                    <i class="fas fa-play"></i>
+                                                
+                                                <!-- Submit Button - Only for active assignments -->
+                                                {% if assignment.status == 'Active' %}
+                                                <button onclick="submitAssignment({{ assignment.id }}, '{{ assignment.assignment_type }}')" 
+                                                        class="btn btn-outline-success btn-sm" title="Submit Assignment">
+                                                    <i class="fas fa-paper-plane me-1"></i>Submit
                                                 </button>
                                                 {% endif %}
-                                                {% if submission %}
-                                                <button onclick="viewSubmission({{ assignment.id }})" 
-                                                        class="btn btn-outline-info btn-sm" title="View Submission">
-                                                    <i class="fas fa-file-alt"></i>
-                                                </button>
+                                                
+                                                <!-- Extension Request Button - Only if active, due date not reached, and not graded/submitted -->
+                                                {% if assignment.status == 'Active' and assignment.due_date and not grade and not submission %}
+                                                    {% set due_date = assignment.due_date.date() if assignment.due_date.date else assignment.due_date %}
+                                                    {% if due_date > today %}
+                                                    <button onclick="requestExtension({{ assignment.id }}, '{{ assignment.title }}')" 
+                                                            class="btn btn-outline-warning btn-sm" title="Request Extension">
+                                                        <i class="fas fa-clock me-1"></i>Extension
+                                                    </button>
+                                                    {% endif %}
                                                 {% endif %}
                                             </div>
                                         </td>
@@ -405,5 +413,137 @@ function viewSubmission(assignmentId) {
     // This would show the student's submission
     alert(`Viewing submission for assignment ID: ${assignmentId}\n\nSubmission view functionality would be implemented here.`);
 }
+
+// New action button functions
+function viewAssignmentDetails(assignmentId, title, description, dueDate, type, status) {
+    // Show detailed assignment information in a modal
+    const modal = document.getElementById('assignmentDetailsModal');
+    const modalTitle = document.getElementById('assignmentDetailsTitle');
+    const modalBody = document.getElementById('assignmentDetailsBody');
+    
+    modalTitle.textContent = title;
+    modalBody.innerHTML = `
+        <div class="row">
+            <div class="col-md-6">
+                <h6 class="text-primary">Assignment Details</h6>
+                <p><strong>Type:</strong> <span class="badge bg-primary">${type.charAt(0).toUpperCase() + type.slice(1)}</span></p>
+                <p><strong>Status:</strong> <span class="badge bg-${status === 'Active' ? 'success' : 'secondary'}">${status}</span></p>
+                <p><strong>Due Date:</strong> ${dueDate}</p>
+            </div>
+            <div class="col-md-6">
+                <h6 class="text-primary">Instructions</h6>
+                <div class="bg-light p-3 rounded">
+                    ${description || 'No detailed instructions provided.'}
+                </div>
+            </div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-12">
+                <h6 class="text-primary">What You Need to Do</h6>
+                <ul class="list-unstyled">
+                    <li><i class="fas fa-check text-success me-2"></i>Read the assignment instructions carefully</li>
+                    <li><i class="fas fa-check text-success me-2"></i>Complete the assignment according to the requirements</li>
+                    <li><i class="fas fa-check text-success me-2"></i>Submit your work before the due date</li>
+                    <li><i class="fas fa-check text-success me-2"></i>Contact your teacher if you have questions</li>
+                </ul>
+            </div>
+        </div>
+    `;
+    
+    // Show the modal
+    const bootstrapModal = new bootstrap.Modal(modal);
+    bootstrapModal.show();
+}
+
+function submitAssignment(assignmentId, type) {
+    // Redirect to the appropriate submission page based on assignment type
+    if (type === 'quiz') {
+        window.location.href = `/student/take-quiz/${assignmentId}`;
+    } else if (type === 'discussion') {
+        window.location.href = `/student/discussion/${assignmentId}`;
+    } else {
+        window.location.href = `/student/assignment/${assignmentId}`;
+    }
+}
+
+function requestExtension(assignmentId, title) {
+    // Show extension request modal
+    const modal = document.getElementById('extensionRequestModal');
+    const modalTitle = document.getElementById('extensionRequestTitle');
+    const modalBody = document.getElementById('extensionRequestBody');
+    
+    modalTitle.textContent = `Request Extension - ${title}`;
+    modalBody.innerHTML = `
+        <form id="extensionRequestForm">
+            <div class="mb-3">
+                <label for="extensionReason" class="form-label">Reason for Extension</label>
+                <textarea class="form-control" id="extensionReason" rows="3" 
+                          placeholder="Please explain why you need an extension..." required></textarea>
+            </div>
+            <div class="mb-3">
+                <label for="requestedDate" class="form-label">Requested New Due Date</label>
+                <input type="date" class="form-control" id="requestedDate" required>
+            </div>
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                Your extension request will be sent to your teacher for approval.
+            </div>
+        </form>
+    `;
+    
+    // Show the modal
+    const bootstrapModal = new bootstrap.Modal(modal);
+    bootstrapModal.show();
+    
+    // Handle form submission
+    document.getElementById('extensionRequestForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const reason = document.getElementById('extensionReason').value;
+        const requestedDate = document.getElementById('requestedDate').value;
+        
+        // Here you would send the extension request to the server
+        alert(`Extension request submitted!\n\nAssignment: ${title}\nReason: ${reason}\nRequested Date: ${requestedDate}\n\nThis would be sent to your teacher for approval.`);
+        
+        bootstrapModal.hide();
+    });
+}
 </script>
+
+<!-- Assignment Details Modal -->
+<div class="modal fade" id="assignmentDetailsModal" tabindex="-1" aria-labelledby="assignmentDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="assignmentDetailsTitle">Assignment Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="assignmentDetailsBody">
+                <!-- Content will be populated by JavaScript -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Extension Request Modal -->
+<div class="modal fade" id="extensionRequestModal" tabindex="-1" aria-labelledby="extensionRequestModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="extensionRequestTitle">Request Extension</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="extensionRequestBody">
+                <!-- Content will be populated by JavaScript -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning" onclick="document.getElementById('extensionRequestForm').submit()">Submit Request</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}

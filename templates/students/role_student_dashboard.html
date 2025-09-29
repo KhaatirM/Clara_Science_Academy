@@ -1847,7 +1847,8 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                             <strong>Due:</strong> 
                                             {% if assignment.due_date %}
                                                 {{ assignment.due_date.strftime('%B %d, %Y at %I:%M %p') }}
-                                                {% set days_remaining = (assignment.due_date.date() - today.date()).days %}
+                                                {% set due_date = assignment.due_date.date() if assignment.due_date.date else assignment.due_date %}
+                                                {% set days_remaining = (due_date - today).days %}
                                                 {% if days_remaining > 0 %}
                                                     <span class="badge bg-success ms-2">{{ days_remaining }} days remaining</span>
                                                 {% elif days_remaining == 0 %}
@@ -2211,7 +2212,8 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                                         <strong>Due:</strong> 
                                                         {% if assignment.due_date %}
                                                             {{ assignment.due_date.strftime('%B %d, %Y') }}
-                                                            {% set days_remaining = (assignment.due_date.date() - today.date()).days %}
+                                                            {% set due_date = assignment.due_date.date() if assignment.due_date.date else assignment.due_date %}
+                                                {% set days_remaining = (due_date - today).days %}
                                                             {% if days_remaining > 0 %}
                                                                 <span class="badge bg-success ms-2">{{ days_remaining }} days</span>
                                                             {% elif days_remaining == 0 %}

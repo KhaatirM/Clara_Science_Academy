@@ -1,0 +1,362 @@
+{% extends "shared/base.html" %}
+
+{% block title %}
+    Resources - Clara Science Academy
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="page-header bg-gradient-primary text-white p-4 rounded-3 shadow-sm">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h1 class="page-title mb-2">
+                            <i class="fas fa-book me-3"></i>Educational Resources
+                        </h1>
+                        <p class="page-subtitle mb-0 opacity-75">
+                            Access comprehensive math resources and study guides for all grade levels
+                        </p>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <div class="resource-stats">
+                            <div class="stat-item d-inline-block me-3">
+                                <h4 class="stat-number mb-0">{{ pdf_files|length }}</h4>
+                                <small class="stat-label">Original PDFs</small>
+                            </div>
+                            <div class="stat-item d-inline-block">
+                                <h4 class="stat-number mb-0">{{ study_guide_files|length }}</h4>
+                                <small class="stat-label">Study Guides</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resource Categories -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 pb-0">
+                    <h5 class="card-title mb-3">
+                        <i class="fas fa-graduation-cap text-primary me-2"></i>
+                        MinuteMath Resources
+                    </h5>
+                    <p class="text-muted mb-0">
+                        Comprehensive math resources for grades 3-8, including original PDFs and detailed study guides.
+                    </p>
+                </div>
+                <div class="card-body">
+                    <!-- Grade Level Tabs -->
+                    <ul class="nav nav-pills nav-fill mb-4" id="gradeTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="all-tab" data-bs-toggle="pill" data-bs-target="#all" type="button" role="tab">
+                                <i class="fas fa-list me-2"></i>All Grades
+                            </button>
+                        </li>
+                        {% for grade in range(3, 9) %}
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="grade{{ grade }}-tab" data-bs-toggle="pill" data-bs-target="#grade{{ grade }}" type="button" role="tab">
+                                <i class="fas fa-star me-2"></i>Grade {{ grade }}
+                            </button>
+                        </li>
+                        {% endfor %}
+                    </ul>
+
+                    <!-- Tab Content -->
+                    <div class="tab-content" id="gradeTabsContent">
+                        <!-- All Grades Tab -->
+                        <div class="tab-pane fade show active" id="all" role="tabpanel">
+                            <div class="row g-4">
+                                {% for file in files %}
+                                <div class="col-lg-6 col-xl-4">
+                                    <div class="resource-card h-100">
+                                        <div class="card border-0 shadow-sm h-100">
+                                            <div class="card-header bg-gradient-{{ 'success' if file.type == 'Original' else 'info' }} text-white">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <div>
+                                                        <h6 class="card-title mb-1">
+                                                            <i class="fas fa-{{ 'file-pdf' if file.type == 'Original' else 'file-alt' }} me-2"></i>
+                                                            {{ file.display_name }}
+                                                        </h6>
+                                                        <small class="opacity-75">
+                                                            <i class="fas fa-tag me-1"></i>
+                                                            {{ file.type }}
+                                                        </small>
+                                                    </div>
+                                                    <div class="grade-badge">
+                                                        <span class="badge bg-white bg-opacity-20 text-white">
+                                                            Grade {{ file.grade }}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="card-body d-flex flex-column">
+                                                <div class="resource-info mb-3">
+                                                    <div class="info-item mb-2">
+                                                        <i class="fas fa-calendar-alt text-primary me-2"></i>
+                                                        <strong>Grade Level:</strong> {{ file.grade }}
+                                                    </div>
+                                                    <div class="info-item mb-2">
+                                                        <i class="fas fa-file text-primary me-2"></i>
+                                                        <strong>Type:</strong> {{ file.type }}
+                                                    </div>
+                                                    {% if file.type == 'Study Guide' %}
+                                                    <div class="info-item mb-2">
+                                                        <i class="fas fa-list-ol text-primary me-2"></i>
+                                                        <strong>Format:</strong> Step-by-step guide
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                                
+                                                {% if file.type == 'Study Guide' %}
+                                                <div class="study-guide-features mb-3">
+                                                    <h6 class="text-success mb-2">
+                                                        <i class="fas fa-lightbulb me-2"></i>Study Guide Features
+                                                    </h6>
+                                                    <ul class="list-unstyled small">
+                                                        <li><i class="fas fa-check text-success me-2"></i>10-week structured curriculum</li>
+                                                        <li><i class="fas fa-check text-success me-2"></i>Daily 10-minute sessions</li>
+                                                        <li><i class="fas fa-check text-success me-2"></i>Teaching strategies and tips</li>
+                                                        <li><i class="fas fa-check text-success me-2"></i>Assessment rubrics</li>
+                                                        <li><i class="fas fa-check text-success me-2"></i>Parent involvement guidelines</li>
+                                                    </ul>
+                                                </div>
+                                                {% endif %}
+                                                
+                                                <div class="mt-auto">
+                                                    <a href="{{ url_for('management.download_resource', filename=file.path) }}" 
+                                                       class="btn btn-{{ 'success' if file.type == 'Original' else 'info' }} w-100">
+                                                        <i class="fas fa-download me-2"></i>
+                                                        Download {{ file.type }}
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- Individual Grade Tabs -->
+                        {% for grade in range(3, 9) %}
+                        <div class="tab-pane fade" id="grade{{ grade }}" role="tabpanel">
+                            <div class="row g-4">
+                                {% set grade_files = files | selectattr('grade', 'equalto', grade|string) | list %}
+                                {% for file in grade_files %}
+                                <div class="col-lg-6 col-xl-4">
+                                    <div class="resource-card h-100">
+                                        <div class="card border-0 shadow-sm h-100">
+                                            <div class="card-header bg-gradient-{{ 'success' if file.type == 'Original' else 'info' }} text-white">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <div>
+                                                        <h6 class="card-title mb-1">
+                                                            <i class="fas fa-{{ 'file-pdf' if file.type == 'Original' else 'file-alt' }} me-2"></i>
+                                                            {{ file.display_name }}
+                                                        </h6>
+                                                        <small class="opacity-75">
+                                                            <i class="fas fa-tag me-1"></i>
+                                                            {{ file.type }}
+                                                        </small>
+                                                    </div>
+                                                    <div class="grade-badge">
+                                                        <span class="badge bg-white bg-opacity-20 text-white">
+                                                            Grade {{ file.grade }}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="card-body d-flex flex-column">
+                                                <div class="resource-info mb-3">
+                                                    <div class="info-item mb-2">
+                                                        <i class="fas fa-calendar-alt text-primary me-2"></i>
+                                                        <strong>Grade Level:</strong> {{ file.grade }}
+                                                    </div>
+                                                    <div class="info-item mb-2">
+                                                        <i class="fas fa-file text-primary me-2"></i>
+                                                        <strong>Type:</strong> {{ file.type }}
+                                                    </div>
+                                                    {% if file.type == 'Study Guide' %}
+                                                    <div class="info-item mb-2">
+                                                        <i class="fas fa-list-ol text-primary me-2"></i>
+                                                        <strong>Format:</strong> Step-by-step guide
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                                
+                                                {% if file.type == 'Study Guide' %}
+                                                <div class="study-guide-features mb-3">
+                                                    <h6 class="text-success mb-2">
+                                                        <i class="fas fa-lightbulb me-2"></i>Study Guide Features
+                                                    </h6>
+                                                    <ul class="list-unstyled small">
+                                                        <li><i class="fas fa-check text-success me-2"></i>10-week structured curriculum</li>
+                                                        <li><i class="fas fa-check text-success me-2"></i>Daily 10-minute sessions</li>
+                                                        <li><i class="fas fa-check text-success me-2"></i>Teaching strategies and tips</li>
+                                                        <li><i class="fas fa-check text-success me-2"></i>Assessment rubrics</li>
+                                                        <li><i class="fas fa-check text-success me-2"></i>Parent involvement guidelines</li>
+                                                    </ul>
+                                                </div>
+                                                {% endif %}
+                                                
+                                                <div class="mt-auto">
+                                                    <a href="{{ url_for('management.download_resource', filename=file.path) }}" 
+                                                       class="btn btn-{{ 'success' if file.type == 'Original' else 'info' }} w-100">
+                                                        <i class="fas fa-download me-2"></i>
+                                                        Download {{ file.type }}
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                                
+                                {% if grade_files | length == 0 %}
+                                <div class="col-12">
+                                    <div class="text-center py-5">
+                                        <i class="fas fa-book-open fa-3x text-muted mb-3"></i>
+                                        <h5 class="text-muted">No resources available for Grade {{ grade }}</h5>
+                                        <p class="text-muted">Check back later for additional resources.</p>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resource Information -->
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-gradient-success text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-file-pdf me-2"></i>Original PDF Resources
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">
+                        The original MinuteMath PDF files contain comprehensive math exercises and activities 
+                        designed for daily 10-minute practice sessions. These resources cover all essential 
+                        math concepts for each grade level.
+                    </p>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-check text-success me-2"></i>100+ pages of math exercises</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Progressive difficulty levels</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Answer keys included</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Ready for immediate use</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-gradient-info text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-file-alt me-2"></i>Study Guide Resources
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">
+                        The study guide versions provide step-by-step instructions for teachers and parents 
+                        to effectively implement the MinuteMath curriculum. Each guide includes teaching 
+                        strategies, assessment rubrics, and parent involvement suggestions.
+                    </p>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-check text-info me-2"></i>10-week structured curriculum</li>
+                        <li><i class="fas fa-check text-info me-2"></i>Daily lesson plans</li>
+                        <li><i class="fas fa-check text-info me-2"></i>Teaching strategies and tips</li>
+                        <li><i class="fas fa-check text-info me-2"></i>Assessment and differentiation guides</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.resource-card {
+    transition: transform 0.2s ease-in-out;
+}
+
+.resource-card:hover {
+    transform: translateY(-5px);
+}
+
+.grade-badge {
+    font-size: 0.8rem;
+}
+
+.study-guide-features {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    border-left: 4px solid #28a745;
+}
+
+.info-item {
+    font-size: 0.9rem;
+}
+
+.stat-number {
+    font-weight: 700;
+    color: white;
+}
+
+.stat-label {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+}
+
+.bg-gradient-success {
+    background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+}
+
+.bg-gradient-info {
+    background: linear-gradient(135deg, #17a2b8 0%, #117a8b 100%);
+}
+
+.nav-pills .nav-link {
+    border-radius: 0.5rem;
+    margin: 0 0.25rem;
+}
+
+.nav-pills .nav-link.active {
+    background-color: #007bff;
+    color: white;
+}
+
+.nav-pills .nav-link:hover {
+    background-color: #e9ecef;
+    color: #007bff;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add smooth scrolling for tab switching
+    const tabButtons = document.querySelectorAll('[data-bs-toggle="pill"]');
+    tabButtons.forEach(button => {
+        button.addEventListener('shown.bs.tab', function (event) {
+            // Smooth scroll to top of content
+            document.querySelector('#gradeTabsContent').scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

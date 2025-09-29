@@ -62,6 +62,17 @@
                             {% endif %}
                             <a class="nav-link" href="{{ dashboard_url }}">Dashboard</a>
                         </li>
+                        {% if current_user.role != 'Student' %}
+                        <li class="nav-item">
+                            {% if current_user.role == 'Teacher' %}
+                                <a class="nav-link" href="{{ url_for('teacher.resources') }}">Resources</a>
+                            {% elif current_user.role == 'Tech' %}
+                                <a class="nav-link" href="{{ url_for('tech.resources') }}">Resources</a>
+                            {% else %}
+                                <a class="nav-link" href="{{ url_for('management.resources') }}">Resources</a>
+                            {% endif %}
+                        </li>
+                        {% endif %}
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('auth.logout') }}">Logout</a>
                         </li>

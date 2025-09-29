@@ -893,3 +893,85 @@ def bug_reports():
     """View all bug reports - temporarily shows placeholder."""
     flash('Bug reporting system is being set up. Please check back later.', 'info')
     return redirect(url_for('tech.tech_dashboard'))
+
+@tech_blueprint.route('/resources')
+@login_required
+@tech_required
+def resources():
+    """Display the resources page with MinuteMath files."""
+    try:
+        # Get list of PDF files in MinuteMath directory
+        import os
+        minute_math_dir = os.path.join(os.getcwd(), 'MinuteMath')
+        study_guides_dir = os.path.join(minute_math_dir, 'StudyGuides')
+        
+        # Original PDF files
+        pdf_files = []
+        if os.path.exists(minute_math_dir):
+            for filename in os.listdir(minute_math_dir):
+                if filename.endswith('.pdf'):
+                    pdf_files.append({
+                        'name': filename,
+                        'display_name': filename.replace('.pdf', ''),
+                        'grade': filename.split()[0] if filename.split()[0].replace('th', '').replace('rd', '').replace('st', '').replace('nd', '').isdigit() else 'Unknown',
+                        'type': 'Original',
+                        'path': os.path.join('MinuteMath', filename)
+                    })
+        
+        # Study guide files
+        study_guide_files = []
+        if os.path.exists(study_guides_dir):
+            for filename in os.listdir(study_guides_dir):
+                if filename.endswith('.txt'):
+                    study_guide_files.append({
+                        'name': filename,
+                        'display_name': filename.replace(' - Study Guide.txt', ''),
+                        'grade': filename.split()[0] if filename.split()[0].replace('th', '').replace('rd', '').replace('st', '').replace('nd', '').isdigit() else 'Unknown',
+                        'type': 'Study Guide',
+                        'path': os.path.join('MinuteMath', 'StudyGuides', filename)
+                    })
+        
+        # Combine and sort by grade
+        all_files = pdf_files + study_guide_files
+        all_files.sort(key=lambda x: int(x['grade'].replace('th', '').replace('rd', '').replace('st', '').replace('nd', '')) if x['grade'].replace('th', '').replace('rd', '').replace('st', '').replace('nd', '').isdigit() else 999)
+        
+        return render_template('management/resources.html', 
+                             files=all_files,
+                             pdf_files=pdf_files,
+                             study_guide_files=study_guide_files)
+    
+    except Exception as e:
+        print(f"Error loading resources: {e}")
+        flash('Error loading resources. Please try again.', 'error')
+        return redirect(url_for('tech.tech_dashboard'))
+
+@tech_blueprint.route('/resources/download/<path:filename>')
+@login_required
+@tech_required
+def download_resource(filename):
+    """Download a resource file."""
+    try:
+        import os
+        from flask import send_from_directory
+        
+        # Security check - ensure filename is safe
+        if '..' in filename or filename.startswith('/'):
+            flash('Invalid file path.', 'error')
+            return redirect(url_for('tech.resources'))
+        
+        # Check if file exists
+        file_path = os.path.join(os.getcwd(), filename)
+        if not os.path.exists(file_path):
+            flash('File not found.', 'error')
+            return redirect(url_for('tech.resources'))
+        
+        # Send file for download
+        directory = os.path.dirname(file_path)
+        filename_only = os.path.basename(file_path)
+        
+        return send_from_directory(directory, filename_only, as_attachment=True)
+    
+    except Exception as e:
+        print(f"Error downloading file {filename}: {e}")
+        flash('Error downloading file. Please try again.', 'error')
+        return redirect(url_for('tech.resources'))

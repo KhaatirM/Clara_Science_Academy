@@ -1,0 +1,242 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block title %}Class Grades - {{ class_info.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="bg-gradient-primary text-white rounded-3 p-4">
+                <div class="d-flex align-items-center">
+                    <div class="bg-white bg-opacity-20 rounded-circle p-3 me-3">
+                        <i class="bi bi-graph-up text-white fs-2"></i>
+                    </div>
+                    <div>
+                        <h2 class="mb-1 fw-bold">{{ class_info.name }} - Grades</h2>
+                        <p class="mb-0 opacity-75">{{ class_info.subject }} • {{ enrolled_students|length }} Students • {{ assignments|length }} Assignments</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Class Information -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="row g-4">
+                        <div class="col-md-3">
+                            <div class="bg-primary bg-opacity-10 rounded-3 p-3 text-center">
+                                <i class="bi bi-people text-primary fs-2 mb-2"></i>
+                                <h4 class="text-primary fw-bold">{{ enrolled_students|length }}</h4>
+                                <small class="text-muted fw-semibold">Enrolled Students</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="bg-success bg-opacity-10 rounded-3 p-3 text-center">
+                                <i class="bi bi-journal-text text-success fs-2 mb-2"></i>
+                                <h4 class="text-success fw-bold">{{ assignments|length }}</h4>
+                                <small class="text-muted fw-semibold">Assignments</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="bg-info bg-opacity-10 rounded-3 p-3 text-center">
+                                <i class="bi bi-person text-info fs-2 mb-2"></i>
+                                <h4 class="text-info fw-bold">{{ (class_info.teacher.first_name + ' ' + class_info.teacher.last_name) if class_info.teacher else 'No Teacher' }}</h4>
+                                <small class="text-muted fw-semibold">Primary Teacher</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="bg-warning bg-opacity-10 rounded-3 p-3 text-center">
+                                <i class="bi bi-calendar text-warning fs-2 mb-2"></i>
+                                <h4 class="text-warning fw-bold">{{ class_info.schedule or 'TBD' }}</h4>
+                                <small class="text-muted fw-semibold">Schedule</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grades Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-lg">
+                <div class="card-header bg-gradient-info text-white border-0">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-white bg-opacity-20 rounded-circle p-2 me-3">
+                                <i class="bi bi-table text-white fs-5"></i>
+                            </div>
+                            <div>
+                                <h5 class="mb-1 fw-bold">Student Grades Overview</h5>
+                                <small class="opacity-75">View and manage student performance</small>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-outline-light btn-sm" onclick="exportGrades()">
+                                <i class="bi bi-download me-1"></i>Export
+                            </button>
+                            <button class="btn btn-outline-light btn-sm" onclick="printGrades()">
+                                <i class="bi bi-printer me-1"></i>Print
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    {% if enrolled_students and assignments %}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="border-0 fw-bold text-dark">Student</th>
+                                        <th class="border-0 fw-bold text-dark">Student ID</th>
+                                        <th class="border-0 fw-bold text-dark">Grade Level</th>
+                                        {% for assignment in assignments %}
+                                        <th class="border-0 fw-bold text-dark text-center">
+                                            <div class="d-flex flex-column align-items-center">
+                                                <span class="small">{{ assignment.title[:15] }}{% if assignment.title|length > 15 %}...{% endif %}</span>
+                                                <span class="badge bg-secondary bg-opacity-20 text-dark border border-secondary small">{{ assignment.assignment_type|title }}</span>
+                                            </div>
+                                        </th>
+                                        {% endfor %}
+                                        <th class="border-0 fw-bold text-dark text-center">Average</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for student in enrolled_students %}
+                                    <tr>
+                                        <td class="align-middle">
+                                            <div class="d-flex align-items-center">
+                                                <div class="bg-success bg-opacity-10 rounded-circle p-2 me-3">
+                                                    <i class="bi bi-person text-success"></i>
+                                                </div>
+                                                <div>
+                                                    <strong class="text-dark">{{ student.first_name }} {{ student.last_name }}</strong>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="align-middle">
+                                            <span class="badge bg-info bg-opacity-20 text-dark border border-info">
+                                                {{ student.student_id or 'N/A' }}
+                                            </span>
+                                        </td>
+                                        <td class="align-middle">
+                                            <span class="badge bg-warning bg-opacity-20 text-dark border border-warning">
+                                                Grade {{ student.grade_level }}
+                                            </span>
+                                        </td>
+                                        {% for assignment in assignments %}
+                                        <td class="align-middle text-center">
+                                            {% set grade_info = student_grades.get(student.id, {}).get(assignment.id, {}) %}
+                                            {% set grade = grade_info.get('grade', 'Not Graded') %}
+                                            {% if grade == 'Not Graded' %}
+                                                <span class="badge bg-secondary bg-opacity-20 text-dark border border-secondary">Not Graded</span>
+                                            {% elif grade == 'N/A' %}
+                                                <span class="badge bg-danger bg-opacity-20 text-dark border border-danger">N/A</span>
+                                            {% else %}
+                                                {% set grade_num = grade|float %}
+                                                {% if grade_num >= 90 %}
+                                                    <span class="badge bg-success bg-opacity-20 text-dark border border-success">{{ grade }}</span>
+                                                {% elif grade_num >= 80 %}
+                                                    <span class="badge bg-primary bg-opacity-20 text-dark border border-primary">{{ grade }}</span>
+                                                {% elif grade_num >= 70 %}
+                                                    <span class="badge bg-warning bg-opacity-20 text-dark border border-warning">{{ grade }}</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger bg-opacity-20 text-dark border border-danger">{{ grade }}</span>
+                                                {% endif %}
+                                            {% endif %}
+                                        </td>
+                                        {% endfor %}
+                                        <td class="align-middle text-center">
+                                            {% set average = student_averages.get(student.id, 'N/A') %}
+                                            {% if average == 'N/A' %}
+                                                <span class="badge bg-secondary bg-opacity-20 text-dark border border-secondary">N/A</span>
+                                            {% else %}
+                                                {% if average >= 90 %}
+                                                    <span class="badge bg-success bg-opacity-20 text-dark border border-success fw-bold">{{ average }}</span>
+                                                {% elif average >= 80 %}
+                                                    <span class="badge bg-primary bg-opacity-20 text-dark border border-primary fw-bold">{{ average }}</span>
+                                                {% elif average >= 70 %}
+                                                    <span class="badge bg-warning bg-opacity-20 text-dark border border-warning fw-bold">{{ average }}</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger bg-opacity-20 text-dark border border-danger fw-bold">{{ average }}</span>
+                                                {% endif %}
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="p-5 text-center">
+                            <div class="bg-light rounded-circle p-4 d-inline-block mb-3">
+                                <i class="bi bi-graph-up text-muted fs-1"></i>
+                            </div>
+                            <h5 class="text-muted mb-2">No Grades Available</h5>
+                            <p class="text-muted mb-0">
+                                {% if not enrolled_students %}
+                                    No students are enrolled in this class.
+                                {% elif not assignments %}
+                                    No assignments have been created for this class yet.
+                                {% else %}
+                                    No grade data is available at this time.
+                                {% endif %}
+                            </p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.bg-gradient-info {
+    background: linear-gradient(135deg, #36d1dc 0%, #5b86e5 100%);
+}
+
+.card {
+    transition: transform 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.table th {
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.badge {
+    font-size: 0.75rem;
+    padding: 0.375rem 0.75rem;
+}
+
+.btn-outline-light:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+</style>
+
+<script>
+function exportGrades() {
+    // Export functionality would go here
+    alert('Export functionality will be implemented');
+}
+
+function printGrades() {
+    // Print functionality would go here
+    window.print();
+}
+</script>
+{% endblock %}

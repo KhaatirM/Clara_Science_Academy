@@ -1106,7 +1106,8 @@ def manage_class(class_id):
                          all_students=all_students,
                          enrolled_students=enrolled_students,
                          available_teachers=available_teachers,
-                         today=today)
+                         today=today,
+                         enrollments=enrollments)
 
 @management_blueprint.route('/class/<int:class_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -1190,9 +1191,62 @@ def class_roster(class_id):
 @management_required
 def class_grades(class_id):
     """View class grades."""
+    from datetime import date
+    import json
+    
     class_obj = Class.query.get_or_404(class_id)
-    # Add grade viewing logic here
-    return render_template('management/view_class.html', class_info=class_obj)
+    
+    # Get enrolled students
+    enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
+    enrolled_students = [enrollment.student for enrollment in enrollments if enrollment.student]
+    
+    # Get assignments for this class
+    assignments = Assignment.query.filter_by(class_id=class_id).order_by(Assignment.due_date.desc()).all()
+    
+    # Get grades for enrolled students
+    student_grades = {}
+    for student in enrolled_students:
+        student_grades[student.id] = {}
+        for assignment in assignments:
+            grade = Grade.query.filter_by(student_id=student.id, assignment_id=assignment.id).first()
+            if grade:
+                try:
+                    grade_data = json.loads(grade.grade_data)
+                    student_grades[student.id][assignment.id] = {
+                        'grade': grade_data.get('score', 'N/A'),
+                        'comments': grade_data.get('comments', ''),
+                        'graded_at': grade.graded_at
+                    }
+                except (json.JSONDecodeError, TypeError):
+                    student_grades[student.id][assignment.id] = {
+                        'grade': 'N/A',
+                        'comments': 'Error parsing grade data',
+                        'graded_at': grade.graded_at
+                    }
+            else:
+                student_grades[student.id][assignment.id] = {
+                    'grade': 'Not Graded',
+                    'comments': '',
+                    'graded_at': None
+                }
+    
+    # Calculate averages for each student
+    student_averages = {}
+    for student_id, grades in student_grades.items():
+        valid_grades = [float(g['grade']) for g in grades.values() 
+                       if g['grade'] not in ['N/A', 'Not Graded'] and str(g['grade']).replace('.', '').isdigit()]
+        if valid_grades:
+            student_averages[student_id] = round(sum(valid_grades) / len(valid_grades), 2)
+        else:
+            student_averages[student_id] = 'N/A'
+    
+    return render_template('management/class_grades.html', 
+                         class_info=class_obj,
+                         enrolled_students=enrolled_students,
+                         assignments=assignments,
+                         student_grades=student_grades,
+                         student_averages=student_averages,
+                         today=date.today())
 
 @management_blueprint.route('/class/<int:class_id>/remove', methods=['POST'])
 @login_required

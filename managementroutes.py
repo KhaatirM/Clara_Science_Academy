@@ -1169,22 +1169,40 @@ def class_roster(class_id):
     from datetime import date, datetime
     
     class_obj = Class.query.get_or_404(class_id)
-    enrollments = Enrollment.query.filter_by(class_id=class_id).all()
     
-    # Convert dob string to date object for each student in enrollments
+    # Get all students for potential enrollment
+    all_students = Student.query.all()
+    
+    # Get currently enrolled students (ACTIVE enrollments only)
+    enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
+    enrolled_students = []
     for enrollment in enrollments:
-        if enrollment.student and isinstance(enrollment.student.dob, str):
-            try:
-                enrollment.student.dob = datetime.strptime(enrollment.student.dob, '%Y-%m-%d').date()
-            except ValueError:
+        student = Student.query.get(enrollment.student_id)
+        if student:
+            # Convert dob string to date object for age calculation
+            if isinstance(student.dob, str):
                 try:
-                    enrollment.student.dob = datetime.strptime(enrollment.student.dob, '%m/%d/%Y').date()
+                    student.dob = datetime.strptime(student.dob, '%Y-%m-%d').date()
                 except ValueError:
-                    enrollment.student.dob = None
+                    try:
+                        student.dob = datetime.strptime(student.dob, '%m/%d/%Y').date()
+                    except ValueError:
+                        student.dob = None
+            enrolled_students.append(student)
     
+    # Get available teachers for assignment
+    available_teachers = TeacherStaff.query.all()
+    
+    # Get today's date for age calculations
     today = date.today()
     
-    return render_template('management/manage_class_roster.html', class_info=class_obj, enrollments=enrollments, today=today)
+    return render_template('management/manage_class_roster.html', 
+                         class_info=class_obj,
+                         all_students=all_students,
+                         enrolled_students=enrolled_students,
+                         available_teachers=available_teachers,
+                         today=today,
+                         enrollments=enrollments)
 
 @management_blueprint.route('/class/<int:class_id>/grades')
 @login_required

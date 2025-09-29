@@ -1180,28 +1180,38 @@ def class_roster(class_id):
     if request.method == 'POST':
         try:
             # Handle student enrollment/removal
-            if 'add_student' in request.form:
-                student_id = request.form.get('student_id', type=int)
-                if student_id:
-                    # Check if student is already enrolled
-                    existing_enrollment = Enrollment.query.filter_by(
-                        class_id=class_id, student_id=student_id, is_active=True
-                    ).first()
-                    
-                    if not existing_enrollment:
-                        # Add student to class
-                        enrollment = Enrollment(
-                            student_id=student_id,
-                            class_id=class_id,
-                            is_active=True
-                        )
-                        db.session.add(enrollment)
-                        db.session.commit()
-                        flash('Student added to class successfully!', 'success')
-                    else:
-                        flash('Student is already enrolled in this class.', 'warning')
+            action = request.form.get('action')
+            
+            if action == 'add':
+                student_ids = request.form.getlist('student_id')
+                if student_ids:
+                    added_count = 0
+                    for student_id in student_ids:
+                        student_id = int(student_id)
+                        # Check if student is already enrolled
+                        existing_enrollment = Enrollment.query.filter_by(
+                            class_id=class_id, student_id=student_id, is_active=True
+                        ).first()
                         
-            elif 'remove_student' in request.form:
+                        if not existing_enrollment:
+                            # Add student to class
+                            enrollment = Enrollment(
+                                student_id=student_id,
+                                class_id=class_id,
+                                is_active=True
+                            )
+                            db.session.add(enrollment)
+                            added_count += 1
+                    
+                    if added_count > 0:
+                        db.session.commit()
+                        flash(f'{added_count} student(s) added to class successfully!', 'success')
+                    else:
+                        flash('Selected students are already enrolled in this class.', 'warning')
+                else:
+                    flash('Please select at least one student to add.', 'warning')
+                        
+            elif action == 'remove':
                 student_id = request.form.get('student_id', type=int)
                 if student_id:
                     # Deactivate enrollment instead of deleting

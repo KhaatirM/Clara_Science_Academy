@@ -357,6 +357,7 @@ def student_assignments():
         Class.school_year_id == current_school_year.id
     ).all()
     
+    classes = [enrollment.class_info for enrollment in enrollments]
     class_ids = [enrollment.class_id for enrollment in enrollments]
     
     # Get assignments for student's classes (show Active and Inactive assignments to students)
@@ -376,6 +377,10 @@ def student_assignments():
     
     # Create assignments with status for template
     assignments_with_status = []
+    past_due_assignments = []
+    upcoming_assignments = []
+    today = datetime.now().date()
+    
     for assignment in assignments:
         submission = submissions_dict.get(assignment.id)
         grade = grades_dict.get(assignment.id)
@@ -384,12 +389,18 @@ def student_assignments():
         student_status = get_student_assignment_status(assignment, submission, grade)
         
         assignments_with_status.append((assignment, submission, student_status))
+        
+        # Categorize assignments for alerts
+        if assignment.due_date and assignment.due_date < today:
+            past_due_assignments.append(assignment)
+        elif assignment.due_date and assignment.due_date <= today + timedelta(days=7):
+            upcoming_assignments.append(assignment)
     
     return render_template('students/enhanced_student_assignments.html', 
                          **create_template_context(student, 'assignments', 'assignments',
                              assignments_with_status=assignments_with_status,
                              grades=grades_dict,
-                             today=datetime.now().date(),
+                             today=today,
                              classes=classes,
                              past_due_assignments=past_due_assignments,
                              upcoming_assignments=upcoming_assignments))

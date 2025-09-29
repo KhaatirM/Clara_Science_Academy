@@ -1065,16 +1065,41 @@ def add_class():
 @management_required
 def manage_class(class_id):
     """Manage a specific class - teachers, students, etc."""
-    from datetime import date
+    from datetime import date, datetime
     
     class_obj = Class.query.get_or_404(class_id)
     
     # Get all students for potential enrollment
     all_students = Student.query.all()
     
+    # Convert dob string to date object for each student to allow for age calculation
+    for student in all_students:
+        if isinstance(student.dob, str):
+            try:
+                # First, try to parse 'YYYY-MM-DD' format
+                student.dob = datetime.strptime(student.dob, '%Y-%m-%d').date()
+            except ValueError:
+                try:
+                    # Fallback to 'MM/DD/YYYY' format
+                    student.dob = datetime.strptime(student.dob, '%m/%d/%Y').date()
+                except ValueError:
+                    # If parsing fails, set dob to None so it will be handled gracefully in the template
+                    student.dob = None
+    
     # Get currently enrolled students
     enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
     enrolled_students = [enrollment.student for enrollment in enrollments if enrollment.student]
+    
+    # Convert dob for enrolled students as well
+    for student in enrolled_students:
+        if isinstance(student.dob, str):
+            try:
+                student.dob = datetime.strptime(student.dob, '%Y-%m-%d').date()
+            except ValueError:
+                try:
+                    student.dob = datetime.strptime(student.dob, '%m/%d/%Y').date()
+                except ValueError:
+                    student.dob = None
     
     # Get available teachers for assignment
     available_teachers = TeacherStaff.query.all()
@@ -1125,10 +1150,22 @@ def edit_class(class_id):
 @management_required
 def class_roster(class_id):
     """View and manage class roster."""
-    from datetime import date
+    from datetime import date, datetime
     
     class_obj = Class.query.get_or_404(class_id)
     enrollments = Enrollment.query.filter_by(class_id=class_id).all()
+    
+    # Convert dob string to date object for each student in enrollments
+    for enrollment in enrollments:
+        if enrollment.student and isinstance(enrollment.student.dob, str):
+            try:
+                enrollment.student.dob = datetime.strptime(enrollment.student.dob, '%Y-%m-%d').date()
+            except ValueError:
+                try:
+                    enrollment.student.dob = datetime.strptime(enrollment.student.dob, '%m/%d/%Y').date()
+                except ValueError:
+                    enrollment.student.dob = None
+    
     today = date.today()
     
     return render_template('management/manage_class_roster.html', class_info=class_obj, enrollments=enrollments, today=today)

@@ -1143,7 +1143,7 @@ def edit_class(class_id):
     
     # GET request - show edit form
     teachers = TeacherStaff.query.all()
-    return render_template('management/edit_class.html', class_obj=class_obj, teachers=teachers)
+    return render_template('management/edit_class.html', class_info=class_obj, teachers=teachers)
 
 @management_blueprint.route('/class/<int:class_id>/roster')
 @login_required

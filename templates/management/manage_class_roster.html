@@ -102,7 +102,7 @@
                             <div class="bg-light rounded-3 p-4 border-start border-4 border-success">
                                 <h6 class="text-success mb-4 fw-bold">
                                     <i class="bi bi-people me-2"></i>
-                                    Teacher Assignments
+                                    Assigned Teachers
                                 </h6>
                                 
                                 <!-- Primary Teacher -->
@@ -113,9 +113,9 @@
                                     </div>
                                     {% if class_info.teacher %}
                                         <div class="ms-4">
-                                            <span class="badge bg-success bg-opacity-20 text-success border border-success fs-6 p-2">
+                                            <span class="badge bg-success bg-opacity-20 text-dark border border-success fs-6 p-2">
                                                 {{ class_info.teacher.first_name + ' ' + class_info.teacher.last_name }}
-                                                <span class="badge bg-success ms-2">{{ class_info.teacher.user.role if class_info.teacher.user else 'No Role' }}</span>
+                                                <span class="badge bg-success text-white ms-2">{{ class_info.teacher.user.role if class_info.teacher.user else 'No Role' }}</span>
                                             </span>
                                         </div>
                                     {% else %}
@@ -137,9 +137,9 @@
                                         {% if class_info.substitute_teachers.count() > 0 %}
                                             {% for teacher in class_info.substitute_teachers %}
                                                 <div class="mb-2">
-                                                    <span class="badge bg-warning bg-opacity-20 text-warning border border-warning">
+                                                    <span class="badge bg-warning bg-opacity-20 text-dark border border-warning">
                                                         {{ teacher.first_name + ' ' + teacher.last_name }}
-                                                        <span class="badge bg-warning ms-2">{{ teacher.user.role if teacher.user else 'No Role' }}</span>
+                                                        <span class="badge bg-warning text-dark ms-2">{{ teacher.user.role if teacher.user else 'No Role' }}</span>
                                                     </span>
                                                 </div>
                                             {% endfor %}
@@ -161,9 +161,9 @@
                                         {% if class_info.additional_teachers.count() > 0 %}
                                             {% for teacher in class_info.additional_teachers %}
                                                 <div class="mb-2">
-                                                    <span class="badge bg-info bg-opacity-20 text-info border border-info">
+                                                    <span class="badge bg-info bg-opacity-20 text-dark border border-info">
                                                         {{ teacher.first_name + ' ' + teacher.last_name }}
-                                                        <span class="badge bg-info ms-2">{{ teacher.user.role if teacher.user else 'No Role' }}</span>
+                                                        <span class="badge bg-info text-dark ms-2">{{ teacher.user.role if teacher.user else 'No Role' }}</span>
                                                     </span>
                                                 </div>
                                             {% endfor %}
@@ -314,7 +314,7 @@
                                                     <div class="flex-grow-1">
                                                         <strong class="text-dark">{{ student.first_name }} {{ student.last_name }}</strong>
                                                         <div class="text-muted small mt-1">
-                                                            <span class="badge bg-info bg-opacity-20 text-info border border-info me-2">
+                                                            <span class="badge bg-info bg-opacity-20 text-dark border border-info me-2">
                                                                 ID: {{ student.student_id }}
                                                             </span>
                                                             <span class="badge bg-success bg-opacity-20 text-dark border border-success me-2">

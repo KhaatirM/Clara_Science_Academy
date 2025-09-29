@@ -75,7 +75,7 @@ def get_student_assignment_status(assignment, submission, grade):
     
     # Check if assignment has been graded
     if grade:
-        return 'Graded'
+        return 'completed'
     
     # Check if assignment has been submitted
     if submission:

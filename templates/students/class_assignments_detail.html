@@ -231,15 +231,19 @@
                                         <td class="align-middle">
                                             {% if status == 'completed' %}
                                                 <span class="badge bg-success bg-opacity-20 text-success border border-success">
-                                                    <i class="fas fa-check-circle me-1"></i>Completed
+                                                    <i class="fas fa-check-circle me-1"></i>Completed (1/1)
                                                 </span>
-                                            {% elif status == 'past_due' %}
+                                            {% elif status == 'Past Due' %}
                                                 <span class="badge bg-danger bg-opacity-20 text-danger border border-danger">
                                                     <i class="fas fa-exclamation-triangle me-1"></i>Past Due
                                                 </span>
-                                            {% elif status == 'submitted' %}
+                                            {% elif status == 'Submitted or Awaiting Grade' %}
                                                 <span class="badge bg-info bg-opacity-20 text-info border border-info">
                                                     <i class="fas fa-paper-plane me-1"></i>Submitted
+                                                </span>
+                                            {% elif status == 'Extended' %}
+                                                <span class="badge bg-warning bg-opacity-20 text-warning border border-warning">
+                                                    <i class="fas fa-clock me-1"></i>Extended
                                                 </span>
                                             {% else %}
                                                 <span class="badge bg-warning bg-opacity-20 text-warning border border-warning">

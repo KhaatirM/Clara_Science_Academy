@@ -2740,8 +2740,8 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                     <td>
                                         {% if student_status == 'Voided' %}
                                             <span class="badge bg-secondary">Voided</span>
-                                        {% elif student_status == 'Graded' %}
-                                            <span class="badge bg-success">Graded</span>
+                                        {% elif student_status == 'completed' %}
+                                            <span class="badge bg-success">Completed (1/1)</span>
                                         {% elif student_status == 'Submitted or Awaiting Grade' %}
                                             <span class="badge bg-info">Submitted or Awaiting Grade</span>
                                         {% elif student_status == 'Past Due' %}

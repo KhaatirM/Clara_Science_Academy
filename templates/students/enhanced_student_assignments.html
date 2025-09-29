@@ -131,8 +131,8 @@
                     <div class="assignment-summary mb-4">
                         {% set class_assignments = assignments_with_status|selectattr('0.class_id', 'equalto', class_obj.id)|list %}
                         {% set completed = class_assignments|selectattr('2', 'equalto', 'completed')|list %}
-                        {% set pending = class_assignments|selectattr('2', 'equalto', 'pending')|list %}
-                        {% set past_due = class_assignments|selectattr('2', 'equalto', 'past_due')|list %}
+                        {% set pending = class_assignments|selectattr('2', 'equalto', 'Submitted or Awaiting Grade')|list %}
+                        {% set past_due = class_assignments|selectattr('2', 'equalto', 'Past Due')|list %}
                         
                         <div class="row g-2">
                             <div class="col-4">

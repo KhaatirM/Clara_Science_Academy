@@ -11,6 +11,93 @@
         </a>
     </div>
 
+    <!-- Class Information Card -->
+    <div class="row g-3 g-md-4 mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Class Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <!-- Class Details -->
+                        <div class="col-md-6">
+                            <h6 class="text-primary mb-3">Class Details</h6>
+                            <div class="mb-2">
+                                <strong>Class Name:</strong> {{ class_info.name }}
+                            </div>
+                            <div class="mb-2">
+                                <strong>Subject:</strong> {{ class_info.subject }}
+                            </div>
+                            {% if class_info.room_number %}
+                            <div class="mb-2">
+                                <strong>Room:</strong> {{ class_info.room_number }}
+                            </div>
+                            {% endif %}
+                            {% if class_info.schedule %}
+                            <div class="mb-2">
+                                <strong>Schedule:</strong> {{ class_info.schedule }}
+                            </div>
+                            {% endif %}
+                            <div class="mb-2">
+                                <strong>Max Students:</strong> {{ class_info.max_students }}
+                            </div>
+                        </div>
+                        
+                        <!-- Teacher Information -->
+                        <div class="col-md-6">
+                            <h6 class="text-primary mb-3">Teacher Assignment</h6>
+                            
+                            <!-- Primary Teacher -->
+                            <div class="mb-3">
+                                <strong>Primary Teacher:</strong>
+                                {% if class_info.teacher %}
+                                    <div class="mt-1">
+                                        <i class="fas fa-user-tie me-2 text-success"></i>
+                                        {{ class_info.teacher.first_name + ' ' + class_info.teacher.last_name }}
+                                        <span class="badge bg-success ms-2">{{ class_info.teacher.user.role if class_info.teacher.user else 'No Role' }}</span>
+                                    </div>
+                                {% else %}
+                                    <div class="text-muted">No primary teacher assigned</div>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Substitute Teacher -->
+                            <div class="mb-3">
+                                <strong>Substitute Teacher:</strong>
+                                {% if class_info.substitute_teachers.count() > 0 %}
+                                    {% for teacher in class_info.substitute_teachers %}
+                                        <div class="mt-1">
+                                            <i class="fas fa-user-clock me-2 text-warning"></i>
+                                            {{ teacher.first_name + ' ' + teacher.last_name }}
+                                            <span class="badge bg-warning ms-2">{{ teacher.user.role if teacher.user else 'No Role' }}</span>
+                                        </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <div class="text-muted">N/A</div>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Additional Teachers -->
+                            {% if class_info.additional_teachers.count() > 0 %}
+                            <div class="mb-3">
+                                <strong>Additional Teachers:</strong>
+                                {% for teacher in class_info.additional_teachers %}
+                                    <div class="mt-1">
+                                        <i class="fas fa-users me-2 text-info"></i>
+                                        {{ teacher.first_name + ' ' + teacher.last_name }}
+                                        <span class="badge bg-info ms-2">{{ teacher.user.role if teacher.user else 'No Role' }}</span>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row g-3 g-md-4">
         <!-- Currently Enrolled Students -->
         <div class="col-12 col-lg-6">

@@ -1066,7 +1066,22 @@ def add_class():
 def manage_class(class_id):
     """Manage a specific class - teachers, students, etc."""
     class_obj = Class.query.get_or_404(class_id)
-    return render_template('management/manage_class_roster.html', class_info=class_obj)
+    
+    # Get all students for potential enrollment
+    all_students = Student.query.all()
+    
+    # Get currently enrolled students
+    enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
+    enrolled_students = [enrollment.student for enrollment in enrollments if enrollment.student]
+    
+    # Get available teachers for assignment
+    available_teachers = TeacherStaff.query.all()
+    
+    return render_template('management/manage_class_roster.html', 
+                         class_info=class_obj,
+                         all_students=all_students,
+                         enrolled_students=enrolled_students,
+                         available_teachers=available_teachers)
 
 @management_blueprint.route('/class/<int:class_id>/edit', methods=['GET', 'POST'])
 @login_required

@@ -191,22 +191,27 @@
                     </div>
                     {% endif %}
 
-                    <!-- Substitute Teachers (if any) -->
-                    {% if class.substitute_teachers.count() > 0 %}
+                    <!-- Substitute Teacher -->
                     <div class="substitute-teachers">
                         <div class="teacher-label">
-                            <i class="fas fa-user-clock me-2"></i>Substitute Teachers ({{ class.substitute_teachers.count() }})
+                            <i class="fas fa-user-clock me-2"></i>Substitute Teacher
                         </div>
                         <div class="teachers-list">
-                            {% for teacher in class.substitute_teachers %}
-                            <div class="teacher-chip substitute-chip">
-                                <i class="fas fa-user-clock me-1"></i>
-                                {{ teacher.first_name + ' ' + teacher.last_name }}
-                            </div>
-                            {% endfor %}
+                            {% if class.substitute_teachers.count() > 0 %}
+                                {% for teacher in class.substitute_teachers %}
+                                <div class="teacher-chip substitute-chip">
+                                    <i class="fas fa-user-clock me-1"></i>
+                                    {{ teacher.first_name + ' ' + teacher.last_name }}
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="no-substitute">
+                                    <i class="fas fa-user-slash me-2"></i>
+                                    N/A
+                                </div>
+                            {% endif %}
                         </div>
                     </div>
-                    {% endif %}
 
                     <!-- Class Metadata -->
                     <div class="class-metadata">

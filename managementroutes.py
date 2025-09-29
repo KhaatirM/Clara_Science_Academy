@@ -1363,10 +1363,41 @@ def remove_class(class_id):
         for attendance in attendance_records:
             db.session.delete(attendance)
         
-        # Then delete all assignments associated with this class
-        from models import Assignment
+        # Delete all assignment-related data for this class
+        from models import Grade, Assignment, AssignmentSubmission, QuizQuestion, QuizSession, AssignmentFeedback, Extension
         assignments = Assignment.query.filter_by(class_id=class_id).all()
         for assignment in assignments:
+            # Delete all grades for this assignment
+            grades = Grade.query.filter_by(assignment_id=assignment.id).all()
+            for grade in grades:
+                db.session.delete(grade)
+            
+            # Delete all assignment submissions
+            submissions = AssignmentSubmission.query.filter_by(assignment_id=assignment.id).all()
+            for submission in submissions:
+                db.session.delete(submission)
+            
+            # Delete all quiz questions
+            quiz_questions = QuizQuestion.query.filter_by(assignment_id=assignment.id).all()
+            for question in quiz_questions:
+                db.session.delete(question)
+            
+            # Delete all quiz sessions
+            quiz_sessions = QuizSession.query.filter_by(assignment_id=assignment.id).all()
+            for session in quiz_sessions:
+                db.session.delete(session)
+            
+            # Delete all assignment feedback
+            feedback = AssignmentFeedback.query.filter_by(assignment_id=assignment.id).all()
+            for fb in feedback:
+                db.session.delete(fb)
+            
+            # Delete all extensions
+            extensions = Extension.query.filter_by(assignment_id=assignment.id).all()
+            for extension in extensions:
+                db.session.delete(extension)
+            
+            # Then delete the assignment
             db.session.delete(assignment)
         
         # Finally, delete the class itself

@@ -1134,9 +1134,9 @@ def edit_class(class_id):
             class_obj.is_active = 'is_active' in request.form
             
             # Handle multi-teacher assignments
-            # Clear existing relationships
-            class_obj.substitute_teachers.clear()
-            class_obj.additional_teachers.clear()
+            # Clear existing relationships (proper way for dynamic relationships)
+            class_obj.substitute_teachers = []
+            class_obj.additional_teachers = []
             
             # Add substitute teachers
             substitute_teacher_ids = request.form.getlist('substitute_teachers')

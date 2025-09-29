@@ -2,72 +2,318 @@
 
 {% block dashboard_content %}
 <div class="container-fluid px-2 px-md-4">
-    <h3 class="mb-4">{% if edit_mode %}Update Class Information{% else %}Add New Class{% endif %}</h3>
-
-    <form method="POST" action="{{ form_action }}" class="needs-validation" novalidate>
-
-        <div class="row g-3">
-            <h4 class="mt-4 mb-3 border-bottom pb-2">Class Details</h4>
-            <div class="col-12 col-md-6">
-                <label for="class_name" class="form-label">Class Name <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" id="class_name" name="class_name" 
-                       value="{{ class_data.name if class_data else '' }}" required placeholder="e.g., Grade 10 Biology - Section A">
-                <div class="invalid-feedback">Class name is required.</div>
-            </div>
-
-            <div class="col-12 col-md-6">
-                <label for="subject" class="form-label">Subject <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" id="subject" name="subject"
-                       value="{{ class_data.subject if class_data else '' }}" required placeholder="e.g., Biology, Algebra II">
-                <div class="invalid-feedback">Subject is required.</div>
-            </div>
-
-            <h4 class="mt-4 mb-3 border-bottom pb-2">Assignment</h4>
-            <div class="col-12">
-                <label for="teacher_id" class="form-label">Assign Teacher <span class="text-danger">*</span></label>
-                <select class="form-select" id="teacher_id" name="teacher_id" required>
-                    <option value="">Select a teacher...</option>
-                    {% for teacher in available_teachers %}
-                    <option value="{{ teacher.id }}" {% if class_data and class_data.teacher_id == teacher.id %}selected{% endif %}>
-                        {{ teacher.first_name + ' ' + teacher.last_name }} ({{ teacher.user.username if teacher.user else 'No User' }})
-                    </option>
-                    {% endfor %}
-                    {% if not available_teachers %}
-                    <option value="" disabled>No teachers available. Please add teachers first.</option>
-                    {% endif %}
-                </select>
-                <div class="invalid-feedback">Please assign a teacher to this class.</div>
-            </div>
-
-            <div class="col-12">
-                <label for="grade_levels" class="form-label">Grade Levels</label>
-                <select class="form-select" id="grade_levels" name="grade_levels" multiple size="6" style="min-height: 120px;">
-                    {% for grade in range(1, 13) %}
-                        <option value="{{ grade }}" 
-                                {% if class_data and grade in class_data.get_grade_levels() %}selected{% endif %}>
-                            Grade {{ grade }}
-                        </option>
-                    {% endfor %}
-                </select>
-                <div class="form-text">
-                    <i class="bi bi-info-circle me-1"></i>
-                    Hold Ctrl (or Cmd on Mac) to select multiple grade levels. 
-                    This class can serve students from the selected grades.
+    <!-- Enhanced Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm bg-gradient-success text-white">
+                <div class="card-body p-4">
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
+                        <div class="mb-3 mb-md-0">
+                            <h2 class="mb-2 fw-bold">
+                                <i class="bi bi-plus-circle-fill me-3 text-warning"></i>
+                                Create New Class
+                            </h2>
+                            <p class="mb-0 opacity-75">
+                                <i class="bi bi-building me-2"></i>
+                                Set up a new class with teacher assignments and configuration
+                            </p>
+                        </div>
+                        <div class="bg-white bg-opacity-20 rounded-circle p-3">
+                            <i class="bi bi-mortarboard text-white fs-1"></i>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
+    </div>
 
-        <hr class="my-4">
+    <div class="row g-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-lg">
+                <div class="card-header bg-gradient-primary text-white border-0">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-white bg-opacity-20 rounded-circle p-2 me-3">
+                            <i class="bi bi-plus-square text-white fs-4"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-1 fw-bold">Class Configuration</h5>
+                            <small class="opacity-75">Create new class with comprehensive settings</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-4">
+                    <form method="POST" action="{{ form_action }}" class="needs-validation" novalidate>
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 
-        <div class="d-flex flex-column flex-md-row gap-2">
-            <button class="btn btn-primary btn-lg" type="submit">
-                {% if edit_mode %}Update Class{% else %}Add Class{% endif %}
-            </button>
-            <a href="{{ cancel_url_override if cancel_url_override else url_for('management.classes') }}" class="btn btn-secondary btn-lg" role="button">
-                {% if edit_mode %}Cancel{% else %}Discard{% endif %}
-            </a>
+                        <!-- Basic Information Section -->
+                        <div class="row g-4 mb-4">
+                            <div class="col-12">
+                                <div class="bg-light rounded-3 p-4 border-start border-4 border-primary">
+                                    <h6 class="text-primary mb-4 fw-bold">
+                                        <i class="bi bi-info-circle me-2"></i>
+                                        Basic Class Information
+                                    </h6>
+                                    <div class="row g-4">
+                                        <div class="col-12 col-md-6">
+                                            <label for="class_name" class="form-label fw-semibold">
+                                                <i class="bi bi-mortarboard me-2 text-primary"></i>
+                                                Class Name <span class="text-danger">*</span>
+                                            </label>
+                                            <input type="text" class="form-control form-control-lg border-2" id="class_name" name="class_name" 
+                                                   value="{{ class_data.name if class_data else '' }}" required placeholder="e.g., Grade 10 Biology - Section A">
+                                            <div class="form-text">
+                                                <i class="bi bi-lightbulb me-1"></i>
+                                                Choose a descriptive name for your class
+                                            </div>
+                                            <div class="invalid-feedback">Class name is required.</div>
+                                        </div>
+
+                                        <div class="col-12 col-md-6">
+                                            <label for="subject" class="form-label fw-semibold">
+                                                <i class="bi bi-book me-2 text-success"></i>
+                                                Subject <span class="text-danger">*</span>
+                                            </label>
+                                            <input type="text" class="form-control form-control-lg border-2" id="subject" name="subject"
+                                                   value="{{ class_data.subject if class_data else '' }}" required placeholder="e.g., Biology, Algebra II">
+                                            <div class="form-text">
+                                                <i class="bi bi-lightbulb me-1"></i>
+                                                The main subject being taught
+                                            </div>
+                                            <div class="invalid-feedback">Subject is required.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Teacher Assignment Section -->
+                        <div class="row g-4 mb-4">
+                            <div class="col-12">
+                                <div class="bg-light rounded-3 p-4 border-start border-4 border-success">
+                                    <h6 class="text-success mb-4 fw-bold">
+                                        <i class="bi bi-people me-2"></i>
+                                        Teacher Assignment & Management
+                                    </h6>
+                                    
+                                    <div class="row g-4">
+                                        <!-- Primary Teacher -->
+                                        <div class="col-12">
+                                            <div class="card border-0 bg-white shadow-sm">
+                                                <div class="card-body p-3">
+                                                    <label for="teacher_id" class="form-label fw-semibold">
+                                                        <i class="bi bi-person-fill me-2 text-success"></i>
+                                                        Primary Teacher <span class="text-danger">*</span>
+                                                    </label>
+                                                    <select class="form-select form-select-lg border-2" id="teacher_id" name="teacher_id" required>
+                                                        <option value="">Select a primary teacher...</option>
+                                                        {% for teacher in available_teachers %}
+                                                        <option value="{{ teacher.id }}" {% if class_data and class_data.teacher_id == teacher.id %}selected{% endif %}>
+                                                            {{ teacher.first_name + ' ' + teacher.last_name }} ({{ teacher.user.username if teacher.user else 'No User' }})
+                                                        </option>
+                                                        {% endfor %}
+                                                        {% if not available_teachers %}
+                                                        <option value="" disabled>No teachers available. Please add teachers first.</option>
+                                                        {% endif %}
+                                                    </select>
+                                                    <div class="form-text mt-2">
+                                                        <i class="bi bi-lightbulb me-1"></i>
+                                                        Choose the primary teacher who will be responsible for this class
+                                                    </div>
+                                                    <div class="invalid-feedback">Please assign a primary teacher to this class.</div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Substitute Teachers -->
+                                        <div class="col-12 col-md-6">
+                                            <div class="card border-0 bg-warning bg-opacity-10 shadow-sm">
+                                                <div class="card-body p-3">
+                                                    <label for="substitute_teachers" class="form-label fw-semibold">
+                                                        <i class="bi bi-person-clock me-2 text-warning"></i>
+                                                        Substitute Teachers
+                                                    </label>
+                                                    <select class="form-select border-2" id="substitute_teachers" name="substitute_teachers" multiple size="4">
+                                                        {% for teacher in available_teachers %}
+                                                        <option value="{{ teacher.id }}">
+                                                            {{ teacher.first_name + ' ' + teacher.last_name }}
+                                                        </option>
+                                                        {% endfor %}
+                                                    </select>
+                                                    <div class="form-text mt-2">
+                                                        <i class="bi bi-lightbulb me-1"></i>
+                                                        Select backup teachers for coverage
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Additional Teachers -->
+                                        <div class="col-12 col-md-6">
+                                            <div class="card border-0 bg-info bg-opacity-10 shadow-sm">
+                                                <div class="card-body p-3">
+                                                    <label for="additional_teachers" class="form-label fw-semibold">
+                                                        <i class="bi bi-people me-2 text-info"></i>
+                                                        Additional Teachers
+                                                    </label>
+                                                    <select class="form-select border-2" id="additional_teachers" name="additional_teachers" multiple size="4">
+                                                        {% for teacher in available_teachers %}
+                                                        <option value="{{ teacher.id }}">
+                                                            {{ teacher.first_name + ' ' + teacher.last_name }}
+                                                        </option>
+                                                        {% endfor %}
+                                                    </select>
+                                                    <div class="form-text mt-2">
+                                                        <i class="bi bi-lightbulb me-1"></i>
+                                                        Select supporting teachers for assistance
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Grade Levels Section -->
+                        <div class="row g-4 mb-4">
+                            <div class="col-12">
+                                <div class="bg-light rounded-3 p-4 border-start border-4 border-info">
+                                    <h6 class="text-info mb-4 fw-bold">
+                                        <i class="bi bi-graduation-cap me-2"></i>
+                                        Grade Level Configuration
+                                    </h6>
+                                    <label for="grade_levels" class="form-label fw-semibold">
+                                        <i class="bi bi-list-ol me-2 text-info"></i>
+                                        Target Grade Levels
+                                    </label>
+                                    <select class="form-select border-2" id="grade_levels" name="grade_levels" multiple size="6" style="min-height: 120px;">
+                                        {% for grade in range(1, 13) %}
+                                            <option value="{{ grade }}" 
+                                                    {% if class_data and grade in class_data.get_grade_levels() %}selected{% endif %}>
+                                                Grade {{ grade }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="form-text mt-2">
+                                        <i class="bi bi-lightbulb me-1"></i>
+                                        Hold Ctrl (or Cmd on Mac) to select multiple grade levels. 
+                                        This class can serve students from the selected grades.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <div class="d-flex flex-column flex-md-row justify-content-between gap-3">
+                                    <a href="{{ cancel_url_override if cancel_url_override else url_for('management.classes') }}" 
+                                       class="btn btn-outline-secondary btn-lg flex-fill">
+                                        <i class="bi bi-x-circle me-2"></i> 
+                                        Cancel Creation
+                                    </a>
+                                    <button class="btn btn-success btn-lg flex-fill shadow-sm" type="submit">
+                                        <i class="bi bi-plus-circle me-2"></i>
+                                        Create New Class
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
-    </form>
+    </div>
+
+    <!-- Enhanced Visual Styling -->
+    <style>
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+    }
+
+    .bg-gradient-success {
+        background: linear-gradient(135deg, #198754 0%, #146c43 100%);
+    }
+
+    .card {
+        transition: all 0.3s ease;
+    }
+
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    }
+
+    .btn {
+        transition: all 0.3s ease;
+    }
+
+    .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+
+    .border-start {
+        border-width: 4px !important;
+    }
+
+    /* Custom animations */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .card {
+        animation: fadeInUp 0.6s ease-out;
+    }
+
+    /* Enhanced form styling */
+    .form-control-lg {
+        border-radius: 0.75rem;
+        padding: 0.75rem 1rem;
+    }
+
+    .form-select {
+        border-radius: 0.75rem;
+        padding: 0.75rem 1rem;
+    }
+
+    /* Teacher assignment cards */
+    .bg-warning.bg-opacity-10 {
+        background-color: rgba(255, 193, 7, 0.1) !important;
+    }
+
+    .bg-info.bg-opacity-10 {
+        background-color: rgba(13, 202, 240, 0.1) !important;
+    }
+
+    /* Header animation */
+    @keyframes slideInDown {
+        from {
+            opacity: 0;
+            transform: translateY(-50px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .bg-gradient-success {
+        animation: slideInDown 0.8s ease-out;
+    }
+    </style>
 
     <script>
     // Bootstrap validation script

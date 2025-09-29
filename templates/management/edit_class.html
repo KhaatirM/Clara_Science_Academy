@@ -4,76 +4,220 @@
 
 {% block dashboard_content %}
 <div class="container-fluid px-2 px-md-4">
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
-        <h3 class="mb-2 mb-md-0"><i class="bi bi-pencil-fill me-2"></i>Edit Class: {{ class_info.name }}</h3>
-        <a href="{{ url_for('management.view_class', class_id=class_info.id) }}" class="btn btn-secondary btn-sm">
-            <i class="bi bi-arrow-left me-1"></i> Back to Class Details
-        </a>
+    <!-- Enhanced Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm bg-gradient-primary text-white">
+                <div class="card-body p-4">
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
+                        <div class="mb-3 mb-md-0">
+                            <h2 class="mb-2 fw-bold">
+                                <i class="bi bi-gear-fill me-3 text-warning"></i>
+                                Edit Class Configuration
+                            </h2>
+                            <p class="mb-0 opacity-75">
+                                <i class="bi bi-building me-2"></i>
+                                {{ class_info.name }} - {{ class_info.subject }}
+                            </p>
+                        </div>
+                        <a href="{{ url_for('management.view_class', class_id=class_info.id) }}" 
+                           class="btn btn-light btn-lg shadow-sm">
+                            <i class="bi bi-arrow-left me-2"></i> 
+                            Back to Class Details
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="row g-3 g-md-4">
         <div class="col-12 col-lg-8">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0"><i class="bi bi-gear-fill me-2"></i>Edit Class Information</h5>
+            <div class="card border-0 shadow-lg">
+                <div class="card-header bg-gradient-primary text-white border-0">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-white bg-opacity-20 rounded-circle p-2 me-3">
+                            <i class="bi bi-pencil-square text-white fs-4"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-1 fw-bold">Class Configuration</h5>
+                            <small class="opacity-75">Update class details and teacher assignments</small>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <form method="POST">
+                <div class="card-body p-4">
+                    <form method="POST" class="needs-validation" novalidate>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <!-- Basic Information Section -->
+                        <div class="row g-4 mb-4">
+                            <div class="col-12">
+                                <div class="bg-light rounded-3 p-3 border-start border-4 border-primary">
+                                    <h6 class="text-primary mb-3 fw-bold">
+                                        <i class="bi bi-info-circle me-2"></i>
+                                        Basic Class Information
+                                    </h6>
+                                    <div class="row g-3">
+                                        <div class="col-12 col-md-6">
+                                            <label for="name" class="form-label fw-semibold">
+                                                <i class="bi bi-mortarboard me-2 text-primary"></i>
+                                                Class Name <span class="text-danger">*</span>
+                                            </label>
+                                            <input type="text" class="form-control form-control-lg border-2" id="name" name="name" 
+                                                   value="{{ class_info.name }}" required>
+                                            <div class="form-text">
+                                                <i class="bi bi-lightbulb me-1"></i>
+                                                The name of the class (e.g., "Grade 3 Math")
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-12 col-md-6">
+                                            <label for="subject" class="form-label fw-semibold">
+                                                <i class="bi bi-book me-2 text-success"></i>
+                                                Subject <span class="text-danger">*</span>
+                                            </label>
+                                            <input type="text" class="form-control form-control-lg border-2" id="subject" name="subject" 
+                                                   value="{{ class_info.subject or '' }}" required>
+                                            <div class="form-text">
+                                                <i class="bi bi-lightbulb me-1"></i>
+                                                The subject being taught (e.g., "Mathematics")
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Teacher Assignment Section -->
+                        <div class="row g-4 mb-4">
+                            <div class="col-12">
+                                <div class="bg-light rounded-3 p-4 border-start border-4 border-success">
+                                    <h6 class="text-success mb-4 fw-bold">
+                                        <i class="bi bi-people me-2"></i>
+                                        Teacher Assignment & Management
+                                    </h6>
+                                    
+                                    <div class="row g-4">
+                                        <!-- Primary Teacher -->
+                                        <div class="col-12">
+                                            <div class="card border-0 bg-white shadow-sm">
+                                                <div class="card-body p-3">
+                                                    <label for="teacher_id" class="form-label fw-semibold">
+                                                        <i class="bi bi-person-fill me-2 text-success"></i>
+                                                        Primary Teacher <span class="text-danger">*</span>
+                                                    </label>
+                                                    <select class="form-select form-select-lg border-2" id="teacher_id" name="teacher_id" required>
+                                                        <option value="">Select a primary teacher...</option>
+                                                        {% for teacher in available_teachers %}
+                                                            <option value="{{ teacher.id }}" 
+                                                                    {% if class_info.teacher_id == teacher.id %}selected{% endif %}>
+                                                                {{ teacher.first_name + ' ' + teacher.last_name }} ({{ teacher.user.username if teacher.user else 'No User' }})
+                                                            </option>
+                                                        {% endfor %}
+                                                    </select>
+                                                    <div class="form-text mt-2">
+                                                        <i class="bi bi-lightbulb me-1"></i>
+                                                        Choose the primary teacher who will be responsible for this class
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Substitute Teachers -->
+                                        <div class="col-12 col-md-6">
+                                            <div class="card border-0 bg-warning bg-opacity-10 shadow-sm">
+                                                <div class="card-body p-3">
+                                                    <label for="substitute_teachers" class="form-label fw-semibold">
+                                                        <i class="bi bi-person-clock me-2 text-warning"></i>
+                                                        Substitute Teachers
+                                                    </label>
+                                                    <select class="form-select border-2" id="substitute_teachers" name="substitute_teachers" multiple size="4">
+                                                        {% for teacher in available_teachers %}
+                                                            <option value="{{ teacher.id }}" 
+                                                                    {% if teacher in class_info.substitute_teachers %}selected{% endif %}>
+                                                                {{ teacher.first_name + ' ' + teacher.last_name }}
+                                                            </option>
+                                                        {% endfor %}
+                                                    </select>
+                                                    <div class="form-text mt-2">
+                                                        <i class="bi bi-lightbulb me-1"></i>
+                                                        Select backup teachers for coverage
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Additional Teachers -->
+                                        <div class="col-12 col-md-6">
+                                            <div class="card border-0 bg-info bg-opacity-10 shadow-sm">
+                                                <div class="card-body p-3">
+                                                    <label for="additional_teachers" class="form-label fw-semibold">
+                                                        <i class="bi bi-people me-2 text-info"></i>
+                                                        Additional Teachers
+                                                    </label>
+                                                    <select class="form-select border-2" id="additional_teachers" name="additional_teachers" multiple size="4">
+                                                        {% for teacher in available_teachers %}
+                                                            <option value="{{ teacher.id }}" 
+                                                                    {% if teacher in class_info.additional_teachers %}selected{% endif %}>
+                                                                {{ teacher.first_name + ' ' + teacher.last_name }}
+                                                            </option>
+                                                        {% endfor %}
+                                                    </select>
+                                                    <div class="form-text mt-2">
+                                                        <i class="bi bi-lightbulb me-1"></i>
+                                                        Select supporting teachers for assistance
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Grade Levels Section -->
+                        <div class="row g-4 mb-4">
+                            <div class="col-12">
+                                <div class="bg-light rounded-3 p-4 border-start border-4 border-info">
+                                    <h6 class="text-info mb-3 fw-bold">
+                                        <i class="bi bi-graduation-cap me-2"></i>
+                                        Grade Level Configuration
+                                    </h6>
+                                    <label for="grade_levels" class="form-label fw-semibold">
+                                        <i class="bi bi-list-ol me-2 text-info"></i>
+                                        Target Grade Levels
+                                    </label>
+                                    <select class="form-select border-2" id="grade_levels" name="grade_levels" multiple size="6" style="min-height: 120px;">
+                                        {% for grade in range(1, 13) %}
+                                            <option value="{{ grade }}" 
+                                                    {% if grade in class_info.get_grade_levels() %}selected{% endif %}>
+                                                Grade {{ grade }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="form-text mt-2">
+                                        <i class="bi bi-lightbulb me-1"></i>
+                                        Hold Ctrl (or Cmd on Mac) to select multiple grade levels. 
+                                        This class can serve students from the selected grades.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
                         <div class="row g-3">
-                            <div class="col-12 col-md-6">
-                                <label for="name" class="form-label">Class Name <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="name" name="name" 
-                                       value="{{ class_info.name }}" required>
-                                <div class="form-text">The name of the class (e.g., "Grade 3 Math")</div>
+                            <div class="col-12">
+                                <div class="d-flex flex-column flex-md-row justify-content-between gap-3">
+                                    <a href="{{ url_for('management.view_class', class_id=class_info.id) }}" 
+                                       class="btn btn-outline-secondary btn-lg flex-fill">
+                                        <i class="bi bi-x-circle me-2"></i> 
+                                        Cancel Changes
+                                    </a>
+                                    <button type="submit" class="btn btn-success btn-lg flex-fill shadow-sm">
+                                        <i class="bi bi-check-circle me-2"></i> 
+                                        Update Class Configuration
+                                    </button>
+                                </div>
                             </div>
-                            
-                            <div class="col-12 col-md-6">
-                                <label for="subject" class="form-label">Subject <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="subject" name="subject" 
-                                       value="{{ class_info.subject or '' }}" required>
-                                <div class="form-text">The subject being taught (e.g., "Mathematics")</div>
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="teacher_id" class="form-label">Assigned Teacher <span class="text-danger">*</span></label>
-                            <select class="form-select" id="teacher_id" name="teacher_id" required>
-                                <option value="">Select a teacher...</option>
-                                {% for teacher in available_teachers %}
-                                    <option value="{{ teacher.id }}" 
-                                            {% if class_info.teacher_id == teacher.id %}selected{% endif %}>
-                                        {{ teacher.first_name + ' ' + teacher.last_name }} ({{ teacher.user.username if teacher.user else 'No User' }})
-                                    </option>
-                                {% endfor %}
-                            </select>
-                            <div class="form-text">Choose the teacher who will be responsible for this class</div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="grade_levels" class="form-label">Grade Levels</label>
-                            <select class="form-select" id="grade_levels" name="grade_levels" multiple size="6" style="min-height: 120px;">
-                                {% for grade in range(1, 13) %}
-                                    <option value="{{ grade }}" 
-                                            {% if grade in class_info.get_grade_levels() %}selected{% endif %}>
-                                        Grade {{ grade }}
-                                    </option>
-                                {% endfor %}
-                            </select>
-                            <div class="form-text">
-                                <i class="bi bi-info-circle me-1"></i>
-                                Hold Ctrl (or Cmd on Mac) to select multiple grade levels. 
-                                This class can serve students from the selected grades.
-                            </div>
-                        </div>
-
-                        <div class="d-flex flex-column flex-md-row justify-content-between gap-2">
-                            <a href="{{ url_for('management.view_class', class_id=class_info.id) }}" class="btn btn-secondary">
-                                <i class="bi bi-x-circle me-1"></i> Cancel
-                            </a>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-circle me-1"></i> Update Class
-                            </button>
                         </div>
                     </form>
                 </div>
@@ -81,61 +225,239 @@
         </div>
 
         <div class="col-12 col-lg-4">
-            <div class="card shadow-sm">
-                <div class="card-header bg-info text-white">
-                    <h5 class="mb-0"><i class="bi bi-info-circle-fill me-2"></i>Current Information</h5>
+            <div class="card border-0 shadow-lg sticky-top" style="top: 20px;">
+                <div class="card-header bg-gradient-info text-white border-0">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-white bg-opacity-20 rounded-circle p-2 me-3">
+                            <i class="bi bi-info-circle text-white fs-5"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-1 fw-bold">Current Configuration</h5>
+                            <small class="opacity-75">Live class information overview</small>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <strong>Class Name:</strong><br>
-                        <span class="text-muted">{{ class_info.name }}</span>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <strong>Subject:</strong><br>
-                        <span class="text-muted">{{ class_info.subject or 'Not set' }}</span>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <strong>Current Teacher:</strong><br>
-                        <span class="text-muted">
-                            {% if class_info.teacher_id %}
-                                {% for teacher in available_teachers %}
-                                    {% if teacher.id == class_info.teacher_id %}
-                                        {{ teacher.first_name + ' ' + teacher.last_name }}
+                <div class="card-body p-4">
+                    <!-- Class Basic Info -->
+                    <div class="mb-4">
+                        <div class="bg-light rounded-3 p-3 border-start border-4 border-primary">
+                            <h6 class="text-primary mb-3 fw-bold">
+                                <i class="bi bi-building me-2"></i>
+                                Class Details
+                            </h6>
+                            <div class="mb-2">
+                                <strong class="text-dark">Class Name:</strong><br>
+                                <span class="text-muted">{{ class_info.name }}</span>
+                            </div>
+                            <div class="mb-2">
+                                <strong class="text-dark">Subject:</strong><br>
+                                <span class="text-muted">{{ class_info.subject or 'Not set' }}</span>
+                            </div>
+                            <div class="mb-2">
+                                <strong class="text-dark">Grade Levels:</strong><br>
+                                <span class="text-muted">{{ class_info.get_grade_levels_display() }}</span>
+                            </div>
+                            <div class="mb-0">
+                                <strong class="text-dark">School Year:</strong><br>
+                                <span class="text-muted">
+                                    {% if class_info.school_year %}
+                                        {{ class_info.school_year.name }}
+                                    {% else %}
+                                        Not set
                                     {% endif %}
-                                {% endfor %}
-                            {% else %}
-                                Not assigned
-                            {% endif %}
-                        </span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Teacher Assignments -->
+                    <div class="mb-4">
+                        <div class="bg-light rounded-3 p-3 border-start border-4 border-success">
+                            <h6 class="text-success mb-3 fw-bold">
+                                <i class="bi bi-people me-2"></i>
+                                Teacher Assignments
+                            </h6>
+                            
+                            <!-- Primary Teacher -->
+                            <div class="mb-3">
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="bi bi-person-fill me-2 text-success"></i>
+                                    <strong class="text-dark">Primary Teacher:</strong>
+                                </div>
+                                <div class="ms-4">
+                                    {% if class_info.teacher_id %}
+                                        {% for teacher in available_teachers %}
+                                            {% if teacher.id == class_info.teacher_id %}
+                                                <span class="badge bg-success bg-opacity-20 text-success border border-success">
+                                                    {{ teacher.first_name + ' ' + teacher.last_name }}
+                                                </span>
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="badge bg-danger bg-opacity-20 text-danger border border-danger">
+                                            Not assigned
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Substitute Teachers -->
+                            <div class="mb-3">
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="bi bi-person-clock me-2 text-warning"></i>
+                                    <strong class="text-dark">Substitute Teachers:</strong>
+                                </div>
+                                <div class="ms-4">
+                                    {% if class_info.substitute_teachers.count() > 0 %}
+                                        {% for teacher in class_info.substitute_teachers %}
+                                            <div class="mb-1">
+                                                <span class="badge bg-warning bg-opacity-20 text-warning border border-warning">
+                                                    {{ teacher.first_name + ' ' + teacher.last_name }}
+                                                </span>
+                                            </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="badge bg-secondary bg-opacity-20 text-secondary border border-secondary">
+                                            None assigned
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Additional Teachers -->
+                            <div class="mb-0">
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="bi bi-people me-2 text-info"></i>
+                                    <strong class="text-dark">Additional Teachers:</strong>
+                                </div>
+                                <div class="ms-4">
+                                    {% if class_info.additional_teachers.count() > 0 %}
+                                        {% for teacher in class_info.additional_teachers %}
+                                            <div class="mb-1">
+                                                <span class="badge bg-info bg-opacity-20 text-info border border-info">
+                                                    {{ teacher.first_name + ' ' + teacher.last_name }}
+                                                </span>
+                                            </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="badge bg-secondary bg-opacity-20 text-secondary border border-secondary">
+                                            None assigned
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     
-                    <div class="mb-3">
-                        <strong>Grade Levels:</strong><br>
-                        <span class="text-muted">{{ class_info.get_grade_levels_display() }}</span>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <strong>School Year:</strong><br>
-                        <span class="text-muted">
-                            {% if class_info.school_year %}
-                                {{ class_info.school_year.name }}
-                            {% else %}
-                                Not set
-                            {% endif %}
-                        </span>
-                    </div>
-                    
-                    <hr>
-                    
-                    <div class="alert alert-warning">
-                        <i class="bi bi-exclamation-triangle me-2"></i>
-                        <strong>Note:</strong> Changes to class information will affect all assignments and student records associated with this class.
+                    <!-- Important Note -->
+                    <div class="alert alert-warning border-0 shadow-sm">
+                        <div class="d-flex align-items-start">
+                            <i class="bi bi-exclamation-triangle me-3 text-warning fs-5"></i>
+                            <div>
+                                <strong class="text-warning">Important Note:</strong><br>
+                                <small class="text-muted">Changes to class information will affect all assignments and student records associated with this class.</small>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Enhanced Visual Styling -->
+<style>
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+}
+
+.bg-gradient-info {
+    background: linear-gradient(135deg, #0dcaf0 0%, #0aa2c0 100%);
+}
+
+.card {
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+.btn {
+    transition: all 0.3s ease;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.badge {
+    font-size: 0.8rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+}
+
+.border-start {
+    border-width: 4px !important;
+}
+
+.alert {
+    border-radius: 0.75rem;
+}
+
+.sticky-top {
+    position: sticky;
+    top: 20px;
+}
+
+@media (max-width: 768px) {
+    .sticky-top {
+        position: relative;
+        top: auto;
+    }
+}
+
+/* Custom animations */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.card {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+/* Enhanced form styling */
+.form-control-lg {
+    border-radius: 0.75rem;
+    padding: 0.75rem 1rem;
+}
+
+.form-select {
+    border-radius: 0.75rem;
+    padding: 0.75rem 1rem;
+}
+
+/* Teacher assignment cards */
+.bg-warning.bg-opacity-10 {
+    background-color: rgba(255, 193, 7, 0.1) !important;
+}
+
+.bg-info.bg-opacity-10 {
+    background-color: rgba(13, 202, 240, 0.1) !important;
+}
+</style>
 {% endblock %} 

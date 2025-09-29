@@ -1046,6 +1046,25 @@ def add_class():
             )
             
             db.session.add(new_class)
+            db.session.flush()  # Get the ID for the new class
+            
+            # Handle multi-teacher assignments
+            # Add substitute teachers
+            substitute_teacher_ids = request.form.getlist('substitute_teachers')
+            for teacher_id in substitute_teacher_ids:
+                if teacher_id:  # Make sure it's not empty
+                    teacher = TeacherStaff.query.get(int(teacher_id))
+                    if teacher:
+                        new_class.substitute_teachers.append(teacher)
+            
+            # Add additional teachers
+            additional_teacher_ids = request.form.getlist('additional_teachers')
+            for teacher_id in additional_teacher_ids:
+                if teacher_id:  # Make sure it's not empty
+                    teacher = TeacherStaff.query.get(int(teacher_id))
+                    if teacher:
+                        new_class.additional_teachers.append(teacher)
+            
             db.session.commit()
             
             flash(f'Class "{name}" created successfully!', 'success')
@@ -1058,7 +1077,7 @@ def add_class():
     
     # GET request - show form
     teachers = TeacherStaff.query.all()
-    return render_template('management/add_class.html', teachers=teachers)
+    return render_template('management/add_class.html', available_teachers=teachers)
 
 @management_blueprint.route('/class/<int:class_id>/manage')
 @login_required
@@ -1132,6 +1151,27 @@ def edit_class(class_id):
             class_obj.description = request.form.get('description', '').strip() or None
             class_obj.is_active = 'is_active' in request.form
             
+            # Handle multi-teacher assignments
+            # Clear existing relationships
+            class_obj.substitute_teachers.clear()
+            class_obj.additional_teachers.clear()
+            
+            # Add substitute teachers
+            substitute_teacher_ids = request.form.getlist('substitute_teachers')
+            for teacher_id in substitute_teacher_ids:
+                if teacher_id:  # Make sure it's not empty
+                    teacher = TeacherStaff.query.get(int(teacher_id))
+                    if teacher:
+                        class_obj.substitute_teachers.append(teacher)
+            
+            # Add additional teachers
+            additional_teacher_ids = request.form.getlist('additional_teachers')
+            for teacher_id in additional_teacher_ids:
+                if teacher_id:  # Make sure it's not empty
+                    teacher = TeacherStaff.query.get(int(teacher_id))
+                    if teacher:
+                        class_obj.additional_teachers.append(teacher)
+            
             db.session.commit()
             flash(f'Class "{class_obj.name}" updated successfully!', 'success')
             return redirect(url_for('management.classes'))
@@ -1143,7 +1183,7 @@ def edit_class(class_id):
     
     # GET request - show edit form
     teachers = TeacherStaff.query.all()
-    return render_template('management/edit_class.html', class_info=class_obj, teachers=teachers)
+    return render_template('management/edit_class.html', class_info=class_obj, available_teachers=teachers)
 
 @management_blueprint.route('/class/<int:class_id>/roster')
 @login_required

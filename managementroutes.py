@@ -1004,7 +1004,7 @@ def api_teachers():
         'id': teacher.id,
         'first_name': teacher.first_name,
         'last_name': teacher.last_name,
-        'role': teacher.role
+        'role': teacher.user.role if teacher.user else 'No Role'
     } for teacher in teachers])
 
 @management_blueprint.route('/add-class', methods=['GET', 'POST'])

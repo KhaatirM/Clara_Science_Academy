@@ -3430,7 +3430,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                             <optgroup label="Teachers & Staff">
                                 {% for teacher in teachers %}
                                     {% if teacher.user %}
-                                        <option value="{{ teacher.user.id }}">{{ teacher.first_name }} {{ teacher.last_name }} ({{ teacher.role }})</option>
+                                        <option value="{{ teacher.user.id }}">{{ teacher.first_name }} {{ teacher.last_name }} ({{ teacher.user.role if teacher.user else 'No Role' }})</option>
                                     {% endif %}
                                 {% endfor %}
                             </optgroup>

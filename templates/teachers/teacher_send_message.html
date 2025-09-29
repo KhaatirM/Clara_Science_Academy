@@ -48,7 +48,7 @@
                                     {% for teacher in teachers %}
                                         {% if teacher.user and teacher.user.id != current_user.id %}
                                             <option value="{{ teacher.user.id }}">
-                                                {{ teacher.first_name }} {{ teacher.last_name }} ({{ teacher.role }})
+                                                {{ teacher.first_name }} {{ teacher.last_name }} ({{ teacher.user.role if teacher.user else 'No Role' }})
                                             </option>
                                         {% endif %}
                                     {% endfor %}

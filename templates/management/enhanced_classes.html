@@ -163,7 +163,7 @@
                                 </div>
                                 <div class="teacher-details">
                                     <div class="teacher-name">{{ class.teacher.first_name + ' ' + class.teacher.last_name if class.teacher else 'No Teacher' }}</div>
-                                    <div class="teacher-role">{{ class.teacher.role }}</div>
+                                    <div class="teacher-role">{{ class.teacher.user.role if class.teacher.user else 'No Role' }}</div>
                                 </div>
                             {% else %}
                                 <div class="no-teacher">

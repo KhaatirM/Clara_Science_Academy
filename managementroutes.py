@@ -1281,9 +1281,23 @@ def remove_class(class_id):
     
     try:
         class_name = class_obj.name
+        
+        # First, delete all enrollments associated with this class
+        from models import Enrollment
+        enrollments = Enrollment.query.filter_by(class_id=class_id).all()
+        for enrollment in enrollments:
+            db.session.delete(enrollment)
+        
+        # Then delete all assignments associated with this class
+        from models import Assignment
+        assignments = Assignment.query.filter_by(class_id=class_id).all()
+        for assignment in assignments:
+            db.session.delete(assignment)
+        
+        # Finally, delete the class itself
         db.session.delete(class_obj)
         db.session.commit()
-        flash(f'Class "{class_name}" removed successfully!', 'success')
+        flash(f'Class "{class_name}" and all associated data removed successfully!', 'success')
     except Exception as e:
         db.session.rollback()
         flash(f'Error removing class: {str(e)}', 'danger')

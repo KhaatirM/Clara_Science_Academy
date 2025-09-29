@@ -56,27 +56,27 @@
                                         <i class="bi bi-info-circle me-2"></i>
                                         Basic Class Information
                                     </h6>
-                                    <div class="row g-3">
-                                        <div class="col-12 col-md-6">
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
                                             <label for="name" class="form-label fw-semibold">
                                                 <i class="bi bi-mortarboard me-2 text-primary"></i>
                                                 Class Name <span class="text-danger">*</span>
                                             </label>
                                             <input type="text" class="form-control form-control-lg border-2" id="name" name="name" 
-                                                   value="{{ class_info.name }}" required>
+                                       value="{{ class_info.name }}" required>
                                             <div class="form-text">
                                                 <i class="bi bi-lightbulb me-1"></i>
                                                 The name of the class (e.g., "Grade 3 Math")
                                             </div>
-                                        </div>
-                                        
-                                        <div class="col-12 col-md-6">
+                            </div>
+                            
+                            <div class="col-12 col-md-6">
                                             <label for="subject" class="form-label fw-semibold">
                                                 <i class="bi bi-book me-2 text-success"></i>
                                                 Subject <span class="text-danger">*</span>
                                             </label>
                                             <input type="text" class="form-control form-control-lg border-2" id="subject" name="subject" 
-                                                   value="{{ class_info.subject or '' }}" required>
+                                       value="{{ class_info.subject or '' }}" required>
                                             <div class="form-text">
                                                 <i class="bi bi-lightbulb me-1"></i>
                                                 The subject being taught (e.g., "Mathematics")
@@ -93,7 +93,7 @@
                                 <div class="bg-light rounded-3 p-4 border-start border-4 border-success">
                                     <h6 class="text-success mb-4 fw-bold">
                                         <i class="bi bi-people me-2"></i>
-                                        Teacher Assignment & Management
+                                        Assigned Teachers
                                     </h6>
                                     
                                     <div class="row g-4">
@@ -107,9 +107,9 @@
                                                     </label>
                                                     <select class="form-select form-select-lg border-2" id="teacher_id" name="teacher_id" required>
                                                         <option value="">Select a primary teacher...</option>
-                                                        {% for teacher in available_teachers %}
-                                                            <option value="{{ teacher.id }}" 
-                                                                    {% if class_info.teacher_id == teacher.id %}selected{% endif %}>
+                                {% for teacher in available_teachers %}
+                                    <option value="{{ teacher.id }}" 
+                                            {% if class_info.teacher_id == teacher.id %}selected{% endif %}>
                                                                 {{ teacher.first_name + ' ' + teacher.last_name }} ({{ teacher.user.username if teacher.user else 'No User' }})
                                                             </option>
                                                         {% endfor %}
@@ -159,9 +159,9 @@
                                                             <option value="{{ teacher.id }}" 
                                                                     {% if teacher in class_info.additional_teachers %}selected{% endif %}>
                                                                 {{ teacher.first_name + ' ' + teacher.last_name }} ({{ teacher.user.role if teacher.user else 'No Role' }})
-                                                            </option>
-                                                        {% endfor %}
-                                                    </select>
+                                    </option>
+                                {% endfor %}
+                            </select>
                                                     <div class="form-text mt-2">
                                                         <i class="bi bi-lightbulb me-1"></i>
                                                         Select supporting teachers for assistance
@@ -187,17 +187,17 @@
                                         Target Grade Levels
                                     </label>
                                     <select class="form-select border-2" id="grade_levels" name="grade_levels" multiple size="6" style="min-height: 120px;">
-                                        {% for grade in range(1, 13) %}
-                                            <option value="{{ grade }}" 
-                                                    {% if grade in class_info.get_grade_levels() %}selected{% endif %}>
-                                                Grade {{ grade }}
-                                            </option>
-                                        {% endfor %}
-                                    </select>
+                                {% for grade in range(1, 13) %}
+                                    <option value="{{ grade }}" 
+                                            {% if grade in class_info.get_grade_levels() %}selected{% endif %}>
+                                        Grade {{ grade }}
+                                    </option>
+                                {% endfor %}
+                            </select>
                                     <div class="form-text mt-2">
                                         <i class="bi bi-lightbulb me-1"></i>
-                                        Hold Ctrl (or Cmd on Mac) to select multiple grade levels. 
-                                        This class can serve students from the selected grades.
+                                Hold Ctrl (or Cmd on Mac) to select multiple grade levels. 
+                                This class can serve students from the selected grades.
                                     </div>
                                 </div>
                             </div>
@@ -244,7 +244,7 @@
                                     <button type="submit" class="btn btn-success btn-lg flex-fill shadow-sm">
                                         <i class="bi bi-check-circle me-2"></i> 
                                         Update Class Configuration
-                                    </button>
+                            </button>
                                 </div>
                             </div>
                         </div>
@@ -276,26 +276,26 @@
                             </h6>
                             <div class="mb-2">
                                 <strong class="text-dark">Class Name:</strong><br>
-                                <span class="text-muted">{{ class_info.name }}</span>
-                            </div>
+                        <span class="text-muted">{{ class_info.name }}</span>
+                    </div>
                             <div class="mb-2">
                                 <strong class="text-dark">Subject:</strong><br>
-                                <span class="text-muted">{{ class_info.subject or 'Not set' }}</span>
-                            </div>
+                        <span class="text-muted">{{ class_info.subject or 'Not set' }}</span>
+                    </div>
                             <div class="mb-2">
                                 <strong class="text-dark">Grade Levels:</strong><br>
-                                <span class="text-muted">{{ class_info.get_grade_levels_display() }}</span>
-                            </div>
+                        <span class="text-muted">{{ class_info.get_grade_levels_display() }}</span>
+                    </div>
                             <div class="mb-2">
                                 <strong class="text-dark">School Year:</strong><br>
-                                <span class="text-muted">
-                                    {% if class_info.school_year %}
-                                        {{ class_info.school_year.name }}
-                                    {% else %}
-                                        Not set
-                                    {% endif %}
-                                </span>
-                            </div>
+                        <span class="text-muted">
+                            {% if class_info.school_year %}
+                                {{ class_info.school_year.name }}
+                            {% else %}
+                                Not set
+                            {% endif %}
+                        </span>
+                    </div>
                             <div class="mb-0">
                                 <strong class="text-dark">Status:</strong><br>
                                 {% if class_info.is_active %}
@@ -316,7 +316,7 @@
                         <div class="bg-light rounded-3 p-3 border-start border-4 border-success">
                             <h6 class="text-success mb-3 fw-bold">
                                 <i class="bi bi-people me-2"></i>
-                                Teacher Assignments
+                                Assigned Teachers
                             </h6>
                             
                             <!-- Primary Teacher -->
@@ -349,7 +349,8 @@
                                     <strong class="text-dark">Substitute Teachers:</strong>
                                 </div>
                                 <div class="ms-4">
-                                    {% if class_info.substitute_teachers.count() > 0 %}
+                                    {% set substitute_count = class_info.substitute_teachers|list|length %}
+                                    {% if substitute_count > 0 %}
                                         {% for teacher in class_info.substitute_teachers %}
                                             <div class="mb-1">
                                                 <span class="badge bg-warning bg-opacity-20 text-warning border border-warning">
@@ -372,7 +373,8 @@
                                     <strong class="text-dark">Additional Teachers:</strong>
                                 </div>
                                 <div class="ms-4">
-                                    {% if class_info.additional_teachers.count() > 0 %}
+                                    {% set additional_count = class_info.additional_teachers|list|length %}
+                                    {% if additional_count > 0 %}
                                         {% for teacher in class_info.additional_teachers %}
                                             <div class="mb-1">
                                                 <span class="badge bg-info bg-opacity-20 text-info border border-info">

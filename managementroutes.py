@@ -1091,34 +1091,9 @@ def manage_class(class_id):
     # Get all students for potential enrollment
     all_students = Student.query.all()
     
-    # Convert dob string to date object for each student to allow for age calculation
-    for student in all_students:
-        if isinstance(student.dob, str):
-            try:
-                # First, try to parse 'YYYY-MM-DD' format
-                student.dob = datetime.strptime(student.dob, '%Y-%m-%d').date()
-            except ValueError:
-                try:
-                    # Fallback to 'MM/DD/YYYY' format
-                    student.dob = datetime.strptime(student.dob, '%m/%d/%Y').date()
-                except ValueError:
-                    # If parsing fails, set dob to None so it will be handled gracefully in the template
-                    student.dob = None
-    
     # Get currently enrolled students
     enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
     enrolled_students = [enrollment.student for enrollment in enrollments if enrollment.student]
-    
-    # Convert dob for enrolled students as well
-    for student in enrolled_students:
-        if isinstance(student.dob, str):
-            try:
-                student.dob = datetime.strptime(student.dob, '%Y-%m-%d').date()
-            except ValueError:
-                try:
-                    student.dob = datetime.strptime(student.dob, '%m/%d/%Y').date()
-                except ValueError:
-                    student.dob = None
     
     # Get available teachers for assignment
     available_teachers = TeacherStaff.query.all()

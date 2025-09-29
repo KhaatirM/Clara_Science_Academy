@@ -136,12 +136,12 @@
                 <div class="card-footer bg-light border-0 p-3">
                     <div class="row g-2">
                         <div class="col-6">
-                            <a href="{{ url_for('student.student_assignments') }}?class_id={{ class_obj.id }}" class="btn btn-success btn-sm w-100 shadow-sm">
+                            <a href="{{ url_for('student.class_assignments', class_id=class_obj.id) }}" class="btn btn-success btn-sm w-100 shadow-sm">
                                 <i class="fas fa-tasks me-1"></i>Assignments
                             </a>
                         </div>
                         <div class="col-6">
-                            <a href="{{ url_for('student.student_grades') }}?class_id={{ class_obj.id }}" class="btn btn-info btn-sm w-100 shadow-sm">
+                            <a href="{{ url_for('student.student_grades') }}" class="btn btn-info btn-sm w-100 shadow-sm">
                                 <i class="fas fa-graduation-cap me-1"></i>Grades
                             </a>
                         </div>

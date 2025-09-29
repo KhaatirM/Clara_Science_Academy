@@ -360,6 +360,12 @@ def student_assignments():
     classes = [enrollment.class_info for enrollment in enrollments]
     class_ids = [enrollment.class_id for enrollment in enrollments]
     
+    # Check if a specific class is requested via query parameter
+    requested_class_id = request.args.get('class_id')
+    if requested_class_id:
+        # Redirect to the proper class-specific route
+        return redirect(url_for('student.class_assignments', class_id=requested_class_id))
+    
     # Get assignments for student's classes (show Active and Inactive assignments to students)
     assignments = Assignment.query.filter(
         Assignment.class_id.in_(class_ids),

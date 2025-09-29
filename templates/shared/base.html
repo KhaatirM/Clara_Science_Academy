@@ -68,6 +68,8 @@
                                 <a class="nav-link" href="{{ url_for('teacher.resources') }}">Resources</a>
                             {% elif current_user.role == 'Tech' %}
                                 <a class="nav-link" href="{{ url_for('tech.resources') }}">Resources</a>
+                            {% elif current_user.role == 'School Administrator' or current_user.role == 'Director' %}
+                                <a class="nav-link" href="{{ url_for('management.resources') }}">Resources</a>
                             {% else %}
                                 <a class="nav-link" href="{{ url_for('management.resources') }}">Resources</a>
                             {% endif %}

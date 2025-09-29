@@ -1167,7 +1167,7 @@ def edit_class(class_id):
     teachers = TeacherStaff.query.all()
     return render_template('management/edit_class.html', class_info=class_obj, available_teachers=teachers)
 
-@management_blueprint.route('/class/<int:class_id>/roster')
+@management_blueprint.route('/class/<int:class_id>/roster', methods=['GET', 'POST'])
 @login_required
 @management_required
 def class_roster(class_id):
@@ -1175,6 +1175,53 @@ def class_roster(class_id):
     from datetime import date, datetime
     
     class_obj = Class.query.get_or_404(class_id)
+    
+    # Handle POST requests for roster management
+    if request.method == 'POST':
+        try:
+            # Handle student enrollment/removal
+            if 'add_student' in request.form:
+                student_id = request.form.get('student_id', type=int)
+                if student_id:
+                    # Check if student is already enrolled
+                    existing_enrollment = Enrollment.query.filter_by(
+                        class_id=class_id, student_id=student_id, is_active=True
+                    ).first()
+                    
+                    if not existing_enrollment:
+                        # Add student to class
+                        enrollment = Enrollment(
+                            student_id=student_id,
+                            class_id=class_id,
+                            is_active=True
+                        )
+                        db.session.add(enrollment)
+                        db.session.commit()
+                        flash('Student added to class successfully!', 'success')
+                    else:
+                        flash('Student is already enrolled in this class.', 'warning')
+                        
+            elif 'remove_student' in request.form:
+                student_id = request.form.get('student_id', type=int)
+                if student_id:
+                    # Deactivate enrollment instead of deleting
+                    enrollment = Enrollment.query.filter_by(
+                        class_id=class_id, student_id=student_id, is_active=True
+                    ).first()
+                    
+                    if enrollment:
+                        enrollment.is_active = False
+                        db.session.commit()
+                        flash('Student removed from class successfully!', 'success')
+                    else:
+                        flash('Student not found in this class.', 'warning')
+            
+            return redirect(url_for('management.class_roster', class_id=class_id))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error updating roster: {str(e)}', 'danger')
+            return redirect(url_for('management.class_roster', class_id=class_id))
     
     # Get all students for potential enrollment
     all_students = Student.query.all()

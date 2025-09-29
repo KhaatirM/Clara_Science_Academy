@@ -1162,7 +1162,7 @@ def take_attendance(class_id):
         return redirect(url_for('teacher.view_class', class_id=class_id))
 
     return render_template(
-        'take_attendance_improved.html',
+        'shared/take_attendance.html',
         class_item=class_obj,
         students=students,
         attendance_date_str=attendance_date_str,
@@ -1587,7 +1587,7 @@ def attendance():
     present_records = Attendance.query.filter_by(date=datetime.now().date(), status='Present').count()
     overall_attendance_rate = round((present_records / total_attendance_records * 100), 1) if total_attendance_records > 0 else 0
     
-    return render_template('shared/attendance_hub_simple.html',
+    return render_template('shared/attendance_hub.html',
                          classes=classes,
                          today_date=today_date,
                          today_attendance_count=today_attendance_count,

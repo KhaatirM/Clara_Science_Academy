@@ -318,7 +318,7 @@ def student_dashboard():
         ((Announcement.target_group == 'class') & (Announcement.class_id.in_(class_ids)))
     ).order_by(Announcement.timestamp.desc()).all()
 
-    return render_template('students/role_student_dashboard.html', 
+    return render_template('students/enhanced_student_dashboard.html', 
                          **create_template_context(student, 'home', 'home',
                              grades=grades, 
                              attendance_summary=attendance_summary, 
@@ -331,7 +331,9 @@ def student_dashboard():
                              gpa=gpa,
                              grade_trends=grade_trends,
                              today_schedule=today_schedule,
-                             goals=goals_dict))
+                             goals=goals_dict,
+                             classes=classes,
+                             today=datetime.now().date()))
 
 @student_blueprint.route('/assignments')
 @login_required
@@ -383,10 +385,60 @@ def student_assignments():
         
         assignments_with_status.append((assignment, submission, student_status))
     
-    return render_template('students/role_student_dashboard.html', 
+    return render_template('students/enhanced_student_assignments.html', 
                          **create_template_context(student, 'assignments', 'assignments',
                              assignments_with_status=assignments_with_status,
                              grades=grades_dict,
+                             today=datetime.now().date(),
+                             classes=classes,
+                             past_due_assignments=past_due_assignments,
+                             upcoming_assignments=upcoming_assignments))
+
+@student_blueprint.route('/assignments/class/<int:class_id>')
+@login_required
+@student_required
+def class_assignments(class_id):
+    """View assignments for a specific class"""
+    student = Student.query.get_or_404(current_user.student_id)
+    
+    # Get the class and verify student is enrolled
+    class_obj = Class.query.get_or_404(class_id)
+    enrollment = Enrollment.query.filter_by(
+        student_id=student.id,
+        class_id=class_id,
+        is_active=True
+    ).first()
+    
+    if not enrollment:
+        flash("You are not enrolled in this class.", "error")
+        return redirect(url_for('student.student_assignments'))
+    
+    # Get assignments for this class
+    assignments = Assignment.query.filter_by(class_id=class_id).order_by(Assignment.due_date.desc()).all()
+    
+    # Get all submissions for this student
+    submissions = Submission.query.filter_by(student_id=student.id).all()
+    submissions_dict = {sub.assignment_id: sub for sub in submissions}
+    
+    # Get all grades for this student
+    grades = Grade.query.filter_by(student_id=student.id).all()
+    grades_dict = {g.assignment_id: g for g in grades}
+    
+    # Create assignments with status for template
+    assignments_with_status = []
+    for assignment in assignments:
+        submission = submissions_dict.get(assignment.id)
+        grade = grades_dict.get(assignment.id)
+        
+        # Determine student-facing status
+        student_status = get_student_assignment_status(assignment, submission, grade)
+        
+        assignments_with_status.append((assignment, submission, student_status))
+    
+    return render_template('students/class_assignments_detail.html',
+                         **create_template_context(student, 'assignments', 'assignments',
+                             class_obj=class_obj,
+                             assignments_with_status=assignments_with_status,
                              today=datetime.now().date()))
 
 @student_blueprint.route('/classes')
@@ -394,10 +446,53 @@ def student_assignments():
 @student_required
 def student_classes():
     student = Student.query.get_or_404(current_user.student_id)
-    classes = Class.query.all()  # Simplified - should filter by enrollment
-    return render_template('students/role_student_dashboard.html', 
+    
+    # Get current school year
+    current_school_year = SchoolYear.query.filter_by(is_active=True).first()
+    if not current_school_year:
+        flash("No active school year found.", "warning")
+        return render_template('students/enhanced_student_classes.html', 
+                             **create_template_context(student, 'classes', 'classes'))
+
+    # Get student's enrolled classes using the Enrollment model
+    enrollments = Enrollment.query.filter_by(
+        student_id=student.id,
+        is_active=True
+    ).join(Class).filter(
+        Class.school_year_id == current_school_year.id
+    ).all()
+    
+    classes = [enrollment.class_info for enrollment in enrollments]
+
+    # Get grades for each class and calculate GPA
+    grades = {}
+    all_grades = []
+    
+    for c in classes:
+        # Get grades for this class
+        class_grades = Grade.query.join(Assignment).filter(
+            Grade.student_id == student.id,
+            Assignment.class_id == c.id,
+            Assignment.school_year_id == current_school_year.id
+        ).all()
+        
+        if class_grades:
+            # Calculate average grade for this class
+            grade_percentages = []
+            for g in class_grades:
+                grade_data = json.loads(g.grade_data)
+                if 'score' in grade_data:
+                    grade_percentages.append(grade_data['score'])
+            
+            if grade_percentages:
+                avg_grade = round(sum(grade_percentages) / len(grade_percentages), 2)
+                grades[c.name] = avg_grade
+                all_grades.append(avg_grade)
+    
+    return render_template('students/enhanced_student_classes.html', 
                          **create_template_context(student, 'classes', 'classes',
-                             my_classes=classes))  # Template expects 'my_classes'
+                             classes=classes,
+                             grades=grades))
 
 @student_blueprint.route('/grades')
 @login_required

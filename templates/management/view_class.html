@@ -4,75 +4,146 @@
 
 {% block dashboard_content %}
 <div class="container-fluid px-2 px-md-4">
-  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
-    <h3 class="mb-2 mb-md-0"><i class="bi bi-house-door-fill me-2"></i>Class: {{ class_info.name }}</h3>
-    <a href="{{ url_for('management.classes') }}" class="btn btn-outline-secondary btn-sm">
-      <i class="bi bi-arrow-left me-1"></i>Back to Classes
-    </a>
+  <!-- Enhanced Header Section -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card border-0 shadow-sm bg-gradient-primary text-white">
+        <div class="card-body p-4">
+          <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
+            <div class="mb-3 mb-md-0">
+              <h2 class="mb-2 fw-bold">
+                <i class="bi bi-house-door-fill me-3 text-warning"></i>
+                Class Overview
+              </h2>
+              <p class="mb-0 opacity-75">
+                <i class="bi bi-building me-2"></i>
+                {{ class_info.name }} - {{ class_info.subject }}
+              </p>
+            </div>
+            <a href="{{ url_for('management.classes') }}" class="btn btn-light btn-lg shadow-sm">
+              <i class="bi bi-arrow-left me-2"></i> 
+              Back to Classes
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <div class="row g-3 g-md-4">
+  <div class="row g-4">
     <!-- Class Info & Management: Stack on mobile, side on desktop -->
     <div class="col-12 col-lg-4">
-      <div class="card shadow-sm mb-4">
-        <div class="card-header bg-primary text-white">
-          <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Class Info</h5>
+      <div class="card border-0 shadow-lg mb-4">
+        <div class="card-header bg-gradient-info text-white border-0">
+          <div class="d-flex align-items-center">
+            <div class="bg-white bg-opacity-20 rounded-circle p-2 me-3">
+              <i class="bi bi-info-circle text-white fs-5"></i>
+            </div>
+            <div>
+              <h5 class="mb-1 fw-bold">Class Information</h5>
+              <small class="opacity-75">Complete class details</small>
+            </div>
+          </div>
         </div>
-        <div class="card-body">
-          <p class="mb-2"><strong>Subject:</strong> {{ class_info.subject or 'N/A' }}</p>
-          <p class="mb-2"><strong>Grade Levels:</strong> {{ class_info.get_grade_levels_display() }}</p>
-          <p class="mb-2"><strong>Room:</strong> {{ class_info.room_number if class_info.room_number else 'N/A' }}</p>
-          <p class="mb-2"><strong>Schedule:</strong> {{ class_info.schedule or 'TBD' }}</p>
-          <p class="mb-0"><strong>School Year:</strong> {{ class_info.school_year.name if class_info.school_year else 'N/A' }}</p>
+        <div class="card-body p-4">
+          <div class="bg-light rounded-3 p-3 border-start border-4 border-primary">
+            <div class="mb-3">
+              <div class="d-flex align-items-center mb-2">
+                <i class="bi bi-book me-2 text-success"></i>
+                <strong class="text-dark">Subject:</strong>
+              </div>
+              <span class="text-muted">{{ class_info.subject or 'N/A' }}</span>
+            </div>
+            <div class="mb-3">
+              <div class="d-flex align-items-center mb-2">
+                <i class="bi bi-graduation-cap me-2 text-primary"></i>
+                <strong class="text-dark">Grade Levels:</strong>
+              </div>
+              <span class="text-muted">{{ class_info.get_grade_levels_display() }}</span>
+            </div>
+            <div class="mb-3">
+              <div class="d-flex align-items-center mb-2">
+                <i class="bi bi-door-open me-2 text-info"></i>
+                <strong class="text-dark">Room:</strong>
+              </div>
+              <span class="text-muted">{{ class_info.room_number if class_info.room_number else 'N/A' }}</span>
+            </div>
+            <div class="mb-3">
+              <div class="d-flex align-items-center mb-2">
+                <i class="bi bi-calendar-event me-2 text-warning"></i>
+                <strong class="text-dark">Schedule:</strong>
+              </div>
+              <span class="text-muted">{{ class_info.schedule or 'TBD' }}</span>
+            </div>
+            <div class="mb-0">
+              <div class="d-flex align-items-center mb-2">
+                <i class="bi bi-calendar-year me-2 text-secondary"></i>
+                <strong class="text-dark">School Year:</strong>
+              </div>
+              <span class="text-muted">{{ class_info.school_year.name if class_info.school_year else 'N/A' }}</span>
+            </div>
+          </div>
         </div>
       </div>
       
       <!-- Action Buttons Card -->
-      <div class="card shadow-sm mb-4">
-        <div class="card-header bg-primary text-white">
-          <h5 class="mb-0"><i class="bi bi-tools me-2"></i>Class Management</h5>
+      <div class="card border-0 shadow-lg mb-4">
+        <div class="card-header bg-gradient-success text-white border-0">
+          <div class="d-flex align-items-center">
+            <div class="bg-white bg-opacity-20 rounded-circle p-2 me-3">
+              <i class="bi bi-tools text-white fs-5"></i>
+            </div>
+            <div>
+              <h5 class="mb-1 fw-bold">Class Management</h5>
+              <small class="opacity-75">Quick access to class tools</small>
+            </div>
+          </div>
         </div>
-        <div class="card-body">
+        <div class="card-body p-4">
           <!-- Core Management Actions -->
-          <div class="mb-3">
-            <h6 class="text-muted mb-2"><i class="bi bi-gear me-1"></i>Core Management</h6>
-            <div class="row g-2">
-              <div class="col-6 col-md-4">
-                <a href="{{ url_for('management.add_assignment') }}" class="btn btn-outline-success btn-sm w-100 class-management-btn">
-                  <i class="bi bi-plus-circle me-1"></i>Add Assignment
-                </a>
-              </div>
-              <div class="col-6 col-md-4">
-                <a href="{{ url_for('management.attendance') }}" class="btn btn-outline-warning btn-sm w-100 class-management-btn">
-                  <i class="bi bi-clipboard-check me-1"></i>Attendance
-                </a>
-              </div>
-              <div class="col-6 col-md-4">
-                <a href="{{ url_for('management.manage_class_roster', class_id=class_info.id) }}" class="btn btn-outline-info btn-sm w-100 class-management-btn">
-                  <i class="bi bi-people me-1"></i>Manage Roster
-                </a>
+          <div class="mb-4">
+            <div class="bg-light rounded-3 p-3 border-start border-4 border-success">
+              <h6 class="text-success mb-3 fw-bold"><i class="bi bi-gear me-2"></i>Core Management</h6>
+              <div class="row g-2">
+                <div class="col-6 col-md-4">
+                  <a href="{{ url_for('management.add_assignment') }}" class="btn btn-outline-success btn-sm w-100 class-management-btn">
+                    <i class="bi bi-plus-circle me-1"></i>Add Assignment
+                  </a>
+                </div>
+                <div class="col-6 col-md-4">
+                  <a href="{{ url_for('management.attendance') }}" class="btn btn-outline-warning btn-sm w-100 class-management-btn">
+                    <i class="bi bi-clipboard-check me-1"></i>Attendance
+                  </a>
+                </div>
+                <div class="col-6 col-md-4">
+                  <a href="{{ url_for('management.manage_class_roster', class_id=class_info.id) }}" class="btn btn-outline-info btn-sm w-100 class-management-btn">
+                    <i class="bi bi-people me-1"></i>Manage Roster
+                  </a>
+                </div>
               </div>
             </div>
           </div>
           
           <!-- Administrative Actions -->
-          <div class="mb-3">
-            <h6 class="text-muted mb-2"><i class="bi bi-shield-check me-1"></i>Administrative</h6>
-            <div class="row g-2">
-              <div class="col-6 col-md-4">
-                <a href="{{ url_for('management.class_grades_view', class_id=class_info.id) }}" class="btn btn-outline-secondary btn-sm w-100 class-management-btn">
-                  <i class="bi bi-journal-plus me-1"></i>View Grades
-                </a>
-              </div>
-              <div class="col-6 col-md-4">
-                <a href="{{ url_for('management.edit_class', class_id=class_info.id) }}" class="btn btn-outline-primary btn-sm w-100 class-management-btn">
-                  <i class="bi bi-pencil me-1"></i>Edit Class
-                </a>
-              </div>
-              <div class="col-6 col-md-4">
-                <a href="{{ url_for('management.attendance_reports') }}" class="btn btn-outline-primary btn-sm w-100 class-management-btn">
-                  <i class="bi bi-graph-up me-1"></i>Reports
-                </a>
+          <div class="mb-4">
+            <div class="bg-light rounded-3 p-3 border-start border-4 border-primary">
+              <h6 class="text-primary mb-3 fw-bold"><i class="bi bi-shield-check me-2"></i>Administrative</h6>
+              <div class="row g-2">
+                <div class="col-6 col-md-4">
+                  <a href="{{ url_for('management.class_grades_view', class_id=class_info.id) }}" class="btn btn-outline-secondary btn-sm w-100 class-management-btn">
+                    <i class="bi bi-journal-plus me-1"></i>View Grades
+                  </a>
+                </div>
+                <div class="col-6 col-md-4">
+                  <a href="{{ url_for('management.edit_class', class_id=class_info.id) }}" class="btn btn-outline-primary btn-sm w-100 class-management-btn">
+                    <i class="bi bi-pencil me-1"></i>Edit Class
+                  </a>
+                </div>
+                <div class="col-6 col-md-4">
+                  <a href="{{ url_for('management.attendance_reports') }}" class="btn btn-outline-primary btn-sm w-100 class-management-btn">
+                    <i class="bi bi-graph-up me-1"></i>Reports
+                  </a>
+                </div>
               </div>
             </div>
           </div>
@@ -265,101 +336,205 @@
 
     <!-- Main Content: Students, Assignments, Attendance -->
     <div class="col-12 col-lg-8">
-      <div class="row g-3 g-md-4">
+      <div class="row g-4">
         <!-- Enrolled Students Card -->
         <div class="col-12 col-md-6">
-          <div class="card shadow-sm h-100">
-            <div class="card-header bg-success text-white">
-              <h5 class="mb-0"><i class="bi bi-person-lines-fill me-2"></i>Enrolled Students ({{ enrolled_students|length }})</h5>
+          <div class="card border-0 shadow-lg h-100">
+            <div class="card-header bg-gradient-success text-white border-0">
+              <div class="d-flex align-items-center">
+                <div class="bg-white bg-opacity-20 rounded-circle p-2 me-3">
+                  <i class="bi bi-person-lines-fill text-white fs-5"></i>
+                </div>
+                <div>
+                  <h5 class="mb-1 fw-bold">Enrolled Students</h5>
+                  <small class="opacity-75">{{ enrolled_students|length }} students</small>
+                </div>
+              </div>
             </div>
             <div class="card-body p-0">
               {% if enrolled_students %}
-                <ul class="list-group list-group-flush">
-                  {% for student in enrolled_students %}
-                  <li class="list-group-item d-flex align-items-center flex-wrap">
-                    {% if student.photo_filename %}
-                      <img src="{{ url_for('static', filename='uploads/' ~ student.photo_filename) }}" class="rounded-circle me-2" width="32" height="32" alt="Photo">
-                    {% else %}
-                      <span class="avatar me-2">{{ student.first_name[0] }}{{ student.last_name[0] }}</span>
-                    {% endif %}
-                    <span>{{ student.first_name }} {{ student.last_name }} <small class="text-muted">(ID: {{ student.student_id or 'N/A' }})</small></span>
-                  </li>
-                  {% endfor %}
-                </ul>
+                <div class="table-responsive">
+                  <table class="table table-hover mb-0">
+                    <tbody>
+                      {% for student in enrolled_students %}
+                      <tr>
+                        <td class="border-0 align-middle">
+                          <div class="d-flex align-items-center">
+                            <div class="bg-success bg-opacity-10 rounded-circle p-2 me-3">
+                              <i class="bi bi-person text-success"></i>
+                            </div>
+                            <div>
+                              <strong class="text-dark">{{ student.first_name }} {{ student.last_name }}</strong>
+                              <div class="text-muted small">
+                                <span class="badge bg-info bg-opacity-20 text-info border border-info">
+                                  ID: {{ student.student_id or 'N/A' }}
+                                </span>
+                                <span class="badge bg-warning bg-opacity-20 text-warning border border-warning ms-1">
+                                  Grade: {{ student.grade_level }}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
               {% else %}
-                <div class="p-3 text-muted">No students are currently enrolled in this class.</div>
+                <div class="p-4 text-center">
+                  <div class="bg-light rounded-circle p-4 d-inline-block mb-3">
+                    <i class="bi bi-people text-muted fs-1"></i>
+                  </div>
+                  <h6 class="text-muted mb-2">No Students Enrolled</h6>
+                  <p class="text-muted mb-0">No students are currently enrolled in this class.</p>
+                </div>
               {% endif %}
             </div>
           </div>
         </div>
         <!-- Recent Assignments Card -->
         <div class="col-12 col-md-6">
-          <div class="card shadow-sm h-100">
-            <div class="card-header bg-warning text-dark">
-              <h5 class="mb-0"><i class="bi bi-journal-text me-2"></i>Recent Assignments</h5>
+          <div class="card border-0 shadow-lg h-100">
+            <div class="card-header bg-gradient-warning text-dark border-0">
+              <div class="d-flex align-items-center">
+                <div class="bg-dark bg-opacity-20 rounded-circle p-2 me-3">
+                  <i class="bi bi-journal-text text-dark fs-5"></i>
+                </div>
+                <div>
+                  <h5 class="mb-1 fw-bold">Recent Assignments</h5>
+                  <small class="opacity-75">{{ assignments|length }} assignments</small>
+                </div>
+              </div>
             </div>
             <div class="card-body p-0">
               {% if assignments %}
-                <ul class="list-group list-group-flush">
-                  {% for assignment in assignments %}
-                  <li class="list-group-item">
-                    <strong>{{ assignment.title }}</strong><br>
-                    <small class="text-muted">Due: {{ assignment.due_date.strftime('%b %d, %Y') if assignment.due_date else 'No due date' }}</small>
-                    {% if assignment.description %}<br><span class="text-muted">{{ assignment.description[:60] }}{% if assignment.description|length > 60 %}...{% endif %}</span>{% endif %}
-                  </li>
-                  {% endfor %}
-                </ul>
+                <div class="table-responsive">
+                  <table class="table table-hover mb-0">
+                    <tbody>
+                      {% for assignment in assignments %}
+                      <tr>
+                        <td class="border-0 align-middle">
+                          <div class="d-flex align-items-center">
+                            <div class="bg-warning bg-opacity-10 rounded-circle p-2 me-3">
+                              <i class="bi bi-journal-text text-warning"></i>
+                            </div>
+                            <div>
+                              <strong class="text-dark">{{ assignment.title }}</strong>
+                              <div class="text-muted small mt-1">
+                                <span class="badge bg-info bg-opacity-20 text-info border border-info">
+                                  Due: {{ assignment.due_date.strftime('%b %d, %Y') if assignment.due_date else 'No due date' }}
+                                </span>
+                                {% if assignment.description %}
+                                <div class="mt-1">
+                                  <small class="text-muted">{{ assignment.description[:60] }}{% if assignment.description|length > 60 %}...{% endif %}</small>
+                                </div>
+                                {% endif %}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
               {% else %}
-                <div class="p-3 text-muted">No recent assignments.</div>
+                <div class="p-4 text-center">
+                  <div class="bg-light rounded-circle p-4 d-inline-block mb-3">
+                    <i class="bi bi-journal text-muted fs-1"></i>
+                  </div>
+                  <h6 class="text-muted mb-2">No Assignments</h6>
+                  <p class="text-muted mb-0">No assignments have been created for this class.</p>
+                </div>
               {% endif %}
             </div>
           </div>
         </div>
       </div>
       <!-- Class Assignments Section -->
-      <div class="card shadow-sm mt-4">
-        <div class="card-header bg-warning text-dark">
+      <div class="card border-0 shadow-lg mt-4">
+        <div class="card-header bg-gradient-secondary text-white border-0">
           <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
-            <h5 class="mb-0"><i class="bi bi-journal-check me-2"></i>Class Assignments</h5>
-            <a href="{{ url_for('management.add_assignment') }}" class="btn btn-light btn-sm">
-              <i class="bi bi-plus-circle me-1"></i> Add Assignment
+            <div class="d-flex align-items-center">
+              <div class="bg-white bg-opacity-20 rounded-circle p-2 me-3">
+                <i class="bi bi-journal-check text-white fs-5"></i>
+              </div>
+              <div>
+                <h5 class="mb-1 fw-bold">Class Assignments</h5>
+                <small class="opacity-75">Complete assignment overview</small>
+              </div>
+            </div>
+            <a href="{{ url_for('management.add_assignment') }}" class="btn btn-light btn-lg shadow-sm">
+              <i class="bi bi-plus-circle me-2"></i> Add Assignment
             </a>
           </div>
         </div>
-        <div class="card-body">
+        <div class="card-body p-4">
           {% if assignments %}
             <div class="table-responsive">
               <table class="table table-hover">
-                <thead>
+                <thead class="table-light">
                   <tr>
-                    <th>Title</th>
-                    <th>Due Date</th>
-                    <th>Quarter</th>
-                    <th>Status</th>
-                    <th>Actions</th>
+                    <th class="border-0">
+                      <i class="bi bi-journal-text me-2 text-primary"></i>Title
+                    </th>
+                    <th class="border-0">
+                      <i class="bi bi-calendar-event me-2 text-success"></i>Due Date
+                    </th>
+                    <th class="border-0">
+                      <i class="bi bi-calendar-quarter me-2 text-info"></i>Quarter
+                    </th>
+                    <th class="border-0">
+                      <i class="bi bi-flag me-2 text-warning"></i>Status
+                    </th>
+                    <th class="border-0">
+                      <i class="bi bi-gear me-2 text-secondary"></i>Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {% for assignment in assignments %}
                   <tr>
-                    <td>{{ assignment.title }}</td>
-                    <td>{{ assignment.due_date.strftime('%Y-%m-%d') if assignment.due_date else 'N/A' }}</td>
-                    <td>Q{{ assignment.quarter if assignment.quarter else 'N/A' }}</td>
-                    <td>
+                    <td class="align-middle">
+                      <div class="d-flex align-items-center">
+                        <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-3">
+                          <i class="bi bi-journal-text text-primary"></i>
+                        </div>
+                        <div>
+                          <strong class="text-dark">{{ assignment.title }}</strong>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="align-middle">
+                      <span class="badge bg-info bg-opacity-20 text-info border border-info">
+                        {{ assignment.due_date.strftime('%Y-%m-%d') if assignment.due_date else 'N/A' }}
+                      </span>
+                    </td>
+                    <td class="align-middle">
+                      <span class="badge bg-secondary bg-opacity-20 text-secondary border border-secondary">
+                        Q{{ assignment.quarter if assignment.quarter else 'N/A' }}
+                      </span>
+                    </td>
+                    <td class="align-middle">
                       {% if assignment.due_date %}
                         {% if assignment.due_date.date() < today %}
-                          <span class="badge bg-danger">Past Due</span>
+                          <span class="badge bg-danger bg-opacity-20 text-danger border border-danger">Past Due</span>
                         {% else %}
-                          <span class="badge bg-success">Active</span>
+                          <span class="badge bg-success bg-opacity-20 text-success border border-success">Active</span>
                         {% endif %}
                       {% else %}
-                        <span class="badge bg-secondary">No Due Date</span>
+                        <span class="badge bg-secondary bg-opacity-20 text-secondary border border-secondary">No Due Date</span>
                       {% endif %}
                     </td>
-                    <td>
-                      <div class="d-flex gap-1">
-                        <a href="{{ url_for('management.view_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-primary btn-sm">View</a>
-                        <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-secondary btn-sm">Edit</a>
+                    <td class="align-middle">
+                      <div class="d-flex gap-2">
+                        <a href="{{ url_for('management.view_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-primary btn-sm">
+                          <i class="bi bi-eye me-1"></i>View
+                        </a>
+                        <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-secondary btn-sm">
+                          <i class="bi bi-pencil me-1"></i>Edit
+                        </a>
                       </div>
                     </td>
                   </tr>
@@ -368,13 +543,18 @@
               </table>
             </div>
           {% else %}
-            <div class="alert alert-info">
-              <i class="bi bi-info-circle me-2"></i>
-              No assignments have been created for this class yet.
-              <br>
-              <a href="{{ url_for('management.add_assignment') }}" class="btn btn-sm btn-primary mt-2">
-                <i class="bi bi-plus-circle"></i> Create First Assignment
-              </a>
+            <div class="alert alert-info border-0 shadow-sm">
+              <div class="d-flex align-items-start">
+                <i class="bi bi-info-circle me-3 text-info fs-4"></i>
+                <div>
+                  <strong class="text-info">No Assignments Created</strong><br>
+                  <small class="text-muted">No assignments have been created for this class yet.</small>
+                  <br>
+                  <a href="{{ url_for('management.add_assignment') }}" class="btn btn-sm btn-primary mt-2">
+                    <i class="bi bi-plus-circle me-1"></i> Create First Assignment
+                  </a>
+                </div>
+              </div>
             </div>
           {% endif %}
         </div>
@@ -382,4 +562,107 @@
     </div>
   </div>
 </div>
+
+<!-- Enhanced Visual Styling -->
+<style>
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+}
+
+.bg-gradient-success {
+    background: linear-gradient(135deg, #198754 0%, #146c43 100%);
+}
+
+.bg-gradient-info {
+    background: linear-gradient(135deg, #0dcaf0 0%, #0aa2c0 100%);
+}
+
+.bg-gradient-warning {
+    background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+}
+
+.bg-gradient-secondary {
+    background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+}
+
+.card {
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+}
+
+.btn {
+    transition: all 0.3s ease;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.badge {
+    font-size: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+}
+
+.border-start {
+    border-width: 4px !important;
+}
+
+/* Custom animations */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.card {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+/* Enhanced form styling */
+.bg-primary.bg-opacity-10 {
+    background-color: rgba(13, 110, 253, 0.1) !important;
+}
+
+.bg-success.bg-opacity-10 {
+    background-color: rgba(25, 135, 84, 0.1) !important;
+}
+
+.bg-warning.bg-opacity-10 {
+    background-color: rgba(255, 193, 7, 0.1) !important;
+}
+
+.bg-info.bg-opacity-10 {
+    background-color: rgba(13, 202, 240, 0.1) !important;
+}
+
+.bg-secondary.bg-opacity-10 {
+    background-color: rgba(108, 117, 125, 0.1) !important;
+}
+
+/* Table enhancements */
+.table-hover tbody tr:hover {
+    background-color: rgba(13, 110, 253, 0.05);
+}
+
+/* Class management button enhancements */
+.class-management-btn {
+    transition: all 0.3s ease;
+}
+
+.class-management-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+</style>
 {% endblock %} 

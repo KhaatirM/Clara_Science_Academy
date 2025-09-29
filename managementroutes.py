@@ -1580,6 +1580,77 @@ def create_discussion_assignment():
 @login_required
 @management_required
 def assignments():
+    """Class-based assignments view for School Administrators and Directors"""
+    from datetime import datetime
+    
+    # Get all classes
+    all_classes = Class.query.all()
+    
+    # Get current user's role and permissions
+    user_role = current_user.role
+    user_id = current_user.id
+    
+    # Determine which classes the user can access
+    if user_role == 'Director':
+        # Directors can see all classes
+        accessible_classes = all_classes
+    elif user_role == 'School Administrator':
+        # School Administrators can see all classes for assignment management
+        accessible_classes = all_classes
+    else:
+        # Fallback - should not happen due to @management_required decorator
+        accessible_classes = []
+    
+    # Get assignment counts for each class
+    class_assignments = {}
+    for class_obj in accessible_classes:
+        assignment_count = Assignment.query.filter_by(class_id=class_obj.id).count()
+        class_assignments[class_obj.id] = assignment_count
+    
+    return render_template('management/class_based_assignments.html',
+                         classes=accessible_classes,
+                         class_assignments=class_assignments,
+                         user_role=user_role,
+                         active_tab='assignments')
+
+@management_blueprint.route('/assignments/class/<int:class_id>')
+@login_required
+@management_required
+def class_assignments(class_id):
+    """View assignments for a specific class"""
+    from datetime import datetime
+    
+    # Get the class
+    class_obj = Class.query.get_or_404(class_id)
+    
+    # Get assignments for this class
+    assignments = Assignment.query.filter_by(class_id=class_id).order_by(Assignment.due_date.desc()).all()
+    
+    # Get current date for status updates
+    today = datetime.now().date()
+    
+    # Update assignment statuses
+    update_assignment_statuses()
+    
+    # Get teacher_staff_id for template use
+    teacher_staff_id = None
+    if current_user.role == 'School Administrator':
+        if current_user.teacher_staff_id:
+            teacher_staff = TeacherStaff.query.get(current_user.teacher_staff_id)
+            if teacher_staff:
+                teacher_staff_id = teacher_staff.id
+    
+    return render_template('management/class_assignments_detail.html',
+                         class_obj=class_obj,
+                         assignments=assignments,
+                         teacher_staff_id=teacher_staff_id,
+                         today=today,
+                         active_tab='assignments')
+
+@management_blueprint.route('/assignments/legacy')
+@login_required
+@management_required
+def assignments_legacy():
     """Management assignment view - similar to teacher assignments with filtering and sorting"""
     from datetime import datetime
     

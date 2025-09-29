@@ -82,8 +82,12 @@ def get_student_assignment_status(assignment, submission, grade):
         return 'Submitted or Awaiting Grade'
     
     # Check if assignment is past due
-    if assignment.due_date < datetime.now():
-        return 'Past Due'
+    if assignment.due_date:
+        # Convert due_date to date if it's a datetime for comparison
+        due_date = assignment.due_date.date() if hasattr(assignment.due_date, 'date') else assignment.due_date
+        today = datetime.now().date()
+        if due_date < today:
+            return 'Past Due'
     
     # Check if assignment has an extension
     from models import AssignmentExtension

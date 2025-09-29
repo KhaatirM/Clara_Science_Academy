@@ -1065,6 +1065,8 @@ def add_class():
 @management_required
 def manage_class(class_id):
     """Manage a specific class - teachers, students, etc."""
+    from datetime import date
+    
     class_obj = Class.query.get_or_404(class_id)
     
     # Get all students for potential enrollment
@@ -1077,11 +1079,15 @@ def manage_class(class_id):
     # Get available teachers for assignment
     available_teachers = TeacherStaff.query.all()
     
+    # Get today's date for age calculations
+    today = date.today()
+    
     return render_template('management/manage_class_roster.html', 
                          class_info=class_obj,
                          all_students=all_students,
                          enrolled_students=enrolled_students,
-                         available_teachers=available_teachers)
+                         available_teachers=available_teachers,
+                         today=today)
 
 @management_blueprint.route('/class/<int:class_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -1119,9 +1125,13 @@ def edit_class(class_id):
 @management_required
 def class_roster(class_id):
     """View and manage class roster."""
+    from datetime import date
+    
     class_obj = Class.query.get_or_404(class_id)
     enrollments = Enrollment.query.filter_by(class_id=class_id).all()
-    return render_template('management/manage_class_roster.html', class_info=class_obj, enrollments=enrollments)
+    today = date.today()
+    
+    return render_template('management/manage_class_roster.html', class_info=class_obj, enrollments=enrollments, today=today)
 
 @management_blueprint.route('/class/<int:class_id>/grades')
 @login_required

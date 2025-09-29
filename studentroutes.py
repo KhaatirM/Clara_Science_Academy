@@ -397,10 +397,14 @@ def student_assignments():
         assignments_with_status.append((assignment, submission, student_status))
         
         # Categorize assignments for alerts
-        if assignment.due_date and assignment.due_date < today:
-            past_due_assignments.append(assignment)
-        elif assignment.due_date and assignment.due_date <= today + timedelta(days=7):
-            upcoming_assignments.append(assignment)
+        if assignment.due_date:
+            # Convert due_date to date if it's a datetime
+            due_date = assignment.due_date.date() if hasattr(assignment.due_date, 'date') else assignment.due_date
+            
+            if due_date < today:
+                past_due_assignments.append(assignment)
+            elif due_date <= today + timedelta(days=7):
+                upcoming_assignments.append(assignment)
     
     return render_template('students/enhanced_student_assignments.html', 
                          **create_template_context(student, 'assignments', 'assignments',

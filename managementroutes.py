@@ -612,7 +612,7 @@ def add_teacher_staff():
 def edit_teacher_staff(staff_id):
     """Edit a teacher or staff member"""
     teacher_staff = TeacherStaff.query.get_or_404(staff_id)
-    return render_template('edit_teacher_staff.html', teacher_staff=teacher_staff)
+    return render_template('management/add_teacher_staff.html', teacher_staff=teacher_staff, editing=True)
 
 @management_blueprint.route('/remove-teacher-staff/<int:staff_id>', methods=['POST'])
 @login_required
@@ -1066,7 +1066,7 @@ def add_class():
 def manage_class(class_id):
     """Manage a specific class - teachers, students, etc."""
     class_obj = Class.query.get_or_404(class_id)
-    return render_template('manage_class.html', class_obj=class_obj)
+    return render_template('management/manage_class_roster.html', class_info=class_obj)
 
 @management_blueprint.route('/class/<int:class_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -1106,7 +1106,7 @@ def class_roster(class_id):
     """View and manage class roster."""
     class_obj = Class.query.get_or_404(class_id)
     enrollments = Enrollment.query.filter_by(class_id=class_id).all()
-    return render_template('class_roster.html', class_obj=class_obj, enrollments=enrollments)
+    return render_template('management/manage_class_roster.html', class_info=class_obj, enrollments=enrollments)
 
 @management_blueprint.route('/class/<int:class_id>/grades')
 @login_required
@@ -1115,7 +1115,7 @@ def class_grades(class_id):
     """View class grades."""
     class_obj = Class.query.get_or_404(class_id)
     # Add grade viewing logic here
-    return render_template('class_grades.html', class_obj=class_obj)
+    return render_template('management/view_class.html', class_info=class_obj)
 
 @management_blueprint.route('/class/<int:class_id>/remove', methods=['POST'])
 @login_required

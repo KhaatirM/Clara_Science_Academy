@@ -989,8 +989,14 @@ def teachers():
 def classes():
     """Enhanced classes management page for Directors and School Administrators."""
     classes = Class.query.all()
+    
+    # Get unique student count (total students in system, not sum across classes)
+    from models import Student
+    unique_student_count = Student.query.count()
+    
     return render_template('management/enhanced_classes.html', 
                          classes=classes,
+                         unique_student_count=unique_student_count,
                          section='classes',
                          active_tab='classes')
 

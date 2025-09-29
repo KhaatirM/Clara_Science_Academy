@@ -231,7 +231,7 @@
                         
                         <div class="metadata-item">
                             <i class="fas fa-users me-2"></i>
-                            <span>{{ class.enrollments|length if class.enrollments else 0 }} students</span>
+                            <span>{{ class.enrollments|selectattr('is_active', 'equalto', true)|list|length }} students</span>
                         </div>
                         
                         {% if class.max_students %}

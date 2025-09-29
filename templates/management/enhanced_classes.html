@@ -255,8 +255,8 @@
                         {% if current_user.role in ['Director', 'School Administrator'] %}
                             <div class="col-6">
                                 <button class="btn btn-outline-primary btn-sm w-100" 
-                                        onclick="manageClass({{ class.id }})">
-                                    <i class="fas fa-cog me-1"></i>Manage
+                                        onclick="viewClass({{ class.id }})">
+                                    <i class="fas fa-eye me-1"></i>View Class
                                 </button>
                             </div>
                             <div class="col-6">
@@ -701,9 +701,9 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Action functions
-function manageClass(classId) {
-    // Redirect to class management page
-    window.location.href = `/management/class/${classId}/manage`;
+function viewClass(classId) {
+    // Redirect to class overview page
+    window.location.href = `/management/view-class/${classId}`;
 }
 
 function editClass(classId) {

@@ -1364,7 +1364,7 @@ def remove_class(class_id):
             db.session.delete(attendance)
         
         # Delete all assignment-related data for this class
-        from models import Grade, Assignment, AssignmentSubmission, QuizQuestion, QuizSession, AssignmentFeedback, Extension
+        from models import Grade, Assignment, Submission, QuizQuestion, QuizProgress, DiscussionThread, AssignmentExtension
         assignments = Assignment.query.filter_by(class_id=class_id).all()
         for assignment in assignments:
             # Delete all grades for this assignment
@@ -1373,7 +1373,7 @@ def remove_class(class_id):
                 db.session.delete(grade)
             
             # Delete all assignment submissions
-            submissions = AssignmentSubmission.query.filter_by(assignment_id=assignment.id).all()
+            submissions = Submission.query.filter_by(assignment_id=assignment.id).all()
             for submission in submissions:
                 db.session.delete(submission)
             
@@ -1382,18 +1382,18 @@ def remove_class(class_id):
             for question in quiz_questions:
                 db.session.delete(question)
             
-            # Delete all quiz sessions
-            quiz_sessions = QuizSession.query.filter_by(assignment_id=assignment.id).all()
-            for session in quiz_sessions:
-                db.session.delete(session)
+            # Delete all quiz progress
+            quiz_progress = QuizProgress.query.filter_by(assignment_id=assignment.id).all()
+            for progress in quiz_progress:
+                db.session.delete(progress)
             
-            # Delete all assignment feedback
-            feedback = AssignmentFeedback.query.filter_by(assignment_id=assignment.id).all()
-            for fb in feedback:
-                db.session.delete(fb)
+            # Delete all discussion threads
+            discussion_threads = DiscussionThread.query.filter_by(assignment_id=assignment.id).all()
+            for thread in discussion_threads:
+                db.session.delete(thread)
             
-            # Delete all extensions
-            extensions = Extension.query.filter_by(assignment_id=assignment.id).all()
+            # Delete all assignment extensions
+            extensions = AssignmentExtension.query.filter_by(assignment_id=assignment.id).all()
             for extension in extensions:
                 db.session.delete(extension)
             

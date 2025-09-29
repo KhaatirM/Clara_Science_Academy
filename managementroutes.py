@@ -1288,6 +1288,24 @@ def remove_class(class_id):
         for enrollment in enrollments:
             db.session.delete(enrollment)
         
+        # Delete all student goals associated with this class
+        from models import StudentGoal
+        student_goals = StudentGoal.query.filter_by(class_id=class_id).all()
+        for goal in student_goals:
+            db.session.delete(goal)
+        
+        # Delete all class schedules associated with this class
+        from models import ClassSchedule
+        schedules = ClassSchedule.query.filter_by(class_id=class_id).all()
+        for schedule in schedules:
+            db.session.delete(schedule)
+        
+        # Delete all attendance records associated with this class
+        from models import Attendance
+        attendance_records = Attendance.query.filter_by(class_id=class_id).all()
+        for attendance in attendance_records:
+            db.session.delete(attendance)
+        
         # Then delete all assignments associated with this class
         from models import Assignment
         assignments = Assignment.query.filter_by(class_id=class_id).all()

@@ -21,7 +21,9 @@ from models import (
     # Calendar and scheduling
     CalendarEvent, TeacherWorkDay, SchoolBreak,
     # Discussion system
-    DiscussionThread, DiscussionPost
+    DiscussionThread, DiscussionPost,
+    # Group system
+    StudentGroup, StudentGroupMember
 )
 
 # Authentication and decorators

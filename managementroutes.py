@@ -4960,6 +4960,93 @@ def admin_delete_group(group_id):
         flash('Error deleting group. Please try again.', 'error')
         return redirect(url_for('management.admin_class_groups', class_id=class_id))
 
+# Additional admin group management routes
+@management_blueprint.route('/class/<int:class_id>/groups/auto-create', methods=['GET', 'POST'])
+@login_required
+@management_required
+def admin_auto_create_groups(class_id):
+    """Auto-create groups for a class (Administrator access)."""
+    try:
+        class_obj = Class.query.get_or_404(class_id)
+        
+        # Get enrolled students for this class
+        enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
+        enrolled_students = [enrollment.student for enrollment in enrollments]
+        
+        if request.method == 'POST':
+            # Handle auto-create logic here
+            flash('Auto-create groups functionality coming soon!', 'info')
+            return redirect(url_for('management.admin_class_groups', class_id=class_id))
+        
+        return render_template('teachers/teacher_auto_create_groups.html',
+                             class_obj=class_obj,
+                             enrolled_students=enrolled_students,
+                             role_prefix=True)
+    except Exception as e:
+        print(f"Error in auto-create groups: {e}")
+        flash('Error accessing auto-create groups.', 'error')
+        return redirect(url_for('management.admin_class_groups', class_id=class_id))
+
+@management_blueprint.route('/class/<int:class_id>/group-templates')
+@login_required
+@management_required
+def admin_class_group_templates(class_id):
+    """View group templates for a class (Administrator access)."""
+    try:
+        class_obj = Class.query.get_or_404(class_id)
+        
+        # Get group templates for this class
+        templates = []  # Add template query here
+        
+        return render_template('teachers/teacher_class_group_templates.html',
+                             class_obj=class_obj,
+                             templates=templates,
+                             role_prefix=True)
+    except Exception as e:
+        print(f"Error accessing group templates: {e}")
+        flash('Error accessing group templates.', 'error')
+        return redirect(url_for('management.admin_class_groups', class_id=class_id))
+
+@management_blueprint.route('/class/<int:class_id>/groups/analytics')
+@login_required
+@management_required
+def admin_group_analytics(class_id):
+    """View group analytics for a class (Administrator access)."""
+    try:
+        class_obj = Class.query.get_or_404(class_id)
+        
+        # Get groups for this class
+        groups = StudentGroup.query.filter_by(class_id=class_id).all()
+        
+        return render_template('teachers/teacher_group_analytics.html',
+                             class_obj=class_obj,
+                             groups=groups,
+                             role_prefix=True)
+    except Exception as e:
+        print(f"Error accessing group analytics: {e}")
+        flash('Error accessing group analytics.', 'error')
+        return redirect(url_for('management.admin_class_groups', class_id=class_id))
+
+@management_blueprint.route('/class/<int:class_id>/group-rotations')
+@login_required
+@management_required
+def admin_class_group_rotations(class_id):
+    """View group rotations for a class (Administrator access)."""
+    try:
+        class_obj = Class.query.get_or_404(class_id)
+        
+        # Get group rotations for this class
+        rotations = []  # Add rotation query here
+        
+        return render_template('teachers/teacher_class_group_rotations.html',
+                             class_obj=class_obj,
+                             rotations=rotations,
+                             role_prefix=True)
+    except Exception as e:
+        print(f"Error accessing group rotations: {e}")
+        flash('Error accessing group rotations.', 'error')
+        return redirect(url_for('management.admin_class_groups', class_id=class_id))
+
 # def store_calendar_data(calendar_data, school_year_id, pdf_filename):
 #     """Store extracted calendar data in the database."""
 #     # PDF processing temporarily disabled due to import issues

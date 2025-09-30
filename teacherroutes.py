@@ -2687,7 +2687,7 @@ def create_student_group(class_id):
             name=name,
             description=description,
             class_id=class_id,
-            created_by=teacher.id,
+            created_by=teacher.id if teacher else current_user.teacher_staff_id,
             max_students=int(max_students) if max_students else None
         )
         

@@ -2187,7 +2187,7 @@ def attendance():
     present_records = Attendance.query.filter_by(date=datetime.now().date(), status='Present').count()
     overall_attendance_rate = round((present_records / total_attendance_records * 100), 1) if total_attendance_records > 0 else 0
     
-    return render_template('shared/attendance_hub_simple.html',
+    return render_template('shared/attendance_hub.html',
                          classes=classes,
                          today_date=today_date,
                          today_attendance_count=today_attendance_count,
@@ -4652,13 +4652,7 @@ def manage_class_roster(class_id):
             enrolled_students.append(student)
     
     # Get all teachers for the summary display
-    teachers = TeacherStaff.query.all()
-    available_teachers = []
-    for t in teachers:
-        user = User.query.filter_by(teacher_staff_id=t.id).first()
-        username = user.username if user else ''
-        name = f"{t.first_name} {t.last_name}"
-        available_teachers.append({'id': t.id, 'name': name, 'username': username})
+    available_teachers = TeacherStaff.query.all()
     
     return render_template('management/manage_class_roster.html', 
                          class_info=class_info,
@@ -5047,6 +5041,29 @@ def admin_class_group_rotations(class_id):
         print(f"Error accessing group rotations: {e}")
         flash('Error accessing group rotations.', 'error')
         return redirect(url_for('management.admin_class_groups', class_id=class_id))
+
+@management_blueprint.route('/group/<int:group_id>/contract/create', methods=['GET', 'POST'])
+@login_required
+@management_required
+def admin_create_group_contract(group_id):
+    """Create a group contract (Administrator access)."""
+    try:
+        group = StudentGroup.query.get_or_404(group_id)
+        class_obj = group.class_info
+        
+        if request.method == 'POST':
+            # Handle contract creation logic here
+            flash('Group contract functionality coming soon!', 'info')
+            return redirect(url_for('management.admin_manage_group', group_id=group_id))
+        
+        return render_template('teachers/teacher_create_group_contract.html',
+                             group=group,
+                             class_obj=class_obj,
+                             role_prefix=True)
+    except Exception as e:
+        print(f"Error creating group contract: {e}")
+        flash('Error accessing group contract creation.', 'error')
+        return redirect(url_for('management.admin_class_groups', class_id=group.class_id))
 
 # def store_calendar_data(calendar_data, school_year_id, pdf_filename):
 #     """Store extracted calendar data in the database."""

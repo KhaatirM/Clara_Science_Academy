@@ -4747,6 +4747,199 @@ def download_resource(filename):
         flash('Error downloading file. Please try again.', 'error')
         return redirect(url_for('management.resources'))
 
+# ===== GROUP MANAGEMENT ROUTES FOR ADMINISTRATORS =====
+
+@management_blueprint.route('/class/<int:class_id>/groups')
+@login_required
+@management_required
+def admin_class_groups(class_id):
+    """View and manage groups for a class (Administrator access)."""
+    try:
+        class_obj = Class.query.get_or_404(class_id)
+        
+        # Get all groups for this class
+        groups = StudentGroup.query.filter_by(class_id=class_id).all()
+        
+        # Get enrolled students for this class
+        enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
+        enrolled_students = [enrollment.student for enrollment in enrollments]
+        
+        # Get group members for each group
+        group_data = []
+        for group in groups:
+            members = StudentGroupMember.query.filter_by(group_id=group.id).all()
+            member_students = [member.student for member in members]
+            group_data.append({
+                'group': group,
+                'members': member_students,
+                'member_count': len(member_students)
+            })
+        
+        return render_template('teachers/teacher_class_groups.html',
+                             class_obj=class_obj,
+                             groups=groups,
+                             group_data=group_data,
+                             enrolled_students=enrolled_students,
+                             role_prefix=True)
+    
+    except Exception as e:
+        print(f"Error loading class groups: {e}")
+        flash('Error loading class groups. Please try again.', 'error')
+        return redirect(url_for('management.classes'))
+
+@management_blueprint.route('/class/<int:class_id>/groups/create', methods=['GET', 'POST'])
+@login_required
+@management_required
+def admin_create_student_group(class_id):
+    """Create a new student group for a class (Administrator access)."""
+    try:
+        class_obj = Class.query.get_or_404(class_id)
+        
+        if request.method == 'POST':
+            name = request.form.get('name')
+            description = request.form.get('description', '')
+            max_members = request.form.get('max_members', type=int)
+            
+            if not name:
+                flash('Group name is required.', 'error')
+                return redirect(url_for('management.admin_class_groups', class_id=class_id))
+            
+            # Create the group
+            group = StudentGroup(
+                name=name,
+                description=description,
+                class_id=class_id,
+                max_members=max_members,
+                is_active=True
+            )
+            
+            db.session.add(group)
+            db.session.commit()
+            
+            flash('Group created successfully!', 'success')
+            return redirect(url_for('management.admin_class_groups', class_id=class_id))
+        
+        # Get enrolled students for this class
+        enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
+        enrolled_students = [enrollment.student for enrollment in enrollments]
+        
+        return render_template('teachers/teacher_create_group.html',
+                             class_obj=class_obj,
+                             enrolled_students=enrolled_students,
+                             role_prefix=True)
+    
+    except Exception as e:
+        print(f"Error creating group: {e}")
+        flash('Error creating group. Please try again.', 'error')
+        return redirect(url_for('management.admin_class_groups', class_id=class_id))
+
+@management_blueprint.route('/group/<int:group_id>/manage', methods=['GET', 'POST'])
+@login_required
+@management_required
+def admin_manage_group(group_id):
+    """Manage students in a specific group (Administrator access)."""
+    try:
+        group = StudentGroup.query.get_or_404(group_id)
+        class_obj = group.class_info
+        
+        # Get current group members
+        current_members = StudentGroupMember.query.filter_by(group_id=group_id).all()
+        current_member_ids = [member.student_id for member in current_members]
+        
+        # Get enrolled students for this class
+        enrollments = Enrollment.query.filter_by(class_id=class_obj.id, is_active=True).all()
+        enrolled_students = [enrollment.student for enrollment in enrollments]
+        
+        if request.method == 'POST':
+            action = request.form.get('action')
+            
+            if action == 'add_student':
+                student_id = request.form.get('student_id')
+                if student_id:
+                    # Check if student is already in the group
+                    existing_member = StudentGroupMember.query.filter_by(
+                        group_id=group_id,
+                        student_id=int(student_id)
+                    ).first()
+                    
+                    if not existing_member:
+                        member = StudentGroupMember(
+                            group_id=group_id,
+                            student_id=int(student_id)
+                        )
+                        db.session.add(member)
+                        db.session.commit()
+                        flash('Student added to group successfully!', 'success')
+                        return redirect(url_for('management.admin_manage_group', group_id=group_id))
+                    else:
+                        flash('Student is already in this group.', 'warning')
+            
+            elif action == 'remove_student':
+                student_id = request.form.get('student_id')
+                if student_id:
+                    member = StudentGroupMember.query.filter_by(
+                        group_id=group_id,
+                        student_id=int(student_id)
+                    ).first()
+                    if member:
+                        db.session.delete(member)
+                        db.session.commit()
+                        flash('Student removed from group successfully!', 'success')
+                        return redirect(url_for('management.admin_manage_group', group_id=group_id))
+            
+            elif action == 'set_leader':
+                student_id = request.form.get('student_id')
+                if student_id:
+                    # Remove leader status from all members
+                    StudentGroupMember.query.filter_by(group_id=group_id).update({'is_leader': False})
+                    
+                    # Set new leader
+                    member = StudentGroupMember.query.filter_by(
+                        group_id=group_id,
+                        student_id=int(student_id)
+                    ).first()
+                    if member:
+                        member.is_leader = True
+                        db.session.commit()
+                        flash('Group leader updated successfully!', 'success')
+                        return redirect(url_for('management.admin_manage_group', group_id=group_id))
+        
+        return render_template('teachers/teacher_manage_group.html',
+                             group=group,
+                             current_members=current_members,
+                             enrolled_students=enrolled_students,
+                             current_member_ids=current_member_ids,
+                             role_prefix=True)
+    
+    except Exception as e:
+        print(f"Error managing group: {e}")
+        flash('Error managing group. Please try again.', 'error')
+        return redirect(url_for('management.admin_class_groups', class_id=group.class_id))
+
+@management_blueprint.route('/group/<int:group_id>/delete', methods=['POST'])
+@login_required
+@management_required
+def admin_delete_group(group_id):
+    """Delete a student group (Administrator access)."""
+    try:
+        group = StudentGroup.query.get_or_404(group_id)
+        class_id = group.class_id
+        
+        # Delete all group members first
+        StudentGroupMember.query.filter_by(group_id=group_id).delete()
+        
+        # Delete the group
+        db.session.delete(group)
+        db.session.commit()
+        
+        flash('Group deleted successfully!', 'success')
+        return redirect(url_for('management.admin_class_groups', class_id=class_id))
+    
+    except Exception as e:
+        print(f"Error deleting group: {e}")
+        flash('Error deleting group. Please try again.', 'error')
+        return redirect(url_for('management.admin_class_groups', class_id=class_id))
+
 # def store_calendar_data(calendar_data, school_year_id, pdf_filename):
 #     """Store extracted calendar data in the database."""
 #     # PDF processing temporarily disabled due to import issues

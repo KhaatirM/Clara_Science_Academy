@@ -228,23 +228,23 @@
             </div>
           </div>
           
-          <!-- System Management -->
+          <!-- Group Management (Available to all management roles) -->
           <div class="mb-3">
-            <h6 class="text-muted mb-2"><i class="bi bi-gear-wide-connected me-1"></i>System Management</h6>
+            <h6 class="text-muted mb-2"><i class="bi bi-people-fill me-1"></i>Group Management</h6>
             <div class="row g-2">
               <div class="col-6 col-md-4">
-                <a href="{{ url_for('management.report_cards') }}" class="btn btn-outline-info btn-sm w-100 class-management-btn">
-                  <i class="bi bi-file-earmark-text me-1"></i>Reports
+                <a href="{{ url_for('management.admin_class_groups', class_id=class_info.id) }}" class="btn btn-outline-info btn-sm w-100 class-management-btn">
+                  <i class="bi bi-people me-1"></i>Manage Groups
                 </a>
               </div>
               <div class="col-6 col-md-4">
-                <a href="{{ url_for('management.communications') }}" class="btn btn-outline-success btn-sm w-100 class-management-btn">
-                  <i class="bi bi-chat-dots me-1"></i>Messages
+                <a href="{{ url_for('teacher.class_group_assignments', class_id=class_info.id) }}?admin_view=true" class="btn btn-outline-secondary btn-sm w-100 class-management-btn">
+                  <i class="bi bi-journal-plus me-1"></i>Group Assignments
                 </a>
               </div>
               <div class="col-6 col-md-4">
-                <a href="{{ url_for('management.settings') }}" class="btn btn-outline-secondary btn-sm w-100 class-management-btn">
-                  <i class="bi bi-gear me-1"></i>Settings
+                <a href="{{ url_for('teacher.class_360_feedback', class_id=class_info.id) }}?admin_view=true" class="btn btn-outline-info btn-sm w-100 class-management-btn">
+                  <i class="bi bi-arrow-repeat me-1"></i>360° Feedback
                 </a>
               </div>
             </div>
@@ -275,23 +275,6 @@
               <div class="col-6 col-md-4">
                 <a href="{{ url_for('teacher.add_assignment', class_id=class_info.id) }}" class="btn btn-outline-success btn-sm w-100 class-management-btn">
                   <i class="bi bi-plus-circle me-1"></i>Add Assignment
-                </a>
-              </div>
-            </div>
-            <div class="row g-2 mt-1">
-              <div class="col-6 col-md-4">
-                <a href="{{ url_for('management.admin_class_groups', class_id=class_info.id) }}" class="btn btn-outline-info btn-sm w-100 class-management-btn">
-                  <i class="bi bi-people me-1"></i>Manage Groups
-                </a>
-              </div>
-              <div class="col-6 col-md-4">
-                <a href="{{ url_for('teacher.class_group_assignments', class_id=class_info.id) }}" class="btn btn-outline-secondary btn-sm w-100 class-management-btn">
-                  <i class="bi bi-journal-plus me-1"></i>Group Assignments
-                </a>
-              </div>
-              <div class="col-6 col-md-4">
-                <a href="{{ url_for('teacher.class_360_feedback', class_id=class_info.id) }}" class="btn btn-outline-info btn-sm w-100 class-management-btn">
-                  <i class="bi bi-arrow-repeat me-1"></i>360° Feedback
                 </a>
               </div>
             </div>

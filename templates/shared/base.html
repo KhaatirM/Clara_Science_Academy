@@ -69,6 +69,49 @@
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('auth.home') }}">Home</a>
                         </li>
+                        
+                        <!-- About Us Dropdown -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="aboutUsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                About Us
+                            </a>
+                            <ul class="dropdown-menu" aria-labelledby="aboutUsDropdown">
+                                <li><a class="dropdown-item" href="#" data-page="education-plan">Education Plan</a></li>
+                                <li><a class="dropdown-item" href="#" data-page="stem-manifesto">STEM Manifesto</a></li>
+                                <li><a class="dropdown-item" href="#" data-page="tuition-assistance">Tuition Assistance</a></li>
+                                <li><a class="dropdown-item" href="#" data-page="admission-policy">Admission Policy</a></li>
+                                <li><a class="dropdown-item" href="#" data-page="locations">Locations</a></li>
+                                <li><a class="dropdown-item" href="#" data-page="board-of-directors">Board of Directors</a></li>
+                                <li><a class="dropdown-item" href="#" data-page="board-meeting-minutes">Board Meeting Minutes</a></li>
+                            </ul>
+                        </li>
+                        
+                        <!-- CSA Info Dropdown -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="csaInfoDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                CSA Info
+                            </a>
+                            <ul class="dropdown-menu" aria-labelledby="csaInfoDropdown">
+                                <li><a class="dropdown-item" href="#" data-page="employment">Employment</a></li>
+                                <li><a class="dropdown-item" href="#" data-page="survey">Survey</a></li>
+                                <li><a class="dropdown-item" href="#" data-page="academic-calendar">Academic Calendar</a></li>
+                                <li><a class="dropdown-item" href="#" data-page="parent-staff-resources">Parent & Staff Resources</a></li>
+                                <li><a class="dropdown-item" href="#" data-page="clarabytes">ClaraBytes</a></li>
+                            </ul>
+                        </li>
+                        
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-page="enrollment">Enrollment</a>
+                        </li>
+                        
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-page="faq">FAQ</a>
+                        </li>
+                        
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-page="contact-us">Contact Us</a>
+                        </li>
+                        
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('auth.login') }}">Login</a>
                         </li>
@@ -143,6 +186,80 @@
             childList: true,
             subtree: true
         });
+        
+        // Navigation dropdown functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle dropdown menu clicks
+            const dropdownItems = document.querySelectorAll('[data-page]');
+            dropdownItems.forEach(item => {
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const page = this.getAttribute('data-page');
+                    showPageContent(page);
+                });
+            });
+        });
+        
+        function showPageContent(page) {
+            // Create or update the content area
+            let contentArea = document.getElementById('dynamic-content');
+            if (!contentArea) {
+                contentArea = document.createElement('div');
+                contentArea.id = 'dynamic-content';
+                contentArea.className = 'container mt-4';
+                document.querySelector('main').appendChild(contentArea);
+            }
+            
+            // Hide the original hero content
+            const heroSection = document.querySelector('.hero-section');
+            if (heroSection) {
+                heroSection.style.display = 'none';
+            }
+            
+            // Show placeholder content for now
+            contentArea.innerHTML = `
+                <div class="row justify-content-center">
+                    <div class="col-lg-8">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h2 class="card-title mb-0">${getPageTitle(page)}</h2>
+                            </div>
+                            <div class="card-body">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Content for "${getPageTitle(page)}" will be added here.
+                                </div>
+                                <p class="text-muted">This page is under construction. Please check back later for detailed information.</p>
+                                <a href="{{ url_for('auth.home') }}" class="btn btn-primary">
+                                    <i class="fas fa-home me-2"></i>Back to Home
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function getPageTitle(page) {
+            const titles = {
+                'education-plan': 'Education Plan',
+                'stem-manifesto': 'STEM Manifesto',
+                'tuition-assistance': 'Tuition Assistance',
+                'admission-policy': 'Admission Policy',
+                'locations': 'Locations',
+                'board-of-directors': 'Board of Directors',
+                'board-meeting-minutes': 'Board Meeting Minutes',
+                'employment': 'Employment',
+                'survey': 'Survey',
+                'academic-calendar': 'Academic Calendar',
+                'parent-staff-resources': 'Parent & Staff Resources',
+                'clarabytes': 'ClaraBytes',
+                'enrollment': 'Enrollment',
+                'faq': 'FAQ',
+                'contact-us': 'Contact Us'
+            };
+            return titles[page] || page;
+        }
     </script>
     
     <!-- Password Change Popup Modal -->

@@ -4818,7 +4818,7 @@ def admin_create_student_group(class_id):
         if request.method == 'POST':
             name = request.form.get('name')
             description = request.form.get('description', '')
-            max_members = request.form.get('max_members', type=int)
+            max_students = request.form.get('max_members', type=int)  # Form field is max_members but model field is max_students
             
             if not name:
                 flash('Group name is required.', 'error')
@@ -4829,7 +4829,8 @@ def admin_create_student_group(class_id):
                 name=name,
                 description=description,
                 class_id=class_id,
-                max_members=max_members,
+                max_students=max_students,  # Use max_students instead of max_members
+                created_by=current_user.teacher_staff_id,  # Add required created_by field
                 is_active=True
             )
             

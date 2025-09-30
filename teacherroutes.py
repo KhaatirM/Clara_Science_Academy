@@ -358,10 +358,16 @@ def view_class(class_id):
     teacher = get_teacher_or_admin()
     class_obj = Class.query.get_or_404(class_id)
     
+    # Check if this is an admin view request
+    admin_view = request.args.get('admin_view') == 'true'
+    
     # Check authorization for this specific class
     if not is_authorized_for_class(class_obj):
         flash("You are not authorized to access this class.", "danger")
-        return redirect(url_for('teacher.teacher_dashboard'))
+        if admin_view:
+            return redirect(url_for('management.view_class', class_id=class_id))
+        else:
+            return redirect(url_for('teacher.teacher_dashboard'))
 
     # Get only actively enrolled students for this class
     enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
@@ -391,7 +397,8 @@ def view_class(class_id):
         enrolled_students=enrolled_students,
         assignments=assignments,
         recent_attendance=recent_attendance,
-        announcements=announcements
+        announcements=announcements,
+        admin_view=admin_view
     )
 
 @teacher_blueprint.route('/assignment/type-selector')

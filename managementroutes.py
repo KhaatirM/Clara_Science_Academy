@@ -3048,7 +3048,25 @@ def settings():
 @management_required
 def class_grades_view(class_id):
     """View class grades"""
-    return render_template('students/class_grades_view.html', class_id=class_id)
+    try:
+        # Get class information
+        class_item = Class.query.get_or_404(class_id)
+        
+        # Get enrolled students for this class
+        enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
+        students_in_class = [enrollment.student for enrollment in enrollments]
+        
+        # Get assignments for this class
+        assignments_in_class = Assignment.query.filter_by(class_id=class_id).all()
+        
+        return render_template('students/class_grades_view.html', 
+                             class_item=class_item,
+                             students_in_class=students_in_class,
+                             assignments_in_class=assignments_in_class)
+    except Exception as e:
+        current_app.logger.error(f"Error in class_grades_view: {str(e)}")
+        flash('Error loading class grades.', 'danger')
+        return redirect(url_for('management.classes'))
 
 
 

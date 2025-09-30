@@ -154,7 +154,7 @@
             <div class="row g-2">
               <div class="col-6 col-md-4">
                 {% if current_user.role in ['Director', 'School Administrator'] %}
-                  <a href="{{ url_for('teacher.class_group_assignments', class_id=class_info.id) }}?admin_view=true?admin_view=true" class="btn btn-outline-secondary btn-sm w-100 class-management-btn">
+                  <a href="{{ url_for('teacher.class_group_assignments', class_id=class_info.id) }}?admin_view=true" class="btn btn-outline-secondary btn-sm w-100 class-management-btn">
                     <i class="bi bi-journal-plus me-1"></i>Group Assignments
                   </a>
                 {% else %}
@@ -165,7 +165,7 @@
               </div>
               <div class="col-6 col-md-4">
                 {% if current_user.role in ['Director', 'School Administrator'] %}
-                  <a href="{{ url_for('teacher.class_deadline_reminders', class_id=class_info.id) }}?admin_view=true?admin_view=true" class="btn btn-outline-primary btn-sm w-100 class-management-btn">
+                  <a href="{{ url_for('teacher.class_deadline_reminders', class_id=class_info.id) }}?admin_view=true" class="btn btn-outline-primary btn-sm w-100 class-management-btn">
                     <i class="bi bi-bell me-1"></i>Deadline Reminders
                   </a>
                 {% else %}
@@ -176,7 +176,7 @@
               </div>
               <div class="col-6 col-md-4">
                 {% if current_user.role in ['Director', 'School Administrator'] %}
-                  <a href="{{ url_for('teacher.class_analytics', class_id=class_info.id) }}?admin_view=true?admin_view=true" class="btn btn-outline-primary btn-sm w-100 class-management-btn">
+                  <a href="{{ url_for('teacher.class_analytics', class_id=class_info.id) }}?admin_view=true" class="btn btn-outline-primary btn-sm w-100 class-management-btn">
                     <i class="bi bi-graph-up me-1"></i>Reports & Analytics
                   </a>
                 {% else %}
@@ -194,7 +194,7 @@
             <div class="row g-2">
               <div class="col-6 col-md-4">
                 {% if current_user.role in ['Director', 'School Administrator'] %}
-                  <a href="{{ url_for('teacher.class_360_feedback', class_id=class_info.id) }}?admin_view=true?admin_view=true" class="btn btn-outline-info btn-sm w-100 class-management-btn">
+                  <a href="{{ url_for('teacher.class_360_feedback', class_id=class_info.id) }}?admin_view=true" class="btn btn-outline-info btn-sm w-100 class-management-btn">
                     <i class="bi bi-arrow-repeat me-1"></i>360° Feedback
                   </a>
                 {% else %}
@@ -205,7 +205,7 @@
               </div>
               <div class="col-6 col-md-4">
                 {% if current_user.role in ['Director', 'School Administrator'] %}
-                  <a href="{{ url_for('teacher.class_reflection_journals', class_id=class_info.id) }}?admin_view=true?admin_view=true" class="btn btn-outline-success btn-sm w-100 class-management-btn">
+                  <a href="{{ url_for('teacher.class_reflection_journals', class_id=class_info.id) }}?admin_view=true" class="btn btn-outline-success btn-sm w-100 class-management-btn">
                     <i class="bi bi-journal-text me-1"></i>Reflection Journals
                   </a>
                 {% else %}
@@ -216,7 +216,7 @@
               </div>
               <div class="col-6 col-md-4">
                 {% if current_user.role in ['Director', 'School Administrator'] %}
-                  <a href="{{ url_for('teacher.class_conflicts', class_id=class_info.id) }}?admin_view=true?admin_view=true" class="btn btn-outline-danger btn-sm w-100 class-management-btn">
+                  <a href="{{ url_for('teacher.class_conflicts', class_id=class_info.id) }}?admin_view=true" class="btn btn-outline-danger btn-sm w-100 class-management-btn">
                     <i class="bi bi-exclamation-triangle me-1"></i>Conflict Resolution
                   </a>
                 {% else %}
@@ -238,12 +238,12 @@
                 </a>
               </div>
               <div class="col-6 col-md-4">
-                <a href="{{ url_for('teacher.class_group_assignments', class_id=class_info.id) }}?admin_view=true?admin_view=true" class="btn btn-outline-secondary btn-sm w-100 class-management-btn">
+                <a href="{{ url_for('teacher.class_group_assignments', class_id=class_info.id) }}?admin_view=true" class="btn btn-outline-secondary btn-sm w-100 class-management-btn">
                   <i class="bi bi-journal-plus me-1"></i>Group Assignments
                 </a>
               </div>
               <div class="col-6 col-md-4">
-                <a href="{{ url_for('teacher.class_360_feedback', class_id=class_info.id) }}?admin_view=true?admin_view=true" class="btn btn-outline-info btn-sm w-100 class-management-btn">
+                <a href="{{ url_for('teacher.class_360_feedback', class_id=class_info.id) }}?admin_view=true" class="btn btn-outline-info btn-sm w-100 class-management-btn">
                   <i class="bi bi-arrow-repeat me-1"></i>360° Feedback
                 </a>
               </div>

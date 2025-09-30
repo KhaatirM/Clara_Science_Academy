@@ -216,28 +216,43 @@
                 heroSection.style.display = 'none';
             }
             
-            // Show placeholder content for now
-            contentArea.innerHTML = `
-                <div class="row justify-content-center">
-                    <div class="col-lg-8">
-                        <div class="card">
-                            <div class="card-header bg-primary text-white">
-                                <h2 class="card-title mb-0">${getPageTitle(page)}</h2>
-                            </div>
-                            <div class="card-body">
-                                <div class="alert alert-info">
-                                    <i class="fas fa-info-circle me-2"></i>
-                                    Content for "${getPageTitle(page)}" will be added here.
+            // Show specific content based on page
+            if (page === 'faq') {
+                contentArea.innerHTML = getFAQContent();
+                // Add FAQ items after the content is loaded
+                setTimeout(() => {
+                    addFAQItems();
+                }, 100);
+            } else if (page === 'contact-us') {
+                contentArea.innerHTML = getContactUsContent();
+                // Add contact form functionality after the content is loaded
+                setTimeout(() => {
+                    setupContactForm();
+                }, 100);
+            } else {
+                // Show placeholder content for other pages
+                contentArea.innerHTML = `
+                    <div class="row justify-content-center">
+                        <div class="col-lg-8">
+                            <div class="card">
+                                <div class="card-header bg-primary text-white">
+                                    <h2 class="card-title mb-0">${getPageTitle(page)}</h2>
                                 </div>
-                                <p class="text-muted">This page is under construction. Please check back later for detailed information.</p>
-                                <a href="{{ url_for('auth.home') }}" class="btn btn-primary">
-                                    <i class="fas fa-home me-2"></i>Back to Home
-                                </a>
+                                <div class="card-body">
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        Content for "${getPageTitle(page)}" will be added here.
+                                    </div>
+                                    <p class="text-muted">This page is under construction. Please check back later for detailed information.</p>
+                                    <a href="{{ url_for('auth.home') }}" class="btn btn-primary">
+                                        <i class="fas fa-home me-2"></i>Back to Home
+                                    </a>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            `;
+                `;
+            }
         }
         
         function getPageTitle(page) {
@@ -259,6 +274,317 @@
                 'contact-us': 'Contact Us'
             };
             return titles[page] || page;
+        }
+        
+        function getFAQContent() {
+            return `
+                <div class="row justify-content-center">
+                    <div class="col-lg-10">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h2 class="card-title mb-0">
+                                    <i class="fas fa-question-circle me-2"></i>Frequently Asked Questions
+                                </h2>
+                            </div>
+                            <div class="card-body">
+                                <div class="accordion" id="faqAccordion">
+                                    <!-- FAQ Items will be added here -->
+                                </div>
+                                
+                                <div class="mt-4 text-center">
+                                    <a href="{{ url_for('auth.home') }}" class="btn btn-primary me-2">
+                                        <i class="fas fa-home me-2"></i>Back to Home
+                                    </a>
+                                    <a href="#" data-page="contact-us" class="btn btn-outline-primary">
+                                        <i class="fas fa-envelope me-2"></i>Contact Us
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function getContactUsContent() {
+            return `
+                <div class="row justify-content-center">
+                    <div class="col-lg-10">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h2 class="card-title mb-0">
+                                    <i class="fas fa-envelope me-2"></i>Contact Us
+                                </h2>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <!-- Contact Information -->
+                                    <div class="col-md-6 mb-4">
+                                        <h4 class="text-primary mb-3">
+                                            <i class="fas fa-map-marker-alt me-2"></i>Mailing Address
+                                        </h4>
+                                        <div class="contact-info">
+                                            <p class="mb-2">
+                                                <strong>Clara Science Academy</strong><br>
+                                                2812 East Bessemer Ave.<br>
+                                                Greensboro, NC 27405
+                                            </p>
+                                        </div>
+                                        
+                                        <h4 class="text-primary mb-3 mt-4">
+                                            <i class="fas fa-phone me-2"></i>Phone
+                                        </h4>
+                                        <div class="contact-info">
+                                            <p class="mb-2">
+                                                <strong>1-800-567-5110</strong>
+                                            </p>
+                                        </div>
+                                        
+                                        <h4 class="text-primary mb-3 mt-4">
+                                            <i class="fas fa-envelope me-2"></i>Email
+                                        </h4>
+                                        <div class="contact-info">
+                                            <p class="mb-2">
+                                                <strong>info@clarascienceacademy.com</strong>
+                                            </p>
+                                        </div>
+                                        
+                                        <div class="mt-4">
+                                            <h4 class="text-primary mb-3">
+                                                <i class="fas fa-clock me-2"></i>Office Hours
+                                            </h4>
+                                            <p class="mb-1"><strong>Monday - Friday:</strong> 8:00 AM - 5:00 PM</p>
+                                            <p class="mb-0"><strong>Saturday:</strong> 9:00 AM - 1:00 PM</p>
+                                            <p class="text-muted small mt-2">Closed on Sundays and major holidays</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Contact Form -->
+                                    <div class="col-md-6 mb-4">
+                                        <h4 class="text-primary mb-3">
+                                            <i class="fas fa-paper-plane me-2"></i>Send us a Message
+                                        </h4>
+                                        <form id="contactForm">
+                                            <div class="mb-3">
+                                                <label for="contactName" class="form-label">Name <span class="text-danger">*</span></label>
+                                                <input type="text" class="form-control" id="contactName" name="name" required>
+                                                <div class="form-text">Please enter your full name</div>
+                                            </div>
+                                            
+                                            <div class="mb-3">
+                                                <label for="contactEmail" class="form-label">Email Address <span class="text-danger">*</span></label>
+                                                <input type="email" class="form-control" id="contactEmail" name="email" required>
+                                                <div class="form-text">Please enter a valid email address</div>
+                                            </div>
+                                            
+                                            <div class="mb-3">
+                                                <label for="contactPhone" class="form-label">Phone Number <span class="text-danger">*</span></label>
+                                                <input type="tel" class="form-control" id="contactPhone" name="phone" required>
+                                                <div class="form-text">Please enter your complete phone number</div>
+                                            </div>
+                                            
+                                            <div class="mb-3">
+                                                <label for="contactMessage" class="form-label">Message <span class="text-danger">*</span></label>
+                                                <textarea class="form-control" id="contactMessage" name="message" rows="5" maxlength="180" required></textarea>
+                                                <div class="form-text">
+                                                    <span id="charCount">0</span> / 180 characters
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="mb-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="spamCheck" name="spamCheck">
+                                                    <label class="form-check-label text-muted" for="spamCheck">
+                                                        Please do not fill in this field.
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            
+                                            <button type="submit" class="btn btn-primary w-100">
+                                                <i class="fas fa-paper-plane me-2"></i>Send Message
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                                
+                                <!-- Additional Information -->
+                                <div class="row mt-4">
+                                    <div class="col-12">
+                                        <div class="alert alert-info">
+                                            <h5 class="alert-heading">
+                                                <i class="fas fa-info-circle me-2"></i>Additional Ways to Connect
+                                            </h5>
+                                            <p class="mb-2">You can also contact us through our main website:</p>
+                                            <p class="mb-0">
+                                                <a href="https://clarascienceacademy.com/contact-us/" target="_blank" class="btn btn-outline-info">
+                                                    <i class="fas fa-external-link-alt me-2"></i>Visit Our Main Website
+                                                </a>
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-4 text-center">
+                                    <a href="{{ url_for('auth.home') }}" class="btn btn-primary me-2">
+                                        <i class="fas fa-home me-2"></i>Back to Home
+                                    </a>
+                                    <a href="#" data-page="faq" class="btn btn-outline-primary">
+                                        <i class="fas fa-question-circle me-2"></i>View FAQ
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function addFAQItems() {
+            const accordion = document.getElementById('faqAccordion');
+            if (!accordion) return;
+            
+            const faqItems = [
+                {
+                    id: 1,
+                    question: "When will the school be available for opening?",
+                    answer: "Clara Science Academy (CSA) will open in Greensboro in the 2024-2025 school year."
+                },
+                {
+                    id: 2,
+                    question: "What should we expect the grade levels to be?",
+                    answer: "CSA will begin with grades K-6 and a new grade level will be added each year until we reach grades K-8."
+                },
+                {
+                    id: 3,
+                    question: "Where is Clara Science Academy located?",
+                    answer: "The school will be located in Greensboro, NC (future locations to be announced in Charlotte, NC, Philadelphia, PA, and Newark, NJ)."
+                },
+                {
+                    id: 4,
+                    question: "What is special about your curriculum?",
+                    answer: `STEM is a curriculum based on the idea of educating students in four specific disciplines — science, technology, engineering and mathematics — in an interdisciplinary and applied approach. Rather than teach the four disciplines as separate and discrete subjects, STEM integrates them into a cohesive learning paradigm based on real-world applications.
+                    <br><br>
+                    While placing STEM at the center of our curriculum, it is used to provide a fundamental purpose, definition and identity to the school. A STEM curriculum will be used throughout every classroom. This will be evident in daily instructional techniques, such as using music or drawing to represent thinking, and culminating unit tasks where students synthesize and display their final understanding through a STEM-based project.
+                    <br><br>
+                    <strong>Important Facts about STEM:</strong><br>
+                    Though the United States has historically been a leader in these fields, fewer students have been focusing on these topics recently. According to the U.S. Department of Education, only 16 percent of high school students are interested in a STEM career and have proven a proficiency in mathematics. Currently, nearly 28 percent of high school freshmen declare an interest in a STEM-related field, a department website says, but 57 percent of these students will lose interest by the time they graduate from high school.`
+                },
+                {
+                    id: 5,
+                    question: "When does school begin and end?",
+                    answer: `<strong>Drop off:</strong> 7:45 a.m.<br>
+                    <strong>School begins:</strong> 8:00 a.m.<br>
+                    <strong>School ends:</strong> 4:00 p.m.`
+                },
+                {
+                    id: 6,
+                    question: "Will you have a before and after school program?",
+                    answer: "Yes. We will implement these programs as we learn more about the needs of our students and families. (TBA)"
+                },
+                {
+                    id: 7,
+                    question: "How do I enroll my child?",
+                    answer: `First complete the short application interest form available under the Enrollment menu item.
+                    <br><br>
+                    Open enrollment will take place between the months of January and February of the school year. Notification of acceptance will be announced in March.
+                    <br><br>
+                    Those applicants who were not accepted will be placed on a waiting list. Rolling admissions will continue until all seats are filled.`
+                },
+                {
+                    id: 8,
+                    question: "Do siblings get enrollment preference?",
+                    answer: `Per the statute, sibling preference can be granted "to siblings of currently enrolled students who were admitted into the school in a previous year." A brand new school does not have any currently enrolled students from the previous year, so that preference cannot be granted in the first year of operation. By the second year, one surname for all the siblings applying will be granted admission at the same time.
+                    <br><br>
+                    The definition of sibling is any of the following who reside in the same household: half siblings, step-siblings, and children residing in a family foster home.`
+                },
+                {
+                    id: 9,
+                    question: "Is the school using the lottery process?",
+                    answer: "CSA will use the lottery process for enrollment. (TBA)"
+                },
+                {
+                    id: 10,
+                    question: "Do you offer resources for students with special needs?",
+                    answer: "Yes. The school will employ qualified staff for Exceptional Children and will implement a School Support Team of teachers and EC specialists. (TBA)"
+                },
+                {
+                    id: 11,
+                    question: "Is lunch provided?",
+                    answer: "Yes. A complete lunch plan will be available to all registered students at the beginning of the school year. (TBA)"
+                },
+                {
+                    id: 12,
+                    question: "Is transportation provided?",
+                    answer: "Yes. A complete transportation plan will be available at the beginning of the school year. (TBA)"
+                }
+            ];
+            
+            faqItems.forEach(item => {
+                const accordionItem = document.createElement('div');
+                accordionItem.className = 'accordion-item';
+                accordionItem.innerHTML = `
+                    <h2 class="accordion-header" id="heading${item.id}">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse${item.id}" aria-expanded="false" aria-controls="collapse${item.id}">
+                            ${item.question}
+                        </button>
+                    </h2>
+                    <div id="collapse${item.id}" class="accordion-collapse collapse" aria-labelledby="heading${item.id}" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body">
+                            ${item.answer}
+                        </div>
+                    </div>
+                `;
+                accordion.appendChild(accordionItem);
+            });
+        }
+        
+        function setupContactForm() {
+            const contactForm = document.getElementById('contactForm');
+            const charCount = document.getElementById('charCount');
+            const messageTextarea = document.getElementById('contactMessage');
+            
+            if (!contactForm) return;
+            
+            // Character counter for message
+            if (messageTextarea && charCount) {
+                messageTextarea.addEventListener('input', function() {
+                    charCount.textContent = this.value.length;
+                });
+            }
+            
+            // Form submission
+            contactForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Get form data
+                const formData = new FormData(this);
+                const name = formData.get('name');
+                const email = formData.get('email');
+                const phone = formData.get('phone');
+                const message = formData.get('message');
+                
+                // Basic validation
+                if (!name || !email || !phone || !message) {
+                    alert('Please fill in all required fields.');
+                    return;
+                }
+                
+                // Email validation
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(email)) {
+                    alert('Please enter a valid email address.');
+                    return;
+                }
+                
+                // Show success message
+                alert('Thank you for your message! We will get back to you as soon as possible.\\n\\nFor immediate assistance, please call us at 1-800-567-5110 or email us at info@clarascienceacademy.com');
+                
+                // Reset form
+                this.reset();
+                if (charCount) {
+                    charCount.textContent = '0';
+                }
+            });
         }
     </script>
     

@@ -1589,12 +1589,19 @@ def assignments_and_grades():
     try:
         from datetime import datetime
         
-        # Get all classes
+        # Get all classes with safety checks
         all_classes = Class.query.all()
+        # Filter out any invalid class objects
+        all_classes = [c for c in all_classes if c and hasattr(c, 'id') and c.id is not None]
         
-        # Get current user's role and permissions
-        user_role = current_user.role
-        user_id = current_user.id
+        # Get current user's role and permissions with safety checks
+        user_role = getattr(current_user, 'role', None) or 'unknown'
+        user_id = getattr(current_user, 'id', None)
+        
+        # Ensure user_id is valid
+        if user_id is None:
+            flash('Invalid user session. Please log in again.', 'error')
+            return redirect(url_for('auth.login'))
         
         # Determine which classes the user can access
         if user_role == 'Director':
@@ -1613,9 +1620,21 @@ def assignments_and_grades():
         sort_order = request.args.get('order', 'desc') or 'desc'
         view_mode = request.args.get('view', 'assignments') or 'assignments'
         
+        # Ensure all parameters are safe
+        if not isinstance(class_filter, str):
+            class_filter = ''
+        if not isinstance(sort_by, str):
+            sort_by = 'due_date'
+        if not isinstance(sort_order, str):
+            sort_order = 'desc'
+        if not isinstance(view_mode, str):
+            view_mode = 'assignments'
+        
         # Get assignment counts and grade data for each class
         class_data = {}
         for class_obj in accessible_classes:
+            if not class_obj or not hasattr(class_obj, 'id') or class_obj.id is None:
+                continue  # Skip invalid class objects
             assignments = Assignment.query.filter_by(class_id=class_obj.id).all()
             assignment_count = len(assignments)
             
@@ -1655,21 +1674,29 @@ def assignments_and_grades():
                 if graded_count > 0:
                     grade_stats['average_score'] = round(total_score / graded_count, 1)
             
-            class_data[class_obj.id] = {
-                'class': class_obj,
-                'assignment_count': assignment_count,
-                'grade_stats': grade_stats
-            }
+            # Only add to class_data if class_obj.id is valid
+            if class_obj.id is not None:
+                class_data[class_obj.id] = {
+                    'class': class_obj,
+                    'assignment_count': assignment_count,
+                    'grade_stats': grade_stats
+                }
         
         # If a specific class is selected, get detailed assignment and grade data
         selected_class = None
         class_assignments = []
         assignment_grades = {}
         
-        if class_filter and class_filter.strip():
+        # Handle class filter with comprehensive safety checks
+        if class_filter and isinstance(class_filter, str) and class_filter.strip():
             try:
-                selected_class_id = int(class_filter)
-                selected_class = next((c for c in accessible_classes if c.id == selected_class_id), None)
+                # Additional safety: check if the string contains only digits
+                clean_filter = class_filter.strip()
+                if clean_filter.isdigit():
+                    selected_class_id = int(clean_filter)
+                    selected_class = next((c for c in accessible_classes if hasattr(c, 'id') and c.id == selected_class_id), None)
+                else:
+                    selected_class = None
                 
                 if selected_class:
                     # Get assignments for the selected class
@@ -1719,7 +1746,9 @@ def assignments_and_grades():
                         'graded_count': len(graded_grades),
                         'average_score': round(total_score / len(graded_grades), 1) if graded_grades else 0
                     }
-            except ValueError:
+            except (ValueError, TypeError, AttributeError) as e:
+                # Handle any conversion errors gracefully
+                selected_class = None
                 pass
     
         return render_template('management/assignments_and_grades.html',
@@ -1736,6 +1765,9 @@ def assignments_and_grades():
     
     except Exception as e:
         print(f"Error in assignments_and_grades: {e}")
+        print(f"Error type: {type(e)}")
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
         flash('Error loading assignments and grades. Please try again.', 'error')
         return redirect(url_for('management.management_dashboard'))
 

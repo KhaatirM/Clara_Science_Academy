@@ -1765,9 +1765,6 @@ def assignments_and_grades():
     
     except Exception as e:
         print(f"Error in assignments_and_grades: {e}")
-        print(f"Error type: {type(e)}")
-        import traceback
-        print(f"Traceback: {traceback.format_exc()}")
         flash('Error loading assignments and grades. Please try again.', 'error')
         return redirect(url_for('management.management_dashboard'))
 

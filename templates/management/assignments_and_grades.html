@@ -451,7 +451,11 @@ function exportData() {
 // View grades function
 function viewGrades(assignmentId) {
     // This would open a modal or redirect to detailed grades view
-    window.location.href = "{{ url_for('teacher.grade_assignment', assignment_id='') }}" + assignmentId;
+    if (assignmentId && assignmentId !== '') {
+        window.location.href = `/teacher/grade/assignment/${assignmentId}`;
+    } else {
+        console.error('Invalid assignment ID:', assignmentId);
+    }
 }
 
 // Initialize active button based on current view

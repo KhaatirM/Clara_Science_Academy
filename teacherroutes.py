@@ -1349,8 +1349,12 @@ def my_assignments():
         assignments_query = Assignment.query.filter(Assignment.id == -1)  # No results
     
     # Apply class filter if specified
-    if class_filter:
-        assignments_query = assignments_query.filter(Assignment.class_id == int(class_filter))
+    if class_filter and class_filter.strip():
+        try:
+            class_id = int(class_filter)
+            assignments_query = assignments_query.filter(Assignment.class_id == class_id)
+        except ValueError:
+            pass
     
     # Apply sorting
     if sort_by == 'title':

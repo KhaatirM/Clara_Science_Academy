@@ -1665,7 +1665,7 @@ def assignments_and_grades():
     class_assignments = []
     assignment_grades = {}
     
-    if class_filter:
+    if class_filter and class_filter.strip():
         try:
             selected_class_id = int(class_filter)
             selected_class = next((c for c in accessible_classes if c.id == selected_class_id), None)

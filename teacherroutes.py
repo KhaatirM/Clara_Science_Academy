@@ -1225,6 +1225,80 @@ def update_assignment_statuses():
         db.session.rollback()
         print(f"Error updating assignment statuses: {e}")
 
+@teacher_blueprint.route('/assignments-and-grades')
+@login_required
+@teacher_required
+def assignments_and_grades():
+    """Combined view of assignments and grades for teachers"""
+    teacher = get_teacher_or_admin()
+    
+    # Update assignment statuses before displaying (only for Active assignments past due)
+    update_assignment_statuses()
+    
+    # Get filter and sort parameters
+    class_filter = request.args.get('class_id', '')
+    sort_by = request.args.get('sort', 'due_date')  # 'due_date' or 'title'
+    sort_order = request.args.get('order', 'desc')  # 'asc' or 'desc'
+    view_mode = request.args.get('view', 'assignments')  # 'assignments' or 'grades'
+    
+    # Directors see all classes and assignments, teachers only see their assigned ones
+    if current_user.role == 'Director':
+        classes = Class.query.all()
+        assignments_query = Assignment.query
+    elif teacher is not None:
+        classes = Class.query.filter_by(teacher_id=teacher.id).all()
+        class_ids = [c.id for c in classes]
+        assignments_query = Assignment.query.filter(Assignment.class_id.in_(class_ids))
+    else:
+        # Teacher user without teacher_staff_id - show empty results
+        classes = []
+        assignments_query = Assignment.query.filter(Assignment.id == -1)  # No results
+    
+    # Apply class filter if specified
+    if class_filter:
+        try:
+            class_id = int(class_filter)
+            assignments_query = assignments_query.filter(Assignment.class_id == class_id)
+        except ValueError:
+            pass
+    
+    # Apply sorting
+    if sort_by == 'title':
+        if sort_order == 'asc':
+            assignments_query = assignments_query.order_by(Assignment.title.asc())
+        else:
+            assignments_query = assignments_query.order_by(Assignment.title.desc())
+    else:  # due_date
+        if sort_order == 'asc':
+            assignments_query = assignments_query.order_by(Assignment.due_date.asc())
+        else:
+            assignments_query = assignments_query.order_by(Assignment.due_date.desc())
+    
+    assignments = assignments_query.all()
+    
+    # Get grade data for grades view
+    grade_data = {}
+    if view_mode == 'grades':
+        for assignment in assignments:
+            grades = Grade.query.filter_by(assignment_id=assignment.id).all()
+            grade_data[assignment.id] = {
+                'grades': grades,
+                'total_submissions': len(grades),
+                'graded_count': len([g for g in grades if g.grade_data is not None]),
+                'average_score': sum([g.grade_data.get('score', 0) for g in grades if g.grade_data]) / len([g for g in grades if g.grade_data]) if [g for g in grades if g.grade_data] else 0
+            }
+    
+    return render_template('teachers/assignments_and_grades.html', 
+                         assignments=assignments,
+                         classes=classes,
+                         class_filter=class_filter,
+                         sort_by=sort_by,
+                         sort_order=sort_order,
+                         view_mode=view_mode,
+                         grade_data=grade_data,
+                         teacher=teacher)
+
+
 @teacher_blueprint.route('/assignments')
 @login_required
 @teacher_required

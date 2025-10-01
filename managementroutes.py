@@ -1581,6 +1581,126 @@ def create_discussion_assignment():
     current_quarter = get_current_quarter()
     return render_template('shared/create_discussion_assignment.html', classes=classes, current_quarter=current_quarter)
 
+@management_blueprint.route('/assignments-and-grades')
+@login_required
+@management_required
+def assignments_and_grades():
+    """Combined assignments and grades view for School Administrators and Directors"""
+    from datetime import datetime
+    
+    # Get all classes
+    all_classes = Class.query.all()
+    
+    # Get current user's role and permissions
+    user_role = current_user.role
+    user_id = current_user.id
+    
+    # Determine which classes the user can access
+    if user_role == 'Director':
+        # Directors can see all classes
+        accessible_classes = all_classes
+    elif user_role == 'School Administrator':
+        # School Administrators can see all classes for assignment management
+        accessible_classes = all_classes
+    else:
+        # Fallback - should not happen due to @management_required decorator
+        accessible_classes = []
+    
+    # Get filter and sort parameters
+    class_filter = request.args.get('class_id', '')
+    sort_by = request.args.get('sort', 'due_date')
+    sort_order = request.args.get('order', 'desc')
+    view_mode = request.args.get('view', 'assignments')  # 'assignments' or 'grades'
+    
+    # Get assignment counts and grade data for each class
+    class_data = {}
+    for class_obj in accessible_classes:
+        assignments = Assignment.query.filter_by(class_id=class_obj.id).all()
+        assignment_count = len(assignments)
+        
+        # Get grade statistics
+        grade_stats = {
+            'total_assignments': assignment_count,
+            'total_submissions': 0,
+            'graded_assignments': 0,
+            'average_score': 0
+        }
+        
+        if view_mode == 'grades':
+            total_score = 0
+            graded_count = 0
+            for assignment in assignments:
+                grades = Grade.query.filter_by(assignment_id=assignment.id).all()
+                grade_stats['total_submissions'] += len(grades)
+                if grades:
+                    grade_stats['graded_assignments'] += 1
+                    for grade in grades:
+                        if grade.grade_data:
+                            total_score += grade.grade_data.get('score', 0)
+                            graded_count += 1
+            
+            if graded_count > 0:
+                grade_stats['average_score'] = round(total_score / graded_count, 1)
+        
+        class_data[class_obj.id] = {
+            'class': class_obj,
+            'assignment_count': assignment_count,
+            'grade_stats': grade_stats
+        }
+    
+    # If a specific class is selected, get detailed assignment and grade data
+    selected_class = None
+    class_assignments = []
+    assignment_grades = {}
+    
+    if class_filter:
+        try:
+            selected_class_id = int(class_filter)
+            selected_class = next((c for c in accessible_classes if c.id == selected_class_id), None)
+            
+            if selected_class:
+                # Get assignments for the selected class
+                assignments_query = Assignment.query.filter_by(class_id=selected_class_id)
+                
+                # Apply sorting
+                if sort_by == 'title':
+                    if sort_order == 'asc':
+                        assignments_query = assignments_query.order_by(Assignment.title.asc())
+                    else:
+                        assignments_query = assignments_query.order_by(Assignment.title.desc())
+                else:  # due_date
+                    if sort_order == 'asc':
+                        assignments_query = assignments_query.order_by(Assignment.due_date.asc())
+                    else:
+                        assignments_query = assignments_query.order_by(Assignment.due_date.desc())
+                
+                class_assignments = assignments_query.all()
+                
+                # Get grade data for each assignment
+                for assignment in class_assignments:
+                    grades = Grade.query.filter_by(assignment_id=assignment.id).all()
+                    assignment_grades[assignment.id] = {
+                        'grades': grades,
+                        'total_submissions': len(grades),
+                        'graded_count': len([g for g in grades if g.grade_data is not None]),
+                        'average_score': sum([g.grade_data.get('score', 0) for g in grades if g.grade_data]) / len([g for g in grades if g.grade_data]) if [g for g in grades if g.grade_data] else 0
+                    }
+        except ValueError:
+            pass
+    
+    return render_template('management/assignments_and_grades.html',
+                         accessible_classes=accessible_classes,
+                         class_data=class_data,
+                         selected_class=selected_class,
+                         class_assignments=class_assignments,
+                         assignment_grades=assignment_grades,
+                         class_filter=class_filter,
+                         sort_by=sort_by,
+                         sort_order=sort_order,
+                         view_mode=view_mode,
+                         user_role=user_role)
+
+
 @management_blueprint.route('/assignments')
 @login_required
 @management_required

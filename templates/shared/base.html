@@ -215,6 +215,8 @@
                 showFAQModal(modal);
             } else if (page === 'contact-us') {
                 showContactUsModal(modal);
+            } else if (page === 'employment') {
+                showEmploymentModal(modal);
             } else {
                 showPlaceholderModal(modal, page);
             }
@@ -412,6 +414,196 @@
             setTimeout(() => {
                 setupContactForm();
             }, 100);
+        }
+        
+        function showEmploymentModal(modal) {
+            const modalTitle = modal.querySelector('#pageModalLabel');
+            const modalBody = modal.querySelector('#modalBody');
+            
+            modalTitle.innerHTML = '<i class="fas fa-briefcase me-2"></i>Employment Opportunities';
+            modalBody.innerHTML = `
+                <div class="welcome-section">
+                    <h4 class="mb-3">
+                        <i class="fas fa-handshake me-2"></i>Join Our Team
+                    </h4>
+                    <p class="text-muted mb-0">We believe in a strong sense of community centered around collaboration, partnership, and achievement. If you share our mission, values, and approach, we'd love to hear from you. The school will consider only top candidates with relevant experience and a proven track record.</p>
+                </div>
+                
+                <div class="row">
+                    <div class="col-12">
+                        <div class="employment-positions">
+                            <!-- Elementary Principal -->
+                            <div class="position-card">
+                                <div class="position-header">
+                                    <h5 class="position-title">
+                                        <i class="fas fa-user-tie me-2"></i>Elementary Principal
+                                    </h5>
+                                    <div class="position-actions">
+                                        <a href="{{ url_for('static', filename='JobDescriptions/Elementary_Principal_Job_Description.pdf') }}" target="_blank" class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-file-pdf me-1"></i>Full Job Description
+                                        </a>
+                                        <a href="https://clarascienceacademy.com/apply-instantly/" target="_blank" class="btn btn-primary btn-sm">
+                                            <i class="fas fa-paper-plane me-1"></i>Apply Instantly
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="position-summary">
+                                    <p>An elementary school principal must regularly meet with the school board to make sure school plans are aligned with the mission. As a leader, the principal makes the board aware of the needs of the students and staff at his school and also communicates school information to teachers, students and parents.</p>
+                                    <p><strong>Salary:</strong> According to the U.S. Bureau of Labor Statistics, the median annual pay for K-12 principals is $86,970.</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Teacher -->
+                            <div class="position-card">
+                                <div class="position-header">
+                                    <h5 class="position-title">
+                                        <i class="fas fa-chalkboard-teacher me-2"></i>Teacher
+                                    </h5>
+                                    <div class="position-actions">
+                                        <a href="{{ url_for('static', filename='JobDescriptions/Teacher_Job_Description.pdf') }}" target="_blank" class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-file-pdf me-1"></i>Full Job Description
+                                        </a>
+                                        <a href="https://clarascienceacademy.com/apply-instantly/" target="_blank" class="btn btn-primary btn-sm">
+                                            <i class="fas fa-paper-plane me-1"></i>Apply Instantly
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="position-summary">
+                                    <p>We are on the hunt for a self-motivated and experienced Teacher to join our qualified team of educators. As a Teacher, you will be responsible for cultivating the students' interest in education and development.</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Guidance Counselor -->
+                            <div class="position-card">
+                                <div class="position-header">
+                                    <h5 class="position-title">
+                                        <i class="fas fa-user-graduate me-2"></i>Guidance Counselor
+                                    </h5>
+                                    <div class="position-actions">
+                                        <a href="{{ url_for('static', filename='JobDescriptions/Guidance_Counselor_Job_Description.pdf') }}" target="_blank" class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-file-pdf me-1"></i>Full Job Description
+                                        </a>
+                                        <a href="https://clarascienceacademy.com/apply-instantly/" target="_blank" class="btn btn-primary btn-sm">
+                                            <i class="fas fa-paper-plane me-1"></i>Apply Instantly
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="position-summary">
+                                    <p>We are looking to hire a Guidance Counselor with outstanding assessment and listening skills. Guidance Counselors are expected to display empathy and sound decision-making with great organizational and motivational skills.</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Teacher Assistant -->
+                            <div class="position-card">
+                                <div class="position-header">
+                                    <h5 class="position-title">
+                                        <i class="fas fa-hands-helping me-2"></i>Teacher Assistant
+                                    </h5>
+                                    <div class="position-actions">
+                                        <a href="{{ url_for('static', filename='JobDescriptions/Teacher_Assistant_Job_Description.pdf') }}" target="_blank" class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-file-pdf me-1"></i>Full Job Description
+                                        </a>
+                                        <a href="https://clarascienceacademy.com/apply-instantly/" target="_blank" class="btn btn-primary btn-sm">
+                                            <i class="fas fa-paper-plane me-1"></i>Apply Instantly
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="position-summary">
+                                    <p>We are currently looking for a friendly and competent Teacher Assistant to join our team. If you are a compassionate and self-motivated individual with a specific interest in education, we urge you to apply!</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Substitute Teacher -->
+                            <div class="position-card">
+                                <div class="position-header">
+                                    <h5 class="position-title">
+                                        <i class="fas fa-exchange-alt me-2"></i>Substitute Teacher
+                                    </h5>
+                                    <div class="position-actions">
+                                        <a href="{{ url_for('static', filename='JobDescriptions/Substitute_Teacher_Job_Description.pdf') }}" target="_blank" class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-file-pdf me-1"></i>Full Job Description
+                                        </a>
+                                        <a href="https://clarascienceacademy.com/apply-instantly/" target="_blank" class="btn btn-primary btn-sm">
+                                            <i class="fas fa-paper-plane me-1"></i>Apply Instantly
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="position-summary">
+                                    <p>We are currently searching for a confident and experienced Substitute Teacher to join our team. If you are a friendly and competent professional with interest in education, then we're interested in you.</p>
+                                </div>
+                            </div>
+                            
+                            <!-- School Nurse -->
+                            <div class="position-card">
+                                <div class="position-header">
+                                    <h5 class="position-title">
+                                        <i class="fas fa-user-nurse me-2"></i>School Nurse
+                                    </h5>
+                                    <div class="position-actions">
+                                        <a href="{{ url_for('static', filename='JobDescriptions/School_Nurse_Job_Description.pdf') }}" target="_blank" class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-file-pdf me-1"></i>Full Job Description
+                                        </a>
+                                        <a href="https://clarascienceacademy.com/apply-instantly/" target="_blank" class="btn btn-primary btn-sm">
+                                            <i class="fas fa-paper-plane me-1"></i>Apply Instantly
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="position-summary">
+                                    <p>Just looking after the children in a school is not the only part of a school nurse job description. The school nurses also look after the staff. School nurses have a very important job looking after all the children and tending to all their medical needs.</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Exceptional Children's Teacher -->
+                            <div class="position-card">
+                                <div class="position-header">
+                                    <h5 class="position-title">
+                                        <i class="fas fa-heart me-2"></i>Exceptional Children's Teacher
+                                    </h5>
+                                    <div class="position-actions">
+                                        <a href="{{ url_for('static', filename='JobDescriptions/Exceptional_Children_Teacher_Job_Description.pdf') }}" target="_blank" class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-file-pdf me-1"></i>Full Job Description
+                                        </a>
+                                        <a href="https://clarascienceacademy.com/apply-instantly/" target="_blank" class="btn btn-primary btn-sm">
+                                            <i class="fas fa-paper-plane me-1"></i>Apply Instantly
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="position-summary">
+                                    <p>Under general supervision, provides special education services to students identified as disabled in accordance with state and federal regulations. Work involves developing and implementing the Individual Education Program in classroom settings.</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Coming Soon Positions -->
+                            <div class="position-card coming-soon">
+                                <div class="position-header">
+                                    <h5 class="position-title">
+                                        <i class="fas fa-clock me-2"></i>Additional Positions Coming Soon
+                                    </h5>
+                                </div>
+                                <div class="position-summary">
+                                    <p>We are also planning to add the following positions:</p>
+                                    <ul class="list-unstyled">
+                                        <li><i class="fas fa-users me-2"></i>Human Resource Officer</li>
+                                        <li><i class="fas fa-clipboard-list me-2"></i>Office Manager</li>
+                                        <li><i class="fas fa-search me-2"></i>Student Recruitment Specialist</li>
+                                    </ul>
+                                    <p class="text-muted">Job descriptions for these positions will be available soon.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="text-center mt-4">
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading">
+                            <i class="fas fa-info-circle me-2"></i>Ready to Apply?
+                        </h6>
+                        <p class="mb-2">Click "Apply Instantly" on any position to be taken to our application portal.</p>
+                        <p class="mb-0">Please be sure to attach your resume for consideration.</p>
+                    </div>
+                </div>
+            `;
         }
         
         function showPlaceholderModal(modal, page) {

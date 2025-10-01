@@ -1,6 +1,7 @@
 # Core Flask imports
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, Response, abort, jsonify
 from flask_login import login_required, current_user
+from datetime import datetime
 
 # Database and model imports - organized by category
 from models import (
@@ -23,7 +24,9 @@ from models import (
     # Discussion system
     DiscussionThread, DiscussionPost,
     # Group system
-    StudentGroup, StudentGroupMember
+    StudentGroup, StudentGroupMember,
+    # Student Jobs system
+    CleaningTeam, CleaningTeamMember, CleaningInspection, CleaningTask, CleaningSchedule
 )
 
 # Authentication and decorators
@@ -4766,7 +4769,85 @@ def download_resource(filename):
 @management_required
 def student_jobs():
     """Student Jobs management page for cleaning crews"""
-    return render_template('management/student_jobs.html')
+    try:
+        # Get all cleaning teams
+        teams = CleaningTeam.query.filter_by(is_active=True).all()
+        
+        # Get recent inspections for each team
+        team_data = []
+        for team in teams:
+            recent_inspections = CleaningInspection.query.filter_by(team_id=team.id).order_by(CleaningInspection.inspection_date.desc()).limit(5).all()
+            team_data.append({
+                'team': team,
+                'recent_inspections': recent_inspections,
+                'current_score': recent_inspections[0].final_score if recent_inspections else 100
+            })
+        
+        return render_template('management/student_jobs.html', team_data=team_data)
+    except Exception as e:
+        print(f"Error loading student jobs: {e}")
+        flash('Error loading student jobs data.', 'error')
+        return render_template('management/student_jobs.html', team_data=[])
+
+
+@management_blueprint.route('/student-jobs/inspection', methods=['POST'])
+@login_required
+@management_required
+def submit_cleaning_inspection():
+    """Submit a cleaning inspection result"""
+    try:
+        data = request.get_json()
+        
+        # Create new inspection record
+        inspection = CleaningInspection(
+            team_id=data['team_id'],
+            inspection_date=datetime.strptime(data['inspection_date'], '%Y-%m-%d').date(),
+            inspector_name=data['inspector_name'],
+            inspector_notes=data.get('inspector_notes', ''),
+            
+            # Deductions
+            bathroom_not_restocked=data.get('bathroom_not_restocked', False),
+            trash_can_left_full=data.get('trash_can_left_full', False),
+            floor_not_swept=data.get('floor_not_swept', False),
+            materials_left_out=data.get('materials_left_out', False),
+            tables_missed=data.get('tables_missed', False),
+            classroom_trash_full=data.get('classroom_trash_full', False),
+            bathroom_floor_poor=data.get('bathroom_floor_poor', False),
+            not_finished_on_time=data.get('not_finished_on_time', False),
+            small_debris_left=data.get('small_debris_left', False),
+            trash_spilled=data.get('trash_spilled', False),
+            dispensers_half_filled=data.get('dispensers_half_filled', False),
+            
+            # Bonuses
+            exceptional_finish=data.get('exceptional_finish', False),
+            speed_efficiency=data.get('speed_efficiency', False),
+            going_above_beyond=data.get('going_above_beyond', False),
+            teamwork_award=data.get('teamwork_award', False),
+            
+            # Calculate scores
+            major_deductions=data.get('major_deductions', 0),
+            moderate_deductions=data.get('moderate_deductions', 0),
+            minor_deductions=data.get('minor_deductions', 0),
+            bonus_points=data.get('bonus_points', 0),
+            final_score=data.get('final_score', 100)
+        )
+        
+        db.session.add(inspection)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Inspection submitted successfully',
+            'inspection_id': inspection.id
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error submitting inspection: {e}")
+        return jsonify({
+            'success': False,
+            'message': 'Error submitting inspection'
+        }), 500
 
 # ===== GROUP MANAGEMENT ROUTES FOR ADMINISTRATORS =====
 

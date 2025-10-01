@@ -1834,3 +1834,126 @@ class PerformanceBenchmark(db.Model):
 # BugReport model temporarily removed to fix deployment issues
 # Will be re-added after successful deployment
 
+
+# ===== STUDENT JOBS MODELS =====
+
+class CleaningTeam(db.Model):
+    """
+    Model for storing cleaning team information.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    team_name = db.Column(db.String(100), nullable=False, unique=True)  # "Team 1" or "Team 2"
+    team_description = db.Column(db.String(200), nullable=False)  # "4 Classrooms & Hallway Trash"
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    team_members = db.relationship('CleaningTeamMember', backref='cleaning_team', cascade='all, delete-orphan')
+    inspections = db.relationship('CleaningInspection', backref='cleaning_team', cascade='all, delete-orphan')
+    
+    def __repr__(self):
+        return f"CleaningTeam('{self.team_name}', '{self.team_description}')"
+
+
+class CleaningTeamMember(db.Model):
+    """
+    Model for storing team member assignments.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    team_id = db.Column(db.Integer, db.ForeignKey('cleaning_team.id'), nullable=False)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
+    role = db.Column(db.String(50), nullable=False)  # "Sweeping Team", "Wipe Down Team", "Trash Team", "Bathroom Team"
+    is_active = db.Column(db.Boolean, default=True)
+    assigned_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    student = db.relationship('Student', backref='cleaning_assignments')
+    
+    def __repr__(self):
+        return f"CleaningTeamMember(Team: {self.team_id}, Student: {self.student_id}, Role: {self.role})"
+
+
+class CleaningInspection(db.Model):
+    """
+    Model for storing cleaning inspection results.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    team_id = db.Column(db.Integer, db.ForeignKey('cleaning_team.id'), nullable=False)
+    inspection_date = db.Column(db.Date, nullable=False)
+    inspector_name = db.Column(db.String(100), nullable=False)
+    
+    # Score tracking
+    starting_score = db.Column(db.Integer, default=100)
+    major_deductions = db.Column(db.Integer, default=0)  # -10 points each
+    moderate_deductions = db.Column(db.Integer, default=0)  # -5 points each
+    minor_deductions = db.Column(db.Integer, default=0)  # -2 points each
+    bonus_points = db.Column(db.Integer, default=0)  # +15 max
+    final_score = db.Column(db.Integer, nullable=False)
+    
+    # Detailed deductions
+    bathroom_not_restocked = db.Column(db.Boolean, default=False)
+    trash_can_left_full = db.Column(db.Boolean, default=False)
+    floor_not_swept = db.Column(db.Boolean, default=False)
+    materials_left_out = db.Column(db.Boolean, default=False)
+    tables_missed = db.Column(db.Boolean, default=False)
+    classroom_trash_full = db.Column(db.Boolean, default=False)
+    bathroom_floor_poor = db.Column(db.Boolean, default=False)
+    not_finished_on_time = db.Column(db.Boolean, default=False)
+    small_debris_left = db.Column(db.Boolean, default=False)
+    trash_spilled = db.Column(db.Boolean, default=False)
+    dispensers_half_filled = db.Column(db.Boolean, default=False)
+    
+    # Bonus points
+    exceptional_finish = db.Column(db.Boolean, default=False)
+    speed_efficiency = db.Column(db.Boolean, default=False)
+    going_above_beyond = db.Column(db.Boolean, default=False)
+    teamwork_award = db.Column(db.Boolean, default=False)
+    
+    # Additional information
+    inspector_notes = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f"CleaningInspection(Team: {self.team_id}, Date: {self.inspection_date}, Score: {self.final_score})"
+
+
+class CleaningTask(db.Model):
+    """
+    Model for storing specific cleaning tasks and their assignments.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    team_id = db.Column(db.Integer, db.ForeignKey('cleaning_team.id'), nullable=False)
+    task_name = db.Column(db.String(100), nullable=False)  # "Sweeping Team", "Wipe Down Team", etc.
+    task_description = db.Column(db.Text, nullable=False)
+    area_covered = db.Column(db.String(200), nullable=False)  # "all four classrooms", "both bathrooms", etc.
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    team = db.relationship('CleaningTeam', backref='tasks')
+    
+    def __repr__(self):
+        return f"CleaningTask('{self.task_name}', Team: {self.team_id})"
+
+
+class CleaningSchedule(db.Model):
+    """
+    Model for storing cleaning schedules and rotations.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    team_id = db.Column(db.Integer, db.ForeignKey('cleaning_team.id'), nullable=False)
+    schedule_date = db.Column(db.Date, nullable=False)
+    start_time = db.Column(db.Time, nullable=False)
+    end_time = db.Column(db.Time, nullable=False)
+    is_completed = db.Column(db.Boolean, default=False)
+    completed_at = db.Column(db.DateTime, nullable=True)
+    notes = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    team = db.relationship('CleaningTeam', backref='schedules')
+    
+    def __repr__(self):
+        return f"CleaningSchedule(Team: {self.team_id}, Date: {self.schedule_date})"
+

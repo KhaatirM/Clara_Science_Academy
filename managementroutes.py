@@ -1636,8 +1636,20 @@ def assignments_and_grades():
                     grade_stats['graded_assignments'] += 1
                     for grade in grades:
                         if grade.grade_data:
-                            total_score += grade.grade_data.get('score', 0)
-                            graded_count += 1
+                            try:
+                                # Handle both dict and JSON string cases
+                                if isinstance(grade.grade_data, dict):
+                                    grade_dict = grade.grade_data
+                                else:
+                                    import json
+                                    grade_dict = json.loads(grade.grade_data)
+                                
+                                if 'score' in grade_dict:
+                                    total_score += grade_dict['score']
+                                    graded_count += 1
+                            except (json.JSONDecodeError, TypeError):
+                                # Skip invalid grade data
+                                continue
             
             if graded_count > 0:
                 grade_stats['average_score'] = round(total_score / graded_count, 1)
@@ -1679,11 +1691,32 @@ def assignments_and_grades():
                 # Get grade data for each assignment
                 for assignment in class_assignments:
                     grades = Grade.query.filter_by(assignment_id=assignment.id).all()
+                    
+                    # Process grade data safely
+                    graded_grades = []
+                    total_score = 0
+                    for g in grades:
+                        if g.grade_data is not None:
+                            try:
+                                # Handle both dict and JSON string cases
+                                if isinstance(g.grade_data, dict):
+                                    grade_dict = g.grade_data
+                                else:
+                                    import json
+                                    grade_dict = json.loads(g.grade_data)
+                                
+                                if 'score' in grade_dict:
+                                    graded_grades.append(grade_dict)
+                                    total_score += grade_dict['score']
+                            except (json.JSONDecodeError, TypeError):
+                                # Skip invalid grade data
+                                continue
+                    
                     assignment_grades[assignment.id] = {
                         'grades': grades,
                         'total_submissions': len(grades),
-                        'graded_count': len([g for g in grades if g.grade_data is not None]),
-                        'average_score': sum([g.grade_data.get('score', 0) for g in grades if g.grade_data]) / len([g for g in grades if g.grade_data]) if [g for g in grades if g.grade_data] else 0
+                        'graded_count': len(graded_grades),
+                        'average_score': round(total_score / len(graded_grades), 1) if graded_grades else 0
                     }
         except ValueError:
             pass

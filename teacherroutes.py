@@ -1281,11 +1281,32 @@ def assignments_and_grades():
     if view_mode == 'grades':
         for assignment in assignments:
             grades = Grade.query.filter_by(assignment_id=assignment.id).all()
+            
+            # Process grade data safely
+            graded_grades = []
+            total_score = 0
+            for g in grades:
+                if g.grade_data is not None:
+                    try:
+                        # Handle both dict and JSON string cases
+                        if isinstance(g.grade_data, dict):
+                            grade_dict = g.grade_data
+                        else:
+                            import json
+                            grade_dict = json.loads(g.grade_data)
+                        
+                        if 'score' in grade_dict:
+                            graded_grades.append(grade_dict)
+                            total_score += grade_dict['score']
+                    except (json.JSONDecodeError, TypeError):
+                        # Skip invalid grade data
+                        continue
+            
             grade_data[assignment.id] = {
                 'grades': grades,
                 'total_submissions': len(grades),
-                'graded_count': len([g for g in grades if g.grade_data is not None]),
-                'average_score': sum([g.grade_data.get('score', 0) for g in grades if g.grade_data]) / len([g for g in grades if g.grade_data]) if [g for g in grades if g.grade_data] else 0
+                'graded_count': len(graded_grades),
+                'average_score': round(total_score / len(graded_grades), 1) if graded_grades else 0
             }
     
     return render_template('teachers/assignments_and_grades.html', 

@@ -111,6 +111,85 @@
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- Quick Stats Cards -->
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <div class="card bg-primary text-white">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <h6 class="card-title">Total Assignments</h6>
+                                            <h4 class="mb-0">{{ class_assignments|length }}</h4>
+                                        </div>
+                                        <div class="align-self-center">
+                                            <i class="bi bi-journal-text display-6"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-success text-white">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <h6 class="card-title">Active Assignments</h6>
+                                            <h4 class="mb-0">{{ class_assignments|selectattr('status', 'equalto', 'Active')|list|length }}</h4>
+                                        </div>
+                                        <div class="align-self-center">
+                                            <i class="bi bi-check-circle display-6"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-warning text-white">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <h6 class="card-title">Pending Grades</h6>
+                                            <h4 class="mb-0">
+                                                {% set total_submissions = assignment_grades.values()|sum(attribute='total_submissions') %}
+                                                {% set graded_count = assignment_grades.values()|sum(attribute='graded_count') %}
+                                                {{ total_submissions - graded_count }}
+                                            </h4>
+                                        </div>
+                                        <div class="align-self-center">
+                                            <i class="bi bi-clock display-6"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-info text-white">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <h6 class="card-title">Avg Score</h6>
+                                            <h4 class="mb-0">
+                                                {% if assignment_grades %}
+                                                    {% set total_avg = assignment_grades.values()|selectattr('average_score', 'gt', 0)|map(attribute='average_score')|list %}
+                                                    {% if total_avg %}
+                                                        {{ "%.1f"|format((total_avg|sum / total_avg|length)) }}%
+                                                    {% else %}
+                                                        N/A
+                                                    {% endif %}
+                                                {% else %}
+                                                    N/A
+                                                {% endif %}
+                                            </h4>
+                                        </div>
+                                        <div class="align-self-center">
+                                            <i class="bi bi-graph-up display-6"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -122,7 +201,7 @@
         <div class="row">
             {% for assignment in class_assignments %}
             <div class="col-lg-6 col-xl-4 mb-4">
-                <div class="card h-100">
+                <div class="card h-100 assignment-card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h6 class="card-title mb-0">{{ assignment.title }}</h6>
                         <span class="badge {% if assignment.status == 'Active' %}bg-success{% elif assignment.status == 'Completed' %}bg-primary{% else %}bg-secondary{% endif %}">
@@ -130,14 +209,35 @@
                         </span>
                     </div>
                     <div class="card-body">
+                        <div class="mb-2">
+                            <small class="text-muted">
+                                <i class="bi bi-calendar-event me-1"></i>
+                                Due: {{ assignment.due_date.strftime('%m/%d/%Y') }}
+                            </small>
+                        </div>
+                        <div class="mb-2">
+                            <span class="badge bg-info">{{ assignment.assignment_type }}</span>
+                            <span class="badge bg-warning text-dark">{{ assignment.points }} pts</span>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted">
+                                <i class="bi bi-person me-1"></i>
+                                {{ assignment.class.teacher.first_name }} {{ assignment.class.teacher.last_name }}
+                            </small>
+                        </div>
+                        <div class="mb-2">
+                            {% set grade_info = assignment_grades.get(assignment.id, {}) %}
+                            <div class="d-flex justify-content-between">
+                                <small class="text-muted">Submissions:</small>
+                                <small class="text-muted">{{ grade_info.get('total_submissions', 0) }}</small>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <small class="text-muted">Graded:</small>
+                                <small class="text-muted">{{ grade_info.get('graded_count', 0) }}</small>
+                            </div>
+                        </div>
                         <p class="card-text">
-                            <strong>Due Date:</strong> {{ assignment.due_date.strftime('%m/%d/%Y') }}<br>
-                            <strong>Type:</strong> {{ assignment.assignment_type }}<br>
-                            <strong>Points:</strong> {{ assignment.points }}<br>
-                            <strong>Teacher:</strong> {{ assignment.class.teacher.first_name }} {{ assignment.class.teacher.last_name }}
-                        </p>
-                        <p class="card-text">
-                            <small class="text-muted">{{ assignment.description[:100] }}{% if assignment.description|length > 100 %}...{% endif %}</small>
+                            <small class="text-muted">{{ assignment.description[:80] }}{% if assignment.description|length > 80 %}...{% endif %}</small>
                         </p>
                     </div>
                     <div class="card-footer">
@@ -173,28 +273,52 @@
             <table class="table table-striped table-hover">
                 <thead class="table-dark">
                     <tr>
-                        <th>Assignment</th>
-                        <th>Due Date</th>
-                        <th>Type</th>
-                        <th>Points</th>
-                        <th>Submissions</th>
-                        <th>Graded</th>
-                        <th>Average Score</th>
-                        <th>Actions</th>
+                        <th>
+                            <i class="bi bi-journal-text me-1"></i>Assignment
+                        </th>
+                        <th>
+                            <i class="bi bi-calendar-event me-1"></i>Due Date
+                        </th>
+                        <th>
+                            <i class="bi bi-tag me-1"></i>Type
+                        </th>
+                        <th>
+                            <i class="bi bi-star me-1"></i>Points
+                        </th>
+                        <th>
+                            <i class="bi bi-people me-1"></i>Submissions
+                        </th>
+                        <th>
+                            <i class="bi bi-check-circle me-1"></i>Graded
+                        </th>
+                        <th>
+                            <i class="bi bi-graph-up me-1"></i>Average Score
+                        </th>
+                        <th>
+                            <i class="bi bi-gear me-1"></i>Actions
+                        </th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for assignment in class_assignments %}
                     <tr>
                         <td>
-                            <strong>{{ assignment.title }}</strong><br>
-                            <small class="text-muted">{{ assignment.description[:50] }}{% if assignment.description|length > 50 %}...{% endif %}</small>
+                            <div>
+                                <strong>{{ assignment.title }}</strong><br>
+                                <small class="text-muted">{{ assignment.description[:50] }}{% if assignment.description|length > 50 %}...{% endif %}</small>
+                            </div>
                         </td>
-                        <td>{{ assignment.due_date.strftime('%m/%d/%Y') }}</td>
+                        <td>
+                            <span class="badge bg-light text-dark">
+                                {{ assignment.due_date.strftime('%m/%d/%Y') }}
+                            </span>
+                        </td>
                         <td>
                             <span class="badge bg-info">{{ assignment.assignment_type }}</span>
                         </td>
-                        <td>{{ assignment.points }}</td>
+                        <td>
+                            <span class="badge bg-warning text-dark">{{ assignment.points }}</span>
+                        </td>
                         <td>
                             {% set grade_info = assignment_grades.get(assignment.id, {}) %}
                             <span class="badge bg-secondary">{{ grade_info.get('total_submissions', 0) }}</span>
@@ -206,18 +330,28 @@
                         <td>
                             {% set grade_info = assignment_grades.get(assignment.id, {}) %}
                             {% set avg_score = grade_info.get('average_score', 0) %}
-                            <span class="badge {% if avg_score >= 90 %}bg-success{% elif avg_score >= 70 %}bg-warning{% else %}bg-danger{% endif %}">
-                                {{ "%.1f"|format(avg_score) }}%
-                            </span>
+                            {% if avg_score > 0 %}
+                                <span class="badge {% if avg_score >= 90 %}bg-success{% elif avg_score >= 70 %}bg-warning{% else %}bg-danger{% endif %}">
+                                    {{ "%.1f"|format(avg_score) }}%
+                                </span>
+                            {% else %}
+                                <span class="badge bg-light text-dark">No grades</span>
+                            {% endif %}
                         </td>
                         <td>
                             <div class="btn-group" role="group">
-                                <a href="{{ url_for('teacher.grade_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-primary btn-sm">
-                                    <i class="bi bi-check-circle me-1"></i>Grade
+                                <a href="{{ url_for('teacher.grade_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-primary btn-sm" title="Grade Assignment">
+                                    <i class="bi bi-check-circle"></i>
                                 </a>
-                                <a href="{{ url_for('teacher.view_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-secondary btn-sm">
-                                    <i class="bi bi-eye me-1"></i>View
+                                <a href="{{ url_for('teacher.view_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-secondary btn-sm" title="View Assignment">
+                                    <i class="bi bi-eye"></i>
                                 </a>
+                                {% set grade_info = assignment_grades.get(assignment.id, {}) %}
+                                {% if grade_info.get('total_submissions', 0) > 0 %}
+                                <button type="button" class="btn btn-outline-info btn-sm" onclick="viewGrades({{ assignment.id }})" title="View Grades">
+                                    <i class="bi bi-graph-up"></i>
+                                </button>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>
@@ -314,6 +448,12 @@ function exportData() {
     alert('Export functionality would be implemented here.');
 }
 
+// View grades function
+function viewGrades(assignmentId) {
+    // This would open a modal or redirect to detailed grades view
+    window.location.href = "{{ url_for('teacher.grade_assignment', assignment_id='') }}" + assignmentId;
+}
+
 // Initialize active button based on current view
 document.addEventListener('DOMContentLoaded', function() {
     const currentView = '{{ view_mode }}';
@@ -363,6 +503,62 @@ document.addEventListener('DOMContentLoaded', function() {
     font-size: 0.875rem;
 }
 
+.assignment-card {
+    transition: all 0.3s ease;
+    border-left: 4px solid transparent;
+}
+
+.assignment-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    border-left-color: #28a745;
+}
+
+.stats-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.stats-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.table th {
+    background: linear-gradient(135deg, #343a40 0%, #495057 100%);
+    border: none;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.875rem;
+    letter-spacing: 0.5px;
+}
+
+.table td {
+    vertical-align: middle;
+    border-color: #e9ecef;
+}
+
+.table tbody tr:hover {
+    background-color: rgba(0,123,255,0.05);
+    transform: scale(1.01);
+    transition: all 0.2s ease;
+}
+
+.badge {
+    font-weight: 500;
+    padding: 0.5em 0.75em;
+}
+
+.btn-group .btn {
+    transition: all 0.2s ease;
+}
+
+.btn-group .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
 @media (max-width: 768px) {
     .btn-group .btn {
         font-size: 0.875rem;
@@ -375,6 +571,10 @@ document.addEventListener('DOMContentLoaded', function() {
     
     .table-responsive {
         font-size: 0.875rem;
+    }
+    
+    .stats-card .display-6 {
+        font-size: 1.5rem;
     }
 }
 </style>

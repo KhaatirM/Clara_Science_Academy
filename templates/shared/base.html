@@ -196,64 +196,210 @@
                 if (target) {
                     e.preventDefault();
                     const page = target.getAttribute('data-page');
-                    showPageContent(page);
+                    showPageModal(page);
                 }
             });
         });
         
-        function showPageContent(page) {
-            // Create or update the content area
-            let contentArea = document.getElementById('dynamic-content');
-            if (!contentArea) {
-                contentArea = document.createElement('div');
-                contentArea.id = 'dynamic-content';
-                contentArea.className = 'container mt-4';
-                document.querySelector('main').appendChild(contentArea);
-            }
-            
-            // Hide the original hero content
-            const heroSection = document.querySelector('.hero-section');
-            if (heroSection) {
-                heroSection.style.display = 'none';
+        function showPageModal(page) {
+            // Create modal if it doesn't exist
+            let modal = document.getElementById('pageModal');
+            if (!modal) {
+                modal = createModal();
+                document.body.appendChild(modal);
             }
             
             // Show specific content based on page
             if (page === 'faq') {
-                contentArea.innerHTML = getFAQContent();
-                // Add FAQ items after the content is loaded
-                setTimeout(() => {
-                    addFAQItems();
-                }, 100);
+                showFAQModal(modal);
             } else if (page === 'contact-us') {
-                contentArea.innerHTML = getContactUsContent();
-                // Add contact form functionality after the content is loaded
-                setTimeout(() => {
-                    setupContactForm();
-                }, 100);
+                showContactUsModal(modal);
             } else {
-                // Show placeholder content for other pages
-                contentArea.innerHTML = `
-                    <div class="row justify-content-center">
-                        <div class="col-lg-8">
-                            <div class="card">
-                                <div class="card-header bg-primary text-white">
-                                    <h2 class="card-title mb-0">${getPageTitle(page)}</h2>
-                                </div>
-                                <div class="card-body">
-                                    <div class="alert alert-info">
-                                        <i class="fas fa-info-circle me-2"></i>
-                                        Content for "${getPageTitle(page)}" will be added here.
-                                    </div>
-                                    <p class="text-muted">This page is under construction. Please check back later for detailed information.</p>
-                                    <a href="{{ url_for('auth.home') }}" class="btn btn-primary">
-                                        <i class="fas fa-home me-2"></i>Back to Home
-                                    </a>
-                                </div>
-                            </div>
+                showPlaceholderModal(modal, page);
+            }
+            
+            // Show the modal
+            const bootstrapModal = new bootstrap.Modal(modal);
+            bootstrapModal.show();
+        }
+        
+        function createModal() {
+            const modal = document.createElement('div');
+            modal.id = 'pageModal';
+            modal.className = 'modal fade';
+            modal.setAttribute('tabindex', '-1');
+            modal.setAttribute('aria-labelledby', 'pageModalLabel');
+            modal.setAttribute('aria-hidden', 'true');
+            modal.innerHTML = `
+                <div class="modal-dialog modal-xl">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="pageModalLabel"></h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body" id="modalBody">
+                            <!-- Content will be loaded here -->
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                         </div>
                     </div>
-                `;
-            }
+                </div>
+            `;
+            return modal;
+        }
+        
+        function showFAQModal(modal) {
+            const modalTitle = modal.querySelector('#pageModalLabel');
+            const modalBody = modal.querySelector('#modalBody');
+            
+            modalTitle.innerHTML = '<i class="fas fa-question-circle me-2"></i>Frequently Asked Questions';
+            modalBody.innerHTML = `
+                <div class="accordion" id="faqAccordion">
+                    <!-- FAQ Items will be added here -->
+                </div>
+            `;
+            
+            // Add FAQ items after the content is loaded
+            setTimeout(() => {
+                addFAQItems();
+            }, 100);
+        }
+        
+        function showContactUsModal(modal) {
+            const modalTitle = modal.querySelector('#pageModalLabel');
+            const modalBody = modal.querySelector('#modalBody');
+            
+            modalTitle.innerHTML = '<i class="fas fa-envelope me-2"></i>Contact Us';
+            modalBody.innerHTML = `
+                <div class="row">
+                    <!-- Contact Information -->
+                    <div class="col-md-6 mb-4">
+                        <h4 class="text-primary mb-3">
+                            <i class="fas fa-map-marker-alt me-2"></i>Mailing Address
+                        </h4>
+                        <div class="contact-info">
+                            <p class="mb-2">
+                                <strong>Clara Science Academy</strong><br>
+                                2812 East Bessemer Ave.<br>
+                                Greensboro, NC 27405
+                            </p>
+                        </div>
+                        
+                        <h4 class="text-primary mb-3 mt-4">
+                            <i class="fas fa-phone me-2"></i>Phone
+                        </h4>
+                        <div class="contact-info">
+                            <p class="mb-2">
+                                <strong>1-800-567-5110</strong>
+                            </p>
+                        </div>
+                        
+                        <h4 class="text-primary mb-3 mt-4">
+                            <i class="fas fa-envelope me-2"></i>Email
+                        </h4>
+                        <div class="contact-info">
+                            <p class="mb-2">
+                                <strong>info@clarascienceacademy.com</strong>
+                            </p>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <h4 class="text-primary mb-3">
+                                <i class="fas fa-clock me-2"></i>Office Hours
+                            </h4>
+                            <p class="mb-1"><strong>Monday - Friday:</strong> 8:00 AM - 5:00 PM</p>
+                            <p class="mb-0"><strong>Saturday:</strong> 9:00 AM - 1:00 PM</p>
+                            <p class="text-muted small mt-2">Closed on Sundays and major holidays</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Contact Form -->
+                    <div class="col-md-6 mb-4">
+                        <h4 class="text-primary mb-3">
+                            <i class="fas fa-paper-plane me-2"></i>Send us a Message
+                        </h4>
+                        <form id="contactForm">
+                            <div class="mb-3">
+                                <label for="contactName" class="form-label">Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="contactName" name="name" required>
+                                <div class="form-text">Please enter your full name</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="contactEmail" class="form-label">Email Address <span class="text-danger">*</span></label>
+                                <input type="email" class="form-control" id="contactEmail" name="email" required>
+                                <div class="form-text">Please enter a valid email address</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="contactPhone" class="form-label">Phone Number <span class="text-danger">*</span></label>
+                                <input type="tel" class="form-control" id="contactPhone" name="phone" required>
+                                <div class="form-text">Please enter your complete phone number</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="contactMessage" class="form-label">Message <span class="text-danger">*</span></label>
+                                <textarea class="form-control" id="contactMessage" name="message" rows="5" maxlength="180" required></textarea>
+                                <div class="form-text">
+                                    <span id="charCount">0</span> / 180 characters
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="spamCheck" name="spamCheck">
+                                    <label class="form-check-label text-muted" for="spamCheck">
+                                        Please do not fill in this field.
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-paper-plane me-2"></i>Send Message
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Additional Information -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="alert alert-info">
+                            <h5 class="alert-heading">
+                                <i class="fas fa-info-circle me-2"></i>Additional Ways to Connect
+                            </h5>
+                            <p class="mb-2">You can also contact us through our main website:</p>
+                            <p class="mb-0">
+                                <a href="https://clarascienceacademy.com/contact-us/" target="_blank" class="btn btn-outline-info">
+                                    <i class="fas fa-external-link-alt me-2"></i>Visit Our Main Website
+                                </a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Add contact form functionality after the content is loaded
+            setTimeout(() => {
+                setupContactForm();
+            }, 100);
+        }
+        
+        function showPlaceholderModal(modal, page) {
+            const modalTitle = modal.querySelector('#pageModalLabel');
+            const modalBody = modal.querySelector('#modalBody');
+            
+            modalTitle.textContent = getPageTitle(page);
+            modalBody.innerHTML = `
+                <div class="text-center">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Content for "${getPageTitle(page)}" will be added here.
+                    </div>
+                    <p class="text-muted">This page is under construction. Please check back later for detailed information.</p>
+                </div>
+            `;
         }
         
         function getPageTitle(page) {
@@ -277,168 +423,6 @@
             return titles[page] || page;
         }
         
-        function getFAQContent() {
-            return `
-                <div class="row justify-content-center">
-                    <div class="col-lg-10">
-                        <div class="card">
-                            <div class="card-header bg-primary text-white">
-                                <h2 class="card-title mb-0">
-                                    <i class="fas fa-question-circle me-2"></i>Frequently Asked Questions
-                                </h2>
-                            </div>
-                            <div class="card-body">
-                                <div class="accordion" id="faqAccordion">
-                                    <!-- FAQ Items will be added here -->
-                                </div>
-                                
-                                <div class="mt-4 text-center">
-                                    <a href="{{ url_for('auth.home') }}" class="btn btn-primary me-2">
-                                        <i class="fas fa-home me-2"></i>Back to Home
-                                    </a>
-                                    <a href="#" data-page="contact-us" class="btn btn-outline-primary">
-                                        <i class="fas fa-envelope me-2"></i>Contact Us
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-        
-        function getContactUsContent() {
-            return `
-                <div class="row justify-content-center">
-                    <div class="col-lg-10">
-                        <div class="card">
-                            <div class="card-header bg-primary text-white">
-                                <h2 class="card-title mb-0">
-                                    <i class="fas fa-envelope me-2"></i>Contact Us
-                                </h2>
-                            </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    <!-- Contact Information -->
-                                    <div class="col-md-6 mb-4">
-                                        <h4 class="text-primary mb-3">
-                                            <i class="fas fa-map-marker-alt me-2"></i>Mailing Address
-                                        </h4>
-                                        <div class="contact-info">
-                                            <p class="mb-2">
-                                                <strong>Clara Science Academy</strong><br>
-                                                2812 East Bessemer Ave.<br>
-                                                Greensboro, NC 27405
-                                            </p>
-                                        </div>
-                                        
-                                        <h4 class="text-primary mb-3 mt-4">
-                                            <i class="fas fa-phone me-2"></i>Phone
-                                        </h4>
-                                        <div class="contact-info">
-                                            <p class="mb-2">
-                                                <strong>1-800-567-5110</strong>
-                                            </p>
-                                        </div>
-                                        
-                                        <h4 class="text-primary mb-3 mt-4">
-                                            <i class="fas fa-envelope me-2"></i>Email
-                                        </h4>
-                                        <div class="contact-info">
-                                            <p class="mb-2">
-                                                <strong>info@clarascienceacademy.com</strong>
-                                            </p>
-                                        </div>
-                                        
-                                        <div class="mt-4">
-                                            <h4 class="text-primary mb-3">
-                                                <i class="fas fa-clock me-2"></i>Office Hours
-                                            </h4>
-                                            <p class="mb-1"><strong>Monday - Friday:</strong> 8:00 AM - 5:00 PM</p>
-                                            <p class="mb-0"><strong>Saturday:</strong> 9:00 AM - 1:00 PM</p>
-                                            <p class="text-muted small mt-2">Closed on Sundays and major holidays</p>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Contact Form -->
-                                    <div class="col-md-6 mb-4">
-                                        <h4 class="text-primary mb-3">
-                                            <i class="fas fa-paper-plane me-2"></i>Send us a Message
-                                        </h4>
-                                        <form id="contactForm">
-                                            <div class="mb-3">
-                                                <label for="contactName" class="form-label">Name <span class="text-danger">*</span></label>
-                                                <input type="text" class="form-control" id="contactName" name="name" required>
-                                                <div class="form-text">Please enter your full name</div>
-                                            </div>
-                                            
-                                            <div class="mb-3">
-                                                <label for="contactEmail" class="form-label">Email Address <span class="text-danger">*</span></label>
-                                                <input type="email" class="form-control" id="contactEmail" name="email" required>
-                                                <div class="form-text">Please enter a valid email address</div>
-                                            </div>
-                                            
-                                            <div class="mb-3">
-                                                <label for="contactPhone" class="form-label">Phone Number <span class="text-danger">*</span></label>
-                                                <input type="tel" class="form-control" id="contactPhone" name="phone" required>
-                                                <div class="form-text">Please enter your complete phone number</div>
-                                            </div>
-                                            
-                                            <div class="mb-3">
-                                                <label for="contactMessage" class="form-label">Message <span class="text-danger">*</span></label>
-                                                <textarea class="form-control" id="contactMessage" name="message" rows="5" maxlength="180" required></textarea>
-                                                <div class="form-text">
-                                                    <span id="charCount">0</span> / 180 characters
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="mb-3">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" id="spamCheck" name="spamCheck">
-                                                    <label class="form-check-label text-muted" for="spamCheck">
-                                                        Please do not fill in this field.
-                                                    </label>
-                                                </div>
-                                            </div>
-                                            
-                                            <button type="submit" class="btn btn-primary w-100">
-                                                <i class="fas fa-paper-plane me-2"></i>Send Message
-                                            </button>
-                                        </form>
-                                    </div>
-                                </div>
-                                
-                                <!-- Additional Information -->
-                                <div class="row mt-4">
-                                    <div class="col-12">
-                                        <div class="alert alert-info">
-                                            <h5 class="alert-heading">
-                                                <i class="fas fa-info-circle me-2"></i>Additional Ways to Connect
-                                            </h5>
-                                            <p class="mb-2">You can also contact us through our main website:</p>
-                                            <p class="mb-0">
-                                                <a href="https://clarascienceacademy.com/contact-us/" target="_blank" class="btn btn-outline-info">
-                                                    <i class="fas fa-external-link-alt me-2"></i>Visit Our Main Website
-                                                </a>
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="mt-4 text-center">
-                                    <a href="{{ url_for('auth.home') }}" class="btn btn-primary me-2">
-                                        <i class="fas fa-home me-2"></i>Back to Home
-                                    </a>
-                                    <a href="#" data-page="faq" class="btn btn-outline-primary">
-                                        <i class="fas fa-question-circle me-2"></i>View FAQ
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
         
         function addFAQItems() {
             const accordion = document.getElementById('faqAccordion');

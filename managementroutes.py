@@ -1719,8 +1719,8 @@ def assignments_and_grades():
                         'graded_count': len(graded_grades),
                         'average_score': round(total_score / len(graded_grades), 1) if graded_grades else 0
                     }
-        except ValueError:
-            pass
+            except ValueError:
+                pass
     
         return render_template('management/assignments_and_grades.html',
                              accessible_classes=accessible_classes,

@@ -1230,94 +1230,100 @@ def update_assignment_statuses():
 @teacher_required
 def assignments_and_grades():
     """Combined view of assignments and grades for teachers"""
-    teacher = get_teacher_or_admin()
-    
-    # Update assignment statuses before displaying (only for Active assignments past due)
-    update_assignment_statuses()
-    
-    # Get filter and sort parameters
-    class_filter = request.args.get('class_id', '')
-    sort_by = request.args.get('sort', 'due_date')  # 'due_date' or 'title'
-    sort_order = request.args.get('order', 'desc')  # 'asc' or 'desc'
-    view_mode = request.args.get('view', 'assignments')  # 'assignments' or 'grades'
-    
-    # Directors see all classes and assignments, teachers only see their assigned ones
-    if current_user.role == 'Director':
-        classes = Class.query.all()
-        assignments_query = Assignment.query
-    elif teacher is not None:
-        classes = Class.query.filter_by(teacher_id=teacher.id).all()
-        class_ids = [c.id for c in classes]
-        assignments_query = Assignment.query.filter(Assignment.class_id.in_(class_ids))
-    else:
-        # Teacher user without teacher_staff_id - show empty results
-        classes = []
-        assignments_query = Assignment.query.filter(Assignment.id == -1)  # No results
-    
-    # Apply class filter if specified
-    if class_filter:
-        try:
-            class_id = int(class_filter)
-            assignments_query = assignments_query.filter(Assignment.class_id == class_id)
-        except ValueError:
-            pass
-    
-    # Apply sorting
-    if sort_by == 'title':
-        if sort_order == 'asc':
-            assignments_query = assignments_query.order_by(Assignment.title.asc())
+    try:
+        teacher = get_teacher_or_admin()
+        
+        # Update assignment statuses before displaying (only for Active assignments past due)
+        update_assignment_statuses()
+        
+        # Get filter and sort parameters with safe defaults
+        class_filter = request.args.get('class_id', '') or ''
+        sort_by = request.args.get('sort', 'due_date') or 'due_date'
+        sort_order = request.args.get('order', 'desc') or 'desc'
+        view_mode = request.args.get('view', 'assignments') or 'assignments'
+        
+        # Directors see all classes and assignments, teachers only see their assigned ones
+        if current_user.role == 'Director':
+            classes = Class.query.all()
+            assignments_query = Assignment.query
+        elif teacher is not None:
+            classes = Class.query.filter_by(teacher_id=teacher.id).all()
+            class_ids = [c.id for c in classes]
+            assignments_query = Assignment.query.filter(Assignment.class_id.in_(class_ids))
         else:
-            assignments_query = assignments_query.order_by(Assignment.title.desc())
-    else:  # due_date
-        if sort_order == 'asc':
-            assignments_query = assignments_query.order_by(Assignment.due_date.asc())
-        else:
-            assignments_query = assignments_query.order_by(Assignment.due_date.desc())
+            # Teacher user without teacher_staff_id - show empty results
+            classes = []
+            assignments_query = Assignment.query.filter(Assignment.id == -1)  # No results
+        
+        # Apply class filter if specified
+        if class_filter and class_filter.strip():
+            try:
+                class_id = int(class_filter)
+                assignments_query = assignments_query.filter(Assignment.class_id == class_id)
+            except ValueError:
+                pass
+        
+        # Apply sorting
+        if sort_by == 'title':
+            if sort_order == 'asc':
+                assignments_query = assignments_query.order_by(Assignment.title.asc())
+            else:
+                assignments_query = assignments_query.order_by(Assignment.title.desc())
+        else:  # due_date
+            if sort_order == 'asc':
+                assignments_query = assignments_query.order_by(Assignment.due_date.asc())
+            else:
+                assignments_query = assignments_query.order_by(Assignment.due_date.desc())
+        
+        assignments = assignments_query.all()
+        
+        # Get grade data for grades view
+        grade_data = {}
+        if view_mode == 'grades':
+            for assignment in assignments:
+                grades = Grade.query.filter_by(assignment_id=assignment.id).all()
+                
+                # Process grade data safely
+                graded_grades = []
+                total_score = 0
+                for g in grades:
+                    if g.grade_data is not None:
+                        try:
+                            # Handle both dict and JSON string cases
+                            if isinstance(g.grade_data, dict):
+                                grade_dict = g.grade_data
+                            else:
+                                import json
+                                grade_dict = json.loads(g.grade_data)
+                            
+                            if 'score' in grade_dict:
+                                graded_grades.append(grade_dict)
+                                total_score += grade_dict['score']
+                        except (json.JSONDecodeError, TypeError):
+                            # Skip invalid grade data
+                            continue
+                
+                grade_data[assignment.id] = {
+                    'grades': grades,
+                    'total_submissions': len(grades),
+                    'graded_count': len(graded_grades),
+                    'average_score': round(total_score / len(graded_grades), 1) if graded_grades else 0
+                }
     
-    assignments = assignments_query.all()
+        return render_template('teachers/assignments_and_grades.html', 
+                             assignments=assignments,
+                             classes=classes,
+                             class_filter=class_filter,
+                             sort_by=sort_by,
+                             sort_order=sort_order,
+                             view_mode=view_mode,
+                             grade_data=grade_data,
+                             teacher=teacher)
     
-    # Get grade data for grades view
-    grade_data = {}
-    if view_mode == 'grades':
-        for assignment in assignments:
-            grades = Grade.query.filter_by(assignment_id=assignment.id).all()
-            
-            # Process grade data safely
-            graded_grades = []
-            total_score = 0
-            for g in grades:
-                if g.grade_data is not None:
-                    try:
-                        # Handle both dict and JSON string cases
-                        if isinstance(g.grade_data, dict):
-                            grade_dict = g.grade_data
-                        else:
-                            import json
-                            grade_dict = json.loads(g.grade_data)
-                        
-                        if 'score' in grade_dict:
-                            graded_grades.append(grade_dict)
-                            total_score += grade_dict['score']
-                    except (json.JSONDecodeError, TypeError):
-                        # Skip invalid grade data
-                        continue
-            
-            grade_data[assignment.id] = {
-                'grades': grades,
-                'total_submissions': len(grades),
-                'graded_count': len(graded_grades),
-                'average_score': round(total_score / len(graded_grades), 1) if graded_grades else 0
-            }
-    
-    return render_template('teachers/assignments_and_grades.html', 
-                         assignments=assignments,
-                         classes=classes,
-                         class_filter=class_filter,
-                         sort_by=sort_by,
-                         sort_order=sort_order,
-                         view_mode=view_mode,
-                         grade_data=grade_data,
-                         teacher=teacher)
+    except Exception as e:
+        print(f"Error in teacher assignments_and_grades: {e}")
+        flash('Error loading assignments and grades. Please try again.', 'error')
+        return redirect(url_for('teacher.teacher_dashboard'))
 
 
 @teacher_blueprint.route('/assignments')

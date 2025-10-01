@@ -1,0 +1,718 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block title %}Student Jobs Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="bi bi-briefcase-fill me-2"></i>Student Jobs Management
+                </h1>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-primary" onclick="exportToSheets()">
+                        <i class="bi bi-file-earmark-spreadsheet me-1"></i>Export to Sheets
+                    </button>
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#inspectionModal">
+                        <i class="bi bi-clipboard-check me-1"></i>Conduct Inspection
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Point System Overview -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-success">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-star-fill me-2"></i>Cleaning Crew Point System
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-success mb-1">100</h4>
+                                <small class="text-muted">Starting Points</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-warning mb-1">60</h4>
+                                <small class="text-muted">Re-do Threshold</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-info mb-1">+15</h4>
+                                <small class="text-muted">Max Bonus Points</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-danger mb-1">-10/-5/-2</h4>
+                                <small class="text-muted">Deduction Levels</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Team 1 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-people-fill me-2"></i>Team 1 - 4 Classrooms & Hallway Trash
+                    </h5>
+                    <div class="d-flex align-items-center">
+                        <span class="badge bg-success me-2" id="team1Score">100 Points</span>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="toggleTeam1()">
+                            <i class="bi bi-chevron-down" id="team1Chevron"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body" id="team1Content">
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <h6><i class="bi bi-person-check me-1"></i>Team Members:</h6>
+                            <p class="mb-2">Mason Jackson, Julien John, Nathan Cassidy, Brendan Tinsley, Ester Hope, Ty'mier Crandell, Miracle Heuston, Emack Akili</p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <button class="btn btn-sm btn-success" onclick="recordInspection('team1')">
+                                <i class="bi bi-clipboard-check me-1"></i>Record Inspection
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="card border-primary">
+                                <div class="card-header bg-primary text-white">
+                                    <h6 class="mb-0"><i class="bi bi-broom me-1"></i>Sweeping Team</h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="mb-2"><strong>Members:</strong> Julien John, Ester Hope, & Mason Jackson</p>
+                                    <p class="mb-0"><strong>Task:</strong> Sweep all four classrooms.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card border-info">
+                                <div class="card-header bg-info text-white">
+                                    <h6 class="mb-0"><i class="bi bi-spray me-1"></i>Wipe Down Team</h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="mb-2"><strong>Members:</strong> Nathan Cassidy & Brendan Tinsley</p>
+                                    <p class="mb-0"><strong>Task:</strong> Wipe down all tables and desks in the four classrooms.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card border-warning">
+                                <div class="card-header bg-warning text-dark">
+                                    <h6 class="mb-0"><i class="bi bi-trash me-1"></i>Trash Team</h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="mb-2"><strong>Members:</strong> Ty'mier Crandell, Miracle Heuston, & Emack Akili</p>
+                                    <p class="mb-0"><strong>Task:</strong> Replace liners in all four classroom trash cans and all hallway trash cans.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Team 2 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-people-fill me-2"></i>Team 2 - 4 Classrooms & Bathrooms
+                    </h5>
+                    <div class="d-flex align-items-center">
+                        <span class="badge bg-success me-2" id="team2Score">100 Points</span>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="toggleTeam2()">
+                            <i class="bi bi-chevron-down" id="team2Chevron"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body" id="team2Content">
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <h6><i class="bi bi-person-check me-1"></i>Team Members:</h6>
+                            <p class="mb-2">Mason Jackson, Julien Amani, Kya Patterson, Jayden Hope, Elimine, Josue Perez, Zatianna Bennett, Mwajuma Abubakari</p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <button class="btn btn-sm btn-success" onclick="recordInspection('team2')">
+                                <i class="bi bi-clipboard-check me-1"></i>Record Inspection
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="card border-primary">
+                                <div class="card-header bg-primary text-white">
+                                    <h6 class="mb-0"><i class="bi bi-broom me-1"></i>Sweeping Team</h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="mb-2"><strong>Members:</strong> Julien Amani & Elimine</p>
+                                    <p class="mb-0"><strong>Task:</strong> Sweep all four classrooms.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card border-info">
+                                <div class="card-header bg-info text-white">
+                                    <h6 class="mb-0"><i class="bi bi-spray me-1"></i>Wipe Down Team</h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="mb-2"><strong>Members:</strong> Kya Patterson & Jayden Hope</p>
+                                    <p class="mb-0"><strong>Task:</strong> Wipe down all tables and desks in the four classrooms.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card border-warning">
+                                <div class="card-header bg-warning text-dark">
+                                    <h6 class="mb-0"><i class="bi bi-door-open me-1"></i>Bathroom Team</h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="mb-2"><strong>Members:</strong> Josue Perez, Zatianna Bennett, Mwajuma Abubakari, & Mason Jackson</p>
+                                    <p class="mb-0"><strong>Task:</strong> Sweep both Male and Female restrooms, replace trash cans, and restock all paper products and soap.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Inspection History -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-clock-history me-2"></i>Inspection History
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Team</th>
+                                    <th>Score</th>
+                                    <th>Deductions</th>
+                                    <th>Bonuses</th>
+                                    <th>Status</th>
+                                    <th>Inspector</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inspectionHistory">
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted">No inspections recorded yet</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Inspection Modal -->
+<div class="modal fade" id="inspectionModal" tabindex="-1" aria-labelledby="inspectionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="inspectionModalLabel">
+                    <i class="bi bi-clipboard-check me-2"></i>Conduct Cleaning Crew Inspection
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="inspectionForm">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="teamSelect" class="form-label">Select Team</label>
+                            <select class="form-select" id="teamSelect" required>
+                                <option value="">Choose a team...</option>
+                                <option value="team1">Team 1 - 4 Classrooms & Hallway Trash</option>
+                                <option value="team2">Team 2 - 4 Classrooms & Bathrooms</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="inspectionDate" class="form-label">Inspection Date</label>
+                            <input type="date" class="form-control" id="inspectionDate" required>
+                        </div>
+                    </div>
+
+                    <!-- Major Deductions (-10 Points) -->
+                    <div class="card mb-3 border-danger">
+                        <div class="card-header bg-danger text-white">
+                            <h6 class="mb-0"><i class="bi bi-exclamation-triangle me-1"></i>Major Deductions (-10 Points each)</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="bathroomNotRestocked">
+                                        <label class="form-check-label" for="bathroomNotRestocked">
+                                            Bathrooms not restocked (no paper towels or soap)
+                                        </label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="trashCanLeftFull">
+                                        <label class="form-check-label" for="trashCanLeftFull">
+                                            Trash can left full (liner not replaced)
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="floorNotSwept">
+                                        <label class="form-check-label" for="floorNotSwept">
+                                            Classroom floor not swept (large debris remains)
+                                        </label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="materialsLeftOut">
+                                        <label class="form-check-label" for="materialsLeftOut">
+                                            Cleaning materials left out in area
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Moderate Deductions (-5 Points) -->
+                    <div class="card mb-3 border-warning">
+                        <div class="card-header bg-warning text-dark">
+                            <h6 class="mb-0"><i class="bi bi-exclamation-circle me-1"></i>Moderate Deductions (-5 Points each)</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="tablesMissed">
+                                        <label class="form-check-label" for="tablesMissed">
+                                            Tables/desks missed or left sticky/dirty
+                                        </label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="classroomTrashFull">
+                                        <label class="form-check-label" for="classroomTrashFull">
+                                            Classroom trash can left full
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="bathroomFloorPoor">
+                                        <label class="form-check-label" for="bathroomFloorPoor">
+                                            Bathroom floor swept poorly (debris in corners)
+                                        </label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="notFinishedOnTime">
+                                        <label class="form-check-label" for="notFinishedOnTime">
+                                            Team not finished by deadline
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Minor Deductions (-2 Points) -->
+                    <div class="card mb-3 border-info">
+                        <div class="card-header bg-info text-white">
+                            <h6 class="mb-0"><i class="bi bi-info-circle me-1"></i>Minor Deductions (-2 Points each)</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="smallDebrisLeft">
+                                        <label class="form-check-label" for="smallDebrisLeft">
+                                            Small debris left in classroom flow areas
+                                        </label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="trashSpilled">
+                                        <label class="form-check-label" for="trashSpilled">
+                                            Trash spilled near cans
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="dispensersHalfFilled">
+                                        <label class="form-check-label" for="dispensersHalfFilled">
+                                            Paper towel/soap dispensers only half-filled
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bonus Points -->
+                    <div class="card mb-3 border-success">
+                        <div class="card-header bg-success text-white">
+                            <h6 class="mb-0"><i class="bi bi-star-fill me-1"></i>Bonus Points (+15 Max)</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="exceptionalFinish">
+                                        <label class="form-check-label" for="exceptionalFinish">
+                                            Exceptional finish - completely spotless (+5 points)
+                                        </label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="speedEfficiency">
+                                        <label class="form-check-label" for="speedEfficiency">
+                                            Finished 15 minutes early (+5 points)
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="goingAboveBeyond">
+                                        <label class="form-check-label" for="goingAboveBeyond">
+                                            Cleaned unassigned area (+3 points)
+                                        </label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="teamworkAward">
+                                        <label class="form-check-label" for="teamworkAward">
+                                            Exceptional teamwork observed (+2 points)
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label for="inspectorNotes" class="form-label">Inspector Notes</label>
+                            <textarea class="form-control" id="inspectorNotes" rows="3" placeholder="Additional comments about the inspection..."></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="inspectorName" class="form-label">Inspector Name</label>
+                            <input type="text" class="form-control" id="inspectorName" required placeholder="Your name">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="submitInspection()">
+                    <i class="bi bi-check-circle me-1"></i>Submit Inspection
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Team toggle functionality
+function toggleTeam1() {
+    const content = document.getElementById('team1Content');
+    const chevron = document.getElementById('team1Chevron');
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        chevron.classList.remove('bi-chevron-right');
+        chevron.classList.add('bi-chevron-down');
+    } else {
+        content.style.display = 'none';
+        chevron.classList.remove('bi-chevron-down');
+        chevron.classList.add('bi-chevron-right');
+    }
+}
+
+function toggleTeam2() {
+    const content = document.getElementById('team2Content');
+    const chevron = document.getElementById('team2Chevron');
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        chevron.classList.remove('bi-chevron-right');
+        chevron.classList.add('bi-chevron-down');
+    } else {
+        content.style.display = 'none';
+        chevron.classList.remove('bi-chevron-down');
+        chevron.classList.add('bi-chevron-right');
+    }
+}
+
+// Set today's date as default
+document.addEventListener('DOMContentLoaded', function() {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('inspectionDate').value = today;
+});
+
+// Calculate and display score
+function calculateScore() {
+    const team = document.getElementById('teamSelect').value;
+    if (!team) return;
+    
+    let score = 100;
+    
+    // Major deductions (-10 points each)
+    const majorDeductions = [
+        'bathroomNotRestocked', 'trashCanLeftFull', 'floorNotSwept', 'materialsLeftOut'
+    ];
+    majorDeductions.forEach(id => {
+        if (document.getElementById(id).checked) {
+            score -= 10;
+        }
+    });
+    
+    // Moderate deductions (-5 points each)
+    const moderateDeductions = [
+        'tablesMissed', 'classroomTrashFull', 'bathroomFloorPoor', 'notFinishedOnTime'
+    ];
+    moderateDeductions.forEach(id => {
+        if (document.getElementById(id).checked) {
+            score -= 5;
+        }
+    });
+    
+    // Minor deductions (-2 points each)
+    const minorDeductions = [
+        'smallDebrisLeft', 'trashSpilled', 'dispensersHalfFilled'
+    ];
+    minorDeductions.forEach(id => {
+        if (document.getElementById(id).checked) {
+            score -= 2;
+        }
+    });
+    
+    // Bonus points (+15 max)
+    let bonus = 0;
+    if (document.getElementById('exceptionalFinish').checked) bonus += 5;
+    if (document.getElementById('speedEfficiency').checked) bonus += 5;
+    if (document.getElementById('goingAboveBeyond').checked) bonus += 3;
+    if (document.getElementById('teamworkAward').checked) bonus += 2;
+    
+    score += bonus;
+    
+    // Display calculated score
+    const scoreDisplay = document.getElementById('calculatedScore');
+    if (scoreDisplay) {
+        scoreDisplay.textContent = `${score} Points`;
+        scoreDisplay.className = score <= 60 ? 'text-danger' : score < 80 ? 'text-warning' : 'text-success';
+    }
+}
+
+// Submit inspection
+function submitInspection() {
+    const team = document.getElementById('teamSelect').value;
+    const date = document.getElementById('inspectionDate').value;
+    const inspector = document.getElementById('inspectorName').value;
+    const notes = document.getElementById('inspectorNotes').value;
+    
+    if (!team || !date || !inspector) {
+        alert('Please fill in all required fields.');
+        return;
+    }
+    
+    // Calculate final score
+    let score = 100;
+    let deductions = 0;
+    let bonuses = 0;
+    
+    // Major deductions
+    const majorDeductions = [
+        'bathroomNotRestocked', 'trashCanLeftFull', 'floorNotSwept', 'materialsLeftOut'
+    ];
+    majorDeductions.forEach(id => {
+        if (document.getElementById(id).checked) {
+            score -= 10;
+            deductions += 10;
+        }
+    });
+    
+    // Moderate deductions
+    const moderateDeductions = [
+        'tablesMissed', 'classroomTrashFull', 'bathroomFloorPoor', 'notFinishedOnTime'
+    ];
+    moderateDeductions.forEach(id => {
+        if (document.getElementById(id).checked) {
+            score -= 5;
+            deductions += 5;
+        }
+    });
+    
+    // Minor deductions
+    const minorDeductions = [
+        'smallDebrisLeft', 'trashSpilled', 'dispensersHalfFilled'
+    ];
+    minorDeductions.forEach(id => {
+        if (document.getElementById(id).checked) {
+            score -= 2;
+            deductions += 2;
+        }
+    });
+    
+    // Bonus points
+    if (document.getElementById('exceptionalFinish').checked) bonuses += 5;
+    if (document.getElementById('speedEfficiency').checked) bonuses += 5;
+    if (document.getElementById('goingAboveBeyond').checked) bonuses += 3;
+    if (document.getElementById('teamworkAward').checked) bonuses += 2;
+    
+    score += bonuses;
+    
+    // Update team score display
+    const teamScoreElement = document.getElementById(`${team}Score`);
+    const teamName = team === 'team1' ? 'Team 1' : 'Team 2';
+    
+    teamScoreElement.textContent = `${score} Points`;
+    teamScoreElement.className = score <= 60 ? 'badge bg-danger' : score < 80 ? 'badge bg-warning' : 'badge bg-success';
+    
+    // Add to inspection history
+    addInspectionToHistory(date, teamName, score, deductions, bonuses, score <= 60 ? 'Failed - Re-do Required' : 'Passed', inspector);
+    
+    // Show result alert
+    const status = score <= 60 ? 'FAILED' : 'PASSED';
+    const alertType = score <= 60 ? 'danger' : 'success';
+    const message = score <= 60 ? 
+        `${teamName} scored ${score} points and must redo cleaning next week.` :
+        `${teamName} scored ${score} points and passed inspection.`;
+    
+    showAlert(message, alertType);
+    
+    // Close modal and reset form
+    const modal = bootstrap.Modal.getInstance(document.getElementById('inspectionModal'));
+    modal.hide();
+    document.getElementById('inspectionForm').reset();
+    document.getElementById('inspectionDate').value = new Date().toISOString().split('T')[0];
+}
+
+// Add inspection to history table
+function addInspectionToHistory(date, team, score, deductions, bonuses, status, inspector) {
+    const tbody = document.getElementById('inspectionHistory');
+    
+    // Remove "No inspections" row if it exists
+    const noDataRow = tbody.querySelector('td[colspan="7"]');
+    if (noDataRow) {
+        noDataRow.parentElement.remove();
+    }
+    
+    const row = document.createElement('tr');
+    row.innerHTML = `
+        <td>${date}</td>
+        <td>${team}</td>
+        <td><span class="badge ${score <= 60 ? 'bg-danger' : score < 80 ? 'bg-warning' : 'bg-success'}">${score}</span></td>
+        <td>${deductions}</td>
+        <td>${bonuses}</td>
+        <td><span class="badge ${status.includes('Failed') ? 'bg-danger' : 'bg-success'}">${status}</span></td>
+        <td>${inspector}</td>
+    `;
+    
+    tbody.insertBefore(row, tbody.firstChild);
+}
+
+// Show alert message
+function showAlert(message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.querySelector('.container-fluid').insertBefore(alertDiv, document.querySelector('.row'));
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+        if (alertDiv.parentElement) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+
+// Export to sheets functionality
+function exportToSheets() {
+    // This would integrate with Google Sheets API in a real implementation
+    alert('Export to Sheets functionality would be implemented here. This would send the current team data and inspection history to a Google Sheet.');
+}
+
+// Record inspection button functionality
+function recordInspection(team) {
+    document.getElementById('teamSelect').value = team;
+    const modal = new bootstrap.Modal(document.getElementById('inspectionModal'));
+    modal.show();
+}
+
+// Add event listeners for score calculation
+document.addEventListener('DOMContentLoaded', function() {
+    const checkboxes = document.querySelectorAll('#inspectionModal input[type="checkbox"]');
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', calculateScore);
+    });
+});
+</script>
+
+<style>
+.card-header {
+    font-weight: 600;
+}
+
+.badge {
+    font-size: 0.875rem;
+}
+
+.table th {
+    background-color: #f8f9fa;
+    border-top: none;
+}
+
+.form-check-label {
+    font-size: 0.9rem;
+}
+
+.btn-group .btn {
+    border-radius: 0.375rem;
+}
+
+.btn-group .btn:not(:last-child) {
+    margin-right: 0.5rem;
+}
+
+@media (max-width: 768px) {
+    .card-body .row > div {
+        margin-bottom: 1rem;
+    }
+    
+    .btn-group {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .btn-group .btn {
+        margin-bottom: 0.5rem;
+        margin-right: 0;
+    }
+}
+</style>
+{% endblock %}

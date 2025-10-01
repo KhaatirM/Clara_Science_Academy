@@ -4761,6 +4761,13 @@ def download_resource(filename):
         flash('Error downloading file. Please try again.', 'error')
         return redirect(url_for('management.resources'))
 
+@management_blueprint.route('/student-jobs')
+@login_required
+@management_required
+def student_jobs():
+    """Student Jobs management page for cleaning crews"""
+    return render_template('management/student_jobs.html')
+
 # ===== GROUP MANAGEMENT ROUTES FOR ADMINISTRATORS =====
 
 @management_blueprint.route('/class/<int:class_id>/groups')

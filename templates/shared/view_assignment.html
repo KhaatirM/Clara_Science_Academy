@@ -64,9 +64,9 @@
         </div>
     </div>
 
-    <div class="row g-4">
+    <div class="row g-4 justify-content-center">
         <!-- Assignment Details Card -->
-        <div class="col-12 col-lg-8">
+        <div class="col-12 col-lg-8 col-xl-9">
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-white border-0 pb-0">
                     <h5 class="mb-0 text-dark">
@@ -85,7 +85,7 @@
                     
                     <!-- Key Information Grid -->
                     <div class="row g-4 mb-4">
-                        <div class="col-12 col-md-6">
+                        <div class="col-12 col-md-6 col-lg-4">
                             <div class="d-flex align-items-center mb-3">
                                 <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-3">
                                     <i class="bi bi-calendar-event text-primary"></i>
@@ -120,7 +120,7 @@
                             {% endif %}
                         </div>
                         
-                        <div class="col-12 col-md-6">
+                        <div class="col-12 col-md-6 col-lg-4">
                             <div class="d-flex align-items-center mb-3">
                                 <div class="bg-info bg-opacity-10 rounded-circle p-2 me-3">
                                     <i class="bi bi-calendar-week text-info"></i>
@@ -133,7 +133,7 @@
                         </div>
                         
                         {% if assignment.points %}
-                        <div class="col-12 col-md-6">
+                        <div class="col-12 col-md-6 col-lg-4">
                             <div class="d-flex align-items-center mb-3">
                                 <div class="bg-warning bg-opacity-10 rounded-circle p-2 me-3">
                                     <i class="bi bi-star text-warning"></i>
@@ -147,7 +147,7 @@
                         {% endif %}
                         
                         {% if assignment.attachment_filename %}
-                        <div class="col-12 col-md-6">
+                        <div class="col-12 col-md-6 col-lg-4">
                             <div class="d-flex align-items-center mb-3">
                                 <div class="bg-success bg-opacity-10 rounded-circle p-2 me-3">
                                     <i class="bi bi-paperclip text-success"></i>
@@ -241,7 +241,7 @@
         </div>
 
         <!-- Enhanced Sidebar -->
-        <div class="col-12 col-lg-4">
+        <div class="col-12 col-lg-4 col-xl-3">
             <!-- Class Information Card -->
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-header bg-white border-0 pb-0">
@@ -318,7 +318,7 @@
                 </div>
                 <div class="card-body p-4">
                     <div class="row g-3">
-                        <div class="col-6">
+                        <div class="col-12 col-sm-6">
                             <div class="text-center">
                                 <div class="bg-success bg-opacity-10 rounded-circle p-3 mx-auto mb-2" style="width: 60px; height: 60px;">
                                     <i class="bi bi-file-earmark-check text-success fs-4"></i>
@@ -327,7 +327,7 @@
                                 <p class="text-muted mb-0 small">Submissions</p>
                             </div>
                         </div>
-                        <div class="col-6">
+                        <div class="col-12 col-sm-6">
                             <div class="text-center">
                                 <div class="bg-warning bg-opacity-10 rounded-circle p-3 mx-auto mb-2" style="width: 60px; height: 60px;">
                                     <i class="bi bi-star text-warning fs-4"></i>
@@ -427,6 +427,46 @@
 /* Enhanced styling for the view assignment page */
 .bg-gradient-primary {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* Center the container and make better use of space */
+.container-fluid {
+    margin: 0 auto;
+    padding-left: 2rem;
+    padding-right: 2rem;
+}
+
+/* Ensure proper spacing and centering */
+.row {
+    justify-content: center;
+}
+
+/* Better responsive breakpoints */
+@media (min-width: 1200px) {
+    .container-fluid {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding-left: 3rem;
+        padding-right: 3rem;
+    }
+}
+
+@media (min-width: 1400px) {
+    .container-fluid {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding-left: 4rem;
+        padding-right: 4rem;
+    }
+}
+
+@media (min-width: 1600px) {
+    .container-fluid {
+        max-width: 1600px;
+        margin: 0 auto;
+        padding-left: 5rem;
+        padding-right: 5rem;
+    }
 }
 
 .card {

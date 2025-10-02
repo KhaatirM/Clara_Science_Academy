@@ -305,6 +305,26 @@
                                         <i class="fas fa-edit me-1"></i>Grade
                                     </button>
                                     {% endif %}
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button class="btn btn-outline-secondary" onclick="editAssignment({{ assignment.id }})" title="Edit Assignment">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-outline-info" onclick="grantExtensions({{ assignment.id }})" title="Grant Extensions">
+                                            <i class="fas fa-clock"></i>
+                                        </button>
+                                        {% if assignment.status == 'Active' %}
+                                        <button class="btn btn-outline-warning" onclick="changeAssignmentStatus({{ assignment.id }}, 'Inactive')" title="Deactivate">
+                                            <i class="fas fa-pause"></i>
+                                        </button>
+                                        {% elif assignment.status == 'Inactive' %}
+                                        <button class="btn btn-outline-success" onclick="changeAssignmentStatus({{ assignment.id }}, 'Active')" title="Activate">
+                                            <i class="fas fa-play"></i>
+                                        </button>
+                                        {% endif %}
+                                        <button class="btn btn-outline-danger" onclick="removeAssignment({{ assignment.id }})" title="Remove Assignment">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -371,12 +391,30 @@
                                             {% endif %}
                                         </td>
                                         <td>
-                                            <div class="btn-group btn-group-sm">
-                                                <button class="btn btn-outline-primary" onclick="gradeAssignment({{ assignment.id }})">
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <button class="btn btn-outline-primary" onclick="viewAssignment({{ assignment.id }})" title="View Assignment">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                                <button class="btn btn-outline-success" onclick="gradeAssignment({{ assignment.id }})" title="Grade Assignment">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
-                                                <button class="btn btn-outline-info" onclick="viewGrades({{ assignment.id }})">
-                                                    <i class="fas fa-eye"></i>
+                                                <button class="btn btn-outline-secondary" onclick="editAssignment({{ assignment.id }})" title="Edit Assignment">
+                                                    <i class="fas fa-cog"></i>
+                                                </button>
+                                                <button class="btn btn-outline-info" onclick="grantExtensions({{ assignment.id }})" title="Grant Extensions">
+                                                    <i class="fas fa-clock"></i>
+                                                </button>
+                                                {% if assignment.status == 'Active' %}
+                                                <button class="btn btn-outline-warning" onclick="changeAssignmentStatus({{ assignment.id }}, 'Inactive')" title="Deactivate">
+                                                    <i class="fas fa-pause"></i>
+                                                </button>
+                                                {% elif assignment.status == 'Inactive' %}
+                                                <button class="btn btn-outline-success" onclick="changeAssignmentStatus({{ assignment.id }}, 'Active')" title="Activate">
+                                                    <i class="fas fa-play"></i>
+                                                </button>
+                                                {% endif %}
+                                                <button class="btn btn-outline-danger" onclick="removeAssignment({{ assignment.id }})" title="Remove Assignment">
+                                                    <i class="fas fa-trash"></i>
                                                 </button>
                                             </div>
                                         </td>
@@ -489,6 +527,54 @@
     box-shadow: 0 4px 15px rgba(0,0,0,0.2);
 }
 
+/* Button group styling */
+.btn-group .btn {
+    border-radius: 0;
+}
+
+.btn-group .btn:first-child {
+    border-top-left-radius: 0.375rem;
+    border-bottom-left-radius: 0.375rem;
+}
+
+.btn-group .btn:last-child {
+    border-top-right-radius: 0.375rem;
+    border-bottom-right-radius: 0.375rem;
+}
+
+.btn-group .btn:not(:first-child):not(:last-child) {
+    border-radius: 0;
+}
+
+/* Action button styling */
+.btn-group .btn {
+    min-width: 35px;
+    padding: 0.375rem 0.5rem;
+}
+
+.btn-group .btn i {
+    font-size: 0.875rem;
+}
+
+/* Status-specific button colors */
+.btn-outline-warning:hover {
+    background-color: #ffc107;
+    border-color: #ffc107;
+    color: #000;
+}
+
+.btn-outline-success:hover {
+    background-color: #198754;
+    border-color: #198754;
+    color: #fff;
+}
+
+.btn-outline-danger:hover {
+    background-color: #dc3545;
+    border-color: #dc3545;
+    color: #fff;
+}
+
 .view-content {
     animation: fadeIn 0.3s ease-in-out;
 }
@@ -528,23 +614,116 @@ function toggleView(view) {
 }
 
 function viewAssignment(assignmentId) {
-    // This would open assignment details
-    alert('View assignment functionality would be implemented here.');
+    // View assignment details
+    if (assignmentId && assignmentId !== '') {
+        window.location.href = `/management/view-assignment/${assignmentId}`;
+    } else {
+        console.error('Invalid assignment ID:', assignmentId);
+    }
 }
 
 function gradeAssignment(assignmentId) {
-    // This would open grading interface
+    // Open grading interface
     if (assignmentId && assignmentId !== '') {
-        window.location.href = `/teacher/grade/assignment/${assignmentId}`;
+        window.location.href = `/management/grade/assignment/${assignmentId}`;
     } else {
         console.error('Invalid assignment ID:', assignmentId);
     }
 }
 
 function viewGrades(assignmentId) {
-    // This would open detailed grades view
+    // Open detailed grades view
     if (assignmentId && assignmentId !== '') {
-        window.location.href = `/teacher/grade/assignment/${assignmentId}`;
+        window.location.href = `/management/grade/assignment/${assignmentId}`;
+    } else {
+        console.error('Invalid assignment ID:', assignmentId);
+    }
+}
+
+function editAssignment(assignmentId) {
+    // Open assignment editing interface
+    if (assignmentId && assignmentId !== '') {
+        window.location.href = `/management/edit-assignment/${assignmentId}`;
+    } else {
+        console.error('Invalid assignment ID:', assignmentId);
+    }
+}
+
+function changeAssignmentStatus(assignmentId, newStatus) {
+    // Change assignment status via AJAX
+    if (assignmentId && assignmentId !== '') {
+        // Get CSRF token
+        const csrfToken = document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || 
+                         document.querySelector('input[name=csrf_token]')?.value || '';
+        
+        // Create form data
+        const formData = new FormData();
+        formData.append('status', newStatus);
+        formData.append('csrf_token', csrfToken);
+        
+        fetch(`/management/assignment/change-status/${assignmentId}`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Reload the page to show updated status
+                window.location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while updating the assignment status.');
+        });
+    } else {
+        console.error('Invalid assignment ID:', assignmentId);
+    }
+}
+
+function removeAssignment(assignmentId) {
+    // Remove assignment with confirmation
+    if (assignmentId && assignmentId !== '') {
+        if (confirm('Are you sure you want to remove this assignment? This action cannot be undone.')) {
+            // Get CSRF token
+            const csrfToken = document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || 
+                             document.querySelector('input[name=csrf_token]')?.value || '';
+            
+            // Create form data
+            const formData = new FormData();
+            formData.append('csrf_token', csrfToken);
+            
+            fetch(`/management/remove-assignment/${assignmentId}`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Reload the page to show updated list
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while removing the assignment.');
+            });
+        }
+    } else {
+        console.error('Invalid assignment ID:', assignmentId);
+    }
+}
+
+function grantExtensions(assignmentId) {
+    // Open extension granting interface
+    if (assignmentId && assignmentId !== '') {
+        // This would open a modal or redirect to extension page
+        // For now, we'll redirect to the assignment view where extensions can be managed
+        window.location.href = `/management/view-assignment/${assignmentId}`;
     } else {
         console.error('Invalid assignment ID:', assignmentId);
     }
@@ -552,7 +731,7 @@ function viewGrades(assignmentId) {
 
 function createAssignment() {
     // Redirect to assignment creation
-    window.location.href = "{{ url_for('teacher.assignment_type_selector') }}";
+    window.location.href = "{{ url_for('management.assignment_type_selector') }}";
 }
 
 // Initialize view based on URL parameter

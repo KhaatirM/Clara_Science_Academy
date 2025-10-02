@@ -2582,65 +2582,65 @@ html, body {
 /* ===== VIEW ASSIGNMENT PAGE STYLES ===== */
 
 /* Enhanced styling for the view assignment page */
-.bg-gradient-primary {
+.view-assignment .bg-gradient-primary {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
-/* Center the container and make better use of space */
-.container-fluid {
+/* Center the container and make better use of space - ONLY for view assignment page */
+.view-assignment .container-fluid {
     margin: 0 auto;
     padding-left: 1rem;
     padding-right: 1rem;
     max-width: 1400px;
 }
 
-/* Ensure proper spacing and centering */
-.row {
+/* Ensure proper spacing and centering - ONLY for view assignment page */
+.view-assignment .row {
     margin: 0;
     justify-content: center;
 }
 
-/* Better layout for different screen sizes */
+/* Better layout for different screen sizes - ONLY for view assignment page */
 @media (min-width: 992px) and (max-width: 1199px) {
-    .container-fluid {
+    .view-assignment .container-fluid {
         max-width: 1000px;
         padding-left: 2rem;
         padding-right: 2rem;
     }
 }
 
-/* Better responsive breakpoints */
+/* Better responsive breakpoints - ONLY for view assignment page */
 @media (min-width: 1200px) {
-    .container-fluid {
+    .view-assignment .container-fluid {
         max-width: 1200px;
         margin: 0 auto;
         padding-left: 2rem;
         padding-right: 2rem;
     }
     
-    .row {
+    .view-assignment .row {
         max-width: 1200px;
         margin: 0 auto;
     }
 }
 
 @media (min-width: 1400px) {
-    .container-fluid {
+    .view-assignment .container-fluid {
         max-width: 1400px;
         margin: 0 auto;
         padding-left: 3rem;
         padding-right: 3rem;
     }
     
-    .row {
+    .view-assignment .row {
         max-width: 1400px;
         margin: 0 auto;
     }
 }
 
-/* Laptop-specific optimizations */
+/* Laptop-specific optimizations - ONLY for view assignment page */
 @media (min-width: 992px) and (max-width: 1199px) {
-    .col-lg-10 {
+    .view-assignment .col-lg-10 {
         max-width: 100%;
         flex: 0 0 100%;
     }

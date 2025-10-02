@@ -1,7 +1,7 @@
 {% extends "shared/dashboard_layout.html" %}
 
 {% block dashboard_content %}
-<div class="container-fluid px-2 px-md-4">
+<div class="container-fluid px-2 px-md-4 view-assignment">
     <!-- Enhanced Header with Gradient Background -->
     <div class="row mb-4">
         <div class="col-12">
@@ -64,9 +64,9 @@
         </div>
     </div>
 
-    <div class="row g-4">
+    <div class="row g-4 justify-content-center">
         <!-- Assignment Details Card -->
-        <div class="col-12 col-lg-8">
+        <div class="col-12 col-lg-8 col-xl-8">
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-white border-0 pb-0">
                     <h5 class="mb-0 text-dark">
@@ -241,7 +241,7 @@
         </div>
 
         <!-- Enhanced Sidebar -->
-        <div class="col-12 col-lg-4">
+        <div class="col-12 col-lg-10 col-xl-4">
             <!-- Class Information Card -->
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-header bg-white border-0 pb-0">
@@ -423,82 +423,6 @@
     </div>
 </div>
 
-<style>
-/* Enhanced styling for the view assignment page */
-.bg-gradient-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-/* Center the container and make better use of space */
-.container-fluid {
-    margin: 0 auto;
-    padding-left: 1rem;
-    padding-right: 1rem;
-}
-
-/* Ensure proper spacing */
-.row {
-    margin: 0;
-}
-
-/* Better responsive breakpoints */
-@media (min-width: 1200px) {
-    .container-fluid {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding-left: 2rem;
-        padding-right: 2rem;
-    }
-}
-
-@media (min-width: 1400px) {
-    .container-fluid {
-        max-width: 1400px;
-        margin: 0 auto;
-        padding-left: 3rem;
-        padding-right: 3rem;
-    }
-}
-
-.card {
-    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-}
-
-.card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
-}
-
-.btn {
-    transition: all 0.3s ease;
-}
-
-.btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-}
-
-.alert {
-    border-radius: 0.75rem;
-}
-
-.badge {
-    font-size: 0.875rem;
-    padding: 0.5rem 0.75rem;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .btn-lg {
-        font-size: 0.875rem;
-        padding: 0.5rem 1rem;
-    }
-    
-    .card-body {
-        padding: 1.5rem !important;
-    }
-}
-</style>
 
 <script>
 function confirmDelete(title, assignmentId) {

@@ -2578,3 +2578,110 @@ html, body {
     margin-bottom: 1rem;
   }
 }
+
+/* ===== VIEW ASSIGNMENT PAGE STYLES ===== */
+
+/* Enhanced styling for the view assignment page */
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* Center the container and make better use of space */
+.container-fluid {
+    margin: 0 auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    max-width: 1400px;
+}
+
+/* Ensure proper spacing and centering */
+.row {
+    margin: 0;
+    justify-content: center;
+}
+
+/* Better layout for different screen sizes */
+@media (min-width: 992px) and (max-width: 1199px) {
+    .container-fluid {
+        max-width: 1000px;
+        padding-left: 2rem;
+        padding-right: 2rem;
+    }
+}
+
+/* Better responsive breakpoints */
+@media (min-width: 1200px) {
+    .container-fluid {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding-left: 2rem;
+        padding-right: 2rem;
+    }
+    
+    .row {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+}
+
+@media (min-width: 1400px) {
+    .container-fluid {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding-left: 3rem;
+        padding-right: 3rem;
+    }
+    
+    .row {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+}
+
+/* Laptop-specific optimizations */
+@media (min-width: 992px) and (max-width: 1199px) {
+    .col-lg-10 {
+        max-width: 100%;
+        flex: 0 0 100%;
+    }
+}
+
+/* View Assignment Page Card Enhancements */
+.view-assignment .card {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.view-assignment .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+}
+
+.view-assignment .btn {
+    transition: all 0.3s ease;
+}
+
+.view-assignment .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.view-assignment .alert {
+    border-radius: 0.75rem;
+}
+
+.view-assignment .badge {
+    font-size: 0.875rem;
+    padding: 0.5rem 0.75rem;
+}
+
+/* Responsive adjustments for view assignment page */
+@media (max-width: 768px) {
+    .view-assignment .btn-lg {
+        font-size: 0.875rem;
+        padding: 0.5rem 1rem;
+    }
+    
+    .view-assignment .card-body {
+        padding: 1.5rem !important;
+    }
+}

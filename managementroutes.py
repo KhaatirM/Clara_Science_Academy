@@ -1630,6 +1630,27 @@ def assignments_and_grades():
         if not isinstance(view_mode, str):
             view_mode = 'assignments'
         
+        # If no class is selected, show the class selection interface (like /management/assignments)
+        if not class_filter or not class_filter.strip():
+            # Get assignment counts for each class (like the original assignments route)
+            class_assignments = {}
+            for class_obj in accessible_classes:
+                if class_obj and hasattr(class_obj, 'id') and class_obj.id is not None:
+                    assignment_count = Assignment.query.filter_by(class_id=class_obj.id).count()
+                    class_assignments[class_obj.id] = assignment_count
+            
+            return render_template('management/assignments_and_grades.html',
+                                 accessible_classes=accessible_classes,
+                                 class_assignments=class_assignments,
+                                 selected_class=None,
+                                 class_assignments_data=None,
+                                 assignment_grades=None,
+                                 sort_by=sort_by,
+                                 sort_order=sort_order,
+                                 view_mode=view_mode,
+                                 user_role=user_role,
+                                 show_class_selection=True)
+        
         # Get assignment counts and grade data for each class
         class_data = {}
         for class_obj in accessible_classes:
@@ -1761,7 +1782,8 @@ def assignments_and_grades():
                              sort_by=sort_by,
                              sort_order=sort_order,
                              view_mode=view_mode,
-                             user_role=user_role)
+                             user_role=user_role,
+                             show_class_selection=False)
     
     except Exception as e:
         print(f"Error in assignments_and_grades: {e}")

@@ -5,7 +5,7 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="mb-0">Grade Assignment: {{ assignment.title }}</h2>
         {% if current_user.role in ['Director', 'School Administrator'] %}
-            <a href="{{ url_for('management.assignments') }}" class="btn btn-outline-secondary">
+            <a href="{{ url_for('management.assignments_and_grades') }}" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left me-2"></i>Back to Assignments
             </a>
         {% else %}

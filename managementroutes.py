@@ -1513,7 +1513,7 @@ def create_quiz_assignment():
             
             db.session.commit()
             flash('Quiz assignment created successfully!', 'success')
-            return redirect(url_for('management.assignments'))
+            return redirect(url_for('management.assignments_and_grades'))
             
         except Exception as e:
             db.session.rollback()
@@ -1570,7 +1570,7 @@ def create_discussion_assignment():
             # This would require additional models for discussion settings, rubric criteria, etc.
             
             flash('Discussion assignment created successfully!', 'success')
-            return redirect(url_for('management.assignments'))
+            return redirect(url_for('management.assignments_and_grades'))
             
         except Exception as e:
             db.session.rollback()
@@ -1791,42 +1791,6 @@ def assignments_and_grades():
         return redirect(url_for('management.management_dashboard'))
 
 
-@management_blueprint.route('/assignments')
-@login_required
-@management_required
-def assignments():
-    """Class-based assignments view for School Administrators and Directors"""
-    from datetime import datetime
-    
-    # Get all classes
-    all_classes = Class.query.all()
-    
-    # Get current user's role and permissions
-    user_role = current_user.role
-    user_id = current_user.id
-    
-    # Determine which classes the user can access
-    if user_role == 'Director':
-        # Directors can see all classes
-        accessible_classes = all_classes
-    elif user_role == 'School Administrator':
-        # School Administrators can see all classes for assignment management
-        accessible_classes = all_classes
-    else:
-        # Fallback - should not happen due to @management_required decorator
-        accessible_classes = []
-    
-    # Get assignment counts for each class
-    class_assignments = {}
-    for class_obj in accessible_classes:
-        assignment_count = Assignment.query.filter_by(class_id=class_obj.id).count()
-        class_assignments[class_obj.id] = assignment_count
-    
-    return render_template('management/class_based_assignments.html',
-                         classes=accessible_classes,
-                         class_assignments=class_assignments,
-                         user_role=user_role,
-                         active_tab='assignments')
 
 @management_blueprint.route('/assignments/class/<int:class_id>')
 @login_required
@@ -3362,7 +3326,7 @@ def add_assignment():
         db.session.commit()
         
         flash('Assignment created successfully.', 'success')
-        return redirect(url_for('management.assignments'))
+        return redirect(url_for('management.assignments_and_grades'))
 
     # For GET request, get all classes for the dropdown and current quarter
     classes = Class.query.all()
@@ -3381,7 +3345,7 @@ def grade_assignment(assignment_id):
     # Authorization check - Directors and School Administrators can grade any assignment
     if current_user.role not in ['Director', 'School Administrator']:
         flash("You are not authorized to grade assignments.", "danger")
-        return redirect(url_for('management.assignments'))
+        return redirect(url_for('management.assignments_and_grades'))
     
     # Get only students enrolled in this specific class
     enrolled_students = db.session.query(Student).join(Enrollment).filter(
@@ -3391,7 +3355,7 @@ def grade_assignment(assignment_id):
     
     if not enrolled_students:
         flash("No students are currently enrolled in this class.", "warning")
-        return redirect(url_for('management.assignments'))
+        return redirect(url_for('management.assignments_and_grades'))
     
     students = enrolled_students
     
@@ -3485,7 +3449,7 @@ def edit_assignment(assignment_id):
     # Authorization check - Directors and School Administrators can edit any assignment
     if current_user.role not in ['Director', 'School Administrator']:
         flash("You are not authorized to edit this assignment.", "danger")
-        return redirect(url_for('management.assignments'))
+        return redirect(url_for('management.assignments_and_grades'))
     
     if request.method == 'POST':
         # Get form data
@@ -3536,7 +3500,7 @@ def edit_assignment(assignment_id):
             
             db.session.commit()
             flash('Assignment updated successfully!', 'success')
-            return redirect(url_for('management.assignments'))
+            return redirect(url_for('management.assignments_and_grades'))
             
         except Exception as e:
             db.session.rollback()
@@ -3570,7 +3534,7 @@ def remove_assignment(assignment_id):
     # Authorization check - Directors and School Administrators can remove any assignment
     if current_user.role not in ['Director', 'School Administrator']:
         flash("You are not authorized to remove this assignment.", "danger")
-        return redirect(url_for('management.assignments'))
+        return redirect(url_for('management.assignments_and_grades'))
     
     try:
         # Delete the assignment file if it exists
@@ -3588,7 +3552,7 @@ def remove_assignment(assignment_id):
         db.session.rollback()
         flash(f'Error removing assignment: {str(e)}', 'danger')
     
-    return redirect(url_for('management.assignments'))
+    return redirect(url_for('management.assignments_and_grades'))
 
 
 @management_blueprint.route('/assignment/change-status/<int:assignment_id>', methods=['POST'])

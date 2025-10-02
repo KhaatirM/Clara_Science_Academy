@@ -8,7 +8,7 @@
         </h3>
         <div class="d-flex gap-2">
             {% if current_user.role in ['Director', 'School Administrator'] %}
-                <a href="{{ url_for('management.assignments') }}" class="btn btn-outline-secondary btn-sm">
+                <a href="{{ url_for('management.assignments_and_grades') }}" class="btn btn-outline-secondary btn-sm">
                     <i class="bi bi-arrow-left me-1"></i>Back to Assignments
                 </a>
                 <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-warning btn-sm">

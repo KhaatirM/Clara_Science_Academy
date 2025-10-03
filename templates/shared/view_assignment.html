@@ -14,7 +14,9 @@
             </div>
             <div class="assignment-status">
                 {% if assignment.due_date %}
-                    {% set days_remaining = (assignment.due_date - today).days %}
+                    {% set due_date = assignment.due_date.date() if assignment.due_date.__class__.__name__ == 'datetime' else assignment.due_date %}
+                    {% set today_date = today.date() if today.__class__.__name__ == 'datetime' else today %}
+                    {% set days_remaining = (due_date - today_date).days %}
                     {% if days_remaining < 0 %}
                         <span class="status-badge overdue">{{ -days_remaining }} days overdue</span>
                     {% elif days_remaining == 0 %}
@@ -48,7 +50,17 @@
                     <div class="details-grid">
                         <div class="detail-item">
                             <label>Due Date:</label>
-                            <span>{{ assignment.due_date.strftime('%B %d, %Y at %I:%M %p') if assignment.due_date else 'No due date' }}</span>
+                            <span>
+                                {% if assignment.due_date %}
+                                    {% if assignment.due_date.__class__.__name__ == 'datetime' %}
+                                        {{ assignment.due_date.strftime('%B %d, %Y at %I:%M %p') }}
+                                    {% else %}
+                                        {{ assignment.due_date.strftime('%B %d, %Y') }}
+                                    {% endif %}
+                                {% else %}
+                                    No due date
+                                {% endif %}
+                            </span>
                         </div>
                         <div class="detail-item">
                             <label>Quarter:</label>

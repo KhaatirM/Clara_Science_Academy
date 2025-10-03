@@ -2594,10 +2594,9 @@ html, body {
     max-width: 1400px;
 }
 
-/* Ensure proper spacing and centering - ONLY for view assignment page */
+/* Ensure proper spacing - ONLY for view assignment page */
 .view-assignment .row {
     margin: 0;
-    justify-content: center;
 }
 
 /* Better layout for different screen sizes - ONLY for view assignment page */
@@ -2640,9 +2639,10 @@ html, body {
 
 /* Laptop-specific optimizations - ONLY for view assignment page */
 @media (min-width: 992px) and (max-width: 1199px) {
-    .view-assignment .col-lg-10 {
-        max-width: 100%;
-        flex: 0 0 100%;
+    .view-assignment .container-fluid {
+        max-width: 1200px;
+        padding-left: 2rem;
+        padding-right: 2rem;
     }
 }
 

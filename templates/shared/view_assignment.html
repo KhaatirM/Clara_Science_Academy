@@ -1,421 +1,257 @@
 {% extends "shared/dashboard_layout.html" %}
 
 {% block dashboard_content %}
-<div class="container-fluid px-2 px-md-4 view-assignment">
-    <!-- Enhanced Header with Gradient Background -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card bg-gradient-primary text-white shadow-lg border-0">
-                <div class="card-body p-4">
-                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
-                        <div>
-                            <h2 class="mb-2 text-white">
-                                <i class="bi bi-journal-text me-3"></i>{{ assignment.title }}
-                            </h2>
-                            <div class="d-flex flex-wrap gap-2 mb-3">
-                                {% if assignment.assignment_type == 'quiz' %}
-                                    <span class="badge bg-warning text-dark fs-6">
-                                        <i class="bi bi-question-circle me-1"></i>Quiz Assignment
-                                    </span>
-                                {% elif assignment.assignment_type == 'discussion' %}
-                                    <span class="badge bg-info fs-6">
-                                        <i class="bi bi-chat-dots me-1"></i>Discussion Assignment
-                                    </span>
-                                {% else %}
-                                    <span class="badge bg-light text-dark fs-6">
-                                        <i class="bi bi-file-earmark-pdf me-1"></i>PDF/Paper Assignment
-                                    </span>
-                                {% endif %}
-                                {% if assignment.status == 'Active' %}
-                                    <span class="badge bg-success fs-6">
-                                        <i class="bi bi-check-circle me-1"></i>Active
-                                    </span>
-                                {% elif assignment.status == 'Inactive' %}
-                                    <span class="badge bg-warning text-dark fs-6">
-                                        <i class="bi bi-pause-circle me-1"></i>Inactive
-                                    </span>
-                                {% elif assignment.status == 'Voided' %}
-                                    <span class="badge bg-danger fs-6">
-                                        <i class="bi bi-x-circle me-1"></i>Voided
-                                    </span>
-                                {% endif %}
-                            </div>
-                        </div>
-                        <div class="d-flex gap-2">
-                            {% if current_user.role in ['Director', 'School Administrator'] %}
-                                <a href="{{ url_for('management.assignments_and_grades') }}" class="btn btn-outline-light btn-lg">
-                                    <i class="bi bi-arrow-left me-2"></i>Back to Assignments
-                                </a>
-                                <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-warning btn-lg">
-                                    <i class="bi bi-pencil me-2"></i>Edit Assignment
-                                </a>
-                            {% elif current_user.role in ['Teacher'] %}
-                                <a href="{{ url_for('teacher.assignments_and_grades') }}" class="btn btn-outline-light btn-lg">
-                                    <i class="bi bi-arrow-left me-2"></i>Back to Assignments
-                                </a>
-                                <a href="{{ url_for('teacher.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-warning btn-lg">
-                                    <i class="bi bi-pencil me-2"></i>Edit Assignment
-                                </a>
-                            {% endif %}
-                        </div>
-                    </div>
+<div class="view-assignment-container">
+    <!-- Header Section -->
+    <div class="assignment-header">
+        <div class="header-content">
+            <div class="assignment-title-section">
+                <h1 class="assignment-title">{{ assignment.title }}</h1>
+                <div class="assignment-meta">
+                    <span class="assignment-class">{{ class_info.name if class_info else 'Unknown Class' }}</span>
+                    <span class="assignment-teacher">by {{ assignment.class_info.teacher.first_name if assignment.class_info and assignment.class_info.teacher else 'Unknown Teacher' }}</span>
                 </div>
+            </div>
+            <div class="assignment-status">
+                {% if assignment.due_date %}
+                    {% set days_remaining = (assignment.due_date - today).days %}
+                    {% if days_remaining < 0 %}
+                        <span class="status-badge overdue">{{ -days_remaining }} days overdue</span>
+                    {% elif days_remaining == 0 %}
+                        <span class="status-badge due-today">Due today</span>
+                    {% else %}
+                        <span class="status-badge due-soon">{{ days_remaining }} days remaining</span>
+                    {% endif %}
+                {% endif %}
+                <span class="status-badge {{ assignment.status.lower() }}">{{ assignment.status.title() }}</span>
             </div>
         </div>
     </div>
 
-    <div class="row g-4">
-        <!-- Assignment Details Card -->
-        <div class="col-12 col-lg-8">
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-white border-0 pb-0">
-                    <h5 class="mb-0 text-dark">
-                        <i class="bi bi-info-circle me-2 text-primary"></i>Assignment Details
-                    </h5>
+    <!-- Main Content Grid -->
+    <div class="assignment-content-grid">
+        <!-- Main Content Column -->
+        <div class="main-content-column">
+            <!-- Assignment Details -->
+            <div class="content-card assignment-details">
+                <div class="card-header">
+                    <h3><i class="bi bi-info-circle"></i> Assignment Details</h3>
                 </div>
-                <div class="card-body p-4">
+                <div class="card-body">
                     {% if assignment.description %}
-                        <div class="mb-4">
-                            <h6 class="text-muted mb-2">Description</h6>
-                            <div class="p-3 bg-light rounded-3">
-                                <p class="mb-0">{{ assignment.description }}</p>
-                            </div>
+                        <div class="detail-section">
+                            <label>Description:</label>
+                            <div class="description-content">{{ assignment.description|safe }}</div>
                         </div>
                     {% endif %}
                     
-                    <!-- Key Information Grid -->
-                    <div class="row g-4 mb-4">
-                        <div class="col-12 col-md-6 col-lg-4">
-                            <div class="d-flex align-items-center mb-3">
-                                <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-3">
-                                    <i class="bi bi-calendar-event text-primary"></i>
-                                </div>
-                                <div>
-                                    <h6 class="mb-1 text-muted">Due Date</h6>
-                                    <p class="mb-0 fw-bold">
-                                        {% if assignment.due_date %}
-                                            {{ assignment.due_date.strftime('%B %d, %Y at %I:%M %p') }}
-                                        {% else %}
-                                            <span class="text-muted">Not specified</span>
-                                        {% endif %}
-                                    </p>
-                                </div>
-                            </div>
-                            {% if assignment.due_date %}
-                                {% set due_date = assignment.due_date.date() if assignment.due_date.date else assignment.due_date %}
-                                {% set days_remaining = (due_date - today).days %}
-                                {% if days_remaining > 0 %}
-                                    <span class="badge bg-success fs-6">
-                                        <i class="bi bi-clock me-1"></i>{{ days_remaining }} days remaining
-                                    </span>
-                                {% elif days_remaining == 0 %}
-                                    <span class="badge bg-warning text-dark fs-6">
-                                        <i class="bi bi-exclamation-triangle me-1"></i>Due today
-                                    </span>
-                                {% else %}
-                                    <span class="badge bg-danger fs-6">
-                                        <i class="bi bi-x-circle me-1"></i>{{ (days_remaining * -1) }} days overdue
-                                    </span>
-                                {% endif %}
-                            {% endif %}
+                    <div class="details-grid">
+                        <div class="detail-item">
+                            <label>Due Date:</label>
+                            <span>{{ assignment.due_date.strftime('%B %d, %Y at %I:%M %p') if assignment.due_date else 'No due date' }}</span>
                         </div>
-                        
-                        <div class="col-12 col-md-6 col-lg-4">
-                            <div class="d-flex align-items-center mb-3">
-                                <div class="bg-info bg-opacity-10 rounded-circle p-2 me-3">
-                                    <i class="bi bi-calendar-week text-info"></i>
-                                </div>
-                                <div>
-                                    <h6 class="mb-1 text-muted">Quarter</h6>
-                                    <p class="mb-0 fw-bold">Q{{ assignment.quarter }}</p>
-                                </div>
-                            </div>
+                        <div class="detail-item">
+                            <label>Quarter:</label>
+                            <span>{{ assignment.quarter if assignment.quarter else 'N/A' }}</span>
                         </div>
-                        
-                        {% if assignment.points %}
-                        <div class="col-12 col-md-6 col-lg-4">
-                            <div class="d-flex align-items-center mb-3">
-                                <div class="bg-warning bg-opacity-10 rounded-circle p-2 me-3">
-                                    <i class="bi bi-star text-warning"></i>
-                                </div>
-                                <div>
-                                    <h6 class="mb-1 text-muted">Points</h6>
-                                    <p class="mb-0 fw-bold">{{ assignment.points }} points</p>
-                                </div>
-                            </div>
+                        <div class="detail-item">
+                            <label>Assignment Type:</label>
+                            <span class="type-badge {{ assignment.assignment_type.lower() }}">{{ assignment.assignment_type.title() }}</span>
                         </div>
-                        {% endif %}
-                        
-                        {% if assignment.attachment_filename %}
-                        <div class="col-12 col-md-6 col-lg-4">
-                            <div class="d-flex align-items-center mb-3">
-                                <div class="bg-success bg-opacity-10 rounded-circle p-2 me-3">
-                                    <i class="bi bi-paperclip text-success"></i>
-                                </div>
-                                <div>
-                                    <h6 class="mb-1 text-muted">Attachment</h6>
-                                    <p class="mb-0 fw-bold text-truncate">
-                                        {{ assignment.attachment_original_filename or assignment.attachment_filename }}
-                                    </p>
-                                </div>
-                            </div>
+                        <div class="detail-item">
+                            <label>Points:</label>
+                            <span>{{ assignment.points if assignment.points else 'N/A' }}</span>
                         </div>
-                        {% endif %}
-                    </div>
-                    
-                    <!-- Assignment Type Information -->
-                    <div class="mb-4">
-                        {% if assignment.assignment_type == 'quiz' %}
-                            <div class="alert alert-warning border-0 shadow-sm">
-                                <div class="d-flex align-items-center">
-                                    <div class="bg-warning bg-opacity-20 rounded-circle p-2 me-3">
-                                        <i class="bi bi-question-circle text-warning"></i>
-                                    </div>
-                                    <div>
-                                        <h6 class="mb-1">Quiz Assignment</h6>
-                                        <p class="mb-0 text-muted">Students will be able to take the quiz online when they access this assignment.</p>
-                                    </div>
-                                </div>
-                            </div>
-                            {% if assignment.attachment_filename %}
-                                <a href="{{ url_for('download_assignment_file', assignment_id=assignment.id) }}" 
-                                   class="btn btn-warning btn-lg shadow-sm">
-                                    <i class="bi bi-download me-2"></i>Download Quiz Materials
-                                </a>
-                            {% endif %}
-                        {% elif assignment.assignment_type == 'discussion' %}
-                            <div class="alert alert-info border-0 shadow-sm">
-                                <div class="d-flex align-items-center">
-                                    <div class="bg-info bg-opacity-20 rounded-circle p-2 me-3">
-                                        <i class="bi bi-chat-dots text-info"></i>
-                                    </div>
-                                    <div>
-                                        <h6 class="mb-1">Discussion Assignment</h6>
-                                        <p class="mb-0 text-muted">Students can participate in online discussions and share their thoughts on the topic.</p>
-                                    </div>
-                                </div>
-                            </div>
-                            {% if assignment.attachment_filename %}
-                                <a href="{{ url_for('download_assignment_file', assignment_id=assignment.id) }}" 
-                                   class="btn btn-info btn-lg shadow-sm">
-                                    <i class="bi bi-download me-2"></i>Download Discussion Materials
-                                </a>
-                            {% endif %}
-                        {% else %}
-                            {% if assignment.attachment_filename %}
-                                <div class="alert alert-primary border-0 shadow-sm">
-                                    <div class="d-flex align-items-center justify-content-between">
-                                        <div class="d-flex align-items-center">
-                                            <div class="bg-primary bg-opacity-20 rounded-circle p-2 me-3">
-                                                <i class="bi bi-file-earmark-pdf text-primary"></i>
-                                            </div>
-                                            <div>
-                                                <h6 class="mb-1">Assignment Materials</h6>
-                                                <p class="mb-0 text-muted">{{ assignment.attachment_original_filename or assignment.attachment_filename }}</p>
-                                            </div>
-                                        </div>
-                                        <a href="{{ url_for('download_assignment_file', assignment_id=assignment.id) }}" 
-                                           class="btn btn-primary shadow-sm">
-                                            <i class="bi bi-download me-2"></i>Download
-                                        </a>
-                                    </div>
-                                </div>
-                            {% else %}
-                                <div class="alert alert-light border-0 shadow-sm">
-                                    <div class="d-flex align-items-center">
-                                        <div class="bg-light bg-opacity-50 rounded-circle p-2 me-3">
-                                            <i class="bi bi-info-circle text-muted"></i>
-                                        </div>
-                                        <div>
-                                            <h6 class="mb-1 text-muted">No Attachment</h6>
-                                            <p class="mb-0 text-muted">No additional materials provided for this assignment.</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            {% endif %}
-                        {% endif %}
-                    </div>
                     </div>
                 </div>
             </div>
+
+            <!-- Assignment Materials -->
+            {% if assignment.attachment_path %}
+            <div class="content-card assignment-materials">
+                <div class="card-header">
+                    <h3><i class="bi bi-paperclip"></i> Assignment Materials</h3>
+                </div>
+                <div class="card-body">
+                    <div class="material-item">
+                        <div class="material-info">
+                            <i class="bi bi-file-pdf"></i>
+                            <span class="material-name">{{ assignment.attachment_path.split('/')[-1] }}</span>
+                        </div>
+                        <a href="{{ url_for('static', filename=assignment.attachment_path) }}" 
+                           class="btn btn-primary download-btn" download>
+                            <i class="bi bi-download"></i> Download
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Assignment Instructions -->
+            {% if assignment.instructions %}
+            <div class="content-card assignment-instructions">
+                <div class="card-header">
+                    <h3><i class="bi bi-list-ol"></i> Instructions</h3>
+                </div>
+                <div class="card-body">
+                    <div class="instructions-content">{{ assignment.instructions|safe }}</div>
+                </div>
+            </div>
+            {% endif %}
         </div>
 
-        <!-- Enhanced Sidebar -->
-        <div class="col-12 col-lg-4">
-            <!-- Class Information Card -->
-            <div class="card shadow-sm border-0 mb-4">
-                <div class="card-header bg-white border-0 pb-0">
-                    <h5 class="mb-0 text-dark">
-                        <i class="bi bi-people me-2 text-info"></i>Class Information
-                    </h5>
+        <!-- Sidebar Column -->
+        <div class="sidebar-column">
+            <!-- Class Information -->
+            <div class="sidebar-card class-info">
+                <div class="card-header">
+                    <h4><i class="bi bi-people"></i> Class Information</h4>
                 </div>
-                <div class="card-body p-4">
+                <div class="card-body">
                     {% if class_info %}
-                        <div class="mb-3">
-                            <div class="d-flex align-items-center mb-2">
-                                <div class="bg-info bg-opacity-10 rounded-circle p-2 me-3">
-                                    <i class="bi bi-book text-info"></i>
-                                </div>
-                                <div>
-                                    <h6 class="mb-1 text-muted">Class</h6>
-                                    <p class="mb-0 fw-bold">{{ class_info.name }}</p>
-                                </div>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <label>Class:</label>
+                                <span>{{ class_info.name }}</span>
+                            </div>
+                            <div class="info-item">
+                                <label>Subject:</label>
+                                <span>{{ class_info.subject }}</span>
+                            </div>
+                            <div class="info-item">
+                                <label>Grade Level:</label>
+                                <span>{{ class_info.grade_level if class_info.grade_level else 'N/A' }}</span>
+                            </div>
+                            <div class="info-item">
+                                <label>Teacher:</label>
+                                <span>{{ class_info.teacher.first_name if class_info.teacher else 'N/A' }}</span>
                             </div>
                         </div>
-                        
-                        <div class="mb-3">
-                            <div class="d-flex align-items-center mb-2">
-                                <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-3">
-                                    <i class="bi bi-mortarboard text-primary"></i>
-                                </div>
-                                <div>
-                                    <h6 class="mb-1 text-muted">Subject</h6>
-                                    <p class="mb-0 fw-bold">{{ class_info.subject }}</p>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <div class="d-flex align-items-center mb-2">
-                                <div class="bg-warning bg-opacity-10 rounded-circle p-2 me-3">
-                                    <i class="bi bi-award text-warning"></i>
-                                </div>
-                                <div>
-                                    <h6 class="mb-1 text-muted">Grade Level</h6>
-                                    <p class="mb-0 fw-bold">{{ class_info.grade_level or 'N/A' }}</p>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        {% if teacher %}
-                        <div class="mb-0">
-                            <div class="d-flex align-items-center mb-2">
-                                <div class="bg-success bg-opacity-10 rounded-circle p-2 me-3">
-                                    <i class="bi bi-person text-success"></i>
-                                </div>
-                                <div>
-                                    <h6 class="mb-1 text-muted">Teacher</h6>
-                                    <p class="mb-0 fw-bold">{{ teacher.first_name }} {{ teacher.last_name }}</p>
-                                </div>
-                            </div>
-                        </div>
-                        {% endif %}
                     {% else %}
-                        <div class="text-center text-muted py-4">
-                            <i class="bi bi-info-circle fs-1 mb-3"></i>
-                            <p class="mb-0">No class information available</p>
-                        </div>
+                        <p class="text-muted">Class information not available</p>
                     {% endif %}
                 </div>
             </div>
 
-            <!-- Assignment Statistics Card -->
-            <div class="card shadow-sm border-0 mb-4">
-                <div class="card-header bg-white border-0 pb-0">
-                    <h5 class="mb-0 text-dark">
-                        <i class="bi bi-graph-up me-2 text-success"></i>Assignment Statistics
-                    </h5>
+            <!-- Assignment Statistics -->
+            <div class="sidebar-card assignment-stats">
+                <div class="card-header">
+                    <h4><i class="bi bi-graph-up"></i> Statistics</h4>
                 </div>
-                <div class="card-body p-4">
-                    <div class="row g-3">
-                        <div class="col-12 col-sm-6">
-                            <div class="text-center">
-                                <div class="bg-success bg-opacity-10 rounded-circle p-3 mx-auto mb-2" style="width: 60px; height: 60px;">
-                                    <i class="bi bi-file-earmark-check text-success fs-4"></i>
-                                </div>
-                                <h4 class="text-success mb-1">{{ submissions_count }}</h4>
-                                <p class="text-muted mb-0 small">Submissions</p>
+                <div class="card-body">
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-icon">
+                                <i class="bi bi-file-text"></i>
+                            </div>
+                            <div class="stat-content">
+                                <span class="stat-number">{{ assignment.submissions|length if assignment.submissions else 0 }}</span>
+                                <span class="stat-label">Submissions</span>
                             </div>
                         </div>
-                        <div class="col-12 col-sm-6">
-                            <div class="text-center">
-                                <div class="bg-warning bg-opacity-10 rounded-circle p-3 mx-auto mb-2" style="width: 60px; height: 60px;">
-                                    <i class="bi bi-star text-warning fs-4"></i>
-                                </div>
-                                <h4 class="text-warning mb-1">{{ assignment.points or 0 }}</h4>
-                                <p class="text-muted mb-0 small">Points</p>
+                        <div class="stat-item">
+                            <div class="stat-icon">
+                                <i class="bi bi-star"></i>
+                            </div>
+                            <div class="stat-content">
+                                <span class="stat-number">{{ assignment.points if assignment.points else 0 }}</span>
+                                <span class="stat-label">Points</span>
                             </div>
                         </div>
                     </div>
                     
-                    {% if current_user.role in ['Director', 'School Administrator', 'Teacher'] %}
-                        <div class="d-grid gap-2 mt-3">
-                            <a href="#" class="btn btn-success shadow-sm">
-                                <i class="bi bi-eye me-2"></i>View All Submissions
-                            </a>
-                            <a href="{{ url_for('management.grade_assignment', assignment_id=assignment.id) if current_user.role in ['Director', 'School Administrator'] else url_for('teacher.grade_assignment', assignment_id=assignment.id) }}" 
-                               class="btn btn-outline-success shadow-sm">
-                                <i class="bi bi-pencil me-2"></i>Grade Assignment
-                            </a>
-                        </div>
-                    {% endif %}
+                    <div class="stat-actions">
+                        <a href="#" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-eye"></i> View Submissions
+                        </a>
+                        <a href="#" class="btn btn-primary btn-sm">
+                            <i class="bi bi-check-circle"></i> Grade Assignment
+                        </a>
+                    </div>
                 </div>
             </div>
 
-            <!-- Quick Actions Card -->
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-white border-0 pb-0">
-                    <h5 class="mb-0 text-dark">
-                        <i class="bi bi-lightning me-2 text-warning"></i>Quick Actions
-                    </h5>
+            <!-- Quick Actions -->
+            <div class="sidebar-card quick-actions">
+                <div class="card-header">
+                    <h4><i class="bi bi-lightning"></i> Quick Actions</h4>
                 </div>
-                <div class="card-body p-4">
-                    <div class="d-grid gap-2">
+                <div class="card-body">
+                    <div class="action-buttons">
                         {% if current_user.role in ['Director', 'School Administrator'] %}
                             <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" 
-                               class="btn btn-warning shadow-sm">
-                                <i class="bi bi-pencil me-2"></i>Edit Assignment
+                               class="btn btn-outline-secondary btn-block">
+                                <i class="bi bi-pencil"></i> Edit Assignment
                             </a>
-                            <button type="button" class="btn btn-outline-danger shadow-sm" 
-                                    onclick="confirmDelete('{{ assignment.title }}', {{ assignment.id }})">
-                                <i class="bi bi-trash me-2"></i>Remove Assignment
+                            <button class="btn btn-outline-warning btn-block" 
+                                    onclick="changeStatus({{ assignment.id }}, '{{ assignment.status }}')">
+                                <i class="bi bi-toggle-on"></i> Change Status
                             </button>
-                        {% elif current_user.role in ['Teacher'] %}
+                            <a href="{{ url_for('management.grant_extensions', assignment_id=assignment.id) }}" 
+                               class="btn btn-outline-info btn-block">
+                                <i class="bi bi-clock"></i> Grant Extensions
+                            </a>
+                            <button class="btn btn-outline-danger btn-block" 
+                                    onclick="confirmDelete('{{ assignment.title }}', {{ assignment.id }})">
+                                <i class="bi bi-trash"></i> Remove Assignment
+                            </button>
+                        {% else %}
                             <a href="{{ url_for('teacher.edit_assignment', assignment_id=assignment.id) }}" 
-                               class="btn btn-warning shadow-sm">
-                                <i class="bi bi-pencil me-2"></i>Edit Assignment
+                               class="btn btn-outline-secondary btn-block">
+                                <i class="bi bi-pencil"></i> Edit Assignment
                             </a>
-                            <button type="button" class="btn btn-outline-danger shadow-sm" 
+                            <button class="btn btn-outline-warning btn-block" 
+                                    onclick="changeStatus({{ assignment.id }}, '{{ assignment.status }}')">
+                                <i class="bi bi-toggle-on"></i> Change Status
+                            </button>
+                            <a href="{{ url_for('teacher.grant_extensions', assignment_id=assignment.id) }}" 
+                               class="btn btn-outline-info btn-block">
+                                <i class="bi bi-clock"></i> Grant Extensions
+                            </a>
+                            <button class="btn btn-outline-danger btn-block" 
                                     onclick="confirmDelete('{{ assignment.title }}', {{ assignment.id }})">
-                                <i class="bi bi-trash me-2"></i>Remove Assignment
-                            </button>
-                        {% endif %}
-                        
-                        {% if assignment.status == 'Active' %}
-                            <button type="button" class="btn btn-outline-warning shadow-sm" 
-                                    onclick="changeStatus('{{ assignment.id }}', 'Inactive')">
-                                <i class="bi bi-pause me-2"></i>Deactivate
-                            </button>
-                        {% elif assignment.status == 'Inactive' %}
-                            <button type="button" class="btn btn-outline-success shadow-sm" 
-                                    onclick="changeStatus('{{ assignment.id }}', 'Active')">
-                                <i class="bi bi-play me-2"></i>Activate
+                                <i class="bi bi-trash"></i> Remove Assignment
                             </button>
                         {% endif %}
                     </div>
                 </div>
             </div>
+
+            <!-- Back Navigation -->
+            <div class="sidebar-card back-navigation">
+                <div class="card-body">
+                    {% if current_user.role in ['Director', 'School Administrator'] %}
+                        <a href="{{ url_for('management.assignments_and_grades') }}" 
+                           class="btn btn-secondary btn-block">
+                            <i class="bi bi-arrow-left"></i> Back to Assignments
+                        </a>
+                    {% else %}
+                        <a href="{{ url_for('teacher.assignments_and_grades') }}" 
+                           class="btn btn-secondary btn-block">
+                            <i class="bi bi-arrow-left"></i> Back to Assignments
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
         </div>
     </div>
-
 </div>
 
 <!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+<div class="modal fade" id="deleteModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h5 class="modal-title">Confirm Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p>Are you sure you want to remove "<span id="assignmentTitle"></span>"?</p>
+                <p>Are you sure you want to delete the assignment "<span id="assignmentTitle"></span>"?</p>
                 <p class="text-danger"><strong>This action cannot be undone.</strong></p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <form id="deleteForm" method="POST" style="display: inline;">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     <button type="submit" class="btn btn-danger">Delete Assignment</button>
                 </form>
             </div>
@@ -423,101 +259,94 @@
     </div>
 </div>
 
+<!-- Status Change Modal -->
+<div class="modal fade" id="statusModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Change Assignment Status</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="statusForm">
+                    <div class="mb-3">
+                        <label for="newStatus" class="form-label">New Status:</label>
+                        <select class="form-select" id="newStatus" name="status">
+                            <option value="Active">Active</option>
+                            <option value="Inactive">Inactive</option>
+                            <option value="Draft">Draft</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitStatusChange()">Update Status</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
 function confirmDelete(title, assignmentId) {
     document.getElementById('assignmentTitle').textContent = title;
     {% if current_user.role in ['Director', 'School Administrator'] %}
         document.getElementById('deleteForm').action = `/management/remove-assignment/${assignmentId}`;
-    {% elif current_user.role in ['Teacher'] %}
-        document.getElementById('deleteForm').action = `/teacher/assignment/remove/${assignmentId}`;
+    {% else %}
+        document.getElementById('deleteForm').action = `/teacher/remove-assignment/${assignmentId}`;
     {% endif %}
-    
-    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
-    deleteModal.show();
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
 }
 
-function changeStatus(assignmentId, newStatus) {
-    // Get CSRF token
-    const csrfToken = document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || 
-                     document.querySelector('input[name=csrf_token]')?.value || '';
+function changeStatus(assignmentId, currentStatus) {
+    document.getElementById('newStatus').value = currentStatus;
+    window.currentAssignmentId = assignmentId;
+    new bootstrap.Modal(document.getElementById('statusModal')).show();
+}
+
+function submitStatusChange() {
+    const assignmentId = window.currentAssignmentId;
+    const newStatus = document.getElementById('newStatus').value;
     
-    // Create form data
     const formData = new FormData();
     formData.append('status', newStatus);
-    formData.append('csrf_token', csrfToken);
+    formData.append('csrf_token', '{{ csrf_token() }}');
     
-    // Show loading state
-    const button = event.target.closest('button');
-    const originalText = button.innerHTML;
-    button.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Updating...';
-    button.disabled = true;
-    
-    {% if current_user.role in ['Director', 'School Administrator'] %}
-        const url = `/management/assignment/change-status/${assignmentId}`;
-    {% elif current_user.role in ['Teacher'] %}
-        const url = `/teacher/assignment/${assignmentId}/change-status`;
-    {% endif %}
-    
-    fetch(url, {
+    fetch(`/teacher/change-assignment-status/${assignmentId}`, {
         method: 'POST',
         body: formData
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Show success message and reload
-            showNotification('Assignment status updated successfully!', 'success');
+            showNotification('Status updated successfully!', 'success');
             setTimeout(() => {
-                window.location.reload();
-            }, 1500);
+                location.reload();
+            }, 1000);
         } else {
-            showNotification('Error: ' + data.message, 'error');
-            button.innerHTML = originalText;
-            button.disabled = false;
+            showNotification('Error updating status: ' + data.error, 'error');
         }
     })
     .catch(error => {
-        console.error('Error:', error);
-        showNotification('An error occurred while updating the assignment status.', 'error');
-        button.innerHTML = originalText;
-        button.disabled = false;
+        showNotification('Error updating status: ' + error, 'error');
     });
+    
+    bootstrap.Modal.getInstance(document.getElementById('statusModal')).hide();
 }
 
 function showNotification(message, type) {
     // Create notification element
     const notification = document.createElement('div');
-    notification.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show position-fixed`;
-    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-    notification.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
+    notification.className = `alert alert-${type === 'success' ? 'success' : 'danger'} notification-toast`;
+    notification.textContent = message;
     
+    // Add to page
     document.body.appendChild(notification);
     
-    // Auto remove after 5 seconds
+    // Remove after 3 seconds
     setTimeout(() => {
-        if (notification.parentNode) {
-            notification.parentNode.removeChild(notification);
-        }
-    }, 5000);
+        notification.remove();
+    }, 3000);
 }
-
-// Add smooth scroll behavior
-document.addEventListener('DOMContentLoaded', function() {
-    // Add animation to cards on load
-    const cards = document.querySelectorAll('.card');
-    cards.forEach((card, index) => {
-        card.style.opacity = '0';
-        card.style.transform = 'translateY(20px)';
-        setTimeout(() => {
-            card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-            card.style.opacity = '1';
-            card.style.transform = 'translateY(0)';
-        }, index * 100);
-    });
-});
 </script>
 {% endblock %}

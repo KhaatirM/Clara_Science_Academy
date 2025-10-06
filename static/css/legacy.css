@@ -1,0 +1,213 @@
+/* ===== LEGACY STYLES ===== */
+/*
+ * This file contains styles that were previously embedded in HTML files.
+ * These styles have been moved here to maintain functionality while
+ * keeping HTML files clean and maintainable.
+ */
+
+/* CSRF Token Hiding - Required for security */
+input[name="csrf_token"] {
+    display: none !important;
+    visibility: hidden !important;
+    position: absolute !important;
+    left: -9999px !important;
+}
+
+/* Hide any text that looks like a CSRF token */
+body *:not(input):not(script):not(style):not(meta) {
+    font-family: inherit;
+}
+
+/* Assignment Management Styles */
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+}
+
+.bg-gradient-success {
+    background: linear-gradient(135deg, #198754 0%, #146c43 100%);
+}
+
+.class-card {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.class-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+}
+
+/* Button Group Active States */
+.btn-group .btn.active {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+    color: white;
+}
+
+/* Card Transitions */
+.card {
+    transition: transform 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+/* Assignment Card Styles */
+.assignment-card {
+    border-left: 4px solid #007bff;
+    transition: all 0.3s ease;
+}
+
+.assignment-card:hover {
+    border-left-color: #28a745;
+    transform: translateY(-2px);
+}
+
+/* Grade Card Styles */
+.grade-card {
+    border-left: 4px solid #28a745;
+}
+
+.grade-card:hover {
+    border-left-color: #007bff;
+}
+
+/* Student Dashboard Styles */
+.student-dashboard-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+}
+
+.student-dashboard-card .card-body {
+    padding: 2rem;
+}
+
+/* Class Management Styles */
+.class-management-header {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+}
+
+.class-management-header h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0;
+}
+
+/* Attendance Styles */
+.attendance-card {
+    border-left: 4px solid #17a2b8;
+}
+
+.attendance-card:hover {
+    border-left-color: #007bff;
+}
+
+/* Modal Styles */
+.modal-content {
+    border-radius: 1rem;
+    border: none;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+}
+
+.modal-header {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    color: white;
+    border-radius: 1rem 1rem 0 0;
+    border: none;
+}
+
+.modal-header .btn-close {
+    filter: invert(1);
+}
+
+/* Form Styles */
+.form-floating > .form-control:focus ~ label,
+.form-floating > .form-control:not(:placeholder-shown) ~ label {
+    color: #007bff;
+}
+
+/* Table Styles */
+.table-hover tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.1);
+}
+
+/* Badge Styles */
+.badge {
+    font-weight: 500;
+    padding: 0.5rem 0.75rem;
+}
+
+/* Alert Styles */
+.alert {
+    border-radius: 0.75rem;
+    border: none;
+}
+
+/* Button Styles */
+.btn {
+    border-radius: 0.5rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* Loading States */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* Responsive Utilities */
+@media (max-width: 768px) {
+    .student-dashboard-card .card-body {
+        padding: 1rem;
+    }
+    
+    .class-management-header h2 {
+        font-size: 1.5rem;
+    }
+    
+    .modal-content {
+        margin: 1rem;
+        border-radius: 0.5rem;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+    
+    .btn {
+        border: 1px solid #000 !important;
+        background: transparent !important;
+        color: #000 !important;
+    }
+    
+    .card {
+        border: 1px solid #000 !important;
+        box-shadow: none !important;
+    }
+}

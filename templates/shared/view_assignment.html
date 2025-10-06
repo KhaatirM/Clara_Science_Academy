@@ -232,17 +232,9 @@
             <!-- Back Navigation -->
             <div class="sidebar-card back-navigation">
                 <div class="card-body">
-                    {% if current_user.role in ['Director', 'School Administrator'] %}
-                        <a href="{{ url_for('management.assignments_and_grades') }}" 
-                           class="btn btn-secondary btn-block">
-                            <i class="bi bi-arrow-left"></i> Back to Assignments
-                        </a>
-                    {% else %}
-                        <a href="{{ url_for('teacher.assignments_and_grades') }}" 
-                           class="btn btn-secondary btn-block">
-                            <i class="bi bi-arrow-left"></i> Back to Assignments
-                        </a>
-                    {% endif %}
+                    <button onclick="goBack()" class="btn btn-secondary btn-block">
+                        <i class="bi bi-arrow-left"></i> Back to Previous Page
+                    </button>
                 </div>
             </div>
         </div>
@@ -359,6 +351,21 @@ function showNotification(message, type) {
     setTimeout(() => {
         notification.remove();
     }, 3000);
+}
+
+// Back navigation function
+function goBack() {
+    // Check if there's history to go back to
+    if (window.history.length > 1) {
+        window.history.back();
+    } else {
+        // Fallback to assignments page if no history
+        {% if current_user.role in ['Director', 'School Administrator'] %}
+            window.location.href = "{{ url_for('management.assignments_and_grades') }}";
+        {% else %}
+            window.location.href = "{{ url_for('teacher.assignments_and_grades') }}";
+        {% endif %}
+    }
 }
 </script>
 {% endblock %}

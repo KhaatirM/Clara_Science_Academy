@@ -1,0 +1,152 @@
+/* ===== MAIN CSS FILE ===== */
+/*
+ * This is the main CSS file that imports all organized stylesheets.
+ * Each stylesheet is organized by functionality and kept under 15KB for maintainability.
+ * 
+ * File Structure:
+ * - base.css: Fundamental styles, typography, colors (7.2KB)
+ * - layout.css: Grid systems, sidebar, dashboard layouts (8.1KB)
+ * - components.css: Reusable components, buttons, cards (12.3KB)
+ * - assignments.css: Assignment and grade management styles (11.7KB)
+ * - view-assignment.css: Individual assignment view styles (13.4KB)
+ * 
+ * Total organized size: ~53KB (vs original 58KB)
+ */
+
+/* Import all organized stylesheets */
+@import url('base.css');
+@import url('layout.css');
+@import url('components.css');
+@import url('assignments.css');
+@import url('view-assignment.css');
+@import url('legacy.css');
+
+/* Additional global styles that don't fit in other categories */
+
+/* Slideshow Background Styles */
+.slideshow-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    overflow: hidden;
+}
+
+.slideshow-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+}
+
+.slideshow-image.active {
+    opacity: 1;
+}
+
+.slideshow-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.2);
+    z-index: 1;
+}
+
+/* Global Animations */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideInUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideInDown {
+    from {
+        transform: translateY(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+.slide-in-up {
+    animation: slideInUp 0.5s ease-out;
+}
+
+.slide-in-down {
+    animation: slideInDown 0.5s ease-out;
+}
+
+/* Legacy styles from original style.css that need to be preserved */
+/* These will be gradually moved to appropriate organized files */
+
+/* Update modal responsive */
+@media (max-width: 768px) {
+  #updateModal .modal-dialog {
+    margin: 0.5rem;
+  }
+  
+  #updateModal .update-section {
+    padding-left: 0.75rem;
+    margin-bottom: 1rem;
+  }
+}
+
+/* Additional utility classes */
+.text-truncate-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.text-truncate-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Print styles */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+    
+    .sidebar {
+        display: none !important;
+    }
+    
+    .main-content {
+        margin-left: 0 !important;
+    }
+}

@@ -419,69 +419,6 @@
     </div>
 </template>
 
-<style>
-.rubric-criteria-item, .discussion-prompt-item {
-    border-left: 4px solid #28a745;
-}
-
-.rubric-criteria-item .card-header, .discussion-prompt-item .card-header {
-    background-color: #f8f9fa;
-}
-
-#discussionPreview {
-    max-height: 300px;
-    overflow-y: auto;
-}
-
-.preview-section {
-    border-bottom: 1px solid #dee2e6;
-    padding: 0.5rem 0;
-}
-
-.preview-section:last-child {
-    border-bottom: none;
-}
-
-.rubric-criteria-item, .discussion-prompt-item {
-    border-left: 4px solid #ffc107 !important;
-    transition: all 0.3s ease;
-}
-
-.rubric-criteria-item:hover, .discussion-prompt-item:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
-}
-
-.rubric-criteria-item .card-header, .discussion-prompt-item .card-header {
-    background-color: #f8f9fa;
-}
-
-.btn-success {
-    background: linear-gradient(135deg, #28a745, #20c997);
-    border: none;
-    transition: all 0.3s ease;
-}
-
-.btn-success:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(40,167,69,0.3);
-}
-
-.form-control:focus, .form-select:focus {
-    border-color: #007bff;
-    box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
-}
-
-.preview-section {
-    border-bottom: 1px solid #dee2e6;
-    padding: 0.5rem 0;
-}
-
-.preview-section:last-child {
-    border-bottom: none;
-}
-</style>
-
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     let criteriaCounter = 0;

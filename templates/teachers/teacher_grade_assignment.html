@@ -4,15 +4,9 @@
 <div class="container-fluid px-2 px-md-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="mb-0">Grade Assignment: {{ assignment.title }}</h2>
-        {% if current_user.role in ['Director', 'School Administrator'] %}
-            <a href="{{ url_for('management.assignments_and_grades') }}" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left me-2"></i>Back to Assignments
-            </a>
-        {% else %}
-            <a href="{{ url_for('teacher.my_assignments') }}" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left me-2"></i>Back to Assignments
-            </a>
-        {% endif %}
+        <button onclick="goBack()" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Back to Previous Page
+        </button>
     </div>
 
     <!-- Assignment Details Card -->
@@ -213,5 +207,20 @@ document.addEventListener('DOMContentLoaded', function() {
         submitBtn.disabled = true;
     });
 });
+
+// Back navigation function
+function goBack() {
+    // Check if there's history to go back to
+    if (window.history.length > 1) {
+        window.history.back();
+    } else {
+        // Fallback to assignments page if no history
+        {% if current_user.role in ['Director', 'School Administrator'] %}
+            window.location.href = "{{ url_for('management.assignments_and_grades') }}";
+        {% else %}
+            window.location.href = "{{ url_for('teacher.assignments_and_grades') }}";
+        {% endif %}
+    }
+}
 </script>
 {% endblock %}

@@ -154,20 +154,16 @@
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const mainContent = document.querySelector('.main-content');
-            const hamburgerIcon = document.getElementById('hamburger-icon');
             const collapseText = document.getElementById('collapse-text');
             
             sidebar.classList.toggle('collapsed');
-            mainContent.classList.toggle('collapsed');
             
-            // Toggle between hamburger icon and collapse text
+            // Update collapse text
             const isCollapsed = sidebar.classList.contains('collapsed');
             if (isCollapsed) {
-                hamburgerIcon.style.display = 'flex';
-                collapseText.style.display = 'none';
+                collapseText.textContent = 'Expand';
             } else {
-                hamburgerIcon.style.display = 'none';
-                collapseText.style.display = 'flex';
+                collapseText.textContent = 'Collapse';
             }
             
             // Save state to localStorage
@@ -194,39 +190,41 @@
             });
         });
         
-        // Always collapse sidebar on mobile and hide hamburger
-        function forceSidebarCollapsedOnMobile() {
+        // Handle sidebar state on page load and resize
+        function initializeSidebar() {
             const sidebar = document.getElementById('sidebar');
-            const mainContent = document.querySelector('.main-content');
             const sidebarToggle = document.querySelector('.sidebar-toggle');
+            const collapseText = document.getElementById('collapse-text');
             
             if (window.innerWidth <= 768) {
-                // On mobile: always collapsed, no hamburger visible
-                sidebar.classList.add('collapsed');
-                mainContent.classList.add('collapsed');
-                sidebarToggle.style.display = 'none';
-            } else {
-                // On desktop: show toggle and restore state
+                // On mobile: hide sidebar by default, show toggle
+                sidebar.classList.remove('collapsed');
                 sidebarToggle.style.display = 'flex';
-                const hamburgerIcon = document.getElementById('hamburger-icon');
-                const collapseText = document.getElementById('collapse-text');
+                collapseText.textContent = 'Menu';
+            } else {
+                // On desktop: restore saved state
+                sidebarToggle.style.display = 'flex';
                 const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
                 
                 if (isCollapsed) {
                     sidebar.classList.add('collapsed');
-                    mainContent.classList.add('collapsed');
-                    hamburgerIcon.style.display = 'flex';
-                    collapseText.style.display = 'none';
+                    collapseText.textContent = 'Expand';
                 } else {
                     sidebar.classList.remove('collapsed');
-                    mainContent.classList.remove('collapsed');
-                    hamburgerIcon.style.display = 'none';
-                    collapseText.style.display = 'flex';
+                    collapseText.textContent = 'Collapse';
                 }
             }
         }
-        document.addEventListener('DOMContentLoaded', forceSidebarCollapsedOnMobile);
-        window.addEventListener('resize', forceSidebarCollapsedOnMobile);
+        
+        // Initialize sidebar on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeSidebar();
+        });
+        
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            initializeSidebar();
+        });
     </script>
     
     <!-- Password Change Popup Modal -->

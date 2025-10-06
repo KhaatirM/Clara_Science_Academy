@@ -711,171 +711,195 @@ def student_schedule():
 @student_required
 def student_school_calendar():
     """View school calendar (read-only for students)"""
-    from datetime import datetime, timedelta, date
+    from datetime import datetime, timedelta
     import calendar as cal
     
-    # Import all required models at the top of the function
-    from models import AcademicPeriod, CalendarEvent
-    
-    # Try to import holidays, but provide fallback if not available
-    try:
-        import holidays as pyholidays
-        holidays_available = True
-    except ImportError:
-        holidays_available = False
-        current_app.logger.warning("holidays package not available, using basic calendar")
-
-    # --- Custom holidays for Jewish, Christian, Muslim ---
-    def get_religious_holidays(year):
-        # Jewish holidays (fixed dates for demonstration; real dates vary by Hebrew calendar)
-        jewish = [
-            (date(year, 4, 23), "Passover (Pesach)"),
-            (date(year, 9, 16), "Rosh Hashanah"),
-            (date(year, 9, 25), "Yom Kippur"),
-            (date(year, 9, 30), "Sukkot"),
-            (date(year, 12, 25), "Hanukkah (start)")
-        ]
-        # Christian holidays
-        christian = [
-            (date(year, 12, 25), "Christmas"),
-            (date(year, 4, 20), "Easter"),  # Example date; real date varies
-            (date(year, 12, 24), "Christmas Eve"),
-            (date(year, 1, 6), "Epiphany"),
-            (date(year, 4, 18), "Good Friday")
-        ]
-        # Muslim holidays (fixed dates for demonstration; real dates vary by Islamic calendar)
-        muslim = [
-            (date(year, 3, 10), "Ramadan Begins"),
-            (date(year, 4, 9), "Eid al-Fitr"),
-            (date(year, 6, 16), "Eid al-Adha")
-        ]
-        return jewish + christian + muslim
-
-    student = Student.query.get_or_404(current_user.student_id)
+    # Get current month/year from query params or use current date
     month = request.args.get('month', datetime.now().month, type=int)
     year = request.args.get('year', datetime.now().year, type=int)
+    
+    # Calculate previous and next month
     current_date = datetime(year, month, 1)
     prev_month = (current_date - timedelta(days=1)).replace(day=1)
     next_month = (current_date + timedelta(days=32)).replace(day=1)
+    
+    # Create calendar data
     cal_obj = cal.monthcalendar(year, month)
     month_name = datetime(year, month, 1).strftime('%B')
-
-    # US Federal holidays
-    if holidays_available:
-        us_holidays = pyholidays.country_holidays('US', years=[year])
-    else:
-        # Basic US holidays as fallback
-        us_holidays = {
-            date(year, 1, 1): "New Year's Day",
-            date(year, 7, 4): "Independence Day",
-            date(year, 11, 11): "Veterans Day",
-            date(year, 12, 25): "Christmas Day"
-        }
     
-    # Religious holidays
-    religious_holidays = get_religious_holidays(year)
-    # Combine all holidays for this month
-    holidays_this_month = []
+    # Get academic dates for this month
+    academic_dates = get_academic_dates_for_calendar(year, month)
     
-    # Add religious holidays
-    for hol_date, hol_name in religious_holidays:
-        if hol_date.month == month:
-            holidays_this_month.append((hol_date.day, hol_name))
-    
-    # Get academic dates from the database
-    academic_dates = []
-    active_year = SchoolYear.query.filter_by(is_active=True).first()
-    if active_year:
-        # Get academic periods for this month
-        start_of_month = date(year, month, 1)
-        if month == 12:
-            end_of_month = date(year + 1, 1, 1) - timedelta(days=1)
-        else:
-            end_of_month = date(year, month + 1, 1) - timedelta(days=1)
-        
-        # Get academic periods that overlap with this month
-        academic_periods = AcademicPeriod.query.filter(
-            AcademicPeriod.school_year_id == active_year.id,
-            AcademicPeriod.start_date <= end_of_month,
-            AcademicPeriod.end_date >= start_of_month
-        ).all()
-        
-        for period in academic_periods:
-            # Add start date event
-            if period.start_date.month == month:
-                academic_dates.append((period.start_date.day, f"{period.name} Start", 'Academic Period'))
-            
-            # Add end date event
-            if period.end_date.month == month:
-                academic_dates.append((period.end_date.day, f"{period.name} End", 'Academic Period'))
-        
-        # Get calendar events for this month
-        calendar_events = CalendarEvent.query.filter(
-            CalendarEvent.school_year_id == active_year.id,
-            CalendarEvent.start_date <= end_of_month,
-            CalendarEvent.end_date >= start_of_month
-        ).all()
-        
-        for event in calendar_events:
-            if event.start_date.month == month:
-                academic_dates.append((event.start_date.day, event.name, event.event_type.replace('_', ' ').title()))
-    
-    # Add US Federal holidays with "No School" for weekdays during school year
-    school_year_start = date(year, 8, 1)  # August 1st
-    school_year_end = date(year, 6, 30)   # June 30th
-    
-    for hol_date, hol_name in us_holidays.items():
-        if hol_date.month == month:
-            # Check if it's a weekday (Monday=0, Sunday=6)
-            is_weekday = hol_date.weekday() < 5
-            # Check if it's during school year
-            is_school_year = (hol_date >= school_year_start and hol_date <= school_year_end) or \
-                           (hol_date >= date(year-1, 8, 1) and hol_date <= date(year, 6, 30))
-            
-            if is_weekday and is_school_year:
-                holidays_this_month.append((hol_date.day, f"{hol_name} - No School"))
-            else:
-                holidays_this_month.append((hol_date.day, hol_name))
-
+    # Simple calendar data structure
     calendar_data = {
         'month_name': month_name,
         'year': year,
         'weekdays': ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
         'weeks': []
     }
+    
+    # Convert calendar to our format
     for week in cal_obj:
         week_data = []
         for day in week:
-            events = []
-            if day != 0:
-                # Add academic dates
-                for acad_day, acad_name, acad_category in academic_dates:
-                    if day == acad_day:
-                        events.append({'title': acad_name, 'category': acad_category})
-                
-                # Add holidays
-                for hol_day, hol_name in holidays_this_month:
-                    if day == hol_day:
-                        events.append({'title': hol_name, 'category': 'Holiday'})
             if day == 0:
                 week_data.append({'day_num': '', 'is_current_month': False, 'is_today': False, 'events': []})
             else:
                 is_today = (day == datetime.now().day and month == datetime.now().month and year == datetime.now().year)
-                week_data.append({'day_num': day, 'is_current_month': True, 'is_today': is_today, 'events': events})
+                
+                # Get events for this day
+                day_events = []
+                for academic_date in academic_dates:
+                    if academic_date['day'] == day:
+                        day_events.append({
+                            'title': academic_date['title'],
+                            'category': academic_date['category']
+                        })
+                
+                week_data.append({'day_num': day, 'is_current_month': True, 'is_today': is_today, 'events': day_events})
         calendar_data['weeks'].append(week_data)
 
-    # Get active school year for template context
-    active_school_year = SchoolYear.query.filter_by(is_active=True).first()
-    
-    return render_template('management/role_calendar.html', 
+    return render_template('shared/calendar.html',
                          calendar_data=calendar_data,
                          prev_month=prev_month,
                          next_month=next_month,
                          month_name=month_name,
                          year=year,
-                         current_user=current_user,
-                         active_school_year=active_school_year,
-                         school_years=[])
+                         section='calendar',
+                         active_tab='calendar')
+
+def get_academic_dates_for_calendar(year, month):
+    """Get academic dates (quarters, semesters, holidays) for a specific month/year."""
+    from datetime import date, timedelta
+    from models import SchoolYear, AcademicPeriod, CalendarEvent, TeacherWorkDay, SchoolBreak
+    
+    academic_dates = []
+    
+    # Get the active school year
+    active_year = SchoolYear.query.filter_by(is_active=True).first()
+    if not active_year:
+        return academic_dates
+    
+    # Get academic periods for this month
+    start_of_month = date(year, month, 1)
+    if month == 12:
+        end_of_month = date(year + 1, 1, 1) - timedelta(days=1)
+    else:
+        end_of_month = date(year, month + 1, 1) - timedelta(days=1)
+    
+    # Get academic periods that overlap with this month
+    academic_periods = AcademicPeriod.query.filter(
+        AcademicPeriod.school_year_id == active_year.id,
+        AcademicPeriod.start_date <= end_of_month,
+        AcademicPeriod.end_date >= start_of_month
+    ).all()
+    
+    for period in academic_periods:
+        # Add start date event
+        if period.start_date.month == month:
+            academic_dates.append({
+                'day': period.start_date.day,
+                'title': f"{period.name} Start",
+                'category': f"{period.period_type.title()}",
+                'type': 'academic_period_start'
+            })
+        
+        # Add end date event
+        if period.end_date.month == month:
+            academic_dates.append({
+                'day': period.end_date.day,
+                'title': f"{period.name} End",
+                'category': f"{period.period_type.title()}",
+                'type': 'academic_period_end'
+            })
+    
+    # Get calendar events for this month
+    calendar_events = CalendarEvent.query.filter(
+        CalendarEvent.school_year_id == active_year.id,
+        CalendarEvent.start_date <= end_of_month,
+        CalendarEvent.end_date >= start_of_month
+    ).all()
+    
+    for event in calendar_events:
+        if event.start_date.month == month:
+            academic_dates.append({
+                'day': event.start_date.day,
+                'title': event.name,
+                'category': event.event_type.replace('_', ' ').title(),
+                'type': 'calendar_event'
+            })
+    
+    # Get teacher work days for this month
+    teacher_work_days = TeacherWorkDay.query.filter(
+        TeacherWorkDay.school_year_id == active_year.id,
+        TeacherWorkDay.date >= start_of_month,
+        TeacherWorkDay.date <= end_of_month
+    ).all()
+    
+    for work_day in teacher_work_days:
+        if work_day.date.month == month:
+            # Shorten the title for better display
+            short_title = work_day.title
+            if "Professional Development" in short_title:
+                short_title = "PD Day"
+            elif "First Day" in short_title:
+                short_title = "First Day"
+            
+            academic_dates.append({
+                'day': work_day.date.day,
+                'title': short_title,
+                'category': 'Teacher Work Day',
+                'type': 'teacher_work_day'
+            })
+    
+    # Get school breaks for this month
+    school_breaks = SchoolBreak.query.filter(
+        SchoolBreak.school_year_id == active_year.id,
+        SchoolBreak.start_date <= end_of_month,
+        SchoolBreak.end_date >= start_of_month
+    ).all()
+    
+    for school_break in school_breaks:
+        # Check if any part of the break falls in this month
+        if (school_break.start_date.month == month or 
+            school_break.end_date.month == month or
+            (school_break.start_date.month < month and school_break.end_date.month > month)):
+            
+            # For multi-day breaks, show start and end dates
+            if school_break.start_date.month == month:
+                # Shorten break names for better display
+                short_name = school_break.name
+                if "Thanksgiving" in short_name:
+                    short_name = "Thanksgiving Break"
+                elif "Winter" in short_name:
+                    short_name = "Winter Break"
+                elif "Spring" in short_name:
+                    short_name = "Spring Break"
+                
+                academic_dates.append({
+                    'day': school_break.start_date.day,
+                    'title': f"{short_name} Start",
+                    'category': 'School Break',
+                    'type': 'school_break_start'
+                })
+            
+            if school_break.end_date.month == month:
+                short_name = school_break.name
+                if "Thanksgiving" in short_name:
+                    short_name = "Thanksgiving Break"
+                elif "Winter" in short_name:
+                    short_name = "Winter Break"
+                elif "Spring" in short_name:
+                    short_name = "Spring Break"
+                
+                academic_dates.append({
+                    'day': school_break.end_date.day,
+                    'title': f"{short_name} End",
+                    'category': 'School Break',
+                    'type': 'school_break_end'
+                })
+    
+    return academic_dates
 
 @student_blueprint.route('/settings')
 @login_required

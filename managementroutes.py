@@ -2503,7 +2503,7 @@ def calendar():
         if year.start_date and year.end_date:
             year.total_days = (year.end_date - year.start_date).days
     
-    return render_template('management/role_calendar.html', 
+    return render_template('shared/calendar.html', 
                          calendar_data=calendar_data,
                          prev_month=prev_month,
                          next_month=next_month,

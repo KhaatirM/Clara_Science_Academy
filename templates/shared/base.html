@@ -217,6 +217,10 @@
                 showContactUsModal(modal);
             } else if (page === 'employment') {
                 showEmploymentModal(modal);
+            } else if (page === 'survey') {
+                showSurveyModal(modal);
+            } else if (page === 'academic-calendar') {
+                showAcademicCalendarModal(modal);
             } else {
                 showPlaceholderModal(modal, page);
             }
@@ -416,6 +420,224 @@
             }, 100);
         }
         
+        function showSurveyModal(modal) {
+            const modalTitle = modal.querySelector('#pageModalLabel');
+            const modalBody = modal.querySelector('#modalBody');
+            
+            modalTitle.innerHTML = '<i class="fas fa-poll me-2"></i>Community Survey';
+            modalBody.innerHTML = `
+                <div class="welcome-section">
+                    <h4 class="mb-3">
+                        <i class="fas fa-handshake me-2"></i>Help Us Plan Our School
+                    </h4>
+                    <p class="text-muted mb-0">Thank you for your interest in attending a public, private, religious or charter school in your county. Help us as we plan and develop a school in your community. Please share with us your thoughts and feeling about public education and what academic programs are important to you in North Carolina schools. This survey should take approximately 5 minutes to complete.</p>
+                    <p class="text-muted mt-2"><strong>When finished, please click the "Submit" button.</strong></p>
+                </div>
+                
+                <form id="surveyForm" class="mt-4">
+                    <div class="row">
+                        <div class="col-12">
+                            <!-- County Question -->
+                            <div class="mb-4">
+                                <label for="county" class="form-label">Which county do you reside in? <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="county" name="county" required>
+                            </div>
+                            
+                            <!-- Children Question -->
+                            <div class="mb-4">
+                                <label class="form-label">Do you have pre-school or school-age children that live with you? <span class="text-danger">*</span></label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="hasChildren" id="hasChildrenYes" value="yes" required>
+                                    <label class="form-check-label" for="hasChildrenYes">Yes</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="hasChildren" id="hasChildrenNo" value="no" required>
+                                    <label class="form-check-label" for="hasChildrenNo">No</label>
+                                </div>
+                            </div>
+                            
+                            <!-- Number of Children -->
+                            <div class="mb-4" id="childrenCountDiv" style="display: none;">
+                                <label for="childrenCount" class="form-label">If yes, how many?</label>
+                                <select class="form-select" id="childrenCount" name="childrenCount">
+                                    <option value="">Select number</option>
+                                    <option value="1">1</option>
+                                    <option value="2">2</option>
+                                    <option value="3">3</option>
+                                    <option value="4">4</option>
+                                    <option value="5">5+</option>
+                                </select>
+                            </div>
+                            
+                            <!-- School Type -->
+                            <div class="mb-4">
+                                <label class="form-label">What type of school do you currently send them to? <span class="text-danger">*</span></label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="schoolType" id="schoolTypePublic" value="public" required>
+                                    <label class="form-check-label" for="schoolTypePublic">Public</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="schoolType" id="schoolTypeFaith" value="faith" required>
+                                    <label class="form-check-label" for="schoolTypeFaith">Faith-based Private</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="schoolType" id="schoolTypePrivate" value="private" required>
+                                    <label class="form-check-label" for="schoolTypePrivate">Private non-denominational</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="schoolType" id="schoolTypeHomeschool" value="homeschool" required>
+                                    <label class="form-check-label" for="schoolTypeHomeschool">Home School</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="schoolType" id="schoolTypeNotYet" value="not_yet" required>
+                                    <label class="form-check-label" for="schoolTypeNotYet">Not in school yet</label>
+                                </div>
+                            </div>
+                            
+                            <!-- New School Option -->
+                            <div class="mb-4">
+                                <p class="form-label">Some private, charter, and religious schools offer a tuition-free alternative from regular public schools. They are publicly funded, but privately operated under a performance contract with the local school district and/or the State Department of Education. These schools are given flexibility from regulations in exchange for higher accountability. If given the choice, would you like there to be a NEW school option in the County where you live? <span class="text-danger">*</span></p>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="newSchoolOption" id="newSchoolYes" value="yes" required>
+                                    <label class="form-check-label" for="newSchoolYes">Yes</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="newSchoolOption" id="newSchoolNo" value="no" required>
+                                    <label class="form-check-label" for="newSchoolNo">No</label>
+                                </div>
+                                <div class="mt-2">
+                                    <label for="newSchoolExplain" class="form-label">Please explain:</label>
+                                    <textarea class="form-control" id="newSchoolExplain" name="newSchoolExplain" rows="3"></textarea>
+                                </div>
+                            </div>
+                            
+                            <!-- Charter School -->
+                            <div class="mb-4">
+                                <label class="form-label">Would you consider sending your child or children to a charter school? <span class="text-danger">*</span></label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="charterSchool" id="charterYes" value="yes" required>
+                                    <label class="form-check-label" for="charterYes">Yes</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="charterSchool" id="charterNo" value="no" required>
+                                    <label class="form-check-label" for="charterNo">No</label>
+                                </div>
+                            </div>
+                            
+                            <!-- School Level Questions -->
+                            <div class="row mb-4">
+                                <div class="col-md-4">
+                                    <label class="form-label">Would you like to see a NEW elementary school option in your community? <span class="text-danger">*</span></label>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="elementarySchool" id="elementaryYes" value="yes" required>
+                                        <label class="form-check-label" for="elementaryYes">Yes</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="elementarySchool" id="elementaryNo" value="no" required>
+                                        <label class="form-check-label" for="elementaryNo">No</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Would you like to see a NEW middle school option in your community? <span class="text-danger">*</span></label>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="middleSchool" id="middleYes" value="yes" required>
+                                        <label class="form-check-label" for="middleYes">Yes</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="middleSchool" id="middleNo" value="no" required>
+                                        <label class="form-check-label" for="middleNo">No</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Would you like to see a NEW high school option in your community? <span class="text-danger">*</span></label>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="highSchool" id="highYes" value="yes" required>
+                                        <label class="form-check-label" for="highYes">Yes</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="highSchool" id="highNo" value="no" required>
+                                        <label class="form-check-label" for="highNo">No</label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Program Focus Questions -->
+                            <div class="row mb-4">
+                                <div class="col-md-4">
+                                    <label class="form-label">Would you be interested in a school that places an emphasis on school cultural factors such as character education, citizenship programs, school uniforms, and active parental involvement? <span class="text-danger">*</span></label>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="culturalFactors" id="culturalYes" value="yes" required>
+                                        <label class="form-check-label" for="culturalYes">Yes</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="culturalFactors" id="culturalNo" value="no" required>
+                                        <label class="form-check-label" for="culturalNo">No</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Would you be interested in a school that places an emphasis on a college prep focus? <span class="text-danger">*</span></label>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="collegePrep" id="collegePrepYes" value="yes" required>
+                                        <label class="form-check-label" for="collegePrepYes">Yes</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="collegePrep" id="collegePrepNo" value="no" required>
+                                        <label class="form-check-label" for="collegePrepNo">No</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Would you send your child to a school that focuses on the Science, Technology, Engineering and Math (STEM)? <span class="text-danger">*</span></label>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="stemFocus" id="stemYes" value="yes" required>
+                                        <label class="form-check-label" for="stemYes">Yes</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="stemFocus" id="stemNo" value="no" required>
+                                        <label class="form-check-label" for="stemNo">No</label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Special Areas -->
+                            <div class="mb-4">
+                                <label class="form-label">Are there special areas of focus or programming you would be interested in seeing offered at the proposed NEW school in your area? <span class="text-danger">*</span></label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="specialAreas" id="specialAreasYes" value="yes" required>
+                                    <label class="form-check-label" for="specialAreasYes">Yes</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="specialAreas" id="specialAreasNo" value="no" required>
+                                    <label class="form-check-label" for="specialAreasNo">No</label>
+                                </div>
+                                <div class="mt-2" id="specialAreasExplainDiv" style="display: none;">
+                                    <label for="specialAreasExplain" class="form-label">If yes, please explain:</label>
+                                    <textarea class="form-control" id="specialAreasExplain" name="specialAreasExplain" rows="3"></textarea>
+                                </div>
+                            </div>
+                            
+                            <!-- Additional Comments -->
+                            <div class="mb-4">
+                                <label for="additionalComments" class="form-label">Please provide any additional comments that will help us in the planning and design of a potential NEW school in the area:</label>
+                                <textarea class="form-control" id="additionalComments" name="additionalComments" rows="4"></textarea>
+                            </div>
+                            
+                            <!-- Submit Button -->
+                            <div class="text-center">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-paper-plane me-2"></i>Submit
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            `;
+            
+            // Add survey form functionality after the content is loaded
+            setTimeout(() => {
+                setupSurveyForm();
+            }, 100);
+        }
+        
         function showEmploymentModal(modal) {
             const modalTitle = modal.querySelector('#pageModalLabel');
             const modalBody = modal.querySelector('#modalBody');
@@ -606,6 +828,104 @@
             `;
         }
         
+        function showAcademicCalendarModal(modal) {
+            const modalTitle = modal.querySelector('#pageModalLabel');
+            const modalBody = modal.querySelector('#modalBody');
+            
+            modalTitle.innerHTML = '<i class="fas fa-calendar-alt me-2"></i>Academic Calendar';
+            modalBody.innerHTML = `
+                <div class="welcome-section">
+                    <h4 class="mb-3">
+                        <i class="fas fa-calendar-check me-2"></i>2025-2026 Academic Calendar
+                    </h4>
+                    <p class="text-muted mb-0">View our complete academic calendar for the 2025-2026 school year. This calendar includes all important dates, holidays, breaks, and academic periods.</p>
+                </div>
+                
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-file-pdf me-2"></i>CSA Calendar 2025-2026
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="text-center">
+                                    <div class="mb-3">
+                                        <i class="fas fa-calendar-alt fa-3x text-success mb-3"></i>
+                                        <h5>Clara Science Academy Academic Calendar</h5>
+                                        <p class="text-muted">School Year 2025-2026</p>
+                                    </div>
+                                    
+                                    <div class="alert alert-info">
+                                        <h6 class="alert-heading">
+                                            <i class="fas fa-info-circle me-2"></i>View Calendar
+                                        </h6>
+                                        <p class="mb-3">Click the button below to view or download the complete academic calendar.</p>
+                                        <a href="{{ url_for('static', filename='CSA_Calendar_2025-2026.pdf') }}" target="_blank" class="btn btn-success btn-lg">
+                                            <i class="fas fa-external-link-alt me-2"></i>View Calendar PDF
+                                        </a>
+                                    </div>
+                                    
+                                    <div class="row mt-4">
+                                        <div class="col-md-6">
+                                            <div class="card border-success">
+                                                <div class="card-body text-center">
+                                                    <i class="fas fa-clock fa-2x text-success mb-2"></i>
+                                                    <h6>Important Dates</h6>
+                                                    <p class="small text-muted mb-0">First day, holidays, breaks, and key academic periods</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="card border-success">
+                                                <div class="card-body text-center">
+                                                    <i class="fas fa-graduation-cap fa-2x text-success mb-2"></i>
+                                                    <h6>Academic Periods</h6>
+                                                    <p class="small text-muted mb-0">Quarters, semesters, and grading periods</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mt-4">
+                                        <div class="alert alert-light">
+                                            <h6 class="alert-heading">
+                                                <i class="fas fa-download me-2"></i>Download Options
+                                            </h6>
+                                            <p class="mb-2">You can also download the calendar for offline viewing:</p>
+                                            <a href="{{ url_for('static', filename='CSA_Calendar_2025-2026.pdf') }}" download class="btn btn-outline-success">
+                                                <i class="fas fa-download me-2"></i>Download PDF
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="alert alert-success">
+                            <h6 class="alert-heading">
+                                <i class="fas fa-lightbulb me-2"></i>Need Help?
+                            </h6>
+                            <p class="mb-2">If you have questions about specific dates or need additional information about the academic calendar, please contact us:</p>
+                            <div class="d-flex flex-wrap gap-2">
+                                <a href="mailto:info@clarascienceacademy.com" class="btn btn-outline-success btn-sm">
+                                    <i class="fas fa-envelope me-1"></i>Email Us
+                                </a>
+                                <a href="tel:1-800-567-5110" class="btn btn-outline-success btn-sm">
+                                    <i class="fas fa-phone me-1"></i>Call Us
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
         function showPlaceholderModal(modal, page) {
             const modalTitle = modal.querySelector('#pageModalLabel');
             const modalBody = modal.querySelector('#modalBody');
@@ -789,6 +1109,91 @@
                 if (charCount) {
                     charCount.textContent = '0';
                 }
+            });
+        }
+        
+        function setupSurveyForm() {
+            const surveyForm = document.getElementById('surveyForm');
+            
+            if (!surveyForm) return;
+            
+            // Handle children count visibility
+            const hasChildrenRadios = document.querySelectorAll('input[name="hasChildren"]');
+            const childrenCountDiv = document.getElementById('childrenCountDiv');
+            
+            hasChildrenRadios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    if (this.value === 'yes') {
+                        childrenCountDiv.style.display = 'block';
+                    } else {
+                        childrenCountDiv.style.display = 'none';
+                    }
+                });
+            });
+            
+            // Handle special areas explanation visibility
+            const specialAreasRadios = document.querySelectorAll('input[name="specialAreas"]');
+            const specialAreasExplainDiv = document.getElementById('specialAreasExplainDiv');
+            
+            specialAreasRadios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    if (this.value === 'yes') {
+                        specialAreasExplainDiv.style.display = 'block';
+                    } else {
+                        specialAreasExplainDiv.style.display = 'none';
+                    }
+                });
+            });
+            
+            // Form submission
+            surveyForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Get form data
+                const formData = new FormData(this);
+                const county = formData.get('county');
+                const hasChildren = formData.get('hasChildren');
+                const schoolType = formData.get('schoolType');
+                const newSchoolOption = formData.get('newSchoolOption');
+                const charterSchool = formData.get('charterSchool');
+                const elementarySchool = formData.get('elementarySchool');
+                const middleSchool = formData.get('middleSchool');
+                const highSchool = formData.get('highSchool');
+                const culturalFactors = formData.get('culturalFactors');
+                const collegePrep = formData.get('collegePrep');
+                const stemFocus = formData.get('stemFocus');
+                const specialAreas = formData.get('specialAreas');
+                
+                // Basic validation for required fields
+                const requiredFields = [
+                    { field: county, name: 'County' },
+                    { field: hasChildren, name: 'Children question' },
+                    { field: schoolType, name: 'School type' },
+                    { field: newSchoolOption, name: 'New school option' },
+                    { field: charterSchool, name: 'Charter school question' },
+                    { field: elementarySchool, name: 'Elementary school question' },
+                    { field: middleSchool, name: 'Middle school question' },
+                    { field: highSchool, name: 'High school question' },
+                    { field: culturalFactors, name: 'Cultural factors question' },
+                    { field: collegePrep, name: 'College prep question' },
+                    { field: stemFocus, name: 'STEM focus question' },
+                    { field: specialAreas, name: 'Special areas question' }
+                ];
+                
+                for (let item of requiredFields) {
+                    if (!item.field) {
+                        alert(`Please fill in the required field: ${item.name}`);
+                        return;
+                    }
+                }
+                
+                // Show success message
+                alert('Thank you for completing our community survey! Your feedback is valuable in helping us plan and develop Clara Science Academy. We appreciate your time and input.\\n\\nIf you have any additional questions, please contact us at info@clarascienceacademy.com or call 1-800-567-5110.');
+                
+                // Reset form
+                this.reset();
+                childrenCountDiv.style.display = 'none';
+                specialAreasExplainDiv.style.display = 'none';
             });
         }
     </script>

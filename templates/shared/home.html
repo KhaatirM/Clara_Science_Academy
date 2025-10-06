@@ -81,9 +81,6 @@
                     <button class="hero-btn hero-btn-secondary" data-bs-toggle="modal" data-bs-target="#contactModal">
                         <i class="fas fa-envelope"></i>Contact Us
                     </button>
-                    <button class="hero-btn hero-btn-secondary" onclick="testModal()" style="background: #dc3545;">
-                        <i class="fas fa-bug"></i>Test Modal
-                    </button>
                 </div>
             </div>
         {% endif %}
@@ -812,39 +809,7 @@ document.addEventListener('DOMContentLoaded', function() {
         observer.observe(el);
     });
     
-    // Debug: Check if modal system is working
-    console.log('Home page loaded, checking modal system...');
-    const testLinks = document.querySelectorAll('[data-page]');
-    console.log('Found', testLinks.length, 'data-page links');
-    
-    // Test modal system
-    setTimeout(() => {
-        const existingModal = document.getElementById('pageModal');
-        console.log('Existing modal found:', !!existingModal);
-    }, 1000);
 });
-
-// Test function for modal debugging
-function testModal() {
-    console.log('Test modal button clicked');
-    
-    // Try to trigger the FAQ modal manually
-    const target = document.querySelector('[data-page="faq"]');
-    if (target) {
-        console.log('FAQ link found, triggering click');
-        target.click();
-    } else {
-        console.log('FAQ link not found');
-    }
-    
-    // Check if modal system functions exist
-    if (typeof showPageModal === 'function') {
-        console.log('showPageModal function exists');
-        showPageModal('faq');
-    } else {
-        console.log('showPageModal function does not exist');
-    }
-}
 </script>
 
 {% endblock %}

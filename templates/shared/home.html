@@ -81,6 +81,9 @@
                     <button class="hero-btn hero-btn-secondary" data-bs-toggle="modal" data-bs-target="#contactModal">
                         <i class="fas fa-envelope"></i>Contact Us
                     </button>
+                    <button class="hero-btn hero-btn-secondary" onclick="testModal()" style="background: #dc3545;">
+                        <i class="fas fa-bug"></i>Test Modal
+                    </button>
                 </div>
             </div>
         {% endif %}
@@ -738,7 +741,7 @@
 </div>
 
 <script>
-// Update popup functionality
+// Consolidated homepage functionality
 document.addEventListener('DOMContentLoaded', function() {
     // Show update popup on page load (only once per session)
     if (!sessionStorage.getItem('updateModalShown')) {
@@ -746,10 +749,8 @@ document.addEventListener('DOMContentLoaded', function() {
         updateModal.show();
         sessionStorage.setItem('updateModalShown', 'true');
     }
-});
-
-// Slideshow functionality for homepage
-document.addEventListener('DOMContentLoaded', function() {
+    
+    // Slideshow functionality for homepage
     const slideshowImages = document.querySelectorAll('.slideshow-image');
     let currentSlide = 0;
     
@@ -769,48 +770,81 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Change slide every 6 seconds
     setInterval(nextSlide, 6000);
-});
-
-// Smooth scrolling for anchor links
-document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-    anchor.addEventListener('click', function (e) {
-        const href = this.getAttribute('href');
-        // Only handle valid anchor links (not just "#")
-        if (href && href !== '#' && href.length > 1) {
-            e.preventDefault();
-            const target = document.querySelector(href);
-            if (target) {
-                target.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start'
-                });
+    
+    // Smooth scrolling for anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            const href = this.getAttribute('href');
+            // Only handle valid anchor links (not just "#")
+            if (href && href !== '#' && href.length > 1) {
+                e.preventDefault();
+                const target = document.querySelector(href);
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
             }
-        }
+        });
     });
+    
+    // Add scroll animations
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+    };
+
+    const observer = new IntersectionObserver(function(entries) {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    }, observerOptions);
+
+    // Observe elements for scroll animations
+    document.querySelectorAll('.feature-card, .program-card, .testimonial-card, .contact-card').forEach(el => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(30px)';
+        el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+        observer.observe(el);
+    });
+    
+    // Debug: Check if modal system is working
+    console.log('Home page loaded, checking modal system...');
+    const testLinks = document.querySelectorAll('[data-page]');
+    console.log('Found', testLinks.length, 'data-page links');
+    
+    // Test modal system
+    setTimeout(() => {
+        const existingModal = document.getElementById('pageModal');
+        console.log('Existing modal found:', !!existingModal);
+    }, 1000);
 });
 
-// Add scroll animations
-const observerOptions = {
-    threshold: 0.1,
-    rootMargin: '0px 0px -50px 0px'
-};
-
-const observer = new IntersectionObserver(function(entries) {
-    entries.forEach(entry => {
-        if (entry.isIntersecting) {
-            entry.target.style.opacity = '1';
-            entry.target.style.transform = 'translateY(0)';
-        }
-    });
-}, observerOptions);
-
-// Observe elements for scroll animations
-document.querySelectorAll('.feature-card, .program-card, .testimonial-card, .contact-card').forEach(el => {
-    el.style.opacity = '0';
-    el.style.transform = 'translateY(30px)';
-    el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
-    observer.observe(el);
-});
+// Test function for modal debugging
+function testModal() {
+    console.log('Test modal button clicked');
+    
+    // Try to trigger the FAQ modal manually
+    const target = document.querySelector('[data-page="faq"]');
+    if (target) {
+        console.log('FAQ link found, triggering click');
+        target.click();
+    } else {
+        console.log('FAQ link not found');
+    }
+    
+    // Check if modal system functions exist
+    if (typeof showPageModal === 'function') {
+        console.log('showPageModal function exists');
+        showPageModal('faq');
+    } else {
+        console.log('showPageModal function does not exist');
+    }
+}
 </script>
 
 {% endblock %}

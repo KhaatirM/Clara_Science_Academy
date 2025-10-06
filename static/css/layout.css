@@ -77,7 +77,12 @@
 .sidebar-nav .nav-link.active {
     color: white;
     background: rgba(255,255,255,0.1);
-    border-left-color: #007bff;
+    border-left-color: #28a745;
+}
+
+.sidebar-nav .nav-link.active {
+    background: #28a745;
+    border-left-color: #1e7e34;
 }
 
 .sidebar-nav .nav-link i {

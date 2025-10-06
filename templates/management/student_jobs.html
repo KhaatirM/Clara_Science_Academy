@@ -673,4 +673,46 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
+<style>
+.card-header {
+    font-weight: 600;
+}
+
+.badge {
+    font-size: 0.875rem;
+}
+
+.table th {
+    background-color: #f8f9fa;
+    border-top: none;
+}
+
+.form-check-label {
+    font-size: 0.9rem;
+}
+
+.btn-group .btn {
+    border-radius: 0.375rem;
+}
+
+.btn-group .btn:not(:last-child) {
+    margin-right: 0.5rem;
+}
+
+@media (max-width: 768px) {
+    .card-body .row > div {
+        margin-bottom: 1rem;
+    }
+    
+    .btn-group {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .btn-group .btn {
+        margin-bottom: 0.5rem;
+        margin-right: 0;
+    }
+}
+</style>
 {% endblock %}

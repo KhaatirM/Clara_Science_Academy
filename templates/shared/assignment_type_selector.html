@@ -138,6 +138,57 @@
     </div>
 </div>
 
+<style>
+.assignment-type-card {
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border: 2px solid transparent;
+}
+
+.assignment-type-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    border-color: #007bff;
+}
+
+.assignment-type-card.selected {
+    border-color: #007bff;
+    background-color: #f8f9fa;
+}
+
+.assignment-type-icon {
+    transition: transform 0.3s ease;
+}
+
+.assignment-type-card:hover .assignment-type-icon {
+    transform: scale(1.1);
+}
+
+.features-list ul li {
+    margin-bottom: 0.25rem;
+}
+
+.btn.select-assignment-type {
+    transition: all 0.3s ease;
+}
+
+.btn.select-assignment-type:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .assignment-type-card {
+        margin-bottom: 1rem;
+    }
+    
+    .features-list {
+        text-align: center;
+    }
+}
+</style>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const assignmentTypeCards = document.querySelectorAll('.assignment-type-card');

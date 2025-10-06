@@ -226,6 +226,94 @@
     </div>
 
     <!-- Enhanced Visual Styling -->
+    <style>
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+    }
+
+    .bg-gradient-success {
+        background: linear-gradient(135deg, #198754 0%, #146c43 100%);
+    }
+
+    .card {
+        transition: all 0.3s ease;
+    }
+
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    }
+
+    .btn {
+        transition: all 0.3s ease;
+    }
+
+    .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+
+    .border-start {
+        border-width: 4px !important;
+    }
+
+    /* Custom animations */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .card {
+        animation: fadeInUp 0.6s ease-out;
+    }
+
+    /* Enhanced form styling */
+    .form-control-lg {
+        border-radius: 0.75rem;
+        padding: 0.75rem 1rem;
+    }
+
+    .form-select {
+        border-radius: 0.75rem;
+        padding: 0.75rem 1rem;
+    }
+
+    /* Teacher assignment cards */
+    .bg-warning.bg-opacity-10 {
+        background-color: rgba(255, 193, 7, 0.1) !important;
+    }
+
+    .bg-info.bg-opacity-10 {
+        background-color: rgba(13, 202, 240, 0.1) !important;
+    }
+
+    /* Header animation */
+    @keyframes slideInDown {
+        from {
+            opacity: 0;
+            transform: translateY(-50px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .bg-gradient-success {
+        animation: slideInDown 0.8s ease-out;
+    }
+    </style>
 
     <script>
     // Bootstrap validation script

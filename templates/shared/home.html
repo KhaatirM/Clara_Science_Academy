@@ -5,8 +5,6 @@
 {% endblock %}
 
 {% block content %}
-<!-- This template no longer needs its own <link> tag as it's handled by base.html -->
-
 <!-- Slideshow Background -->
 <div class="slideshow-container">
     <div class="slideshow-image" style="background-image: url('/static/img/backimg/image1.png');"></div>
@@ -64,22 +62,26 @@
             {% endif %}
             <div class="hero-actions">
                 <p class="mb-3">Welcome back, {{ current_user.username }}! ({{ current_user.role }})</p>
-                <a class="btn btn-primary btn-lg me-3" href="{{ dashboard_url }}" role="button">
-                    <i class="fas fa-tachometer-alt me-2"></i>Go to Your Dashboard
-                </a>
-                <a class="btn btn-outline-light btn-lg" href="{{ url_for('auth.logout') }}" role="button">
-                    <i class="fas fa-sign-out-alt me-2"></i>Logout
-                </a>
+                <div class="hero-buttons">
+                    <a class="hero-btn hero-btn-primary" href="{{ dashboard_url }}" role="button">
+                        <i class="fas fa-tachometer-alt"></i>Go to Your Dashboard
+                    </a>
+                    <a class="hero-btn hero-btn-outline" href="{{ url_for('auth.logout') }}" role="button">
+                        <i class="fas fa-sign-out-alt"></i>Logout
+                    </a>
+                </div>
             </div>
         {% else %}
             <div class="hero-actions">
                 <p class="mb-3">Access your personalized educational portal</p>
-                <a class="btn btn-primary btn-lg me-3" href="{{ url_for('auth.login') }}" role="button">
-                    <i class="fas fa-sign-in-alt me-2"></i>Secure Login
-                </a>
-                <button class="btn btn-outline-light btn-lg" data-bs-toggle="modal" data-bs-target="#contactModal">
-                    <i class="fas fa-envelope me-2"></i>Contact Us
-                </button>
+                <div class="hero-buttons">
+                    <a class="hero-btn hero-btn-primary" href="{{ url_for('auth.login') }}" role="button">
+                        <i class="fas fa-sign-in-alt"></i>Secure Login
+                    </a>
+                    <button class="hero-btn hero-btn-secondary" data-bs-toggle="modal" data-bs-target="#contactModal">
+                        <i class="fas fa-envelope"></i>Contact Us
+                    </button>
+                </div>
             </div>
         {% endif %}
     </div>
@@ -96,14 +98,14 @@
                 <p>We believe that every student has the potential to achieve greatness when provided with the right tools, guidance, and environment. Our commitment to personalized education ensures that each student receives the attention and support they need to thrive.</p>
                 <div class="row mt-4">
                     <div class="col-6">
-                        <div class="stat-item text-center">
-                            <h3 class="stat-number">N/A</h3>
+                        <div class="stat-item">
+                            <h3 class="stat-number">150+</h3>
                             <p class="stat-label">Students Enrolled</p>
                         </div>
                     </div>
                     <div class="col-6">
-                        <div class="stat-item text-center">
-                            <h3 class="stat-number">N/A</h3>
+                        <div class="stat-item">
+                            <h3 class="stat-number">25+</h3>
                             <p class="stat-label">Expert Teachers</p>
                         </div>
                     </div>
@@ -136,7 +138,7 @@
                         <i class="fas fa-user-graduate"></i>
                     </div>
                     <h3>Student Management</h3>
-                    <p>Easily manage student records, enrollment, and academic progress all in one place.</p>
+                    <p>Easily manage student records, enrollment, and academic progress all in one place with our intuitive dashboard.</p>
                 </div>
             </div>
             <!-- Feature 2: Teacher & Class Tools -->
@@ -146,7 +148,7 @@
                         <i class="fas fa-chalkboard-teacher"></i>
                     </div>
                     <h3>Teacher & Class Tools</h3>
-                    <p>Empower teachers with tools for class management, assignments, and grading.</p>
+                    <p>Empower teachers with advanced tools for class management, assignments, grading, and student engagement.</p>
                 </div>
             </div>
             <!-- Feature 3: Comprehensive Reporting -->
@@ -156,7 +158,7 @@
                         <i class="fas fa-chart-pie"></i>
                     </div>
                     <h3>Comprehensive Reporting</h3>
-                    <p>Generate detailed reports for attendance, grades, and overall school performance.</p>
+                    <p>Generate detailed reports for attendance, grades, and overall school performance with real-time analytics.</p>
                 </div>
             </div>
             <!-- Feature 4: Advanced Analytics -->
@@ -166,7 +168,7 @@
                         <i class="fas fa-chart-line"></i>
                     </div>
                     <h3>Advanced Analytics</h3>
-                    <p>Track student performance trends and identify areas for improvement with data-driven insights.</p>
+                    <p>Track student performance trends and identify areas for improvement with data-driven insights and visualizations.</p>
                 </div>
             </div>
             <!-- Feature 5: Communication Hub -->
@@ -176,7 +178,7 @@
                         <i class="fas fa-comments"></i>
                     </div>
                     <h3>Communication Hub</h3>
-                    <p>Seamless communication between students, teachers, and parents through integrated messaging.</p>
+                    <p>Seamless communication between students, teachers, and parents through integrated messaging and notifications.</p>
                 </div>
             </div>
             <!-- Feature 6: Secure Platform -->
@@ -186,7 +188,7 @@
                         <i class="fas fa-shield-alt"></i>
                     </div>
                     <h3>Secure Platform</h3>
-                    <p>Enterprise-grade security ensures student data privacy and platform reliability.</p>
+                    <p>Enterprise-grade security ensures student data privacy and platform reliability with advanced encryption.</p>
                 </div>
             </div>
         </div>
@@ -194,7 +196,7 @@
 </div>
 
 <!-- Programs Section -->
-<div class="programs-section py-5 bg-light">
+<div class="programs-section py-5">
     <div class="container">
         <div class="row">
             <div class="col-12 text-center mb-5">
@@ -203,49 +205,58 @@
             </div>
         </div>
         <div class="row g-4">
-            <div class="col-md-6 col-lg-2-4">
+            <div class="col-md-6 col-lg-4">
                 <div class="program-card">
                     <div class="program-icon">
                         <i class="fas fa-flask"></i>
                     </div>
                     <h4>Science & Technology</h4>
-                    <p>Advanced courses in physics, chemistry, biology, and computer science with hands-on laboratory experiences.</p>
+                    <p>Advanced courses in physics, chemistry, biology, and computer science with hands-on laboratory experiences and modern equipment.</p>
                 </div>
             </div>
-            <div class="col-md-6 col-lg-2-4">
+            <div class="col-md-6 col-lg-4">
                 <div class="program-card">
                     <div class="program-icon">
                         <i class="fas fa-calculator"></i>
                     </div>
                     <h4>Mathematics</h4>
-                    <p>Comprehensive math curriculum from basic arithmetic to advanced calculus and statistics.</p>
+                    <p>Comprehensive math curriculum from basic arithmetic to advanced calculus, statistics, and problem-solving methodologies.</p>
                 </div>
             </div>
-            <div class="col-md-6 col-lg-2-4">
+            <div class="col-md-6 col-lg-4">
                 <div class="program-card">
                     <div class="program-icon">
                         <i class="fas fa-book"></i>
                     </div>
                     <h4>Language Arts</h4>
-                    <p>Literature, writing, and communication skills development for academic and professional success.</p>
+                    <p>Literature, writing, and communication skills development for academic and professional success with creative expression.</p>
                 </div>
             </div>
-            <div class="col-md-6 col-lg-2-4">
+            <div class="col-md-6 col-lg-4">
                 <div class="program-card">
                     <div class="program-icon">
                         <i class="fas fa-globe-americas"></i>
                     </div>
                     <h4>Social Sciences</h4>
-                    <p>History, geography, civics, and social studies to develop well-rounded global citizens.</p>
+                    <p>History, geography, civics, and social studies to develop well-rounded global citizens with cultural awareness.</p>
                 </div>
             </div>
-            <div class="col-md-6 col-lg-2-4">
+            <div class="col-md-6 col-lg-4">
                 <div class="program-card">
                     <div class="program-icon">
                         <i class="fas fa-code"></i>
                     </div>
                     <h4>Programming</h4>
-                    <p>Modern programming languages, software development, web technologies, and computational thinking skills.</p>
+                    <p>Modern programming languages, software development, web technologies, and computational thinking skills for the digital age.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4">
+                <div class="program-card">
+                    <div class="program-icon">
+                        <i class="fas fa-palette"></i>
+                    </div>
+                    <h4>Arts & Creativity</h4>
+                    <p>Visual arts, music, drama, and creative expression to foster imagination and artistic development in our students.</p>
                 </div>
             </div>
         </div>
@@ -269,11 +280,12 @@
                 <p class="lead">Digital Innovation in Education</p>
                 <p>Our student management system leverages the latest technology to provide seamless, efficient, and secure educational administration. From real-time attendance tracking to comprehensive grade management, we've integrated modern solutions to enhance the learning experience.</p>
                 <ul class="tech-features">
-                    <li><i class="fas fa-check-circle"></i> Real-time attendance tracking</li>
-                    <li><i class="fas fa-check-circle"></i> Digital grade books and report cards</li>
-                    <li><i class="fas fa-check-circle"></i> Mobile-responsive design</li>
-                    <li><i class="fas fa-check-circle"></i> Secure cloud-based platform</li>
-                    <li><i class="fas fa-check-circle"></i> Advanced analytics and reporting</li>
+                    <li><i class="fas fa-check-circle"></i> Real-time attendance tracking and monitoring</li>
+                    <li><i class="fas fa-check-circle"></i> Digital grade books and automated report cards</li>
+                    <li><i class="fas fa-check-circle"></i> Mobile-responsive design for all devices</li>
+                    <li><i class="fas fa-check-circle"></i> Secure cloud-based platform with 99.9% uptime</li>
+                    <li><i class="fas fa-check-circle"></i> Advanced analytics and performance insights</li>
+                    <li><i class="fas fa-check-circle"></i> Integrated communication and notification system</li>
                 </ul>
             </div>
         </div>
@@ -293,7 +305,7 @@
             <div class="col-md-4">
                 <div class="testimonial-card">
                     <div class="testimonial-content">
-                        <p>"Leading Clara Science Academy with a vision for educational excellence and innovation. We are committed to providing the best learning environment for our students."</p>
+                        <p>"Leading Clara Science Academy with a vision for educational excellence and innovation. We are committed to providing the best learning environment for our students and preparing them for future success."</p>
                     </div>
                     <div class="testimonial-author">
                         <div class="author-info">
@@ -306,7 +318,7 @@
             <div class="col-md-4">
                 <div class="testimonial-card">
                     <div class="testimonial-content">
-                        <p>"As Principal, I ensure that every student receives the highest quality education and support. Our comprehensive management system helps us achieve this goal effectively."</p>
+                        <p>"As Principal, I ensure that every student receives the highest quality education and support. Our comprehensive management system helps us achieve this goal effectively while maintaining personal connections."</p>
                     </div>
                     <div class="testimonial-author">
                         <div class="author-info">
@@ -319,7 +331,7 @@
             <div class="col-md-4">
                 <div class="testimonial-card">
                     <div class="testimonial-content">
-                        <p>"Technology is the backbone of modern education. Our advanced student management system ensures seamless operations and enhanced learning experiences for all stakeholders."</p>
+                        <p>"Technology is the backbone of modern education. Our advanced student management system ensures seamless operations and enhanced learning experiences for all stakeholders in our educational community."</p>
                     </div>
                     <div class="testimonial-author">
                         <div class="author-info">
@@ -394,7 +406,7 @@
 </div>
 
 <!-- Call to Action Section -->
-<div class="cta-section py-5 bg-primary text-white">
+<div class="cta-section py-5">
     <div class="container text-center">
         <div class="row">
             <div class="col-12">
@@ -559,7 +571,7 @@
             <div class="modal-body p-4">
                 <div class="update-intro mb-4">
                     <h6 class="text-primary mb-2">
-                        <i class="fas fa-calendar-alt me-2"></i>Comprehensive System Update - September 29, 2025
+                        <i class="fas fa-calendar-alt me-2"></i>Comprehensive System Update - October 2025
                     </h6>
                     <p class="text-muted mb-0">We've completed a massive overhaul of the entire system! Here's everything that's been fixed and improved:</p>
                 </div>
@@ -623,64 +635,6 @@
                         </ul>
                     </div>
 
-                    <!-- Class Management Improvements -->
-                    <div class="update-section mb-4">
-                        <h6 class="text-primary mb-3">
-                            <i class="fas fa-chalkboard-teacher me-2"></i>📚 Class Management Enhancements
-                        </h6>
-                        <ul class="list-unstyled">
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Multi-Teacher System:</strong> Support for primary, substitute, and additional teachers per class
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Enhanced Class Pages:</strong> Beautiful roster management, grades display, and class overview pages
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Student Roster Management:</strong> Add/remove students with real-time updates and validation
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Class-Based Assignments View:</strong> Management can view assignments organized by class
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Visual Design Overhaul:</strong> Modern cards, gradients, and professional styling throughout
-                            </li>
-                        </ul>
-                    </div>
-
-                    <!-- Technical Infrastructure -->
-                    <div class="update-section mb-4">
-                        <h6 class="text-primary mb-3">
-                            <i class="fas fa-cogs me-2"></i>⚙️ Technical Infrastructure Improvements
-                        </h6>
-                        <ul class="list-unstyled">
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Codebase Organization:</strong> Modularized route files and consolidated utility functions
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Template Structure:</strong> Organized templates by role with proper inheritance
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Database Schema Fixes:</strong> Resolved all foreign key constraints and data integrity issues
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Error Handling:</strong> Comprehensive error handling and user-friendly error messages
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Performance Optimization:</strong> Improved loading times and reduced server errors
-                            </li>
-                        </ul>
-                    </div>
-
                     <!-- Visual Design Revolution -->
                     <div class="update-section mb-4">
                         <h6 class="text-primary mb-3">
@@ -689,7 +643,7 @@
                         <ul class="list-unstyled">
                             <li class="mb-2">
                                 <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Modern UI Components:</strong> Beautiful cards, gradients, and professional styling
+                                <strong>Modern UI Components:</strong> Beautiful cards, gradients, and professional styling throughout
                             </li>
                             <li class="mb-2">
                                 <i class="fas fa-check-circle text-success me-2"></i>
@@ -706,35 +660,6 @@
                             <li class="mb-2">
                                 <i class="fas fa-check-circle text-success me-2"></i>
                                 <strong>Consistent Branding:</strong> Unified color scheme and design language throughout
-                            </li>
-                        </ul>
-                    </div>
-
-                    <!-- User Experience Improvements -->
-                    <div class="update-section mb-4">
-                        <h6 class="text-primary mb-3">
-                            <i class="fas fa-heart me-2"></i>💝 User Experience Improvements
-                        </h6>
-                        <ul class="list-unstyled">
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Intuitive Navigation:</strong> Clear visual hierarchy and logical user flows
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Smart Conditional Logic:</strong> Buttons and features appear only when relevant
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Real-time Feedback:</strong> Immediate visual feedback for all user actions
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Accessibility Features:</strong> Screen reader support and keyboard navigation
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Helpful Guidance:</strong> Built-in tips and contextual help throughout the system
                             </li>
                         </ul>
                     </div>
@@ -815,9 +740,12 @@
 <script>
 // Update popup functionality
 document.addEventListener('DOMContentLoaded', function() {
-    // Show update popup on page load
-    const updateModal = new bootstrap.Modal(document.getElementById('updateModal'));
-    updateModal.show();
+    // Show update popup on page load (only once per session)
+    if (!sessionStorage.getItem('updateModalShown')) {
+        const updateModal = new bootstrap.Modal(document.getElementById('updateModal'));
+        updateModal.show();
+        sessionStorage.setItem('updateModalShown', 'true');
+    }
 });
 
 // Slideshow functionality for homepage
@@ -839,8 +767,45 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize slideshow
     showSlide(0);
     
-    // Change slide every 5 seconds
-    setInterval(nextSlide, 5000);
+    // Change slide every 6 seconds
+    setInterval(nextSlide, 6000);
+});
+
+// Smooth scrolling for anchor links
+document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+            target.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
+        }
+    });
+});
+
+// Add scroll animations
+const observerOptions = {
+    threshold: 0.1,
+    rootMargin: '0px 0px -50px 0px'
+};
+
+const observer = new IntersectionObserver(function(entries) {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            entry.target.style.opacity = '1';
+            entry.target.style.transform = 'translateY(0)';
+        }
+    });
+}, observerOptions);
+
+// Observe elements for scroll animations
+document.querySelectorAll('.feature-card, .program-card, .testimonial-card, .contact-card').forEach(el => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(30px)';
+    el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+    observer.observe(el);
 });
 </script>
 

@@ -174,7 +174,7 @@
                                 </div>
                                 <div class="flex-grow-1 ms-3">
                                     <h6 class="card-title mb-0">Total Assignments</h6>
-                                    <h4 class="mb-0">{{ class_assignments|length }}</h4>
+                                    <h4 class="mb-0">{{ class_assignments|length + (group_assignments|length if group_assignments else 0) }}</h4>
                                 </div>
                             </div>
                         </div>
@@ -329,7 +329,52 @@
                             </div>
                         </div>
                     </div>
-                    {% else %}
+                    {% endfor %}
+                    
+                    {% if group_assignments %}
+                        {% for group_assignment in group_assignments %}
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card h-100 shadow-sm assignment-card border-info">
+                                <div class="card-header d-flex justify-content-between align-items-center bg-info text-white">
+                                    <h6 class="mb-0"><i class="bi bi-people-fill me-2"></i>{{ group_assignment.title }}</h6>
+                                    <span class="badge bg-light text-dark">Group</span>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-2">
+                                        <small class="text-muted">
+                                            <i class="fas fa-calendar me-1"></i>
+                                            Due: {{ group_assignment.due_date.strftime('%m/%d/%Y') if group_assignment.due_date else 'No due date' }}
+                                        </small>
+                                    </div>
+                                    <div class="mb-2">
+                                        <small class="text-muted">
+                                            <i class="bi bi-journal-text me-1"></i>
+                                            Quarter: {{ group_assignment.quarter or 'N/A' }}
+                                        </small>
+                                    </div>
+                                    <div class="mb-2">
+                                        <small class="text-muted">
+                                            <i class="bi bi-people me-1"></i>
+                                            Group Size: {{ group_assignment.group_size_min }}-{{ group_assignment.group_size_max }}
+                                        </small>
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-light">
+                                    <div class="d-grid gap-2">
+                                        <a href="{{ url_for('teacher.view_group_assignment', assignment_id=group_assignment.id) }}?admin_view=true" class="btn btn-primary btn-sm">
+                                            <i class="fas fa-eye me-2"></i>View Details
+                                        </a>
+                                        <a href="{{ url_for('teacher.grade_group_assignment', assignment_id=group_assignment.id) }}?admin_view=true" class="btn btn-success btn-sm">
+                                            <i class="fas fa-edit me-2"></i>Grade Submissions
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+                    
+                    {% if not class_assignments and not group_assignments %}
                     <div class="col-12">
                         <div class="card">
                             <div class="card-body text-center p-5">
@@ -339,7 +384,7 @@
                             </div>
                         </div>
                     </div>
-                    {% endfor %}
+                    {% endif %}
                 </div>
             </div>
 

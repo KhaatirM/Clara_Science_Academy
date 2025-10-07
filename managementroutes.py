@@ -24,7 +24,7 @@ from models import (
     # Discussion system
     DiscussionThread, DiscussionPost,
     # Group system
-    StudentGroup, StudentGroupMember,
+    StudentGroup, StudentGroupMember, GroupAssignment,
     # Student Jobs system
     CleaningTeam, CleaningTeamMember, CleaningInspection, CleaningTask, CleaningSchedule
 )
@@ -1632,12 +1632,16 @@ def assignments_and_grades():
         
         # If no class is selected, show the class selection interface (like /management/assignments)
         if not class_filter or not class_filter.strip():
-            # Get assignment counts for each class (like the original assignments route)
+            # Get assignment counts for each class (regular + group assignments)
             class_assignments = {}
             for class_obj in accessible_classes:
                 if class_obj and hasattr(class_obj, 'id') and class_obj.id is not None:
-                    assignment_count = Assignment.query.filter_by(class_id=class_obj.id).count()
-                    class_assignments[class_obj.id] = assignment_count
+                    regular_count = Assignment.query.filter_by(class_id=class_obj.id).count()
+                    try:
+                        group_count = GroupAssignment.query.filter_by(class_id=class_obj.id).count()
+                    except:
+                        group_count = 0
+                    class_assignments[class_obj.id] = regular_count + group_count
             
             return render_template('management/assignments_and_grades.html',
                                  accessible_classes=accessible_classes,
@@ -1720,22 +1724,42 @@ def assignments_and_grades():
                     selected_class = None
                 
                 if selected_class:
-                    # Get assignments for the selected class
+                    # Get regular assignments for the selected class
                     assignments_query = Assignment.query.filter_by(class_id=selected_class_id)
                 
-                # Apply sorting
-                if sort_by == 'title':
-                    if sort_order == 'asc':
-                        assignments_query = assignments_query.order_by(Assignment.title.asc())
-                    else:
-                        assignments_query = assignments_query.order_by(Assignment.title.desc())
-                else:  # due_date
-                    if sort_order == 'asc':
-                        assignments_query = assignments_query.order_by(Assignment.due_date.asc())
-                    else:
-                        assignments_query = assignments_query.order_by(Assignment.due_date.desc())
-                
-                class_assignments = assignments_query.all()
+                    # Apply sorting for regular assignments
+                    if sort_by == 'title':
+                        if sort_order == 'asc':
+                            assignments_query = assignments_query.order_by(Assignment.title.asc())
+                        else:
+                            assignments_query = assignments_query.order_by(Assignment.title.desc())
+                    else:  # due_date
+                        if sort_order == 'asc':
+                            assignments_query = assignments_query.order_by(Assignment.due_date.asc())
+                        else:
+                            assignments_query = assignments_query.order_by(Assignment.due_date.desc())
+                    
+                    class_assignments = assignments_query.all()
+                    
+                    # Get group assignments for the selected class
+                    try:
+                        group_assignments_query = GroupAssignment.query.filter_by(class_id=selected_class_id)
+                        
+                        # Apply sorting for group assignments
+                        if sort_by == 'title':
+                            if sort_order == 'asc':
+                                group_assignments_query = group_assignments_query.order_by(GroupAssignment.title.asc())
+                            else:
+                                group_assignments_query = group_assignments_query.order_by(GroupAssignment.title.desc())
+                        else:  # due_date
+                            if sort_order == 'asc':
+                                group_assignments_query = group_assignments_query.order_by(GroupAssignment.due_date.asc())
+                            else:
+                                group_assignments_query = group_assignments_query.order_by(GroupAssignment.due_date.desc())
+                        
+                        group_assignments = group_assignments_query.all()
+                    except:
+                        group_assignments = []
                 
                 # Get grade data for each assignment
                 for assignment in class_assignments:
@@ -1772,11 +1796,19 @@ def assignments_and_grades():
                 selected_class = None
                 pass
     
+        # Get group_assignments if they exist (for passing to template)
+        try:
+            if not 'group_assignments' in locals():
+                group_assignments = []
+        except:
+            group_assignments = []
+        
         return render_template('management/assignments_and_grades.html',
                              accessible_classes=accessible_classes,
                              class_data=class_data,
                              selected_class=selected_class,
                              class_assignments=class_assignments,
+                             group_assignments=group_assignments,
                              assignment_grades=assignment_grades,
                              class_filter=class_filter,
                              sort_by=sort_by,

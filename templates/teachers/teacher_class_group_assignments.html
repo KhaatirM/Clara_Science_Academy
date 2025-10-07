@@ -10,11 +10,11 @@
           <i class="bi bi-arrow-left me-1"></i>Back to Management
         </a>
       {% else %}
-        <a href="{{ url_for('management.view_class', class_id=class_obj.id) if role_prefix else url_for('teacher.view_class', class_id=class_obj.id) }}" class="btn btn-outline-secondary btn-sm">
+        <a href="{{ url_for('teacher.view_class', class_id=class_obj.id) }}" class="btn btn-outline-secondary btn-sm">
           <i class="bi bi-arrow-left me-1"></i>Back to Class
         </a>
       {% endif %}
-      <a href="{{ url_for('management.admin_create_group_assignment', class_id=class_obj.id) if role_prefix else url_for('teacher.group_assignment_type_selector', class_id=class_obj.id) }}" class="btn btn-primary btn-sm">
+      <a href="{{ url_for('teacher.group_assignment_type_selector', class_id=class_obj.id) }}{% if admin_view %}?admin_view=true{% endif %}" class="btn btn-primary btn-sm">
         <i class="bi bi-plus-circle me-1"></i>Create Group Assignment
       </a>
     </div>
@@ -134,11 +134,11 @@
               <!-- Assignment Actions -->
               <div class="mt-auto">
                 <div class="d-grid gap-2">
-                  <a href="{{ url_for('teacher.view_group_assignment', assignment_id=assignment.id) }}" 
+                  <a href="{{ url_for('teacher.view_group_assignment', assignment_id=assignment.id) }}{% if admin_view %}?admin_view=true{% endif %}" 
                      class="btn btn-outline-primary btn-sm">
                     <i class="bi bi-eye me-1"></i>View Details
                   </a>
-                  <a href="{{ url_for('teacher.grade_group_assignment', assignment_id=assignment.id) }}" 
+                  <a href="{{ url_for('teacher.grade_group_assignment', assignment_id=assignment.id) }}{% if admin_view %}?admin_view=true{% endif %}" 
                      class="btn btn-outline-success btn-sm">
                     <i class="bi bi-check-circle me-1"></i>Grade Assignment
                   </a>
@@ -155,7 +155,7 @@
             <i class="bi bi-journal-plus text-muted" style="font-size: 3rem;"></i>
             <h4 class="text-muted mt-3">No Group Assignments Yet</h4>
             <p class="text-muted mb-4">Create your first group assignment to engage students in collaborative work.</p>
-            <a href="{{ url_for('management.admin_create_group_assignment', class_id=class_obj.id) if role_prefix else url_for('teacher.group_assignment_type_selector', class_id=class_obj.id) }}" class="btn btn-primary">
+            <a href="{{ url_for('teacher.group_assignment_type_selector', class_id=class_obj.id) }}{% if admin_view %}?admin_view=true{% endif %}" class="btn btn-primary">
               <i class="bi bi-plus-circle me-2"></i>Create Your First Group Assignment
             </a>
           </div>

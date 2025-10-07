@@ -1277,6 +1277,25 @@ def assignments_and_grades():
         
         assignments = assignments_query.all()
         
+        # Get group assignments for the teacher's classes
+        try:
+            if current_user.role == 'Director':
+                group_assignments = GroupAssignment.query.all()
+            elif teacher is not None:
+                group_assignments = GroupAssignment.query.filter(GroupAssignment.class_id.in_(class_ids)).all()
+            else:
+                group_assignments = []
+            
+            # Apply class filter to group assignments if specified
+            if class_filter and class_filter.strip():
+                try:
+                    class_id = int(class_filter)
+                    group_assignments = [ga for ga in group_assignments if ga.class_id == class_id]
+                except ValueError:
+                    pass
+        except:
+            group_assignments = []
+        
         # Get grade data for grades view
         grade_data = {}
         if view_mode == 'grades':
@@ -1312,6 +1331,7 @@ def assignments_and_grades():
     
         return render_template('teachers/assignments_and_grades.html', 
                              assignments=assignments,
+                             group_assignments=group_assignments,
                              classes=classes,
                              class_filter=class_filter,
                              sort_by=sort_by,

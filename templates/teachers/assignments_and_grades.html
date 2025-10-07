@@ -99,7 +99,43 @@
                     </div>
                 </div>
                 {% endfor %}
-            {% else %}
+            {% endif %}
+            
+            {% if group_assignments %}
+                {% for group_assignment in group_assignments %}
+                <div class="col-lg-6 col-xl-4 mb-4">
+                    <div class="card h-100 border-info">
+                        <div class="card-header d-flex justify-content-between align-items-center bg-info text-white">
+                            <h6 class="card-title mb-0"><i class="bi bi-people-fill me-2"></i>{{ group_assignment.title }}</h6>
+                            <span class="badge bg-light text-dark">Group</span>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text">
+                                <strong>Class:</strong> {{ group_assignment.class_info.name if group_assignment.class_info else 'N/A' }}<br>
+                                <strong>Due Date:</strong> {{ group_assignment.due_date.strftime('%m/%d/%Y') if group_assignment.due_date else 'No due date' }}<br>
+                                <strong>Quarter:</strong> {{ group_assignment.quarter or 'N/A' }}<br>
+                                <strong>Group Size:</strong> {{ group_assignment.group_size_min }}-{{ group_assignment.group_size_max }}
+                            </p>
+                            <p class="card-text">
+                                <small class="text-muted">{{ group_assignment.description[:100] if group_assignment.description else 'No description' }}{% if group_assignment.description and group_assignment.description|length > 100 %}...{% endif %}</small>
+                            </p>
+                        </div>
+                        <div class="card-footer">
+                            <div class="btn-group w-100" role="group">
+                                <a href="{{ url_for('teacher.view_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-eye me-1"></i>View
+                                </a>
+                                <a href="{{ url_for('teacher.grade_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-outline-success btn-sm">
+                                    <i class="bi bi-check-circle me-1"></i>Grade
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% endif %}
+            
+            {% if not assignments and not group_assignments %}
                 <div class="col-12">
                     <div class="text-center py-5">
                         <i class="bi bi-journal-x display-1 text-muted"></i>

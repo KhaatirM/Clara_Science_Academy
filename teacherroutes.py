@@ -3102,11 +3102,21 @@ def create_group_assignment(class_id):
         db.session.commit()
         
         flash(f'Group assignment "{title}" created successfully!', 'success')
-        return redirect(url_for('teacher.class_group_assignments', class_id=class_id))
+        
+        # Check if this was called from management view
+        admin_view = request.args.get('admin_view') == 'true'
+        if admin_view:
+            return redirect(url_for('management.admin_class_group_assignments', class_id=class_id))
+        else:
+            return redirect(url_for('teacher.class_group_assignments', class_id=class_id))
+    
+    # Check if this was called from management view
+    admin_view = request.args.get('admin_view') == 'true'
     
     return render_template('teachers/teacher_create_group_assignment.html', 
                          class_obj=class_obj, 
-                         academic_periods=academic_periods)
+                         academic_periods=academic_periods,
+                         admin_view=admin_view)
 
 
 @teacher_blueprint.route('/class/<int:class_id>/group-assignment/type-selector', methods=['GET'])

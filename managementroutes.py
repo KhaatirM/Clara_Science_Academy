@@ -5009,19 +5009,59 @@ def manage_class_roster(class_id):
 @login_required
 @management_required
 def remove_student(student_id):
-    """Remove a student"""
-    student = Student.query.get_or_404(student_id)
-    
-    # Delete associated user account if it exists
-    if student.user:
-        db.session.delete(student.user)
-    
-    # Delete the student
-    db.session.delete(student)
-    db.session.commit()
-    
-    flash('Student removed successfully.', 'success')
-    return redirect(url_for('management.students'))
+    """Remove a student and all associated data"""
+    try:
+        student = Student.query.get_or_404(student_id)
+        
+        # Delete all related records first to avoid foreign key constraints
+        from models import Attendance, StudentGoal, StudentGroupMember, Grade, AssignmentSubmission, QuizSubmission, DiscussionSubmission, GroupSubmission, GroupGrade, AssignmentExtension
+        
+        # Delete attendance records
+        Attendance.query.filter_by(student_id=student_id).delete()
+        
+        # Delete student goals
+        StudentGoal.query.filter_by(student_id=student_id).delete()
+        
+        # Delete group memberships
+        StudentGroupMember.query.filter_by(student_id=student_id).delete()
+        
+        # Delete grades
+        Grade.query.filter_by(student_id=student_id).delete()
+        
+        # Delete assignment submissions
+        AssignmentSubmission.query.filter_by(student_id=student_id).delete()
+        
+        # Delete quiz submissions
+        QuizSubmission.query.filter_by(student_id=student_id).delete()
+        
+        # Delete discussion submissions
+        DiscussionSubmission.query.filter_by(student_id=student_id).delete()
+        
+        # Delete group submissions
+        GroupSubmission.query.filter_by(student_id=student_id).delete()
+        
+        # Delete group grades
+        GroupGrade.query.filter_by(student_id=student_id).delete()
+        
+        # Delete assignment extensions
+        AssignmentExtension.query.filter_by(student_id=student_id).delete()
+        
+        # Delete associated user account if it exists
+        if student.user:
+            db.session.delete(student.user)
+        
+        # Finally, delete the student
+        db.session.delete(student)
+        db.session.commit()
+        
+        flash('Student removed successfully.', 'success')
+        return redirect(url_for('management.students'))
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error removing student: {e}")
+        flash('Error removing student. Please try again.', 'error')
+        return redirect(url_for('management.students'))
 
 @management_blueprint.route('/resources')
 @login_required
@@ -5502,6 +5542,57 @@ def admin_create_group_contract(group_id):
 # ============================================================================
 # GROUP ASSIGNMENT MANAGEMENT ROUTES
 # ============================================================================
+
+@management_blueprint.route('/class/<int:class_id>/group-assignment/type-selector')
+@login_required
+@management_required
+def admin_group_assignment_type_selector(class_id):
+    """Group assignment type selector for management."""
+    class_obj = Class.query.get_or_404(class_id)
+    
+    return render_template('shared/group_assignment_type_selector.html',
+                         class_obj=class_obj,
+                         admin_view=True)
+
+@management_blueprint.route('/class/<int:class_id>/group-assignment/create/pdf')
+@login_required
+@management_required
+def admin_create_group_pdf_assignment(class_id):
+    """Create a new PDF group assignment - Management view."""
+    class_obj = Class.query.get_or_404(class_id)
+    
+    # Get current school year and academic periods
+    current_school_year = SchoolYear.query.filter_by(is_active=True).first()
+    academic_periods = []
+    if current_school_year:
+        academic_periods = AcademicPeriod.query.filter_by(school_year_id=current_school_year.id, is_active=True).all()
+    
+    return render_template('shared/create_group_pdf_assignment.html',
+                         class_obj=class_obj,
+                         academic_periods=academic_periods,
+                         admin_view=True)
+
+@management_blueprint.route('/class/<int:class_id>/group-assignment/create/quiz')
+@login_required
+@management_required
+def admin_create_group_quiz_assignment(class_id):
+    """Create a new quiz group assignment - Management view."""
+    class_obj = Class.query.get_or_404(class_id)
+    
+    return render_template('shared/create_group_quiz_assignment.html',
+                         class_obj=class_obj,
+                         admin_view=True)
+
+@management_blueprint.route('/class/<int:class_id>/group-assignment/create/discussion')
+@login_required
+@management_required
+def admin_create_group_discussion_assignment(class_id):
+    """Create a new discussion group assignment - Management view."""
+    class_obj = Class.query.get_or_404(class_id)
+    
+    return render_template('shared/create_group_discussion_assignment.html',
+                         class_obj=class_obj,
+                         admin_view=True)
 
 @management_blueprint.route('/group-assignment/<int:assignment_id>/view')
 @login_required

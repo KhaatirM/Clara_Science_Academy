@@ -15,9 +15,15 @@
                             <p class="mb-0 opacity-75">Choose the type of collaborative assignment you want to create</p>
                         </div>
                         <div class="d-flex gap-2 mt-3 mt-md-0">
-                            <a href="{{ url_for('teacher.view_class', class_id=class_obj.id) }}" class="btn btn-light btn-sm">
-                                <i class="bi bi-arrow-left me-1"></i>Back to Class
-                            </a>
+                            {% if admin_view %}
+                                <a href="{{ url_for('management.view_class', class_id=class_obj.id) }}" class="btn btn-light btn-sm">
+                                    <i class="bi bi-arrow-left me-1"></i>Back to Class
+                                </a>
+                            {% else %}
+                                <a href="{{ url_for('teacher.view_class', class_id=class_obj.id) }}" class="btn btn-light btn-sm">
+                                    <i class="bi bi-arrow-left me-1"></i>Back to Class
+                                </a>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -61,10 +67,17 @@
                             </div>
                         </div>
                         <div class="card-footer bg-transparent border-0 p-4 pt-0">
-                            <a href="{{ url_for('teacher.create_group_pdf_assignment', class_id=class_obj.id) }}" 
-                               class="btn btn-primary w-100">
-                                <i class="bi bi-file-earmark-plus me-2"></i>Create PDF/Paper Assignment
-                            </a>
+                            {% if admin_view %}
+                                <a href="{{ url_for('management.admin_create_group_pdf_assignment', class_id=class_obj.id) }}" 
+                                   class="btn btn-primary w-100">
+                                    <i class="bi bi-file-earmark-plus me-2"></i>Create PDF/Paper Assignment
+                                </a>
+                            {% else %}
+                                <a href="{{ url_for('teacher.create_group_pdf_assignment', class_id=class_obj.id) }}" 
+                                   class="btn btn-primary w-100">
+                                    <i class="bi bi-file-earmark-plus me-2"></i>Create PDF/Paper Assignment
+                                </a>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -101,10 +114,17 @@
                             </div>
                         </div>
                         <div class="card-footer bg-transparent border-0 p-4 pt-0">
-                            <a href="{{ url_for('teacher.create_group_quiz_assignment', class_id=class_obj.id) }}" 
-                               class="btn btn-success w-100">
-                                <i class="bi bi-question-circle me-2"></i>Create Quiz Assignment
-                            </a>
+                            {% if admin_view %}
+                                <a href="{{ url_for('management.admin_create_group_quiz_assignment', class_id=class_obj.id) }}" 
+                                   class="btn btn-success w-100">
+                                    <i class="bi bi-question-circle me-2"></i>Create Quiz Assignment
+                                </a>
+                            {% else %}
+                                <a href="{{ url_for('teacher.create_group_quiz_assignment', class_id=class_obj.id) }}" 
+                                   class="btn btn-success w-100">
+                                    <i class="bi bi-question-circle me-2"></i>Create Quiz Assignment
+                                </a>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -141,10 +161,17 @@
                             </div>
                         </div>
                         <div class="card-footer bg-transparent border-0 p-4 pt-0">
-                            <a href="{{ url_for('teacher.create_group_discussion_assignment', class_id=class_obj.id) }}" 
-                               class="btn btn-info w-100">
-                                <i class="bi bi-chat-dots me-2"></i>Create Discussion Assignment
-                            </a>
+                            {% if admin_view %}
+                                <a href="{{ url_for('management.admin_create_group_discussion_assignment', class_id=class_obj.id) }}" 
+                                   class="btn btn-info w-100">
+                                    <i class="bi bi-chat-dots me-2"></i>Create Discussion Assignment
+                                </a>
+                            {% else %}
+                                <a href="{{ url_for('teacher.create_group_discussion_assignment', class_id=class_obj.id) }}" 
+                                   class="btn btn-info w-100">
+                                    <i class="bi bi-chat-dots me-2"></i>Create Discussion Assignment
+                                </a>
+                            {% endif %}
                         </div>
                     </div>
                 </div>

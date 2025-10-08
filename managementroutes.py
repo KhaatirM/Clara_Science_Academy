@@ -5053,7 +5053,7 @@ def remove_student(student_id):
         student = Student.query.get_or_404(student_id)
         
         # Delete all related records first to avoid foreign key constraints
-        from models import Attendance, StudentGoal, StudentGroupMember, Grade, Submission, GroupSubmission, GroupGrade, AssignmentExtension, Enrollment, MessageGroupMember
+        from models import Attendance, StudentGoal, StudentGroupMember, Grade, Submission, GroupSubmission, GroupGrade, AssignmentExtension, Enrollment, MessageGroupMember, Notification
         
         # Delete enrollment records first (these reference the student)
         Enrollment.query.filter_by(student_id=student_id).delete()
@@ -5084,6 +5084,8 @@ def remove_student(student_id):
         
         # Delete associated user account if it exists
         if student.user:
+            # Delete notifications before deleting the user
+            Notification.query.filter_by(user_id=student.user.id).delete()
             # Delete message group memberships before deleting the user
             MessageGroupMember.query.filter_by(user_id=student.user.id).delete()
             db.session.delete(student.user)

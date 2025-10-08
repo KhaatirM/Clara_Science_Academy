@@ -5071,7 +5071,7 @@ def remove_student(student_id):
         Submission.query.filter_by(student_id=student_id).delete()
         
         # Delete group submissions
-        GroupSubmission.query.filter_by(student_id=student_id).delete()
+        GroupSubmission.query.filter_by(submitted_by=student_id).delete()
         
         # Delete group grades
         GroupGrade.query.filter_by(student_id=student_id).delete()

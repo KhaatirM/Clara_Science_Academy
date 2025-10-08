@@ -5698,3 +5698,30 @@ def admin_edit_group_assignment(assignment_id):
         print(f"Error editing group assignment: {e}")
         flash('Error accessing group assignment editing.', 'error')
         return redirect(url_for('management.admin_class_group_assignments', class_id=group_assignment.class_id))
+
+@management_blueprint.route('/assignment/<int:assignment_id>/extensions')
+@login_required
+@management_required
+def admin_grant_extensions(assignment_id):
+    """View and manage extensions for an assignment - Management view."""
+    try:
+        from models import Assignment, AssignmentExtension, Class, Student
+        
+        assignment = Assignment.query.get_or_404(assignment_id)
+        class_obj = Class.query.get_or_404(assignment.class_id)
+        
+        # Get existing extensions for this assignment
+        extensions = AssignmentExtension.query.filter_by(assignment_id=assignment_id).all()
+        
+        # Get students in this class for granting new extensions
+        students = Student.query.join(Class.students).filter(Class.id == assignment.class_id).all()
+        
+        return render_template('management/admin_grant_extensions.html',
+                             assignment=assignment,
+                             class_obj=class_obj,
+                             extensions=extensions,
+                             students=students)
+    except Exception as e:
+        print(f"Error viewing extensions: {e}")
+        flash('Error accessing extensions management.', 'error')
+        return redirect(url_for('management.admin_view_group_assignment', assignment_id=assignment_id))

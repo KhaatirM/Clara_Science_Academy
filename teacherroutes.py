@@ -3523,7 +3523,7 @@ def grade_group_assignment(assignment_id):
                                         group_id=group.id,
                                         student_id=student_id,
                                         grade_data=grade_data,
-                                        graded_by=teacher.id if teacher else current_user.id,
+                                        graded_by=teacher.id if teacher else None,
                                         comments=comments
                                     )
                                     db.session.add(grade)

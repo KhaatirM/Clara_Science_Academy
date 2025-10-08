@@ -495,12 +495,14 @@ def create_app(config_class=None):
     from teacherroutes import teacher_blueprint
     from managementroutes import management_blueprint
     from techroutes import tech_blueprint
-
+    from classroutes import class_blueprint
+    
     app.register_blueprint(auth_blueprint)
     app.register_blueprint(student_blueprint, url_prefix='/student')
     app.register_blueprint(teacher_blueprint, url_prefix='/teacher')
     app.register_blueprint(management_blueprint, url_prefix='/management')
     app.register_blueprint(tech_blueprint, url_prefix='/tech')
+    app.register_blueprint(class_blueprint)
 
     # Custom template filters
     @app.template_filter('from_json')

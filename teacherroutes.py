@@ -3452,10 +3452,16 @@ def view_group_assignment(assignment_id):
     teacher = get_teacher_or_admin()
     group_assignment = GroupAssignment.query.get_or_404(assignment_id)
     
+    # Check if this is an admin view request
+    admin_view = request.args.get('admin_view') == 'true' or is_admin()
+    
     # Check if teacher has access to this assignment's class
     if not is_admin() and group_assignment.class_info.teacher_id != teacher.id:
         flash('You do not have access to this assignment.', 'danger')
-        return redirect(url_for('teacher.teacher_dashboard'))
+        if admin_view:
+            return redirect(url_for('management.admin_class_group_assignments', class_id=group_assignment.class_id))
+        else:
+            return redirect(url_for('teacher.teacher_dashboard'))
     
     # Get submissions for this assignment
     submissions = GroupSubmission.query.filter_by(group_assignment_id=assignment_id).all()
@@ -3463,10 +3469,18 @@ def view_group_assignment(assignment_id):
     # Get groups for this class
     groups = StudentGroup.query.filter_by(class_id=group_assignment.class_id, is_active=True).all()
     
+    # Get extensions for this assignment
+    try:
+        extensions = AssignmentExtension.query.filter_by(assignment_id=assignment_id).all()
+    except:
+        extensions = []
+    
     return render_template('teachers/teacher_view_group_assignment.html',
                          group_assignment=group_assignment,
                          submissions=submissions,
-                         groups=groups)
+                         groups=groups,
+                         extensions=extensions,
+                         admin_view=admin_view)
 
 
 @teacher_blueprint.route('/group-assignment/<int:assignment_id>/grade', methods=['GET', 'POST'])

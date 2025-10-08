@@ -4,28 +4,37 @@
 <div class="container-fluid px-2 px-md-4">
   <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
     <h3 class="mb-2 mb-md-0"><i class="bi bi-eye me-2"></i>{{ group_assignment.title }}</h3>
-    <div class="d-flex gap-2">
-      <a href="{{ url_for('teacher.class_group_assignments', class_id=group_assignment.class_id) }}" class="btn btn-outline-secondary btn-sm">
-        <i class="bi bi-arrow-left me-1"></i>Back to Assignments
-      </a>
-      <a href="{{ url_for('teacher.grade_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-success btn-sm">
+    <div class="d-flex gap-2 flex-wrap">
+      {% if admin_view %}
+        <a href="{{ url_for('management.admin_class_group_assignments', class_id=group_assignment.class_id) }}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-arrow-left me-1"></i>Back to Group Assignments
+        </a>
+      {% else %}
+        <a href="{{ url_for('teacher.class_group_assignments', class_id=group_assignment.class_id) }}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-arrow-left me-1"></i>Back to Assignments
+        </a>
+      {% endif %}
+      <a href="{{ url_for('teacher.grade_group_assignment', assignment_id=group_assignment.id) }}{% if admin_view %}?admin_view=true{% endif %}" class="btn btn-success btn-sm">
         <i class="bi bi-check-circle me-1"></i>Grade Assignment
       </a>
-      <a href="{{ url_for('teacher.create_assignment_rubric', assignment_id=group_assignment.id) }}" class="btn btn-info btn-sm">
+      <a href="{{ url_for('management.grant_extensions', assignment_id=group_assignment.id) }}" class="btn btn-primary btn-sm">
+        <i class="bi bi-clock me-1"></i>Extensions
+      </a>
+      <a href="{{ url_for('teacher.create_assignment_rubric', assignment_id=group_assignment.id) }}{% if admin_view %}?admin_view=true{% endif %}" class="btn btn-info btn-sm">
         <i class="bi bi-list-check me-1"></i>Create Rubric
       </a>
-      <a href="{{ url_for('teacher.view_peer_evaluations', assignment_id=group_assignment.id) }}" class="btn btn-warning btn-sm">
+      <a href="{{ url_for('teacher.view_peer_evaluations', assignment_id=group_assignment.id) }}{% if admin_view %}?admin_view=true{% endif %}" class="btn btn-warning btn-sm">
         <i class="bi bi-people me-1"></i>Peer Evaluations
       </a>
-                <a href="{{ url_for('teacher.view_group_progress', assignment_id=group_assignment.id) }}" class="btn btn-secondary btn-sm">
-            <i class="bi bi-graph-up me-1"></i>Progress
-          </a>
-          <a href="{{ url_for('teacher.view_peer_reviews', assignment_id=group_assignment.id) }}" class="btn btn-dark btn-sm">
-            <i class="bi bi-eye me-1"></i>Peer Reviews
-          </a>
-          <a href="{{ url_for('teacher.view_draft_submissions', assignment_id=group_assignment.id) }}" class="btn btn-light btn-sm">
-            <i class="bi bi-file-earmark-text me-1"></i>Draft Submissions
-          </a>
+      <a href="{{ url_for('teacher.view_group_progress', assignment_id=group_assignment.id) }}{% if admin_view %}?admin_view=true{% endif %}" class="btn btn-secondary btn-sm">
+        <i class="bi bi-graph-up me-1"></i>Progress
+      </a>
+      <a href="{{ url_for('teacher.view_peer_reviews', assignment_id=group_assignment.id) }}{% if admin_view %}?admin_view=true{% endif %}" class="btn btn-dark btn-sm">
+        <i class="bi bi-eye me-1"></i>Peer Reviews
+      </a>
+      <a href="{{ url_for('teacher.view_draft_submissions', assignment_id=group_assignment.id) }}{% if admin_view %}?admin_view=true{% endif %}" class="btn btn-light btn-sm">
+        <i class="bi bi-file-earmark-text me-1"></i>Draft Submissions
+      </a>
     </div>
   </div>
 
@@ -165,7 +174,7 @@
                         <small class="text-muted">{{ group.description[:50] }}{% if group.description|length > 50 %}...{% endif %}</small>
                       {% endif %}
                     </div>
-                    <a href="{{ url_for('teacher.manage_group', group_id=group.id) }}" class="btn btn-outline-primary btn-sm">
+                    <a href="{{ url_for('teacher.manage_group', group_id=group.id) }}{% if admin_view %}?admin_view=true{% endif %}" class="btn btn-outline-primary btn-sm">
                       <i class="bi bi-gear"></i>
                     </a>
                   </div>
@@ -176,9 +185,15 @@
             <div class="p-3 text-muted text-center">
               <i class="bi bi-people text-muted" style="font-size: 2rem;"></i>
               <p class="mb-0">No groups created yet.</p>
-              <a href="{{ url_for('teacher.class_groups', class_id=group_assignment.class_id) }}" class="btn btn-primary btn-sm mt-2">
-                <i class="bi bi-plus-circle me-1"></i>Create Groups
-              </a>
+              {% if admin_view %}
+                <a href="{{ url_for('management.admin_class_groups', class_id=group_assignment.class_id) }}" class="btn btn-primary btn-sm mt-2">
+                  <i class="bi bi-plus-circle me-1"></i>Create Groups
+                </a>
+              {% else %}
+                <a href="{{ url_for('teacher.class_groups', class_id=group_assignment.class_id) }}" class="btn btn-primary btn-sm mt-2">
+                  <i class="bi bi-plus-circle me-1"></i>Create Groups
+                </a>
+              {% endif %}
             </div>
           {% endif %}
         </div>
@@ -216,6 +231,38 @@
           </div>
         </div>
       </div>
+      
+      <!-- Extensions Card -->
+      {% if extensions %}
+      <div class="card shadow-sm mt-4">
+        <div class="card-header bg-warning text-dark">
+          <h5 class="mb-0"><i class="bi bi-clock me-2"></i>Extensions Granted ({{ extensions|length }})</h5>
+        </div>
+        <div class="card-body p-0">
+          <div class="list-group list-group-flush">
+            {% for ext in extensions %}
+              <div class="list-group-item">
+                <div class="d-flex justify-content-between align-items-start">
+                  <div>
+                    <h6 class="mb-1">{{ ext.student.first_name }} {{ ext.student.last_name }}</h6>
+                    <small class="text-muted">
+                      <i class="bi bi-calendar-event me-1"></i>
+                      New Due Date: {{ ext.new_due_date.strftime('%b %d, %Y %I:%M %p') if ext.new_due_date else 'N/A' }}
+                    </small>
+                    {% if ext.reason %}
+                      <p class="mb-0 mt-1"><small>Reason: {{ ext.reason }}</small></p>
+                    {% endif %}
+                  </div>
+                  <span class="badge bg-{% if ext.approved %}success{% else %}warning{% endif %}">
+                    {{ 'Approved' if ext.approved else 'Pending' }}
+                  </span>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
     </div>
   </div>
 </div>

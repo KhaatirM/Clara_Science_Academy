@@ -54,8 +54,8 @@
             <div class="card-body">
               {% for member in group.members %}
                 {% set student_id = member.student.id %}
-                {% set score_key = f"score_{group.id}_{student_id}" %}
-                {% set comments_key = f"comments_{group.id}_{student_id}" %}
+                {% set score_key = "score_" + group.id|string + "_" + student_id|string %}
+                {% set comments_key = "comments_" + group.id|string + "_" + student_id|string %}
                 
                 <div class="mb-3 p-3 border rounded">
                   <div class="d-flex justify-content-between align-items-start mb-2">

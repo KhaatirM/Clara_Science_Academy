@@ -5053,7 +5053,10 @@ def remove_student(student_id):
         student = Student.query.get_or_404(student_id)
         
         # Delete all related records first to avoid foreign key constraints
-        from models import Attendance, StudentGoal, StudentGroupMember, Grade, Submission, GroupSubmission, GroupGrade, AssignmentExtension
+        from models import Attendance, StudentGoal, StudentGroupMember, Grade, Submission, GroupSubmission, GroupGrade, AssignmentExtension, Enrollment
+        
+        # Delete enrollment records first (these reference the student)
+        Enrollment.query.filter_by(student_id=student_id).delete()
         
         # Delete attendance records
         Attendance.query.filter_by(student_id=student_id).delete()

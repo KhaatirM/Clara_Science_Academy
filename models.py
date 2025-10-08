@@ -1081,6 +1081,7 @@ class GroupAssignment(db.Model):
     group_size_max = db.Column(db.Integer, default=4)  # Maximum students per group
     allow_individual = db.Column(db.Boolean, default=False)  # Allow individual submissions
     collaboration_type = db.Column(db.String(20), default='group')  # 'group', 'individual', 'both'
+    selected_group_ids = db.Column(db.Text, nullable=True)  # JSON string of selected group IDs (null = all groups)
     
     # File attachment fields
     attachment_filename = db.Column(db.String(255), nullable=True)

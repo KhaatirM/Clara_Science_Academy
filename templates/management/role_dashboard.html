@@ -2820,20 +2820,24 @@
 
     function removeStudent(studentId, studentName) {
         if (confirm(`Are you sure you want to remove ${studentName}? This action cannot be undone.`)) {
-            fetch(`/management/remove-student/${studentId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            })
-            .then(response => {
-                if (response.ok) {
-                    location.reload();
-                } else {
-                    alert('Error removing student.');
-                }
-            })
-            .catch(() => alert('Could not remove student.'));
+            // Create a form and submit it to match the route's expectations
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `/management/remove-student/${studentId}`;
+            
+            // Add CSRF token
+            const csrfToken = document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || 
+                             document.querySelector('input[name=csrf_token]')?.value;
+            if (csrfToken) {
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = 'csrf_token';
+                csrfInput.value = csrfToken;
+                form.appendChild(csrfInput);
+            }
+            
+            document.body.appendChild(form);
+            form.submit();
         }
     }
     

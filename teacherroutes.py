@@ -3067,6 +3067,15 @@ def create_group_assignment(class_id):
                 attachment_file_size = os.path.getsize(attachment_file_path)
                 attachment_mime_type = file.content_type
         
+        # Handle group selection
+        group_selection = request.form.get('group_selection', 'all')
+        selected_groups = request.form.getlist('selected_groups')
+        selected_group_ids = None
+        
+        if group_selection == 'specific' and selected_groups:
+            import json
+            selected_group_ids = json.dumps([int(group_id) for group_id in selected_groups])
+        
         # Create the group assignment
         group_assignment = GroupAssignment(
             title=title,
@@ -3081,6 +3090,7 @@ def create_group_assignment(class_id):
             group_size_max=int(group_size_max),
             allow_individual=allow_individual,
             collaboration_type=collaboration_type,
+            selected_group_ids=selected_group_ids,
             attachment_filename=attachment_filename,
             attachment_original_filename=attachment_original_filename,
             attachment_file_path=attachment_file_path,
@@ -5838,3 +5848,44 @@ def download_resource(filename):
         print(f"Error downloading file {filename}: {e}")
         flash('Error downloading file. Please try again.', 'error')
         return redirect(url_for('teacher.resources'))
+
+# ============================================================================
+# API ENDPOINTS
+# ============================================================================
+
+@teacher_blueprint.route('/api/class/<int:class_id>/groups')
+@login_required
+@teacher_required
+def api_class_groups(class_id):
+    """API endpoint to get groups for a class."""
+    try:
+        from models import StudentGroup
+        
+        # Verify teacher has access to this class
+        class_obj = Class.query.get_or_404(class_id)
+        teacher = get_teacher_or_admin()
+        
+        if not is_admin() and class_obj.teacher_id != teacher.id:
+            return jsonify({'success': False, 'message': 'Access denied'}), 403
+        
+        # Get groups for this class
+        groups = StudentGroup.query.filter_by(class_id=class_id, is_active=True).all()
+        
+        groups_data = []
+        for group in groups:
+            groups_data.append({
+                'id': group.id,
+                'name': group.name,
+                'description': group.description,
+                'member_count': len(group.members),
+                'created_at': group.created_at.isoformat() if group.created_at else None
+            })
+        
+        return jsonify({
+            'success': True,
+            'groups': groups_data
+        })
+        
+    except Exception as e:
+        print(f"Error fetching groups: {e}")
+        return jsonify({'success': False, 'message': 'Error fetching groups'}), 500

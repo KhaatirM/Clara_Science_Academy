@@ -114,6 +114,41 @@
                     </div>
                 </div>
 
+                <!-- Group Selection -->
+                <div class="card mb-4 border-0 shadow-sm">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0 fw-bold"><i class="bi bi-people-fill me-2"></i>Target Groups</h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="group_selection" id="all_groups" value="all" checked>
+                                <label class="form-check-label fw-semibold" for="all_groups">
+                                    <i class="bi bi-globe me-2 text-info"></i>All Groups
+                                </label>
+                                <div class="form-text">Assignment will be available to all groups in the class</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="group_selection" id="specific_groups" value="specific">
+                                <label class="form-check-label fw-semibold" for="specific_groups">
+                                    <i class="bi bi-list-check me-2 text-info"></i>Select Specific Groups
+                                </label>
+                                <div class="form-text">Choose which groups will receive this assignment</div>
+                            </div>
+                        </div>
+                        
+                        <div id="groupSelectionArea" style="display: none;" class="border rounded p-3 bg-light">
+                            <h6 class="fw-semibold mb-3"><i class="bi bi-list me-2"></i>Available Groups</h6>
+                            <div id="availableGroups">
+                                <p class="text-muted">Loading groups...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- File Upload Section -->
                 <div class="card mb-4 border-0 shadow-sm">
                     <div class="card-header bg-warning text-dark">
@@ -415,6 +450,64 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             preview.innerHTML = '<div class="text-center text-muted py-4"><i class="bi bi-file-earmark-text mb-2" style="font-size: 2rem;"></i><p class="mb-0">Assignment preview will appear here</p></div>';
         }
+    }
+    
+    // Group selection functionality
+    const groupSelectionRadios = document.querySelectorAll('input[name="group_selection"]');
+    const groupSelectionArea = document.getElementById('groupSelectionArea');
+    const availableGroups = document.getElementById('availableGroups');
+    
+    // Load groups when page loads
+    loadGroups();
+    
+    groupSelectionRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (this.value === 'specific') {
+                groupSelectionArea.style.display = 'block';
+                loadGroups();
+            } else {
+                groupSelectionArea.style.display = 'none';
+            }
+        });
+    });
+    
+    function loadGroups() {
+        // Fetch groups for this class
+        fetch(`/api/class/{{ class_obj.id }}/groups`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.groups) {
+                    displayGroups(data.groups);
+                } else {
+                    availableGroups.innerHTML = '<p class="text-muted">No groups found for this class.</p>';
+                }
+            })
+            .catch(error => {
+                console.error('Error loading groups:', error);
+                availableGroups.innerHTML = '<p class="text-danger">Error loading groups.</p>';
+            });
+    }
+    
+    function displayGroups(groups) {
+        if (groups.length === 0) {
+            availableGroups.innerHTML = '<p class="text-muted">No groups found for this class.</p>';
+            return;
+        }
+        
+        let groupsHTML = '';
+        groups.forEach(group => {
+            groupsHTML += `
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" name="selected_groups" value="${group.id}" id="group_${group.id}">
+                    <label class="form-check-label" for="group_${group.id}">
+                        <strong>${group.name}</strong>
+                        <small class="text-muted d-block">${group.member_count} members</small>
+                    </label>
+                </div>
+            `;
+        });
+        
+        availableGroups.innerHTML = groupsHTML;
     }
 });
 </script>

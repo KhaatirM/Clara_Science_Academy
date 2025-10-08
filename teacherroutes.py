@@ -3477,10 +3477,16 @@ def grade_group_assignment(assignment_id):
     teacher = get_teacher_or_admin()
     group_assignment = GroupAssignment.query.get_or_404(assignment_id)
     
+    # Check if this is an admin view request
+    admin_view = request.args.get('admin_view') == 'true' or is_admin()
+    
     # Check if teacher has access to this assignment's class
     if not is_admin() and group_assignment.class_info.teacher_id != teacher.id:
         flash('You do not have access to this assignment.', 'danger')
-        return redirect(url_for('teacher.teacher_dashboard'))
+        if admin_view:
+            return redirect(url_for('management.admin_class_group_assignments', class_id=group_assignment.class_id))
+        else:
+            return redirect(url_for('teacher.teacher_dashboard'))
     
     # Get all groups for this class
     groups = StudentGroup.query.filter_by(class_id=group_assignment.class_id, is_active=True).all()
@@ -3533,12 +3539,16 @@ def grade_group_assignment(assignment_id):
                             flash(f'Invalid score for {member.student.first_name} {member.student.last_name}', 'warning')
         
         flash('Grades saved successfully!', 'success')
-        return redirect(url_for('teacher.view_group_assignment', assignment_id=assignment_id))
+        if admin_view:
+            return redirect(url_for('management.admin_class_group_assignments', class_id=group_assignment.class_id))
+        else:
+            return redirect(url_for('teacher.view_group_assignment', assignment_id=assignment_id))
     
     return render_template('teachers/teacher_grade_group_assignment.html',
                          group_assignment=group_assignment,
                          groups=groups,
-                         grades_by_student=grades_by_student)
+                         grades_by_student=grades_by_student,
+                         admin_view=admin_view)
 
 
 def get_letter_grade(percentage):

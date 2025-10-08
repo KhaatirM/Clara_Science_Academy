@@ -203,6 +203,45 @@ def calculate_student_gpa(student_id):
 
 management_blueprint = Blueprint('management', __name__)
 
+# ============================================================================
+# API ENDPOINTS FOR MANAGEMENT (placed early to avoid route conflicts)
+# ============================================================================
+
+@management_blueprint.route('/api/class/<int:class_id>/groups', methods=['GET'])
+@login_required
+@management_required
+def management_api_class_groups(class_id):
+    """API endpoint to get groups for a class - Management access."""
+    try:
+        print(f"DEBUG: Management API called for class {class_id}")
+        from models import StudentGroup
+        
+        # Verify management has access to this class
+        class_obj = Class.query.get_or_404(class_id)
+        
+        # Get groups for this class
+        groups = StudentGroup.query.filter_by(class_id=class_id, is_active=True).all()
+        print(f"DEBUG: Found {len(groups)} groups for class {class_id}")
+        
+        groups_data = []
+        for group in groups:
+            groups_data.append({
+                'id': group.id,
+                'name': group.name,
+                'description': group.description,
+                'member_count': len(group.members),
+                'created_at': group.created_at.isoformat() if group.created_at else None
+            })
+        
+        return jsonify({
+            'success': True,
+            'groups': groups_data
+        })
+        
+    except Exception as e:
+        print(f"Error fetching groups: {e}")
+        return jsonify({'success': False, 'message': 'Error fetching groups'}), 500
+
 @management_blueprint.route('/dashboard')
 @login_required
 @management_required
@@ -5014,7 +5053,7 @@ def remove_student(student_id):
         student = Student.query.get_or_404(student_id)
         
         # Delete all related records first to avoid foreign key constraints
-        from models import Attendance, StudentGoal, StudentGroupMember, Grade, AssignmentSubmission, QuizSubmission, DiscussionSubmission, GroupSubmission, GroupGrade, AssignmentExtension
+        from models import Attendance, StudentGoal, StudentGroupMember, Grade, Submission, GroupSubmission, GroupGrade, AssignmentExtension
         
         # Delete attendance records
         Attendance.query.filter_by(student_id=student_id).delete()
@@ -5029,13 +5068,7 @@ def remove_student(student_id):
         Grade.query.filter_by(student_id=student_id).delete()
         
         # Delete assignment submissions
-        AssignmentSubmission.query.filter_by(student_id=student_id).delete()
-        
-        # Delete quiz submissions
-        QuizSubmission.query.filter_by(student_id=student_id).delete()
-        
-        # Delete discussion submissions
-        DiscussionSubmission.query.filter_by(student_id=student_id).delete()
+        Submission.query.filter_by(student_id=student_id).delete()
         
         # Delete group submissions
         GroupSubmission.query.filter_by(student_id=student_id).delete()
@@ -5593,6 +5626,7 @@ def admin_create_group_discussion_assignment(class_id):
     return render_template('shared/create_group_discussion_assignment.html',
                          class_obj=class_obj,
                          admin_view=True)
+
 
 @management_blueprint.route('/group-assignment/<int:assignment_id>/view')
 @login_required

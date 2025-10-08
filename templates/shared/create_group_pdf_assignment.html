@@ -474,6 +474,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const groupSelectionArea = document.getElementById('groupSelectionArea');
     const availableGroups = document.getElementById('availableGroups');
     
+    // Debug: Check if admin_view is set
+    console.log('DEBUG: admin_view = {{ admin_view }}');
+    
     // Load groups when page loads
     loadGroups();
     
@@ -489,8 +492,18 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     function loadGroups() {
+        // Determine the correct API endpoint based on admin_view
+        {% if admin_view %}
+        const apiUrl = '/management/api/class/{{ class_obj.id }}/groups';
+        console.log('DEBUG: Using management API:', apiUrl);
+        {% else %}
+        const apiUrl = '/teacher/api/class/{{ class_obj.id }}/groups';
+        console.log('DEBUG: Using teacher API:', apiUrl);
+        {% endif %}
+        
         // Fetch groups for this class
-        fetch(`/api/class/{{ class_obj.id }}/groups`)
+        console.log('DEBUG: Fetching groups from:', apiUrl);
+        fetch(apiUrl)
             .then(response => response.json())
             .then(data => {
                 if (data.success && data.groups) {

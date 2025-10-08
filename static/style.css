@@ -3093,3 +3093,33 @@ html, body {
         padding: 0.4rem 0.8rem;
     }
 }
+
+/* Custom scrollbar styling for enrolled students sections */
+.table-responsive::-webkit-scrollbar,
+.list-group::-webkit-scrollbar {
+    width: 8px;
+}
+
+.table-responsive::-webkit-scrollbar-track,
+.list-group::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb,
+.list-group::-webkit-scrollbar-thumb {
+    background: #28a745;
+    border-radius: 4px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover,
+.list-group::-webkit-scrollbar-thumb:hover {
+    background: #218838;
+}
+
+/* Firefox scrollbar styling */
+.table-responsive,
+.list-group {
+    scrollbar-width: thin;
+    scrollbar-color: #28a745 #f1f1f1;
+}

@@ -2168,19 +2168,21 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                     Class Roster
                                 </h5>
                             </div>
-                            <div class="card-body">
-                                <div class="list-group list-group-flush">
-                                    {% for student in enrolled_students %}
-                                    <div class="list-group-item d-flex align-items-center">
-                                        <i class="bi bi-person-circle text-primary me-2"></i>
-                                        <div class="flex-grow-1">
-                                            <strong>{{ student.first_name }} {{ student.last_name }}</strong>
-                                            {% if student.id == current_user.student_id %}
-                                                <span class="badge bg-success ms-2">You</span>
-                                            {% endif %}
+                            <div class="card-body p-0">
+                                <div style="max-height: 300px; overflow-y: auto;">
+                                    <div class="list-group list-group-flush">
+                                        {% for student in enrolled_students %}
+                                        <div class="list-group-item d-flex align-items-center">
+                                            <i class="bi bi-person-circle text-primary me-2"></i>
+                                            <div class="flex-grow-1">
+                                                <strong>{{ student.first_name }} {{ student.last_name }}</strong>
+                                                {% if student.id == current_user.student_id %}
+                                                    <span class="badge bg-success ms-2">You</span>
+                                                {% endif %}
+                                            </div>
                                         </div>
+                                        {% endfor %}
                                     </div>
-                                    {% endfor %}
                                 </div>
                             </div>
                         </div>

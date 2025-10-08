@@ -4899,8 +4899,8 @@ def view_class(class_id):
         Enrollment.is_active == True
     ).order_by(Student.last_name, Student.first_name).all()
     
-    # Get assignments for this class
-    assignments = Assignment.query.filter_by(class_id=class_id).all()
+    # Get assignments for this class, ordered by due date
+    assignments = Assignment.query.filter_by(class_id=class_id).order_by(Assignment.due_date.desc()).all()
     
     # Get current date for assignment status comparison
     today = datetime.now().date()

@@ -300,7 +300,7 @@
             </div>
             <div class="card-body p-0">
               {% if enrolled_students %}
-                <div class="table-responsive">
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
                   <table class="table table-hover mb-0">
                     <tbody>
                       {% for student in enrolled_students %}
@@ -356,7 +356,7 @@
             </div>
             <div class="card-body p-0">
               {% if assignments %}
-                <div class="table-responsive">
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
                   <table class="table table-hover mb-0">
                     <tbody>
                       {% for assignment in assignments %}
@@ -370,7 +370,11 @@
                               <strong class="text-dark">{{ assignment.title }}</strong>
                               <div class="text-muted small mt-1">
                                 <span class="badge bg-info bg-opacity-20 text-info border border-info">
-                                  Due: {{ assignment.due_date.strftime('%b %d, %Y') if assignment.due_date else 'No due date' }}
+                                  {% if assignment.due_date %}
+                                    Due: {{ assignment.due_date.strftime('%b %d, %Y') }}
+                                  {% else %}
+                                    Due: No due date
+                                  {% endif %}
                                 </span>
                                 {% if assignment.description %}
                                 <div class="mt-1">

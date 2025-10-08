@@ -133,18 +133,20 @@
             </div>
             <div class="card-body p-0">
               {% if enrolled_students %}
-                <ul class="list-group list-group-flush">
-                  {% for student in enrolled_students %}
-                  <li class="list-group-item d-flex align-items-center flex-wrap">
-                    {% if student.photo_filename %}
-                      <img src="{{ url_for('static', filename='uploads/' ~ student.photo_filename) }}" class="rounded-circle me-2" width="32" height="32" alt="Photo">
-                    {% else %}
-                      <span class="avatar me-2">{{ student.first_name[0] }}{{ student.last_name[0] }}</span>
-                    {% endif %}
-                    <span>{{ student.first_name }} {{ student.last_name }} <small class="text-muted">(ID: {{ student.student_id or 'N/A' }})</small></span>
-                  </li>
-                  {% endfor %}
-                </ul>
+                <div style="max-height: 400px; overflow-y: auto;">
+                  <ul class="list-group list-group-flush">
+                    {% for student in enrolled_students %}
+                    <li class="list-group-item d-flex align-items-center flex-wrap">
+                      {% if student.photo_filename %}
+                        <img src="{{ url_for('static', filename='uploads/' ~ student.photo_filename) }}" class="rounded-circle me-2" width="32" height="32" alt="Photo">
+                      {% else %}
+                        <span class="avatar me-2">{{ student.first_name[0] }}{{ student.last_name[0] }}</span>
+                      {% endif %}
+                      <span>{{ student.first_name }} {{ student.last_name }} <small class="text-muted">(ID: {{ student.student_id or 'N/A' }})</small></span>
+                    </li>
+                    {% endfor %}
+                  </ul>
+                </div>
               {% else %}
                 <div class="p-3 text-muted">No students are currently enrolled in this class.</div>
               {% endif %}
@@ -159,15 +161,21 @@
             </div>
             <div class="card-body p-0">
               {% if assignments %}
-                <ul class="list-group list-group-flush">
-                  {% for assignment in assignments %}
-                  <li class="list-group-item">
-                    <strong>{{ assignment.title }}</strong><br>
-                    <small class="text-muted">Due: {{ assignment.due_date.strftime('%b %d, %Y') }}</small>
-                    {% if assignment.description %}<br><span class="text-muted">{{ assignment.description[:60] }}{% if assignment.description|length > 60 %}...{% endif %}</span>{% endif %}
-                  </li>
-                  {% endfor %}
-                </ul>
+                <div style="max-height: 400px; overflow-y: auto;">
+                  <ul class="list-group list-group-flush">
+                    {% for assignment in assignments %}
+                    <li class="list-group-item">
+                      <strong>{{ assignment.title }}</strong><br>
+                      {% if assignment.due_date %}
+                        <small class="text-muted">Due: {{ assignment.due_date.strftime('%b %d, %Y') }}</small>
+                      {% else %}
+                        <small class="text-muted">Due: No due date</small>
+                      {% endif %}
+                      {% if assignment.description %}<br><span class="text-muted">{{ assignment.description[:60] }}{% if assignment.description|length > 60 %}...{% endif %}</span>{% endif %}
+                    </li>
+                    {% endfor %}
+                  </ul>
+                </div>
               {% else %}
                 <div class="p-3 text-muted">No recent assignments.</div>
               {% endif %}

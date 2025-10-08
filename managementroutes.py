@@ -25,6 +25,8 @@ from models import (
     DiscussionThread, DiscussionPost,
     # Group system
     StudentGroup, StudentGroupMember, GroupAssignment,
+    # Advanced features
+    DeadlineReminder, Feedback360, ReflectionJournal, GroupConflict,
     # Student Jobs system
     CleaningTeam, CleaningTeamMember, CleaningInspection, CleaningTask, CleaningSchedule
 )
@@ -1271,6 +1273,139 @@ def class_roster(class_id):
                          available_teachers=available_teachers,
                          today=today,
                          enrollments=enrollments)
+
+
+# ============================================================================
+# CLASS MANAGEMENT FEATURES (Group Assignments, Deadline Reminders, etc.)
+# ============================================================================
+
+@management_blueprint.route('/class/<int:class_id>/group-assignments')
+@login_required
+@management_required
+def admin_class_group_assignments(class_id):
+    """View all group assignments for a specific class - Management view."""
+    class_obj = Class.query.get_or_404(class_id)
+    
+    # Get all group assignments for this class
+    try:
+        group_assignments = GroupAssignment.query.filter_by(class_id=class_id).order_by(GroupAssignment.due_date.desc()).all()
+    except Exception as e:
+        flash('Group assignments feature is not yet available.', 'warning')
+        group_assignments = []
+    
+    return render_template('management/admin_class_group_assignments.html',
+                         class_obj=class_obj,
+                         group_assignments=group_assignments,
+                         moment=datetime.utcnow())
+
+
+@management_blueprint.route('/class/<int:class_id>/deadline-reminders')
+@login_required
+@management_required
+def admin_class_deadline_reminders(class_id):
+    """View deadline reminders for a specific class - Management view."""
+    class_obj = Class.query.get_or_404(class_id)
+    
+    # Get all deadline reminders for this class
+    try:
+        from datetime import timedelta
+        reminders = DeadlineReminder.query.filter_by(class_id=class_id).order_by(DeadlineReminder.reminder_date.asc()).all()
+        
+        # Get upcoming reminders (next 7 days)
+        now = datetime.now()
+        upcoming_date = now + timedelta(days=7)
+        upcoming_reminders = [r for r in reminders if r.reminder_date and now <= r.reminder_date <= upcoming_date]
+    except Exception as e:
+        flash('Deadline reminders feature is not yet available.', 'warning')
+        reminders = []
+        upcoming_reminders = []
+    
+    return render_template('management/admin_class_deadline_reminders.html',
+                         class_obj=class_obj,
+                         reminders=reminders,
+                         upcoming_reminders=upcoming_reminders)
+
+
+@management_blueprint.route('/class/<int:class_id>/analytics')
+@login_required
+@management_required
+def admin_class_analytics(class_id):
+    """View analytics for a specific class - Management view."""
+    class_obj = Class.query.get_or_404(class_id)
+    
+    # Get analytics data
+    try:
+        groups = StudentGroup.query.filter_by(class_id=class_id).all()
+        group_assignments = GroupAssignment.query.filter_by(class_id=class_id).all()
+        collaboration_metrics = []
+        benchmarks = []
+    except Exception as e:
+        groups = []
+        group_assignments = []
+        collaboration_metrics = []
+        benchmarks = []
+    
+    return render_template('management/admin_class_analytics.html',
+                         class_obj=class_obj,
+                         groups=groups,
+                         group_assignments=group_assignments,
+                         collaboration_metrics=collaboration_metrics,
+                         benchmarks=benchmarks)
+
+
+@management_blueprint.route('/class/<int:class_id>/360-feedback')
+@login_required
+@management_required
+def admin_class_360_feedback(class_id):
+    """View 360 feedback for a specific class - Management view."""
+    class_obj = Class.query.get_or_404(class_id)
+    
+    # Get feedback sessions
+    try:
+        feedback_sessions = Feedback360.query.filter_by(class_id=class_id).order_by(Feedback360.created_at.desc()).all()
+    except Exception as e:
+        feedback_sessions = []
+    
+    return render_template('management/admin_class_360_feedback.html',
+                         class_obj=class_obj,
+                         feedback_sessions=feedback_sessions)
+
+
+@management_blueprint.route('/class/<int:class_id>/reflection-journals')
+@login_required
+@management_required
+def admin_class_reflection_journals(class_id):
+    """View reflection journals for a specific class - Management view."""
+    class_obj = Class.query.get_or_404(class_id)
+    
+    # Get reflection journals
+    try:
+        journals = ReflectionJournal.query.filter_by(class_id=class_id).order_by(ReflectionJournal.created_at.desc()).all()
+    except Exception as e:
+        journals = []
+    
+    return render_template('management/admin_class_reflection_journals.html',
+                         class_obj=class_obj,
+                         journals=journals)
+
+
+@management_blueprint.route('/class/<int:class_id>/conflicts')
+@login_required
+@management_required
+def admin_class_conflicts(class_id):
+    """View conflicts for a specific class - Management view."""
+    class_obj = Class.query.get_or_404(class_id)
+    
+    # Get conflicts
+    try:
+        conflicts = GroupConflict.query.filter_by(class_id=class_id).order_by(GroupConflict.reported_at.desc()).all()
+    except Exception as e:
+        conflicts = []
+    
+    return render_template('management/admin_class_conflicts.html',
+                         class_obj=class_obj,
+                         conflicts=conflicts)
+
 
 @management_blueprint.route('/class/<int:class_id>/grades')
 @login_required

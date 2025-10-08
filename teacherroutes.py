@@ -2991,7 +2991,7 @@ def class_group_assignments(class_id):
         flash('Group assignments feature is not yet available. Please run the database migration first.', 'warning')
         group_assignments = []
     
-    return render_template('shared/class_group_assignments.html',
+    return render_template('teachers/teacher_class_group_assignments.html',
                          class_obj=class_obj,
                          group_assignments=group_assignments,
                          moment=datetime.utcnow(),
@@ -4702,7 +4702,7 @@ def class_deadline_reminders(class_id):
         reminders = []
         upcoming_reminders = []
     
-    return render_template('shared/class_deadline_reminders.html',
+    return render_template('teachers/teacher_class_deadline_reminders.html',
                          class_obj=class_obj,
                          reminders=reminders,
                          upcoming_reminders=upcoming_reminders,
@@ -4946,7 +4946,7 @@ def class_360_feedback(class_id):
     enrollments = Enrollment.query.filter_by(class_id=class_id).all()
     students = [enrollment.student for enrollment in enrollments if enrollment.student]
     
-    return render_template('shared/class_360_feedback.html',
+    return render_template('teachers/teacher_class_360_feedback.html',
                          class_obj=class_obj,
                          feedback_sessions=feedback_sessions,
                          students=students)
@@ -5181,7 +5181,7 @@ def class_reflection_journals(class_id):
     enrollments = Enrollment.query.filter_by(class_id=class_id).all()
     students = [enrollment.student for enrollment in enrollments if enrollment.student]
     
-    return render_template('shared/class_reflection_journals.html',
+    return render_template('teachers/teacher_class_reflection_journals.html',
                          class_obj=class_obj,
                          journals=journals,
                          students=students)
@@ -5273,7 +5273,7 @@ def class_conflicts(class_id):
     enrollments = Enrollment.query.filter_by(class_id=class_id).all()
     students = [enrollment.student for enrollment in enrollments if enrollment.student]
     
-    return render_template('shared/class_conflicts.html',
+    return render_template('teachers/teacher_class_conflicts.html',
                          class_obj=class_obj,
                          conflicts=conflicts,
                          students=students)
@@ -5497,7 +5497,7 @@ def class_analytics(class_id):
     # Get saved dashboards
     dashboards = AnalyticsDashboard.query.filter_by(class_id=class_id).order_by(AnalyticsDashboard.last_accessed.desc()).all()
     
-    return render_template('shared/class_analytics.html',
+    return render_template('teachers/teacher_class_analytics.html',
                          class_obj=class_obj,
                          groups=groups,
                          group_assignments=group_assignments,

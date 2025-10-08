@@ -1,0 +1,153 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
+    <h3 class="mb-2 mb-md-0"><i class="bi bi-check-circle me-2"></i>Grade Assignment: {{ group_assignment.title }}</h3>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('management.admin_view_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Back to Assignment
+      </a>
+    </div>
+  </div>
+
+  <!-- Assignment Info -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-header bg-primary text-white">
+      <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Assignment Information</h5>
+    </div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-12 col-md-6">
+          <strong>Due Date:</strong> {{ group_assignment.due_date.strftime('%B %d, %Y at %I:%M %p') }}
+        </div>
+        <div class="col-12 col-md-6">
+          <strong>Academic Period:</strong> 
+          <span class="badge bg-primary">{{ group_assignment.quarter }}</span>
+          {% if group_assignment.semester %}
+            <span class="badge bg-secondary">{{ group_assignment.semester }}</span>
+          {% endif %}
+        </div>
+        <div class="col-12 col-md-6">
+          <strong>Group Size:</strong> {{ group_assignment.min_group_size }} - {{ group_assignment.max_group_size }} students
+        </div>
+        <div class="col-12 col-md-6">
+          <strong>Type:</strong> 
+          <span class="badge bg-info">{{ group_assignment.assignment_type.title() }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <div class="row g-3 g-md-4">
+      {% for group in groups %}
+        <div class="col-12 col-lg-6">
+          <div class="card shadow-sm">
+            <div class="card-header bg-info text-white">
+              <h5 class="mb-0">
+                <i class="bi bi-people me-2"></i>{{ group.name }}
+                <small class="float-end">({{ group.members|length }} members)</small>
+              </h5>
+            </div>
+            <div class="card-body">
+              {% for member in group.members %}
+                {% set student_id = member.student.id %}
+                {% set score_key = f"score_{group.id}_{student_id}" %}
+                {% set comments_key = f"comments_{group.id}_{student_id}" %}
+                
+                <div class="mb-3 p-3 border rounded">
+                  <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h6 class="mb-0">{{ member.student.first_name }} {{ member.student.last_name }}</h6>
+                    <span class="badge bg-secondary">{{ member.student.grade_level }}</span>
+                  </div>
+                  
+                  <!-- Score Input -->
+                  <div class="mb-2">
+                    <label for="{{ score_key }}" class="form-label">
+                      <i class="bi bi-star me-1"></i>Score
+                    </label>
+                    <div class="input-group">
+                      <input type="number" 
+                             class="form-control" 
+                             id="{{ score_key }}" 
+                             name="{{ score_key }}" 
+                             min="0" 
+                             max="100" 
+                             step="0.1"
+                             value="{{ grades_by_student.get(student_id, {}).get('score', '') }}"
+                             placeholder="Enter score (0-100)">
+                      <span class="input-group-text">/ 100</span>
+                    </div>
+                  </div>
+                  
+                  <!-- Comments -->
+                  <div class="mb-2">
+                    <label for="{{ comments_key }}" class="form-label">
+                      <i class="bi bi-chat-text me-1"></i>Comments
+                    </label>
+                    <textarea class="form-control" 
+                              id="{{ comments_key }}" 
+                              name="{{ comments_key }}" 
+                              rows="2" 
+                              placeholder="Add feedback for this student...">{{ grades_by_student.get(student_id, {}).get('comments', '') }}</textarea>
+                  </div>
+                  
+                  <!-- Current Grade Display -->
+                  {% if grades_by_student.get(student_id) %}
+                    <div class="alert alert-info py-2">
+                      <small>
+                        <i class="bi bi-info-circle me-1"></i>
+                        <strong>Current Grade:</strong> 
+                        {{ grades_by_student[student_id].get('score', 'N/A') }}/100 
+                        ({{ grades_by_student[student_id].get('letter_grade', 'N/A') }})
+                      </small>
+                    </div>
+                  {% endif %}
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- Submit Button -->
+    <div class="row mt-4">
+      <div class="col-12">
+        <div class="d-flex justify-content-center gap-3">
+          <button type="submit" class="btn btn-success btn-lg">
+            <i class="bi bi-check-circle me-2"></i>Save Grades
+          </button>
+          <a href="{{ url_for('management.admin_view_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-outline-secondary btn-lg">
+            <i class="bi bi-x-circle me-2"></i>Cancel
+          </a>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-calculate letter grades based on score
+    const scoreInputs = document.querySelectorAll('input[type="number"]');
+    scoreInputs.forEach(input => {
+        input.addEventListener('input', function() {
+            const score = parseFloat(this.value);
+            if (!isNaN(score)) {
+                let letterGrade = 'F';
+                if (score >= 90) letterGrade = 'A';
+                else if (score >= 80) letterGrade = 'B';
+                else if (score >= 70) letterGrade = 'C';
+                else if (score >= 60) letterGrade = 'D';
+                
+                // You could update a display element here if needed
+                console.log(`Score: ${score}, Letter Grade: ${letterGrade}`);
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

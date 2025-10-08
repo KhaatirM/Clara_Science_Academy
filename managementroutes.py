@@ -5498,3 +5498,203 @@ def admin_create_group_contract(group_id):
 #     """Store extracted calendar data in the database."""
 #     # PDF processing temporarily disabled due to import issues
 #     pass
+
+# ============================================================================
+# GROUP ASSIGNMENT MANAGEMENT ROUTES
+# ============================================================================
+
+@management_blueprint.route('/group-assignment/<int:assignment_id>/view')
+@login_required
+@management_required
+def admin_view_group_assignment(assignment_id):
+    """View details of a specific group assignment - Management view."""
+    try:
+        from models import GroupAssignment, GroupSubmission, StudentGroup, AssignmentExtension
+        
+        group_assignment = GroupAssignment.query.get_or_404(assignment_id)
+        
+        # Get submissions for this assignment
+        submissions = GroupSubmission.query.filter_by(group_assignment_id=assignment_id).all()
+        
+        # Get groups for this class
+        groups = StudentGroup.query.filter_by(class_id=group_assignment.class_id, is_active=True).all()
+        
+        # Get extensions for this assignment
+        try:
+            extensions = AssignmentExtension.query.filter_by(assignment_id=assignment_id).all()
+        except:
+            extensions = []
+        
+        return render_template('management/admin_view_group_assignment.html',
+                             group_assignment=group_assignment,
+                             submissions=submissions,
+                             groups=groups,
+                             extensions=extensions)
+    except Exception as e:
+        print(f"Error viewing group assignment: {e}")
+        flash('Error accessing group assignment details.', 'error')
+        return redirect(url_for('management.admin_class_group_assignments', class_id=group_assignment.class_id))
+
+@management_blueprint.route('/group-assignment/<int:assignment_id>/grade', methods=['GET', 'POST'])
+@login_required
+@management_required
+def admin_grade_group_assignment(assignment_id):
+    """Grade a group assignment - Management view."""
+    try:
+        from models import GroupAssignment, StudentGroup, GroupGrade, AssignmentExtension
+        import json
+        
+        group_assignment = GroupAssignment.query.get_or_404(assignment_id)
+        
+        # Get groups for this class
+        groups = StudentGroup.query.filter_by(class_id=group_assignment.class_id, is_active=True).all()
+        
+        # Get existing grades
+        grades_by_student = {}
+        try:
+            existing_grades = GroupGrade.query.filter_by(group_assignment_id=assignment_id).all()
+            for grade in existing_grades:
+                if grade.grade_data:
+                    try:
+                        grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
+                        grades_by_student[grade.student_id] = grade_data
+                    except:
+                        grades_by_student[grade.student_id] = {'score': '', 'comments': ''}
+        except:
+            pass
+        
+        if request.method == 'POST':
+            try:
+                for group in groups:
+                    for member in group.members:
+                        student_id = member.student.id
+                        score_key = f"score_{group.id}_{student_id}"
+                        comments_key = f"comments_{group.id}_{student_id}"
+                        
+                        if score_key in request.form:
+                            score = request.form.get(score_key)
+                            comments = request.form.get(comments_key, '')
+                            
+                            if score:
+                                try:
+                                    score = float(score)
+                                    if 0 <= score <= 100:
+                                        # Calculate letter grade
+                                        if score >= 90:
+                                            letter_grade = 'A'
+                                        elif score >= 80:
+                                            letter_grade = 'B'
+                                        elif score >= 70:
+                                            letter_grade = 'C'
+                                        elif score >= 60:
+                                            letter_grade = 'D'
+                                        else:
+                                            letter_grade = 'F'
+                                        
+                                        grade_data = {
+                                            'score': score,
+                                            'max_score': 100,
+                                            'letter_grade': letter_grade
+                                        }
+                                        
+                                        # Update or create grade
+                                        existing_grade = GroupGrade.query.filter_by(
+                                            group_assignment_id=assignment_id,
+                                            group_id=group.id,
+                                            student_id=student_id
+                                        ).first()
+                                        
+                                        if existing_grade:
+                                            existing_grade.grade_data = json.dumps(grade_data)
+                                            existing_grade.comments = comments
+                                            existing_grade.graded_by = None  # Admin grading
+                                        else:
+                                            new_grade = GroupGrade(
+                                                group_assignment_id=assignment_id,
+                                                group_id=group.id,
+                                                student_id=student_id,
+                                                grade_data=json.dumps(grade_data),
+                                                graded_by=None,  # Admin grading
+                                                comments=comments
+                                            )
+                                            db.session.add(new_grade)
+                                        
+                                        db.session.commit()
+                                        
+                                except ValueError:
+                                    flash(f'Invalid score for {member.student.first_name} {member.student.last_name}', 'warning')
+                
+                flash('Grades saved successfully!', 'success')
+                return redirect(url_for('management.admin_class_group_assignments', class_id=group_assignment.class_id))
+                
+            except Exception as e:
+                db.session.rollback()
+                print(f"Error saving grades: {e}")
+                flash('Error saving grades. Please try again.', 'error')
+        
+        return render_template('management/admin_grade_group_assignment.html',
+                             group_assignment=group_assignment,
+                             groups=groups,
+                             grades_by_student=grades_by_student)
+    except Exception as e:
+        print(f"Error grading group assignment: {e}")
+        flash('Error accessing group assignment grading.', 'error')
+        return redirect(url_for('management.admin_class_group_assignments', class_id=group_assignment.class_id))
+
+@management_blueprint.route('/group-assignment/<int:assignment_id>/edit', methods=['GET', 'POST'])
+@login_required
+@management_required
+def admin_edit_group_assignment(assignment_id):
+    """Edit a group assignment - Management view."""
+    try:
+        from models import GroupAssignment
+        
+        group_assignment = GroupAssignment.query.get_or_404(assignment_id)
+        
+        if request.method == 'POST':
+            try:
+                # Update assignment fields
+                group_assignment.title = request.form.get('title', group_assignment.title)
+                group_assignment.description = request.form.get('description', group_assignment.description)
+                
+                # Update due date
+                due_date_str = request.form.get('due_date')
+                if due_date_str:
+                    try:
+                        from datetime import datetime
+                        group_assignment.due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
+                    except ValueError:
+                        flash('Invalid due date format.', 'error')
+                        return render_template('management/admin_edit_group_assignment.html', 
+                                             group_assignment=group_assignment)
+                
+                # Update group size constraints
+                min_size = request.form.get('min_group_size')
+                max_size = request.form.get('max_group_size')
+                if min_size and max_size:
+                    try:
+                        group_assignment.min_group_size = int(min_size)
+                        group_assignment.max_group_size = int(max_size)
+                    except ValueError:
+                        flash('Invalid group size values.', 'error')
+                        return render_template('management/admin_edit_group_assignment.html', 
+                                             group_assignment=group_assignment)
+                
+                group_assignment.assignment_type = request.form.get('assignment_type', group_assignment.assignment_type)
+                group_assignment.collaboration_type = request.form.get('collaboration_type', group_assignment.collaboration_type)
+                
+                db.session.commit()
+                flash('Assignment updated successfully!', 'success')
+                return redirect(url_for('management.admin_view_group_assignment', assignment_id=assignment_id))
+                
+            except Exception as e:
+                db.session.rollback()
+                print(f"Error updating assignment: {e}")
+                flash('Error updating assignment. Please try again.', 'error')
+        
+        return render_template('management/admin_edit_group_assignment.html', 
+                             group_assignment=group_assignment)
+    except Exception as e:
+        print(f"Error editing group assignment: {e}")
+        flash('Error accessing group assignment editing.', 'error')
+        return redirect(url_for('management.admin_class_group_assignments', class_id=group_assignment.class_id))

@@ -1,0 +1,266 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
+    <h3 class="mb-2 mb-md-0"><i class="bi bi-eye me-2"></i>{{ group_assignment.title }}</h3>
+    <div class="d-flex gap-2 flex-wrap">
+      <a href="{{ url_for('management.admin_class_group_assignments', class_id=group_assignment.class_id) }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Back to Group Assignments
+      </a>
+      <a href="{{ url_for('management.admin_grade_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-success btn-sm">
+        <i class="bi bi-check-circle me-1"></i>Grade Assignment
+      </a>
+      <a href="{{ url_for('management.edit_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-warning btn-sm">
+        <i class="bi bi-pencil me-1"></i>Edit Assignment
+      </a>
+      <a href="{{ url_for('management.grant_extensions', assignment_id=group_assignment.id) }}" class="btn btn-primary btn-sm">
+        <i class="bi bi-clock me-1"></i>Extensions
+      </a>
+      <a href="{{ url_for('teacher.create_assignment_rubric', assignment_id=group_assignment.id) }}?admin_view=true" class="btn btn-info btn-sm">
+        <i class="bi bi-list-check me-1"></i>Create Rubric
+      </a>
+      <a href="{{ url_for('teacher.view_peer_evaluations', assignment_id=group_assignment.id) }}?admin_view=true" class="btn btn-warning btn-sm">
+        <i class="bi bi-people me-1"></i>Peer Evaluations
+      </a>
+      <a href="{{ url_for('teacher.view_group_progress', assignment_id=group_assignment.id) }}?admin_view=true" class="btn btn-secondary btn-sm">
+        <i class="bi bi-graph-up me-1"></i>Progress
+      </a>
+      <a href="{{ url_for('teacher.view_peer_reviews', assignment_id=group_assignment.id) }}?admin_view=true" class="btn btn-dark btn-sm">
+        <i class="bi bi-eye me-1"></i>Peer Reviews
+      </a>
+      <a href="{{ url_for('teacher.view_draft_submissions', assignment_id=group_assignment.id) }}?admin_view=true" class="btn btn-light btn-sm">
+        <i class="bi bi-file-earmark-text me-1"></i>Draft Submissions
+      </a>
+    </div>
+  </div>
+
+  <div class="row g-3 g-md-4">
+    <!-- Assignment Details -->
+    <div class="col-12 col-lg-8">
+      <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Assignment Details</h5>
+        </div>
+        <div class="card-body">
+          {% if group_assignment.description %}
+            <div class="mb-4">
+              <h6><i class="bi bi-file-text me-2"></i>Description</h6>
+              <p class="text-muted">{{ group_assignment.description }}</p>
+            </div>
+          {% endif %}
+
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="d-flex align-items-center">
+                <i class="bi bi-calendar-event text-primary me-2"></i>
+                <div>
+                  <small class="text-muted d-block">Due Date</small>
+                  <strong>{{ group_assignment.due_date.strftime('%B %d, %Y at %I:%M %p') if group_assignment.due_date else 'Not set' }}</strong>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="d-flex align-items-center">
+                <i class="bi bi-people text-success me-2"></i>
+                <div>
+                  <small class="text-muted d-block">Group Size</small>
+                  <strong>{{ group_assignment.min_group_size }}-{{ group_assignment.max_group_size }} students</strong>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="d-flex align-items-center">
+                <i class="bi bi-book text-info me-2"></i>
+                <div>
+                  <small class="text-muted d-block">Class</small>
+                  <strong>{{ group_assignment.class_info.name }}</strong>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="d-flex align-items-center">
+                <i class="bi bi-tag text-warning me-2"></i>
+                <div>
+                  <small class="text-muted d-block">Type</small>
+                  <strong>{{ group_assignment.assignment_type.title() }}</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {% if group_assignment.attachment_filename %}
+            <div class="mt-4">
+              <h6><i class="bi bi-paperclip me-2"></i>Attachments</h6>
+              <div class="list-group">
+                <div class="list-group-item">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                      <i class="bi bi-file-earmark me-2"></i>
+                      {{ group_assignment.attachment_filename }}
+                    </div>
+                    <a href="{{ url_for('static', filename='uploads/' ~ group_assignment.attachment_filename) }}" 
+                       class="btn btn-outline-primary btn-sm" target="_blank">
+                      <i class="bi bi-download me-1"></i>Download
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Submissions -->
+      <div class="card shadow-sm mt-4">
+        <div class="card-header bg-success text-white">
+          <h5 class="mb-0"><i class="bi bi-inbox me-2"></i>Group Submissions ({{ submissions|length }})</h5>
+        </div>
+        <div class="card-body p-0">
+          {% if submissions %}
+            <div class="list-group list-group-flush">
+              {% for submission in submissions %}
+                <div class="list-group-item">
+                  <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                      <h6 class="mb-1">
+                        {% for group in groups %}
+                          {% if group.id == submission.group_id %}
+                            {{ group.name }}
+                          {% endif %}
+                        {% endfor %}
+                      </h6>
+                      <p class="mb-1 text-muted">
+                        Submitted: {{ submission.submitted_at.strftime('%b %d, %Y at %I:%M %p') if submission.submitted_at else 'Not submitted' }}
+                      </p>
+                      {% if submission.comments %}
+                        <small class="text-muted">{{ submission.comments[:100] }}{% if submission.comments|length > 100 %}...{% endif %}</small>
+                      {% endif %}
+                    </div>
+                    <div class="d-flex gap-1">
+                      {% if submission.attachment_filename %}
+                        <a href="{{ url_for('static', filename='uploads/' ~ submission.attachment_filename) }}" 
+                           class="btn btn-outline-primary btn-sm" target="_blank">
+                          <i class="bi bi-download"></i>
+                        </a>
+                      {% endif %}
+                      <span class="badge bg-{% if submission.is_late %}danger{% else %}success{% endif %}">
+                        {{ 'Late' if submission.is_late else 'On Time' }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="p-4 text-muted text-center">
+              <i class="bi bi-inbox text-muted" style="font-size: 2rem;"></i>
+              <p class="mb-0">No submissions yet.</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Groups Overview -->
+    <div class="col-12 col-lg-4">
+      <div class="card shadow-sm">
+        <div class="card-header bg-info text-white">
+          <h5 class="mb-0"><i class="bi bi-people me-2"></i>Class Groups ({{ groups|length }})</h5>
+        </div>
+        <div class="card-body p-0">
+          {% if groups %}
+            <div class="list-group list-group-flush">
+              {% for group in groups %}
+                <div class="list-group-item">
+                  <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                      <h6 class="mb-1">{{ group.name }}</h6>
+                      <p class="mb-1 text-muted">{{ group.members|length }} members</p>
+                      {% if group.description %}
+                        <small class="text-muted">{{ group.description[:50] }}{% if group.description|length > 50 %}...{% endif %}</small>
+                      {% endif %}
+                    </div>
+                    <a href="{{ url_for('management.admin_manage_group', group_id=group.id) }}" class="btn btn-outline-primary btn-sm">
+                      <i class="bi bi-gear"></i>
+                    </a>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="p-3 text-muted text-center">
+              <i class="bi bi-people text-muted" style="font-size: 2rem;"></i>
+              <p class="mb-0">No groups created yet.</p>
+              <a href="{{ url_for('management.admin_class_groups', class_id=group_assignment.class_id) }}" class="btn btn-primary btn-sm mt-2">
+                <i class="bi bi-plus-circle me-1"></i>Create Groups
+              </a>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Assignment Stats -->
+      <div class="card shadow-sm mt-4">
+        <div class="card-header bg-secondary text-white">
+          <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Assignment Statistics</h5>
+        </div>
+        <div class="card-body">
+          <div class="row text-center">
+            <div class="col-6">
+              <h4 class="text-success">{{ submissions|length }}</h4>
+              <small class="text-muted">Submissions</small>
+            </div>
+            <div class="col-6">
+              <h4 class="text-warning">
+                {% set total_students = groups|sum(attribute='members')|length %}
+                {{ total_students }}
+              </h4>
+              <small class="text-muted">Students in Groups</small>
+            </div>
+            <div class="col-6">
+              <h4 class="text-info">
+                {% set late_submissions = submissions|selectattr('is_late')|list|length %}
+                {{ late_submissions }}
+              </h4>
+              <small class="text-muted">Late Submissions</small>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Extensions Card -->
+      {% if extensions %}
+      <div class="card shadow-sm mt-4">
+        <div class="card-header bg-warning text-dark">
+          <h5 class="mb-0"><i class="bi bi-clock me-2"></i>Extensions Granted ({{ extensions|length }})</h5>
+        </div>
+        <div class="card-body p-0">
+          <div class="list-group list-group-flush">
+            {% for ext in extensions %}
+              <div class="list-group-item">
+                <div class="d-flex justify-content-between align-items-start">
+                  <div>
+                    <h6 class="mb-1">{{ ext.student.first_name }} {{ ext.student.last_name }}</h6>
+                    <small class="text-muted">
+                      <i class="bi bi-calendar-event me-1"></i>
+                      New Due Date: {{ ext.new_due_date.strftime('%b %d, %Y %I:%M %p') if ext.new_due_date else 'N/A' }}
+                    </small>
+                    {% if ext.reason %}
+                      <p class="mb-0 mt-1"><small>Reason: {{ ext.reason }}</small></p>
+                    {% endif %}
+                  </div>
+                  <span class="badge bg-{% if ext.approved %}success{% else %}warning{% endif %}">
+                    {{ 'Approved' if ext.approved else 'Pending' }}
+                  </span>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

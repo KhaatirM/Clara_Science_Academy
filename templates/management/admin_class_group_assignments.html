@@ -128,11 +128,11 @@
               <!-- Assignment Actions -->
               <div class="mt-auto">
                 <div class="d-grid gap-2">
-                  <a href="{{ url_for('teacher.view_group_assignment', assignment_id=assignment.id) }}?admin_view=true" 
+                  <a href="{{ url_for('management.admin_view_group_assignment', assignment_id=assignment.id) }}" 
                      class="btn btn-outline-primary btn-sm">
                     <i class="bi bi-eye me-1"></i>View Details
                   </a>
-                  <a href="{{ url_for('teacher.grade_group_assignment', assignment_id=assignment.id) }}?admin_view=true" 
+                  <a href="{{ url_for('management.admin_grade_group_assignment', assignment_id=assignment.id) }}" 
                      class="btn btn-outline-success btn-sm">
                     <i class="bi bi-check-circle me-1"></i>Grade Assignment
                   </a>

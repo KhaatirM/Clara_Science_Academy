@@ -3,8 +3,9 @@ from models import (
     User, Student, TeacherStaff, Class, Attendance, SchoolDayAttendance,
     StudentGoal, StudentGroupMember, Grade, Submission, GroupSubmission, 
     GroupGrade, AssignmentExtension, Enrollment, MessageGroupMember, 
-    Notification, StudentGroup, GroupAssignment, Assignment, QuizAssignment,
-    DiscussionAssignment, AssignmentSubmission, BugReport, SystemConfig
+    Notification, StudentGroup, GroupAssignment, Assignment, BugReport, 
+    SystemConfig, QuizAnswer, QuizProgress, DiscussionPost, ReportCard,
+    GroupQuizAnswer
 )
 from sqlalchemy import text, inspect
 

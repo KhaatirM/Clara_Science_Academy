@@ -5053,13 +5053,19 @@ def remove_student(student_id):
         student = Student.query.get_or_404(student_id)
         
         # Delete all related records first to avoid foreign key constraints
-        from models import Attendance, StudentGoal, StudentGroupMember, Grade, Submission, GroupSubmission, GroupGrade, AssignmentExtension, Enrollment, MessageGroupMember, Notification
+        from models import (
+            Attendance, SchoolDayAttendance, StudentGoal, StudentGroupMember, Grade, 
+            Submission, GroupSubmission, GroupGrade, AssignmentExtension, Enrollment, 
+            MessageGroupMember, Notification, QuizAnswer, QuizProgress, DiscussionPost,
+            ReportCard, GroupQuizAnswer
+        )
         
         # Delete enrollment records first (these reference the student)
         Enrollment.query.filter_by(student_id=student_id).delete()
         
-        # Delete attendance records
+        # Delete attendance records (both class and school day attendance)
         Attendance.query.filter_by(student_id=student_id).delete()
+        SchoolDayAttendance.query.filter_by(student_id=student_id).delete()
         
         # Delete student goals
         StudentGoal.query.filter_by(student_id=student_id).delete()
@@ -5081,6 +5087,19 @@ def remove_student(student_id):
         
         # Delete assignment extensions
         AssignmentExtension.query.filter_by(student_id=student_id).delete()
+        
+        # Delete quiz answers and progress
+        QuizAnswer.query.filter_by(student_id=student_id).delete()
+        QuizProgress.query.filter_by(student_id=student_id).delete()
+        
+        # Delete discussion posts
+        DiscussionPost.query.filter_by(student_id=student_id).delete()
+        
+        # Delete report cards
+        ReportCard.query.filter_by(student_id=student_id).delete()
+        
+        # Delete group quiz answers
+        GroupQuizAnswer.query.filter_by(student_id=student_id).delete()
         
         # Delete associated user account if it exists
         if student.user:

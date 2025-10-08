@@ -356,6 +356,10 @@
             </div>
             <div class="card-body p-0">
               {% if assignments %}
+                <!-- Debug info -->
+                <div class="p-2 bg-light border-bottom">
+                  <small class="text-muted">Debug: Found {{ assignments|length }} assignments</small>
+                </div>
                 <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
                   <table class="table table-hover mb-0">
                     <tbody>
@@ -372,6 +376,7 @@
                                 <span class="badge bg-info bg-opacity-20 text-info border border-info">
                                   {% if assignment.due_date %}
                                     Due: {{ assignment.due_date.strftime('%b %d, %Y') }}
+                                    <small class="d-block text-muted">Debug: {{ assignment.due_date }}</small>
                                   {% else %}
                                     Due: No due date
                                   {% endif %}

@@ -148,21 +148,29 @@
                         <div class="col-md-6">
                             <div class="d-flex flex-wrap gap-3">
                                 <div class="d-flex align-items-center">
-                                    <span class="calendar-legend-item event-academic_period_start me-2"></span>
-                                    <small>Quarter/Semester Start</small>
+                                    <span class="calendar-legend-item event-quarter_start me-2"></span>
+                                    <small>Quarter Start</small>
                                 </div>
                                 <div class="d-flex align-items-center">
-                                    <span class="calendar-legend-item event-academic_period_end me-2"></span>
-                                    <small>Quarter/Semester End</small>
+                                    <span class="calendar-legend-item event-quarter_end me-2"></span>
+                                    <small>Quarter End</small>
                                 </div>
                                 <div class="d-flex align-items-center">
-                                    <span class="calendar-legend-item event-teacher_work_day me-2"></span>
-                                    <small>Teacher Work Day</small>
+                                    <span class="calendar-legend-item event-semester_start me-2"></span>
+                                    <small>Semester Start</small>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <span class="calendar-legend-item event-semester_end me-2"></span>
+                                    <small>Semester End</small>
                                 </div>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="d-flex flex-wrap gap-3">
+                                <div class="d-flex align-items-center">
+                                    <span class="calendar-legend-item event-teacher_work_day me-2"></span>
+                                    <small>Teacher Work Day</small>
+                                </div>
                                 <div class="d-flex align-items-center">
                                     <span class="calendar-legend-item event-school_break_start me-2"></span>
                                     <small>School Break Start</small>
@@ -172,7 +180,19 @@
                                     <small>School Break End</small>
                                 </div>
                                 <div class="d-flex align-items-center">
-                                    <span class="calendar-legend-item event-calendar_event me-2"></span>
+                                    <span class="calendar-legend-item event-holiday me-2"></span>
+                                    <small>Holiday</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-12 mt-2">
+                            <div class="d-flex flex-wrap gap-3">
+                                <div class="d-flex align-items-center">
+                                    <span class="calendar-legend-item event-professional_development me-2"></span>
+                                    <small>Professional Development</small>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <span class="calendar-legend-item event-other_event me-2"></span>
                                     <small>Other Events</small>
                                 </div>
                             </div>
@@ -291,22 +311,36 @@
     cursor: pointer;
 }
 
-/* Event color schemes - consistent across all roles */
-.calendar-event.event-academic_period_start,
-.calendar-legend-item.event-academic_period_start {
+/* Event color schemes - comprehensive system for all event types */
+/* Quarter Events */
+.calendar-event.event-quarter_start,
+.calendar-legend-item.event-quarter_start {
     background-color: #28a745; /* Green */
 }
 
-.calendar-event.event-academic_period_end,
-.calendar-legend-item.event-academic_period_end {
+.calendar-event.event-quarter_end,
+.calendar-legend-item.event-quarter_end {
     background-color: #dc3545; /* Red */
 }
 
+/* Semester Events */
+.calendar-event.event-semester_start,
+.calendar-legend-item.event-semester_start {
+    background-color: #17a2b8; /* Teal */
+}
+
+.calendar-event.event-semester_end,
+.calendar-legend-item.event-semester_end {
+    background-color: #6f42c1; /* Purple */
+}
+
+/* Teacher Work Days */
 .calendar-event.event-teacher_work_day,
 .calendar-legend-item.event-teacher_work_day {
     background-color: #fd7e14; /* Orange */
 }
 
+/* School Break Events */
 .calendar-event.event-school_break_start,
 .calendar-legend-item.event-school_break_start {
     background-color: #e83e8c; /* Pink */
@@ -317,14 +351,28 @@
     background-color: #6f42c1; /* Purple */
 }
 
-.calendar-event.event-calendar_event,
-.calendar-legend-item.event-calendar_event {
-    background-color: #007bff; /* Blue */
+/* Holiday Events */
+.calendar-event.event-holiday,
+.calendar-legend-item.event-holiday {
+    background-color: #dc3545; /* Red */
 }
 
+/* Professional Development */
+.calendar-event.event-professional_development,
+.calendar-legend-item.event-professional_development {
+    background-color: #20c997; /* Mint Green */
+}
+
+/* Other Calendar Events */
+.calendar-event.event-other_event,
+.calendar-legend-item.event-other_event {
+    background-color: #6c757d; /* Gray */
+}
+
+/* Fallback for any unhandled event types */
 .calendar-event.event-default,
 .calendar-legend-item.event-default {
-    background-color: #6c757d; /* Gray */
+    background-color: #007bff; /* Blue */
 }
 
 .calendar-legend-item {

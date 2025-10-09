@@ -2112,20 +2112,22 @@ def get_academic_dates_for_calendar(year, month):
     for period in academic_periods:
         # Add start date event
         if period.start_date.month == month:
+            event_type = f"{period.period_type}_start"  # quarter_start, semester_start
             academic_dates.append({
                 'day': period.start_date.day,
                 'title': f"{period.name} Start",
                 'category': f"{period.period_type.title()}",
-                'type': 'academic_period_start'
+                'type': event_type
             })
         
         # Add end date event
         if period.end_date.month == month:
+            event_type = f"{period.period_type}_end"  # quarter_end, semester_end
             academic_dates.append({
                 'day': period.end_date.day,
                 'title': f"{period.name} End",
                 'category': f"{period.period_type.title()}",
-                'type': 'academic_period_end'
+                'type': event_type
             })
     
     # Get calendar events for this month
@@ -2137,11 +2139,13 @@ def get_academic_dates_for_calendar(year, month):
     
     for event in calendar_events:
         if event.start_date.month == month:
+            # Use the actual event_type from the database, or default to 'other_event'
+            event_type = event.event_type if event.event_type else 'other_event'
             academic_dates.append({
                 'day': event.start_date.day,
                 'title': event.name,
-                'category': event.event_type.replace('_', ' ').title(),
-                'type': 'calendar_event'
+                'category': event.event_type.replace('_', ' ').title() if event.event_type else 'Other Event',
+                'type': event_type
             })
     
     # Get teacher work days for this month
@@ -3486,8 +3490,23 @@ def view_group_assignment(assignment_id):
     # Get submissions for this assignment
     submissions = GroupSubmission.query.filter_by(group_assignment_id=assignment_id).all()
     
-    # Get groups for this class
-    groups = StudentGroup.query.filter_by(class_id=group_assignment.class_id, is_active=True).all()
+    # Get groups for this class - filter by selected groups if specified
+    if group_assignment.selected_group_ids:
+        # Parse the selected group IDs
+        try:
+            selected_ids = json.loads(group_assignment.selected_group_ids) if isinstance(group_assignment.selected_group_ids, str) else group_assignment.selected_group_ids
+            # Filter to only selected groups
+            groups = StudentGroup.query.filter(
+                StudentGroup.class_id == group_assignment.class_id,
+                StudentGroup.is_active == True,
+                StudentGroup.id.in_(selected_ids)
+            ).all()
+        except:
+            # If parsing fails, get all groups
+            groups = StudentGroup.query.filter_by(class_id=group_assignment.class_id, is_active=True).all()
+    else:
+        # If no specific groups selected, get all groups
+        groups = StudentGroup.query.filter_by(class_id=group_assignment.class_id, is_active=True).all()
     
     # Get extensions for this assignment
     try:
@@ -3522,8 +3541,23 @@ def grade_group_assignment(assignment_id):
         else:
             return redirect(url_for('teacher.teacher_dashboard'))
     
-    # Get all groups for this class
-    groups = StudentGroup.query.filter_by(class_id=group_assignment.class_id, is_active=True).all()
+    # Get groups for this class - filter by selected groups if specified
+    if group_assignment.selected_group_ids:
+        # Parse the selected group IDs
+        try:
+            selected_ids = json.loads(group_assignment.selected_group_ids) if isinstance(group_assignment.selected_group_ids, str) else group_assignment.selected_group_ids
+            # Filter to only selected groups
+            groups = StudentGroup.query.filter(
+                StudentGroup.class_id == group_assignment.class_id,
+                StudentGroup.is_active == True,
+                StudentGroup.id.in_(selected_ids)
+            ).all()
+        except:
+            # If parsing fails, get all groups
+            groups = StudentGroup.query.filter_by(class_id=group_assignment.class_id, is_active=True).all()
+    else:
+        # If no specific groups selected, get all groups
+        groups = StudentGroup.query.filter_by(class_id=group_assignment.class_id, is_active=True).all()
     
     # Get existing grades
     existing_grades = GroupGrade.query.filter_by(group_assignment_id=assignment_id).all()

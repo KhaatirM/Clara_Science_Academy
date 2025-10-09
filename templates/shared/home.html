@@ -803,11 +803,20 @@
 <script>
 // Consolidated homepage functionality
 document.addEventListener('DOMContentLoaded', function() {
-    // Show update popup on page load (only once per session)
-    if (!sessionStorage.getItem('updateModalShown')) {
-        const updateModal = new bootstrap.Modal(document.getElementById('updateModal'));
-        updateModal.show();
-        sessionStorage.setItem('updateModalShown', 'true');
+    // Show update popup on page load (only once per session for this update)
+    if (!sessionStorage.getItem('updateModalShownOct9')) {
+        console.log('Showing update modal...');
+        const updateModalElement = document.getElementById('updateModal');
+        if (updateModalElement) {
+            const updateModal = new bootstrap.Modal(updateModalElement);
+            updateModal.show();
+            sessionStorage.setItem('updateModalShownOct9', 'true');
+            console.log('Update modal shown successfully');
+        } else {
+            console.error('Update modal element not found');
+        }
+    } else {
+        console.log('Update modal already shown in this session');
     }
     
     // Slideshow functionality for homepage

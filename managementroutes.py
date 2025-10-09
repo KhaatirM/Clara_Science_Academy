@@ -5057,7 +5057,7 @@ def remove_student(student_id):
             Attendance, SchoolDayAttendance, StudentGoal, StudentGroupMember, Grade, 
             Submission, GroupSubmission, GroupGrade, AssignmentExtension, Enrollment, 
             MessageGroupMember, Notification, QuizAnswer, QuizProgress, DiscussionPost,
-            ReportCard, GroupQuizAnswer
+            ReportCard, GroupQuizAnswer, CleaningTeamMember
         )
         
         # Delete enrollment records first (these reference the student)
@@ -5100,6 +5100,9 @@ def remove_student(student_id):
         
         # Delete group quiz answers
         GroupQuizAnswer.query.filter_by(student_id=student_id).delete()
+        
+        # Delete cleaning team memberships
+        CleaningTeamMember.query.filter_by(student_id=student_id).delete()
         
         # Delete associated user account if it exists
         if student.user:

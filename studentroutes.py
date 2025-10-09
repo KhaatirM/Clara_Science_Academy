@@ -297,10 +297,12 @@ def student_dashboard():
         if assignment.due_date:
             # Convert due_date to date if it's a datetime
             due_date = assignment.due_date.date() if hasattr(assignment.due_date, 'date') else assignment.due_date
-            if due_date < today:
+            # Ensure today is also a date object for comparison
+            today_date = today.date() if hasattr(today, 'date') else today
+            if due_date < today_date:
                 past_due_assignments.append(assignment)
             # Check if upcoming (due within 7 days)
-            elif due_date <= today + timedelta(days=7):
+            elif due_date <= today_date + timedelta(days=7):
                 upcoming_assignments.append(assignment)
     
     # Get recent grades for enrolled classes only, excluding Voided assignments

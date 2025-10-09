@@ -17,7 +17,7 @@
                                 <i class="fas fa-chalkboard-teacher me-2"></i>
                                 {% if current_user.role in ['Director', 'School Administrator'] %}
                                     Manage and view school calendar events
-                                {% elif current_user.role == 'Teacher' %}
+                                {% elif 'Teacher' in current_user.role %}
                                     View school calendar and important dates
                                 {% else %}
                                     View school calendar and holidays
@@ -27,7 +27,7 @@
                         <div class="d-flex flex-wrap gap-2">
                             <!-- Navigation buttons -->
                             <div class="btn-group" role="group">
-                                {% if current_user.role == 'Teacher' %}
+                                {% if 'Teacher' in current_user.role %}
                                     <a href="{{ url_for('teacher.calendar', month=prev_month.month, year=prev_month.year) }}" class="btn btn-outline-light">
                                         <i class="fas fa-chevron-left me-1"></i>Previous
                                     </a>
@@ -107,7 +107,7 @@
                                                     <div class="day-number fw-bold p-2">{{ day.day_num }}</div>
                                                     <div class="day-events px-2 pb-2">
                                                         {% for event in day.events %}
-                                                            <div class="calendar-event event-{{ event.category|lower|replace(' ', '_') if event.category else 'default' }}" title="{{ event.title }} - {{ event.category if event.category else 'Event' }}">
+                                                            <div class="calendar-event event-{{ event.type if event.type else 'default' }}" title="{{ event.title }} - {{ event.category if event.category else 'Event' }}">
                                                                 <small class="event-title text-white px-1 py-1 rounded d-block">{{ event.title }}</small>
                                                             </div>
                                                         {% endfor %}
@@ -148,29 +148,21 @@
                         <div class="col-md-6">
                             <div class="d-flex flex-wrap gap-3">
                                 <div class="d-flex align-items-center">
-                                    <span class="calendar-legend-item event-quarter_start me-2"></span>
-                                    <small>Quarter Start</small>
+                                    <span class="calendar-legend-item event-academic_period_start me-2"></span>
+                                    <small>Quarter/Semester Start</small>
                                 </div>
                                 <div class="d-flex align-items-center">
-                                    <span class="calendar-legend-item event-quarter_end me-2"></span>
-                                    <small>Quarter End</small>
+                                    <span class="calendar-legend-item event-academic_period_end me-2"></span>
+                                    <small>Quarter/Semester End</small>
                                 </div>
                                 <div class="d-flex align-items-center">
-                                    <span class="calendar-legend-item event-semester_start me-2"></span>
-                                    <small>Semester Start</small>
-                                </div>
-                                <div class="d-flex align-items-center">
-                                    <span class="calendar-legend-item event-semester_end me-2"></span>
-                                    <small>Semester End</small>
+                                    <span class="calendar-legend-item event-teacher_work_day me-2"></span>
+                                    <small>Teacher Work Day</small>
                                 </div>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="d-flex flex-wrap gap-3">
-                                <div class="d-flex align-items-center">
-                                    <span class="calendar-legend-item event-teacher_work_day me-2"></span>
-                                    <small>Teacher Work Day</small>
-                                </div>
                                 <div class="d-flex align-items-center">
                                     <span class="calendar-legend-item event-school_break_start me-2"></span>
                                     <small>School Break Start</small>
@@ -178,6 +170,10 @@
                                 <div class="d-flex align-items-center">
                                     <span class="calendar-legend-item event-school_break_end me-2"></span>
                                     <small>School Break End</small>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <span class="calendar-legend-item event-calendar_event me-2"></span>
+                                    <small>Other Events</small>
                                 </div>
                             </div>
                         </div>

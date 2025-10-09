@@ -1519,6 +1519,14 @@ html, body {
     display: block;
 }
 
+.calendar-event.event-academic_period_start {
+    background-color: #28a745;
+}
+
+.calendar-event.event-academic_period_end {
+    background-color: #dc3545;
+}
+
 .calendar-event.event-quarter_start {
     background-color: #28a745;
 }
@@ -1547,6 +1555,10 @@ html, body {
     background-color: #6f42c1;
 }
 
+.calendar-event.event-calendar_event {
+    background-color: #007bff;
+}
+
 /* Calendar legend styles */
 .calendar-legend-item {
     display: inline-block;
@@ -1554,6 +1566,14 @@ html, body {
     height: 16px;
     border-radius: 4px;
     margin-right: 8px;
+}
+
+.calendar-legend-item.event-academic_period_start {
+    background-color: #28a745;
+}
+
+.calendar-legend-item.event-academic_period_end {
+    background-color: #dc3545;
 }
 
 .calendar-legend-item.event-quarter_start {

@@ -14,11 +14,13 @@ import sys
 # Add the project directory to the path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from app import app, db
+from app import create_app
+from extensions import db
 from models import Student, CleaningTeam, CleaningTeamMember
 
 def reorganize_teams():
     """Reorganize cleaning teams according to new structure"""
+    app = create_app()
     with app.app_context():
         try:
             print("Starting cleaning team reorganization...")

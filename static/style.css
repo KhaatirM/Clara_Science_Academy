@@ -1519,44 +1519,33 @@ html, body {
     display: block;
 }
 
+/* Calendar Event Colors - Consistent with actual event types */
 .calendar-event.event-academic_period_start {
-    background-color: #28a745;
+    background-color: #28a745; /* Green */
 }
 
 .calendar-event.event-academic_period_end {
-    background-color: #dc3545;
-}
-
-.calendar-event.event-quarter_start {
-    background-color: #28a745;
-}
-
-.calendar-event.event-quarter_end {
-    background-color: #dc3545;
-}
-
-.calendar-event.event-semester_start {
-    background-color: #17a2b8;
-}
-
-.calendar-event.event-semester_end {
-    background-color: #6f42c1;
+    background-color: #dc3545; /* Red */
 }
 
 .calendar-event.event-teacher_work_day {
-    background-color: #fd7e14;
+    background-color: #fd7e14; /* Orange */
 }
 
 .calendar-event.event-school_break_start {
-    background-color: #e83e8c;
+    background-color: #e83e8c; /* Pink */
 }
 
 .calendar-event.event-school_break_end {
-    background-color: #6f42c1;
+    background-color: #6f42c1; /* Purple */
 }
 
 .calendar-event.event-calendar_event {
-    background-color: #007bff;
+    background-color: #007bff; /* Blue */
+}
+
+.calendar-event.event-default {
+    background-color: #6c757d; /* Gray */
 }
 
 /* Calendar legend styles */
@@ -1569,39 +1558,31 @@ html, body {
 }
 
 .calendar-legend-item.event-academic_period_start {
-    background-color: #28a745;
+    background-color: #28a745; /* Green */
 }
 
 .calendar-legend-item.event-academic_period_end {
-    background-color: #dc3545;
-}
-
-.calendar-legend-item.event-quarter_start {
-    background-color: #28a745;
-}
-
-.calendar-legend-item.event-quarter_end {
-    background-color: #dc3545;
-}
-
-.calendar-legend-item.event-semester_start {
-    background-color: #17a2b8;
-}
-
-.calendar-legend-item.event-semester_end {
-    background-color: #6f42c1;
+    background-color: #dc3545; /* Red */
 }
 
 .calendar-legend-item.event-teacher_work_day {
-    background-color: #fd7e14;
+    background-color: #fd7e14; /* Orange */
 }
 
 .calendar-legend-item.event-school_break_start {
-    background-color: #e83e8c;
+    background-color: #e83e8c; /* Pink */
 }
 
 .calendar-legend-item.event-school_break_end {
-    background-color: #6f42c1;
+    background-color: #6f42c1; /* Purple */
+}
+
+.calendar-legend-item.event-calendar_event {
+    background-color: #007bff; /* Blue */
+}
+
+.calendar-legend-item.event-default {
+    background-color: #6c757d; /* Gray */
 }
 
 /* Custom avatar for student initials */

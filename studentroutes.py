@@ -17,6 +17,8 @@ from models import (
     Class, SchoolYear, AcademicPeriod, Enrollment, ClassSchedule,
     # Assignment system
     Assignment, Submission, Grade, StudentGoal,
+    # Group assignment system
+    GroupAssignment, GroupGrade, StudentGroup,
     # Quiz system
     QuizQuestion, QuizOption, QuizAnswer, QuizProgress,
     # Communication system
@@ -566,35 +568,57 @@ def student_grades():
     for enrollment in enrollments:
         class_info = enrollment.class_info
         
-        # Get all assignments for this class
+        # Get all assignments for this class (both regular and group assignments)
         assignments = Assignment.query.filter(
             Assignment.class_id == class_info.id,
             Assignment.school_year_id == school_year.id
         ).all()
         
-        if not assignments:
+        group_assignments = GroupAssignment.query.filter(
+            GroupAssignment.class_id == class_info.id,
+            GroupAssignment.school_year_id == school_year.id
+        ).all()
+        
+        if not assignments and not group_assignments:
             continue
         
-        # Get all grades for this student in this class
+        # Get all grades for this student in this class (both regular and group grades)
         grades = Grade.query.join(Assignment).filter(
             Grade.student_id == student.id,
             Assignment.class_id == class_info.id,
             Assignment.school_year_id == school_year.id
         ).order_by(Grade.graded_at.desc()).all()
         
-        if not grades:
+        # Get group assignment grades for this student
+        group_grades = GroupGrade.query.join(GroupAssignment).filter(
+            GroupGrade.student_id == student.id,
+            GroupAssignment.class_id == class_info.id,
+            GroupAssignment.school_year_id == school_year.id
+        ).order_by(GroupGrade.graded_at.desc()).all()
+        
+        if not grades and not group_grades:
             continue
         
-        # Calculate individual assignment grades
+        # Calculate individual assignment grades (including both regular and group assignments)
         assignment_grades = {}
         total_score = 0
         valid_grades = 0
         
+        # Process regular assignment grades
         for grade in grades:
             grade_data = json.loads(grade.grade_data)
             if 'score' in grade_data:
                 score = grade_data['score']
                 assignment_grades[grade.assignment.title] = f"{score}%"
+                total_score += score
+                valid_grades += 1
+        
+        # Process group assignment grades
+        for group_grade in group_grades:
+            grade_data = json.loads(group_grade.grade_data) if isinstance(group_grade.grade_data, str) else group_grade.grade_data
+            if 'score' in grade_data:
+                score = grade_data['score']
+                assignment_grades[group_grade.group_assignment.title] = f"{score}%"
                 total_score += score
                 valid_grades += 1
         
@@ -605,17 +629,40 @@ def student_grades():
             # Convert percentage to letter grade
             letter_grade = get_letter_grade(class_average)
             
-            # Get recent grades (last 3 assignments)
+            # Get recent grades (last 3 assignments - combining regular and group assignments)
             recent_assignments = []
-            for grade in grades[:3]:  # Get last 3 graded assignments
+            all_recent_grades = []
+            
+            # Combine regular and group grades
+            for grade in grades:
                 grade_data = json.loads(grade.grade_data)
                 if 'score' in grade_data:
-                    recent_assignments.append({
+                    all_recent_grades.append({
                         'title': grade.assignment.title,
                         'score': grade_data['score'],
                         'letter': get_letter_grade(grade_data['score']),
-                        'graded_at': grade.graded_at.strftime('%b %d, %Y')
+                        'graded_at': grade.graded_at
                     })
+            
+            for group_grade in group_grades:
+                grade_data = json.loads(group_grade.grade_data) if isinstance(group_grade.grade_data, str) else group_grade.grade_data
+                if 'score' in grade_data:
+                    all_recent_grades.append({
+                        'title': f"{group_grade.group_assignment.title} (Group)",
+                        'score': grade_data['score'],
+                        'letter': get_letter_grade(grade_data['score']),
+                        'graded_at': group_grade.graded_at
+                    })
+            
+            # Sort by graded_at and get last 3
+            all_recent_grades.sort(key=lambda x: x['graded_at'], reverse=True)
+            for grade_info in all_recent_grades[:3]:
+                recent_assignments.append({
+                    'title': grade_info['title'],
+                    'score': grade_info['score'],
+                    'letter': grade_info['letter'],
+                    'graded_at': grade_info['graded_at'].strftime('%b %d, %Y')
+                })
             
             # Calculate class GPA (convert percentage to 4.0 scale)
             class_gpa = calculate_gpa([class_average])
@@ -624,15 +671,25 @@ def student_grades():
             quarter_grades = {}
             semester_grades = {}
             
-            # Calculate grades for each quarter
+            # Calculate grades for each quarter (including group assignments)
             for quarter in quarters:
                 quarter_assignments = [a for a in assignments if a.quarter == quarter.name]
+                quarter_group_assignments = [a for a in group_assignments if a.quarter == quarter.name]
                 quarter_grades_list = []
                 
+                # Add regular assignment grades
                 for assignment in quarter_assignments:
                     grade = next((g for g in grades if g.assignment_id == assignment.id), None)
                     if grade:
                         grade_data = json.loads(grade.grade_data)
+                        if 'score' in grade_data:
+                            quarter_grades_list.append(grade_data['score'])
+                
+                # Add group assignment grades
+                for group_assignment in quarter_group_assignments:
+                    group_grade = next((g for g in group_grades if g.group_assignment_id == group_assignment.id), None)
+                    if group_grade:
+                        grade_data = json.loads(group_grade.grade_data) if isinstance(group_grade.grade_data, str) else group_grade.grade_data
                         if 'score' in grade_data:
                             quarter_grades_list.append(grade_data['score'])
                 
@@ -645,9 +702,12 @@ def student_grades():
                         'assignments': len(quarter_grades_list)
                     }
             
-            # Calculate grades for each semester
+            # Calculate grades for each semester (including group assignments)
             for semester in semesters:
                 semester_assignments = []
+                semester_group_assignments = []
+                
+                # Get regular assignments for this semester
                 for assignment in assignments:
                     # Determine which semester this assignment belongs to
                     if semester.name == 'S1' and assignment.due_date.date() <= semester.end_date:
@@ -655,11 +715,29 @@ def student_grades():
                     elif semester.name == 'S2' and assignment.due_date.date() > semester.start_date:
                         semester_assignments.append(assignment)
                 
+                # Get group assignments for this semester
+                for group_assignment in group_assignments:
+                    # Determine which semester this assignment belongs to
+                    if semester.name == 'S1' and group_assignment.due_date.date() <= semester.end_date:
+                        semester_group_assignments.append(group_assignment)
+                    elif semester.name == 'S2' and group_assignment.due_date.date() > semester.start_date:
+                        semester_group_assignments.append(group_assignment)
+                
                 semester_grades_list = []
+                
+                # Add regular assignment grades
                 for assignment in semester_assignments:
                     grade = next((g for g in grades if g.assignment_id == assignment.id), None)
                     if grade:
                         grade_data = json.loads(grade.grade_data)
+                        if 'score' in grade_data:
+                            semester_grades_list.append(grade_data['score'])
+                
+                # Add group assignment grades
+                for group_assignment in semester_group_assignments:
+                    group_grade = next((g for g in group_grades if g.group_assignment_id == group_assignment.id), None)
+                    if group_grade:
+                        grade_data = json.loads(group_grade.grade_data) if isinstance(group_grade.grade_data, str) else group_grade.grade_data
                         if 'score' in grade_data:
                             semester_grades_list.append(grade_data['score'])
                 
@@ -799,20 +877,22 @@ def get_academic_dates_for_calendar(year, month):
     for period in academic_periods:
         # Add start date event
         if period.start_date.month == month:
+            event_type = f"{period.period_type}_start"  # quarter_start, semester_start
             academic_dates.append({
                 'day': period.start_date.day,
                 'title': f"{period.name} Start",
                 'category': f"{period.period_type.title()}",
-                'type': 'academic_period_start'
+                'type': event_type
             })
         
         # Add end date event
         if period.end_date.month == month:
+            event_type = f"{period.period_type}_end"  # quarter_end, semester_end
             academic_dates.append({
                 'day': period.end_date.day,
                 'title': f"{period.name} End",
                 'category': f"{period.period_type.title()}",
-                'type': 'academic_period_end'
+                'type': event_type
             })
     
     # Get calendar events for this month
@@ -824,11 +904,13 @@ def get_academic_dates_for_calendar(year, month):
     
     for event in calendar_events:
         if event.start_date.month == month:
+            # Use the actual event_type from the database, or default to 'other_event'
+            event_type = event.event_type if event.event_type else 'other_event'
             academic_dates.append({
                 'day': event.start_date.day,
                 'title': event.name,
-                'category': event.event_type.replace('_', ' ').title(),
-                'type': 'calendar_event'
+                'category': event.event_type.replace('_', ' ').title() if event.event_type else 'Other Event',
+                'type': event_type
             })
     
     # Get teacher work days for this month

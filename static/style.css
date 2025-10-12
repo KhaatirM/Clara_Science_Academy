@@ -3272,16 +3272,30 @@ html, body {
 }
 
 /* Ensure class names in grade cards are visible */
-.grade-card .card-header h5 {
+.grade-card .card-header h5,
+.grade-card .card-header .text-white {
     color: white !important;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5) !important;
+    font-weight: 700 !important;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3)) !important;
 }
 
 .grade-card .card-header .badge {
-    background-color: rgba(255,255,255,0.9) !important;
+    background-color: rgba(255,255,255,0.95) !important;
     color: #333 !important;
     font-weight: 600;
     text-shadow: none;
+    border: 1px solid rgba(255,255,255,0.3) !important;
+}
+
+/* Additional contrast for gradient backgrounds */
+.grade-card .card-header.bg-gradient-success h5,
+.grade-card .card-header.bg-gradient-primary h5,
+.grade-card .card-header.bg-gradient-warning h5,
+.grade-card .card-header.bg-gradient-danger h5 {
+    color: white !important;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.6) !important;
+    font-weight: 700 !important;
 }
 
 /* ========================================

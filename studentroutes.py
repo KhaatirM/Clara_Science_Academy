@@ -672,7 +672,22 @@ def student_grades():
             semester_grades = {}
             
             # Calculate grades for each quarter (including group assignments)
+            from datetime import date
             for quarter in quarters:
+                # Check if the quarter has ended before calculating grades
+                today = date.today()
+                if today < quarter.end_date:
+                    # Quarter hasn't ended yet, show "In Progress" or similar
+                    quarter_grades[quarter.name] = {
+                        'average': None,
+                        'letter': 'In Progress',
+                        'gpa': None,
+                        'assignments': 0,
+                        'status': 'in_progress',
+                        'end_date': quarter.end_date
+                    }
+                    continue
+                
                 quarter_assignments = [a for a in assignments if a.quarter == quarter.name]
                 quarter_group_assignments = [a for a in group_assignments if a.quarter == quarter.name]
                 quarter_grades_list = []
@@ -699,11 +714,36 @@ def student_grades():
                         'average': quarter_avg,
                         'letter': get_letter_grade(quarter_avg),
                         'gpa': calculate_gpa([quarter_avg]),
-                        'assignments': len(quarter_grades_list)
+                        'assignments': len(quarter_grades_list),
+                        'status': 'completed',
+                        'end_date': quarter.end_date
+                    }
+                else:
+                    quarter_grades[quarter.name] = {
+                        'average': None,
+                        'letter': 'No Grades',
+                        'gpa': None,
+                        'assignments': 0,
+                        'status': 'completed',
+                        'end_date': quarter.end_date
                     }
             
             # Calculate grades for each semester (including group assignments)
             for semester in semesters:
+                # Check if the semester has ended before calculating grades
+                today = date.today()
+                if today < semester.end_date:
+                    # Semester hasn't ended yet, show "In Progress" or similar
+                    semester_grades[semester.name] = {
+                        'average': None,
+                        'letter': 'In Progress',
+                        'gpa': None,
+                        'assignments': 0,
+                        'status': 'in_progress',
+                        'end_date': semester.end_date
+                    }
+                    continue
+                
                 semester_assignments = []
                 semester_group_assignments = []
                 
@@ -747,7 +787,18 @@ def student_grades():
                         'average': semester_avg,
                         'letter': get_letter_grade(semester_avg),
                         'gpa': calculate_gpa([semester_avg]),
-                        'assignments': len(semester_grades_list)
+                        'assignments': len(semester_grades_list),
+                        'status': 'completed',
+                        'end_date': semester.end_date
+                    }
+                else:
+                    semester_grades[semester.name] = {
+                        'average': None,
+                        'letter': 'No Grades',
+                        'gpa': None,
+                        'assignments': 0,
+                        'status': 'completed',
+                        'end_date': semester.end_date
                     }
             
             grades_by_class[class_info.name] = {

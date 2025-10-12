@@ -2363,12 +2363,25 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                     <div class="text-center p-3 border rounded">
                                         <h6 class="text-muted mb-2">{{ quarter.name }}</h6>
                                         {% set quarter_grades = [] %}
+                                        {% set quarter_status = 'completed' %}
                                         {% for class_name, data in grades_by_class.items() %}
                                             {% if data.quarter_grades and data.quarter_grades.get(quarter.name) %}
-                                                {% set _ = quarter_grades.append(data.quarter_grades[quarter.name].average) %}
+                                                {% set quarter_data = data.quarter_grades[quarter.name] %}
+                                                {% if quarter_data.status == 'in_progress' %}
+                                                    {% set quarter_status = 'in_progress' %}
+                                                {% endif %}
+                                                {% if quarter_data.average %}
+                                                    {% set _ = quarter_grades.append(quarter_data.average) %}
+                                                {% endif %}
                                             {% endif %}
                                         {% endfor %}
-                                        {% if quarter_grades %}
+                                        
+                                        {% if quarter_status == 'in_progress' %}
+                                            <div class="h4 fw-bold text-info">
+                                                <i class="bi bi-clock"></i> In Progress
+                                            </div>
+                                            <div class="small text-muted">Quarter ends {{ quarter.end_date.strftime('%m/%d/%Y') }}</div>
+                                        {% elif quarter_grades %}
                                             {% set quarter_avg = (quarter_grades | sum) / (quarter_grades | length) %}
                                             {% set quarter_gpa = calculate_gpa(quarter_grades) %}
                                             <div class="h4 fw-bold 
@@ -2410,12 +2423,25 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                     <div class="text-center p-3 border rounded">
                                         <h6 class="text-muted mb-2">{{ semester.name }}</h6>
                                         {% set semester_grades = [] %}
+                                        {% set semester_status = 'completed' %}
                                         {% for class_name, data in grades_by_class.items() %}
                                             {% if data.semester_grades and data.semester_grades.get(semester.name) %}
-                                                {% set _ = semester_grades.append(data.semester_grades[semester.name].average) %}
+                                                {% set semester_data = data.semester_grades[semester.name] %}
+                                                {% if semester_data.status == 'in_progress' %}
+                                                    {% set semester_status = 'in_progress' %}
+                                                {% endif %}
+                                                {% if semester_data.average %}
+                                                    {% set _ = semester_grades.append(semester_data.average) %}
+                                                {% endif %}
                                             {% endif %}
                                         {% endfor %}
-                                        {% if semester_grades %}
+                                        
+                                        {% if semester_status == 'in_progress' %}
+                                            <div class="h4 fw-bold text-info">
+                                                <i class="bi bi-clock"></i> In Progress
+                                            </div>
+                                            <div class="small text-muted">Semester ends {{ semester.end_date.strftime('%m/%d/%Y') }}</div>
+                                        {% elif semester_grades %}
                                             {% set semester_avg = (semester_grades | sum) / (semester_grades | length) %}
                                             {% set semester_gpa = calculate_gpa(semester_grades) %}
                                             <div class="h4 fw-bold 
@@ -2517,15 +2543,24 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                     <div class="col-6">
                                         <div class="border rounded p-2 text-center">
                                             <div class="small text-muted">{{ semester_name }}</div>
-                                            <div class="fw-bold 
-                                                {% if semester_data.average >= 90 %}text-success
-                                                {% elif semester_data.average >= 80 %}text-primary
-                                                {% elif semester_data.average >= 70 %}text-warning
-                                                {% else %}text-danger{% endif %}">
-                                                {{ semester_data.average }}%
-                                            </div>
-                                            <div class="small">{{ semester_data.letter }}</div>
-                                            <div class="small text-muted">{{ semester_data.assignments }} assignments</div>
+                                            {% if semester_data.status == 'in_progress' %}
+                                                <div class="fw-bold text-info">
+                                                    <i class="bi bi-clock"></i> In Progress
+                                                </div>
+                                                <div class="small text-muted">Ends {{ semester_data.end_date.strftime('%m/%d/%Y') }}</div>
+                                            {% elif semester_data.average %}
+                                                <div class="fw-bold 
+                                                    {% if semester_data.average >= 90 %}text-success
+                                                    {% elif semester_data.average >= 80 %}text-primary
+                                                    {% elif semester_data.average >= 70 %}text-warning
+                                                    {% else %}text-danger{% endif %}">
+                                                    {{ semester_data.average }}%
+                                                </div>
+                                                <div class="small">{{ semester_data.letter }}</div>
+                                                <div class="small text-muted">{{ semester_data.assignments }} assignments</div>
+                                            {% else %}
+                                                <div class="fw-bold text-muted">No Grades</div>
+                                            {% endif %}
                                         </div>
                                     </div>
                                     {% endfor %}
@@ -2550,7 +2585,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                                 <small class="text-muted">{{ assignment.graded_at }}</small>
                                             </div>
                                             <div class="ms-2 text-end">
-                                                <div class="badge fs-6 px-2 py-1
+                                                <div class="badge assignment-grade-badge fs-6
                                                     {% if assignment.score >= 90 %}bg-success
                                                     {% elif assignment.score >= 80 %}bg-primary
                                                     {% elif assignment.score >= 70 %}bg-warning text-dark

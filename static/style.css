@@ -3233,6 +3233,37 @@ html, body {
 }
 
 /* ========================================
+   STUDENT GRADE BADGES FIXES
+   ======================================== */
+
+/* Fix grade badge truncation in Recent Assignments */
+.recent-assignments .badge {
+    min-width: 60px;
+    padding: 0.5rem 0.75rem !important;
+    white-space: nowrap;
+    overflow: visible;
+    text-overflow: unset;
+    font-size: 0.875rem !important;
+    font-weight: 600;
+}
+
+/* Ensure grade badges have enough space */
+.list-group-item .text-end {
+    min-width: 80px;
+    flex-shrink: 0;
+}
+
+/* Fix for assignment grade badges in class cards */
+.assignment-grade-badge {
+    min-width: 50px;
+    padding: 0.375rem 0.625rem !important;
+    white-space: nowrap;
+    overflow: visible;
+    text-overflow: unset;
+    font-weight: 600;
+}
+
+/* ========================================
    ENHANCED ASSIGNMENT CREATION STYLES
    ======================================== */
 

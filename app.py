@@ -103,11 +103,29 @@ def calculate_and_get_grade_for_student(student_id, school_year_id, quarter):
     """
     Calculates and retrieves grades for a student for a specific quarter and school year.
     This function computes grades based on assignments and stores the result in a ReportCard entry.
+    Only calculates grades if the quarter has ended according to AcademicPeriod dates.
     """
+    from datetime import date
+    from models import AcademicPeriod
+    
     student = Student.query.get(student_id)
     if not student:
         return {}
 
+    # Check if the quarter has ended before calculating grades
+    quarter_period = AcademicPeriod.query.filter_by(
+        school_year_id=school_year_id,
+        name=f"Q{quarter}",
+        period_type='quarter',
+        is_active=True
+    ).first()
+    
+    if quarter_period:
+        today = date.today()
+        if today < quarter_period.end_date:
+            current_app.logger.info(f"Quarter Q{quarter} has not ended yet (ends {quarter_period.end_date}). Grade calculation skipped.")
+            return {}
+    
     # Fetch all relevant grades for the student in the given school year and quarter
     grades = db.session.query(Grade).join(Assignment).filter(
         Grade.student_id == student_id,

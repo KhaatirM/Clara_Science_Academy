@@ -3417,6 +3417,15 @@ def create_group_quiz_assignment(class_id):
         show_correct_answers = 'show_correct_answers' in request.form
         allow_save_and_continue = 'allow_save_and_continue' in request.form
         
+        # Handle group selection
+        group_selection = request.form.get('group_selection', 'all')
+        selected_groups = request.form.getlist('selected_groups')
+        selected_group_ids = None
+        
+        if group_selection == 'specific' and selected_groups:
+            import json
+            selected_group_ids = json.dumps([int(group_id) for group_id in selected_groups])
+        
         if not title or not due_date_str or not quarter:
             flash('Title, due date, and quarter are required.', 'danger')
             return render_template('shared/create_group_quiz_assignment.html', 
@@ -3446,6 +3455,7 @@ def create_group_quiz_assignment(class_id):
             group_size_max=int(group_size_max),
             allow_individual=allow_individual,
             collaboration_type=collaboration_type,
+            selected_group_ids=selected_group_ids,
             allow_save_and_continue=allow_save_and_continue,
             max_save_attempts=10,
             save_timeout_minutes=30
@@ -3546,6 +3556,15 @@ def create_group_discussion_assignment(class_id):
         anonymous_posts = 'anonymous_posts' in request.form
         moderate_posts = 'moderate_posts' in request.form
         
+        # Handle group selection
+        group_selection = request.form.get('group_selection', 'all')
+        selected_groups = request.form.getlist('selected_groups')
+        selected_group_ids = None
+        
+        if group_selection == 'specific' and selected_groups:
+            import json
+            selected_group_ids = json.dumps([int(group_id) for group_id in selected_groups])
+        
         if not title or not due_date_str or not quarter:
             flash('Title, due date, and quarter are required.', 'danger')
             return render_template('shared/create_group_discussion_assignment.html', 
@@ -3574,7 +3593,8 @@ def create_group_discussion_assignment(class_id):
             group_size_min=int(group_size_min),
             group_size_max=int(group_size_max),
             allow_individual=allow_individual,
-            collaboration_type=collaboration_type
+            collaboration_type=collaboration_type,
+            selected_group_ids=selected_group_ids
         )
         
         db.session.add(group_assignment)

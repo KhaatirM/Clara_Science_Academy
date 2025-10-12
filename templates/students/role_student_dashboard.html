@@ -603,18 +603,13 @@ window.handleAssignmentSubmission = function() {
             return;
         }
         
-        // For now, let's just show a success message to test the function
-        alert('Assignment submission function is working! File: ' + fileInput.files[0].name);
-        
-        // TODO: Uncomment this when backend is ready
-        /*
         // Create FormData for file upload
         const formData = new FormData();
         formData.append('assignment_id', assignmentId.value);
         formData.append('submission_file', fileInput.files[0]);
         
         if (commentsInput && commentsInput.value.trim()) {
-            formData.append('comments', commentsInput.value.trim());
+            formData.append('submission_notes', commentsInput.value.trim());
         }
         
         // Show loading state
@@ -624,7 +619,7 @@ window.handleAssignmentSubmission = function() {
         submitBtn.disabled = true;
         
         // Submit the assignment
-        fetch('/student/submit_assignment', {
+        fetch(`/student/submit/${assignmentId.value}`, {
             method: 'POST',
             body: formData
         })
@@ -660,7 +655,7 @@ window.handleAssignmentSubmission = function() {
             submitBtn.textContent = originalText;
             submitBtn.disabled = false;
         });
-        */
+        
         
     } catch (error) {
         console.error('Error in handleAssignmentSubmission:', error);

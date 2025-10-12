@@ -18,7 +18,7 @@ from models import (
     # Assignment system
     Assignment, Submission, Grade, StudentGoal,
     # Group assignment system
-    GroupAssignment, GroupGrade, StudentGroup,
+    GroupAssignment, GroupGrade, StudentGroup, GroupSubmission, StudentGroupMember,
     # Quiz system
     QuizQuestion, QuizOption, QuizAnswer, QuizProgress,
     # Communication system
@@ -1522,7 +1522,7 @@ def submit_assignment(assignment_id):
         assert file.filename is not None
         filename = secure_filename(file.filename)
         # Create a unique filename to avoid collisions
-        unique_filename = f"sub_{student.id}_{assignment.id}_{filename}"
+        unique_filename = f"sub_{student.id}_{assignment.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{filename}"
         filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], unique_filename)
         
         try:
@@ -1540,15 +1540,15 @@ def submit_assignment(assignment_id):
                 submission.file_path = unique_filename
                 submission.submitted_at = db.func.now()
                 if notes:
-                    submission.notes = notes
+                    submission.comments = notes
             else:
                 # Create new submission
                 submission = Submission(
                     student_id=student.id,
                     assignment_id=assignment_id,
                     file_path=unique_filename,
-                    notes=notes,
-                    status='Submitted'
+                    comments=notes,
+                    submitted_at=datetime.utcnow()
                 )
                 db.session.add(submission)
             
@@ -1558,6 +1558,117 @@ def submit_assignment(assignment_id):
         except Exception as e:
             db.session.rollback()
             current_app.logger.error(f"File upload failed for student {student.id}, assignment {assignment_id}: {e}")
+            return jsonify({'success': False, 'message': f'An error occurred while saving the file: {e}'}), 500
+
+    else:
+        return jsonify({'success': False, 'message': f'File type not allowed. Allowed types are: {", ".join(ALLOWED_EXTENSIONS)}'}), 400
+
+@student_blueprint.route('/submit/group/<int:assignment_id>', methods=['POST'])
+@login_required
+@student_required
+def submit_group_assignment(assignment_id):
+    """Submit a group assignment"""
+    student = Student.query.get_or_404(current_user.student_id)
+    group_assignment = GroupAssignment.query.get_or_404(assignment_id)
+    
+    # Check if student is enrolled in the class
+    enrollment = Enrollment.query.filter_by(
+        student_id=student.id,
+        class_id=group_assignment.class_id,
+        is_active=True
+    ).first()
+    
+    if not enrollment:
+        return jsonify({'success': False, 'message': 'You are not enrolled in this class'}), 403
+    
+    # Find which group the student belongs to for this assignment
+    student_group = None
+    if group_assignment.selected_group_ids:
+        # Assignment is for specific groups
+        import json
+        selected_group_ids = json.loads(group_assignment.selected_group_ids)
+        for group_id in selected_group_ids:
+            membership = StudentGroupMember.query.filter_by(
+                student_id=student.id,
+                group_id=group_id
+            ).first()
+            if membership:
+                student_group = StudentGroup.query.get(group_id)
+                break
+    else:
+        # Assignment is for all groups in the class
+        membership = StudentGroupMember.query.join(StudentGroup).filter(
+            StudentGroupMember.student_id == student.id,
+            StudentGroup.class_id == group_assignment.class_id,
+            StudentGroup.is_active == True
+        ).first()
+        if membership:
+            student_group = StudentGroup.query.get(membership.group_id)
+    
+    if not student_group and group_assignment.collaboration_type != 'both':
+        return jsonify({'success': False, 'message': 'You are not assigned to a group for this assignment'}), 403
+    
+    if 'submission_file' not in request.files:
+        return jsonify({'success': False, 'message': 'No file selected'}), 400
+    
+    file = request.files['submission_file']
+    if file.filename == '':
+        return jsonify({'success': False, 'message': 'No file selected'}), 400
+
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        unique_filename = f"group_sub_{student.id}_{assignment_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{filename}"
+        filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], unique_filename)
+        
+        try:
+            file.save(filepath)
+            
+            # Get optional notes
+            notes = request.form.get('submission_notes', '')
+            
+            # Check for existing group submission
+            existing_submission = GroupSubmission.query.filter_by(
+                group_assignment_id=assignment_id,
+                group_id=student_group.id if student_group else None,
+                submitted_by=student.id
+            ).first()
+            
+            if existing_submission:
+                # Update existing submission
+                if existing_submission.attachment_file_path and os.path.exists(os.path.join(current_app.config['UPLOAD_FOLDER'], existing_submission.attachment_file_path)):
+                    os.remove(os.path.join(current_app.config['UPLOAD_FOLDER'], existing_submission.attachment_file_path))
+                
+                existing_submission.attachment_filename = unique_filename
+                existing_submission.attachment_original_filename = filename
+                existing_submission.attachment_file_path = filepath
+                existing_submission.attachment_file_size = os.path.getsize(filepath)
+                existing_submission.attachment_mime_type = file.content_type
+                existing_submission.submitted_at = datetime.utcnow()
+                if notes:
+                    existing_submission.submission_text = notes
+            else:
+                # Create new group submission
+                group_submission = GroupSubmission(
+                    group_assignment_id=assignment_id,
+                    group_id=student_group.id if student_group else None,
+                    submitted_by=student.id,
+                    submission_text=notes,
+                    attachment_filename=unique_filename,
+                    attachment_original_filename=filename,
+                    attachment_file_path=filepath,
+                    attachment_file_size=os.path.getsize(filepath),
+                    attachment_mime_type=file.content_type,
+                    submitted_at=datetime.utcnow(),
+                    is_late=datetime.utcnow() > group_assignment.due_date
+                )
+                db.session.add(group_submission)
+            
+            db.session.commit()
+            return jsonify({'success': True, 'message': 'Group assignment submitted successfully!'}), 200
+            
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Group assignment upload failed for student {student.id}, assignment {assignment_id}: {e}")
             return jsonify({'success': False, 'message': f'An error occurred while saving the file: {e}'}), 500
 
     else:

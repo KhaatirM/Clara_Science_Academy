@@ -1,0 +1,464 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-3 px-md-4 px-lg-5">
+    <!-- Enhanced Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm assignment-header-gradient">
+                <div class="card-body text-white p-4">
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
+                        <div>
+                            <h2 class="mb-2 mb-md-0 fw-bold">
+                                <i class="bi bi-file-earmark-text me-3"></i>Create Assignment
+                            </h2>
+                            <p class="mb-0 opacity-75">Design engaging assignments with flexible group and individual options</p>
+                        </div>
+                        <div class="d-flex gap-2 mt-3 mt-md-0">
+                            {% if class_obj %}
+                                <a href="{{ url_for('teacher.view_class', class_id=class_obj.id) }}" class="btn btn-light btn-sm">
+                                    <i class="bi bi-arrow-left me-1"></i>Back to Class
+                                </a>
+                            {% else %}
+                                <a href="{{ url_for('management.management_dashboard') }}" class="btn btn-light btn-sm">
+                                    <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12 col-lg-8">
+            <form method="POST" enctype="multipart/form-data" id="assignmentForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                
+                <!-- Assignment Type Selection -->
+                <div class="card mb-4 border-0 shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0 fw-bold"><i class="bi bi-diagram-3 me-2"></i>Assignment Type</h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">
+                                    <i class="bi bi-people me-1 text-primary"></i>Assignment Structure <span class="text-danger">*</span>
+                                </label>
+                                <div class="assignment-type-selection">
+                                    <div class="form-check form-check-inline assignment-type-option" data-type="individual">
+                                        <input class="form-check-input" type="radio" name="assignment_structure" id="individual" value="individual" checked>
+                                        <label class="form-check-label assignment-type-label" for="individual">
+                                            <div class="assignment-type-card">
+                                                <div class="assignment-type-icon">
+                                                    <i class="bi bi-person text-primary"></i>
+                                                </div>
+                                                <div class="assignment-type-content">
+                                                    <h6>Individual Assignment</h6>
+                                                    <p class="small text-muted">Each student works independently</p>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                    <div class="form-check form-check-inline assignment-type-option" data-type="group">
+                                        <input class="form-check-input" type="radio" name="assignment_structure" id="group" value="group">
+                                        <label class="form-check-label assignment-type-label" for="group">
+                                            <div class="assignment-type-card">
+                                                <div class="assignment-type-icon">
+                                                    <i class="bi bi-people text-success"></i>
+                                                </div>
+                                                <div class="assignment-type-content">
+                                                    <h6>Group Assignment</h6>
+                                                    <p class="small text-muted">Students work in teams</p>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Group Selection (Hidden by default) -->
+                <div class="card mb-4 border-0 shadow-sm" id="groupSelectionCard" style="display: none;">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0 fw-bold"><i class="bi bi-diagram-2 me-2"></i>Group Configuration</h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">
+                                    <i class="bi bi-collection me-1 text-success"></i>Select Groups <span class="text-danger">*</span>
+                                </label>
+                                <div id="groupSelectionContainer">
+                                    <p class="text-muted">Select which groups will participate in this assignment. Leave empty to include all groups.</p>
+                                    <div class="group-selection-list" id="groupSelectionList">
+                                        <!-- Groups will be populated via JavaScript -->
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-12 col-md-6">
+                                <label for="collaboration_type" class="form-label fw-semibold">
+                                    <i class="bi bi-gear me-1 text-success"></i>Collaboration Type
+                                </label>
+                                <select class="form-select" id="collaboration_type" name="collaboration_type">
+                                    <option value="group">Group Only</option>
+                                    <option value="both">Allow Individual Submissions</option>
+                                </select>
+                                <div class="form-text">Allow students to submit individually if they prefer</div>
+                            </div>
+                            
+                            <div class="col-12 col-md-6">
+                                <label for="group_size_min" class="form-label fw-semibold">
+                                    <i class="bi bi-people me-1 text-success"></i>Minimum Group Size
+                                </label>
+                                <input type="number" class="form-control" id="group_size_min" name="group_size_min" value="2" min="1" max="10">
+                                <div class="form-text">Minimum number of students per group</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Assignment Information -->
+                <div class="card mb-4 border-0 shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0 fw-bold"><i class="bi bi-info-circle me-2"></i>Assignment Information</h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label for="title" class="form-label fw-semibold">
+                                    <i class="bi bi-pencil-square me-1 text-primary"></i>Assignment Title <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control form-control-lg" id="title" name="title" 
+                                       placeholder="Enter a clear, descriptive assignment title..." required>
+                                <div class="form-text">Make it specific and engaging for students</div>
+                            </div>
+                            
+                            <div class="col-12">
+                                <label for="description" class="form-label fw-semibold">
+                                    <i class="bi bi-card-text me-1 text-primary"></i>Assignment Description <span class="text-danger">*</span>
+                                </label>
+                                <textarea class="form-control" id="description" name="description" rows="4" 
+                                          placeholder="Provide detailed instructions, learning objectives, and any specific requirements..." required></textarea>
+                                <div class="form-text">Be clear about what students need to do and how they'll be graded</div>
+                            </div>
+                            
+                            <div class="col-12 col-md-6">
+                                <label for="class_id" class="form-label fw-semibold">
+                                    <i class="bi bi-book me-1 text-primary"></i>Class <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select form-select-lg" id="class_id" name="class_id" required>
+                                    <option value="">Choose a class...</option>
+                                    {% if class_obj %}
+                                        <option value="{{ class_obj.id }}" selected>{{ class_obj.name }} - {{ class_obj.subject }}</option>
+                                    {% elif classes %}
+                                        {% for class in classes %}
+                                        <option value="{{ class.id }}">{{ class.name }} - {{ class.subject }}</option>
+                                        {% endfor %}
+                                    {% endif %}
+                                </select>
+                            </div>
+                            
+                            <div class="col-12 col-md-6">
+                                <label for="due_date" class="form-label fw-semibold">
+                                    <i class="bi bi-calendar-event me-1 text-primary"></i>Due Date <span class="text-danger">*</span>
+                                </label>
+                                <input type="datetime-local" class="form-control form-control-lg" id="due_date" name="due_date" required>
+                            </div>
+                            
+                            <div class="col-12 col-md-6">
+                                <label for="quarter" class="form-label fw-semibold">
+                                    <i class="bi bi-calendar3 me-1 text-primary"></i>Quarter <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select form-select-lg" id="quarter" name="quarter" required>
+                                    <option value="">Select Quarter</option>
+                                    <option value="1" {% if current_quarter == "1" %}selected{% endif %}>Quarter 1</option>
+                                    <option value="2" {% if current_quarter == "2" %}selected{% endif %}>Quarter 2</option>
+                                    <option value="3" {% if current_quarter == "3" %}selected{% endif %}>Quarter 3</option>
+                                    <option value="4" {% if current_quarter == "4" %}selected{% endif %}>Quarter 4</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-12 col-md-6">
+                                <label for="points" class="form-label fw-semibold">
+                                    <i class="bi bi-star me-1 text-primary"></i>Points <span class="text-danger">*</span>
+                                </label>
+                                <input type="number" class="form-control form-control-lg" id="points" name="points" 
+                                       value="100" min="1" max="1000" required>
+                                <div class="form-text">Total points for this assignment</div>
+                            </div>
+                            
+                            <div class="col-12 col-md-6">
+                                <label for="status" class="form-label fw-semibold">
+                                    <i class="bi bi-toggle-on me-1 text-primary"></i>Assignment Status <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select form-select-lg" id="status" name="status" required>
+                                    <option value="Active" selected>Active</option>
+                                    <option value="Inactive">Inactive</option>
+                                    <option value="Voided">Voided</option>
+                                </select>
+                                <div class="form-text">
+                                    <strong>Active:</strong> Students can submit work<br>
+                                    <strong>Inactive:</strong> Students cannot submit work<br>
+                                    <strong>Voided:</strong> Assignment doesn't affect grades
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- File Upload Section -->
+                <div class="card mb-4 border-0 shadow-sm">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0 fw-bold"><i class="bi bi-cloud-upload me-2"></i>Assignment Files</h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label for="assignment_file" class="form-label fw-semibold">
+                                    <i class="bi bi-paperclip me-1 text-success"></i>Assignment File (Optional)
+                                </label>
+                                <div class="file-upload-area border-2 border-dashed border-success rounded p-4 text-center file-upload-interactive" 
+                                     id="fileUploadArea">
+                                    <i class="bi bi-cloud-upload text-success mb-2 file-upload-icon"></i>
+                                    <p class="mb-2 fw-semibold">Click to upload or drag and drop</p>
+                                    <p class="text-muted small mb-0">PDF, DOC(X), TXT, JPG, PNG, GIF, XLS(X), PPT(X)</p>
+                                    <p class="text-muted small">Maximum file size: 16 MB</p>
+                                    <input type="file" class="d-none" id="assignment_file" name="assignment_file" 
+                                           accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.xls,.xlsx,.ppt,.pptx">
+                                </div>
+                            </div>
+                            
+                            <!-- File Preview Section -->
+                            <div class="col-12">
+                                <div id="filePreview" class="mt-3 file-preview-hidden">
+                                    <div class="card border-success">
+                                        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                                            <h6 class="mb-0"><i class="bi bi-file-earmark me-2"></i>File Preview</h6>
+                                            <button type="button" class="btn btn-light btn-sm" id="removeFile">
+                                                <i class="bi bi-x-circle"></i>
+                                            </button>
+                                        </div>
+                                        <div class="card-body">
+                                            <div id="fileInfo">
+                                                <div class="d-flex align-items-center">
+                                                    <i class="bi bi-file-earmark-text text-success me-3 file-info-icon"></i>
+                                                    <div>
+                                                        <p class="mb-1 fw-semibold"><span id="fileName"></span></p>
+                                                        <p class="mb-1 text-muted"><strong>Size:</strong> <span id="fileSize"></span></p>
+                                                        <p class="mb-0 text-muted"><strong>Type:</strong> <span id="fileType"></span></p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="card mb-4 border-0 shadow-sm">
+                    <div class="card-body p-4">
+                        <div class="d-flex flex-column flex-md-row gap-3 justify-content-between">
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-success btn-lg px-4">
+                                    <i class="bi bi-check-circle me-2"></i>Create Assignment
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-lg px-4" onclick="resetForm()">
+                                    <i class="bi bi-arrow-clockwise me-2"></i>Reset Form
+                                </button>
+                            </div>
+                            <div class="text-muted small d-flex align-items-center">
+                                <i class="bi bi-info-circle me-2"></i>
+                                <span>All required fields must be completed</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Enhanced Sidebar -->
+        <div class="col-12 col-lg-4">
+            <!-- Assignment Preview -->
+            <div class="card mb-4 border-0 shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-eye me-2"></i>Live Preview</h6>
+                </div>
+                <div class="card-body p-3">
+                    <div id="assignmentPreview">
+                        <div class="text-center text-muted py-3">
+                            <i class="bi bi-eye-slash mb-2 d-block preview-placeholder-icon"></i>
+                            <p class="small mb-0">Assignment preview will appear here as you build it</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Assignment Tips -->
+            <div class="card mb-4 border-0 shadow-sm">
+                <div class="card-header bg-secondary text-white">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-lightbulb me-2"></i>Assignment Tips</h6>
+                </div>
+                <div class="card-body p-3">
+                    <div class="assignment-tips">
+                        <div class="tip-item">
+                            <div class="tip-icon">
+                                <i class="bi bi-check-circle text-success"></i>
+                            </div>
+                            <div class="tip-content">
+                                <h6>Clear Instructions</h6>
+                                <p class="small mb-0">Provide specific, actionable instructions that students can easily follow.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="tip-item">
+                            <div class="tip-icon">
+                                <i class="bi bi-people text-primary"></i>
+                            </div>
+                            <div class="tip-content">
+                                <h6>Group Considerations</h6>
+                                <p class="small mb-0">For group assignments, consider individual contribution tracking.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="tip-item">
+                            <div class="tip-icon">
+                                <i class="bi bi-clock text-warning"></i>
+                            </div>
+                            <div class="tip-content">
+                                <h6>Realistic Deadlines</h6>
+                                <p class="small mb-0">Set due dates that give students adequate time to complete quality work.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Assignment type selection handling
+    const assignmentTypeOptions = document.querySelectorAll('.assignment-type-option');
+    const groupSelectionCard = document.getElementById('groupSelectionCard');
+    const classSelect = document.getElementById('class_id');
+    
+    assignmentTypeOptions.forEach(option => {
+        option.addEventListener('change', function() {
+            if (this.querySelector('input').value === 'group') {
+                groupSelectionCard.style.display = 'block';
+                loadGroupsForClass();
+            } else {
+                groupSelectionCard.style.display = 'none';
+            }
+        });
+    });
+    
+    // Load groups when class is selected
+    classSelect.addEventListener('change', function() {
+        if (this.value && document.querySelector('input[name="assignment_structure"]:checked').value === 'group') {
+            loadGroupsForClass();
+        }
+    });
+    
+    function loadGroupsForClass() {
+        const classId = classSelect.value;
+        if (!classId) return;
+        
+        // Fetch groups for the selected class
+        fetch(`/api/class/${classId}/groups`)
+            .then(response => response.json())
+            .then(data => {
+                const container = document.getElementById('groupSelectionList');
+                container.innerHTML = '';
+                
+                if (data.groups && data.groups.length > 0) {
+                    data.groups.forEach(group => {
+                        const groupItem = document.createElement('div');
+                        groupItem.className = 'form-check mb-2';
+                        groupItem.innerHTML = `
+                            <input class="form-check-input" type="checkbox" name="selected_groups" value="${group.id}" id="group_${group.id}">
+                            <label class="form-check-label" for="group_${group.id}">
+                                <strong>${group.name}</strong>
+                                <small class="text-muted d-block">${group.student_count} students</small>
+                            </label>
+                        `;
+                        container.appendChild(groupItem);
+                    });
+                } else {
+                    container.innerHTML = '<p class="text-muted">No groups found for this class.</p>';
+                }
+            })
+            .catch(error => {
+                console.error('Error loading groups:', error);
+                document.getElementById('groupSelectionList').innerHTML = '<p class="text-danger">Error loading groups.</p>';
+            });
+    }
+    
+    // File upload handling
+    const fileUploadArea = document.getElementById('fileUploadArea');
+    const fileInput = document.getElementById('assignment_file');
+    const filePreview = document.getElementById('filePreview');
+    
+    fileUploadArea.addEventListener('click', () => fileInput.click());
+    
+    fileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            showFilePreview(file);
+        }
+    });
+    
+    document.getElementById('removeFile').addEventListener('click', function() {
+        fileInput.value = '';
+        filePreview.style.display = 'none';
+    });
+    
+    function showFilePreview(file) {
+        document.getElementById('fileName').textContent = file.name;
+        document.getElementById('fileSize').textContent = formatFileSize(file.size);
+        document.getElementById('fileType').textContent = file.type || 'Unknown';
+        filePreview.style.display = 'block';
+    }
+    
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+    
+    // Form validation
+    document.getElementById('assignmentForm').addEventListener('submit', function(e) {
+        const assignmentStructure = document.querySelector('input[name="assignment_structure"]:checked').value;
+        
+        if (assignmentStructure === 'group') {
+            const selectedGroups = document.querySelectorAll('input[name="selected_groups"]:checked');
+            if (selectedGroups.length === 0) {
+                e.preventDefault();
+                alert('Please select at least one group for group assignments.');
+                return false;
+            }
+        }
+    });
+});
+
+function resetForm() {
+    document.getElementById('assignmentForm').reset();
+    document.getElementById('groupSelectionCard').style.display = 'none';
+    document.getElementById('filePreview').style.display = 'none';
+}
+</script>
+{% endblock %}

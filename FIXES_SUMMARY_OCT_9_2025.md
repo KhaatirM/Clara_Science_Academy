@@ -169,7 +169,7 @@ if due_date < today_date:
 ### 1. **Deploy Code Changes**
 ```bash
 git add managementroutes.py studentroutes.py templates/management/resources.html templates/shared/calendar.html static/style.css reorganize_cleaning_teams.py templates/shared/home.html FIXES_SUMMARY_OCT_9_2025.md
-git commit -m "Fix student deletion, datetime comparison, calendar access/colors, enhance resources, update home popup"
+git commit -m "Fix student deletion, datetime comparison, calendar access/colors, enhance resources, fix home popup"
 git push origin main
 ```
 

@@ -1519,19 +1519,31 @@ html, body {
     display: block;
 }
 
-/* Calendar Event Colors - Consistent with actual event types */
-.calendar-event.event-academic_period_start {
+/* Calendar Event Colors - Comprehensive system for all event types */
+/* Quarter Events */
+.calendar-event.event-quarter_start {
     background-color: #28a745; /* Green */
 }
 
-.calendar-event.event-academic_period_end {
+.calendar-event.event-quarter_end {
     background-color: #dc3545; /* Red */
 }
 
+/* Semester Events */
+.calendar-event.event-semester_start {
+    background-color: #17a2b8; /* Teal */
+}
+
+.calendar-event.event-semester_end {
+    background-color: #6f42c1; /* Purple */
+}
+
+/* Teacher Work Days */
 .calendar-event.event-teacher_work_day {
     background-color: #fd7e14; /* Orange */
 }
 
+/* School Break Events */
 .calendar-event.event-school_break_start {
     background-color: #e83e8c; /* Pink */
 }
@@ -1540,12 +1552,24 @@ html, body {
     background-color: #6f42c1; /* Purple */
 }
 
-.calendar-event.event-calendar_event {
-    background-color: #007bff; /* Blue */
+/* Holiday Events */
+.calendar-event.event-holiday {
+    background-color: #dc3545; /* Red */
 }
 
-.calendar-event.event-default {
+/* Professional Development */
+.calendar-event.event-professional_development {
+    background-color: #20c997; /* Mint Green */
+}
+
+/* Other Calendar Events */
+.calendar-event.event-other_event {
     background-color: #6c757d; /* Gray */
+}
+
+/* Fallback for any unhandled event types */
+.calendar-event.event-default {
+    background-color: #007bff; /* Blue */
 }
 
 /* Calendar legend styles */
@@ -1557,18 +1581,31 @@ html, body {
     margin-right: 8px;
 }
 
-.calendar-legend-item.event-academic_period_start {
+/* Calendar Legend Colors - Comprehensive system for all event types */
+/* Quarter Events */
+.calendar-legend-item.event-quarter_start {
     background-color: #28a745; /* Green */
 }
 
-.calendar-legend-item.event-academic_period_end {
+.calendar-legend-item.event-quarter_end {
     background-color: #dc3545; /* Red */
 }
 
+/* Semester Events */
+.calendar-legend-item.event-semester_start {
+    background-color: #17a2b8; /* Teal */
+}
+
+.calendar-legend-item.event-semester_end {
+    background-color: #6f42c1; /* Purple */
+}
+
+/* Teacher Work Days */
 .calendar-legend-item.event-teacher_work_day {
     background-color: #fd7e14; /* Orange */
 }
 
+/* School Break Events */
 .calendar-legend-item.event-school_break_start {
     background-color: #e83e8c; /* Pink */
 }
@@ -1577,12 +1614,24 @@ html, body {
     background-color: #6f42c1; /* Purple */
 }
 
-.calendar-legend-item.event-calendar_event {
-    background-color: #007bff; /* Blue */
+/* Holiday Events */
+.calendar-legend-item.event-holiday {
+    background-color: #dc3545; /* Red */
 }
 
-.calendar-legend-item.event-default {
+/* Professional Development */
+.calendar-legend-item.event-professional_development {
+    background-color: #20c997; /* Mint Green */
+}
+
+/* Other Calendar Events */
+.calendar-legend-item.event-other_event {
     background-color: #6c757d; /* Gray */
+}
+
+/* Fallback for any unhandled event types */
+.calendar-legend-item.event-default {
+    background-color: #007bff; /* Blue */
 }
 
 /* Custom avatar for student initials */
@@ -3123,4 +3172,227 @@ html, body {
 .list-group {
     scrollbar-width: thin;
     scrollbar-color: #28a745 #f1f1f1;
+}
+
+/* ========================================
+   ASSIGNMENT TYPE SELECTOR STYLES
+   ======================================== */
+
+/* Assignment Type Selection Cards */
+.assignment-type-card {
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border: 2px solid transparent;
+}
+
+.assignment-type-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    border-color: #007bff;
+}
+
+.assignment-type-card.selected {
+    border-color: #007bff;
+    background-color: #f8f9fa;
+}
+
+.assignment-type-icon {
+    transition: transform 0.3s ease;
+}
+
+.assignment-type-icon-large {
+    font-size: 3rem;
+}
+
+.assignment-type-card:hover .assignment-type-icon {
+    transform: scale(1.1);
+}
+
+.features-list ul li {
+    margin-bottom: 0.25rem;
+}
+
+.btn.select-assignment-type {
+    transition: all 0.3s ease;
+}
+
+.btn.select-assignment-type:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* Responsive adjustments for assignment type selector */
+@media (max-width: 768px) {
+    .assignment-type-card {
+        margin-bottom: 1rem;
+    }
+    
+    .features-list {
+        text-align: center;
+    }
+}
+
+/* ========================================
+   ENHANCED ASSIGNMENT CREATION STYLES
+   ======================================== */
+
+/* Assignment Header Gradient */
+.assignment-header-gradient {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+}
+
+/* Assignment Type Selection */
+.assignment-type-selection {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.assignment-type-option {
+    flex: 1;
+    min-width: 200px;
+}
+
+.assignment-type-label {
+    width: 100%;
+    cursor: pointer;
+    margin: 0;
+}
+
+.assignment-type-label .assignment-type-card {
+    border: 2px solid #e9ecef;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    background: white;
+    margin: 0;
+}
+
+.assignment-type-label:hover .assignment-type-card {
+    border-color: #007bff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.15);
+}
+
+.assignment-type-option input[type="radio"]:checked + .assignment-type-label .assignment-type-card {
+    border-color: #007bff;
+    background-color: #f8f9fa;
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.2);
+}
+
+.assignment-type-label .assignment-type-icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.assignment-type-label .assignment-type-content h6 {
+    margin: 0 0 0.25rem 0;
+    font-weight: 600;
+}
+
+.assignment-type-label .assignment-type-content p {
+    margin: 0;
+}
+
+/* Group Selection */
+.group-selection-list {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #e9ecef;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    background-color: #f8f9fa;
+}
+
+.group-selection-list .form-check {
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    transition: background-color 0.2s ease;
+}
+
+.group-selection-list .form-check:hover {
+    background-color: #e9ecef;
+}
+
+/* File Upload Styles */
+.file-upload-interactive {
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.file-upload-interactive:hover {
+    border-color: #28a745 !important;
+    background-color: rgba(40, 167, 69, 0.05);
+}
+
+.file-upload-icon {
+    font-size: 2rem;
+}
+
+.file-preview-hidden {
+    display: none;
+}
+
+.file-info-icon {
+    font-size: 2rem;
+}
+
+.preview-placeholder-icon {
+    font-size: 2rem;
+    opacity: 0.5;
+}
+
+/* Assignment Tips */
+.assignment-tips {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.tip-item {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+}
+
+.tip-icon {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tip-content h6 {
+    margin: 0 0 0.25rem 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.tip-content p {
+    margin: 0;
+    line-height: 1.4;
+}
+
+/* Responsive adjustments for enhanced assignment creation */
+@media (max-width: 768px) {
+    .assignment-type-selection {
+        flex-direction: column;
+    }
+    
+    .assignment-type-option {
+        min-width: 100%;
+    }
+    
+    .assignment-tips {
+        gap: 0.75rem;
+    }
+    
+    .tip-item {
+        flex-direction: column;
+        text-align: center;
+        gap: 0.5rem;
+    }
 }

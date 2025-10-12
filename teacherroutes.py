@@ -740,6 +740,143 @@ def add_assignment(class_id):
     
     return render_template('shared/add_assignment.html', class_obj=class_obj, current_quarter=current_quarter)
 
+@teacher_blueprint.route('/class/<int:class_id>/assignment/add/enhanced', methods=['GET', 'POST'])
+@login_required
+@teacher_required
+def add_assignment_enhanced(class_id):
+    """Enhanced assignment creation with group/individual selection."""
+    class_obj = Class.query.get_or_404(class_id)
+    teacher = get_teacher_or_admin()
+    
+    if not is_admin() and teacher and class_obj.teacher_id != teacher.id:
+        flash("You are not authorized to add assignments to this class.", "danger")
+        return redirect(url_for('teacher.teacher_dashboard'))
+
+    if request.method == 'POST':
+        title = request.form.get('title')
+        description = request.form.get('description')
+        due_date_str = request.form.get('due_date')
+        quarter = request.form.get('quarter')
+        status = request.form.get('status', 'Active')
+        points = float(request.form.get('points', 100))
+        assignment_structure = request.form.get('assignment_structure', 'individual')
+        
+        if not all([title, due_date_str, quarter]):
+            flash("Title, Due Date, and Quarter are required.", "danger")
+            return redirect(request.url)
+        
+        # Validate status
+        valid_statuses = ['Active', 'Inactive', 'Voided']
+        if status not in valid_statuses:
+            flash('Invalid assignment status.', 'danger')
+            return redirect(request.url)
+
+        due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
+        
+        current_school_year = SchoolYear.query.filter_by(is_active=True).first()
+        if not current_school_year:
+            flash("Cannot create assignment: No active school year.", "danger")
+            return redirect(url_for('teacher.view_class', class_id=class_id))
+        
+        try:
+            if assignment_structure == 'group':
+                # Create group assignment
+                new_assignment = GroupAssignment()
+                new_assignment.title = title
+                new_assignment.description = description
+                new_assignment.due_date = due_date
+                new_assignment.class_id = class_id
+                new_assignment.school_year_id = current_school_year.id
+                new_assignment.quarter = str(quarter)
+                new_assignment.status = status
+                new_assignment.assignment_type = 'pdf_paper'
+                new_assignment.collaboration_type = request.form.get('collaboration_type', 'group')
+                new_assignment.group_size_min = int(request.form.get('group_size_min', 2))
+                
+                # Handle selected groups
+                selected_groups = request.form.getlist('selected_groups')
+                if selected_groups:
+                    new_assignment.selected_group_ids = json.dumps(selected_groups)
+                
+                # Handle file upload for group assignments
+                if 'assignment_file' in request.files:
+                    file = request.files['assignment_file']
+                    if file and file.filename != '':
+                        if allowed_file(file.filename):
+                            filename = secure_filename(file.filename)
+                            unique_filename = f"group_assignment_{class_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{filename}"
+                            filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], unique_filename)
+                            
+                            file.save(filepath)
+                            
+                            new_assignment.attachment_filename = unique_filename
+                            new_assignment.attachment_original_filename = filename
+                            new_assignment.attachment_file_path = filepath
+                            new_assignment.attachment_file_size = os.path.getsize(filepath)
+                            new_assignment.attachment_mime_type = file.content_type
+                
+                db.session.add(new_assignment)
+                db.session.commit()
+                
+                flash('Group assignment created successfully.', 'success')
+                
+            else:
+                # Create individual assignment
+                new_assignment = Assignment()
+                new_assignment.title = title
+                new_assignment.description = description
+                new_assignment.due_date = due_date
+                new_assignment.class_id = class_id
+                new_assignment.school_year_id = current_school_year.id
+                new_assignment.quarter = str(quarter)
+                new_assignment.status = status
+                new_assignment.assignment_type = 'pdf_paper'
+                new_assignment.points = points
+                new_assignment.created_by = current_user.id
+                
+                # Handle file upload for individual assignments
+                if 'assignment_file' in request.files:
+                    file = request.files['assignment_file']
+                    if file and file.filename != '':
+                        if allowed_file(file.filename):
+                            filename = secure_filename(file.filename)
+                            unique_filename = f"assignment_{class_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{filename}"
+                            filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], unique_filename)
+                            
+                            file.save(filepath)
+                            
+                            new_assignment.attachment_filename = unique_filename
+                            new_assignment.attachment_original_filename = filename
+                            new_assignment.attachment_file_path = filepath
+                            new_assignment.attachment_file_size = os.path.getsize(filepath)
+                            new_assignment.attachment_mime_type = file.content_type
+                
+                db.session.add(new_assignment)
+                db.session.commit()
+                
+                # Create notifications for students in this class
+                from app import create_notification_for_students_in_class
+                create_notification_for_students_in_class(
+                    class_id=class_id,
+                    notification_type='assignment',
+                    title=f'New Assignment: {title}',
+                    message=f'A new assignment "{title}" has been created for {class_obj.name}. Due date: {due_date.strftime("%b %d, %Y")}',
+                    link=url_for('student.student_assignments')
+                )
+                
+                flash('Individual assignment created successfully.', 'success')
+            
+            return redirect(url_for('teacher.view_class', class_id=class_id))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error creating assignment: {str(e)}', 'danger')
+            return redirect(request.url)
+
+    # Get current quarter for pre-selection
+    current_quarter = get_current_quarter()
+    return render_template('shared/enhanced_add_assignment.html', class_obj=class_obj, current_quarter=current_quarter)
+
 
 @teacher_blueprint.route('/assignment/view/<int:assignment_id>')
 @login_required

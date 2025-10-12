@@ -30,7 +30,7 @@
             <div class="card h-100 assignment-type-card" data-type="pdf">
                 <div class="card-body text-center p-4">
                     <div class="assignment-type-icon mb-3">
-                        <i class="bi bi-file-earmark-pdf text-danger" style="font-size: 3rem;"></i>
+                        <i class="bi bi-file-earmark-pdf text-danger assignment-type-icon-large"></i>
                     </div>
                     <h5 class="card-title mb-3">PDF/Paper Assignment</h5>
                     <p class="card-text text-muted mb-4">
@@ -58,7 +58,7 @@
             <div class="card h-100 assignment-type-card" data-type="quiz">
                 <div class="card-body text-center p-4">
                     <div class="assignment-type-icon mb-3">
-                        <i class="bi bi-question-circle text-warning" style="font-size: 3rem;"></i>
+                        <i class="bi bi-question-circle text-warning assignment-type-icon-large"></i>
                     </div>
                     <h5 class="card-title mb-3">Questionnaire/Quiz Assignment</h5>
                     <p class="card-text text-muted mb-4">
@@ -86,7 +86,7 @@
             <div class="card h-100 assignment-type-card" data-type="discussion">
                 <div class="card-body text-center p-4">
                     <div class="assignment-type-icon mb-3">
-                        <i class="bi bi-chat-dots text-info" style="font-size: 3rem;"></i>
+                        <i class="bi bi-chat-dots text-info assignment-type-icon-large"></i>
                     </div>
                     <h5 class="card-title mb-3">Discussion Assignment</h5>
                     <p class="card-text text-muted mb-4">
@@ -138,56 +138,6 @@
     </div>
 </div>
 
-<style>
-.assignment-type-card {
-    transition: all 0.3s ease;
-    cursor: pointer;
-    border: 2px solid transparent;
-}
-
-.assignment-type-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-    border-color: #007bff;
-}
-
-.assignment-type-card.selected {
-    border-color: #007bff;
-    background-color: #f8f9fa;
-}
-
-.assignment-type-icon {
-    transition: transform 0.3s ease;
-}
-
-.assignment-type-card:hover .assignment-type-icon {
-    transform: scale(1.1);
-}
-
-.features-list ul li {
-    margin-bottom: 0.25rem;
-}
-
-.btn.select-assignment-type {
-    transition: all 0.3s ease;
-}
-
-.btn.select-assignment-type:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .assignment-type-card {
-        margin-bottom: 1rem;
-    }
-    
-    .features-list {
-        text-align: center;
-    }
-}
-</style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {

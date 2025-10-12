@@ -75,21 +75,13 @@ def get_student_assignment_status(assignment, submission, grade):
     if assignment.status == 'Voided':
         return 'Voided'
     
-    # Check if assignment has been graded
+    # Check if assignment has been graded - this takes priority over due date
     if grade:
         return 'completed'
     
     # Check if assignment has been submitted
     if submission:
         return 'Submitted or Awaiting Grade'
-    
-    # Check if assignment is past due
-    if assignment.due_date:
-        # Convert due_date to date if it's a datetime for comparison
-        due_date = assignment.due_date.date() if hasattr(assignment.due_date, 'date') else assignment.due_date
-        today = datetime.now().date()
-        if due_date < today:
-            return 'Past Due'
     
     # Check if assignment has an extension
     from models import AssignmentExtension
@@ -101,6 +93,14 @@ def get_student_assignment_status(assignment, submission, grade):
     
     if extension:
         return 'Extended'
+    
+    # Check if assignment is past due (only if not completed/submitted)
+    if assignment.due_date:
+        # Convert due_date to date if it's a datetime for comparison
+        due_date = assignment.due_date.date() if hasattr(assignment.due_date, 'date') else assignment.due_date
+        today = datetime.now().date()
+        if due_date < today:
+            return 'Past Due'
     
     # Default status for active assignments
     return 'Un-Submitted'
@@ -295,8 +295,12 @@ def student_dashboard():
     recent_grades = []
     
     for assignment in assignments:
-        # Check if past due
-        if assignment.due_date:
+        # Get submission and grade status to check if completed
+        submission = Submission.query.filter_by(student_id=student.id, assignment_id=assignment.id).first()
+        grade = Grade.query.filter_by(student_id=student.id, assignment_id=assignment.id).first()
+        
+        # Only check due dates for non-completed assignments
+        if assignment.due_date and not grade:  # Not completed if no grade
             # Convert due_date to date if it's a datetime
             due_date = assignment.due_date.date() if hasattr(assignment.due_date, 'date') else assignment.due_date
             # Ensure today is also a date object for comparison
@@ -407,8 +411,8 @@ def student_assignments():
         
         assignments_with_status.append((assignment, submission, student_status))
         
-        # Categorize assignments for alerts
-        if assignment.due_date:
+        # Categorize assignments for alerts (only if not completed)
+        if assignment.due_date and student_status not in ['completed', 'Voided']:
             # Convert due_date to date if it's a datetime
             due_date = assignment.due_date.date() if hasattr(assignment.due_date, 'date') else assignment.due_date
             

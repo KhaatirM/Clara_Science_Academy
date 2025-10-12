@@ -202,7 +202,14 @@
                                             {% if assignment.due_date %}
                                                 {% set due_date = assignment.due_date.date() if assignment.due_date.date else assignment.due_date %}
                                                 {% set days_until_due = (due_date - today).days %}
-                                                {% if days_until_due < 0 %}
+                                                
+                                                {% if status == 'completed' %}
+                                                    <!-- For completed assignments, just show the date without overdue status -->
+                                                    <span class="badge bg-success bg-opacity-20 text-dark border border-success">
+                                                        <i class="fas fa-check-circle me-1"></i>
+                                                        {{ assignment.due_date.strftime('%m/%d/%Y') }}
+                                                    </span>
+                                                {% elif days_until_due < 0 %}
                                                     <span class="badge bg-danger bg-opacity-20 text-dark border border-danger">
                                                         <i class="fas fa-exclamation-triangle me-1"></i>
                                                         {{ assignment.due_date.strftime('%m/%d/%Y') }} ({{ -days_until_due }} days overdue)

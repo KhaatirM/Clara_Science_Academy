@@ -1844,7 +1844,18 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                                 {{ assignment.due_date.strftime('%B %d, %Y at %I:%M %p') }}
                                                 {% set due_date = assignment.due_date.date() if assignment.due_date.date else assignment.due_date %}
                                                 {% set days_remaining = (due_date - today).days %}
-                                                {% if days_remaining > 0 %}
+                                                
+                                                <!-- Check if this assignment is completed by looking at the status -->
+                                                {% set assignment_status = 'Un-Submitted' %}
+                                                {% for assignment_item, submission, status in assignments_with_status %}
+                                                    {% if assignment_item.id == assignment.id %}
+                                                        {% set assignment_status = status %}
+                                                    {% endif %}
+                                                {% endfor %}
+                                                
+                                                {% if assignment_status == 'completed' %}
+                                                    <span class="badge bg-success ms-2">Completed</span>
+                                                {% elif days_remaining > 0 %}
                                                     <span class="badge bg-success ms-2">{{ days_remaining }} days remaining</span>
                                                 {% elif days_remaining == 0 %}
                                                     <span class="badge bg-warning ms-2">Due today</span>
@@ -2210,8 +2221,19 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                                         {% if assignment.due_date %}
                                                             {{ assignment.due_date.strftime('%B %d, %Y') }}
                                                             {% set due_date = assignment.due_date.date() if assignment.due_date.date else assignment.due_date %}
-                                                {% set days_remaining = (due_date - today).days %}
-                                                            {% if days_remaining > 0 %}
+                                                            {% set days_remaining = (due_date - today).days %}
+                                                            
+                                                            <!-- Check if this assignment is completed by looking at the status -->
+                                                            {% set assignment_status = 'Un-Submitted' %}
+                                                            {% for assignment_item, submission, status in assignments_with_status %}
+                                                                {% if assignment_item.id == assignment.id %}
+                                                                    {% set assignment_status = status %}
+                                                                {% endif %}
+                                                            {% endfor %}
+                                                            
+                                                            {% if assignment_status == 'completed' %}
+                                                                <span class="badge bg-success ms-2">Completed</span>
+                                                            {% elif days_remaining > 0 %}
                                                                 <span class="badge bg-success ms-2">{{ days_remaining }} days</span>
                                                             {% elif days_remaining == 0 %}
                                                                 <span class="badge bg-warning ms-2">Due today</span>
@@ -2587,13 +2609,13 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                     <div class="list-group list-group-flush recent-assignments">
                                         {% for assignment in data.recent_assignments %}
                                         <div class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center">
-                                            <div class="flex-grow-1">
-                                                <div class="fw-semibold text-truncate" title="{{ assignment.title }}">
+                                            <div class="flex-grow-1 me-3" style="min-width: 0;">
+                                                <div class="fw-semibold assignment-name-truncated" title="{{ assignment.title }}">
                                                     {{ assignment.title }}
                                                 </div>
                                                 <small class="text-muted">{{ assignment.graded_at }}</small>
                                             </div>
-                                            <div class="ms-2 text-end">
+                                            <div class="text-end flex-shrink-0">
                                                 <div class="badge assignment-grade-badge fs-6
                                                     {% if assignment.score and assignment.score >= 90 %}bg-success
                                                     {% elif assignment.score and assignment.score >= 80 %}bg-primary

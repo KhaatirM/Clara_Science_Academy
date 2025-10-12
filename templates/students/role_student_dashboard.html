@@ -2515,15 +2515,24 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                     <div class="col-6">
                                         <div class="border rounded p-2 text-center">
                                             <div class="small text-muted">{{ quarter_name }}</div>
-                                            <div class="fw-bold 
-                                                {% if quarter_data.average >= 90 %}text-success
-                                                {% elif quarter_data.average >= 80 %}text-primary
-                                                {% elif quarter_data.average >= 70 %}text-warning
-                                                {% else %}text-danger{% endif %}">
-                                                {{ quarter_data.average }}%
-                                            </div>
-                                            <div class="small">{{ quarter_data.letter }}</div>
-                                            <div class="small text-muted">{{ quarter_data.assignments }} assignments</div>
+                                            {% if quarter_data.status == 'in_progress' %}
+                                                <div class="fw-bold text-info">
+                                                    <i class="bi bi-clock"></i> In Progress
+                                                </div>
+                                                <div class="small text-muted">Ends {{ quarter_data.end_date.strftime('%m/%d/%Y') }}</div>
+                                            {% elif quarter_data.average %}
+                                                <div class="fw-bold 
+                                                    {% if quarter_data.average >= 90 %}text-success
+                                                    {% elif quarter_data.average >= 80 %}text-primary
+                                                    {% elif quarter_data.average >= 70 %}text-warning
+                                                    {% else %}text-danger{% endif %}">
+                                                    {{ quarter_data.average }}%
+                                                </div>
+                                                <div class="small">{{ quarter_data.letter }}</div>
+                                                <div class="small text-muted">{{ quarter_data.assignments }} assignments</div>
+                                            {% else %}
+                                                <div class="fw-bold text-muted">No Grades</div>
+                                            {% endif %}
                                         </div>
                                     </div>
                                     {% endfor %}
@@ -2586,9 +2595,9 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                             </div>
                                             <div class="ms-2 text-end">
                                                 <div class="badge assignment-grade-badge fs-6
-                                                    {% if assignment.score >= 90 %}bg-success
-                                                    {% elif assignment.score >= 80 %}bg-primary
-                                                    {% elif assignment.score >= 70 %}bg-warning text-dark
+                                                    {% if assignment.score and assignment.score >= 90 %}bg-success
+                                                    {% elif assignment.score and assignment.score >= 80 %}bg-primary
+                                                    {% elif assignment.score and assignment.score >= 70 %}bg-warning text-dark
                                                     {% else %}bg-danger{% endif %}">
                                                     {{ assignment.score }}%
                                                 </div>

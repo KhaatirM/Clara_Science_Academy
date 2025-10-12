@@ -636,7 +636,7 @@ def student_grades():
             # Combine regular and group grades
             for grade in grades:
                 grade_data = json.loads(grade.grade_data)
-                if 'score' in grade_data:
+                if 'score' in grade_data and grade_data['score'] is not None:
                     all_recent_grades.append({
                         'title': grade.assignment.title,
                         'score': grade_data['score'],
@@ -646,7 +646,7 @@ def student_grades():
             
             for group_grade in group_grades:
                 grade_data = json.loads(group_grade.grade_data) if isinstance(group_grade.grade_data, str) else group_grade.grade_data
-                if 'score' in grade_data:
+                if 'score' in grade_data and grade_data['score'] is not None:
                     all_recent_grades.append({
                         'title': f"{group_grade.group_assignment.title} (Group)",
                         'score': grade_data['score'],
@@ -697,7 +697,7 @@ def student_grades():
                     grade = next((g for g in grades if g.assignment_id == assignment.id), None)
                     if grade:
                         grade_data = json.loads(grade.grade_data)
-                        if 'score' in grade_data:
+                        if 'score' in grade_data and grade_data['score'] is not None:
                             quarter_grades_list.append(grade_data['score'])
                 
                 # Add group assignment grades
@@ -705,7 +705,7 @@ def student_grades():
                     group_grade = next((g for g in group_grades if g.group_assignment_id == group_assignment.id), None)
                     if group_grade:
                         grade_data = json.loads(group_grade.grade_data) if isinstance(group_grade.grade_data, str) else group_grade.grade_data
-                        if 'score' in grade_data:
+                        if 'score' in grade_data and grade_data['score'] is not None:
                             quarter_grades_list.append(grade_data['score'])
                 
                 if quarter_grades_list:
@@ -770,7 +770,7 @@ def student_grades():
                     grade = next((g for g in grades if g.assignment_id == assignment.id), None)
                     if grade:
                         grade_data = json.loads(grade.grade_data)
-                        if 'score' in grade_data:
+                        if 'score' in grade_data and grade_data['score'] is not None:
                             semester_grades_list.append(grade_data['score'])
                 
                 # Add group assignment grades
@@ -778,7 +778,7 @@ def student_grades():
                     group_grade = next((g for g in group_grades if g.group_assignment_id == group_assignment.id), None)
                     if group_grade:
                         grade_data = json.loads(group_grade.grade_data) if isinstance(group_grade.grade_data, str) else group_grade.grade_data
-                        if 'score' in grade_data:
+                        if 'score' in grade_data and grade_data['score'] is not None:
                             semester_grades_list.append(grade_data['score'])
                 
                 if semester_grades_list:

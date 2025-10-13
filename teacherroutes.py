@@ -3681,6 +3681,43 @@ def view_group_assignment(assignment_id):
                          admin_view=admin_view)
 
 
+@teacher_blueprint.route('/fix-group-assignments')
+@login_required
+@teacher_required
+def fix_group_assignments():
+    """Fix existing group assignments with missing selected_group_ids"""
+    from models import GroupAssignment, StudentGroup
+    import json
+    
+    assignments_fixed = 0
+    
+    # Find all group assignments with null selected_group_ids
+    assignments_to_fix = GroupAssignment.query.filter(
+        GroupAssignment.selected_group_ids.is_(None)
+    ).all()
+    
+    for assignment in assignments_to_fix:
+        # Get all active groups for this assignment's class
+        groups = StudentGroup.query.filter_by(
+            class_id=assignment.class_id, 
+            is_active=True
+        ).all()
+        
+        if groups:
+            # Set selected_group_ids to include all groups
+            group_ids = [str(group.id) for group in groups]
+            assignment.selected_group_ids = json.dumps(group_ids)
+            assignments_fixed += 1
+    
+    try:
+        db.session.commit()
+        flash(f'Successfully fixed {assignments_fixed} group assignments!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error fixing assignments: {str(e)}', 'danger')
+    
+    return redirect(url_for('teacher.teacher_dashboard'))
+
 @teacher_blueprint.route('/group-assignment/<int:assignment_id>/grade', methods=['GET', 'POST'])
 @login_required
 @teacher_required

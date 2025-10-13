@@ -5830,6 +5830,34 @@ def admin_grade_group_assignment(assignment_id):
         flash('Error accessing group assignment grading.', 'error')
         return redirect(url_for('management.admin_class_group_assignments', class_id=group_assignment.class_id))
 
+@management_blueprint.route('/group-assignment/<int:assignment_id>/delete', methods=['POST'])
+@login_required
+@management_required
+def admin_delete_group_assignment(assignment_id):
+    """Delete a group assignment - Management view."""
+    try:
+        from models import GroupAssignment, GroupGrade, GroupSubmission
+        
+        group_assignment = GroupAssignment.query.get_or_404(assignment_id)
+        
+        # Delete related grades first
+        GroupGrade.query.filter_by(group_assignment_id=assignment_id).delete()
+        
+        # Delete related submissions
+        GroupSubmission.query.filter_by(group_assignment_id=assignment_id).delete()
+        
+        # Delete the assignment itself
+        db.session.delete(group_assignment)
+        db.session.commit()
+        
+        flash('Group assignment deleted successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting assignment: {str(e)}', 'danger')
+    
+    # Redirect back to the appropriate page
+    return redirect(url_for('management.admin_class_group_assignments', class_id=group_assignment.class_id))
+
 @management_blueprint.route('/group-assignment/<int:assignment_id>/edit', methods=['GET', 'POST'])
 @login_required
 @management_required

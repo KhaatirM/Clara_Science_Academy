@@ -20,6 +20,10 @@
       <a href="{{ url_for('management.grant_extensions', assignment_id=group_assignment.id) }}" class="btn btn-primary btn-sm">
         <i class="bi bi-clock me-1"></i>Extensions
       </a>
+      <button type="button" class="btn btn-danger btn-sm" 
+              onclick="confirmDeleteAssignment({{ group_assignment.id }}, '{{ group_assignment.title }}')">
+        <i class="bi bi-trash me-1"></i>Delete Assignment
+      </button>
       <a href="{{ url_for('teacher.create_assignment_rubric', assignment_id=group_assignment.id) }}{% if admin_view %}?admin_view=true{% endif %}" class="btn btn-info btn-sm">
         <i class="bi bi-list-check me-1"></i>Create Rubric
       </a>
@@ -266,4 +270,19 @@
     </div>
   </div>
 </div>
+
+<!-- Hidden delete form -->
+<form id="deleteAssignmentForm" method="POST" style="display: none;">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+</form>
+
+<script>
+function confirmDeleteAssignment(assignmentId, assignmentTitle) {
+    if (confirm(`Are you sure you want to delete the assignment "${assignmentTitle}"?\n\nThis action cannot be undone and will delete all grades and submissions for this assignment.`)) {
+        const form = document.getElementById('deleteAssignmentForm');
+        form.action = "{{ url_for('teacher.delete_group_assignment', assignment_id=0) }}".replace('0', assignmentId);
+        form.submit();
+    }
+}
+</script>
 {% endblock %}

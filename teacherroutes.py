@@ -3718,6 +3718,38 @@ def fix_group_assignments():
     
     return redirect(url_for('teacher.teacher_dashboard'))
 
+@teacher_blueprint.route('/group-assignment/<int:assignment_id>/delete', methods=['POST'])
+@login_required
+@teacher_required
+def delete_group_assignment(assignment_id):
+    """Delete a group assignment."""
+    teacher = get_teacher_or_admin()
+    group_assignment = GroupAssignment.query.get_or_404(assignment_id)
+    
+    # Check if teacher has access to this assignment's class
+    if not is_admin() and group_assignment.class_info.teacher_id != teacher.id:
+        flash('You do not have access to delete this assignment.', 'danger')
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    try:
+        # Delete related grades first
+        GroupGrade.query.filter_by(group_assignment_id=assignment_id).delete()
+        
+        # Delete related submissions
+        GroupSubmission.query.filter_by(group_assignment_id=assignment_id).delete()
+        
+        # Delete the assignment itself
+        db.session.delete(group_assignment)
+        db.session.commit()
+        
+        flash('Group assignment deleted successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting assignment: {str(e)}', 'danger')
+    
+    # Redirect back to the appropriate page
+    return redirect(url_for('teacher.class_group_assignments', class_id=group_assignment.class_id))
+
 @teacher_blueprint.route('/group-assignment/<int:assignment_id>/grade', methods=['GET', 'POST'])
 @login_required
 @teacher_required

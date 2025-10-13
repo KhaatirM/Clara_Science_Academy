@@ -216,7 +216,7 @@
             </div>
             <div class="col-6">
               <h4 class="text-warning">
-                {% set total_students = groups|sum(attribute='members')|length %}
+                {% set total_students = groups|map(attribute='members')|map('length')|sum %}
                 {{ total_students }}
               </h4>
               <small class="text-muted">Students in Groups</small>

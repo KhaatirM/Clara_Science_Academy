@@ -793,10 +793,12 @@ def add_assignment_enhanced(class_id):
                 new_assignment.collaboration_type = request.form.get('collaboration_type', 'group')
                 new_assignment.group_size_min = int(request.form.get('group_size_min', 2))
                 
-                # Handle selected groups
-                selected_groups = request.form.getlist('selected_groups')
-                if selected_groups:
-                    new_assignment.selected_group_ids = json.dumps(selected_groups)
+        # Handle selected groups
+        selected_groups = request.form.getlist('selected_groups')
+        print(f"DEBUG: Selected groups from form: {selected_groups}")
+        if selected_groups:
+            new_assignment.selected_group_ids = json.dumps(selected_groups)
+            print(f"DEBUG: Saved selected_group_ids: {new_assignment.selected_group_ids}")
                 
                 # Handle file upload for group assignments
                 if 'assignment_file' in request.files:
@@ -3699,22 +3701,29 @@ def grade_group_assignment(assignment_id):
             return redirect(url_for('teacher.teacher_dashboard'))
     
     # Get groups for this class - filter by selected groups if specified
+    print(f"DEBUG: Assignment {assignment_id} selected_group_ids: {group_assignment.selected_group_ids}")
+    
     if group_assignment.selected_group_ids:
         # Parse the selected group IDs
         try:
             selected_ids = json.loads(group_assignment.selected_group_ids) if isinstance(group_assignment.selected_group_ids, str) else group_assignment.selected_group_ids
+            print(f"DEBUG: Parsed selected_ids: {selected_ids}")
             # Filter to only selected groups
             groups = StudentGroup.query.filter(
                 StudentGroup.class_id == group_assignment.class_id,
                 StudentGroup.is_active == True,
                 StudentGroup.id.in_(selected_ids)
             ).all()
-        except:
+            print(f"DEBUG: Filtered groups count: {len(groups)}")
+        except Exception as e:
+            print(f"DEBUG: Error parsing selected_group_ids: {e}")
             # If parsing fails, get all groups
             groups = StudentGroup.query.filter_by(class_id=group_assignment.class_id, is_active=True).all()
+            print(f"DEBUG: Fallback to all groups count: {len(groups)}")
     else:
         # If no specific groups selected, get all groups
         groups = StudentGroup.query.filter_by(class_id=group_assignment.class_id, is_active=True).all()
+        print(f"DEBUG: No selected_group_ids, using all groups count: {len(groups)}")
     
     # Get existing grades
     existing_grades = GroupGrade.query.filter_by(group_assignment_id=assignment_id).all()

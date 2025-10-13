@@ -446,6 +446,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (assignmentStructure === 'group') {
             const selectedGroups = document.querySelectorAll('input[name="selected_groups"]:checked');
+            console.log('DEBUG: Selected groups count:', selectedGroups.length);
+            console.log('DEBUG: Selected group values:', Array.from(selectedGroups).map(g => g.value));
+            
             if (selectedGroups.length === 0) {
                 e.preventDefault();
                 alert('Please select at least one group for group assignments.');

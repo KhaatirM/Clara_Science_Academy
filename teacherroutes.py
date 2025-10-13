@@ -796,9 +796,13 @@ def add_assignment_enhanced(class_id):
                 # Handle selected groups
                 selected_groups = request.form.getlist('selected_groups')
                 print(f"DEBUG: Selected groups from form: {selected_groups}")
+                print(f"DEBUG: Form data keys: {list(request.form.keys())}")
+                print(f"DEBUG: All form data: {dict(request.form)}")
                 if selected_groups:
                     new_assignment.selected_group_ids = json.dumps(selected_groups)
                     print(f"DEBUG: Saved selected_group_ids: {new_assignment.selected_group_ids}")
+                else:
+                    print("DEBUG: No groups selected from form")
                 
                 # Handle file upload for group assignments
                 if 'assignment_file' in request.files:

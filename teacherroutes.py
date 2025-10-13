@@ -793,12 +793,12 @@ def add_assignment_enhanced(class_id):
                 new_assignment.collaboration_type = request.form.get('collaboration_type', 'group')
                 new_assignment.group_size_min = int(request.form.get('group_size_min', 2))
                 
-        # Handle selected groups
-        selected_groups = request.form.getlist('selected_groups')
-        print(f"DEBUG: Selected groups from form: {selected_groups}")
-        if selected_groups:
-            new_assignment.selected_group_ids = json.dumps(selected_groups)
-            print(f"DEBUG: Saved selected_group_ids: {new_assignment.selected_group_ids}")
+                # Handle selected groups
+                selected_groups = request.form.getlist('selected_groups')
+                print(f"DEBUG: Selected groups from form: {selected_groups}")
+                if selected_groups:
+                    new_assignment.selected_group_ids = json.dumps(selected_groups)
+                    print(f"DEBUG: Saved selected_group_ids: {new_assignment.selected_group_ids}")
                 
                 # Handle file upload for group assignments
                 if 'assignment_file' in request.files:

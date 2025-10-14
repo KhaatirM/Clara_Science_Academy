@@ -433,6 +433,57 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Event clicked:', this.title);
         });
     });
+    
+    // Show calendar notice modal on page load (only once per session)
+    document.addEventListener('DOMContentLoaded', function() {
+        if (!sessionStorage.getItem('calendarNoticeShown')) {
+            const modal = new bootstrap.Modal(document.getElementById('calendarNoticeModal'));
+            modal.show();
+            sessionStorage.setItem('calendarNoticeShown', 'true');
+        }
+    });
 });
 </script>
+
+<!-- Calendar Notice Modal -->
+<div class="modal fade" id="calendarNoticeModal" tabindex="-1" aria-labelledby="calendarNoticeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="calendarNoticeModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Calendar Notice
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <h6 class="alert-heading"><i class="fas fa-info-circle me-2"></i>Minor Issues Notice</h6>
+                    <p class="mb-2">We're aware of some minor issues with the calendar display:</p>
+                </div>
+                
+                <ul class="list-unstyled">
+                    <li class="mb-2"><i class="fas fa-exclamation-circle text-warning me-2"></i><strong>Color Coordination:</strong> Some date colors may not perfectly match their corresponding days</li>
+                    <li class="mb-2"><i class="fas fa-exclamation-circle text-warning me-2"></i><strong>Visual Alignment:</strong> Minor display inconsistencies between different calendar views</li>
+                    <li class="mb-0"><i class="fas fa-exclamation-circle text-warning me-2"></i><strong>Event Highlighting:</strong> Some events may not highlight with the intended colors</li>
+                </ul>
+                
+                <div class="alert alert-info mt-3">
+                    <h6 class="alert-heading"><i class="fas fa-tools me-2"></i>Working on It!</h6>
+                    <p class="mb-0">Our development team is actively working to resolve these visual issues. These are cosmetic problems and don't affect the functionality of the calendar or your ability to view important dates and events.</p>
+                </div>
+                
+                <div class="alert alert-success">
+                    <h6 class="alert-heading"><i class="fas fa-check-circle me-2"></i>What Works Perfectly</h6>
+                    <p class="mb-0">All calendar functionality including navigation, event viewing, date selection, and event management is working correctly. Only the visual styling needs refinement.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
+                    <i class="fas fa-check me-1"></i>Got It, Continue
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}

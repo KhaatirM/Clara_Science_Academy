@@ -81,6 +81,9 @@
                     <button class="hero-btn hero-btn-secondary" data-bs-toggle="modal" data-bs-target="#contactModal">
                         <i class="fas fa-envelope"></i>Contact Us
                     </button>
+                    <button class="hero-btn hero-btn-info" data-bs-toggle="modal" data-bs-target="#systemUpdatesModal">
+                        <i class="fas fa-rocket"></i>Latest Updates
+                    </button>
                 </div>
             </div>
         {% endif %}
@@ -883,5 +886,86 @@ document.addEventListener('DOMContentLoaded', function() {
     
 });
 </script>
+
+<!-- System Updates Modal -->
+<div class="modal fade" id="systemUpdatesModal" tabindex="-1" aria-labelledby="systemUpdatesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-gradient-info text-white">
+                <h5 class="modal-title" id="systemUpdatesModalLabel">
+                    <i class="fas fa-rocket me-2"></i>Latest System Updates & Improvements
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-success">
+                    <h6 class="alert-heading"><i class="fas fa-check-circle me-2"></i>Recent Updates (October 2025)</h6>
+                    <p class="mb-0">We've been working hard to improve your experience with Clara Science Academy!</p>
+                </div>
+                
+                <div class="row g-4">
+                    <div class="col-12">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-primary text-white">
+                                <h6 class="mb-0"><i class="fas fa-tools me-2"></i>Assignment Creation Improvements</h6>
+                            </div>
+                            <div class="card-body">
+                                <ul class="list-unstyled mb-0">
+                                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i><strong>Enhanced Assignment Flow:</strong> Fixed routing to properly go through assignment type selector</li>
+                                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i><strong>Group vs Individual Selection:</strong> Added popup to choose between group and individual assignments for PDF/Paper assignments</li>
+                                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i><strong>Improved Navigation:</strong> All "Add Assignment" buttons now properly route through the assignment selector</li>
+                                    <li class="mb-0"><i class="fas fa-check text-success me-2"></i><strong>Streamlined Interface:</strong> Better user experience with clear assignment type selection</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-12">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-success text-white">
+                                <h6 class="mb-0"><i class="fas fa-eye me-2"></i>Visual Design Improvements</h6>
+                            </div>
+                            <div class="card-body">
+                                <ul class="list-unstyled mb-0">
+                                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i><strong>Badge Visibility:</strong> Fixed blank badges in Recent Attendance and Class Assignments sections</li>
+                                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i><strong>High Contrast Text:</strong> Improved readability with better color combinations</li>
+                                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i><strong>Professional Layout:</strong> Fixed text wrapping issues in table headers</li>
+                                    <li class="mb-0"><i class="fas fa-check text-success me-2"></i><strong>Clean Interface:</strong> Removed redundant teacher actions from management view</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-12">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-warning text-dark">
+                                <h6 class="mb-0"><i class="fas fa-bug me-2"></i>Bug Fixes & Stability</h6>
+                            </div>
+                            <div class="card-body">
+                                <ul class="list-unstyled mb-0">
+                                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i><strong>Production Error Fix:</strong> Resolved 'User' object attribute error in class view</li>
+                                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i><strong>Database Compatibility:</strong> Fixed teacher_id vs teacher_staff_id attribute references</li>
+                                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i><strong>Route Optimization:</strong> Improved assignment creation routing for better performance</li>
+                                    <li class="mb-0"><i class="fas fa-check text-success me-2"></i><strong>System Stability:</strong> Enhanced error handling and user experience</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info mt-4">
+                    <h6 class="alert-heading"><i class="fas fa-info-circle me-2"></i>What's Next?</h6>
+                    <p class="mb-0">We're continuously working to improve the platform. Stay tuned for more enhancements including calendar improvements, mobile optimization, and additional features!</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <a href="{{ url_for('auth.login') }}" class="btn btn-primary">
+                    <i class="fas fa-sign-in-alt me-1"></i>Login to Experience Updates
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
 
 {% endblock %}

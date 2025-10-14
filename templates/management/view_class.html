@@ -106,7 +106,7 @@
               <h6 class="text-success mb-3 fw-bold"><i class="bi bi-gear me-2"></i>Core Management</h6>
               <div class="row g-2">
                 <div class="col-6 col-md-4">
-                  <a href="{{ url_for('management.add_assignment') }}" class="btn btn-outline-success btn-sm w-100 class-management-btn">
+                  <a href="{{ url_for('management.assignment_type_selector') }}" class="btn btn-outline-success btn-sm w-100 class-management-btn">
                     <i class="bi bi-plus-circle me-1"></i>Add Assignment
                   </a>
                 </div>
@@ -327,46 +327,44 @@
             </div>
           </div>
         </div>
-        <!-- Recent Assignments Card -->
+        <!-- Recent Attendance Card -->
         <div class="col-12 col-md-6">
           <div class="card border-0 shadow-lg h-100">
             <div class="card-header bg-gradient-warning text-dark border-0">
               <div class="d-flex align-items-center">
                 <div class="bg-dark bg-opacity-20 rounded-circle p-2 me-3">
-                  <i class="bi bi-journal-text text-dark fs-5"></i>
+                  <i class="bi bi-clipboard-check text-dark fs-5"></i>
                 </div>
                 <div>
-                  <h5 class="mb-1 fw-bold">Recent Assignments</h5>
-                  <small class="opacity-75">{{ assignments|length }} assignments</small>
+                  <h5 class="mb-1 fw-bold">Recent Attendance</h5>
+                  <small class="opacity-75">{{ recent_attendance|length }} records (7 days)</small>
                 </div>
               </div>
             </div>
             <div class="card-body p-0">
-              {% if assignments %}
+              {% if recent_attendance %}
                 <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
                   <table class="table table-hover mb-0">
                     <tbody>
-                      {% for assignment in assignments %}
+                      {% for attendance in recent_attendance %}
                       <tr>
                         <td class="border-0 align-middle">
                           <div class="d-flex align-items-center">
                             <div class="bg-warning bg-opacity-10 rounded-circle p-2 me-3">
-                              <i class="bi bi-journal-text text-warning"></i>
+                              <i class="bi bi-clipboard-check text-warning"></i>
                             </div>
                             <div>
-                              <strong class="text-dark">{{ assignment.title }}</strong>
+                              <strong class="text-dark">{{ attendance.student.first_name }} {{ attendance.student.last_name }}</strong>
                               <div class="text-muted small mt-1">
                                 <span class="badge bg-info bg-opacity-20 text-info border border-info">
-                                  {% if assignment.due_date %}
-                                    Due: {{ assignment.due_date.strftime('%b %d, %Y') }}
-                                  {% else %}
-                                    Due: No due date
-                                  {% endif %}
+                                  {{ attendance.date.strftime('%b %d, %Y') }}
                                 </span>
-                                {% if assignment.description %}
-                                <div class="mt-1">
-                                  <small class="text-muted">{{ assignment.description[:60] }}{% if assignment.description|length > 60 %}...{% endif %}</small>
-                                </div>
+                                {% if attendance.status == 'Present' %}
+                                  <span class="badge bg-success bg-opacity-20 text-success border border-success ms-1">Present</span>
+                                {% elif attendance.status == 'Excused Absence' %}
+                                  <span class="badge bg-warning bg-opacity-20 text-warning border border-warning ms-1">Excused</span>
+                                {% else %}
+                                  <span class="badge bg-danger bg-opacity-20 text-danger border border-danger ms-1">Absent</span>
                                 {% endif %}
                               </div>
                             </div>
@@ -380,10 +378,10 @@
               {% else %}
                 <div class="p-4 text-center">
                   <div class="bg-light rounded-circle p-4 d-inline-block mb-3">
-                    <i class="bi bi-journal text-muted fs-1"></i>
+                    <i class="bi bi-clipboard-check text-muted fs-1"></i>
                   </div>
-                  <h6 class="text-muted mb-2">No Assignments</h6>
-                  <p class="text-muted mb-0">No assignments have been created for this class.</p>
+                  <h6 class="text-muted mb-2">No Recent Attendance</h6>
+                  <p class="text-muted mb-0">No attendance records found for the last 7 days.</p>
                 </div>
               {% endif %}
             </div>
@@ -403,16 +401,16 @@
                 <small class="opacity-75">Complete assignment overview</small>
               </div>
             </div>
-            <a href="{{ url_for('management.add_assignment') }}" class="btn btn-light btn-lg shadow-sm">
+            <a href="{{ url_for('management.assignment_type_selector') }}" class="btn btn-light btn-lg shadow-sm">
               <i class="bi bi-plus-circle me-2"></i> Add Assignment
             </a>
           </div>
         </div>
         <div class="card-body p-4">
           {% if assignments %}
-            <div class="table-responsive">
+            <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
               <table class="table table-hover">
-                <thead class="table-light">
+                <thead class="table-light sticky-top">
                   <tr>
                     <th class="border-0">
                       <i class="bi bi-journal-text me-2 text-primary"></i>Title
@@ -445,14 +443,26 @@
                       </div>
                     </td>
                     <td class="align-middle">
-                      <span class="badge bg-info bg-opacity-20 text-info border border-info">
-                        {{ assignment.due_date.strftime('%Y-%m-%d') if assignment.due_date else 'N/A' }}
-                      </span>
+                      {% if assignment.due_date %}
+                        <span class="badge bg-info bg-opacity-20 text-info border border-info">
+                          {{ assignment.due_date.strftime('%Y-%m-%d') }}
+                        </span>
+                      {% else %}
+                        <span class="badge bg-secondary bg-opacity-20 text-secondary border border-secondary">
+                          No Due Date
+                        </span>
+                      {% endif %}
                     </td>
                     <td class="align-middle">
-                      <span class="badge bg-secondary bg-opacity-20 text-secondary border border-secondary">
-                        Q{{ assignment.quarter if assignment.quarter else 'N/A' }}
-                      </span>
+                      {% if assignment.quarter %}
+                        <span class="badge bg-secondary bg-opacity-20 text-secondary border border-secondary">
+                          Q{{ assignment.quarter }}
+                        </span>
+                      {% else %}
+                        <span class="badge bg-secondary bg-opacity-20 text-secondary border border-secondary">
+                          N/A
+                        </span>
+                      {% endif %}
                     </td>
                     <td class="align-middle">
                       {% if assignment.due_date %}
@@ -488,7 +498,7 @@
                   <strong class="text-info">No Assignments Created</strong><br>
                   <small class="text-muted">No assignments have been created for this class yet.</small>
                   <br>
-                  <a href="{{ url_for('management.add_assignment') }}" class="btn btn-sm btn-primary mt-2">
+                  <a href="{{ url_for('management.assignment_type_selector') }}" class="btn btn-sm btn-primary mt-2">
                     <i class="bi bi-plus-circle me-1"></i> Create First Assignment
                   </a>
                 </div>

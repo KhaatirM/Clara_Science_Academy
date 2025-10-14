@@ -408,6 +408,24 @@ def assignment_type_selector():
     """Assignment type selection page"""
     return render_template('shared/assignment_type_selector.html')
 
+@teacher_blueprint.route('/group-assignment/class-selector')
+@login_required
+@teacher_required
+def group_assignment_class_selector():
+    """Group assignment class selector for teachers"""
+    teacher = get_teacher_or_admin()
+    
+    # Get classes for this teacher (or all classes if admin)
+    if current_user.role in ['Director', 'School Administrator']:
+        classes = Class.query.all()
+    else:
+        if teacher:
+            classes = Class.query.filter_by(teacher_id=teacher.id).all()
+        else:
+            classes = []
+    
+    return render_template('teachers/group_assignment_class_selector.html', classes=classes)
+
 @teacher_blueprint.route('/assignment/create/quiz', methods=['GET', 'POST'])
 @login_required
 @teacher_required

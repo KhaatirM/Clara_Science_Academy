@@ -273,7 +273,7 @@
                                     <a href="{{ url_for('management.add_student') }}" class="btn btn-outline-primary">Add New Student</a>
                                     <a href="{{ url_for('management.add_teacher_staff') }}" class="btn btn-outline-success">Add New Staff</a>
                                     <a href="{{ url_for('management.add_class') }}" class="btn btn-outline-info">Add New Class</a>
-                                    <a href="{{ url_for('management.add_assignment') }}" class="btn btn-outline-warning">Add New Assignment</a>
+                                    <a href="{{ url_for('management.assignment_type_selector') }}" class="btn btn-outline-warning">Add New Assignment</a>
                                 {% elif current_user.role == 'Teacher' %}
                                     <a href="{{ url_for('teacher.my_assignments') }}" class="btn btn-outline-primary">View Assignments</a>
                                     <a href="{{ url_for('teacher.my_classes') }}" class="btn btn-outline-success">View My Classes</a>

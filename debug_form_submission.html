@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Form Submission</title>
+</head>
+<body>
+    <h1>Debug Group Assignment Form</h1>
+    
+    <form id="testForm" method="POST">
+        <h3>Test Form Submission</h3>
+        
+        <div>
+            <label>Assignment Structure:</label><br>
+            <input type="radio" name="assignment_structure" value="individual" checked> Individual<br>
+            <input type="radio" name="assignment_structure" value="group"> Group<br>
+        </div>
+        
+        <div id="groupSelection" style="display: none; margin-top: 20px;">
+            <label>Select Groups:</label><br>
+            <input type="checkbox" name="selected_groups" value="1" id="group_1"> Group 1<br>
+            <input type="checkbox" name="selected_groups" value="2" id="group_2"> Group 2<br>
+        </div>
+        
+        <button type="submit">Submit Form</button>
+    </form>
+    
+    <div id="debugOutput" style="margin-top: 20px; padding: 10px; background: #f0f0f0;"></div>
+    
+    <script>
+        const form = document.getElementById('testForm');
+        const groupSelection = document.getElementById('groupSelection');
+        const debugOutput = document.getElementById('debugOutput');
+        
+        // Show/hide group selection
+        document.querySelectorAll('input[name="assignment_structure"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                if (this.value === 'group') {
+                    groupSelection.style.display = 'block';
+                } else {
+                    groupSelection.style.display = 'none';
+                }
+            });
+        });
+        
+        // Form submission handler
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const assignmentStructure = document.querySelector('input[name="assignment_structure"]:checked').value;
+            const selectedGroups = document.querySelectorAll('input[name="selected_groups"]:checked');
+            
+            let output = '<h3>Form Submission Debug:</h3>';
+            output += `<p><strong>Assignment Structure:</strong> ${assignmentStructure}</p>`;
+            output += `<p><strong>Selected Groups Count:</strong> ${selectedGroups.length}</p>`;
+            output += `<p><strong>Selected Group Values:</strong> ${Array.from(selectedGroups).map(g => g.value).join(', ')}</p>`;
+            
+            if (assignmentStructure === 'group') {
+                if (selectedGroups.length === 0) {
+                    output += '<p style="color: red;"><strong>ERROR:</strong> No groups selected!</p>';
+                } else {
+                    output += '<p style="color: green;"><strong>SUCCESS:</strong> Groups selected correctly!</p>';
+                }
+            }
+            
+            debugOutput.innerHTML = output;
+        });
+    </script>
+</body>
+</html>
+

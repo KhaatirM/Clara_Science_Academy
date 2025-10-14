@@ -172,11 +172,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // Redirect to the appropriate assignment creation page
         switch(type) {
             case 'pdf':
-                {% if current_user.role in ['Director', 'School Administrator'] %}
-                    window.location.href = `{{ url_for('management.add_assignment') }}`;
-                {% else %}
-                    window.location.href = `{{ url_for('teacher.add_assignment_select_class') }}`;
-                {% endif %}
+                // Show popup to ask group vs individual
+                showAssignmentTargetModal();
                 break;
             case 'quiz':
                 {% if current_user.role in ['Director', 'School Administrator'] %}
@@ -195,6 +192,96 @@ document.addEventListener('DOMContentLoaded', function() {
             default:
                 console.error('Unknown assignment type:', type);
         }
+    }
+
+    function showAssignmentTargetModal() {
+        // Create and show modal for assignment target selection
+        const modalHtml = `
+            <div class="modal fade" id="assignmentTargetModal" tabindex="-1" aria-labelledby="assignmentTargetModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header bg-primary text-white">
+                            <h5 class="modal-title" id="assignmentTargetModalLabel">
+                                <i class="bi bi-people-fill me-2"></i>Assignment Target
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p class="mb-4">Choose how students will work on this PDF/Paper assignment:</p>
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <div class="card h-100 assignment-target-card" data-target="individual" style="cursor: pointer;">
+                                        <div class="card-body text-center p-4">
+                                            <div class="mb-3">
+                                                <i class="bi bi-person-fill text-primary" style="font-size: 3rem;"></i>
+                                            </div>
+                                            <h5 class="card-title text-primary">Individual Students</h5>
+                                            <p class="card-text text-muted mb-0">
+                                                Each student works independently and submits their own work.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="card h-100 assignment-target-card" data-target="group" style="cursor: pointer;">
+                                        <div class="card-body text-center p-4">
+                                            <div class="mb-3">
+                                                <i class="bi bi-people-fill text-success" style="font-size: 3rem;"></i>
+                                            </div>
+                                            <h5 class="card-title text-success">Class Groups</h5>
+                                            <p class="card-text text-muted mb-0">
+                                                Students work in assigned groups and collaborate on submissions.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Remove existing modal if it exists
+        const existingModal = document.getElementById('assignmentTargetModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        // Add modal to body
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        // Add click handlers for target cards
+        document.querySelectorAll('.assignment-target-card').forEach(card => {
+            card.addEventListener('click', function() {
+                const target = this.dataset.target;
+                const modal = bootstrap.Modal.getInstance(document.getElementById('assignmentTargetModal'));
+                modal.hide();
+                
+                // Redirect based on target selection
+                if (target === 'individual') {
+                    {% if current_user.role in ['Director', 'School Administrator'] %}
+                        window.location.href = `{{ url_for('management.add_assignment') }}`;
+                    {% else %}
+                        window.location.href = `{{ url_for('teacher.add_assignment_select_class') }}`;
+                    {% endif %}
+                } else if (target === 'group') {
+                    {% if current_user.role in ['Director', 'School Administrator'] %}
+                        window.location.href = `{{ url_for('management.group_assignment_type_selector') }}`;
+                    {% else %}
+                        // For teachers, redirect to class selection for group assignments
+                        window.location.href = `{{ url_for('teacher.group_assignment_class_selector') }}`;
+                    {% endif %}
+                }
+            });
+        });
+
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('assignmentTargetModal'));
+        modal.show();
     }
 });
 </script>

@@ -1596,6 +1596,14 @@ def assignment_type_selector():
     """Assignment type selection page for management"""
     return render_template('shared/assignment_type_selector.html')
 
+@management_blueprint.route('/group-assignment/type-selector')
+@login_required
+@management_required
+def group_assignment_type_selector():
+    """General group assignment type selector for management"""
+    classes = Class.query.all()
+    return render_template('management/group_assignment_class_selector.html', classes=classes)
+
 @management_blueprint.route('/assignment/create/quiz', methods=['GET', 'POST'])
 @login_required
 @management_required
@@ -4906,15 +4914,29 @@ def view_class(class_id):
     # Get assignments for this class, ordered by due date
     assignments = Assignment.query.filter_by(class_id=class_id).order_by(Assignment.due_date.desc()).all()
     
+    # Get recent attendance records for this class (last 7 days)
+    from datetime import timedelta
+    recent_attendance = Attendance.query.filter(
+        Attendance.class_id == class_id,
+        Attendance.date >= datetime.now().date() - timedelta(days=7)
+    ).order_by(Attendance.date.desc()).all()
+    
     # Get current date for assignment status comparison
     today = datetime.now().date()
+    
+    # Check if current user is also the teacher
+    is_current_user_teacher = False
+    if teacher and current_user.teacher_id == teacher.id:
+        is_current_user_teacher = True
     
     return render_template('management/view_class.html', 
                          class_info=class_info,
                          teacher=teacher,
                          enrolled_students=enrolled_students,
                          assignments=assignments,
+                         recent_attendance=recent_attendance,
                          today=today,
+                         is_current_user_teacher=is_current_user_teacher,
                          role_prefix=None)
 
 

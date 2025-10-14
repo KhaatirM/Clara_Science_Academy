@@ -1,0 +1,118 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block title %}Select Class for Group Assignment{% endblock %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-3 px-md-4 px-lg-5">
+    <!-- Header Section -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
+        <div>
+            <h3 class="mb-2 mb-md-0">
+                <i class="bi bi-people-fill me-2"></i>Select Class for Group Assignment
+            </h3>
+            <p class="text-muted mb-0">Choose which class this group assignment will be created for</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('teacher.assignment_type_selector') }}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left me-1"></i>Back to Assignment Types
+            </a>
+        </div>
+    </div>
+
+    <!-- Class Selection Cards -->
+    <div class="row g-4">
+        {% if classes %}
+            {% for class_obj in classes %}
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="card h-100 class-selection-card" data-class-id="{{ class_obj.id }}" style="cursor: pointer;">
+                    <div class="card-body text-center p-4">
+                        <div class="class-icon mb-3">
+                            <i class="bi bi-house-door-fill text-primary" style="font-size: 3rem;"></i>
+                        </div>
+                        <h5 class="card-title text-primary mb-3">{{ class_obj.name }}</h5>
+                        <p class="card-text text-muted mb-3">
+                            <strong>Subject:</strong> {{ class_obj.subject or 'N/A' }}<br>
+                            <strong>Grade Level:</strong> {{ class_obj.get_grade_levels_display() }}<br>
+                            {% if class_obj.teacher %}
+                            <strong>Teacher:</strong> {{ class_obj.teacher.first_name }} {{ class_obj.teacher.last_name }}
+                            {% endif %}
+                        </p>
+                        <div class="d-grid">
+                            <button class="btn btn-outline-primary select-class-btn" data-class-id="{{ class_obj.id }}">
+                                <i class="bi bi-people-fill me-2"></i>Create Group Assignment
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12">
+                <div class="alert alert-info">
+                    <h5><i class="bi bi-info-circle me-2"></i>No Classes Available</h5>
+                    <p class="mb-0">You don't have any classes assigned to you for group assignment creation.</p>
+                    <a href="{{ url_for('teacher.my_classes') }}" class="btn btn-primary mt-2">
+                        <i class="bi bi-house-door me-1"></i>View My Classes
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const classCards = document.querySelectorAll('.class-selection-card');
+    const selectButtons = document.querySelectorAll('.select-class-btn');
+    
+    // Add hover effects to cards
+    classCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.classList.add('shadow-lg');
+            this.style.transform = 'translateY(-5px)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.classList.remove('shadow-lg');
+            this.style.transform = 'translateY(0)';
+        });
+        
+        card.addEventListener('click', function() {
+            const classId = this.dataset.classId;
+            redirectToGroupAssignmentTypeSelector(classId);
+        });
+    });
+    
+    selectButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const classId = this.dataset.classId;
+            redirectToGroupAssignmentTypeSelector(classId);
+        });
+    });
+    
+    function redirectToGroupAssignmentTypeSelector(classId) {
+        window.location.href = `{{ url_for('teacher.group_assignment_type_selector', class_id=0) }}`.replace('0', classId);
+    }
+});
+</script>
+
+<style>
+.class-selection-card {
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.class-selection-card:hover {
+    border-color: var(--bs-primary);
+}
+
+.class-icon i {
+    transition: transform 0.3s ease;
+}
+
+.class-selection-card:hover .class-icon i {
+    transform: scale(1.1);
+}
+</style>
+{% endblock %}

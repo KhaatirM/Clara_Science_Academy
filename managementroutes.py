@@ -4926,7 +4926,7 @@ def view_class(class_id):
     
     # Check if current user is also the teacher
     is_current_user_teacher = False
-    if teacher and current_user.teacher_id == teacher.id:
+    if teacher and current_user.teacher_staff_id == teacher.id:
         is_current_user_teacher = True
     
     return render_template('management/view_class.html', 

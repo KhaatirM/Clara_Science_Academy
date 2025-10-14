@@ -435,13 +435,11 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Show calendar notice modal on page load (only once per session)
-    document.addEventListener('DOMContentLoaded', function() {
-        if (!sessionStorage.getItem('calendarNoticeShown')) {
-            const modal = new bootstrap.Modal(document.getElementById('calendarNoticeModal'));
-            modal.show();
-            sessionStorage.setItem('calendarNoticeShown', 'true');
-        }
-    });
+    if (!sessionStorage.getItem('calendarNoticeShown')) {
+        const modal = new bootstrap.Modal(document.getElementById('calendarNoticeModal'));
+        modal.show();
+        sessionStorage.setItem('calendarNoticeShown', 'true');
+    }
 });
 </script>
 

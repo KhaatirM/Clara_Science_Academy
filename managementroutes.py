@@ -1807,14 +1807,27 @@ def class_grades(class_id):
     
     class_obj = Class.query.get_or_404(class_id)
     
+    # Get view mode (table or student_cards)
+    view_mode = request.args.get('view', 'table')
+    
     # Get enrolled students
     enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
     enrolled_students = [enrollment.student for enrollment in enrollments if enrollment.student]
     
-    # Get assignments for this class
+    # Get individual assignments for this class
     assignments = Assignment.query.filter_by(class_id=class_id).order_by(Assignment.due_date.desc()).all()
     
-    # Get grades for enrolled students
+    # Get group assignments for this class
+    try:
+        group_assignments = GroupAssignment.query.filter_by(class_id=class_id).order_by(GroupAssignment.due_date.desc()).all()
+    except Exception as e:
+        current_app.logger.warning(f"Error loading group assignments: {e}")
+        group_assignments = []
+    
+    # Combine both types of assignments for total count
+    all_assignments = list(assignments) + list(group_assignments)
+    
+    # Get grades for enrolled students (individual assignments)
     student_grades = {}
     for student in enrolled_students:
         student_grades[student.id] = {}
@@ -1826,38 +1839,107 @@ def class_grades(class_id):
                     student_grades[student.id][assignment.id] = {
                         'grade': grade_data.get('score', 'N/A'),
                         'comments': grade_data.get('comments', ''),
-                        'graded_at': grade.graded_at
+                        'graded_at': grade.graded_at,
+                        'type': 'individual'
                     }
                 except (json.JSONDecodeError, TypeError):
                     student_grades[student.id][assignment.id] = {
                         'grade': 'N/A',
                         'comments': 'Error parsing grade data',
-                        'graded_at': grade.graded_at
+                        'graded_at': grade.graded_at,
+                        'type': 'individual'
                     }
             else:
                 student_grades[student.id][assignment.id] = {
                     'grade': 'Not Graded',
                     'comments': '',
-                    'graded_at': None
+                    'graded_at': None,
+                    'type': 'individual'
                 }
     
-    # Calculate averages for each student
+    # Get group grades for students (group assignments)
+    from models import GroupGrade
+    for student in enrolled_students:
+        for group_assignment in group_assignments:
+            # Find if student is in a group for this assignment
+            group_member = StudentGroupMember.query.join(StudentGroup).filter(
+                StudentGroup.class_id == class_id,
+                StudentGroupMember.student_id == student.id
+            ).first()
+            
+            if group_member and group_member.group:
+                # Check if this group has a grade for this assignment
+                group_grade = GroupGrade.query.filter_by(
+                    group_id=group_member.group.id,
+                    group_assignment_id=group_assignment.id
+                ).first()
+                
+                if group_grade:
+                    try:
+                        grade_data = json.loads(group_grade.grade_data) if group_grade.grade_data else {}
+                        # Use a special key format for group assignments: 'group_{group_assignment_id}'
+                        student_grades[student.id][f'group_{group_assignment.id}'] = {
+                            'grade': grade_data.get('score', 'N/A'),
+                            'comments': grade_data.get('comments', ''),
+                            'graded_at': group_grade.graded_at,
+                            'type': 'group',
+                            'group_name': group_member.group.name
+                        }
+                    except (json.JSONDecodeError, TypeError, AttributeError):
+                        student_grades[student.id][f'group_{group_assignment.id}'] = {
+                            'grade': 'N/A',
+                            'comments': 'Error parsing grade data',
+                            'graded_at': None,
+                            'type': 'group',
+                            'group_name': group_member.group.name if group_member.group else 'N/A'
+                        }
+                else:
+                    student_grades[student.id][f'group_{group_assignment.id}'] = {
+                        'grade': 'Not Graded',
+                        'comments': '',
+                        'graded_at': None,
+                        'type': 'group',
+                        'group_name': group_member.group.name if group_member.group else 'N/A'
+                    }
+            else:
+                # Student is not in a group
+                student_grades[student.id][f'group_{group_assignment.id}'] = {
+                    'grade': 'No Group',
+                    'comments': 'Student not assigned to a group',
+                    'graded_at': None,
+                    'type': 'group',
+                    'group_name': 'N/A'
+                }
+    
+    # Calculate averages for each student (including both individual and group assignments)
     student_averages = {}
     for student_id, grades in student_grades.items():
         valid_grades = [float(g['grade']) for g in grades.values() 
-                       if g['grade'] not in ['N/A', 'Not Graded'] and str(g['grade']).replace('.', '').isdigit()]
+                       if g['grade'] not in ['N/A', 'Not Graded', 'No Group'] and str(g['grade']).replace('.', '').replace('-', '').isdigit()]
         if valid_grades:
             student_averages[student_id] = round(sum(valid_grades) / len(valid_grades), 2)
         else:
             student_averages[student_id] = 'N/A'
     
+    # For student card view, get recent assignments (last 3)
+    if view_mode == 'student_cards':
+        recent_assignments_count = 3
+        all_assignments_sorted = sorted(all_assignments, key=lambda x: x.due_date if x.due_date else date.min, reverse=True)
+        recent_assignments = all_assignments_sorted[:recent_assignments_count]
+    else:
+        recent_assignments = []
+    
     return render_template('management/class_grades.html', 
                          class_info=class_obj,
                          enrolled_students=enrolled_students,
                          assignments=assignments,
+                         group_assignments=group_assignments,
+                         all_assignments=all_assignments,
                          student_grades=student_grades,
                          student_averages=student_averages,
-                         today=date.today())
+                         today=date.today(),
+                         view_mode=view_mode,
+                         recent_assignments=recent_assignments)
 
 @management_blueprint.route('/class/<int:class_id>/remove', methods=['POST'])
 @login_required

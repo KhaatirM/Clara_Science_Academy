@@ -14,7 +14,7 @@
                     </div>
                     <div>
                         <h2 class="mb-1 fw-bold">{{ class_info.name }} - Grades</h2>
-                        <p class="mb-0 opacity-75">{{ class_info.subject }} • {{ enrolled_students|length }} Students • {{ assignments|length }} Assignments</p>
+                        <p class="mb-0 opacity-75">{{ class_info.subject }} • {{ enrolled_students|length }} Students • {{ all_assignments|length }} Assignments</p>
                     </div>
                 </div>
             </div>
@@ -37,8 +37,12 @@
                         <div class="col-md-3">
                             <div class="bg-success bg-opacity-10 rounded-3 p-3 text-center">
                                 <i class="bi bi-journal-text text-success fs-2 mb-2"></i>
-                                <h4 class="text-success fw-bold">{{ assignments|length }}</h4>
-                                <small class="text-muted fw-semibold">Assignments</small>
+                                <h4 class="text-success fw-bold">{{ all_assignments|length }}</h4>
+                                <small class="text-muted fw-semibold">Total Assignments</small>
+                                <div class="mt-2">
+                                    <span class="badge bg-primary">{{ assignments|length }} Individual</span>
+                                    <span class="badge bg-info">{{ group_assignments|length }} Group</span>
+                                </div>
                             </div>
                         </div>
                         <div class="col-md-3">
@@ -61,7 +65,24 @@
         </div>
     </div>
 
-    <!-- Grades Table -->
+    <!-- View Mode Toggle -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="btn-group w-100" role="group">
+                <a href="{{ url_for('management.class_grades', class_id=class_info.id, view='table') }}" 
+                   class="btn {% if view_mode == 'table' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                    <i class="bi bi-table me-2"></i>Assignments & Grades Table
+                </a>
+                <a href="{{ url_for('management.class_grades', class_id=class_info.id, view='student_cards') }}" 
+                   class="btn {% if view_mode == 'student_cards' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                    <i class="bi bi-person-lines-fill me-2"></i>Student Grades View
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {% if view_mode == 'table' %}
+    <!-- Grades Table View -->
     <div class="row">
         <div class="col-12">
             <div class="card border-0 shadow-lg">
@@ -87,7 +108,7 @@
                     </div>
                 </div>
                 <div class="card-body p-0">
-                    {% if enrolled_students and assignments %}
+                    {% if enrolled_students and all_assignments %}
                         <div class="table-responsive">
                             <table class="table table-hover mb-0">
                                 <thead class="table-light">
@@ -99,7 +120,15 @@
                                         <th class="border-0 fw-bold text-dark text-center">
                                             <div class="d-flex flex-column align-items-center">
                                                 <span class="small">{{ assignment.title[:15] }}{% if assignment.title|length > 15 %}...{% endif %}</span>
-                                                <span class="badge bg-secondary bg-opacity-20 text-dark border border-secondary small">{{ assignment.assignment_type|title }}</span>
+                                                <span class="badge bg-primary bg-opacity-20 text-dark border border-primary small">Individual</span>
+                                            </div>
+                                        </th>
+                                        {% endfor %}
+                                        {% for group_assignment in group_assignments %}
+                                        <th class="border-0 fw-bold text-dark text-center">
+                                            <div class="d-flex flex-column align-items-center">
+                                                <span class="small">{{ group_assignment.title[:15] }}{% if group_assignment.title|length > 15 %}...{% endif %}</span>
+                                                <span class="badge bg-info bg-opacity-20 text-dark border border-info small">Group</span>
                                             </div>
                                         </th>
                                         {% endfor %}
@@ -151,6 +180,30 @@
                                             {% endif %}
                                         </td>
                                         {% endfor %}
+                                        {% for group_assignment in group_assignments %}
+                                        <td class="align-middle text-center">
+                                            {% set grade_info = student_grades.get(student.id, {}).get('group_' ~ group_assignment.id, {}) %}
+                                            {% set grade = grade_info.get('grade', 'Not Graded') %}
+                                            {% if grade == 'Not Graded' %}
+                                                <span class="badge bg-secondary bg-opacity-20 text-dark border border-secondary">Not Graded</span>
+                                            {% elif grade == 'No Group' %}
+                                                <span class="badge bg-warning bg-opacity-20 text-dark border border-warning">No Group</span>
+                                            {% elif grade == 'N/A' %}
+                                                <span class="badge bg-danger bg-opacity-20 text-dark border border-danger">N/A</span>
+                                            {% else %}
+                                                {% set grade_num = grade|float %}
+                                                {% if grade_num >= 90 %}
+                                                    <span class="badge bg-success bg-opacity-20 text-dark border border-success" title="{{ grade_info.get('group_name', 'N/A') }}">{{ grade }}</span>
+                                                {% elif grade_num >= 80 %}
+                                                    <span class="badge bg-primary bg-opacity-20 text-dark border border-primary" title="{{ grade_info.get('group_name', 'N/A') }}">{{ grade }}</span>
+                                                {% elif grade_num >= 70 %}
+                                                    <span class="badge bg-warning bg-opacity-20 text-dark border border-warning" title="{{ grade_info.get('group_name', 'N/A') }}">{{ grade }}</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger bg-opacity-20 text-dark border border-danger" title="{{ grade_info.get('group_name', 'N/A') }}">{{ grade }}</span>
+                                                {% endif %}
+                                            {% endif %}
+                                        </td>
+                                        {% endfor %}
                                         <td class="align-middle text-center">
                                             {% set average = student_averages.get(student.id, 'N/A') %}
                                             {% if average == 'N/A' %}
@@ -181,7 +234,7 @@
                             <p class="text-muted mb-0">
                                 {% if not enrolled_students %}
                                     No students are enrolled in this class.
-                                {% elif not assignments %}
+                                {% elif not all_assignments %}
                                     No assignments have been created for this class yet.
                                 {% else %}
                                     No grade data is available at this time.
@@ -193,6 +246,160 @@
             </div>
         </div>
     </div>
+    
+    {% else %}
+    <!-- Student Cards View -->
+    <div class="row">
+        {% if enrolled_students %}
+            {% for student in enrolled_students %}
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="card border-0 shadow-sm h-100">
+                    <!-- Student Header -->
+                    <div class="card-header bg-gradient-primary text-white border-0">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-white bg-opacity-20 rounded-circle p-3 me-3">
+                                <i class="bi bi-person text-white fs-4"></i>
+                            </div>
+                            <div>
+                                <h5 class="mb-1 fw-bold">{{ student.first_name }} {{ student.last_name }}</h5>
+                                <small class="opacity-75">{{ student.student_id or 'No ID' }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Student Info -->
+                    <div class="card-body">
+                        <!-- Class & Grade -->
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-book text-primary me-2"></i>
+                                    <strong class="text-dark">{{ class_info.name }}</strong>
+                                </div>
+                                <div>
+                                    <span class="badge bg-warning bg-opacity-20 text-dark border border-warning">
+                                        Grade {{ student.grade_level }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Current Average -->
+                        <div class="mb-3 p-3 bg-light rounded-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <small class="text-muted">Current Average</small>
+                                </div>
+                                <div>
+                                    {% set average = student_averages.get(student.id, 'N/A') %}
+                                    {% if average == 'N/A' %}
+                                        <span class="badge bg-secondary fs-6">N/A</span>
+                                    {% else %}
+                                        {% if average >= 90 %}
+                                            <span class="badge bg-success fs-6">{{ average }}%</span>
+                                        {% elif average >= 80 %}
+                                            <span class="badge bg-primary fs-6">{{ average }}%</span>
+                                        {% elif average >= 70 %}
+                                            <span class="badge bg-warning fs-6">{{ average }}%</span>
+                                        {% else %}
+                                            <span class="badge bg-danger fs-6">{{ average }}%</span>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Recent Assignments -->
+                        <div class="mb-2">
+                            <h6 class="text-dark fw-bold mb-3">
+                                <i class="bi bi-clipboard-check text-success me-2"></i>Last 3 Assignments
+                            </h6>
+                            
+                            {% set student_recent_grades = [] %}
+                            {% for assignment in all_assignments|sort(attribute='due_date', reverse=True)[:3] %}
+                                {% if assignment.__class__.__name__ == 'GroupAssignment' %}
+                                    {% set grade_info = student_grades.get(student.id, {}).get('group_' ~ assignment.id, {}) %}
+                                    {% set _ = student_recent_grades.append((assignment, grade_info, 'group')) %}
+                                {% else %}
+                                    {% set grade_info = student_grades.get(student.id, {}).get(assignment.id, {}) %}
+                                    {% set _ = student_recent_grades.append((assignment, grade_info, 'individual')) %}
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if student_recent_grades %}
+                                <div class="list-group list-group-flush">
+                                    {% for assignment, grade_info, assignment_type in student_recent_grades %}
+                                    <div class="list-group-item px-0 py-2">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div class="flex-grow-1">
+                                                <div class="fw-semibold text-dark small">{{ assignment.title[:30] }}{% if assignment.title|length > 30 %}...{% endif %}</div>
+                                                <div class="small text-muted">
+                                                    {% if assignment_type == 'group' %}
+                                                        <span class="badge bg-info bg-opacity-20 text-dark border border-info">Group</span>
+                                                    {% else %}
+                                                        <span class="badge bg-primary bg-opacity-20 text-dark border border-primary">Individual</span>
+                                                    {% endif %}
+                                                    <span class="ms-1">Due: {{ assignment.due_date.strftime('%m/%d/%Y') if assignment.due_date else 'N/A' }}</span>
+                                                </div>
+                                            </div>
+                                            <div class="ms-2">
+                                                {% set grade = grade_info.get('grade', 'Not Graded') %}
+                                                {% if grade == 'Not Graded' %}
+                                                    <span class="badge bg-secondary">Not Graded</span>
+                                                {% elif grade == 'No Group' %}
+                                                    <span class="badge bg-warning">No Group</span>
+                                                {% elif grade == 'N/A' %}
+                                                    <span class="badge bg-danger">N/A</span>
+                                                {% else %}
+                                                    {% set grade_num = grade|float %}
+                                                    {% if grade_num >= 90 %}
+                                                        <span class="badge bg-success">{{ grade }}</span>
+                                                    {% elif grade_num >= 80 %}
+                                                        <span class="badge bg-primary">{{ grade }}</span>
+                                                    {% elif grade_num >= 70 %}
+                                                        <span class="badge bg-warning">{{ grade }}</span>
+                                                    {% else %}
+                                                        <span class="badge bg-danger">{{ grade }}</span>
+                                                    {% endif %}
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <p class="text-muted small mb-0">No recent assignments</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Card Footer -->
+                    <div class="card-footer bg-light border-0">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                <i class="bi bi-calendar3 me-1"></i>{{ today.strftime('%m/%d/%Y') }}
+                            </small>
+                            <a href="{{ url_for('management.view_student', student_id=student.id) }}" class="btn btn-sm btn-outline-primary">
+                                View Details
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12">
+                <div class="text-center p-5">
+                    <div class="bg-light rounded-circle p-4 d-inline-block mb-3">
+                        <i class="bi bi-people text-muted fs-1"></i>
+                    </div>
+                    <h5 class="text-muted mb-2">No Students Enrolled</h5>
+                    <p class="text-muted mb-0">There are no students enrolled in this class yet.</p>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    {% endif %}
 </div>
 
 <style>

@@ -1824,8 +1824,14 @@ def class_grades(class_id):
         current_app.logger.warning(f"Error loading group assignments: {e}")
         group_assignments = []
     
-    # Combine both types of assignments for total count
-    all_assignments = list(assignments) + list(group_assignments)
+    # Combine both types of assignments for total count with type indicators
+    all_assignments = []
+    for assignment in assignments:
+        assignment.type = 'individual'
+        all_assignments.append(assignment)
+    for group_assignment in group_assignments:
+        group_assignment.type = 'group'
+        all_assignments.append(group_assignment)
     
     # Get grades for enrolled students (individual assignments)
     student_grades = {}

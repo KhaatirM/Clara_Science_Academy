@@ -319,7 +319,7 @@
                             {% set sorted_assignments = all_assignments|sort(attribute='due_date', reverse=True) %}
                             {% for assignment in sorted_assignments %}
                                 {% if loop.index <= 3 %}
-                                    {% if assignment.__class__.__name__ == 'GroupAssignment' %}
+                                    {% if assignment.type == 'group' %}
                                         {% set grade_info = student_grades.get(student.id, {}).get('group_' ~ assignment.id, {}) %}
                                         {% set _ = student_recent_grades.append((assignment, grade_info, 'group')) %}
                                     {% else %}

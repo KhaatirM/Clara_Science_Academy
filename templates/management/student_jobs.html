@@ -63,13 +63,13 @@
         </div>
     </div>
 
-    <!-- Team 1 -->
+    <!-- Cleanup Team 1 -->
     <div class="row mb-4">
         <div class="col-12">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="card-title mb-0">
-                        <i class="bi bi-people-fill me-2"></i>Team 1 - 4 Classrooms & Hallway Trash
+                        <i class="bi bi-people-fill me-2"></i>Cleanup Team 1
                     </h5>
                     <div class="d-flex align-items-center">
                         <span class="badge bg-success me-2" id="team1Score">100 Points</span>
@@ -82,7 +82,7 @@
                     <div class="row mb-3">
                         <div class="col-md-8">
                             <h6><i class="bi bi-person-check me-1"></i>Team Members:</h6>
-                            <p class="mb-2">Mason Jackson, Julien John, Nathan Cassidy, Brendan Tinsley, Ester Hope, Ty'mier Crandell, Miracle Heuston, Emack Akili</p>
+                            <p class="mb-2">Jayden Hope, Josue Perez, Julien John, Julien Amani, Mason Jackson, Tymier Crandell, Major Sharif, Brendan Tinsley</p>
                         </div>
                         <div class="col-md-4 text-end">
                             <button class="btn btn-sm btn-success" onclick="recordInspection('team1')">
@@ -90,54 +90,18 @@
                             </button>
                         </div>
                     </div>
-                    
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="card border-primary">
-                                <div class="card-header bg-primary text-white">
-                                    <h6 class="mb-0"><i class="bi bi-broom me-1"></i>Sweeping Team</h6>
-                                </div>
-                                <div class="card-body">
-                                    <p class="mb-2"><strong>Members:</strong> Julien John, Ester Hope, & Mason Jackson</p>
-                                    <p class="mb-0"><strong>Task:</strong> Sweep all four classrooms.</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card border-info">
-                                <div class="card-header bg-info text-white">
-                                    <h6 class="mb-0"><i class="bi bi-spray me-1"></i>Wipe Down Team</h6>
-                                </div>
-                                <div class="card-body">
-                                    <p class="mb-2"><strong>Members:</strong> Nathan Cassidy & Brendan Tinsley</p>
-                                    <p class="mb-0"><strong>Task:</strong> Wipe down all tables and desks in the four classrooms.</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card border-warning">
-                                <div class="card-header bg-warning text-dark">
-                                    <h6 class="mb-0"><i class="bi bi-trash me-1"></i>Trash Team</h6>
-                                </div>
-                                <div class="card-body">
-                                    <p class="mb-2"><strong>Members:</strong> Ty'mier Crandell, Miracle Heuston, & Emack Akili</p>
-                                    <p class="mb-0"><strong>Task:</strong> Replace liners in all four classroom trash cans and all hallway trash cans.</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Team 2 -->
+    <!-- Cleanup Team 2 -->
     <div class="row mb-4">
         <div class="col-12">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="card-title mb-0">
-                        <i class="bi bi-people-fill me-2"></i>Team 2 - 4 Classrooms & Bathrooms
+                        <i class="bi bi-people-fill me-2"></i>Cleanup Team 2
                     </h5>
                     <div class="d-flex align-items-center">
                         <span class="badge bg-success me-2" id="team2Score">100 Points</span>
@@ -150,7 +114,7 @@
                     <div class="row mb-3">
                         <div class="col-md-8">
                             <h6><i class="bi bi-person-check me-1"></i>Team Members:</h6>
-                            <p class="mb-2">Mason Jackson, Julien Amani, Kya Patterson, Jayden Hope, Elimine, Josue Perez, Zatianna Bennett, Mwajuma Abubakari</p>
+                            <p class="mb-2">Muaci Ajuwa, Zawadi Ajuwa</p>
                         </div>
                         <div class="col-md-4 text-end">
                             <button class="btn btn-sm btn-success" onclick="recordInspection('team2')">
@@ -158,39 +122,79 @@
                             </button>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Computer Cleanup & Setup Team -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-info">
+                <div class="card-header d-flex justify-content-between align-items-center bg-info text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-laptop me-2"></i>Computer Cleanup & Setup Team
+                    </h5>
+                    <div class="d-flex align-items-center">
+                        <span class="badge bg-light text-dark me-2" id="computerTeamScore">100 Points</span>
+                        <button class="btn btn-sm btn-outline-light" onclick="toggleComputerTeam()">
+                            <i class="bi bi-chevron-down" id="computerTeamChevron"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body" id="computerTeamContent">
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <h6><i class="bi bi-person-check me-1"></i>Team Members:</h6>
+                            <p class="mb-2">Muaci Ajuwa, Zawadi Ajuwa</p>
+                            <small class="text-muted">Responsible for setting up and putting up all laptops</small>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <button class="btn btn-sm btn-info" onclick="recordComputerInspection()">
+                                <i class="bi bi-clipboard-check me-1"></i>Record Inspection
+                            </button>
+                        </div>
+                    </div>
                     
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="card border-primary">
-                                <div class="card-header bg-primary text-white">
-                                    <h6 class="mb-0"><i class="bi bi-broom me-1"></i>Sweeping Team</h6>
+                    <!-- Computer Team Point System -->
+                    <div class="card border-info">
+                        <div class="card-header bg-info text-white">
+                            <h6 class="mb-0"><i class="bi bi-calculator me-1"></i>Point Deduction System</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span><i class="bi bi-laptop text-danger me-1"></i>Computer left out</span>
+                                        <span class="badge bg-danger">-10 points</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span><i class="bi bi-tablet text-warning me-1"></i>Tablet left out</span>
+                                        <span class="badge bg-warning">-8 points</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span><i class="bi bi-lightning text-info me-1"></i>Charger left out</span>
+                                        <span class="badge bg-info">-5 points</span>
+                                    </div>
                                 </div>
-                                <div class="card-body">
-                                    <p class="mb-2"><strong>Members:</strong> Julien Amani & Elimine</p>
-                                    <p class="mb-0"><strong>Task:</strong> Sweep all four classrooms.</p>
+                                <div class="col-md-6">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span><i class="bi bi-headphones text-primary me-1"></i>Headphones left out</span>
+                                        <span class="badge bg-primary">-5 points</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span><i class="bi bi-plug text-secondary me-1"></i>Extension cord left out</span>
+                                        <span class="badge bg-secondary">-3 points</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="fw-bold">Starting Points</span>
+                                        <span class="badge bg-success">100 points</span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card border-info">
-                                <div class="card-header bg-info text-white">
-                                    <h6 class="mb-0"><i class="bi bi-spray me-1"></i>Wipe Down Team</h6>
-                                </div>
-                                <div class="card-body">
-                                    <p class="mb-2"><strong>Members:</strong> Kya Patterson & Jayden Hope</p>
-                                    <p class="mb-0"><strong>Task:</strong> Wipe down all tables and desks in the four classrooms.</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card border-warning">
-                                <div class="card-header bg-warning text-dark">
-                                    <h6 class="mb-0"><i class="bi bi-door-open me-1"></i>Bathroom Team</h6>
-                                </div>
-                                <div class="card-body">
-                                    <p class="mb-2"><strong>Members:</strong> Josue Perez, Zatianna Bennett, Mwajuma Abubakari, & Mason Jackson</p>
-                                    <p class="mb-0"><strong>Task:</strong> Sweep both Male and Female restrooms, replace trash cans, and restock all paper products and soap.</p>
-                                </div>
+                            <div class="alert alert-info mt-3 mb-0">
+                                <i class="bi bi-info-circle me-1"></i>
+                                <strong>Stacking:</strong> Multiple items can be left out and points will be deducted for each item.
                             </div>
                         </div>
                     </div>
@@ -252,8 +256,9 @@
                             <label for="teamSelect" class="form-label">Select Team</label>
                             <select class="form-select" id="teamSelect" required>
                                 <option value="">Choose a team...</option>
-                                <option value="team1">Team 1 - 4 Classrooms & Hallway Trash</option>
-                                <option value="team2">Team 2 - 4 Classrooms & Bathrooms</option>
+                                <option value="team1">Cleanup Team 1</option>
+                                <option value="team2">Cleanup Team 2</option>
+                                <option value="computer">Computer Cleanup & Setup Team</option>
                             </select>
                         </div>
                         <div class="col-md-6">
@@ -262,10 +267,59 @@
                         </div>
                     </div>
 
-                    <!-- Major Deductions (-10 Points) -->
-                    <div class="card mb-3 border-danger">
+                    <!-- Computer Team Deductions -->
+                    <div class="card mb-3 border-info" id="computerTeamDeductions" style="display: none;">
+                        <div class="card-header bg-info text-white">
+                            <h6 class="mb-0"><i class="bi bi-laptop me-1"></i>Computer Team Deductions (Stackable)</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="computerLeftOut">
+                                        <label class="form-check-label" for="computerLeftOut">
+                                            Computer left out (-10 points)
+                                        </label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="tabletLeftOut">
+                                        <label class="form-check-label" for="tabletLeftOut">
+                                            Tablet left out (-8 points)
+                                        </label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="chargerLeftOut">
+                                        <label class="form-check-label" for="chargerLeftOut">
+                                            Charger left out (-5 points)
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="headphonesLeftOut">
+                                        <label class="form-check-label" for="headphonesLeftOut">
+                                            Headphones left out (-5 points)
+                                        </label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="extensionCordLeftOut">
+                                        <label class="form-check-label" for="extensionCordLeftOut">
+                                            Extension cord left out (-3 points)
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="alert alert-info mt-2 mb-0">
+                                <i class="bi bi-info-circle me-1"></i>
+                                <strong>Note:</strong> Multiple items can be selected and points will be deducted for each item.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Cleanup Team Deductions -->
+                    <div class="card mb-3 border-danger" id="cleanupTeamDeductions">
                         <div class="card-header bg-danger text-white">
-                            <h6 class="mb-0"><i class="bi bi-exclamation-triangle me-1"></i>Major Deductions (-10 Points each)</h6>
+                            <h6 class="mb-0"><i class="bi bi-exclamation-triangle me-1"></i>Cleanup Team Deductions (Stackable)</h6>
                         </div>
                         <div class="card-body">
                             <div class="row">
@@ -273,13 +327,13 @@
                                     <div class="form-check mb-2">
                                         <input class="form-check-input" type="checkbox" id="bathroomNotRestocked">
                                         <label class="form-check-label" for="bathroomNotRestocked">
-                                            Bathrooms not restocked (no paper towels or soap)
+                                            Bathrooms not restocked (no paper towels or soap) (-10 points)
                                         </label>
                                     </div>
                                     <div class="form-check mb-2">
                                         <input class="form-check-input" type="checkbox" id="trashCanLeftFull">
                                         <label class="form-check-label" for="trashCanLeftFull">
-                                            Trash can left full (liner not replaced)
+                                            Trash can left full (liner not replaced) (-10 points)
                                         </label>
                                     </div>
                                 </div>
@@ -287,16 +341,20 @@
                                     <div class="form-check mb-2">
                                         <input class="form-check-input" type="checkbox" id="floorNotSwept">
                                         <label class="form-check-label" for="floorNotSwept">
-                                            Classroom floor not swept (large debris remains)
+                                            Classroom floor not swept (large debris remains) (-10 points)
                                         </label>
                                     </div>
                                     <div class="form-check mb-2">
                                         <input class="form-check-input" type="checkbox" id="materialsLeftOut">
                                         <label class="form-check-label" for="materialsLeftOut">
-                                            Cleaning materials left out in area
+                                            Cleaning materials left out in area (-10 points)
                                         </label>
                                     </div>
                                 </div>
+                            </div>
+                            <div class="alert alert-warning mt-2 mb-0">
+                                <i class="bi bi-info-circle me-1"></i>
+                                <strong>Note:</strong> Multiple items can be selected and points will be deducted for each item.
                             </div>
                         </div>
                     </div>
@@ -464,6 +522,35 @@ function toggleTeam2() {
     }
 }
 
+function toggleComputerTeam() {
+    const content = document.getElementById('computerTeamContent');
+    const chevron = document.getElementById('computerTeamChevron');
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        chevron.classList.remove('bi-chevron-right');
+        chevron.classList.add('bi-chevron-down');
+    } else {
+        content.style.display = 'none';
+        chevron.classList.remove('bi-chevron-down');
+        chevron.classList.add('bi-chevron-right');
+    }
+}
+
+// Show/hide team-specific inspection sections
+function toggleInspectionSections() {
+    const teamSelect = document.getElementById('teamSelect');
+    const computerDeductions = document.getElementById('computerTeamDeductions');
+    const cleanupDeductions = document.getElementById('cleanupTeamDeductions');
+    
+    if (teamSelect.value === 'computer') {
+        computerDeductions.style.display = 'block';
+        cleanupDeductions.style.display = 'none';
+    } else {
+        computerDeductions.style.display = 'none';
+        cleanupDeductions.style.display = 'block';
+    }
+}
+
 // Set today's date as default
 document.addEventListener('DOMContentLoaded', function() {
     const today = new Date().toISOString().split('T')[0];
@@ -477,37 +564,46 @@ function calculateScore() {
     
     let score = 100;
     
-    // Major deductions (-10 points each)
-    const majorDeductions = [
-        'bathroomNotRestocked', 'trashCanLeftFull', 'floorNotSwept', 'materialsLeftOut'
-    ];
-    majorDeductions.forEach(id => {
-        if (document.getElementById(id).checked) {
-            score -= 10;
-        }
-    });
+    if (team === 'computer') {
+        // Computer team deductions (stackable)
+        if (document.getElementById('computerLeftOut').checked) score -= 10;
+        if (document.getElementById('tabletLeftOut').checked) score -= 8;
+        if (document.getElementById('chargerLeftOut').checked) score -= 5;
+        if (document.getElementById('headphonesLeftOut').checked) score -= 5;
+        if (document.getElementById('extensionCordLeftOut').checked) score -= 3;
+    } else {
+        // Cleanup team deductions (stackable)
+        const cleanupDeductions = [
+            'bathroomNotRestocked', 'trashCanLeftFull', 'floorNotSwept', 'materialsLeftOut'
+        ];
+        cleanupDeductions.forEach(id => {
+            if (document.getElementById(id).checked) {
+                score -= 10;
+            }
+        });
+        
+        // Moderate deductions (-5 points each)
+        const moderateDeductions = [
+            'tablesMissed', 'classroomTrashFull', 'bathroomFloorPoor', 'notFinishedOnTime'
+        ];
+        moderateDeductions.forEach(id => {
+            if (document.getElementById(id).checked) {
+                score -= 5;
+            }
+        });
+        
+        // Minor deductions (-2 points each)
+        const minorDeductions = [
+            'smallDebrisLeft', 'trashSpilled', 'dispensersHalfFilled'
+        ];
+        minorDeductions.forEach(id => {
+            if (document.getElementById(id).checked) {
+                score -= 2;
+            }
+        });
+    }
     
-    // Moderate deductions (-5 points each)
-    const moderateDeductions = [
-        'tablesMissed', 'classroomTrashFull', 'bathroomFloorPoor', 'notFinishedOnTime'
-    ];
-    moderateDeductions.forEach(id => {
-        if (document.getElementById(id).checked) {
-            score -= 5;
-        }
-    });
-    
-    // Minor deductions (-2 points each)
-    const minorDeductions = [
-        'smallDebrisLeft', 'trashSpilled', 'dispensersHalfFilled'
-    ];
-    minorDeductions.forEach(id => {
-        if (document.getElementById(id).checked) {
-            score -= 2;
-        }
-    });
-    
-    // Bonus points (+15 max)
+    // Bonus points (+15 max) - applies to all teams
     let bonus = 0;
     if (document.getElementById('exceptionalFinish').checked) bonus += 5;
     if (document.getElementById('speedEfficiency').checked) bonus += 5;
@@ -541,38 +637,62 @@ function submitInspection() {
     let deductions = 0;
     let bonuses = 0;
     
-    // Major deductions
-    const majorDeductions = [
-        'bathroomNotRestocked', 'trashCanLeftFull', 'floorNotSwept', 'materialsLeftOut'
-    ];
-    majorDeductions.forEach(id => {
-        if (document.getElementById(id).checked) {
+    if (team === 'computer') {
+        // Computer team deductions (stackable)
+        if (document.getElementById('computerLeftOut').checked) {
             score -= 10;
             deductions += 10;
         }
-    });
-    
-    // Moderate deductions
-    const moderateDeductions = [
-        'tablesMissed', 'classroomTrashFull', 'bathroomFloorPoor', 'notFinishedOnTime'
-    ];
-    moderateDeductions.forEach(id => {
-        if (document.getElementById(id).checked) {
+        if (document.getElementById('tabletLeftOut').checked) {
+            score -= 8;
+            deductions += 8;
+        }
+        if (document.getElementById('chargerLeftOut').checked) {
             score -= 5;
             deductions += 5;
         }
-    });
-    
-    // Minor deductions
-    const minorDeductions = [
-        'smallDebrisLeft', 'trashSpilled', 'dispensersHalfFilled'
-    ];
-    minorDeductions.forEach(id => {
-        if (document.getElementById(id).checked) {
-            score -= 2;
-            deductions += 2;
+        if (document.getElementById('headphonesLeftOut').checked) {
+            score -= 5;
+            deductions += 5;
         }
-    });
+        if (document.getElementById('extensionCordLeftOut').checked) {
+            score -= 3;
+            deductions += 3;
+        }
+    } else {
+        // Cleanup team deductions (stackable)
+        const cleanupDeductions = [
+            'bathroomNotRestocked', 'trashCanLeftFull', 'floorNotSwept', 'materialsLeftOut'
+        ];
+        cleanupDeductions.forEach(id => {
+            if (document.getElementById(id).checked) {
+                score -= 10;
+                deductions += 10;
+            }
+        });
+        
+        // Moderate deductions
+        const moderateDeductions = [
+            'tablesMissed', 'classroomTrashFull', 'bathroomFloorPoor', 'notFinishedOnTime'
+        ];
+        moderateDeductions.forEach(id => {
+            if (document.getElementById(id).checked) {
+                score -= 5;
+                deductions += 5;
+            }
+        });
+        
+        // Minor deductions
+        const minorDeductions = [
+            'smallDebrisLeft', 'trashSpilled', 'dispensersHalfFilled'
+        ];
+        minorDeductions.forEach(id => {
+            if (document.getElementById(id).checked) {
+                score -= 2;
+                deductions += 2;
+            }
+        });
+    }
     
     // Bonus points
     if (document.getElementById('exceptionalFinish').checked) bonuses += 5;
@@ -583,8 +703,14 @@ function submitInspection() {
     score += bonuses;
     
     // Update team score display
-    const teamScoreElement = document.getElementById(`${team}Score`);
-    const teamName = team === 'team1' ? 'Team 1' : 'Team 2';
+    let teamScoreElement, teamName;
+    if (team === 'computer') {
+        teamScoreElement = document.getElementById('computerTeamScore');
+        teamName = 'Computer Cleanup & Setup Team';
+    } else {
+        teamScoreElement = document.getElementById(`${team}Score`);
+        teamName = team === 'team1' ? 'Cleanup Team 1' : 'Cleanup Team 2';
+    }
     
     teamScoreElement.textContent = `${score} Points`;
     teamScoreElement.className = score <= 60 ? 'badge bg-danger' : score < 80 ? 'badge bg-warning' : 'badge bg-success';
@@ -660,6 +786,14 @@ function exportToSheets() {
 // Record inspection button functionality
 function recordInspection(team) {
     document.getElementById('teamSelect').value = team;
+    toggleInspectionSections();
+    const modal = new bootstrap.Modal(document.getElementById('inspectionModal'));
+    modal.show();
+}
+
+function recordComputerInspection() {
+    document.getElementById('teamSelect').value = 'computer';
+    toggleInspectionSections();
     const modal = new bootstrap.Modal(document.getElementById('inspectionModal'));
     modal.show();
 }
@@ -670,6 +804,12 @@ document.addEventListener('DOMContentLoaded', function() {
     checkboxes.forEach(checkbox => {
         checkbox.addEventListener('change', calculateScore);
     });
+    
+    // Add event listener for team selection changes
+    const teamSelect = document.getElementById('teamSelect');
+    if (teamSelect) {
+        teamSelect.addEventListener('change', toggleInspectionSections);
+    }
 });
 </script>
 

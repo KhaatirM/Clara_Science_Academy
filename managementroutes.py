@@ -42,6 +42,8 @@ import os
 import json
 import time
 import re
+import csv
+import io
 from datetime import datetime, timedelta, date
 
 # Werkzeug utilities
@@ -879,6 +881,355 @@ def students():
                          students_without_accounts=students_without_accounts,
                          section='students',
                          active_tab='students')
+
+@management_blueprint.route('/students/download-csv')
+@login_required
+@management_required
+def download_students_csv():
+    """Download all students as a CSV file."""
+    try:
+        # Get all students
+        students = Student.query.order_by(Student.last_name, Student.first_name).all()
+        
+        # Create CSV in memory
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # Write header
+        writer.writerow([
+            'Student ID', 'First Name', 'Last Name', 'Date of Birth', 'Grade Level', 
+            'Email', 'Street', 'Apt/Unit', 'City', 'State', 'Zip Code',
+            'Parent 1 First Name', 'Parent 1 Last Name', 'Parent 1 Email', 'Parent 1 Phone', 'Parent 1 Relationship',
+            'Parent 2 First Name', 'Parent 2 Last Name', 'Parent 2 Email', 'Parent 2 Phone', 'Parent 2 Relationship',
+            'Emergency First Name', 'Emergency Last Name', 'Emergency Email', 'Emergency Phone', 'Emergency Relationship',
+            'Previous School', 'Medical Concerns', 'Notes', 'GPA'
+        ])
+        
+        # Write student data
+        for student in students:
+            writer.writerow([
+                student.student_id or '',
+                student.first_name or '',
+                student.last_name or '',
+                student.dob or '',
+                student.grade_level or '',
+                student.email or '',
+                student.street or '',
+                student.apt_unit or '',
+                student.city or '',
+                student.state or '',
+                student.zip_code or '',
+                student.parent1_first_name or '',
+                student.parent1_last_name or '',
+                student.parent1_email or '',
+                student.parent1_phone or '',
+                student.parent1_relationship or '',
+                student.parent2_first_name or '',
+                student.parent2_last_name or '',
+                student.parent2_email or '',
+                student.parent2_phone or '',
+                student.parent2_relationship or '',
+                student.emergency_first_name or '',
+                student.emergency_last_name or '',
+                student.emergency_email or '',
+                student.emergency_phone or '',
+                student.emergency_relationship or '',
+                student.previous_school or '',
+                student.medical_concerns or '',
+                student.notes or '',
+                student.gpa or ''
+            ])
+        
+        # Create response
+        output.seek(0)
+        return Response(
+            output.getvalue(),
+            mimetype='text/csv',
+            headers={'Content-Disposition': f'attachment; filename=students_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'}
+        )
+        
+    except Exception as e:
+        current_app.logger.error(f"Error downloading students CSV: {e}")
+        flash('Error downloading CSV file. Please try again.', 'error')
+        return redirect(url_for('management.students'))
+
+@management_blueprint.route('/students/download-template')
+@login_required
+@management_required
+def download_students_template():
+    """Download a template CSV file for student upload."""
+    try:
+        # Create CSV template in memory
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # Write header (same as download, but with example data)
+        writer.writerow([
+            'Student ID', 'First Name', 'Last Name', 'Date of Birth', 'Grade Level', 
+            'Email', 'Street', 'Apt/Unit', 'City', 'State', 'Zip Code',
+            'Parent 1 First Name', 'Parent 1 Last Name', 'Parent 1 Email', 'Parent 1 Phone', 'Parent 1 Relationship',
+            'Parent 2 First Name', 'Parent 2 Last Name', 'Parent 2 Email', 'Parent 2 Phone', 'Parent 2 Relationship',
+            'Emergency First Name', 'Emergency Last Name', 'Emergency Email', 'Emergency Phone', 'Emergency Relationship',
+            'Previous School', 'Medical Concerns', 'Notes', 'GPA'
+        ])
+        
+        # Write example row
+        writer.writerow([
+            '',  # Student ID (auto-generated if empty)
+            'John',  # First Name
+            'Doe',  # Last Name
+            '01/15/2010',  # Date of Birth (MM/DD/YYYY)
+            '8',  # Grade Level
+            'john.doe@example.com',  # Email
+            '123 Main Street',  # Street
+            'Apt 4B',  # Apt/Unit
+            'Springfield',  # City
+            'Illinois',  # State
+            '62701',  # Zip Code
+            'Jane',  # Parent 1 First Name
+            'Doe',  # Parent 1 Last Name
+            'jane.doe@example.com',  # Parent 1 Email
+            '555-0100',  # Parent 1 Phone
+            'Mother',  # Parent 1 Relationship
+            'James',  # Parent 2 First Name
+            'Doe',  # Parent 2 Last Name
+            'james.doe@example.com',  # Parent 2 Email
+            '555-0101',  # Parent 2 Phone
+            'Father',  # Parent 2 Relationship
+            'Emergency',  # Emergency First Name
+            'Contact',  # Emergency Last Name
+            'emergency@example.com',  # Emergency Email
+            '555-0102',  # Emergency Phone
+            'Grandmother',  # Emergency Relationship
+            'Springfield Elementary',  # Previous School
+            'None',  # Medical Concerns
+            'Sample student',  # Notes
+            '3.5'  # GPA
+        ])
+        
+        # Create response
+        output.seek(0)
+        return Response(
+            output.getvalue(),
+            mimetype='text/csv',
+            headers={'Content-Disposition': 'attachment; filename=students_upload_template.csv'}
+        )
+        
+    except Exception as e:
+        current_app.logger.error(f"Error downloading template CSV: {e}")
+        flash('Error downloading template file. Please try again.', 'error')
+        return redirect(url_for('management.students'))
+
+@management_blueprint.route('/students/upload-csv', methods=['POST'])
+@login_required
+@management_required
+def upload_students_csv():
+    """Upload and process a CSV file with student data."""
+    try:
+        # Check if file was uploaded
+        if 'csv_file' not in request.files:
+            flash('No file selected. Please choose a CSV file to upload.', 'error')
+            return redirect(url_for('management.students'))
+        
+        file = request.files['csv_file']
+        
+        # Check if file has a name
+        if file.filename == '':
+            flash('No file selected. Please choose a CSV file to upload.', 'error')
+            return redirect(url_for('management.students'))
+        
+        # Check file extension
+        if not file.filename.lower().endswith('.csv'):
+            flash('Invalid file type. Please upload a CSV file.', 'error')
+            return redirect(url_for('management.students'))
+        
+        # Read and process CSV
+        stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
+        csv_reader = csv.DictReader(stream)
+        
+        added_count = 0
+        updated_count = 0
+        error_count = 0
+        errors = []
+        
+        for row_num, row in enumerate(csv_reader, start=2):  # Start at 2 to account for header row
+            try:
+                # Validate required fields
+                if not row.get('First Name') or not row.get('Last Name'):
+                    errors.append(f"Row {row_num}: First Name and Last Name are required")
+                    error_count += 1
+                    continue
+                
+                # Check if student exists by student_id or by name+dob
+                student = None
+                if row.get('Student ID'):
+                    student = Student.query.filter_by(student_id=row['Student ID']).first()
+                
+                # If no student found by ID, try to match by name and DOB
+                if not student and row.get('Date of Birth'):
+                    student = Student.query.filter_by(
+                        first_name=row['First Name'].strip(),
+                        last_name=row['Last Name'].strip(),
+                        dob=row['Date of Birth'].strip()
+                    ).first()
+                
+                # Parse grade level
+                grade_level = None
+                if row.get('Grade Level'):
+                    try:
+                        grade_level = int(row['Grade Level'])
+                    except (ValueError, TypeError):
+                        pass
+                
+                # Parse GPA
+                gpa = 0.0
+                if row.get('GPA'):
+                    try:
+                        gpa = float(row['GPA'])
+                    except (ValueError, TypeError):
+                        gpa = 0.0
+                
+                if student:
+                    # Update existing student
+                    student.first_name = row.get('First Name', '').strip()
+                    student.last_name = row.get('Last Name', '').strip()
+                    if row.get('Date of Birth'):
+                        student.dob = row['Date of Birth'].strip()
+                    if grade_level is not None:
+                        student.grade_level = grade_level
+                    if row.get('Email'):
+                        student.email = row['Email'].strip()
+                    if row.get('Street'):
+                        student.street = row['Street'].strip()
+                    if row.get('Apt/Unit'):
+                        student.apt_unit = row['Apt/Unit'].strip()
+                    if row.get('City'):
+                        student.city = row['City'].strip()
+                    if row.get('State'):
+                        student.state = row['State'].strip()
+                    if row.get('Zip Code'):
+                        student.zip_code = row['Zip Code'].strip()
+                    if row.get('Parent 1 First Name'):
+                        student.parent1_first_name = row['Parent 1 First Name'].strip()
+                    if row.get('Parent 1 Last Name'):
+                        student.parent1_last_name = row['Parent 1 Last Name'].strip()
+                    if row.get('Parent 1 Email'):
+                        student.parent1_email = row['Parent 1 Email'].strip()
+                    if row.get('Parent 1 Phone'):
+                        student.parent1_phone = row['Parent 1 Phone'].strip()
+                    if row.get('Parent 1 Relationship'):
+                        student.parent1_relationship = row['Parent 1 Relationship'].strip()
+                    if row.get('Parent 2 First Name'):
+                        student.parent2_first_name = row['Parent 2 First Name'].strip()
+                    if row.get('Parent 2 Last Name'):
+                        student.parent2_last_name = row['Parent 2 Last Name'].strip()
+                    if row.get('Parent 2 Email'):
+                        student.parent2_email = row['Parent 2 Email'].strip()
+                    if row.get('Parent 2 Phone'):
+                        student.parent2_phone = row['Parent 2 Phone'].strip()
+                    if row.get('Parent 2 Relationship'):
+                        student.parent2_relationship = row['Parent 2 Relationship'].strip()
+                    if row.get('Emergency First Name'):
+                        student.emergency_first_name = row['Emergency First Name'].strip()
+                    if row.get('Emergency Last Name'):
+                        student.emergency_last_name = row['Emergency Last Name'].strip()
+                    if row.get('Emergency Email'):
+                        student.emergency_email = row['Emergency Email'].strip()
+                    if row.get('Emergency Phone'):
+                        student.emergency_phone = row['Emergency Phone'].strip()
+                    if row.get('Emergency Relationship'):
+                        student.emergency_relationship = row['Emergency Relationship'].strip()
+                    if row.get('Previous School'):
+                        student.previous_school = row['Previous School'].strip()
+                    if row.get('Medical Concerns'):
+                        student.medical_concerns = row['Medical Concerns'].strip()
+                    if row.get('Notes'):
+                        student.notes = row['Notes'].strip()
+                    student.gpa = gpa
+                    
+                    updated_count += 1
+                else:
+                    # Create new student
+                    student = Student(
+                        first_name=row.get('First Name', '').strip(),
+                        last_name=row.get('Last Name', '').strip(),
+                        dob=row.get('Date of Birth', '').strip() if row.get('Date of Birth') else None,
+                        grade_level=grade_level,
+                        email=row.get('Email', '').strip() if row.get('Email') else None,
+                        street=row.get('Street', '').strip() if row.get('Street') else None,
+                        apt_unit=row.get('Apt/Unit', '').strip() if row.get('Apt/Unit') else None,
+                        city=row.get('City', '').strip() if row.get('City') else None,
+                        state=row.get('State', '').strip() if row.get('State') else None,
+                        zip_code=row.get('Zip Code', '').strip() if row.get('Zip Code') else None,
+                        parent1_first_name=row.get('Parent 1 First Name', '').strip() if row.get('Parent 1 First Name') else None,
+                        parent1_last_name=row.get('Parent 1 Last Name', '').strip() if row.get('Parent 1 Last Name') else None,
+                        parent1_email=row.get('Parent 1 Email', '').strip() if row.get('Parent 1 Email') else None,
+                        parent1_phone=row.get('Parent 1 Phone', '').strip() if row.get('Parent 1 Phone') else None,
+                        parent1_relationship=row.get('Parent 1 Relationship', '').strip() if row.get('Parent 1 Relationship') else None,
+                        parent2_first_name=row.get('Parent 2 First Name', '').strip() if row.get('Parent 2 First Name') else None,
+                        parent2_last_name=row.get('Parent 2 Last Name', '').strip() if row.get('Parent 2 Last Name') else None,
+                        parent2_email=row.get('Parent 2 Email', '').strip() if row.get('Parent 2 Email') else None,
+                        parent2_phone=row.get('Parent 2 Phone', '').strip() if row.get('Parent 2 Phone') else None,
+                        parent2_relationship=row.get('Parent 2 Relationship', '').strip() if row.get('Parent 2 Relationship') else None,
+                        emergency_first_name=row.get('Emergency First Name', '').strip() if row.get('Emergency First Name') else None,
+                        emergency_last_name=row.get('Emergency Last Name', '').strip() if row.get('Emergency Last Name') else None,
+                        emergency_email=row.get('Emergency Email', '').strip() if row.get('Emergency Email') else None,
+                        emergency_phone=row.get('Emergency Phone', '').strip() if row.get('Emergency Phone') else None,
+                        emergency_relationship=row.get('Emergency Relationship', '').strip() if row.get('Emergency Relationship') else None,
+                        previous_school=row.get('Previous School', '').strip() if row.get('Previous School') else None,
+                        medical_concerns=row.get('Medical Concerns', '').strip() if row.get('Medical Concerns') else None,
+                        notes=row.get('Notes', '').strip() if row.get('Notes') else None,
+                        gpa=gpa
+                    )
+                    
+                    # Generate student ID if not provided
+                    if not row.get('Student ID') and student.state and student.dob:
+                        student.student_id = student.generate_student_id()
+                    elif row.get('Student ID'):
+                        student.student_id = row['Student ID'].strip()
+                    
+                    db.session.add(student)
+                    added_count += 1
+                
+            except Exception as e:
+                errors.append(f"Row {row_num}: {str(e)}")
+                error_count += 1
+                continue
+        
+        # Commit all changes
+        try:
+            db.session.commit()
+            
+            # Prepare success message
+            message_parts = []
+            if added_count > 0:
+                message_parts.append(f"{added_count} student(s) added")
+            if updated_count > 0:
+                message_parts.append(f"{updated_count} student(s) updated")
+            
+            if message_parts:
+                flash(f"CSV upload successful: {', '.join(message_parts)}", 'success')
+            
+            if error_count > 0:
+                error_msg = f"{error_count} error(s) occurred during upload."
+                if len(errors) <= 10:
+                    error_msg += " Errors: " + "; ".join(errors)
+                else:
+                    error_msg += f" First 10 errors: " + "; ".join(errors[:10])
+                flash(error_msg, 'warning')
+            
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error committing CSV upload: {e}")
+            flash(f'Error saving data: {str(e)}', 'error')
+        
+        return redirect(url_for('management.students'))
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error processing CSV upload: {e}")
+        flash(f'Error processing CSV file: {str(e)}', 'error')
+        return redirect(url_for('management.students'))
 
 @management_blueprint.route('/teachers')
 @login_required

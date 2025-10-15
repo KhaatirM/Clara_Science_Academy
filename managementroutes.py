@@ -2714,7 +2714,8 @@ def take_class_attendance(class_id):
         # Get current user's teacher staff record if they are management
         teacher = None
         if current_user.role in ['Director', 'School Administrator']:
-            teacher = TeacherStaff.query.filter_by(user_id=current_user.id).first()
+            if current_user.teacher_staff_id:
+                teacher = TeacherStaff.query.get(current_user.teacher_staff_id)
         
         for student in students:
             status = request.form.get(f'status-{student.id}')

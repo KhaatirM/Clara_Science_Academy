@@ -316,13 +316,16 @@
                             </h6>
                             
                             {% set student_recent_grades = [] %}
-                            {% for assignment in all_assignments|sort(attribute='due_date', reverse=True)[:3] %}
-                                {% if assignment.__class__.__name__ == 'GroupAssignment' %}
-                                    {% set grade_info = student_grades.get(student.id, {}).get('group_' ~ assignment.id, {}) %}
-                                    {% set _ = student_recent_grades.append((assignment, grade_info, 'group')) %}
-                                {% else %}
-                                    {% set grade_info = student_grades.get(student.id, {}).get(assignment.id, {}) %}
-                                    {% set _ = student_recent_grades.append((assignment, grade_info, 'individual')) %}
+                            {% set sorted_assignments = all_assignments|sort(attribute='due_date', reverse=True) %}
+                            {% for assignment in sorted_assignments %}
+                                {% if loop.index <= 3 %}
+                                    {% if assignment.__class__.__name__ == 'GroupAssignment' %}
+                                        {% set grade_info = student_grades.get(student.id, {}).get('group_' ~ assignment.id, {}) %}
+                                        {% set _ = student_recent_grades.append((assignment, grade_info, 'group')) %}
+                                    {% else %}
+                                        {% set grade_info = student_grades.get(student.id, {}).get(assignment.id, {}) %}
+                                        {% set _ = student_recent_grades.append((assignment, grade_info, 'individual')) %}
+                                    {% endif %}
                                 {% endif %}
                             {% endfor %}
                             

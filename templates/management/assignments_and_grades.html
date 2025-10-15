@@ -66,7 +66,7 @@
                                 <div class="d-flex align-items-center flex-wrap gap-2">
                                     <h5 class="mb-1 fw-bold text-truncate" title="{{ class_obj.name }}" style="max-width: calc(100% - 120px);">{{ class_obj.name }}</h5>
                                     <span class="badge bg-light text-success fs-6 px-2 py-1 flex-shrink-0">
-                                        {{ class_assignments[class_obj.id] }} assignments
+                                        {{ class_assignments.get(class_obj.id, 0) }} assignments
                                     </span>
                                 </div>
                                 <small class="opacity-75 text-truncate d-block" title="{{ class_obj.subject }}">{{ class_obj.subject }}</small>
@@ -416,19 +416,21 @@
                                     </tr>
                                 </thead>
                                 <tbody>
+                                    <!-- Individual Assignments -->
                                     {% for assignment in class_assignments %}
                                     {% set grade_info = assignment_grades.get(assignment.id, {}) %}
                                     <tr>
                                         <td>
                                             <strong>{{ assignment.title }}</strong><br>
                                             <small class="text-muted">{{ assignment.assignment_type }}</small>
+                                            <span class="badge bg-primary ms-2">Individual</span>
                                         </td>
-                                        <td>{{ assignment.due_date.strftime('%m/%d/%Y') }}</td>
+                                        <td>{{ assignment.due_date.strftime('%m/%d/%Y') if assignment.due_date else 'N/A' }}</td>
                                         <td>
                                             <span class="badge bg-info">{{ grade_info.get('total_submissions', 0) }}</span>
                                         </td>
                                         <td>
-                                            <span class="badge bg-{% if grade_info.get('graded_count', 0) == grade_info.get('total_submissions', 0) %}success{% else %}warning{% endif %}">
+                                            <span class="badge bg-{% if grade_info.get('graded_count', 0) == grade_info.get('total_submissions', 0) and grade_info.get('total_submissions', 0) > 0 %}success{% else %}warning{% endif %}">
                                                 {{ grade_info.get('graded_count', 0) }}
                                             </span>
                                         </td>
@@ -470,6 +472,53 @@
                                             </div>
                                         </td>
                                     </tr>
+                                    {% endfor %}
+                                    
+                                    <!-- Group Assignments -->
+                                    {% for group_assignment in group_assignments %}
+                                    {% set grade_info = assignment_grades.get('group_' ~ group_assignment.id, {}) %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ group_assignment.title }}</strong><br>
+                                            <small class="text-muted">{{ group_assignment.assignment_type or 'Group Assignment' }}</small>
+                                            <span class="badge bg-info ms-2">Group</span>
+                                        </td>
+                                        <td>{{ group_assignment.due_date.strftime('%m/%d/%Y') if group_assignment.due_date else 'N/A' }}</td>
+                                        <td>
+                                            <span class="badge bg-info">{{ grade_info.get('total_submissions', 0) }}</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-{% if grade_info.get('graded_count', 0) == grade_info.get('total_submissions', 0) and grade_info.get('total_submissions', 0) > 0 %}success{% else %}warning{% endif %}">
+                                                {{ grade_info.get('graded_count', 0) }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {% if grade_info.get('average_score', 0) > 0 %}
+                                                <span class="badge bg-{% if grade_info.average_score >= 80 %}success{% elif grade_info.average_score >= 60 %}warning{% else %}danger{% endif %}">
+                                                    {{ grade_info.average_score }}%
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">N/A</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="d-flex flex-wrap gap-1">
+                                                <button class="btn btn-outline-primary btn-sm" onclick="viewGroupAssignment({{ group_assignment.id }})" title="View Group Assignment Details">
+                                                    <i class="fas fa-eye me-1"></i>View
+                                                </button>
+                                                <button class="btn btn-outline-success btn-sm" onclick="gradeGroupAssignment({{ group_assignment.id }})" title="Grade Group Submissions">
+                                                    <i class="fas fa-edit me-1"></i>Grade
+                                                </button>
+                                                <button class="btn btn-outline-secondary btn-sm" onclick="editGroupAssignment({{ group_assignment.id }})" title="Edit Group Assignment Details">
+                                                    <i class="fas fa-cog me-1"></i>Edit
+                                                </button>
+                                                <button class="btn btn-outline-danger btn-sm" onclick="removeGroupAssignment({{ group_assignment.id }})" title="Remove Group Assignment">
+                                                    <i class="fas fa-trash me-1"></i>Remove
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
                                     {% else %}
                                     <tr>
                                         <td colspan="6" class="text-center text-muted py-4">

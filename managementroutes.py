@@ -2376,7 +2376,7 @@ def assignments_and_grades():
                     except:
                         group_assignments = []
                 
-                # Get grade data for each assignment
+                # Get grade data for each individual assignment
                 for assignment in class_assignments:
                     grades = Grade.query.filter_by(assignment_id=assignment.id).all()
                     
@@ -2404,7 +2404,44 @@ def assignments_and_grades():
                         'grades': grades,
                         'total_submissions': len(grades),
                         'graded_count': len(graded_grades),
-                        'average_score': round(total_score / len(graded_grades), 1) if graded_grades else 0
+                        'average_score': round(total_score / len(graded_grades), 1) if graded_grades else 0,
+                        'type': 'individual'
+                    }
+                
+                # Get grade data for each group assignment
+                for group_assignment in group_assignments:
+                    # Get group grades for this assignment
+                    from models import GroupGrade
+                    group_grades = GroupGrade.query.filter_by(group_assignment_id=group_assignment.id).all()
+                    
+                    # Process group grade data safely
+                    graded_group_grades = []
+                    total_score = 0
+                    for gg in group_grades:
+                        if gg.grade_data is not None:
+                            try:
+                                # Handle both dict and JSON string cases
+                                if isinstance(gg.grade_data, dict):
+                                    grade_dict = gg.grade_data
+                                else:
+                                    import json
+                                    grade_dict = json.loads(gg.grade_data)
+                                
+                                if 'score' in grade_dict:
+                                    graded_group_grades.append(grade_dict)
+                                    total_score += grade_dict['score']
+                            except (json.JSONDecodeError, TypeError):
+                                # Skip invalid grade data
+                                continue
+                    
+                    # Use a special key format for group assignments
+                    assignment_grades[f'group_{group_assignment.id}'] = {
+                        'grades': group_grades,
+                        'total_submissions': len(group_grades),
+                        'graded_count': len(graded_group_grades),
+                        'average_score': round(total_score / len(graded_group_grades), 1) if graded_group_grades else 0,
+                        'type': 'group',
+                        'assignment': group_assignment  # Store the assignment object for template use
                     }
             except (ValueError, TypeError, AttributeError) as e:
                 # Handle any conversion errors gracefully

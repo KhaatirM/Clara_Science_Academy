@@ -5735,6 +5735,206 @@ def student_jobs():
         return render_template('management/student_jobs.html', team_data=[])
 
 
+@management_blueprint.route('/api/students')
+@login_required
+@management_required
+def api_get_students():
+    """API endpoint to get all students for dynamic team creation"""
+    try:
+        students = Student.query.filter_by(is_active=True).all()
+        student_list = []
+        for student in students:
+            student_list.append({
+                'id': student.id,
+                'first_name': student.first_name,
+                'last_name': student.last_name,
+                'student_id': student.student_id
+            })
+        
+        return jsonify({
+            'success': True,
+            'students': student_list
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error fetching students: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@management_blueprint.route('/api/dynamic-teams', methods=['GET'])
+@login_required
+@management_required
+def api_get_dynamic_teams():
+    """API endpoint to get all dynamic teams"""
+    try:
+        teams = CleaningTeam.query.filter(CleaningTeam.team_name.like('Dynamic:%')).all()
+        team_list = []
+        
+        for team in teams:
+            # Get team members
+            members = []
+            for member in team.team_members:
+                if member.student:
+                    members.append({
+                        'id': member.student.id,
+                        'name': f"{member.student.first_name} {member.student.last_name}"
+                    })
+            
+            team_list.append({
+                'id': team.id,
+                'name': team.team_name.replace('Dynamic:', ''),
+                'type': getattr(team, 'team_type', 'other'),
+                'description': team.team_description,
+                'members': members,
+                'score': 100,  # Default score
+                'created_at': team.created_at.isoformat()
+            })
+        
+        return jsonify({
+            'success': True,
+            'teams': team_list
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error fetching dynamic teams: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@management_blueprint.route('/api/dynamic-teams', methods=['POST'])
+@login_required
+@management_required
+def api_create_dynamic_team():
+    """API endpoint to create a new dynamic team"""
+    try:
+        data = request.get_json()
+        
+        if not data or not data.get('name') or not data.get('type'):
+            return jsonify({
+                'success': False,
+                'error': 'Team name and type are required'
+            }), 400
+        
+        # Create team
+        team = CleaningTeam(
+            team_name=f"Dynamic:{data['name']}",
+            team_description=data.get('description', ''),
+            is_active=True
+        )
+        
+        # Add team_type attribute if it doesn't exist
+        if not hasattr(team, 'team_type'):
+            team.team_type = data.get('type', 'other')
+        
+        db.session.add(team)
+        db.session.flush()  # Get the team ID
+        
+        # Add team members
+        for student_id in data.get('members', []):
+            member = CleaningTeamMember(
+                team_id=team.id,
+                student_id=student_id,
+                role='Member',
+                is_active=True
+            )
+            db.session.add(member)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'team_id': team.id,
+            'message': 'Team created successfully'
+        })
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error creating dynamic team: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@management_blueprint.route('/api/dynamic-teams/<int:team_id>', methods=['PUT'])
+@login_required
+@management_required
+def api_update_dynamic_team(team_id):
+    """API endpoint to update a dynamic team"""
+    try:
+        team = CleaningTeam.query.get_or_404(team_id)
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No data provided'
+            }), 400
+        
+        # Update team
+        team.team_name = f"Dynamic:{data.get('name', team.team_name.replace('Dynamic:', ''))}"
+        team.team_description = data.get('description', team.team_description)
+        
+        # Add team_type attribute if it doesn't exist
+        if not hasattr(team, 'team_type'):
+            team.team_type = data.get('type', 'other')
+        else:
+            team.team_type = data.get('type', team.team_type)
+        
+        # Update team members
+        # Remove existing members
+        CleaningTeamMember.query.filter_by(team_id=team_id).delete()
+        
+        # Add new members
+        for student_id in data.get('members', []):
+            member = CleaningTeamMember(
+                team_id=team_id,
+                student_id=student_id,
+                role='Member',
+                is_active=True
+            )
+            db.session.add(member)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Team updated successfully'
+        })
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error updating dynamic team: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@management_blueprint.route('/api/dynamic-teams/<int:team_id>', methods=['DELETE'])
+@login_required
+@management_required
+def api_delete_dynamic_team(team_id):
+    """API endpoint to delete a dynamic team"""
+    try:
+        team = CleaningTeam.query.get_or_404(team_id)
+        
+        # Delete team members first
+        CleaningTeamMember.query.filter_by(team_id=team_id).delete()
+        
+        # Delete team
+        db.session.delete(team)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Team deleted successfully'
+        })
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error deleting dynamic team: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @management_blueprint.route('/student-jobs/inspection', methods=['POST'])
 @login_required
 @management_required

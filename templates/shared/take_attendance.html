@@ -5,199 +5,664 @@
 {% endblock %}
 
 {% block dashboard_content %}
-<div class="container-fluid px-2 px-md-4">
-    <div class="card shadow-sm">
-        <div class="card-header bg-success text-white">
-            <h4 class="mb-0"><i class="fas fa-user-check me-2"></i>Take Attendance: {{ class_item.name }}</h4>
-            <small class="text-white-50">{{ class_item.subject }} - {{ students|length }} enrolled students</small>
+<div class="container-fluid px-2 px-md-4 py-4">
+    <!-- Header Section -->
+    <div class="attendance-header mb-4">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                <h2 class="attendance-title mb-1">
+                    <i class="bi bi-clipboard-check-fill me-2"></i>{{ class_item.name }}
+                </h2>
+                <p class="attendance-subtitle mb-0">
+                    <span class="badge bg-primary me-2">{{ class_item.subject }}</span>
+                    <span class="text-muted">{{ students|length }} Students Enrolled</span>
+                </p>
+            </div>
+            {% if current_user.role in ['Director', 'School Administrator'] %}
+                <a href="{{ url_for('management.unified_attendance') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i>Back to Attendance
+                </a>
+            {% else %}
+                <a href="{{ url_for('teacher.my_classes') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i>Back to My Classes
+                </a>
+            {% endif %}
         </div>
+    </div>
+
+    <!-- Date Selector & Stats Row -->
+    <div class="row g-4 mb-4">
+        <!-- Date Selector Card -->
+        <div class="col-12 col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
         <div class="card-body">
-            <form method="GET" action="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.take_class_attendance', class_id=class_item.id) }}{% else %}{{ url_for('teacher.take_attendance', class_id=class_item.id) }}{% endif %}" class="mb-4">
-                <div class="row g-3 align-items-end">
-                    <div class="col-12 col-sm-6 col-md-4">
-                        <label for="date" class="form-label">Attendance Date:</label>
-                        <input type="date" class="form-control" id="date" name="date" value="{{ attendance_date_str }}">
-                    </div>
-                    <div class="col-12 col-sm-6 col-md-4">
-                        <button type="submit" class="btn btn-secondary w-100 w-sm-auto">
-                            <i class="fas fa-search me-1"></i>Load Date
-                        </button>
+                    <h6 class="card-subtitle mb-3 text-muted">
+                        <i class="bi bi-calendar-date me-2"></i>Select Date
+                    </h6>
+                    <form method="GET" action="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.take_class_attendance', class_id=class_item.id) }}{% else %}{{ url_for('teacher.take_attendance', class_id=class_item.id) }}{% endif %}">
+                        <div class="input-group">
+                            <input type="date" class="form-control" id="date" name="date" value="{{ attendance_date_str }}" required>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-search me-1"></i>Load
+                            </button>
+                        </div>
+                        <div class="mt-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setToday()">
+                                <i class="bi bi-calendar-day me-1"></i>Today
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setYesterday()">
+                                <i class="bi bi-calendar-minus me-1"></i>Yesterday
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Live Statistics Cards -->
+        <div class="col-12 col-lg-8">
+            <div class="row g-3">
+                <div class="col-6 col-sm-3">
+                    <div class="stat-card stat-card-present">
+                        <div class="stat-icon">
+                            <i class="bi bi-check-circle-fill"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="presentCount">{{ attendance_stats.present }}</div>
+                            <div class="stat-label">Present</div>
+                        </div>
                     </div>
                 </div>
-            </form>
+                <div class="col-6 col-sm-3">
+                    <div class="stat-card stat-card-late">
+                        <div class="stat-icon">
+                            <i class="bi bi-clock-fill"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="lateCount">{{ attendance_stats.late }}</div>
+                            <div class="stat-label">Late</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-sm-3">
+                    <div class="stat-card stat-card-absent">
+                        <div class="stat-icon">
+                            <i class="bi bi-x-circle-fill"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="absentCount">{{ attendance_stats.absent }}</div>
+                            <div class="stat-label">Absent</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-sm-3">
+                    <div class="stat-card stat-card-rate">
+                        <div class="stat-icon">
+                            <i class="bi bi-graph-up-arrow"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="attendanceRate">{{ attendance_stats.present_percentage }}%</div>
+                            <div class="stat-label">Rate</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-            <form method="POST" action="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.take_class_attendance', class_id=class_item.id) }}{% else %}{{ url_for('teacher.take_attendance', class_id=class_item.id) }}{% endif %}">
+    <!-- Attendance Form -->
+    <form method="POST" action="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.take_class_attendance', class_id=class_item.id) }}{% else %}{{ url_for('teacher.take_attendance', class_id=class_item.id) }}{% endif %}" id="attendanceForm">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <input type="hidden" name="attendance_date" value="{{ attendance_date_str }}">
                 
-                <div class="alert alert-info mb-3">
-                    <i class="fas fa-info-circle me-2"></i>
-                    <strong>Class Information:</strong> {{ class_item.name }} ({{ class_item.subject }}) - 
-                    <strong>{{ students|length }} enrolled students</strong><br>
-                    <small class="text-muted">Only students currently enrolled in this class are shown below. 
-                    Students who have dropped the class or are not enrolled will not appear in this list.</small>
+        <!-- Quick Actions Bar -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <div>
+                        <h6 class="mb-0">Quick Actions</h6>
+                        <small class="text-muted">Mark all students at once</small>
+                    </div>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-outline-success" onclick="markAll('Present')">
+                            <i class="bi bi-check-all me-1"></i>All Present
+                        </button>
+                        <button type="button" class="btn btn-outline-danger" onclick="markAll('Unexcused Absence')">
+                            <i class="bi bi-x-lg me-1"></i>All Absent
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="clearAll()">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i>Clear All
+                        </button>
+                    </div>
                 </div>
-                
-                {% if existing_records|length < students|length %}
-                <div class="alert alert-warning mb-3">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                    <strong>Incomplete Attendance:</strong> {{ students|length - existing_records|length }} students do not have attendance records for today.
-                    Please mark attendance for all students before saving.
+            </div>
                 </div>
-                {% endif %}
-                
-                <div class="table-responsive">
-                    <table class="table table-hover table-bordered">
-                        <thead class="thead-light">
-                            <tr>
-                                <th class="width-20">Student Name</th>
-                                <th class="width-15">School Day Status</th>
-                                <th class="width-40">Class Period Status</th>
-                                <th class="width-25">Notes (Optional)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
+
+        <!-- Student Attendance Cards -->
+        <div class="row g-3 mb-4">
                             {% for student in students %}
                                 {% set record = existing_records.get(student.id) %}
                                 {% set school_day_record = school_day_records.get(student.id) %}
-                                <tr>
-                                    <td class="align-middle">
-                                        <strong>{{ student.first_name }} {{ student.last_name }}</strong>
-                                        <br><small class="text-muted">{{ student.student_id }}</small>
-                                    </td>
-                                    <td class="align-middle">
+                <div class="col-12 col-md-6 col-xl-4">
+                    <div class="student-attendance-card" data-student-id="{{ student.id }}">
+                        <div class="student-card-header">
+                            <div class="student-avatar">
+                                {{ student.first_name[0] }}{{ student.last_name[0] }}
+                            </div>
+                            <div class="student-info">
+                                <h6 class="student-name mb-0">{{ student.first_name }} {{ student.last_name }}</h6>
+                                <small class="student-id">ID: {{ student.student_id }}</small>
+                            </div>
                                         {% if school_day_record %}
+                                <div class="school-day-badge">
                                             {% if school_day_record.status == 'Present' %}
-                                                <span class="badge bg-success">Present</span>
+                                        <span class="badge bg-success" title="School Day Status">
+                                            <i class="bi bi-check-circle-fill"></i>
+                                        </span>
                                             {% elif school_day_record.status == 'Absent' %}
-                                                <span class="badge bg-danger">Absent</span>
+                                        <span class="badge bg-danger" title="School Day Status">
+                                            <i class="bi bi-x-circle-fill"></i>
+                                        </span>
                                             {% elif school_day_record.status == 'Late' %}
-                                                <span class="badge bg-warning text-dark">Late</span>
-                                            {% elif school_day_record.status == 'Excused Absence' %}
-                                                <span class="badge bg-info">Excused</span>
+                                        <span class="badge bg-warning" title="School Day Status">
+                                            <i class="bi bi-clock-fill"></i>
+                                        </span>
                                             {% else %}
-                                                <span class="badge bg-secondary">{{ school_day_record.status }}</span>
+                                        <span class="badge bg-info" title="School Day Status">
+                                            <i class="bi bi-info-circle-fill"></i>
+                                        </span>
+                                    {% endif %}
+                                </div>
                                             {% endif %}
+                        </div>
+                        
+                        <div class="student-card-body">
+                            <div class="attendance-buttons">
+                                {% for status in statuses %}
+                                    <input type="radio" class="btn-check" name="status-{{ student.id }}" 
+                                           id="status-{{ student.id }}-{{ loop.index }}" 
+                                           value="{{ status }}" 
+                                           {% if record and record.status == status %}checked{% endif %} 
+                                           required>
+                                    <label class="btn btn-attendance btn-attendance-{{ status|lower|replace(' ', '-') }}" 
+                                           for="status-{{ student.id }}-{{ loop.index }}">
+                                        {% if status == 'Present' %}
+                                            <i class="bi bi-check-circle-fill"></i>
+                                        {% elif status == 'Late' %}
+                                            <i class="bi bi-clock-fill"></i>
+                                        {% elif status == 'Suspended' %}
+                                            <i class="bi bi-ban"></i>
                                         {% else %}
-                                            <span class="badge bg-light text-dark">Not Set</span>
+                                            <i class="bi bi-x-circle-fill"></i>
                                         {% endif %}
-                                    </td>
-                                    <td class="align-middle">
-                                        <div class="d-flex flex-column flex-sm-row gap-1">
-                                            {% for status in statuses %}
-                                                <label class="btn btn-outline-secondary btn-sm {% if record and record.status == status %}active{% endif %} flex-fill">
-                                                    <input type="radio" name="status-{{ student.id }}" value="{{ status }}" id="status-{{ student.id }}-{{ loop.index }}" 
-                                                           {% if record and record.status == status %}checked{% endif %} required> {{ status }}
+                                        <span>{{ status }}</span>
                                                 </label>
                                             {% endfor %}
                                         </div>
-                                    </td>
-                                    <td>
-                                        <input type="text" class="form-control form-control-sm" name="notes-{{ student.id }}" 
-                                               placeholder="e.g., Left early" value="{{ record.notes if record else '' }}">
-                                    </td>
-                                </tr>
-                            {% else %}
-                                <tr>
-                                    <td colspan="4" class="text-center">No students enrolled in this class.</td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                            
+                            <div class="notes-section mt-3">
+                                <input type="text" class="form-control form-control-sm notes-input" 
+                                       name="notes-{{ student.id }}" 
+                                       placeholder="Add note (optional)" 
+                                       value="{{ record.notes if record else '' }}">
                 </div>
-
-                <hr>
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <div class="alert alert-light">
-                            <i class="fas fa-calendar-check me-2"></i>
-                            <strong>Attendance Summary:</strong><br>
-                            <small class="text-muted">
-                                Date: {{ attendance_date_str }}<br>
-                                Students with existing records: {{ existing_records|length }}<br>
-                                Total enrolled students: {{ students|length }}
-                            </small>
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <div class="alert alert-success">
-                            <i class="fas fa-chart-pie me-2"></i>
-                            <strong>Today's Statistics:</strong><br>
-                            <small class="text-muted">
-                                Present: {{ attendance_stats.present }}/{{ attendance_stats.total }} ({{ attendance_stats.present_percentage }}%)<br>
-                                Late: {{ attendance_stats.late }} | Absent: {{ attendance_stats.absent }} | Suspended: {{ attendance_stats.suspended }}
-                            </small>
                         </div>
+            {% else %}
+                <div class="col-12">
+                    <div class="alert alert-info text-center">
+                        <i class="bi bi-info-circle me-2"></i>
+                        No students enrolled in this class.
                     </div>
+                </div>
+            {% endfor %}
                 </div>
                 
-                <div class="d-flex flex-column flex-sm-row justify-content-end gap-2">
-                    {% if current_user.role in ['Director', 'School Administrator'] %}
-                        <a href="{{ url_for('management.unified_attendance') }}" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left me-1"></i>Back to Attendance
-                        </a>
-                    {% else %}
-                        <a href="{{ url_for('teacher.my_classes') }}" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left me-1"></i>Back to My Classes
-                        </a>
-                    {% endif %}
-                    <button type="submit" class="btn btn-primary" id="saveAttendanceBtn">
-                        <i class="fas fa-save me-1"></i>Save Attendance
+        <!-- Save Button -->
+        <div class="card border-0 shadow-sm sticky-bottom">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <div>
+                        <h6 class="mb-0">Ready to submit?</h6>
+                        <small class="text-muted" id="completionStatus">
+                            <span id="markedCount">{{ existing_records|length }}</span> of {{ students|length }} students marked
+                        </small>
+                    </div>
+                    <button type="submit" class="btn btn-success btn-lg px-5" id="saveAttendanceBtn">
+                        <i class="bi bi-save me-2"></i>Save Attendance
                     </button>
                 </div>
-            </form>
+            </div>
         </div>
-    </div>
+    </form>
 </div>
+
+<style>
+/* Header Styling */
+.attendance-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 15px;
+    padding: 2rem;
+    color: white;
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+}
+
+.attendance-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.attendance-subtitle {
+    font-size: 1.1rem;
+    opacity: 0.95;
+}
+
+/* Stat Cards */
+.stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+    border-left: 4px solid transparent;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+}
+
+.stat-card-present {
+    border-left-color: #10b981;
+}
+
+.stat-card-late {
+    border-left-color: #f59e0b;
+}
+
+.stat-card-absent {
+    border-left-color: #ef4444;
+}
+
+.stat-card-rate {
+    border-left-color: #3b82f6;
+}
+
+.stat-icon {
+    font-size: 2rem;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+}
+
+.stat-card-present .stat-icon {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+}
+
+.stat-card-late .stat-icon {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+}
+
+.stat-card-absent .stat-icon {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+}
+
+.stat-card-rate .stat-icon {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+}
+
+.stat-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1;
+    color: #1f2937;
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    color: #6b7280;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Student Attendance Cards */
+.student-attendance-card {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.student-attendance-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+    border-color: #667eea;
+}
+
+.student-card-header {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    position: relative;
+}
+
+.student-avatar {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.student-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.student-name {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #1f2937;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.student-id {
+    color: #6b7280;
+    font-size: 0.75rem;
+}
+
+.school-day-badge {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+}
+
+.student-card-body {
+    padding: 1rem;
+}
+
+/* Attendance Buttons */
+.attendance-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+}
+
+.btn-attendance {
+    padding: 0.625rem;
+    font-size: 0.8rem;
+    border-radius: 8px;
+    border: 2px solid #e5e7eb;
+    background: white;
+    color: #6b7280;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    font-weight: 500;
+}
+
+.btn-attendance i {
+    font-size: 1.25rem;
+}
+
+.btn-attendance:hover {
+    border-color: #667eea;
+    background: #f8f9fa;
+    transform: scale(1.02);
+}
+
+.btn-check:checked + .btn-attendance-present {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border-color: #10b981;
+    color: white;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+}
+
+.btn-check:checked + .btn-attendance-late {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    border-color: #f59e0b;
+    color: white;
+    box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+}
+
+.btn-check:checked + .btn-attendance-unexcused-absence,
+.btn-check:checked + .btn-attendance-excused-absence {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    border-color: #ef4444;
+    color: white;
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+}
+
+.btn-check:checked + .btn-attendance-suspended {
+    background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+    border-color: #6b7280;
+    color: white;
+    box-shadow: 0 4px 15px rgba(107, 114, 128, 0.3);
+}
+
+/* Notes Input */
+.notes-input {
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+.notes-input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Sticky Bottom */
+.sticky-bottom {
+    position: sticky;
+    bottom: 1rem;
+    z-index: 100;
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .attendance-header {
+        padding: 1.5rem;
+    }
+    
+    .attendance-title {
+        font-size: 1.5rem;
+    }
+    
+    .stat-card {
+        padding: 1rem;
+    }
+    
+    .stat-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 1.5rem;
+    }
+    
+    .stat-value {
+        font-size: 1.5rem;
+    }
+    
+    .attendance-buttons {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 576px) {
+    .stat-card {
+        flex-direction: row;
+        gap: 0.75rem;
+    }
+}
+
+/* Loading State */
+.btn-loading {
+    position: relative;
+    pointer-events: none;
+}
+
+.btn-loading::after {
+    content: "";
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: 50%;
+    left: 50%;
+    margin-left: -8px;
+    margin-top: -8px;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spinner 0.6s linear infinite;
+}
+
+@keyframes spinner {
+    to {transform: rotate(360deg);}
+}
+</style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const form = document.querySelector('form[method="POST"]');
+    const form = document.getElementById('attendanceForm');
     const saveBtn = document.getElementById('saveAttendanceBtn');
+    const totalStudents = {{ students|length }};
     
+    // Form submission validation
     form.addEventListener('submit', function(e) {
-        const students = document.querySelectorAll('input[type="radio"]:checked');
-        const totalStudents = {{ students|length }};
+        const checkedStudents = document.querySelectorAll('input[type="radio"]:checked').length;
         
-        if (students.length < totalStudents) {
+        if (checkedStudents < totalStudents) {
             e.preventDefault();
-            const missing = totalStudents - students.length;
-            alert(`Please mark attendance for all ${totalStudents} students. You have ${missing} student(s) without attendance status.`);
+            const missing = totalStudents - checkedStudents;
+            alert(`⚠️ Please mark attendance for all students.\n\n${missing} student(s) still need attendance status.`);
             return false;
         }
         
         // Show loading state
-        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving...';
+        saveBtn.classList.add('btn-loading');
+        saveBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Saving...';
         saveBtn.disabled = true;
     });
     
-    // Update attendance statistics in real-time
+    // Real-time statistics update
     const radioButtons = document.querySelectorAll('input[type="radio"]');
     radioButtons.forEach(radio => {
-        radio.addEventListener('change', function() {
-            updateAttendanceStats();
-        });
+        radio.addEventListener('change', updateStats);
     });
     
-    function updateAttendanceStats() {
+    function updateStats() {
         const presentCount = document.querySelectorAll('input[value="Present"]:checked').length;
         const lateCount = document.querySelectorAll('input[value="Late"]:checked').length;
         const absentCount = document.querySelectorAll('input[value="Unexcused Absence"]:checked, input[value="Excused Absence"]:checked').length;
         const suspendedCount = document.querySelectorAll('input[value="Suspended"]:checked').length;
-        const total = {{ students|length }};
+        const markedCount = presentCount + lateCount + absentCount + suspendedCount;
         
-        const presentPercentage = total > 0 ? Math.round((presentCount / total) * 100) : 0;
+        const attendanceRate = totalStudents > 0 ? Math.round((presentCount / totalStudents) * 100) : 0;
         
-        // Update the statistics display
-        const statsAlert = document.querySelector('.alert-success small');
-        if (statsAlert) {
-            statsAlert.innerHTML = `
-                Present: ${presentCount}/${total} (${presentPercentage}%)<br>
-                Late: ${lateCount} | Absent: ${absentCount} | Suspended: ${suspendedCount}
-            `;
-        }
+        // Update stat cards with animation
+        animateValue('presentCount', parseInt(document.getElementById('presentCount').textContent), presentCount);
+        animateValue('lateCount', parseInt(document.getElementById('lateCount').textContent), lateCount);
+        animateValue('absentCount', parseInt(document.getElementById('absentCount').textContent), absentCount);
+        animateValue('attendanceRate', parseInt(document.getElementById('attendanceRate').textContent), attendanceRate);
+        
+        // Update completion status
+        document.getElementById('markedCount').textContent = markedCount;
     }
+    
+    function animateValue(id, start, end) {
+        const element = document.getElementById(id);
+        const duration = 300;
+        const range = end - start;
+        const increment = range / (duration / 16);
+        let current = start;
+        
+        const timer = setInterval(() => {
+            current += increment;
+            if ((increment > 0 && current >= end) || (increment < 0 && current <= end)) {
+                element.textContent = id === 'attendanceRate' ? end + '%' : end;
+                clearInterval(timer);
+            } else {
+                element.textContent = id === 'attendanceRate' ? Math.round(current) + '%' : Math.round(current);
+            }
+        }, 16);
+    }
+    
+    // Initialize stats
+    updateStats();
 });
+
+// Quick action functions
+function markAll(status) {
+    const radios = document.querySelectorAll(`input[type="radio"][value="${status}"]`);
+    radios.forEach(radio => {
+        radio.checked = true;
+        // Trigger change event for stats update
+        radio.dispatchEvent(new Event('change'));
+    });
+}
+
+function clearAll() {
+    if (confirm('Are you sure you want to clear all attendance selections?')) {
+        const radios = document.querySelectorAll('input[type="radio"]:checked');
+        radios.forEach(radio => {
+            radio.checked = false;
+        });
+        // Update stats
+        document.querySelectorAll('input[type="radio"]')[0].dispatchEvent(new Event('change'));
+    }
+}
+
+// Date helper functions
+function setToday() {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('date').value = today;
+}
+
+function setYesterday() {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    document.getElementById('date').value = yesterday.toISOString().split('T')[0];
+}
 </script>
 
 {% endblock %}

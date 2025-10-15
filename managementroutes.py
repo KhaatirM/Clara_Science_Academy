@@ -2632,10 +2632,155 @@ def assignments_legacy():
 @management_required
 def take_class_attendance(class_id):
     """Take attendance for a specific class (management view)"""
-    # For management users, we can reuse the teacher attendance taking functionality
-    # by importing and calling it, or redirect to teacher route since it already handles admins
-    from teacherroutes import take_attendance as teacher_take_attendance
-    return teacher_take_attendance(class_id)
+    from datetime import datetime
+    
+    class_obj = Class.query.get_or_404(class_id)
+    
+    # Check if class is active (has an active school year)
+    if not hasattr(class_obj, 'school_year_id') or not class_obj.school_year_id:
+        flash("This class is not associated with an active school year.", "warning")
+        return redirect(url_for('management.classes'))
+    
+    # Check if class is archived or inactive
+    if hasattr(class_obj, 'is_active') and not class_obj.is_active:
+        flash("This class is archived or inactive. Cannot take attendance.", "warning")
+        return redirect(url_for('management.classes'))
+
+    # Get only students enrolled in this specific class
+    enrolled_students = db.session.query(Student).join(Enrollment).filter(
+        Enrollment.class_id == class_id,
+        Enrollment.is_active == True
+    ).order_by(Student.last_name, Student.first_name).all()
+    
+    if not enrolled_students:
+        flash("No students are currently enrolled in this class.", "warning")
+        return redirect(url_for('management.view_class', class_id=class_id))
+    
+    students = enrolled_students
+    
+    statuses = [
+        "Present",
+        "Late",
+        "Unexcused Absence",
+        "Excused Absence",
+        "Suspended"
+    ]
+
+    attendance_date_str = request.args.get('date') or request.form.get('attendance_date')
+    if not attendance_date_str:
+        attendance_date_str = datetime.now().strftime('%Y-%m-%d')
+    
+    try:
+        attendance_date = datetime.strptime(attendance_date_str, '%Y-%m-%d').date()
+    except ValueError:
+        flash("Invalid date format. Please use YYYY-MM-DD format.", "danger")
+        return redirect(url_for('management.take_class_attendance', class_id=class_id))
+    
+    # Check if date is not in the future
+    if attendance_date > datetime.now().date():
+        flash("Cannot take attendance for future dates.", "warning")
+        attendance_date_str = datetime.now().strftime('%Y-%m-%d')
+        attendance_date = datetime.now().date()
+
+    # Load existing records for this class/date
+    existing_records = {rec.student_id: rec for rec in Attendance.query.filter_by(class_id=class_id, date=attendance_date).all()}
+    
+    # Load school-day attendance records for the same date
+    school_day_records = {}
+    if attendance_date:
+        school_day_attendance = SchoolDayAttendance.query.filter_by(date=attendance_date).all()
+        school_day_records = {record.student_id: record for record in school_day_attendance}
+    
+    # Calculate attendance statistics
+    total_students = len(students)
+    present_count = sum(1 for record in existing_records.values() if record.status == "Present")
+    late_count = sum(1 for record in existing_records.values() if record.status == "Late")
+    absent_count = sum(1 for record in existing_records.values() if record.status in ["Unexcused Absence", "Excused Absence"])
+    suspended_count = sum(1 for record in existing_records.values() if record.status == "Suspended")
+    
+    attendance_stats = {
+        'total': total_students,
+        'present': present_count,
+        'late': late_count,
+        'absent': absent_count,
+        'suspended': suspended_count,
+        'present_percentage': round((present_count / total_students * 100) if total_students > 0 else 0, 1)
+    }
+
+    if request.method == 'POST':
+        attendance_saved = False
+        valid_statuses = ["Present", "Late", "Unexcused Absence", "Excused Absence", "Suspended"]
+        
+        # Get current user's teacher staff record if they are management
+        teacher = None
+        if current_user.role in ['Director', 'School Administrator']:
+            teacher = TeacherStaff.query.filter_by(user_id=current_user.id).first()
+        
+        for student in students:
+            status = request.form.get(f'status-{student.id}')
+            notes = request.form.get(f'notes-{student.id}')
+            
+            if not status:
+                continue
+                
+            # Validate status
+            if status not in valid_statuses:
+                flash(f"Invalid attendance status for {student.first_name} {student.last_name}.", "warning")
+                continue
+            
+            # Validate that the student is still enrolled in this class
+            enrollment = Enrollment.query.filter_by(
+                student_id=student.id, 
+                class_id=class_id, 
+                is_active=True
+            ).first()
+            
+            if not enrollment:
+                flash(f'Student {student.first_name} {student.last_name} is no longer enrolled in this class.', 'warning')
+                continue
+            
+            # Check if record exists
+            record = Attendance.query.filter_by(student_id=student.id, class_id=class_id, date=attendance_date).first()
+            if record:
+                record.status = status
+                record.notes = notes
+                record.teacher_id = teacher.id if teacher else None
+            else:
+                record = Attendance(
+                    student_id=student.id,
+                    class_id=class_id,
+                    date=attendance_date,
+                    status=status,
+                    notes=notes,
+                    teacher_id=teacher.id if teacher else None
+                )
+                db.session.add(record)
+            attendance_saved = True
+        
+        if attendance_saved:
+            try:
+                db.session.commit()
+                flash('Attendance recorded successfully.', 'success')
+            except Exception as e:
+                db.session.rollback()
+                flash('Error saving attendance. Please try again.', 'danger')
+                current_app.logger.error(f"Error saving attendance: {e}")
+        else:
+            flash('No attendance data was submitted.', 'warning')
+        
+        # Redirect back to management view
+        return redirect(url_for('management.view_class', class_id=class_id))
+
+    return render_template(
+        'shared/take_attendance.html',
+        class_item=class_obj,
+        students=students,
+        attendance_date_str=attendance_date_str,
+        statuses=statuses,
+        existing_records=existing_records,
+        school_day_records=school_day_records,
+        attendance_stats=attendance_stats
+    )
 
 @management_blueprint.route('/unified-attendance', methods=['GET', 'POST'])
 @login_required

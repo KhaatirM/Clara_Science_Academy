@@ -2627,6 +2627,16 @@ def assignments_legacy():
                          sort_order=sort_order,
                          active_tab='assignments')
 
+@management_blueprint.route('/attendance/take/<int:class_id>', methods=['GET', 'POST'])
+@login_required
+@management_required
+def take_class_attendance(class_id):
+    """Take attendance for a specific class (management view)"""
+    # For management users, we can reuse the teacher attendance taking functionality
+    # by importing and calling it, or redirect to teacher route since it already handles admins
+    from teacherroutes import take_attendance as teacher_take_attendance
+    return teacher_take_attendance(class_id)
+
 @management_blueprint.route('/unified-attendance', methods=['GET', 'POST'])
 @login_required
 @management_required

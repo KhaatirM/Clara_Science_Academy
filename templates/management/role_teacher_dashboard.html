@@ -222,7 +222,7 @@
                         <i class="bi bi-people-fill"></i>
                     </div>
                     <div class="stat-content">
-                        <div class="stat-value">{{ classes|map(attribute='enrollments')|map('selectattr', 'is_active', True)|map('list')|map('length')|sum }}</div>
+                        <div class="stat-value">{{ classes|map(attribute='enrollments')|map('selectattr', 'is_active')|map('list')|map('length')|sum }}</div>
                         <div class="stat-label">Total Students</div>
                     </div>
                 </div>
@@ -273,7 +273,7 @@
                             <div class="class-details">
                                 <div class="detail-item">
                                     <i class="bi bi-people-fill text-primary"></i>
-                                    <span>{{ class.enrollments|selectattr('is_active', True)|list|length }} Students</span>
+                                    <span>{{ class.enrollments|selectattr('is_active')|list|length }} Students</span>
                                 </div>
                                 <div class="detail-item">
                                     <i class="bi bi-journal-text text-success"></i>
@@ -844,7 +844,7 @@
                         <i class="bi bi-people-fill"></i>
                     </div>
                     <div class="stat-content">
-                        <div class="stat-value">{{ classes|map(attribute='enrollments')|map('selectattr', 'is_active', True)|map('list')|map('length')|sum }}</div>
+                        <div class="stat-value">{{ classes|map(attribute='enrollments')|map('selectattr', 'is_active')|map('list')|map('length')|sum }}</div>
                         <div class="stat-label">Total Students</div>
                     </div>
                 </div>
@@ -927,7 +927,7 @@
                                         <i class="bi bi-people-fill text-primary"></i>
                                     </div>
                                     <div class="stat-info">
-                                        <span class="stat-number">{{ class.enrollments|selectattr('is_active', True)|list|length }}</span>
+                                        <span class="stat-number">{{ class.enrollments|selectattr('is_active')|list|length }}</span>
                                         <span class="stat-label">Students</span>
                                     </div>
                                 </div>

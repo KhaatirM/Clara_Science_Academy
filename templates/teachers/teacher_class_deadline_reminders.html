@@ -50,7 +50,7 @@
       <div class="card shadow-sm">
         <div class="card-body text-center">
           <h4 class="text-success">
-            {% set active_reminders = reminders|selectattr('is_active', 'equalto', True)|list|length %}
+            {% set active_reminders = reminders|selectattr('is_active')|list|length %}
             {{ active_reminders }}
           </h4>
           <p class="mb-0">Active Reminders</p>

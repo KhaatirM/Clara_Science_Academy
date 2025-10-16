@@ -18,8 +18,8 @@
                         <a href="{{ url_for('management.management_messages') }}" 
                            class="list-group-item list-group-item-action {% if active_tab == 'messages' %}active{% endif %}">
                             <i class="bi bi-envelope-fill me-2"></i>Messages
-                            {% if messages and messages|selectattr('is_read', 'equalto', False)|list|length > 0 %}
-                                <span class="badge bg-danger float-end">{{ messages|selectattr('is_read', 'equalto', False)|list|length }}</span>
+                            {% if messages and messages|rejectattr('is_read')|list|length > 0 %}
+                                <span class="badge bg-danger float-end">{{ messages|rejectattr('is_read')|list|length }}</span>
                             {% endif %}
                         </a>
                         <a href="{{ url_for('management.management_groups') }}" 

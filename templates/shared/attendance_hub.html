@@ -118,7 +118,7 @@
                     <div class="class-details">
                         <div class="detail-item">
                             <i class="bi bi-people-fill text-primary"></i>
-                            <span>{{ class_item.enrollments|selectattr('is_active', True)|list|length }} Students</span>
+                            <span>{{ class_item.enrollments|selectattr('is_active')|list|length }} Students</span>
                         </div>
                         <div class="detail-item">
                             <i class="bi bi-person-badge text-info"></i>
@@ -131,7 +131,7 @@
                     </div>
                     
                     <div class="attendance-progress mb-3">
-                        {% set student_count = class_item.enrollments|selectattr('is_active', True)|list|length %}
+                        {% set student_count = class_item.enrollments|selectattr('is_active')|list|length %}
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <small class="text-muted">Today's Attendance</small>
                             <small class="text-muted">{% if class_item.attendance_taken_today %}{{ student_count }}/{{ student_count }}{% else %}0/{{ student_count }}{% endif %}</small>

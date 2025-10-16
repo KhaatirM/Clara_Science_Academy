@@ -28,7 +28,7 @@
       <div class="card shadow-sm">
         <div class="card-body text-center">
           <h4 class="text-success">
-            {% set active_sessions = feedback_sessions|selectattr('is_active', 'equalto', True)|list|length %}
+            {% set active_sessions = feedback_sessions|selectattr('is_active')|list|length %}
             {{ active_sessions }}
           </h4>
           <p class="mb-0">Active Sessions</p>

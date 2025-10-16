@@ -125,7 +125,7 @@
                             <i class="bi bi-journal-text"></i>
                         </div>
                         <div class="assignment-status">
-                            {% if assignment.due_date < today %}
+                            {% if assignment.due_date.date() < today %}
                                 <span class="badge bg-danger">Past Due</span>
                             {% else %}
                                 <span class="badge bg-success">Active</span>

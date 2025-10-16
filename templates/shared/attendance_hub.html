@@ -2,34 +2,432 @@
 
 {% block title %}Attendance Hub{% endblock %}
 
-{% block dashboard_content %} {# Changed from 'content' to 'dashboard_content' #}
-<div class="container-fluid py-3">
-    <div class="card shadow-sm">
-        <div class="card-header bg-success text-white">
-            <h4 class="mb-0"><i class="fas fa-tasks mr-2"></i>Select a Class for Attendance</h4>
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4 py-4">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">
+                <i class="bi bi-calendar-check-fill text-primary me-2"></i>
+                Attendance Hub
+            </h2>
+            <p class="text-muted mb-0">Take and manage attendance for your classes</p>
         </div>
-        <div class="card-body">
-            <p>Select a class from the list below to take or view attendance for today's date, <strong>{{ today_date }}</strong>.</p>
-            {% if classes %}
-            <div class="list-group">
-                {% for class_item in classes %}
-                    <a href="{{ url_for('teacher.take_attendance', class_id=class_item.id) }}" class="list-group-item list-group-item-action d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
-                        <div>
-                            <h5 class="mb-1">{{ class_item.name }}</h5>
-                            <small>Subject: {{ class_item.subject }} | Grade: {{ class_item.grade_level }} | Teacher: {{ (class_item.teacher.first_name + ' ' + class_item.teacher.last_name) if class_item.teacher else 'N/A' }}</small>
-                        </div>
-                        <span class="btn btn-primary btn-sm align-self-start align-self-md-center">
-                            Take Attendance <i class="fas fa-arrow-right ml-1"></i>
-                        </span>
-                    </a>
-                {% endfor %}
-            </div>
-            {% else %}
-            <div class="alert alert-info">
-                There are no classes available to take attendance for.
-            </div>
-            {% endif %}
+        <div class="d-flex gap-2">
+            <span class="badge bg-primary fs-6">{{ classes|length }} Classes</span>
+            <span class="badge bg-success fs-6">{{ today_date }}</span>
         </div>
     </div>
+
+    <!-- Attendance Stats -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="stat-card stat-card-primary">
+                <div class="stat-icon">
+                    <i class="bi bi-calendar-check"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ classes|length }}</div>
+                    <div class="stat-label">Total Classes</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card stat-card-success">
+                <div class="stat-icon">
+                    <i class="bi bi-people-fill"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ classes|sum(attribute='enrollments')|selectattr('is_active', true)|list|sum }}</div>
+                    <div class="stat-label">Total Students</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card stat-card-warning">
+                <div class="stat-icon">
+                    <i class="bi bi-clock-fill"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ pending_classes_count or 0 }}</div>
+                    <div class="stat-label">Pending</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card stat-card-info">
+                <div class="stat-icon">
+                    <i class="bi bi-graph-up-arrow"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ overall_attendance_rate or 0 }}%</div>
+                    <div class="stat-label">Avg Rate</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div>
+                    <h6 class="mb-1">Quick Actions</h6>
+                    <small class="text-muted">Manage attendance for today: {{ today_date }}</small>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-primary btn-sm" onclick="markAllClassesPresent()">
+                        <i class="bi bi-check-all me-1"></i>Mark All Present
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="viewAttendanceReports()">
+                        <i class="bi bi-bar-chart me-1"></i>View Reports
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Classes Grid -->
+    {% if classes %}
+    <div class="row g-4">
+        {% for class_item in classes %}
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="attendance-class-card">
+                <div class="attendance-card-header">
+                    <div class="class-icon">
+                        <i class="bi bi-book-fill"></i>
+                    </div>
+                    <div class="class-info">
+                        <h5 class="class-name">{{ class_item.name }}</h5>
+                        <p class="class-subject">{{ class_item.subject or 'General' }}</p>
+                    </div>
+                    <div class="attendance-status">
+                        {% set class_attendance_count = class_item.attendance_records|selectattr('date', 'equalto', today_date|replace('-', '/'))|list|length %}
+                        {% if class_attendance_count > 0 %}
+                            <span class="badge bg-success">
+                                <i class="bi bi-check-circle me-1"></i>Taken
+                            </span>
+                        {% else %}
+                            <span class="badge bg-warning text-dark">
+                                <i class="bi bi-clock me-1"></i>Pending
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="attendance-card-body">
+                    <div class="class-details">
+                        <div class="detail-item">
+                            <i class="bi bi-people-fill text-primary"></i>
+                            <span>{{ class_item.enrollments|selectattr('is_active', true)|list|length }} Students</span>
+                        </div>
+                        <div class="detail-item">
+                            <i class="bi bi-person-badge text-info"></i>
+                            <span>{{ (class_item.teacher.first_name + ' ' + class_item.teacher.last_name) if class_item.teacher else 'N/A' }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <i class="bi bi-calendar text-success"></i>
+                            <span>{{ class_item.get_grade_levels_display() if class_item.get_grade_levels_display() else 'N/A' }}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="attendance-progress mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <small class="text-muted">Today's Attendance</small>
+                            <small class="text-muted">{{ class_attendance_count }}/{{ class_item.enrollments|selectattr('is_active', true)|list|length }}</small>
+                        </div>
+                        <div class="progress">
+                            {% set progress_percentage = (class_attendance_count / class_item.enrollments|selectattr('is_active', true)|list|length * 100) if class_item.enrollments|selectattr('is_active', true)|list|length > 0 else 0 %}
+                            <div class="progress-bar {% if class_attendance_count > 0 %}bg-success{% else %}bg-warning{% endif %}" 
+                                 role="progressbar" style="width: {{ progress_percentage }}%"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="attendance-card-footer">
+                    <a href="{{ url_for('teacher.take_attendance', class_id=class_item.id) }}" class="btn btn-primary w-100">
+                        <i class="bi bi-clipboard-check me-1"></i>
+                        {% if class_attendance_count > 0 %}View/Edit Attendance{% else %}Take Attendance{% endif %}
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">
+            <i class="bi bi-calendar-check"></i>
+        </div>
+        <h4>No Classes Available</h4>
+        <p class="text-muted">There are no classes available to take attendance for.</p>
+        <a href="{{ url_for('teacher.teacher_dashboard') }}" class="btn btn-primary">
+            <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
+        </a>
+    </div>
+    {% endif %}
 </div>
+
+<style>
+/* Import styles from the main dashboard */
+.stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+}
+
+.stat-card-primary .stat-icon {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+}
+
+.stat-card-success .stat-icon {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    color: white;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+}
+
+.stat-card-warning .stat-icon {
+    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    color: white;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+}
+
+.stat-card-info .stat-icon {
+    background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+    color: #333;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+}
+
+.stat-content {
+    flex: 1;
+}
+
+.stat-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #2c3e50;
+    line-height: 1;
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    color: #6c757d;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.attendance-class-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.attendance-class-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+}
+
+.attendance-card-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.class-icon {
+    background: rgba(255, 255, 255, 0.2);
+    width: 3rem;
+    height: 3rem;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+}
+
+.class-info {
+    flex: 1;
+}
+
+.class-name {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.class-subject {
+    font-size: 0.875rem;
+    opacity: 0.9;
+    margin: 0;
+}
+
+.attendance-status {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+}
+
+.attendance-card-body {
+    padding: 1.5rem;
+}
+
+.class-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.detail-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.875rem;
+}
+
+.detail-item i {
+    width: 1.25rem;
+    text-align: center;
+}
+
+.attendance-progress {
+    margin-top: 1rem;
+}
+
+.attendance-card-footer {
+    padding: 1rem 1.5rem;
+    background: #f8f9fa;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem 2rem;
+}
+
+.empty-state-icon {
+    width: 4rem;
+    height: 4rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin: 0 auto 1.5rem;
+}
+
+.empty-state h4 {
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+}
+
+.progress {
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    border-radius: 10px;
+}
+
+@media (max-width: 768px) {
+    .stat-card {
+        padding: 1rem;
+        gap: 0.75rem;
+    }
+    
+    .stat-icon {
+        width: 2.5rem !important;
+        height: 2.5rem !important;
+        font-size: 1rem !important;
+    }
+    
+    .stat-value {
+        font-size: 1.5rem;
+    }
+    
+    .attendance-card-header {
+        padding: 1rem;
+    }
+    
+    .attendance-card-body {
+        padding: 1rem;
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.stat-card {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+.stat-card:nth-child(1) { animation-delay: 0.1s; }
+.stat-card:nth-child(2) { animation-delay: 0.2s; }
+.stat-card:nth-child(3) { animation-delay: 0.3s; }
+.stat-card:nth-child(4) { animation-delay: 0.4s; }
+</style>
+
+<script>
+function markAllClassesPresent() {
+    alert('Mark all classes present functionality will be implemented');
+}
+
+function viewAttendanceReports() {
+    alert('Attendance reports functionality will be implemented');
+}
+</script>
 {% endblock %}

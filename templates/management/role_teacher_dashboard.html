@@ -222,7 +222,7 @@
                         <i class="bi bi-people-fill"></i>
                     </div>
                     <div class="stat-content">
-                        <div class="stat-value">{{ classes|sum(attribute='enrolled_student_count') }}</div>
+                        <div class="stat-value">{{ classes|map(attribute='enrollments')|map('selectattr', 'is_active', true)|map('list')|sum }}</div>
                         <div class="stat-label">Total Students</div>
                     </div>
                 </div>
@@ -233,7 +233,7 @@
                         <i class="bi bi-journal-text"></i>
                     </div>
                     <div class="stat-content">
-                        <div class="stat-value">{{ classes|sum(attribute='assignment_count') if classes else 0 }}</div>
+                        <div class="stat-value">{{ classes|map(attribute='assignments')|map('list')|sum if classes else 0 }}</div>
                         <div class="stat-label">Assignments</div>
                     </div>
                 </div>
@@ -265,7 +265,7 @@
                                 <p class="class-subject">{{ class.subject or 'General' }}</p>
                             </div>
                             <div class="class-badge">
-                                <span class="badge bg-primary">{{ class.grade_level or 'N/A' }}</span>
+                                <span class="badge bg-primary">{{ class.get_grade_levels_display() if class.get_grade_levels_display() else 'N/A' }}</span>
                             </div>
                         </div>
                         
@@ -273,11 +273,11 @@
                             <div class="class-details">
                                 <div class="detail-item">
                                     <i class="bi bi-people-fill text-primary"></i>
-                                    <span>{{ class.enrolled_student_count or 0 }} Students</span>
+                                    <span>{{ class.enrollments|selectattr('is_active', true)|list|length }} Students</span>
                                 </div>
                                 <div class="detail-item">
                                     <i class="bi bi-journal-text text-success"></i>
-                                    <span>{{ class.assignment_count or 0 }} Assignments</span>
+                                    <span>{{ class.assignments|list|length }} Assignments</span>
                                 </div>
                                 <div class="detail-item">
                                     <i class="bi bi-calendar text-info"></i>
@@ -844,7 +844,7 @@
                         <i class="bi bi-people-fill"></i>
                     </div>
                     <div class="stat-content">
-                        <div class="stat-value">{{ classes|sum(attribute='enrolled_student_count') }}</div>
+                        <div class="stat-value">{{ classes|map(attribute='enrollments')|map('selectattr', 'is_active', true)|map('list')|sum }}</div>
                         <div class="stat-label">Total Students</div>
                     </div>
                 </div>
@@ -927,7 +927,7 @@
                                         <i class="bi bi-people-fill text-primary"></i>
                                     </div>
                                     <div class="stat-info">
-                                        <span class="stat-number">{{ class.enrolled_student_count or 0 }}</span>
+                                        <span class="stat-number">{{ class.enrollments|selectattr('is_active', true)|list|length }}</span>
                                         <span class="stat-label">Students</span>
                                     </div>
                                 </div>

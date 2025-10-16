@@ -452,12 +452,18 @@
     box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
 }
 
-.btn-check:checked + .btn-attendance-unexcused-absence,
-.btn-check:checked + .btn-attendance-excused-absence {
+.btn-check:checked + .btn-attendance-unexcused-absence {
     background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
     border-color: #ef4444;
     color: white;
     box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+}
+
+.btn-check:checked + .btn-attendance-excused-absence {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    border-color: #3b82f6;
+    color: white;
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
 }
 
 .btn-check:checked + .btn-attendance-suspended {

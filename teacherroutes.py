@@ -1490,6 +1490,9 @@ def assignments_and_grades():
                     'average_score': round(total_score / len(graded_grades), 1) if graded_grades else 0
                 }
     
+        from datetime import datetime
+        today = datetime.now().date()
+        
         return render_template('teachers/assignments_and_grades.html', 
                              assignments=assignments,
                              group_assignments=group_assignments,
@@ -1499,7 +1502,8 @@ def assignments_and_grades():
                              sort_order=sort_order,
                              view_mode=view_mode,
                              grade_data=grade_data,
-                             teacher=teacher)
+                             teacher=teacher,
+                             today=today)
     
     except Exception as e:
         print(f"Error in teacher assignments_and_grades: {e}")

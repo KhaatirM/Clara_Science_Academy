@@ -222,7 +222,7 @@
                         <i class="bi bi-people-fill"></i>
                     </div>
                     <div class="stat-content">
-                        <div class="stat-value">{{ classes|map(attribute='enrollments')|map('selectattr', 'is_active', true)|map('list')|sum }}</div>
+                        <div class="stat-value">{{ classes|map(attribute='enrollments')|map('selectattr', 'is_active', True)|map('list')|map('length')|sum }}</div>
                         <div class="stat-label">Total Students</div>
                     </div>
                 </div>
@@ -273,7 +273,7 @@
                             <div class="class-details">
                                 <div class="detail-item">
                                     <i class="bi bi-people-fill text-primary"></i>
-                                    <span>{{ class.enrollments|selectattr('is_active', true)|list|length }} Students</span>
+                                    <span>{{ class.enrollments|selectattr('is_active', True)|list|length }} Students</span>
                                 </div>
                                 <div class="detail-item">
                                     <i class="bi bi-journal-text text-success"></i>
@@ -752,7 +752,7 @@
         {% endfor %}
 
         <!-- Student Details Modal -->
-        <div class="modal fade" id="studentDetailsModal" tabindex="-1" aria-labelledby="studentDetailsModalLabel" aria-hidden="true">
+        <div class="modal fade" id="studentDetailsModal" tabindex="-1" aria-labelledby="studentDetailsModalLabel" aria-hidden="True">
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -844,7 +844,7 @@
                         <i class="bi bi-people-fill"></i>
                     </div>
                     <div class="stat-content">
-                        <div class="stat-value">{{ classes|map(attribute='enrollments')|map('selectattr', 'is_active', true)|map('list')|sum }}</div>
+                        <div class="stat-value">{{ classes|map(attribute='enrollments')|map('selectattr', 'is_active', True)|map('list')|map('length')|sum }}</div>
                         <div class="stat-label">Total Students</div>
                     </div>
                 </div>
@@ -927,7 +927,7 @@
                                         <i class="bi bi-people-fill text-primary"></i>
                                     </div>
                                     <div class="stat-info">
-                                        <span class="stat-number">{{ class.enrollments|selectattr('is_active', true)|list|length }}</span>
+                                        <span class="stat-number">{{ class.enrollments|selectattr('is_active', True)|list|length }}</span>
                                         <span class="stat-label">Students</span>
                                     </div>
                                 </div>
@@ -1385,7 +1385,7 @@
 </div>
 
 <!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="True">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -1415,7 +1415,7 @@ function showInfoUnavailableModal() {
     let modalEl = document.getElementById('infoUnavailableModal');
     if (!modalEl) {
         const modalHtml = `
-        <div class="modal fade" id="infoUnavailableModal" tabindex="-1" aria-labelledby="infoUnavailableModalLabel" aria-hidden="true">
+        <div class="modal fade" id="infoUnavailableModal" tabindex="-1" aria-labelledby="infoUnavailableModalLabel" aria-hidden="True">
           <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
               <div class="modal-header">

@@ -38,7 +38,7 @@
                     <i class="bi bi-people-fill"></i>
                 </div>
                 <div class="stat-content">
-                    <div class="stat-value">{{ classes|sum(attribute='enrollments')|selectattr('is_active', true)|list|sum }}</div>
+                    <div class="stat-value">{{ classes|map(attribute='enrollments')|map('selectattr', 'is_active', true)|map('list')|map('length')|sum }}</div>
                     <div class="stat-label">Total Students</div>
                 </div>
             </div>

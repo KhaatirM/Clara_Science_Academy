@@ -5,7 +5,7 @@
 {% block dashboard_content %}
 <div class="container-fluid px-2 px-md-4 py-4">
     <!-- Header Section -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="mb-1">
                 <i class="bi bi-journal-check text-primary me-2"></i>
@@ -17,7 +17,7 @@
             <span class="badge bg-primary fs-6">{{ (assignments|length + group_assignments|length) }} Assignments</span>
             <button type="button" class="btn btn-primary" onclick="createAssignment()">
                 <i class="bi bi-plus-circle me-1"></i>New Assignment
-            </button>
+                    </button>
         </div>
     </div>
 
@@ -51,7 +51,7 @@
                     <i class="bi bi-clock-fill"></i>
                 </div>
                 <div class="stat-content">
-                    <div class="stat-value">{{ assignments|selectattr('due_date', 'ge', today)|list|length + group_assignments|selectattr('due_date', 'ge', today)|list|length }}</div>
+                    <div class="stat-value">{{ assignments|length + group_assignments|length }}</div>
                     <div class="stat-label">Active</div>
                 </div>
             </div>
@@ -84,30 +84,30 @@
                     </div>
                 </div>
                 <div class="col-12 col-md-3">
-                    <label for="classFilter" class="form-label">Filter by Class</label>
-                    <select class="form-select" id="classFilter" onchange="applyFilters()">
-                        <option value="">All Classes</option>
-                        {% for class_obj in classes %}
-                        <option value="{{ class_obj.id }}" {% if class_filter == class_obj.id|string %}selected{% endif %}>
-                            {{ class_obj.name }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
+            <label for="classFilter" class="form-label">Filter by Class</label>
+            <select class="form-select" id="classFilter" onchange="applyFilters()">
+                <option value="">All Classes</option>
+                {% for class_obj in classes %}
+                <option value="{{ class_obj.id }}" {% if class_filter == class_obj.id|string %}selected{% endif %}>
+                    {{ class_obj.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
                 <div class="col-12 col-md-3">
-                    <label for="sortBy" class="form-label">Sort By</label>
-                    <select class="form-select" id="sortBy" onchange="applyFilters()">
-                        <option value="due_date" {% if sort_by == 'due_date' %}selected{% endif %}>Due Date</option>
-                        <option value="title" {% if sort_by == 'title' %}selected{% endif %}>Title</option>
-                    </select>
-                </div>
+            <label for="sortBy" class="form-label">Sort By</label>
+            <select class="form-select" id="sortBy" onchange="applyFilters()">
+                <option value="due_date" {% if sort_by == 'due_date' %}selected{% endif %}>Due Date</option>
+                <option value="title" {% if sort_by == 'title' %}selected{% endif %}>Title</option>
+            </select>
+        </div>
                 <div class="col-12 col-md-3">
-                    <label for="sortOrder" class="form-label">Order</label>
-                    <select class="form-select" id="sortOrder" onchange="applyFilters()">
-                        <option value="desc" {% if sort_order == 'desc' %}selected{% endif %}>Descending</option>
-                        <option value="asc" {% if sort_order == 'asc' %}selected{% endif %}>Ascending</option>
-                    </select>
-                </div>
+            <label for="sortOrder" class="form-label">Order</label>
+            <select class="form-select" id="sortOrder" onchange="applyFilters()">
+                <option value="desc" {% if sort_order == 'desc' %}selected{% endif %}>Descending</option>
+                <option value="asc" {% if sort_order == 'asc' %}selected{% endif %}>Ascending</option>
+            </select>
+        </div>
             </div>
         </div>
     </div>
@@ -117,7 +117,7 @@
         {% if assignments or group_assignments %}
         <div class="row g-4">
             <!-- Individual Assignments -->
-            {% for assignment in assignments %}
+                {% for assignment in assignments %}
             <div class="col-12 col-md-6 col-xl-4">
                 <div class="assignment-card">
                     <div class="assignment-card-header">
@@ -125,8 +125,7 @@
                             <i class="bi bi-journal-text"></i>
                         </div>
                         <div class="assignment-status">
-                            {% set is_overdue = assignment.due_date < today %}
-                            {% if is_overdue %}
+                            {% if assignment.due_date < today %}
                                 <span class="badge bg-danger">Past Due</span>
                             {% else %}
                                 <span class="badge bg-success">Active</span>
@@ -174,14 +173,14 @@
                             <a href="{{ url_for('teacher.grade_assignment', assignment_id=assignment.id) }}" class="btn btn-primary btn-sm">
                                 <i class="bi bi-check-circle"></i>
                             </a>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            {% endfor %}
-
+                {% endfor %}
+            
             <!-- Group Assignments -->
-            {% for group_assignment in group_assignments %}
+                {% for group_assignment in group_assignments %}
             <div class="col-12 col-md-6 col-xl-4">
                 <div class="group-assignment-card">
                     <div class="assignment-card-header">
@@ -225,11 +224,11 @@
                             <a href="{{ url_for('teacher.grade_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-info btn-sm">
                                 <i class="bi bi-check-circle"></i>
                             </a>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            {% endfor %}
+                {% endfor %}
         </div>
         {% else %}
         <div class="empty-state">
@@ -238,11 +237,11 @@
             </div>
             <h4>No Assignments Yet</h4>
             <p class="text-muted">Create your first assignment to get started with grading and tracking.</p>
-            <button type="button" class="btn btn-primary" onclick="createAssignment()">
-                <i class="bi bi-plus-circle me-1"></i>Create Assignment
-            </button>
-        </div>
-        {% endif %}
+                        <button type="button" class="btn btn-primary" onclick="createAssignment()">
+                            <i class="bi bi-plus-circle me-1"></i>Create Assignment
+                        </button>
+                </div>
+            {% endif %}
     </div>
 
     <!-- Grades View -->
@@ -253,20 +252,20 @@
                 <h6 class="mb-0">Grade Analytics Overview</h6>
             </div>
             <div class="card-body p-0">
-                <div class="table-responsive">
+        <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-light">
-                            <tr>
-                                <th>Assignment</th>
-                                <th>Class</th>
-                                <th>Due Date</th>
+                    <tr>
+                        <th>Assignment</th>
+                        <th>Class</th>
+                        <th>Due Date</th>
                                 <th>Progress</th>
-                                <th>Average Score</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for assignment in assignments %}
+                        <th>Average Score</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for assignment in assignments %}
                             {% set grade_info = grade_data.get(assignment.id, {}) %}
                             {% set avg_score = grade_info.get('average_score', 0) %}
                             {% set total_submissions = grade_info.get('total_submissions', 0) %}
@@ -301,23 +300,23 @@
                                 </td>
                                 <td>
                                     <span class="badge {% if avg_score >= 90 %}bg-success{% elif avg_score >= 70 %}bg-warning{% else %}bg-danger{% endif %} fs-6">
-                                        {{ "%.1f"|format(avg_score) }}%
-                                    </span>
-                                </td>
-                                <td>
-                                    <div class="btn-group" role="group">
+                                {{ "%.1f"|format(avg_score) }}%
+                            </span>
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
                                         <a href="{{ url_for('teacher.grade_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-primary" title="Grade Assignment">
                                             <i class="bi bi-pencil-square"></i>
-                                        </a>
+                                </a>
                                         <a href="{{ url_for('teacher.view_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-secondary" title="View Assignment">
                                             <i class="bi bi-eye"></i>
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
                 </div>
             </div>
         </div>

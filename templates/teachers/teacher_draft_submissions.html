@@ -25,7 +25,7 @@
       <div class="card shadow-sm">
         <div class="card-body text-center">
           <h4 class="text-success">
-            {% set approved_drafts = draft_submissions|selectattr('is_final', 'equalto', true)|list|length %}
+            {% set approved_drafts = draft_submissions|selectattr('is_final', 'equalto', True)|list|length %}
             {{ approved_drafts }}
           </h4>
           <p class="mb-0">Approved Drafts</p>
@@ -36,7 +36,7 @@
       <div class="card shadow-sm">
         <div class="card-body text-center">
           <h4 class="text-warning">
-            {% set pending_drafts = draft_submissions|selectattr('is_final', 'equalto', false)|list|length %}
+            {% set pending_drafts = draft_submissions|selectattr('is_final', 'equalto', False)|list|length %}
             {{ pending_drafts }}
           </h4>
           <p class="mb-0">Pending Review</p>

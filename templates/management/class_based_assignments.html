@@ -99,7 +99,7 @@
                         
                         <div class="metadata-item mb-2">
                             <i class="fas fa-users me-2 text-success"></i>
-                            <span>{{ class_obj.enrollments|selectattr('is_active', 'equalto', true)|list|length }} students enrolled</span>
+                            <span>{{ class_obj.enrollments|selectattr('is_active', 'equalto', True)|list|length }} students enrolled</span>
                         </div>
                         
                         {% if class_obj.max_students %}

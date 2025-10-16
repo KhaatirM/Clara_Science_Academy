@@ -231,7 +231,7 @@
                         
                         <div class="metadata-item">
                             <i class="fas fa-users me-2"></i>
-                            <span>{{ class.enrollments|selectattr('is_active', 'equalto', true)|list|length }} students</span>
+                            <span>{{ class.enrollments|selectattr('is_active', 'equalto', True)|list|length }} students</span>
                         </div>
                         
                         {% if class.max_students %}
@@ -324,7 +324,7 @@
 </div>
 
 <!-- Create Class Modal -->
-<div class="modal fade" id="createClassModal" tabindex="-1" aria-labelledby="createClassModalLabel" aria-hidden="true">
+<div class="modal fade" id="createClassModal" tabindex="-1" aria-labelledby="createClassModalLabel" aria-hidden="True">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header bg-success text-white">
@@ -670,7 +670,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const subject = card.dataset.subject;
             const status = card.dataset.status;
             
-            let show = true;
+            let show = True;
             
             if (searchTerm && !searchData.includes(searchTerm)) {
                 show = false;

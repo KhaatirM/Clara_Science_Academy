@@ -981,90 +981,145 @@
 
     {% elif section == 'students' %}
         <!-- Students Directory View -->
-        <h2 class="mb-4">Students Directory</h2>
+        <!-- Header Section -->
+        <div class="students-dir-header mb-4">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div>
+                    <h2 class="header-title-dir mb-1">
+                        <i class="bi bi-people-fill me-2"></i>Students Directory
+                    </h2>
+                    <p class="header-subtitle-dir mb-0">
+                        <span class="badge bg-white text-primary me-2">{{ students|length }} Students</span>
+                        <span class="text-white-50">Browse and search all enrolled students</span>
+                    </p>
+                </div>
+            </div>
+        </div>
 
-        <!-- Advanced Student Search -->
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0"><i class="bi bi-search me-2"></i>Advanced Student Search</h5>
+        <!-- Statistics Cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3">
+                <div class="stat-card-dir stat-card-dir-primary">
+                    <div class="stat-icon-dir">
+                        <i class="bi bi-person-check-fill"></i>
+                    </div>
+                    <div class="stat-content-dir">
+                        <div class="stat-value-dir">{{ students|length }}</div>
+                        <div class="stat-label-dir">Total Students</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card-dir stat-card-dir-success">
+                    <div class="stat-icon-dir">
+                        <i class="bi bi-graph-up-arrow"></i>
+                    </div>
+                    <div class="stat-content-dir">
+                        <div class="stat-value-dir">{{ students|selectattr('is_active')|list|length }}</div>
+                        <div class="stat-label-dir">Active</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card-dir stat-card-dir-info">
+                    <div class="stat-icon-dir">
+                        <i class="bi bi-mortarboard-fill"></i>
+                    </div>
+                    <div class="stat-content-dir">
+                        <div class="stat-value-dir">{{ students|map(attribute='grade_level')|unique|list|length }}</div>
+                        <div class="stat-label-dir">Grade Levels</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card-dir stat-card-dir-warning">
+                    <div class="stat-icon-dir">
+                        <i class="bi bi-star-fill"></i>
+                    </div>
+                    <div class="stat-content-dir">
+                        <div class="stat-value-dir">{{ students|selectattr('is_active')|list|length }}</div>
+                        <div class="stat-label-dir">Enrolled</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Advanced Search & Filter Card -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-gradient-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-funnel-fill me-2"></i>Search & Filter</h5>
             </div>
             <div class="card-body">
                 <form method="GET" action="{{ url_for('teacher.students_directory') }}" id="studentSearchForm" class="row g-3">
                     <!-- Search Query -->
-                    <div class="col-md-6">
-                        <label for="search" class="form-label">Search Query</label>
+                    <div class="col-md-4">
+                        <label for="search" class="form-label fw-semibold">
+                            <i class="bi bi-search me-1"></i>Search
+                        </label>
                         <input type="text" 
                                class="form-control" 
                                id="search" 
                                name="search" 
                                value="{{ search_query or '' }}" 
-                               placeholder="Enter search terms..."
+                               placeholder="Search by name or ID..."
                                autocomplete="off">
                     </div>
                     
-                    <!-- Search Type -->
-                    <div class="col-md-3">
-                        <label for="search_type" class="form-label">Search Type</label>
-                        <select class="form-select" id="search_type" name="search_type">
-                            <option value="all" {% if search_type == 'all' %}selected{% endif %}>All Fields</option>
-                            <option value="name" {% if search_type == 'name' %}selected{% endif %}>Student Name</option>
-                            <option value="contact" {% if search_type == 'contact' %}selected{% endif %}>Contact Info</option>
-                            <option value="academic" {% if search_type == 'academic' %}selected{% endif %}>Academic Info</option>
-                            <option value="address" {% if search_type == 'address' %}selected{% endif %}>Address</option>
-                            <option value="emergency" {% if search_type == 'emergency' %}selected{% endif %}>Emergency Contact</option>
-                            <option value="student_id" {% if search_type == 'student_id' %}selected{% endif %}>Student ID</option>
-                        </select>
-                    </div>
-                    
                     <!-- Grade Filter -->
-                    <div class="col-md-3">
-                        <label for="grade_filter" class="form-label">Grade Level</label>
+                    <div class="col-md-2">
+                        <label for="grade_filter" class="form-label fw-semibold">
+                            <i class="bi bi-mortarboard me-1"></i>Grade
+                        </label>
                         <select class="form-select" id="grade_filter" name="grade_filter">
-                            <option value="">All Grades</option>
-                            <option value="Kindergarten" {% if grade_filter == 'Kindergarten' %}selected{% endif %}>Kindergarten</option>
-                            <option value="1st" {% if grade_filter == '1st' %}selected{% endif %}>1st Grade</option>
-                            <option value="2nd" {% if grade_filter == '2nd' %}selected{% endif %}>2nd Grade</option>
-                            <option value="3rd" {% if grade_filter == '3rd' %}selected{% endif %}>3rd Grade</option>
-                            <option value="4th" {% if grade_filter == '4th' %}selected{% endif %}>4th Grade</option>
-                            <option value="5th" {% if grade_filter == '5th' %}selected{% endif %}>5th Grade</option>
-                            <option value="6th" {% if grade_filter == '6th' %}selected{% endif %}>6th Grade</option>
-                            <option value="7th" {% if grade_filter == '7th' %}selected{% endif %}>7th Grade</option>
-                            <option value="8th" {% if grade_filter == '8th' %}selected{% endif %}>8th Grade</option>
-                            <option value="9th" {% if grade_filter == '9th' %}selected{% endif %}>9th Grade</option>
-                            <option value="10th" {% if grade_filter == '10th' %}selected{% endif %}>10th Grade</option>
-                            <option value="11th" {% if grade_filter == '11th' %}selected{% endif %}>11th Grade</option>
-                            <option value="12th" {% if grade_filter == '12th' %}selected{% endif %}>12th Grade</option>
+                            <option value="">All</option>
+                            <option value="Kindergarten" {% if grade_filter == 'Kindergarten' %}selected{% endif %}>K</option>
+                            <option value="1st" {% if grade_filter == '1st' %}selected{% endif %}>1st</option>
+                            <option value="2nd" {% if grade_filter == '2nd' %}selected{% endif %}>2nd</option>
+                            <option value="3rd" {% if grade_filter == '3rd' %}selected{% endif %}>3rd</option>
+                            <option value="4th" {% if grade_filter == '4th' %}selected{% endif %}>4th</option>
+                            <option value="5th" {% if grade_filter == '5th' %}selected{% endif %}>5th</option>
+                            <option value="6th" {% if grade_filter == '6th' %}selected{% endif %}>6th</option>
+                            <option value="7th" {% if grade_filter == '7th' %}selected{% endif %}>7th</option>
+                            <option value="8th" {% if grade_filter == '8th' %}selected{% endif %}>8th</option>
+                            <option value="9th" {% if grade_filter == '9th' %}selected{% endif %}>9th</option>
+                            <option value="10th" {% if grade_filter == '10th' %}selected{% endif %}>10th</option>
+                            <option value="11th" {% if grade_filter == '11th' %}selected{% endif %}>11th</option>
+                            <option value="12th" {% if grade_filter == '12th' %}selected{% endif %}>12th</option>
                         </select>
                     </div>
                     
                     <!-- Status Filter -->
-                    <div class="col-md-3">
-                        <label for="status_filter" class="form-label">Account Status</label>
+                    <div class="col-md-2">
+                        <label for="status_filter" class="form-label fw-semibold">
+                            <i class="bi bi-toggle-on me-1"></i>Status
+                        </label>
                         <select class="form-select" id="status_filter" name="status_filter">
-                            <option value="">All Statuses</option>
+                            <option value="">All</option>
                             <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
                             <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive</option>
-                            <option value="no_account" {% if status_filter == 'no_account' %}selected{% endif %}>No Account</option>
                         </select>
                     </div>
                     
-                    <!-- Sort Options -->
-                    <div class="col-md-3">
-                        <label for="sort_by" class="form-label">Sort By</label>
+                    <!-- Sort By -->
+                    <div class="col-md-2">
+                        <label for="sort_by" class="form-label fw-semibold">
+                            <i class="bi bi-sort-down me-1"></i>Sort By
+                        </label>
                         <select class="form-select" id="sort_by" name="sort_by">
                             <option value="name" {% if sort_by == 'name' %}selected{% endif %}>Name</option>
-                            <option value="grade" {% if sort_by == 'grade' %}selected{% endif %}>Grade Level</option>
+                            <option value="grade" {% if sort_by == 'grade' %}selected{% endif %}>Grade</option>
                             <option value="gpa" {% if sort_by == 'gpa' %}selected{% endif %}>GPA</option>
-                            <option value="student_id" {% if sort_by == 'student_id' %}selected{% endif %}>Student ID</option>
                         </select>
                     </div>
                     
                     <!-- Sort Order -->
-                    <div class="col-md-3">
-                        <label for="sort_order" class="form-label">Order</label>
+                    <div class="col-md-2">
+                        <label for="sort_order" class="form-label fw-semibold">
+                            <i class="bi bi-arrow-down-up me-1"></i>Order
+                        </label>
                         <select class="form-select" id="sort_order" name="sort_order">
-                            <option value="asc" {% if sort_order == 'asc' %}selected{% endif %}>Ascending</option>
-                            <option value="desc" {% if sort_order == 'desc' %}selected{% endif %}>Descending</option>
+                            <option value="asc" {% if sort_order == 'asc' %}selected{% endif %}>A-Z</option>
+                            <option value="desc" {% if sort_order == 'desc' %}selected{% endif %}>Z-A</option>
                         </select>
                     </div>
                     
@@ -1072,111 +1127,129 @@
                     <div class="col-12">
                         <div class="d-flex gap-2 flex-wrap">
                             <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-search me-2"></i>Search
+                                <i class="bi bi-search me-2"></i>Apply Filters
                             </button>
                             <a href="{{ url_for('teacher.students_directory') }}" class="btn btn-outline-secondary">
-                                <i class="bi bi-arrow-clockwise me-2"></i>Reset
+                                <i class="bi bi-arrow-counterclockwise me-2"></i>Reset
                             </a>
-                            <button type="button" class="btn btn-outline-info" data-bs-toggle="collapse" data-bs-target="#searchTips">
-                                <i class="bi bi-lightbulb me-2"></i>Search Tips
-                            </button>
                         </div>
                     </div>
                 </form>
-                
-                <!-- Search Tips -->
-                <div class="collapse mt-3" id="searchTips">
-                    <div class="alert alert-info">
-                        <h6><i class="bi bi-info-circle me-2"></i>Search Tips:</h6>
-                        <ul class="mb-0">
-                            <li><strong>All Fields:</strong> Searches across all student information including name, contact, academic details, and emergency contacts</li>
-                            <li><strong>Student Name:</strong> Search by first name, last name, or middle initial</li>
-                            <li><strong>Contact Info:</strong> Search by email address or phone number</li>
-                            <li><strong>Academic Info:</strong> Search by grade level, GPA, or student ID</li>
-                            <li><strong>Address:</strong> Search by street, city, state, or zip code</li>
-                            <li><strong>Emergency Contact:</strong> Search by emergency contact name, phone, or relationship</li>
-                            <li><strong>Student ID:</strong> Search by student identification number</li>
-                        </ul>
-                    </div>
-                </div>
             </div>
         </div>
 
         <!-- Search Results Info -->
         {% if search_query or grade_filter or status_filter %}
-            <div class="alert alert-info mb-3">
-                <i class="bi bi-info-circle me-2"></i>
-                <strong>Search Results:</strong> Found {{ students|length }} student(s)
-                {% if search_query %}<span class="badge bg-primary me-1">Search: "{{ search_query }}"</span>{% endif %}
-                {% if grade_filter %}<span class="badge bg-secondary me-1">Grade: "{{ grade_filter }}"</span>{% endif %}
-                {% if status_filter %}<span class="badge bg-warning me-1">Status: "{{ status_filter }}"</span>{% endif %}
+            <div class="alert alert-info border-0 shadow-sm mb-3">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-info-circle-fill fs-4 me-3"></i>
+                    <div>
+                        <strong>Search Results:</strong> Found {{ students|length }} student(s)
+                        <div class="mt-1">
+                            {% if search_query %}<span class="badge bg-primary me-1">Search: "{{ search_query }}"</span>{% endif %}
+                            {% if grade_filter %}<span class="badge bg-secondary me-1">Grade: "{{ grade_filter }}"</span>{% endif %}
+                            {% if status_filter %}<span class="badge bg-warning text-dark me-1">Status: "{{ status_filter }}"</span>{% endif %}
+                        </div>
+                    </div>
+                </div>
             </div>
         {% endif %}
 
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Grade Level</th>
-                                <th>Email</th>
-                                <th>Phone</th>
-                                <th>GPA</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for student in students %}
-                                <tr>
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <div class="avatar-sm me-3">
-                                                <i class="bi bi-person-circle fs-4 text-primary"></i>
-                                            </div>
-                                            <div>
-                                                <strong>{{ student.first_name }} {{ student.last_name }}</strong>
-                                                <br><small class="text-muted">{{ student.student_id }}</small>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-info">{{ student.grade_level or 'N/A' }}</span>
-                                    </td>
-                                    <td>
-                                        {% if student.email %}
-                                            <a href="mailto:{{ student.email }}" class="text-decoration-none">
-                                                {{ student.email }}
-                                            </a>
-                                        {% else %}
-                                            <span class="text-muted">N/A</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>{{ student.phone or 'N/A' }}</td>
-                                    <td>
-                                        {% set student_gpa = student_gpas.get(student.id, 0.0) %}
-                                        <span class="badge {% if student_gpa >= 3.5 %}bg-success
-                                                       {% elif student_gpa >= 3.0 %}bg-primary
-                                                       {% elif student_gpa >= 2.0 %}bg-warning text-dark
-                                                       {% else %}bg-danger{% endif %} fs-6">
-                                            {{ "%.2f"|format(student_gpa) }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="showInfoUnavailableModal()">View Details</button>
-                                    </td>
-                                </tr>
-                            {% else %}
-                                <tr>
-                                    <td colspan="6" class="text-center text-muted">No students found.</td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+        <!-- Students Cards Grid -->
+        {% if students %}
+        <div class="row g-3">
+            {% for student in students %}
+            <div class="col-12 col-md-6 col-xl-4">
+                <div class="student-card-dir">
+                    <div class="student-card-header-dir">
+                        <div class="student-avatar-dir">
+                            {{ student.first_name[0] }}{{ student.last_name[0] }}
+                        </div>
+                        <div class="student-info-dir">
+                            <h6 class="student-name-dir mb-1">{{ student.first_name }} {{ student.last_name }}</h6>
+                            <div class="d-flex gap-2 flex-wrap">
+                                <span class="badge badge-grade-dir">Grade {{ student.grade_level or 'N/A' }}</span>
+                                {% if student.is_active %}
+                                <span class="badge bg-success">Active</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Inactive</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="student-card-body-dir">
+                        <div class="info-row-dir">
+                            <div class="info-icon-dir">
+                                <i class="bi bi-card-text"></i>
+                            </div>
+                            <div class="info-content-dir">
+                                <small class="text-muted">Student ID</small>
+                                <div class="fw-semibold">{{ student.student_id }}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="info-row-dir">
+                            <div class="info-icon-dir">
+                                <i class="bi bi-envelope"></i>
+                            </div>
+                            <div class="info-content-dir">
+                                <small class="text-muted">Email</small>
+                                {% if student.email %}
+                                <div class="fw-semibold text-truncate">
+                                    <a href="mailto:{{ student.email }}" class="text-decoration-none">{{ student.email }}</a>
+                                </div>
+                                {% else %}
+                                <div class="text-muted">N/A</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="info-row-dir">
+                            <div class="info-icon-dir">
+                                <i class="bi bi-telephone"></i>
+                            </div>
+                            <div class="info-content-dir">
+                                <small class="text-muted">Phone</small>
+                                <div class="fw-semibold">{{ student.phone or 'N/A' }}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="info-row-dir">
+                            <div class="info-icon-dir">
+                                <i class="bi bi-trophy"></i>
+                            </div>
+                            <div class="info-content-dir">
+                                <small class="text-muted">GPA</small>
+                                {% set student_gpa = student_gpas.get(student.id, 0.0) %}
+                                <span class="badge {% if student_gpa >= 3.5 %}bg-success
+                                               {% elif student_gpa >= 3.0 %}bg-primary
+                                               {% elif student_gpa >= 2.0 %}bg-warning text-dark
+                                               {% else %}bg-danger{% endif %}">
+                                    {{ "%.2f"|format(student_gpa) }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="student-card-footer-dir">
+                        <button class="btn btn-primary btn-sm w-100" onclick="showInfoUnavailableModal()">
+                            <i class="bi bi-eye me-1"></i>View Full Details
+                        </button>
+                    </div>
                 </div>
             </div>
+            {% endfor %}
         </div>
+        {% else %}
+        <div class="alert alert-info text-center border-0 shadow-sm">
+            <div class="mb-3">
+                <i class="bi bi-person-x" style="font-size: 3rem; color: #0d6efd;"></i>
+            </div>
+            <h5>No Students Found</h5>
+            <p class="mb-0">Try adjusting your search filters or reset to view all students.</p>
+        </div>
+        {% endif %}
 
     {% elif section == 'teachers-staff' %}
         <!-- Teachers & Staff Directory View -->
@@ -1976,5 +2049,236 @@ function markAllPresent() {
 .stat-card:nth-child(2) { animation-delay: 0.2s; }
 .stat-card:nth-child(3) { animation-delay: 0.3s; }
 .stat-card:nth-child(4) { animation-delay: 0.4s; }
+
+/* Students Directory Specific Styles */
+.students-dir-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 15px;
+    padding: 2rem;
+    color: white;
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+}
+
+.header-title-dir {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.header-subtitle-dir {
+    font-size: 1.1rem;
+    opacity: 0.95;
+}
+
+.stat-card-dir {
+    background: white;
+    border-radius: 12px;
+    padding: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+    border-left: 4px solid transparent;
+}
+
+.stat-card-dir:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+}
+
+.stat-card-dir-primary {
+    border-left-color: #667eea;
+}
+
+.stat-card-dir-success {
+    border-left-color: #10b981;
+}
+
+.stat-card-dir-info {
+    border-left-color: #3b82f6;
+}
+
+.stat-card-dir-warning {
+    border-left-color: #f59e0b;
+}
+
+.stat-icon-dir {
+    font-size: 2rem;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+}
+
+.stat-card-dir-primary .stat-icon-dir {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.stat-card-dir-success .stat-icon-dir {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+}
+
+.stat-card-dir-info .stat-icon-dir {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+}
+
+.stat-card-dir-warning .stat-icon-dir {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+}
+
+.stat-value-dir {
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1;
+    color: #1f2937;
+}
+
+.stat-label-dir {
+    font-size: 0.875rem;
+    color: #6b7280;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.student-card-dir {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.student-card-dir:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    border-color: #667eea;
+}
+
+.student-card-header-dir {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.student-avatar-dir {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+    box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3);
+}
+
+.student-info-dir {
+    flex: 1;
+    min-width: 0;
+}
+
+.student-name-dir {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin: 0;
+}
+
+.badge-grade-dir {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.student-card-body-dir {
+    padding: 1.5rem;
+    flex: 1;
+}
+
+.info-row-dir {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.info-row-dir:last-child {
+    border-bottom: none;
+}
+
+.info-icon-dir {
+    width: 35px;
+    height: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f9fa;
+    border-radius: 8px;
+    color: #667eea;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+.info-content-dir {
+    flex: 1;
+    min-width: 0;
+}
+
+.info-content-dir small {
+    display: block;
+    font-size: 0.75rem;
+    margin-bottom: 0.25rem;
+}
+
+.student-card-footer-dir {
+    padding: 1rem 1.5rem;
+    background: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+}
+
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+@media (max-width: 768px) {
+    .students-dir-header {
+        padding: 1.5rem;
+    }
+    
+    .header-title-dir {
+        font-size: 1.5rem;
+    }
+    
+    .stat-card-dir {
+        padding: 1rem;
+    }
+    
+    .stat-icon-dir {
+        width: 40px;
+        height: 40px;
+        font-size: 1.5rem;
+    }
+    
+    .stat-value-dir {
+        font-size: 1.5rem;
+    }
+}
 </style>
 {% endblock %} 

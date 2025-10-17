@@ -1253,14 +1253,80 @@
 
     {% elif section == 'teachers-staff' %}
         <!-- Teachers & Staff Directory View -->
-        <h2 class="mb-4">Teachers & Staff Directory</h2>
+        <!-- Header Section -->
+        <div class="staff-dir-header mb-4">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div>
+                    <h2 class="header-title-staff mb-1">
+                        <i class="bi bi-person-badge-fill me-2"></i>Teachers & Staff Directory
+                    </h2>
+                    <p class="header-subtitle-staff mb-0">
+                        <span class="badge bg-white text-primary me-2">{{ teachers_staff|length }} Members</span>
+                        <span class="text-white-50">Connect with colleagues and staff</span>
+                    </p>
+                </div>
+            </div>
+        </div>
 
-        <!-- Search Bar -->
-        <div class="card shadow-sm mb-3">
+        <!-- Statistics Cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3">
+                <div class="stat-card-staff stat-card-staff-primary">
+                    <div class="stat-icon-staff">
+                        <i class="bi bi-people-fill"></i>
+                    </div>
+                    <div class="stat-content-staff">
+                        <div class="stat-value-staff">{{ teachers_staff|length }}</div>
+                        <div class="stat-label-staff">Total Staff</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card-staff stat-card-staff-success">
+                    <div class="stat-icon-staff">
+                        <i class="bi bi-mortarboard-fill"></i>
+                    </div>
+                    <div class="stat-content-staff">
+                        <div class="stat-value-staff">{{ teachers_staff|selectattr('role', 'in', ['Math Teacher', 'Science Teacher', 'English Teacher', 'History Teacher', 'PE Teacher', 'Art Teacher', 'Music Teacher'])|list|length }}</div>
+                        <div class="stat-label-staff">Teachers</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card-staff stat-card-staff-info">
+                    <div class="stat-icon-staff">
+                        <i class="bi bi-shield-check"></i>
+                    </div>
+                    <div class="stat-content-staff">
+                        <div class="stat-value-staff">{{ teachers_staff|selectattr('role', 'in', ['Director', 'School Administrator'])|list|length }}</div>
+                        <div class="stat-label-staff">Admins</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card-staff stat-card-staff-warning">
+                    <div class="stat-icon-staff">
+                        <i class="bi bi-wrench-adjustable"></i>
+                    </div>
+                    <div class="stat-content-staff">
+                        <div class="stat-value-staff">{{ teachers_staff|rejectattr('role', 'in', ['Math Teacher', 'Science Teacher', 'English Teacher', 'History Teacher', 'PE Teacher', 'Art Teacher', 'Music Teacher', 'Director', 'School Administrator'])|list|length }}</div>
+                        <div class="stat-label-staff">Support</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search & Filter Card -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-gradient-staff text-white">
+                <h5 class="mb-0"><i class="bi bi-search me-2"></i>Search Staff</h5>
+            </div>
             <div class="card-body">
                 <form method="GET" action="{{ url_for('teacher.teachers_staff_directory') }}" class="row g-3 align-items-end">
-                    <div class="col-md-6">
-                        <label for="search" class="form-label">Search Teachers & Staff</label>
+                    <div class="col-md-8">
+                        <label for="search" class="form-label fw-semibold">
+                            <i class="bi bi-search me-1"></i>Search
+                        </label>
                         <input type="text" 
                                class="form-control" 
                                id="search" 
@@ -1269,17 +1335,15 @@
                                placeholder="Search by name, email, or role..."
                                autocomplete="off">
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <button type="submit" class="btn btn-primary w-100">
-                            <i class="bi bi-search me-2"></i>Search
+                            <i class="bi bi-search me-1"></i>Search
                         </button>
                     </div>
-                    <div class="col-md-3">
-                        {% if search_query %}
-                            <a href="{{ url_for('teacher.teachers_staff_directory') }}" class="btn btn-outline-secondary w-100">
-                                <i class="bi bi-x-circle me-2"></i>Clear Search
-                            </a>
-                        {% endif %}
+                    <div class="col-md-2">
+                        <a href="{{ url_for('teacher.teachers_staff_directory') }}" class="btn btn-outline-secondary w-100">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i>Reset
+                        </a>
                     </div>
                 </form>
             </div>
@@ -1287,46 +1351,125 @@
 
         <!-- Search Results Info -->
         {% if search_query %}
-            <div class="alert alert-info mb-3">
-                <i class="bi bi-info-circle me-2"></i>
-                <strong>Search Results:</strong> Found {{ teachers_staff|length }} staff member(s) matching "{{ search_query }}"
+            <div class="alert alert-info border-0 shadow-sm mb-3">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-info-circle-fill fs-4 me-3"></i>
+                    <div>
+                        <strong>Search Results:</strong> Found {{ teachers_staff|length }} staff member(s) matching "{{ search_query }}"
+                    </div>
+                </div>
             </div>
         {% endif %}
 
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Role</th>
-                                <th>Email</th>
-                                <th>Phone</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for staff in teachers_staff %}
-                                <tr>
-                                    <td>{{ staff.first_name }} {{ staff.last_name }}</td>
-                                    <td>{{ staff.assigned_role or 'N/A' }}</td>
-                                    <td>{{ staff.email or 'N/A' }}</td>
-                                    <td>{{ staff.phone or 'N/A' }}</td>
-                                    <td>
-                                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="showInfoUnavailableModal()">View Details</button>
-                                    </td>
-                                </tr>
-                            {% else %}
-                                <tr>
-                                    <td colspan="5" class="text-center text-muted">No staff members found.</td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+        <!-- Staff Cards Grid -->
+        {% if teachers_staff %}
+        <div class="row g-3">
+            {% for staff in teachers_staff %}
+            <div class="col-12 col-md-6 col-xl-4">
+                <div class="staff-card-dir">
+                    <div class="staff-card-header-dir">
+                        <div class="staff-avatar-dir">
+                            {{ staff.first_name[0] }}{{ staff.last_name[0] }}
+                        </div>
+                        <div class="staff-info-dir">
+                            <h6 class="staff-name-dir mb-1">{{ staff.first_name }} {{ staff.last_name }}</h6>
+                            <div class="d-flex gap-2 flex-wrap">
+                                {% if staff.role in ['Director', 'School Administrator'] %}
+                                <span class="badge badge-admin-dir">
+                                    <i class="bi bi-shield-fill me-1"></i>{{ staff.role }}
+                                </span>
+                                {% elif 'Teacher' in staff.role %}
+                                <span class="badge badge-teacher-dir">
+                                    <i class="bi bi-mortarboard-fill me-1"></i>{{ staff.role }}
+                                </span>
+                                {% else %}
+                                <span class="badge badge-staff-dir">
+                                    <i class="bi bi-person-fill me-1"></i>{{ staff.role }}
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="staff-card-body-dir">
+                        <div class="info-row-staff">
+                            <div class="info-icon-staff">
+                                <i class="bi bi-envelope-fill"></i>
+                            </div>
+                            <div class="info-content-staff">
+                                <small class="text-muted">Email Address</small>
+                                <div class="fw-semibold text-truncate">
+                                    {% if staff.email %}
+                                    <a href="mailto:{{ staff.email }}" class="text-decoration-none">{{ staff.email }}</a>
+                                    {% else %}
+                                    <span class="text-muted">N/A</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {% if staff.phone %}
+                        <div class="info-row-staff">
+                            <div class="info-icon-staff">
+                                <i class="bi bi-telephone-fill"></i>
+                            </div>
+                            <div class="info-content-staff">
+                                <small class="text-muted">Phone Number</small>
+                                <div class="fw-semibold">{{ staff.phone }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if staff.assigned_role %}
+                        <div class="info-row-staff">
+                            <div class="info-icon-staff">
+                                <i class="bi bi-briefcase"></i>
+                            </div>
+                            <div class="info-content-staff">
+                                <small class="text-muted">Position</small>
+                                <div class="fw-semibold">{{ staff.assigned_role }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if staff.department %}
+                        <div class="info-row-staff">
+                            <div class="info-icon-staff">
+                                <i class="bi bi-building"></i>
+                            </div>
+                            <div class="info-content-staff">
+                                <small class="text-muted">Department</small>
+                                <div class="fw-semibold">{{ staff.department }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="staff-card-footer-dir">
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-primary btn-sm flex-fill" onclick="showInfoUnavailableModal()">
+                                <i class="bi bi-eye me-1"></i>View Details
+                            </button>
+                            {% if staff.email %}
+                            <a href="mailto:{{ staff.email }}" class="btn btn-outline-primary btn-sm" title="Send Email">
+                                <i class="bi bi-envelope"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
             </div>
+            {% endfor %}
         </div>
+        {% else %}
+        <div class="alert alert-info text-center border-0 shadow-sm">
+            <div class="mb-3">
+                <i class="bi bi-person-x" style="font-size: 3rem; color: #f093fb;"></i>
+            </div>
+            <h5>No Staff Members Found</h5>
+            <p class="mb-0">Try adjusting your search or reset to view all staff members.</p>
+        </div>
+        {% endif %}
 
     {% elif section == 'calendar' %}
         <!-- Calendar View -->
@@ -2277,6 +2420,247 @@ function markAllPresent() {
     }
     
     .stat-value-dir {
+        font-size: 1.5rem;
+    }
+}
+
+/* Teachers & Staff Directory Specific Styles */
+.staff-dir-header {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    border-radius: 15px;
+    padding: 2rem;
+    color: white;
+    box-shadow: 0 10px 30px rgba(240, 147, 251, 0.3);
+}
+
+.header-title-staff {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.header-subtitle-staff {
+    font-size: 1.1rem;
+    opacity: 0.95;
+}
+
+.stat-card-staff {
+    background: white;
+    border-radius: 12px;
+    padding: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+    border-left: 4px solid transparent;
+}
+
+.stat-card-staff:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+}
+
+.stat-card-staff-primary {
+    border-left-color: #f093fb;
+}
+
+.stat-card-staff-success {
+    border-left-color: #10b981;
+}
+
+.stat-card-staff-info {
+    border-left-color: #3b82f6;
+}
+
+.stat-card-staff-warning {
+    border-left-color: #f59e0b;
+}
+
+.stat-icon-staff {
+    font-size: 2rem;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+}
+
+.stat-card-staff-primary .stat-icon-staff {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+}
+
+.stat-card-staff-success .stat-icon-staff {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+}
+
+.stat-card-staff-info .stat-icon-staff {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+}
+
+.stat-card-staff-warning .stat-icon-staff {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+}
+
+.stat-value-staff {
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1;
+    color: #1f2937;
+}
+
+.stat-label-staff {
+    font-size: 0.875rem;
+    color: #6b7280;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.staff-card-dir {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.staff-card-dir:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    border-color: #f093fb;
+}
+
+.staff-card-header-dir {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.staff-avatar-dir {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+    box-shadow: 0 4px 10px rgba(240, 147, 251, 0.3);
+}
+
+.staff-info-dir {
+    flex: 1;
+    min-width: 0;
+}
+
+.staff-name-dir {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin: 0;
+}
+
+.badge-admin-dir {
+    background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+    color: white;
+}
+
+.badge-teacher-dir {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+}
+
+.badge-staff-dir {
+    background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+    color: white;
+}
+
+.staff-card-body-dir {
+    padding: 1.5rem;
+    flex: 1;
+}
+
+.info-row-staff {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.info-row-staff:last-child {
+    border-bottom: none;
+}
+
+.info-icon-staff {
+    width: 35px;
+    height: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f9fa;
+    border-radius: 8px;
+    color: #f093fb;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+.info-content-staff {
+    flex: 1;
+    min-width: 0;
+}
+
+.info-content-staff small {
+    display: block;
+    font-size: 0.75rem;
+    margin-bottom: 0.25rem;
+}
+
+.staff-card-footer-dir {
+    padding: 1rem 1.5rem;
+    background: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+}
+
+.bg-gradient-staff {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+@media (max-width: 768px) {
+    .staff-dir-header {
+        padding: 1.5rem;
+    }
+    
+    .header-title-staff {
+        font-size: 1.5rem;
+    }
+    
+    .stat-card-staff {
+        padding: 1rem;
+    }
+    
+    .stat-icon-staff {
+        width: 40px;
+        height: 40px;
+        font-size: 1.5rem;
+    }
+    
+    .stat-value-staff {
         font-size: 1.5rem;
     }
 }

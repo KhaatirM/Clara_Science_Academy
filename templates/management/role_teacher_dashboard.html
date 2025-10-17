@@ -5,184 +5,275 @@
     <!-- DEBUG: Current section is "{{ section }}" -->
     {% if section == 'home' %}
         <!-- Home Dashboard -->
-        <h2 class="mb-4">Teacher Dashboard <span class="text-muted fs-6">(Teacher View)</span></h2>
+        <!-- Welcome Header -->
+        <div class="home-header mb-4">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div>
+                    <h2 class="home-title mb-1">
+                        <i class="bi bi-house-heart-fill me-2"></i>Welcome Back, {{ teacher.first_name if teacher else current_user.username }}!
+                    </h2>
+                    <p class="home-subtitle mb-0">
+                        <i class="bi bi-calendar3 me-2"></i>{% set now = now() %}{{ now.strftime('%A, %B %d, %Y') }}
+                    </p>
+                </div>
+                <div class="home-role-badge">
+                    {% if is_admin %}
+                    <span class="badge badge-home-admin"><i class="bi bi-shield-fill me-1"></i>Administrator</span>
+                    {% else %}
+                    <span class="badge badge-home-teacher"><i class="bi bi-mortarboard-fill me-1"></i>Teacher</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
 
-        <div class="row g-3 g-md-4">
-            <!-- Left Column -->
-            <div class="col-12 col-lg-5">
-                <!-- Teacher Information Card -->
-                <div class="card shadow-sm mb-4">
-                    <div class="card-header text-white" style="background: linear-gradient(135deg, #2E8B57 0%, #228B22 50%, #556B2F 100%);">
-                        <h5 class="mb-0"><i class="bi bi-person-badge-fill me-2"></i>{% if is_admin %}Administrator Information{% else %}Teacher Information{% endif %}</h5>
+        <!-- Statistics Overview -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3">
+                <div class="home-stat-card home-stat-primary">
+                    <div class="home-stat-icon">
+                        <i class="bi bi-house-door-fill"></i>
                     </div>
-                    <div class="card-body">
-                        <ul class="list-group list-group-flush">
+                    <div class="home-stat-content">
+                        <div class="home-stat-value">{{ classes|length if classes else 0 }}</div>
+                        <div class="home-stat-label">My Classes</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="home-stat-card home-stat-success">
+                    <div class="home-stat-icon">
+                        <i class="bi bi-people-fill"></i>
+                    </div>
+                    <div class="home-stat-content">
+                        <div class="home-stat-value">{{ total_students if total_students else 0 }}</div>
+                        <div class="home-stat-label">Total Students</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="home-stat-card home-stat-warning">
+                    <div class="home-stat-icon">
+                        <i class="bi bi-journal-text"></i>
+                    </div>
+                    <div class="home-stat-content">
+                        <div class="home-stat-value">{{ active_assignments if active_assignments else 0 }}</div>
+                        <div class="home-stat-label">Active Assignments</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="home-stat-card home-stat-info">
+                    <div class="home-stat-icon">
+                        <i class="bi bi-bell-fill"></i>
+                    </div>
+                    <div class="home-stat-content">
+                        <div class="home-stat-value">{{ notifications|length if notifications else 0 }}</div>
+                        <div class="home-stat-label">Notifications</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <!-- Left Column -->
+            <div class="col-12 col-lg-4">
+                <!-- Profile Card -->
+                <div class="home-profile-card mb-4">
+                    <div class="home-profile-header">
+                        <div class="home-profile-avatar">
                             {% if teacher %}
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <strong>Name:</strong>
-                                <span>{{ teacher.first_name }} {{ teacher.last_name }}</span>
-                            </li>
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <strong>Email:</strong>
-                                <span>{{ teacher.email or 'N/A' }}</span>
-                            </li>
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <strong>Phone:</strong>
-                                <span>{{ teacher.phone or 'N/A' }}</span>
-                            </li>
+                            {{ teacher.first_name[0] }}{{ teacher.last_name[0] }}
                             {% else %}
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <strong>Role:</strong>
-                                <span>{{ current_user.role }}</span>
-                            </li>
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <strong>Username:</strong>
-                                <span>{{ current_user.username }}</span>
-                            </li>
+                            {{ current_user.username[0]|upper }}
                             {% endif %}
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <strong>Classes:</strong>
-                                <span>{{ classes|length if classes else 0 }}</span>
-                            </li>
-                        </ul>
+                        </div>
+                        <div class="home-profile-info">
+                            <h5 class="home-profile-name mb-1">
+                                {% if teacher %}
+                                {{ teacher.first_name }} {{ teacher.last_name }}
+                                {% else %}
+                                {{ current_user.username }}
+                                {% endif %}
+                            </h5>
+                            <p class="home-profile-role mb-0">
+                                <i class="bi bi-briefcase me-1"></i>{{ current_user.role }}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="home-profile-body">
+                        {% if teacher %}
+                        <div class="home-profile-item">
+                            <i class="bi bi-envelope"></i>
+                            <span>{{ teacher.email or 'N/A' }}</span>
+                        </div>
+                        <div class="home-profile-item">
+                            <i class="bi bi-telephone"></i>
+                            <span>{{ teacher.phone or 'N/A' }}</span>
+                        </div>
+                        {% endif %}
+                        <div class="home-profile-item">
+                            <i class="bi bi-house-door"></i>
+                            <span>{{ classes|length }} Assigned Classes</span>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Quick Actions Card -->
-                <div class="card shadow-sm mb-4">
-                    <div class="card-header text-white" style="background: linear-gradient(135deg, #228B22 0%, #2E8B57 50%, #556B2F 100%);">
-                        <h5 class="mb-0"><i class="bi bi-lightning-fill me-2"></i>Quick Actions</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="d-grid gap-2">
-                            <a href="{{ url_for('teacher.my_classes') }}" class="btn" style="border-color: #2E8B57; color: #2E8B57;">
-                                <i class="bi bi-house-door-fill me-2"></i>View My Classes
-                            </a>
-                            <a href="{{ url_for('teacher.my_assignments') }}" class="btn" style="border-color: #228B22; color: #228B22;">
-                                <i class="bi bi-journal-check me-2"></i>Manage Assignments
-                            </a>
-                            <a href="{{ url_for('teacher.my_grades') }}" class="btn" style="border-color: #556B2F; color: #556B2F;">
-                                <i class="bi bi-mortarboard-fill me-2"></i>Grade Assignments
-                            </a>
-                            <a href="{{ url_for('teacher.student_grades') }}" class="btn" style="border-color: #2E8B57; color: #2E8B57;">
-                                <i class="bi bi-graph-up me-2"></i>View Student Grades
-                            </a>
-                            <a href="{{ url_for('teacher.attendance') }}" class="btn" style="border-color: #228B22; color: #228B22;">
-                                <i class="bi bi-calendar-check-fill me-2"></i>Take Attendance
-                            </a>
-                        </div>
+                <div class="home-quick-actions mb-4">
+                    <h6 class="home-quick-actions-title">
+                        <i class="bi bi-lightning-charge-fill me-2"></i>Quick Actions
+                    </h6>
+                    <div class="home-quick-actions-grid">
+                        <a href="{{ url_for('teacher.my_classes') }}" class="home-quick-action home-qa-classes">
+                            <div class="home-qa-icon">
+                                <i class="bi bi-house-door-fill"></i>
+                            </div>
+                            <span>My Classes</span>
+                        </a>
+                        <a href="{{ url_for('teacher.my_assignments') }}" class="home-quick-action home-qa-assignments">
+                            <div class="home-qa-icon">
+                                <i class="bi bi-journal-check"></i>
+                            </div>
+                            <span>Assignments</span>
+                        </a>
+                        <a href="{{ url_for('teacher.my_grades') }}" class="home-quick-action home-qa-grades">
+                            <div class="home-qa-icon">
+                                <i class="bi bi-mortarboard-fill"></i>
+                            </div>
+                            <span>Grades</span>
+                        </a>
+                        <a href="{{ url_for('teacher.attendance') }}" class="home-quick-action home-qa-attendance">
+                            <div class="home-qa-icon">
+                                <i class="bi bi-calendar-check-fill"></i>
+                            </div>
+                            <span>Attendance</span>
+                        </a>
+                        <a href="{{ url_for('teacher.student_grades') }}" class="home-quick-action home-qa-reports">
+                            <div class="home-qa-icon">
+                                <i class="bi bi-graph-up"></i>
+                            </div>
+                            <span>Reports</span>
+                        </a>
+                        <a href="{{ url_for('teacher.students_directory') }}" class="home-quick-action home-qa-students">
+                            <div class="home-qa-icon">
+                                <i class="bi bi-people-fill"></i>
+                            </div>
+                            <span>Students</span>
+                        </a>
                     </div>
                 </div>
             </div>
 
             <!-- Right Column -->
-            <div class="col-12 col-lg-7">
+            <div class="col-12 col-lg-8">
                 <!-- Notifications Card -->
-                <div class="card shadow-sm mb-4">
-                    <div class="card-header text-white" style="background: linear-gradient(135deg, #556B2F 0%, #2E8B57 50%, #228B22 100%);">
-                        <h5 class="mb-0"><i class="bi bi-bell-fill me-2"></i>Notifications</h5>
+                <div class="home-notifications mb-4">
+                    <div class="home-notifications-header">
+                        <h6 class="mb-0">
+                            <i class="bi bi-bell-fill me-2"></i>Notifications
+                            {% if notifications and notifications|length > 0 %}
+                            <span class="badge bg-danger ms-2">{{ notifications|length }}</span>
+                            {% endif %}
+                        </h6>
                     </div>
-                    <div class="card-body">
+                    <div class="home-notifications-body">
                         {% if notifications and notifications|length > 0 %}
-                            <div class="list-group mb-3">
-                                {% for notification in notifications %}
-                                    <div class="list-group-item list-group-item-action {% if not notification.is_read %}list-group-item-warning{% endif %}">
-                                        <div class="d-flex justify-content-between align-items-start">
-                                            <div class="flex-grow-1">
-                                                <strong>{{ notification.title }}</strong>
-                                                <p class="mb-1">{{ notification.message }}</p>
-                                                <small class="text-muted">{{ notification.timestamp.strftime('%b %d, %Y %I:%M %p') }}</small>
-                                            </div>
-                                            <div class="ms-2">
-                                                {% if not notification.is_read %}
-                                                    <span class="badge bg-warning text-dark">New</span>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                        <div class="mt-2">
-                                            {% if notification.link %}
-                                                <a href="{{ notification.link }}" class="btn btn-sm btn-outline-warning me-2">View Details</a>
-                                            {% endif %}
-                                            {% if not notification.is_read %}
-                                                <form method="POST" action="{{ url_for('teacher.mark_notification_read', notification_id=notification.id) }}" style="display: inline;">
+                            {% for notification in notifications[:5] %}
+                            <div class="home-notification-item {% if not notification.is_read %}unread{% endif %}">
+                                <div class="home-notif-icon">
+                                    {% if not notification.is_read %}
+                                    <i class="bi bi-circle-fill text-danger"></i>
+                                    {% else %}
+                                    <i class="bi bi-check-circle-fill text-success"></i>
+                                    {% endif %}
+                                </div>
+                                <div class="home-notif-content">
+                                    <h6 class="home-notif-title">{{ notification.title }}</h6>
+                                    <p class="home-notif-message">{{ notification.message }}</p>
+                                    <small class="home-notif-time">
+                                        <i class="bi bi-clock me-1"></i>{{ notification.timestamp.strftime('%b %d, %Y %I:%M %p') }}
+                                    </small>
+                                </div>
+                                <div class="home-notif-actions">
+                                    {% if notification.link %}
+                                    <a href="{{ notification.link }}" class="btn btn-sm btn-outline-primary">View</a>
+                                    {% endif %}
+                                    {% if not notification.is_read %}
+                                    <form method="POST" action="{{ url_for('teacher.mark_notification_read', notification_id=notification.id) }}" style="display: inline;">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                                    <button type="submit" class="btn btn-sm btn-outline-secondary">Mark as Read</button>
-                                                </form>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                {% endfor %}
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary">Mark Read</button>
+                                    </form>
+                                    {% endif %}
+                                </div>
                             </div>
+                            {% endfor %}
+                            {% if notifications|length > 5 %}
+                            <div class="text-center mt-3">
+                                <a href="#" class="btn btn-sm btn-outline-primary">View All Notifications</a>
+                            </div>
+                            {% endif %}
                         {% else %}
-                            <div class="alert alert-info" role="alert">
-                                <i class="bi bi-info-circle-fill me-2"></i>No new notifications at this time.
+                            <div class="home-empty-state">
+                                <i class="bi bi-bell-slash"></i>
+                                <p>No new notifications at this time.</p>
                             </div>
                         {% endif %}
                     </div>
                 </div>
 
                 <!-- Recent Activity Card -->
-                <div class="card shadow-sm mb-4">
-                    <div class="card-header bg-info text-white">
-                        <h5 class="mb-0"><i class="bi bi-activity me-2"></i>Recent Activity</h5>
+                <div class="home-activity">
+                    <div class="home-activity-header">
+                        <h6 class="mb-0">
+                            <i class="bi bi-activity me-2"></i>Recent Activity
+                        </h6>
                     </div>
-                    <div class="card-body">
+                    <div class="home-activity-body">
                         {% if recent_activity and recent_activity|length > 0 %}
-                            <div class="list-group">
-                                {% for activity in recent_activity %}
-                                    <div class="list-group-item">
-                                        <div class="d-flex justify-content-between align-items-start">
-                                            <div class="flex-grow-1">
-                                                <strong>{{ activity.title }}</strong>
-                                                <p class="mb-1 text-muted">{{ activity.description }}</p>
-                                                <small class="text-muted">{{ activity.timestamp.strftime('%b %d, %Y %I:%M %p') }}</small>
-                                            </div>
-                                            <div class="ms-2">
-                                                {% if activity.type == 'submission' %}
-                                                    <span class="badge bg-primary">Submission</span>
-                                                {% elif activity.type == 'grade' %}
-                                                    <span class="badge bg-success">Grade</span>
-                                                {% elif activity.type == 'assignment' %}
-                                                    <span class="badge bg-info">Assignment</span>
-                                                {% else %}
-                                                    <span class="badge bg-secondary">{{ activity.type|title }}</span>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                        {% if activity.link %}
-                                            <a href="{{ activity.link }}" class="btn btn-sm btn-outline-primary mt-2">View Details</a>
+                            <div class="home-activity-timeline">
+                                {% for activity in recent_activity[:5] %}
+                                <div class="home-activity-item">
+                                    <div class="home-activity-icon">
+                                        {% if activity.type == 'submission' %}
+                                        <i class="bi bi-file-earmark-check-fill text-primary"></i>
+                                        {% elif activity.type == 'grade' %}
+                                        <i class="bi bi-star-fill text-success"></i>
+                                        {% elif activity.type == 'assignment' %}
+                                        <i class="bi bi-journal-plus text-info"></i>
+                                        {% else %}
+                                        <i class="bi bi-circle-fill text-secondary"></i>
                                         {% endif %}
                                     </div>
+                                    <div class="home-activity-content">
+                                        <h6 class="home-activity-title">{{ activity.title }}</h6>
+                                        <p class="home-activity-desc">{{ activity.description }}</p>
+                                        <small class="home-activity-time">
+                                            <i class="bi bi-clock me-1"></i>{{ activity.timestamp.strftime('%b %d, %Y %I:%M %p') }}
+                                        </small>
+                                        {% if activity.link %}
+                                        <a href="{{ activity.link }}" class="btn btn-sm btn-outline-primary mt-2">View Details</a>
+                                        {% endif %}
+                                    </div>
+                                    <div class="home-activity-badge">
+                                        {% if activity.type == 'submission' %}
+                                        <span class="badge bg-primary">Submission</span>
+                                        {% elif activity.type == 'grade' %}
+                                        <span class="badge bg-success">Grade</span>
+                                        {% elif activity.type == 'assignment' %}
+                                        <span class="badge bg-info">Assignment</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">{{ activity.type|title }}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
                                 {% endfor %}
                             </div>
                         {% else %}
-                            <div class="alert alert-info" role="alert">
-                                <i class="bi bi-info-circle-fill me-2"></i>No recent activity to display. Start by creating assignments or grading student work!
+                            <div class="home-empty-state">
+                                <i class="bi bi-clock-history"></i>
+                                <p>No recent activity to display. Start by creating assignments or grading student work!</p>
                             </div>
                         {% endif %}
-                    </div>
-                </div>
-
-                <!-- Statistics Card -->
-                <div class="card shadow-sm">
-                    <div class="card-header bg-secondary text-white">
-                        <h5 class="mb-0"><i class="bi bi-bar-chart-fill me-2"></i>Statistics</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row text-center g-3">
-                            <div class="col-4">
-                                <h4 class="text-primary">{{ classes|length if classes else 0 }}</h4>
-                                <small class="text-muted">Classes</small>
-                            </div>
-                            <div class="col-4">
-                                <h4 class="text-success">{{ total_students if total_students else 0 }}</h4>
-                                <small class="text-muted">Students</small>
-                            </div>
-                            <div class="col-4">
-                                <h4 class="text-warning">{{ active_assignments if active_assignments else 0 }}</h4>
-                                <small class="text-muted">Assignments</small>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -2661,6 +2752,457 @@ function markAllPresent() {
     }
     
     .stat-value-staff {
+        font-size: 1.5rem;
+    }
+}
+
+/* Home Dashboard Specific Styles */
+.home-header {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    border-radius: 15px;
+    padding: 2rem;
+    color: white;
+    box-shadow: 0 10px 30px rgba(79, 172, 254, 0.3);
+}
+
+.home-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.home-subtitle {
+    font-size: 1.1rem;
+    opacity: 0.95;
+}
+
+.badge-home-admin {
+    background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+    color: white;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+}
+
+.badge-home-teacher {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+}
+
+/* Home Statistics */
+.home-stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+    border-left: 4px solid transparent;
+}
+
+.home-stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+}
+
+.home-stat-primary {
+    border-left-color: #4facfe;
+}
+
+.home-stat-success {
+    border-left-color: #10b981;
+}
+
+.home-stat-warning {
+    border-left-color: #f59e0b;
+}
+
+.home-stat-info {
+    border-left-color: #8b5cf6;
+}
+
+.home-stat-icon {
+    font-size: 2rem;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+}
+
+.home-stat-primary .home-stat-icon {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    color: white;
+}
+
+.home-stat-success .home-stat-icon {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+}
+
+.home-stat-warning .home-stat-icon {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+}
+
+.home-stat-info .home-stat-icon {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    color: white;
+}
+
+.home-stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+    color: #1f2937;
+}
+
+.home-stat-label {
+    font-size: 0.875rem;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+/* Home Profile Card */
+.home-profile-card {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.home-profile-header {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    padding: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.home-profile-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: white;
+    color: #4facfe;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 2rem;
+    flex-shrink: 0;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.home-profile-info {
+    flex: 1;
+    color: white;
+}
+
+.home-profile-name {
+    font-size: 1.3rem;
+    font-weight: 700;
+}
+
+.home-profile-role {
+    opacity: 0.9;
+}
+
+.home-profile-body {
+    padding: 1.5rem;
+}
+
+.home-profile-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.home-profile-item:last-child {
+    border-bottom: none;
+}
+
+.home-profile-item i {
+    width: 24px;
+    color: #4facfe;
+    font-size: 1.2rem;
+}
+
+/* Quick Actions */
+.home-quick-actions {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.home-quick-actions-title {
+    color: #1f2937;
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+.home-quick-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+
+.home-quick-action {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1.25rem;
+    border-radius: 10px;
+    text-decoration: none;
+    color: white;
+    transition: all 0.3s ease;
+    text-align: center;
+}
+
+.home-quick-action:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
+
+.home-qa-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.home-qa-classes {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.home-qa-assignments {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.home-qa-grades {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.home-qa-attendance {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+.home-qa-reports {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+}
+
+.home-qa-students {
+    background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);
+}
+
+/* Notifications */
+.home-notifications {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.home-notifications-header {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.home-notifications-body {
+    padding: 1.5rem;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.home-notification-item {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    border: 1px solid #e9ecef;
+    transition: all 0.3s ease;
+}
+
+.home-notification-item:hover {
+    background: #f8f9fa;
+    border-color: #4facfe;
+}
+
+.home-notification-item.unread {
+    background: #fef3c7;
+    border-color: #fbbf24;
+}
+
+.home-notif-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.home-notif-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.home-notif-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.home-notif-message {
+    font-size: 0.9rem;
+    color: #6b7280;
+    margin-bottom: 0.5rem;
+}
+
+.home-notif-time {
+    font-size: 0.8rem;
+    color: #9ca3af;
+}
+
+.home-notif-actions {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+/* Activity */
+.home-activity {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.home-activity-header {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.home-activity-body {
+    padding: 1.5rem;
+}
+
+.home-activity-timeline {
+    position: relative;
+}
+
+.home-activity-timeline::before {
+    content: '';
+    position: absolute;
+    left: 20px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #e9ecef;
+}
+
+.home-activity-item {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    position: relative;
+}
+
+.home-activity-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: white;
+    border: 3px solid #e9ecef;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+    z-index: 1;
+}
+
+.home-activity-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.home-activity-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.home-activity-desc {
+    font-size: 0.9rem;
+    color: #6b7280;
+    margin-bottom: 0.5rem;
+}
+
+.home-activity-time {
+    font-size: 0.8rem;
+    color: #9ca3af;
+}
+
+.home-activity-badge {
+    flex-shrink: 0;
+}
+
+/* Empty State */
+.home-empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #9ca3af;
+}
+
+.home-empty-state i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    display: block;
+}
+
+@media (max-width: 768px) {
+    .home-header {
+        padding: 1.5rem;
+    }
+    
+    .home-title {
+        font-size: 1.5rem;
+    }
+    
+    .home-stat-card {
+        padding: 1rem;
+    }
+    
+    .home-stat-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 1.5rem;
+    }
+    
+    .home-stat-value {
+        font-size: 1.5rem;
+    }
+    
+    .home-quick-actions-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .home-profile-avatar {
+        width: 60px;
+        height: 60px;
         font-size: 1.5rem;
     }
 }

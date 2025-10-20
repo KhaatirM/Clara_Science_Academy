@@ -4121,53 +4121,6 @@ def class_grades_view(class_id):
     """View class grades - redirect to the main class_grades view"""
     return redirect(url_for('management.class_grades', class_id=class_id))
 
-@management_blueprint.route('/debug-group-assignments/<int:class_id>')
-@login_required
-@management_required
-def debug_group_assignments(class_id):
-    """Debug route to check group assignment data"""
-    import json
-    
-    class_obj = Class.query.get_or_404(class_id)
-    
-    # Get group assignments
-    group_assignments = GroupAssignment.query.filter_by(class_id=class_id).all()
-    
-    # Get students and their groups
-        enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
-    students = [enrollment.student for enrollment in enrollments if enrollment.student]
-    
-    debug_data = {
-        'class_id': class_id,
-        'class_name': class_obj.name,
-        'group_assignments': [],
-        'students': []
-    }
-    
-    for assignment in group_assignments:
-        assignment_data = {
-            'id': assignment.id,
-            'title': assignment.title,
-            'selected_group_ids': assignment.selected_group_ids,
-            'parsed_group_ids': json.loads(assignment.selected_group_ids) if assignment.selected_group_ids else None
-        }
-        debug_data['group_assignments'].append(assignment_data)
-    
-    for student in students:
-        student_group = StudentGroupMember.query.join(StudentGroup).filter(
-            StudentGroup.class_id == class_id,
-            StudentGroupMember.student_id == student.id
-        ).first()
-        
-        student_data = {
-            'id': student.id,
-            'name': f"{student.first_name} {student.last_name}",
-            'group_id': student_group.group.id if student_group and student_group.group else None,
-            'group_name': student_group.group.name if student_group and student_group.group else None
-        }
-        debug_data['students'].append(student_data)
-    
-    return jsonify(debug_data)
 
 
 

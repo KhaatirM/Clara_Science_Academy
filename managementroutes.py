@@ -1865,6 +1865,12 @@ def class_grades(class_id):
     
     # Get group grades for students (group assignments)
     from models import GroupGrade
+    
+    # Debug: Let's check what group assignments exist and their selected_group_ids
+    current_app.logger.info(f"DEBUG: Processing {len(group_assignments)} group assignments for class {class_id}")
+    for ga in group_assignments:
+        current_app.logger.info(f"DEBUG: Assignment '{ga.title}' - selected_group_ids: '{ga.selected_group_ids}'")
+    
     for student in enrolled_students:
         for group_assignment in group_assignments:
             # Check if this group assignment is for specific groups
@@ -1898,6 +1904,9 @@ def class_grades(class_id):
                     # Assignment is for specific groups - check if student's group is included
                     should_show_assignment = student_group_id in assignment_group_ids
             
+            # Debug logging
+            current_app.logger.info(f"DEBUG: Student {student.first_name} {student.last_name} (ID: {student.id}) - Group: {student_group_name} (ID: {student_group_id}) - Assignment: '{group_assignment.title}' - Should show: {should_show_assignment}")
+            
             if should_show_assignment:
                 # Student should see this assignment
                 if student_group_id:
@@ -1908,9 +1917,12 @@ def class_grades(class_id):
                         group_assignment_id=group_assignment.id
                     ).first()
                     
+                    current_app.logger.info(f"DEBUG: Looking for grade - Student ID: {student.id}, Assignment ID: {group_assignment.id}, Found: {group_grade is not None}")
+                    
                     if group_grade:
                         try:
                             grade_data = json.loads(group_grade.grade_data) if group_grade.grade_data else {}
+                            current_app.logger.info(f"DEBUG: Grade data: {grade_data}")
                             student_grades[student.id][f'group_{group_assignment.id}'] = {
                                 'grade': grade_data.get('score', 'N/A'),
                                 'comments': grade_data.get('comments', ''),
@@ -4121,6 +4133,77 @@ def settings():
 def class_grades_view(class_id):
     """View class grades - redirect to the main class_grades view"""
     return redirect(url_for('management.class_grades', class_id=class_id))
+
+@management_blueprint.route('/debug-grades/<int:class_id>')
+@login_required
+@management_required
+def debug_grades(class_id):
+    """Debug route to check grades data"""
+    import json
+    
+    # Get class info
+    class_obj = Class.query.get_or_404(class_id)
+    
+    # Get students
+    enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
+    students = [enrollment.student for enrollment in enrollments if enrollment.student]
+    
+    # Get group assignments
+    group_assignments = GroupAssignment.query.filter_by(class_id=class_id).all()
+    
+    # Get all group grades for this class
+    group_grades = GroupGrade.query.join(GroupAssignment).filter(
+        GroupAssignment.class_id == class_id
+    ).all()
+    
+    debug_info = {
+        'class_id': class_id,
+        'class_name': class_obj.name,
+        'students': [],
+        'group_assignments': [],
+        'group_grades': []
+    }
+    
+    # Student info
+    for student in students:
+        student_group = StudentGroupMember.query.join(StudentGroup).filter(
+            StudentGroup.class_id == class_id,
+            StudentGroupMember.student_id == student.id
+        ).first()
+        
+        debug_info['students'].append({
+            'id': student.id,
+            'name': f"{student.first_name} {student.last_name}",
+            'group_id': student_group.group.id if student_group and student_group.group else None,
+            'group_name': student_group.group.name if student_group and student_group.group else None
+        })
+    
+    # Group assignments info
+    for assignment in group_assignments:
+        debug_info['group_assignments'].append({
+            'id': assignment.id,
+            'title': assignment.title,
+            'selected_group_ids': assignment.selected_group_ids,
+            'parsed_group_ids': json.loads(assignment.selected_group_ids) if assignment.selected_group_ids else None
+        })
+    
+    # Group grades info
+    for grade in group_grades:
+        try:
+            grade_data = json.loads(grade.grade_data) if grade.grade_data else {}
+        except:
+            grade_data = {}
+            
+        debug_info['group_grades'].append({
+            'id': grade.id,
+            'student_id': grade.student_id,
+            'group_assignment_id': grade.group_assignment_id,
+            'group_id': grade.group_id,
+            'grade_data': grade_data,
+            'comments': grade.comments
+        })
+    
+    return jsonify(debug_info)
 
 
 

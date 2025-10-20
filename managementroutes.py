@@ -1872,6 +1872,13 @@ def class_grades(class_id):
     ).count()
     print(f"DEBUG: Found {total_group_grades} group grades for class {class_id}")
     
+    # Debug: Check a few sample group grades
+    sample_grades = GroupGrade.query.join(GroupAssignment).filter(
+        GroupAssignment.class_id == class_id
+    ).limit(3).all()
+    for grade in sample_grades:
+        print(f"DEBUG: Sample grade - Student ID: {grade.student_id}, Assignment ID: {grade.group_assignment_id}, Group ID: {grade.group_id}, Grade Data: {grade.grade_data}")
+    
     for student in enrolled_students:
         for group_assignment in group_assignments:
             # Check if this group assignment is for specific groups
@@ -1904,6 +1911,10 @@ def class_grades(class_id):
                 else:
                     # Assignment is for specific groups - check if student's group is included
                     should_show_assignment = student_group_id in assignment_group_ids
+            
+            # Debug: Log the first few students and assignments
+            if student.id <= 3 and group_assignment.id <= 3:
+                print(f"DEBUG: Student {student.first_name} {student.last_name} (ID: {student.id}) - Group: {student_group_name} (ID: {student_group_id}) - Assignment: '{group_assignment.title}' (ID: {group_assignment.id}) - Should show: {should_show_assignment} - Assignment groups: {assignment_group_ids}")
             
             if should_show_assignment:
                 # Student should see this assignment

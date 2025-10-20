@@ -1901,9 +1901,10 @@ def class_grades(class_id):
             if should_show_assignment:
                 # Student should see this assignment
                 if student_group_id:
-                    # Check if this group has a grade for this assignment
+                    # Check if this student has a grade for this assignment
+                    # GroupGrade records are stored per student, so we look by student_id
                     group_grade = GroupGrade.query.filter_by(
-                        group_id=student_group_id,
+                        student_id=student.id,
                         group_assignment_id=group_assignment.id
                     ).first()
                     

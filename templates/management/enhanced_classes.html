@@ -4,69 +4,70 @@
 
 {% block dashboard_content %}
 <div class="container-fluid px-2 px-md-4">
-    <!-- Enhanced Header Section -->
-    <div class="enhanced-header mb-4">
-        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
-            <div class="header-content">
-                <h2 class="mb-1 text-dark">
-                    <i class="fas fa-chalkboard-teacher me-2 text-success"></i>
-                    Classes Management
+    <!-- Modern Classes Header -->
+    <div class="classes-admin-header mb-4">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                <h2 class="classes-admin-title mb-1">
+                    <i class="bi bi-house-door-fill me-2"></i>Classes Management
                 </h2>
-                <p class="text-muted mb-0">Comprehensive class oversight with multi-teacher support and advanced scheduling</p>
+                <p class="classes-admin-subtitle mb-0">
+                    <i class="bi bi-book me-2"></i>Manage classes, schedules, and enrollments
+                </p>
             </div>
-            <div class="header-actions">
+            <div>
                 {% if current_user.role in ['Director', 'School Administrator'] %}
-                    <button class="btn btn-success btn-lg shadow-sm" data-bs-toggle="modal" data-bs-target="#createClassModal">
-                        <i class="fas fa-plus-circle me-2"></i>Create New Class
-                    </button>
+                <button class="btn btn-classes-add" data-bs-toggle="modal" data-bs-target="#createClassModal">
+                    <i class="bi bi-plus-circle me-2"></i>Create New Class
+                </button>
                 {% endif %}
             </div>
         </div>
-        
-        <!-- Quick Stats Cards -->
-        <div class="row g-3 mt-3">
-            <div class="col-6 col-md-3">
-                <div class="stat-card stat-card-primary">
-                    <div class="stat-icon">
-                        <i class="fas fa-chalkboard"></i>
-                    </div>
-                    <div class="stat-content">
-                        <div class="stat-number">{{ classes|length }}</div>
-                        <div class="stat-label">Total Classes</div>
-                    </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="classes-stat-card">
+                <div class="classes-stat-icon">
+                    <i class="bi bi-house-door-fill"></i>
+                </div>
+                <div class="classes-stat-content">
+                    <h3 class="classes-stat-number">{{ classes|length }}</h3>
+                    <p class="classes-stat-label">Total Classes</p>
                 </div>
             </div>
-            <div class="col-6 col-md-3">
-                <div class="stat-card stat-card-success">
-                    <div class="stat-icon">
-                        <i class="fas fa-user-tie"></i>
-                    </div>
-                    <div class="stat-content">
-                        <div class="stat-number">{{ classes|selectattr('teacher')|list|length }}</div>
-                        <div class="stat-label">With Teachers</div>
-                    </div>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="classes-stat-card">
+                <div class="classes-stat-icon">
+                    <i class="bi bi-people-fill"></i>
+                </div>
+                <div class="classes-stat-content">
+                    <h3 class="classes-stat-number">{{ classes|map(attribute='enrollments')|map('selectattr', 'is_active')|map('list')|map('length')|sum }}</h3>
+                    <p class="classes-stat-label">Total Enrollments</p>
                 </div>
             </div>
-            <div class="col-6 col-md-3">
-                <div class="stat-card stat-card-info">
-                    <div class="stat-icon">
-                        <i class="fas fa-users"></i>
-                    </div>
-                    <div class="stat-content">
-                        <div class="stat-number">{{ unique_student_count }}</div>
-                        <div class="stat-label">Total Students</div>
-                    </div>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="classes-stat-card">
+                <div class="classes-stat-icon">
+                    <i class="bi bi-person-badge"></i>
+                </div>
+                <div class="classes-stat-content">
+                    <h3 class="classes-stat-number">{{ classes|map(attribute='teacher')|select|unique|list|length }}</h3>
+                    <p class="classes-stat-label">Active Teachers</p>
                 </div>
             </div>
-            <div class="col-6 col-md-3">
-                <div class="stat-card stat-card-warning">
-                    <div class="stat-icon">
-                        <i class="fas fa-clock"></i>
-                    </div>
-                    <div class="stat-content">
-                        <div class="stat-number">{{ classes|selectattr('schedule')|list|length }}</div>
-                        <div class="stat-label">Scheduled</div>
-                    </div>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="classes-stat-card">
+                <div class="classes-stat-icon">
+                    <i class="bi bi-journal-check"></i>
+                </div>
+                <div class="classes-stat-content">
+                    <h3 class="classes-stat-number">{{ classes|map(attribute='assignments')|map('list')|map('length')|sum }}</h3>
+                    <p class="classes-stat-label">Total Assignments</p>
                 </div>
             </div>
         </div>
@@ -118,204 +119,87 @@
         </div>
     </div>
 
+    <!-- Classes Grid Header -->
+    <div class="classes-grid-header mb-3">
+        <h5 class="mb-0">
+            <i class="bi bi-grid-3x3-gap-fill me-2"></i>All Classes
+        </h5>
+    </div>
+
     <!-- Enhanced Classes Grid -->
     <div class="row g-4" id="classesGrid">
         {% for class in classes %}
-        <div class="col-12 col-lg-6 col-xl-4 class-card" 
+        <div class="col-12 col-md-6 col-lg-4 class-card" 
              data-subject="{{ class.subject }}" 
              data-teacher="{{ (class.teacher.first_name + ' ' + class.teacher.last_name) if class.teacher else '' }}"
              data-status="{{ 'active' if class.is_active else 'inactive' }}"
              data-search="{{ (class.name + ' ' + class.subject + ' ' + ((class.teacher.first_name + ' ' + class.teacher.last_name) if class.teacher else '')).lower() }}">
             
-            <div class="enhanced-class-card h-100">
-                <!-- Class Header -->
-                <div class="class-header">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div class="class-info">
-                            <h5 class="class-title mb-1">{{ class.name }}</h5>
-                            <span class="subject-badge">{{ class.subject }}</span>
-                        </div>
-                        <div class="class-status">
-                            {% if class.is_active %}
-                                <span class="status-badge status-active">
-                                    <i class="fas fa-circle me-1"></i>Active
-                                </span>
-                            {% else %}
-                                <span class="status-badge status-inactive">
-                                    <i class="fas fa-circle me-1"></i>Inactive
-                                </span>
-                            {% endif %}
-                        </div>
+            <div class="class-card-modern h-100">
+                <div class="class-card-header-modern">
+                    <div class="class-card-icon-modern">
+                        <i class="bi bi-book-fill"></i>
+                    </div>
+                    <div class="class-card-title-section-modern">
+                        <h6 class="class-card-title-modern">{{ class.name }}</h6>
+                        <p class="class-card-subject-modern">{{ class.subject or 'General' }}</p>
                     </div>
                 </div>
-
-                <!-- Class Details -->
-                <div class="class-body">
-                    <!-- Primary Teacher -->
-                    <div class="teacher-section">
-                        <div class="teacher-label">
-                            <i class="fas fa-user-tie me-2"></i>Primary Teacher
-                        </div>
-                        <div class="teacher-info">
-                            {% if class.teacher %}
-                                <div class="teacher-avatar">
-                                    <i class="fas fa-user-circle"></i>
-                                </div>
-                                <div class="teacher-details">
-                                    <div class="teacher-name">{{ class.teacher.first_name + ' ' + class.teacher.last_name if class.teacher else 'No Teacher' }}</div>
-                                    <div class="teacher-role">{{ class.teacher.user.role if class.teacher.user else 'No Role' }}</div>
-                                </div>
-                            {% else %}
-                                <div class="no-teacher">
-                                    <i class="fas fa-exclamation-triangle me-2"></i>
-                                    No Teacher Assigned
-                                </div>
-                            {% endif %}
-                        </div>
+                <div class="class-card-body-modern">
+                    <div class="class-card-detail-modern">
+                        <i class="bi bi-mortarboard me-2"></i>
+                        <span>Grade: <strong>{{ class.grade_level or 'N/A' }}</strong></span>
                     </div>
-
-                    <!-- Additional Teachers (if any) -->
-                    {% if class.additional_teachers.count() > 0 %}
-                    <div class="additional-teachers">
-                        <div class="teacher-label">
-                            <i class="fas fa-users me-2"></i>Additional Teachers ({{ class.additional_teachers.count() }})
-                        </div>
-                        <div class="teachers-list">
-                            {% for teacher in class.additional_teachers %}
-                            <div class="teacher-chip">
-                                <i class="fas fa-user me-1"></i>
-                                {{ teacher.first_name + ' ' + teacher.last_name }}
-                            </div>
-                            {% endfor %}
-                        </div>
+                    <div class="class-card-detail-modern">
+                        <i class="bi bi-person-badge me-2"></i>
+                        <span>Teacher: <strong>{{ class.teacher.first_name }} {{ class.teacher.last_name if class.teacher else 'N/A' }}</strong></span>
+                    </div>
+                    <div class="class-card-detail-modern">
+                        <i class="bi bi-people-fill me-2"></i>
+                        <span>Students: <strong>{{ class.enrollments|selectattr('is_active')|list|length }}</strong></span>
+                    </div>
+                    <div class="class-card-detail-modern">
+                        <i class="bi bi-journal-check me-2"></i>
+                        <span>Assignments: <strong>{{ class.assignments|list|length }}</strong></span>
+                    </div>
+                    {% if class.room_number %}
+                    <div class="class-card-detail-modern">
+                        <i class="bi bi-door-open me-2"></i>
+                        <span>Room: <strong>{{ class.room_number }}</strong></span>
                     </div>
                     {% endif %}
-
-                    <!-- Substitute Teacher -->
-                    <div class="substitute-teachers">
-                        <div class="teacher-label">
-                            <i class="fas fa-user-clock me-2"></i>Substitute Teacher
-                        </div>
-                        <div class="teachers-list">
-                            {% if class.substitute_teachers.count() > 0 %}
-                                {% for teacher in class.substitute_teachers %}
-                                <div class="teacher-chip substitute-chip">
-                                    <i class="fas fa-user-clock me-1"></i>
-                                    {{ teacher.first_name + ' ' + teacher.last_name }}
-                                </div>
-                                {% endfor %}
-                            {% else %}
-                                <div class="no-substitute">
-                                    <i class="fas fa-user-slash me-2"></i>
-                                    N/A
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    <!-- Class Metadata -->
-                    <div class="class-metadata">
-                        {% if class.room_number %}
-                        <div class="metadata-item">
-                            <i class="fas fa-door-open me-2"></i>
-                            <span>Room {{ class.room_number }}</span>
-                        </div>
-                        {% endif %}
-                        
-                        {% if class.schedule %}
-                        <div class="metadata-item">
-                            <i class="fas fa-clock me-2"></i>
-                            <span>{{ class.schedule }}</span>
-                        </div>
-                        {% endif %}
-                        
-                        <div class="metadata-item">
-                            <i class="fas fa-users me-2"></i>
-                            <span>{{ class.enrollments|selectattr('is_active')|list|length }} students</span>
-                        </div>
-                        
-                        {% if class.max_students %}
-                        <div class="metadata-item">
-                            <i class="fas fa-chart-bar me-2"></i>
-                            <span>Max: {{ class.max_students }} students</span>
-                        </div>
-                        {% endif %}
-                    </div>
-
-                    {% if class.description %}
-                    <div class="class-description">
-                        <p>{{ class.description[:100] }}{% if class.description|length > 100 %}...{% endif %}</p>
+                    {% if class.schedule %}
+                    <div class="class-card-detail-modern">
+                        <i class="bi bi-clock me-2"></i>
+                        <span><strong>{{ class.schedule }}</strong></span>
                     </div>
                     {% endif %}
                 </div>
 
                 <!-- Class Actions -->
-                <div class="class-actions">
-                    <div class="row g-2">
-                        {% if current_user.role in ['Director', 'School Administrator'] %}
-                            <div class="col-6">
-                                <button class="btn btn-outline-primary btn-sm w-100" 
-                                        onclick="viewClass({{ class.id }})">
-                                    <i class="fas fa-eye me-1"></i>View Class
-                                </button>
-                            </div>
-                            <div class="col-6">
-                                <button class="btn btn-outline-success btn-sm w-100" 
-                                        onclick="editClass({{ class.id }})">
-                                    <i class="fas fa-edit me-1"></i>Edit
-                                </button>
-                            </div>
-                            <div class="col-6">
-                                <button class="btn btn-outline-info btn-sm w-100" 
-                                        onclick="viewRoster({{ class.id }})">
-                                    <i class="fas fa-users me-1"></i>Roster
-                                </button>
-                            </div>
-                            <div class="col-6">
-                                <button class="btn btn-outline-warning btn-sm w-100" 
-                                        onclick="viewGrades({{ class.id }})">
-                                    <i class="fas fa-chart-line me-1"></i>Grades
-                                </button>
-                            </div>
-                        {% elif current_user.role == 'Teacher' %}
-                            <div class="col-6">
-                                <button class="btn btn-outline-info btn-sm w-100" 
-                                        onclick="viewRoster({{ class.id }})">
-                                    <i class="fas fa-users me-1"></i>View Roster
-                                </button>
-                            </div>
-                            <div class="col-6">
-                                <button class="btn btn-outline-success btn-sm w-100" 
-                                        onclick="enterGrades({{ class.id }})">
-                                    <i class="fas fa-edit me-1"></i>Enter Grades
-                                </button>
-                            </div>
-                        {% endif %}
-                        
-                        {% if current_user.role in ['Director', 'School Administrator'] %}
-                        <div class="col-12 mt-2">
-                            <button class="btn btn-outline-danger btn-sm w-100" 
-                                    onclick="removeClass({{ class.id }}, '{{ class.name }}')">
-                                <i class="fas fa-trash me-1"></i>Remove Class
-                            </button>
-                        </div>
-                        {% endif %}
-                    </div>
+                <div class="class-card-footer-modern">
+                    <button class="btn btn-sm btn-class-action-modern" onclick="viewClass({{ class.id }})">
+                        <i class="bi bi-eye me-1"></i>View
+                    </button>
+                    <button class="btn btn-sm btn-class-action-modern" onclick="editClass({{ class.id }})">
+                        <i class="bi bi-pencil me-1"></i>Edit
+                    </button>
+                    <button class="btn btn-sm btn-class-action-modern" onclick="viewRoster({{ class.id }})">
+                        <i class="bi bi-people me-1"></i>Roster
+                    </button>
                 </div>
             </div>
         </div>
         {% else %}
         <div class="col-12">
-            <div class="empty-state">
-                <div class="empty-state-icon">
-                    <i class="fas fa-chalkboard"></i>
-                </div>
-                <h4>No Classes Found</h4>
-                <p>There are currently no classes in the system.</p>
+            <div class="classes-empty-state">
+                <i class="bi bi-inbox display-1 text-muted d-block mb-3"></i>
+                <h5 class="text-muted">No Classes Found</h5>
+                <p class="text-muted mb-3">Get started by creating your first class</p>
                 {% if current_user.role in ['Director', 'School Administrator'] %}
-                    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#createClassModal">
-                        <i class="fas fa-plus me-2"></i>Create First Class
-                    </button>
+                <button class="btn btn-classes-add" data-bs-toggle="modal" data-bs-target="#createClassModal">
+                    <i class="bi bi-plus-circle me-2"></i>Create New Class
+                </button>
                 {% endif %}
             </div>
         </div>
@@ -389,265 +273,252 @@
 </div>
 
 <style>
-/* Enhanced Classes Styles */
-.enhanced-header {
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    padding: 2rem;
+/* ==================== CLASSES TAB STYLES ==================== */
+
+/* Classes Header */
+.classes-admin-header {
+    background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
     border-radius: 15px;
-    border: 1px solid #dee2e6;
+    padding: 2rem;
+    color: #333;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
 }
 
-.header-content h2 {
+.classes-admin-title {
+    font-size: 2.5rem;
     font-weight: 700;
-    color: #2c3e50;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.stat-card {
+.classes-admin-subtitle {
+    font-size: 1.1rem;
+    opacity: 0.9;
+}
+
+.btn-classes-add {
     background: white;
-    border-radius: 12px;
+    color: #ffd700;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 10px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-classes-add:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(255,255,255,0.3);
+    color: #ffd700;
+}
+
+/* Classes Statistics Cards */
+.classes-stat-card {
+    background: white;
+    border-radius: 15px;
     padding: 1.5rem;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    border: 1px solid rgba(0,0,0,0.05);
+    transition: all 0.3s ease;
+    height: 100%;
     display: flex;
     align-items: center;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    border: 1px solid #e9ecef;
-    transition: transform 0.2s ease;
+    gap: 1rem;
 }
 
-.stat-card:hover {
-    transform: translateY(-2px);
+.classes-stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 40px rgba(0,0,0,0.15);
 }
 
-.stat-icon {
-    width: 50px;
-    height: 50px;
-    border-radius: 10px;
+.classes-stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-right: 1rem;
     font-size: 1.5rem;
     color: white;
+    flex-shrink: 0;
 }
 
-.stat-card-primary .stat-icon { background: linear-gradient(135deg, #007bff, #0056b3); }
-.stat-card-success .stat-icon { background: linear-gradient(135deg, #28a745, #1e7e34); }
-.stat-card-info .stat-icon { background: linear-gradient(135deg, #17a2b8, #117a8b); }
-.stat-card-warning .stat-icon { background: linear-gradient(135deg, #ffc107, #e0a800); }
+.classes-stat-card:nth-child(1) .classes-stat-icon {
+    background: linear-gradient(45deg, #ffd700, #ffed4e);
+}
 
-.stat-number {
-    font-size: 1.8rem;
+.classes-stat-card:nth-child(2) .classes-stat-icon {
+    background: linear-gradient(45deg, #667eea, #764ba2);
+}
+
+.classes-stat-card:nth-child(3) .classes-stat-icon {
+    background: linear-gradient(45deg, #f093fb, #f5576c);
+}
+
+.classes-stat-card:nth-child(4) .classes-stat-icon {
+    background: linear-gradient(45deg, #4facfe, #00f2fe);
+}
+
+.classes-stat-content {
+    flex: 1;
+}
+
+.classes-stat-number {
+    font-size: 2.5rem;
     font-weight: 700;
+    margin: 0;
     color: #2c3e50;
     line-height: 1;
 }
 
-.stat-label {
+.classes-stat-label {
     font-size: 0.9rem;
     color: #6c757d;
-    margin-top: 0.25rem;
+    margin: 0.25rem 0 0 0;
+    font-weight: 500;
 }
 
+/* Classes Grid Header */
+.classes-grid-header {
+    background: white;
+    border-radius: 12px;
+    padding: 1rem 1.5rem;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    border-left: 4px solid #ffd700;
+}
+
+.classes-grid-header h5 {
+    color: #2c3e50;
+    font-weight: 700;
+    margin: 0;
+}
+
+/* Enhanced Filters */
 .enhanced-filters .card {
     border-radius: 12px;
 }
 
-.input-group-text {
-    border-radius: 8px 0 0 8px;
-}
-
-.form-control, .form-select {
-    border-radius: 8px;
-}
-
-.enhanced-class-card {
+/* Class Cards */
+.class-card-modern {
     background: white;
     border-radius: 15px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-    border: 1px solid #e9ecef;
-    overflow: hidden;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    border: 1px solid rgba(0,0,0,0.05);
     transition: all 0.3s ease;
+    overflow: hidden;
     height: 100%;
     display: flex;
     flex-direction: column;
 }
 
-.enhanced-class-card:hover {
+.class-card-modern:hover {
     transform: translateY(-5px);
-    box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+    box-shadow: 0 15px 40px rgba(0,0,0,0.15);
 }
 
-.class-header {
-    padding: 1.5rem 1.5rem 1rem;
-    border-bottom: 1px solid #f1f3f4;
+.class-card-header-modern {
+    background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
 }
 
-.class-title {
-    font-weight: 700;
-    color: #2c3e50;
+.class-card-icon-modern {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    color: #ffd700;
+    flex-shrink: 0;
+}
+
+.class-card-title-section-modern {
+    flex: 1;
+}
+
+.class-card-title-modern {
     font-size: 1.1rem;
-}
-
-.subject-badge {
-    background: linear-gradient(135deg, #28a745, #20c997);
-    color: white;
-    padding: 0.25rem 0.75rem;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    font-weight: 600;
-}
-
-.status-badge {
-    padding: 0.25rem 0.75rem;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    font-weight: 600;
-}
-
-.status-active {
-    background: #d4edda;
-    color: #155724;
-}
-
-.status-inactive {
-    background: #f8d7da;
-    color: #721c24;
-}
-
-.class-body {
-    padding: 1rem 1.5rem;
-    flex-grow: 1;
-}
-
-.teacher-section {
-    margin-bottom: 1rem;
-}
-
-.teacher-label {
-    font-size: 0.85rem;
-    color: #6c757d;
-    margin-bottom: 0.5rem;
-    font-weight: 600;
-}
-
-.teacher-info {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
-.teacher-avatar {
-    font-size: 2rem;
-    color: #6c757d;
-}
-
-.teacher-name {
-    font-weight: 600;
-    color: #2c3e50;
-}
-
-.teacher-role {
-    font-size: 0.85rem;
-    color: #6c757d;
-}
-
-.no-teacher {
-    color: #dc3545;
-    font-style: italic;
-}
-
-.additional-teachers, .substitute-teachers {
-    margin-bottom: 1rem;
-}
-
-.teachers-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-}
-
-.teacher-chip {
-    background: #e3f2fd;
-    color: #1976d2;
-    padding: 0.25rem 0.75rem;
-    border-radius: 15px;
-    font-size: 0.8rem;
-    border: 1px solid #bbdefb;
-}
-
-.substitute-chip {
-    background: #fff3e0;
-    color: #f57c00;
-    border-color: #ffcc02;
-}
-
-.class-metadata {
-    margin-bottom: 1rem;
-}
-
-.metadata-item {
-    display: flex;
-    align-items: center;
-    margin-bottom: 0.5rem;
-    font-size: 0.9rem;
-    color: #6c757d;
-}
-
-.class-description {
-    margin-bottom: 1rem;
-}
-
-.class-description p {
-    font-size: 0.9rem;
-    color: #6c757d;
+    font-weight: 700;
+    color: #333;
     margin: 0;
 }
 
-.class-actions {
+.class-card-subject-modern {
+    font-size: 0.85rem;
+    color: rgba(0,0,0,0.7);
+    margin: 0.25rem 0 0 0;
+}
+
+.class-card-body-modern {
+    padding: 1.5rem;
+    flex: 1;
+}
+
+.class-card-detail-modern {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #f0f0f0;
+    color: #495057;
+    font-size: 0.9rem;
+}
+
+.class-card-detail-modern:last-child {
+    border-bottom: none;
+}
+
+.class-card-detail-modern i {
+    color: #ffd700;
+    width: 24px;
+}
+
+.class-card-footer-modern {
     padding: 1rem 1.5rem;
     background: #f8f9fa;
+    display: flex;
+    gap: 0.5rem;
     border-top: 1px solid #e9ecef;
 }
 
-.empty-state {
+.btn-class-action-modern {
+    flex: 1;
+    background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+    color: #333;
+    border: none;
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-class-action-modern:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(255, 215, 0, 0.4);
+    color: #333;
+}
+
+/* Classes Empty State */
+.classes-empty-state {
     text-align: center;
     padding: 4rem 2rem;
     background: white;
     border-radius: 15px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-}
-
-.empty-state-icon {
-    font-size: 4rem;
-    color: #6c757d;
-    margin-bottom: 1rem;
-}
-
-.empty-state h4 {
-    color: #2c3e50;
-    margin-bottom: 1rem;
-}
-
-.empty-state p {
-    color: #6c757d;
-    margin-bottom: 2rem;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
 }
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-    .enhanced-header {
-        padding: 1.5rem;
+    .classes-admin-title {
+        font-size: 2rem;
     }
     
-    .header-actions .btn {
-        width: 100%;
-    }
-    
-    .stat-card {
-        padding: 1rem;
-    }
-    
-    .stat-number {
-        font-size: 1.5rem;
+    .classes-stat-card {
+        flex-direction: column;
+        text-align: center;
     }
 }
 </style>

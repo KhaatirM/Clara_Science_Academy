@@ -1866,34 +1866,6 @@ def class_grades(class_id):
     # Get group grades for students (group assignments)
     from models import GroupGrade
     
-    # Debug: Check what groups exist for this class
-    all_groups = StudentGroup.query.filter_by(class_id=class_id).all()
-    print(f"DEBUG: All groups in class {class_id}:")
-    for group in all_groups:
-        print(f"  Group ID: {group.id}, Name: {group.name}")
-    
-    # Debug: Check students in Group 9 specifically
-    group_9_members = StudentGroupMember.query.join(StudentGroup).filter(
-        StudentGroup.class_id == class_id,
-        StudentGroup.id == 9
-    ).all()
-    print(f"DEBUG: Students in Group 9: {len(group_9_members)}")
-    for member in group_9_members:
-        print(f"  Student ID: {member.student_id}, Student: {member.student.first_name} {member.student.last_name}")
-    
-    # Debug: Check all group memberships for Group 9 students
-    group_9_student_ids = [member.student_id for member in group_9_members]
-    print(f"DEBUG: All group memberships for Group 9 students:")
-    for student_id in group_9_student_ids[:3]:  # Check first 3 students
-        all_memberships = StudentGroupMember.query.join(StudentGroup).filter(
-            StudentGroup.class_id == class_id,
-            StudentGroupMember.student_id == student_id
-        ).all()
-        student_name = Student.query.get(student_id)
-        print(f"  Student {student_name.first_name} {student_name.last_name} (ID: {student_id}):")
-        for membership in all_memberships:
-            print(f"    Group ID: {membership.group_id}, Group Name: {membership.group.name}")
-    
     for student in enrolled_students:
         for group_assignment in group_assignments:
             # Check if this group assignment is for specific groups
@@ -1908,32 +1880,35 @@ def class_grades(class_id):
                     assignment_group_ids = []
             
             # Find what group this student is in for this class
-            # Handle case where student might be in multiple groups - get the most recent one
-            student_group_member = StudentGroupMember.query.join(StudentGroup).filter(
-                StudentGroup.class_id == class_id,
-                StudentGroupMember.student_id == student.id
-            ).order_by(StudentGroupMember.id.desc()).first()
-            
-            # Check if student should see this assignment
+            # If assignment targets specific groups, only consider those groups
+            # This prevents conflicts when students are in multiple groups
             should_show_assignment = False
             student_group_id = None
             student_group_name = 'N/A'
             
-            if student_group_member and student_group_member.group:
-                student_group_id = student_group_member.group.id
-                student_group_name = student_group_member.group.name
+            if not assignment_group_ids:
+                # Assignment is for all groups - get any group the student is in
+                student_group_member = StudentGroupMember.query.join(StudentGroup).filter(
+                    StudentGroup.class_id == class_id,
+                    StudentGroupMember.student_id == student.id
+                ).order_by(StudentGroupMember.id.desc()).first()
                 
-                if not assignment_group_ids:
-                    # Assignment is for all groups
+                if student_group_member and student_group_member.group:
+                    student_group_id = student_group_member.group.id
+                    student_group_name = student_group_member.group.name
                     should_show_assignment = True
-                else:
-                    # Assignment is for specific groups - check if student's group is included
-                    should_show_assignment = student_group_id in assignment_group_ids
-            
-            # Debug: Check "What is Matter" assignments specifically
-            if group_assignment.title.startswith('What is Matter'):
-                print(f"DEBUG What is Matter: Student {student.first_name} {student.last_name} (ID: {student.id}) - Group: {student_group_name} (ID: {student_group_id}) - Assignment: '{group_assignment.title}' (ID: {group_assignment.id}) - Target groups: {assignment_group_ids} - Should show: {should_show_assignment}")
-            
+            else:
+                # Assignment is for specific groups - only check if student is in one of those groups
+                student_group_member = StudentGroupMember.query.join(StudentGroup).filter(
+                    StudentGroup.class_id == class_id,
+                    StudentGroupMember.student_id == student.id,
+                    StudentGroup.id.in_(assignment_group_ids)
+                ).order_by(StudentGroupMember.id.desc()).first()
+                
+                if student_group_member and student_group_member.group:
+                    student_group_id = student_group_member.group.id
+                    student_group_name = student_group_member.group.name
+                    should_show_assignment = True
             
             if should_show_assignment:
                 # Student should see this assignment
@@ -1944,12 +1919,6 @@ def class_grades(class_id):
                         student_id=student.id,
                         group_assignment_id=group_assignment.id
                     ).first()
-                    
-                    # Debug: Check grade lookup for "What is Matter" assignments
-                    if group_assignment.title.startswith('What is Matter'):
-                        print(f"DEBUG Grade Lookup: Student {student.first_name} {student.last_name} (ID: {student.id}) - Assignment: '{group_assignment.title}' (ID: {group_assignment.id}) - Grade found: {group_grade is not None}")
-                        if group_grade:
-                            print(f"DEBUG Grade Data: {group_grade.grade_data}")
                     
                     if group_grade:
                         try:

@@ -1901,6 +1901,10 @@ def class_grades(class_id):
                     # Assignment is for specific groups - check if student's group is included
                     should_show_assignment = student_group_id in assignment_group_ids
             
+            # Debug: Check "What is Matter" assignments specifically
+            if group_assignment.title.startswith('What is Matter') and student.id <= 5:
+                print(f"DEBUG What is Matter: Student {student.first_name} {student.last_name} (ID: {student.id}) - Group: {student_group_name} (ID: {student_group_id}) - Assignment: '{group_assignment.title}' (ID: {group_assignment.id}) - Target groups: {assignment_group_ids} - Should show: {should_show_assignment}")
+            
             
             if should_show_assignment:
                 # Student should see this assignment
@@ -1949,13 +1953,26 @@ def class_grades(class_id):
                     }
             else:
                 # Student should not see this assignment (not in the assigned group)
-                student_grades[student.id][f'group_{group_assignment.id}'] = {
-                    'grade': 'N/A',
-                    'comments': 'Not assigned to this group',
-                    'graded_at': None,
-                    'type': 'group',
-                    'group_name': 'N/A'
-                }
+                # Only show this assignment if it's for all groups (assignment_group_ids is empty)
+                if not assignment_group_ids:
+                    # Assignment is for all groups but student is not in any group
+                    student_grades[student.id][f'group_{group_assignment.id}'] = {
+                        'grade': 'No Group',
+                        'comments': 'Student not assigned to a group',
+                        'graded_at': None,
+                        'type': 'group',
+                        'group_name': 'N/A'
+                    }
+                else:
+                    # Assignment is for specific groups and student is not in any of them
+                    # Show "N/A" to indicate this assignment doesn't apply to this student
+                    student_grades[student.id][f'group_{group_assignment.id}'] = {
+                        'grade': 'N/A',
+                        'comments': 'Not assigned to this group',
+                        'graded_at': None,
+                        'type': 'group',
+                        'group_name': 'N/A'
+                    }
     
     # Calculate averages for each student (including both individual and group assignments)
     # Only include grades that are applicable to the student (exclude N/A from group assignments they're not part of)

@@ -4239,6 +4239,10 @@ def debug_grades(class_id):
 def add_assignment():
     """Add a new assignment"""
     if request.method == 'POST':
+        # Debug logging
+        print(f"DEBUG: POST request to add_assignment")
+        print(f"DEBUG: Form data: {dict(request.form)}")
+        
         title = request.form.get('title')
         description = request.form.get('description')
         class_id = request.form.get('class_id', type=int)
@@ -4246,9 +4250,14 @@ def add_assignment():
         quarter = request.form.get('quarter')
         status = request.form.get('status', 'Active')
         
+        print(f"DEBUG: Parsed - title={title}, class_id={class_id}, due_date={due_date_str}, quarter={quarter}, status={status}")
+        
         if not all([title, class_id, due_date_str, quarter]):
+            print(f"DEBUG: Validation failed - title={title!r}, class_id={class_id!r}, due_date_str={due_date_str!r}, quarter={quarter!r}")
             flash("Title, Class, Due Date, and Quarter are required.", "danger")
             return redirect(request.url)
+        
+        print(f"DEBUG: Validation passed, proceeding to create assignment")
         
         # Validate status
         valid_statuses = ['Active', 'Inactive', 'Voided']
@@ -4307,11 +4316,19 @@ def add_assignment():
                     flash(f'File type not allowed. Allowed types are: {", ".join(ALLOWED_EXTENSIONS)}', 'danger')
                     return redirect(request.url)
         
-        db.session.add(new_assignment)
-        db.session.commit()
-        
-        flash('Assignment created successfully.', 'success')
-        return redirect(url_for('management.assignments_and_grades'))
+        try:
+            db.session.add(new_assignment)
+            db.session.commit()
+            print(f"DEBUG: Assignment created successfully with ID: {new_assignment.id}")
+            print(f"DEBUG: Assignment details - title={new_assignment.title}, class_id={new_assignment.class_id}, quarter={new_assignment.quarter}")
+            
+            flash('Assignment created successfully.', 'success')
+            return redirect(url_for('management.assignments_and_grades'))
+        except Exception as e:
+            print(f"ERROR: Failed to create assignment: {e}")
+            db.session.rollback()
+            flash(f'Error creating assignment: {str(e)}', 'danger')
+            return redirect(request.url)
 
     # For GET request, get all classes for the dropdown and current quarter
     classes = Class.query.all()

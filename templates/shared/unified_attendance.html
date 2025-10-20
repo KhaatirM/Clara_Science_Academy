@@ -119,11 +119,11 @@
             </div>
 
             <!-- School Day Attendance Form -->
-            <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h6 class="mb-0"><i class="bi bi-people me-2"></i>Mark School Day Attendance</h6>
+            <div class="unified-form-card">
+                <div class="unified-form-header">
+                    <h5 class="mb-0"><i class="bi bi-people me-2"></i>Mark School Day Attendance</h5>
                 </div>
-                <div class="card-body">
+                <div class="unified-form-body">
                     <form method="POST">
                         <input type="hidden" name="attendance_date" value="{{ selected_date_str }}">
                         <div class="table-responsive">
@@ -185,34 +185,46 @@
             <!-- Quick Stats -->
             <div class="row g-3 mb-4">
                 <div class="col-6 col-md-3">
-                    <div class="card bg-primary text-white">
-                        <div class="card-body text-center">
-                            <h4 class="mb-1">{{ classes|length }}</h4>
-                            <small>Total Classes</small>
+                    <div class="unified-stat-card">
+                        <div class="unified-stat-icon" style="background: linear-gradient(45deg, #f093fb, #f5576c);">
+                            <i class="bi bi-house-door-fill"></i>
+                        </div>
+                        <div class="unified-stat-content">
+                            <h3 class="unified-stat-number">{{ classes|length }}</h3>
+                            <p class="unified-stat-label">Total Classes</p>
                         </div>
                     </div>
                 </div>
                 <div class="col-6 col-md-3">
-                    <div class="card bg-success text-white">
-                        <div class="card-body text-center">
-                            <h4 class="mb-1">{{ today_attendance_count or 0 }}</h4>
-                            <small>Today's Attendance</small>
+                    <div class="unified-stat-card">
+                        <div class="unified-stat-icon" style="background: linear-gradient(45deg, #43e97b, #38f9d7);">
+                            <i class="bi bi-check-circle"></i>
+                        </div>
+                        <div class="unified-stat-content">
+                            <h3 class="unified-stat-number">{{ today_attendance_count or 0 }}</h3>
+                            <p class="unified-stat-label">Completed Today</p>
                         </div>
                     </div>
                 </div>
                 <div class="col-6 col-md-3">
-                    <div class="card bg-warning text-white">
-                        <div class="card-body text-center">
-                            <h4 class="mb-1">{{ pending_classes_count or 0 }}</h4>
-                            <small>Pending Today</small>
+                    <div class="unified-stat-card">
+                        <div class="unified-stat-icon" style="background: linear-gradient(45deg, #ffd700, #ffed4e);">
+                            <i class="bi bi-clock"></i>
+                        </div>
+                        <div class="unified-stat-content">
+                            <h3 class="unified-stat-number">{{ pending_classes_count or 0 }}</h3>
+                            <p class="unified-stat-label">Pending Today</p>
                         </div>
                     </div>
                 </div>
                 <div class="col-6 col-md-3">
-                    <div class="card bg-info text-white">
-                        <div class="card-body text-center">
-                            <h4 class="mb-1">{{ overall_attendance_rate or 0 }}%</h4>
-                            <small>Overall Rate</small>
+                    <div class="unified-stat-card">
+                        <div class="unified-stat-icon" style="background: linear-gradient(45deg, #4facfe, #00f2fe);">
+                            <i class="bi bi-percent"></i>
+                        </div>
+                        <div class="unified-stat-content">
+                            <h3 class="unified-stat-number">{{ overall_attendance_rate or 0 }}%</h3>
+                            <p class="unified-stat-label">Overall Rate</p>
                         </div>
                     </div>
                 </div>
@@ -246,81 +258,78 @@
             </div>
 
             <!-- Classes Grid -->
-            <div class="row g-3 g-md-4">
+            <div class="row g-4">
                 {% for class_item in classes %}
                 <div class="col-12 col-md-6 col-lg-4">
-                    <div class="card h-100">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <h5 class="card-title mb-0">{{ class_item.name }}</h5>
-                            <span class="badge bg-{{ 'success' if class_item.attendance_taken_today else 'warning' }}">
-                                {{ 'Completed' if class_item.attendance_taken_today else 'Pending' }}
-                            </span>
+                    <div class="unified-class-card">
+                        <div class="unified-class-header">
+                            <div class="unified-class-icon">
+                                <i class="bi bi-book-fill"></i>
+                            </div>
+                            <div class="unified-class-info">
+                                <h6 class="unified-class-title">{{ class_item.name }}</h6>
+                                <p class="unified-class-subject">{{ class_item.subject or 'General' }}</p>
+                            </div>
+                            <div class="unified-class-status">
+                                <span class="badge bg-{{ 'success' if class_item.attendance_taken_today else 'warning' }}">
+                                    {{ 'Completed' if class_item.attendance_taken_today else 'Pending' }}
+                                </span>
+                            </div>
                         </div>
-                        <div class="card-body">
-                            <div class="mb-3">
-                                <p class="card-text mb-1"><strong>Subject:</strong> {{ class_item.subject }}</p>
-                                <p class="card-text mb-1"><strong>Grade Level:</strong> {{ class_item.get_grade_levels_display() }}</p>
-                                <p class="card-text mb-1"><strong>Students:</strong> {{ class_item.student_count or 0 }}</p>
-                                <p class="card-text mb-0"><strong>Teacher:</strong> {{ (class_item.teacher.first_name + ' ' + class_item.teacher.last_name) if class_item.teacher else 'N/A' }}</p>
+                        <div class="unified-class-body">
+                            <div class="unified-class-detail">
+                                <i class="bi bi-people-fill me-2"></i>
+                                <span>Students: <strong>{{ class_item.student_count or 0 }}</strong></span>
+                            </div>
+                            <div class="unified-class-detail">
+                                <i class="bi bi-person-badge me-2"></i>
+                                <span>Teacher: <strong>{{ (class_item.teacher.first_name + ' ' + class_item.teacher.last_name) if class_item.teacher else 'N/A' }}</strong></span>
+                            </div>
+                            <div class="unified-class-detail">
+                                <i class="bi bi-mortarboard me-2"></i>
+                                <span>Grade: <strong>{{ class_item.get_grade_levels_display() }}</strong></span>
                             </div>
                             
-                            <!-- Quick Stats -->
-                            <div class="row g-2 mb-3">
-                                <div class="col-6">
-                                    <div class="text-center">
-                                        <div class="h6 mb-0 text-success">{{ class_item.today_present or 0 }}</div>
-                                        <small class="text-muted">Present</small>
-                                    </div>
-                                </div>
-                                <div class="col-6">
-                                    <div class="text-center">
-                                        <div class="h6 mb-0 text-danger">{{ class_item.today_absent or 0 }}</div>
-                                        <small class="text-muted">Absent</small>
-                                    </div>
-                                </div>
-                            </div>
                         </div>
-                        <div class="card-footer">
-                            <div class="d-grid gap-2">
-                                {% if current_user.role in ['Director', 'School Administrator'] %}
-                                    <a href="{{ url_for('management.take_class_attendance', class_id=class_item.id) }}?date={{ today_date }}" 
-                                       class="btn btn-primary">
-                                        <i class="bi bi-clipboard-check me-1"></i>Take Attendance
+                        <div class="unified-class-footer">
+                            {% if current_user.role in ['Director', 'School Administrator'] %}
+                                <a href="{{ url_for('management.take_class_attendance', class_id=class_item.id) }}?date={{ today_date }}" 
+                                   class="btn btn-unified-class-action w-100 mb-2">
+                                    <i class="bi bi-clipboard-check me-1"></i>Take Attendance
+                                </a>
+                                <div class="d-flex gap-2">
+                                    <a href="{{ url_for('management.view_class', class_id=class_item.id) }}" 
+                                       class="btn btn-unified-class-secondary flex-fill">
+                                        <i class="bi bi-eye me-1"></i>View
                                     </a>
-                                    <div class="btn-group" role="group">
-                                        <a href="{{ url_for('management.view_class', class_id=class_item.id) }}" 
-                                           class="btn btn-outline-secondary btn-sm">
-                                            <i class="bi bi-eye me-1"></i>View Class
-                                        </a>
-                                        <button class="btn btn-outline-info btn-sm" onclick="markAllPresent({{ class_item.id }})">
-                                            <i class="bi bi-check-all me-1"></i>All Present
-                                        </button>
-                                    </div>
-                                {% else %}
-                                    <a href="{{ url_for('teacher.take_attendance', class_id=class_item.id) }}?date={{ today_date }}" 
-                                       class="btn btn-primary">
-                                        <i class="bi bi-clipboard-check me-1"></i>Take Attendance
+                                    <button class="btn btn-unified-class-secondary flex-fill" onclick="markAllPresent({{ class_item.id }})">
+                                        <i class="bi bi-check-all me-1"></i>All Present
+                                    </button>
+                                </div>
+                            {% else %}
+                                <a href="{{ url_for('teacher.take_attendance', class_id=class_item.id) }}?date={{ today_date }}" 
+                                   class="btn btn-unified-class-action w-100 mb-2">
+                                    <i class="bi bi-clipboard-check me-1"></i>Take Attendance
+                                </a>
+                                <div class="d-flex gap-2">
+                                    <a href="{{ url_for('teacher.view_class', class_id=class_item.id) }}" 
+                                       class="btn btn-unified-class-secondary flex-fill">
+                                        <i class="bi bi-eye me-1"></i>View
                                     </a>
-                                    <div class="btn-group" role="group">
-                                        <a href="{{ url_for('teacher.view_class', class_id=class_item.id) }}" 
-                                           class="btn btn-outline-secondary btn-sm">
-                                            <i class="bi bi-eye me-1"></i>View Class
-                                        </a>
-                                        <button class="btn btn-outline-info btn-sm" onclick="markAllPresent({{ class_item.id }})">
-                                            <i class="bi bi-check-all me-1"></i>All Present
-                                        </button>
-                                    </div>
-                                {% endif %}
-                            </div>
+                                    <button class="btn btn-unified-class-secondary flex-fill" onclick="markAllPresent({{ class_item.id }})">
+                                        <i class="bi bi-check-all me-1"></i>All Present
+                                    </button>
+                                </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
                 {% else %}
                 <div class="col-12">
-                    <div class="alert alert-info text-center">
-                        <i class="bi bi-info-circle me-2"></i>
-                        <h5>No Classes Available</h5>
-                        <p class="mb-0">You don't have any classes assigned to take attendance for.</p>
+                    <div class="unified-empty-state">
+                        <i class="bi bi-inbox display-1 text-muted d-block mb-3"></i>
+                        <h5 class="text-muted">No Classes Available</h5>
+                        <p class="text-muted mb-0">You don't have any classes assigned to take attendance for.</p>
                     </div>
                 </div>
                 {% endfor %}
@@ -727,6 +736,163 @@ document.getElementById('attendanceTabs').addEventListener('shown.bs.tab', funct
     background-color: #0dcaf0;
     border-color: #0dcaf0;
     color: white;
+}
+
+/* Unified Form Card */
+.unified-form-card {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    border: 1px solid rgba(0,0,0,0.05);
+    overflow: hidden;
+}
+
+.unified-form-header {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    padding: 1.25rem 1.5rem;
+    color: white;
+}
+
+.unified-form-header h5 {
+    margin: 0;
+    font-weight: 700;
+}
+
+.unified-form-body {
+    padding: 1.5rem;
+}
+
+/* Unified Class Cards */
+.unified-class-card {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    border: 1px solid rgba(0,0,0,0.05);
+    transition: all 0.3s ease;
+    overflow: hidden;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.unified-class-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+}
+
+.unified-class-header {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    padding: 1.5rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    position: relative;
+}
+
+.unified-class-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    color: #f093fb;
+    flex-shrink: 0;
+}
+
+.unified-class-info {
+    flex: 1;
+}
+
+.unified-class-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: white;
+    margin: 0;
+}
+
+.unified-class-subject {
+    font-size: 0.85rem;
+    color: rgba(255,255,255,0.9);
+    margin: 0.25rem 0 0 0;
+}
+
+.unified-class-status {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+}
+
+.unified-class-body {
+    padding: 1.5rem;
+    flex: 1;
+}
+
+.unified-class-detail {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #f0f0f0;
+    color: #495057;
+    font-size: 0.9rem;
+}
+
+.unified-class-detail:last-child {
+    border-bottom: none;
+}
+
+.unified-class-detail i {
+    color: #f093fb;
+    width: 24px;
+}
+
+.unified-class-footer {
+    padding: 1rem 1.5rem;
+    background: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+}
+
+.btn-unified-class-action {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+    border: none;
+    padding: 0.625rem 1rem;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-unified-class-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(240, 147, 251, 0.4);
+    color: white;
+}
+
+.btn-unified-class-secondary {
+    background: white;
+    color: #6c757d;
+    border: 2px solid #dee2e6;
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-unified-class-secondary:hover {
+    background: #f8f9fa;
+    border-color: #f093fb;
+    color: #f093fb;
+}
+
+/* Unified Empty State */
+.unified-empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
 }
 
 /* Responsive Design */

@@ -178,15 +178,35 @@
 
                 <!-- Class Actions -->
                 <div class="class-card-footer-modern">
-                    <button class="btn btn-sm btn-class-action-modern" onclick="viewClass({{ class.id }})">
-                        <i class="bi bi-eye me-1"></i>View
-                    </button>
-                    <button class="btn btn-sm btn-class-action-modern" onclick="editClass({{ class.id }})">
-                        <i class="bi bi-pencil me-1"></i>Edit
-                    </button>
-                    <button class="btn btn-sm btn-class-action-modern" onclick="viewRoster({{ class.id }})">
-                        <i class="bi bi-people me-1"></i>Roster
-                    </button>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <button class="btn btn-sm btn-class-action-modern w-100" onclick="viewClass({{ class.id }})">
+                                <i class="bi bi-eye me-1"></i>View
+                            </button>
+                        </div>
+                        <div class="col-6">
+                            <button class="btn btn-sm btn-class-action-modern w-100" onclick="editClass({{ class.id }})">
+                                <i class="bi bi-pencil me-1"></i>Edit
+                            </button>
+                        </div>
+                        <div class="col-6">
+                            <button class="btn btn-sm btn-class-action-modern w-100" onclick="viewRoster({{ class.id }})">
+                                <i class="bi bi-people me-1"></i>Roster
+                            </button>
+                        </div>
+                        <div class="col-6">
+                            <button class="btn btn-sm btn-class-action-modern w-100" onclick="viewGrades({{ class.id }})">
+                                <i class="bi bi-clipboard-data me-1"></i>Grades
+                            </button>
+                        </div>
+                        {% if current_user.role in ['Director', 'School Administrator'] %}
+                        <div class="col-12 mt-2">
+                            <button class="btn btn-sm btn-class-action-delete w-100" onclick="removeClass({{ class.id }}, '{{ class.name }}')">
+                                <i class="bi bi-trash me-1"></i>Remove Class
+                            </button>
+                        </div>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         </div>
@@ -499,6 +519,22 @@
     transform: translateY(-2px);
     box-shadow: 0 5px 15px rgba(255, 215, 0, 0.4);
     color: #333;
+}
+
+.btn-class-action-delete {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+    border: none;
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-class-action-delete:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(245, 87, 108, 0.4);
+    color: white;
 }
 
 /* Classes Empty State */

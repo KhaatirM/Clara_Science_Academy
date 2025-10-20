@@ -1881,6 +1881,19 @@ def class_grades(class_id):
     for member in group_9_members:
         print(f"  Student ID: {member.student_id}, Student: {member.student.first_name} {member.student.last_name}")
     
+    # Debug: Check all group memberships for Group 9 students
+    group_9_student_ids = [member.student_id for member in group_9_members]
+    print(f"DEBUG: All group memberships for Group 9 students:")
+    for student_id in group_9_student_ids[:3]:  # Check first 3 students
+        all_memberships = StudentGroupMember.query.join(StudentGroup).filter(
+            StudentGroup.class_id == class_id,
+            StudentGroupMember.student_id == student_id
+        ).all()
+        student_name = Student.query.get(student_id)
+        print(f"  Student {student_name.first_name} {student_name.last_name} (ID: {student_id}):")
+        for membership in all_memberships:
+            print(f"    Group ID: {membership.group_id}, Group Name: {membership.group.name}")
+    
     for student in enrolled_students:
         for group_assignment in group_assignments:
             # Check if this group assignment is for specific groups
@@ -1895,10 +1908,11 @@ def class_grades(class_id):
                     assignment_group_ids = []
             
             # Find what group this student is in for this class
+            # Handle case where student might be in multiple groups - get the most recent one
             student_group_member = StudentGroupMember.query.join(StudentGroup).filter(
                 StudentGroup.class_id == class_id,
                 StudentGroupMember.student_id == student.id
-            ).first()
+            ).order_by(StudentGroupMember.id.desc()).first()
             
             # Check if student should see this assignment
             should_show_assignment = False

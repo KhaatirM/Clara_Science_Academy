@@ -333,10 +333,10 @@ def student_dashboard():
         ((Announcement.target_group == 'class') & (Announcement.class_id.in_(class_ids)))
     ).order_by(Announcement.timestamp.desc()).all()
 
-    return render_template('students/enhanced_student_dashboard.html', 
+    return render_template('students/role_student_dashboard.html', 
                          **create_template_context(student, 'home', 'home',
-                             grades=grades, 
-                             attendance_summary=attendance_summary, 
+                            grades=grades, 
+                            attendance_summary=attendance_summary,
                              announcements=announcements,
                              notifications=notifications,
                              school_year=current_school_year,
@@ -421,7 +421,7 @@ def student_assignments():
             elif due_date <= today + timedelta(days=7):
                 upcoming_assignments.append(assignment)
     
-    return render_template('students/enhanced_student_assignments.html', 
+    return render_template('students/role_student_dashboard.html', 
                          **create_template_context(student, 'assignments', 'assignments',
                              assignments_with_status=assignments_with_status,
                              grades=grades_dict,
@@ -487,7 +487,7 @@ def student_classes():
     current_school_year = SchoolYear.query.filter_by(is_active=True).first()
     if not current_school_year:
         flash("No active school year found.", "warning")
-        return render_template('students/enhanced_student_classes.html', 
+        return render_template('students/role_student_dashboard.html', 
                              **create_template_context(student, 'classes', 'classes'))
 
     # Get student's enrolled classes using the Enrollment model
@@ -525,9 +525,10 @@ def student_classes():
                 grades[c.name] = avg_grade
                 all_grades.append(avg_grade)
     
-    return render_template('students/enhanced_student_classes.html', 
+    return render_template('students/role_student_dashboard.html',
                          **create_template_context(student, 'classes', 'classes',
                              classes=classes,
+                             my_classes=classes,
                              grades=grades))
 
 @student_blueprint.route('/grades')

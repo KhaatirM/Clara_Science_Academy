@@ -1867,72 +1867,43 @@ def class_grades(class_id):
     from models import GroupGrade
     for student in enrolled_students:
         for group_assignment in group_assignments:
-            # Check if this group assignment has a specific group assigned to it
-            # Group assignments can be assigned to specific groups
+            # Check if this group assignment is for specific groups
+            # selected_group_ids is a JSON string of group IDs (null = all groups)
+            assignment_group_ids = []
+            if group_assignment.selected_group_ids:
+                try:
+                    assignment_group_ids = json.loads(group_assignment.selected_group_ids)
+                except (json.JSONDecodeError, TypeError):
+                    assignment_group_ids = []
             
-            # Find if student is in a group that has this specific assignment
-            # First, check if the group assignment has a group_id (some assignments may target specific groups)
-            if hasattr(group_assignment, 'group_id') and group_assignment.group_id:
-                # This assignment is for a specific group
-                group_member = StudentGroupMember.query.filter_by(
-                    student_id=student.id,
-                    group_id=group_assignment.group_id
-                ).first()
+            # Find what group this student is in for this class
+            student_group_member = StudentGroupMember.query.join(StudentGroup).filter(
+                StudentGroup.class_id == class_id,
+                StudentGroupMember.student_id == student.id
+            ).first()
+            
+            # Check if student should see this assignment
+            should_show_assignment = False
+            student_group_id = None
+            student_group_name = 'N/A'
+            
+            if student_group_member and student_group_member.group:
+                student_group_id = student_group_member.group.id
+                student_group_name = student_group_member.group.name
                 
-                if group_member:
-                    # Student is in the group this assignment is for
-                    group_grade = GroupGrade.query.filter_by(
-                        group_id=group_assignment.group_id,
-                        group_assignment_id=group_assignment.id
-                    ).first()
-                    
-                    if group_grade:
-                        try:
-                            grade_data = json.loads(group_grade.grade_data) if group_grade.grade_data else {}
-                            student_grades[student.id][f'group_{group_assignment.id}'] = {
-                                'grade': grade_data.get('score', 'N/A'),
-                                'comments': grade_data.get('comments', ''),
-                                'graded_at': group_grade.graded_at,
-                                'type': 'group',
-                                'group_name': group_member.group.name if group_member.group else 'N/A'
-                            }
-                        except (json.JSONDecodeError, TypeError, AttributeError):
-                            student_grades[student.id][f'group_{group_assignment.id}'] = {
-                                'grade': 'N/A',
-                                'comments': 'Error parsing grade data',
-                                'graded_at': None,
-                                'type': 'group',
-                                'group_name': group_member.group.name if group_member.group else 'N/A'
-                            }
-                    else:
-                        student_grades[student.id][f'group_{group_assignment.id}'] = {
-                            'grade': 'Not Graded',
-                            'comments': '',
-                            'graded_at': None,
-                            'type': 'group',
-                            'group_name': group_member.group.name if group_member.group else 'N/A'
-                        }
+                if not assignment_group_ids:
+                    # Assignment is for all groups
+                    should_show_assignment = True
                 else:
-                    # Student is not in the group this assignment is for - mark as N/A (not applicable)
-                    student_grades[student.id][f'group_{group_assignment.id}'] = {
-                        'grade': 'N/A',
-                        'comments': 'Not assigned to this group',
-                        'graded_at': None,
-                        'type': 'group',
-                        'group_name': 'N/A'
-                    }
-            else:
-                # Assignment is for all groups in the class or no specific group
-                # Find any group the student is in for this class
-                group_member = StudentGroupMember.query.join(StudentGroup).filter(
-                    StudentGroup.class_id == class_id,
-                    StudentGroupMember.student_id == student.id
-                ).first()
-                
-                if group_member and group_member.group:
+                    # Assignment is for specific groups - check if student's group is included
+                    should_show_assignment = student_group_id in assignment_group_ids
+            
+            if should_show_assignment:
+                # Student should see this assignment
+                if student_group_id:
                     # Check if this group has a grade for this assignment
                     group_grade = GroupGrade.query.filter_by(
-                        group_id=group_member.group.id,
+                        group_id=student_group_id,
                         group_assignment_id=group_assignment.id
                     ).first()
                     
@@ -1944,7 +1915,7 @@ def class_grades(class_id):
                                 'comments': grade_data.get('comments', ''),
                                 'graded_at': group_grade.graded_at,
                                 'type': 'group',
-                                'group_name': group_member.group.name
+                                'group_name': student_group_name
                             }
                         except (json.JSONDecodeError, TypeError, AttributeError):
                             student_grades[student.id][f'group_{group_assignment.id}'] = {
@@ -1952,7 +1923,7 @@ def class_grades(class_id):
                                 'comments': 'Error parsing grade data',
                                 'graded_at': None,
                                 'type': 'group',
-                                'group_name': group_member.group.name if group_member.group else 'N/A'
+                                'group_name': student_group_name
                             }
                     else:
                         student_grades[student.id][f'group_{group_assignment.id}'] = {
@@ -1960,10 +1931,10 @@ def class_grades(class_id):
                             'comments': '',
                             'graded_at': None,
                             'type': 'group',
-                            'group_name': group_member.group.name if group_member.group else 'N/A'
+                            'group_name': student_group_name
                         }
                 else:
-                    # Student is not in any group
+                    # Student is not in any group but assignment is for all groups
                     student_grades[student.id][f'group_{group_assignment.id}'] = {
                         'grade': 'No Group',
                         'comments': 'Student not assigned to a group',
@@ -1971,6 +1942,15 @@ def class_grades(class_id):
                         'type': 'group',
                         'group_name': 'N/A'
                     }
+            else:
+                # Student should not see this assignment (not in the assigned group)
+                student_grades[student.id][f'group_{group_assignment.id}'] = {
+                    'grade': 'N/A',
+                    'comments': 'Not assigned to this group',
+                    'graded_at': None,
+                    'type': 'group',
+                    'group_name': 'N/A'
+                }
     
     # Calculate averages for each student (including both individual and group assignments)
     # Only include grades that are applicable to the student (exclude N/A from group assignments they're not part of)
@@ -4140,6 +4120,54 @@ def settings():
 def class_grades_view(class_id):
     """View class grades - redirect to the main class_grades view"""
     return redirect(url_for('management.class_grades', class_id=class_id))
+
+@management_blueprint.route('/debug-group-assignments/<int:class_id>')
+@login_required
+@management_required
+def debug_group_assignments(class_id):
+    """Debug route to check group assignment data"""
+    import json
+    
+    class_obj = Class.query.get_or_404(class_id)
+    
+    # Get group assignments
+    group_assignments = GroupAssignment.query.filter_by(class_id=class_id).all()
+    
+    # Get students and their groups
+        enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
+    students = [enrollment.student for enrollment in enrollments if enrollment.student]
+    
+    debug_data = {
+        'class_id': class_id,
+        'class_name': class_obj.name,
+        'group_assignments': [],
+        'students': []
+    }
+    
+    for assignment in group_assignments:
+        assignment_data = {
+            'id': assignment.id,
+            'title': assignment.title,
+            'selected_group_ids': assignment.selected_group_ids,
+            'parsed_group_ids': json.loads(assignment.selected_group_ids) if assignment.selected_group_ids else None
+        }
+        debug_data['group_assignments'].append(assignment_data)
+    
+    for student in students:
+        student_group = StudentGroupMember.query.join(StudentGroup).filter(
+            StudentGroup.class_id == class_id,
+            StudentGroupMember.student_id == student.id
+        ).first()
+        
+        student_data = {
+            'id': student.id,
+            'name': f"{student.first_name} {student.last_name}",
+            'group_id': student_group.group.id if student_group and student_group.group else None,
+            'group_name': student_group.group.name if student_group and student_group.group else None
+        }
+        debug_data['students'].append(student_data)
+    
+    return jsonify(debug_data)
 
 
 

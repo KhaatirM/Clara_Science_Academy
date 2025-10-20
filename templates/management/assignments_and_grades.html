@@ -4,157 +4,142 @@
 
 {% block dashboard_content %}
 <div class="container-fluid px-2 px-md-4">
-    <!-- Enhanced Header Section -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card border-0 shadow-sm bg-gradient-primary text-white">
-                <div class="card-body p-4">
-                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
-                        <div class="mb-3 mb-md-0">
-                            <h2 class="mb-2 fw-bold">
-                                <i class="fas fa-tasks me-3 text-warning"></i>
-                                {% if show_class_selection %}
-                                    Assignments & Grades Management
-                                {% else %}
-                                    {{ selected_class.name if selected_class else 'Assignments & Grades' }}
-                                {% endif %}
-                            </h2>
-                            <p class="mb-0 opacity-75">
-                                <i class="fas fa-chalkboard-teacher me-2"></i>
-                                {% if show_class_selection %}
-                                    Select a class to view and manage its assignments and grades
-                                {% else %}
-                                    Manage assignments and grades for {{ selected_class.name if selected_class else 'selected class' }}
-                                {% endif %}
-                            </p>
-                        </div>
-                        <div class="d-flex gap-2">
-                            {% if show_class_selection %}
-                                <button onclick="createAssignment()" class="btn btn-light btn-lg shadow-sm">
-                                    <i class="fas fa-plus me-2"></i> 
-                                    Add New Assignment
-                                </button>
-                            {% else %}
-                                <a href="{{ url_for('management.assignments_and_grades') }}" class="btn btn-outline-light btn-lg shadow-sm">
-                                    <i class="fas fa-arrow-left me-2"></i> 
-                                    Back to Classes
-                                </a>
-                                <button onclick="createAssignment()" class="btn btn-light btn-lg shadow-sm">
-                                    <i class="fas fa-plus me-2"></i> 
-                                    Add New Assignment
-                                </button>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
+    <!-- Modern Assignments Header -->
+    <div class="assignments-admin-header mb-4">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                <h2 class="assignments-admin-title mb-1">
+                    <i class="bi bi-journal-check me-2"></i>
+                    {% if show_class_selection %}
+                        Assignments & Grades
+                    {% else %}
+                        {{ selected_class.name if selected_class else 'Assignments & Grades' }}
+                    {% endif %}
+                </h2>
+                <p class="assignments-admin-subtitle mb-0">
+                    <i class="bi bi-clipboard-data me-2"></i>
+                    {% if show_class_selection %}
+                        Select a class to view and manage assignments
+                    {% else %}
+                        Manage assignments and grades for {{ selected_class.name if selected_class else 'selected class' }}
+                    {% endif %}
+                </p>
+            </div>
+            <div class="d-flex gap-2">
+                {% if not show_class_selection %}
+                    <a href="{{ url_for('management.assignments_and_grades') }}" class="btn btn-assignments-back">
+                        <i class="bi bi-arrow-left me-2"></i>Back
+                    </a>
+                {% endif %}
+                <button onclick="createAssignment()" class="btn btn-assignments-add">
+                    <i class="bi bi-plus-circle me-2"></i>New Assignment
+                </button>
             </div>
         </div>
     </div>
 
     {% if show_class_selection %}
-        <!-- Classes Grid (Same as /management/assignments) -->
+        <!-- Statistics Cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="assignments-stat-card">
+                    <div class="assignments-stat-icon">
+                        <i class="bi bi-house-door-fill"></i>
+                    </div>
+                    <div class="assignments-stat-content">
+                        <h3 class="assignments-stat-number">{{ accessible_classes|length }}</h3>
+                        <p class="assignments-stat-label">Total Classes</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="assignments-stat-card">
+                    <div class="assignments-stat-icon">
+                        <i class="bi bi-journal-check"></i>
+                    </div>
+                    <div class="assignments-stat-content">
+                        <h3 class="assignments-stat-number">{{ class_assignments.values()|sum }}</h3>
+                        <p class="assignments-stat-label">Total Assignments</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="assignments-stat-card">
+                    <div class="assignments-stat-icon">
+                        <i class="bi bi-people-fill"></i>
+                    </div>
+                    <div class="assignments-stat-content">
+                        <h3 class="assignments-stat-number">{{ accessible_classes|map(attribute='enrollments')|map('selectattr', 'is_active')|map('list')|map('length')|sum }}</h3>
+                        <p class="assignments-stat-label">Total Students</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="assignments-stat-card">
+                    <div class="assignments-stat-icon">
+                        <i class="bi bi-person-badge"></i>
+                    </div>
+                    <div class="assignments-stat-content">
+                        <h3 class="assignments-stat-number">{{ accessible_classes|map(attribute='teacher')|select|unique|list|length }}</h3>
+                        <p class="assignments-stat-label">Active Teachers</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Classes Grid -->
         <div class="row g-4">
             {% for class_obj in accessible_classes %}
             <div class="col-12 col-md-6 col-lg-4">
-                <div class="card border-0 shadow-lg h-100 class-card" onclick="viewClassAssignmentsAndGrades({{ class_obj.id }})">
-                    <div class="card-header bg-gradient-success text-white border-0">
-                        <div class="d-flex align-items-center">
-                            <div class="bg-white bg-opacity-20 rounded-circle p-2 me-3">
-                                <i class="fas fa-chalkboard text-white fs-4"></i>
-                            </div>
-                            <div class="flex-grow-1 min-width-0">
-                                <div class="d-flex align-items-center flex-wrap gap-2">
-                                    <h5 class="mb-1 fw-bold text-truncate" title="{{ class_obj.name }}" style="max-width: calc(100% - 120px);">{{ class_obj.name }}</h5>
-                                    <span class="badge bg-light text-success fs-6 px-2 py-1 flex-shrink-0">
-                                        {{ class_assignments.get(class_obj.id, 0) }} assignments
-                                    </span>
-                                </div>
-                                <small class="opacity-75 text-truncate d-block" title="{{ class_obj.subject }}">{{ class_obj.subject }}</small>
-                            </div>
+                <div class="assignment-class-card" onclick="viewClassAssignmentsAndGrades({{ class_obj.id }})">
+                    <div class="assignment-class-header">
+                        <div class="assignment-class-icon">
+                            <i class="bi bi-book-fill"></i>
+                        </div>
+                        <div class="assignment-class-info">
+                            <h6 class="assignment-class-title">{{ class_obj.name }}</h6>
+                            <p class="assignment-class-subject">{{ class_obj.subject or 'General' }}</p>
+                        </div>
+                        <div class="assignment-class-badge">
+                            <span class="badge bg-white text-dark">{{ class_assignments.get(class_obj.id, 0) }} assignments</span>
                         </div>
                     </div>
                     
-                    <div class="card-body p-4">
-                        <!-- Teacher Information -->
-                        <div class="mb-4">
-                            <div class="d-flex align-items-center mb-2">
-                                <i class="fas fa-user-tie me-2 text-primary"></i>
-                                <strong class="text-dark">Primary Teacher:</strong>
-                            </div>
-                            {% if class_obj.teacher %}
-                                <div class="ms-4">
-                                    <div class="badge bg-primary bg-opacity-20 text-dark border border-primary fs-6 p-2 d-inline-flex align-items-center flex-wrap gap-1" style="max-width: 100%;">
-                                        <span class="text-truncate" style="max-width: 150px;" title="{{ class_obj.teacher.first_name + ' ' + class_obj.teacher.last_name }}">
-                                            {{ class_obj.teacher.first_name + ' ' + class_obj.teacher.last_name }}
-                                        </span>
-                                        <span class="badge bg-primary text-white">{{ class_obj.teacher.user.role if class_obj.teacher.user else 'No Role' }}</span>
-                                    </div>
-                                </div>
-                            {% else %}
-                                <div class="ms-4">
-                                    <span class="badge bg-danger bg-opacity-20 text-danger border border-danger">
-                                        No primary teacher assigned
-                                    </span>
-                                </div>
-                            {% endif %}
+                    <div class="assignment-class-body">
+                        <div class="assignment-class-detail">
+                            <i class="bi bi-person-badge me-2"></i>
+                            <span>Teacher: <strong>{{ class_obj.teacher.first_name }} {{ class_obj.teacher.last_name if class_obj.teacher else 'N/A' }}</strong></span>
                         </div>
-
-                        <!-- Class Metadata -->
-                        <div class="class-metadata mb-4">
-                            {% if class_obj.room_number %}
-                            <div class="metadata-item mb-2">
-                                <i class="fas fa-door-open me-2 text-info"></i>
-                                <span>Room {{ class_obj.room_number }}</span>
-                            </div>
-                            {% endif %}
-                            
-                            {% if class_obj.schedule %}
-                            <div class="metadata-item mb-2">
-                                <i class="fas fa-clock me-2 text-warning"></i>
-                                <span>{{ class_obj.schedule }}</span>
-                            </div>
-                            {% endif %}
-                            
-                            <div class="metadata-item mb-2">
-                                <i class="fas fa-users me-2 text-success"></i>
-                                <span>{{ class_obj.enrollments|selectattr('is_active')|list|length }} students enrolled</span>
-                            </div>
-                            
-                            {% if class_obj.max_students %}
-                            <div class="metadata-item mb-2">
-                                <i class="fas fa-chart-bar me-2 text-info"></i>
-                                <span>Max: {{ class_obj.max_students }} students</span>
-                            </div>
-                            {% endif %}
+                        <div class="assignment-class-detail">
+                            <i class="bi bi-people-fill me-2"></i>
+                            <span>Students: <strong>{{ class_obj.enrollments|selectattr('is_active')|list|length }}</strong></span>
                         </div>
-
-                        {% if class_obj.description %}
-                        <div class="class-description">
-                            <p class="text-muted small">{{ class_obj.description[:100] }}{% if class_obj.description|length > 100 %}...{% endif %}</p>
+                        <div class="assignment-class-detail">
+                            <i class="bi bi-mortarboard me-2"></i>
+                            <span>Grade: <strong>{{ class_obj.grade_level or 'N/A' }}</strong></span>
+                        </div>
+                        {% if class_obj.schedule %}
+                        <div class="assignment-class-detail">
+                            <i class="bi bi-clock me-2"></i>
+                            <span><strong>{{ class_obj.schedule }}</strong></span>
                         </div>
                         {% endif %}
                     </div>
 
                     <!-- Action Footer -->
-                    <div class="card-footer bg-light border-0 p-3">
-                        <div class="d-grid">
-                            <button class="btn btn-success btn-lg shadow-sm" onclick="event.stopPropagation(); viewClassAssignmentsAndGrades({{ class_obj.id }})">
-                                <i class="fas fa-eye me-2"></i>View Assignments & Grades
-                            </button>
-                        </div>
+                    <div class="assignment-class-footer">
+                        <button class="btn btn-assignment-class-action w-100" onclick="event.stopPropagation(); viewClassAssignmentsAndGrades({{ class_obj.id }})">
+                            <i class="bi bi-eye me-2"></i>View Assignments & Grades
+                        </button>
                     </div>
                 </div>
             </div>
             {% else %}
             <div class="col-12">
-                <div class="card border-0 shadow-lg">
-                    <div class="card-body text-center p-5">
-                        <div class="bg-light rounded-circle p-4 d-inline-block mb-3">
-                            <i class="fas fa-chalkboard text-muted fs-1"></i>
-                        </div>
-                        <h5 class="text-muted mb-2">No Classes Available</h5>
-                        <p class="text-muted mb-0">No classes are currently available for assignment management.</p>
-                    </div>
+                <div class="assignments-empty-state">
+                    <i class="bi bi-inbox display-1 text-muted d-block mb-3"></i>
+                    <h5 class="text-muted">No Classes Available</h5>
+                    <p class="text-muted mb-3">No classes are currently available for assignment management.</p>
                 </div>
             </div>
             {% endfor %}
@@ -555,8 +540,246 @@
 
 <!-- Enhanced Visual Styling -->
 <style>
+/* ==================== ASSIGNMENTS & GRADES TAB STYLES ==================== */
+
+/* Assignments Header */
+.assignments-admin-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 15px;
+    padding: 2rem;
+    color: white;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+.assignments-admin-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.assignments-admin-subtitle {
+    font-size: 1.1rem;
+    opacity: 0.9;
+}
+
+.btn-assignments-add {
+    background: white;
+    color: #667eea;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 10px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-assignments-add:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(255,255,255,0.3);
+    color: #667eea;
+}
+
+.btn-assignments-back {
+    background: rgba(255,255,255,0.2);
+    color: white;
+    border: 2px solid white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 10px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-assignments-back:hover {
+    background: white;
+    color: #667eea;
+}
+
+/* Assignments Statistics Cards */
+.assignments-stat-card {
+    background: white;
+    border-radius: 15px;
+    padding: 1.5rem;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    border: 1px solid rgba(0,0,0,0.05);
+    transition: all 0.3s ease;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.assignments-stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+}
+
+.assignments-stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: white;
+    flex-shrink: 0;
+}
+
+.assignments-stat-card:nth-child(1) .assignments-stat-icon {
+    background: linear-gradient(45deg, #667eea, #764ba2);
+}
+
+.assignments-stat-card:nth-child(2) .assignments-stat-icon {
+    background: linear-gradient(45deg, #43e97b, #38f9d7);
+}
+
+.assignments-stat-card:nth-child(3) .assignments-stat-icon {
+    background: linear-gradient(45deg, #fa709a, #fee140);
+}
+
+.assignments-stat-card:nth-child(4) .assignments-stat-icon {
+    background: linear-gradient(45deg, #4facfe, #00f2fe);
+}
+
+.assignments-stat-content {
+    flex: 1;
+}
+
+.assignments-stat-number {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 0;
+    color: #2c3e50;
+    line-height: 1;
+}
+
+.assignments-stat-label {
+    font-size: 0.9rem;
+    color: #6c757d;
+    margin: 0.25rem 0 0 0;
+    font-weight: 500;
+}
+
+/* Assignment Class Cards */
+.assignment-class-card {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    border: 1px solid rgba(0,0,0,0.05);
+    transition: all 0.3s ease;
+    overflow: hidden;
+    cursor: pointer;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.assignment-class-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+}
+
+.assignment-class-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    position: relative;
+}
+
+.assignment-class-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    color: #667eea;
+    flex-shrink: 0;
+}
+
+.assignment-class-info {
+    flex: 1;
+}
+
+.assignment-class-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: white;
+    margin: 0;
+}
+
+.assignment-class-subject {
+    font-size: 0.85rem;
+    color: rgba(255,255,255,0.9);
+    margin: 0.25rem 0 0 0;
+}
+
+.assignment-class-badge {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+}
+
+.assignment-class-body {
+    padding: 1.5rem;
+    flex: 1;
+}
+
+.assignment-class-detail {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #f0f0f0;
+    color: #495057;
+    font-size: 0.9rem;
+}
+
+.assignment-class-detail:last-child {
+    border-bottom: none;
+}
+
+.assignment-class-detail i {
+    color: #667eea;
+    width: 24px;
+}
+
+.assignment-class-footer {
+    padding: 1rem 1.5rem;
+    background: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+}
+
+.btn-assignment-class-action {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 0.625rem 1rem;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-assignment-class-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    color: white;
+}
+
+/* Assignments Empty State */
+.assignments-empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+}
+
+/* Old gradient styles for compatibility */
 .bg-gradient-primary {
-    background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 .bg-gradient-success {
@@ -573,22 +796,6 @@
     box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
 }
 
-.class-metadata {
-    font-size: 0.9rem;
-}
-
-.metadata-item {
-    display: flex;
-    align-items: center;
-    color: #6c757d;
-}
-
-.badge {
-    font-size: 0.75rem;
-    padding: 0.5rem 0.75rem;
-    border-radius: 0.5rem;
-}
-
 .assignment-card {
     transition: all 0.3s ease;
 }
@@ -596,64 +803,6 @@
 .assignment-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important;
-}
-
-/* Class header layout fixes */
-.class-card .card-header .d-flex {
-    width: 100%;
-}
-
-.class-card .card-header h5 {
-    line-height: 1.2;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.class-card .card-header .badge {
-    font-size: 0.75rem;
-    padding: 0.25rem 0.5rem;
-    border-radius: 0.375rem;
-    white-space: nowrap;
-}
-
-/* Ensure proper spacing and alignment */
-.class-card .card-header .flex-wrap {
-    align-items: center;
-    gap: 0.5rem;
-}
-
-/* Responsive adjustments for class headers */
-@media (max-width: 576px) {
-    .class-card .card-header h5 {
-        max-width: calc(100% - 100px) !important;
-        font-size: 1rem;
-    }
-    
-    .class-card .card-header .badge {
-        font-size: 0.7rem;
-        padding: 0.2rem 0.4rem;
-    }
-}
-
-/* Custom animations */
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.class-card {
-    animation: fadeInUp 0.6s ease-out;
-}
-
-.assignment-card {
-    animation: fadeInUp 0.4s ease-out;
 }
 
 /* Button hover effects */

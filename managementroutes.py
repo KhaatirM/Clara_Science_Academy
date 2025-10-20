@@ -2338,9 +2338,19 @@ def assignments_and_grades():
                         group_count = 0
                     class_assignments[class_obj.id] = regular_count + group_count
             
+            # Calculate unique student count across all accessible classes
+            unique_student_ids = set()
+            for class_obj in accessible_classes:
+                if class_obj and hasattr(class_obj, 'enrollments'):
+                    for enrollment in class_obj.enrollments:
+                        if enrollment.is_active and enrollment.student_id:
+                            unique_student_ids.add(enrollment.student_id)
+            unique_student_count = len(unique_student_ids)
+            
             return render_template('management/assignments_and_grades.html',
                                  accessible_classes=accessible_classes,
                                  class_assignments=class_assignments,
+                                 unique_student_count=unique_student_count,
                                  selected_class=None,
                                  class_assignments_data=None,
                                  assignment_grades=None,

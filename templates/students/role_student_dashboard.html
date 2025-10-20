@@ -1455,55 +1455,844 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
         height: calc(100% - 200px);
     }
 }
+
+/* ========== STUDENT HOME TAB STYLES ========== */
+.student-home-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 2rem;
+    border-radius: 15px;
+    color: white;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.student-home-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.student-home-subtitle {
+    font-size: 1.1rem;
+    opacity: 0.95;
+}
+
+.badge-student-home {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    padding: 0.5rem 1.25rem;
+    font-size: 0.95rem;
+    border-radius: 50px;
+    font-weight: 600;
+}
+
+.student-stat-card {
+    background: white;
+    border-radius: 15px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.student-stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+}
+
+.student-stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    color: white;
+    flex-shrink: 0;
+}
+
+.student-stat-gpa {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.student-stat-classes {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.student-stat-assignments {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.student-stat-grade {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+}
+
+.student-stat-content {
+    flex: 1;
+}
+
+.student-stat-number {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0;
+    color: #2d3748;
+}
+
+.student-stat-label {
+    font-size: 0.9rem;
+    color: #718096;
+    margin: 0;
+}
+
+.student-profile-card {
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+}
+
+.student-profile-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 2rem;
+    text-align: center;
+    color: white;
+}
+
+.student-profile-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+    font-size: 2.5rem;
+}
+
+.student-profile-name {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.student-profile-id {
+    font-size: 0.9rem;
+    opacity: 0.9;
+    margin: 0.25rem 0 0 0;
+}
+
+.student-profile-details {
+    padding: 1.5rem;
+}
+
+.student-profile-item {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    color: #4a5568;
+}
+
+.student-profile-item:last-child {
+    border-bottom: none;
+}
+
+.student-goals-card {
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+}
+
+.student-goals-header {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    padding: 1.25rem 1.5rem;
+    color: white;
+}
+
+.student-goals-header h5 {
+    margin: 0;
+    font-weight: 600;
+}
+
+.student-goals-body {
+    padding: 1.5rem;
+}
+
+.student-links-card {
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+}
+
+.student-links-header {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    padding: 1.25rem 1.5rem;
+    color: white;
+}
+
+.student-links-header h5 {
+    margin: 0;
+    font-weight: 600;
+}
+
+.student-links-body {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.student-link-btn {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    background: #f7fafc;
+    border-radius: 10px;
+    text-decoration: none;
+    color: #2d3748;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.student-link-btn:hover {
+    background: #edf2f7;
+    border-color: #43e97b;
+    color: #2d3748;
+    transform: translateX(5px);
+}
+
+.student-upcoming-card {
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+}
+
+.student-upcoming-header {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    padding: 1.25rem 1.5rem;
+    color: white;
+}
+
+.student-upcoming-header h5 {
+    margin: 0;
+    font-weight: 600;
+}
+
+.student-upcoming-body {
+    padding: 1.5rem;
+}
+
+.student-assignment-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: #f7fafc;
+    border-radius: 10px;
+    margin-bottom: 0.75rem;
+}
+
+.student-assignment-item:last-child {
+    margin-bottom: 0;
+}
+
+.student-assignment-icon {
+    width: 45px;
+    height: 45px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+}
+
+.student-assignment-info {
+    flex: 1;
+}
+
+.student-assignment-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 0.25rem 0;
+    color: #2d3748;
+}
+
+.student-assignment-class {
+    font-size: 0.85rem;
+    color: #718096;
+    margin: 0;
+}
+
+.student-assignment-due {
+    flex-shrink: 0;
+}
+
+.student-activity-card {
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+}
+
+.student-activity-header {
+    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    padding: 1.25rem 1.5rem;
+    color: white;
+}
+
+.student-activity-header h5 {
+    margin: 0;
+    font-weight: 600;
+}
+
+.student-activity-body {
+    padding: 1.5rem;
+}
+
+.student-activity-timeline {
+    position: relative;
+}
+
+.student-activity-timeline::before {
+    content: '';
+    position: absolute;
+    left: 19px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #e2e8f0;
+}
+
+.student-activity-item {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    position: relative;
+}
+
+.student-activity-item:last-child {
+    margin-bottom: 0;
+}
+
+.student-activity-dot {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    flex-shrink: 0;
+    z-index: 1;
+    border: 3px solid white;
+}
+
+.student-activity-content {
+    flex: 1;
+    padding-top: 0.25rem;
+}
+
+.student-activity-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 0 0 0.25rem 0;
+    color: #2d3748;
+}
+
+.student-activity-text {
+    font-size: 0.85rem;
+    color: #718096;
+    margin: 0 0 0.25rem 0;
+}
+
+.student-activity-time {
+    font-size: 0.75rem;
+    color: #a0aec0;
+}
+
+/* ========== STUDENT ASSIGNMENTS TAB STYLES ========== */
+.student-assignments-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 2rem;
+    border-radius: 15px;
+    color: white;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.student-assignments-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.student-assignments-subtitle {
+    font-size: 1rem;
+    opacity: 0.95;
+}
+
+.student-filter-select {
+    background: white;
+    border: 2px solid rgba(255,255,255,0.2);
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    width: auto;
+    min-width: 150px;
+}
+
+.student-assignment-card {
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.student-assignment-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+}
+
+.student-assignment-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    background: #f7fafc;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.student-assignment-type-icon {
+    width: 45px;
+    height: 45px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+}
+
+.student-assignment-type-icon.type-pdf {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.student-assignment-type-icon.type-quiz {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.student-assignment-type-icon.type-discussion {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.student-assignment-card-body {
+    padding: 1.25rem;
+    flex: 1;
+}
+
+.student-assignment-card-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0 0 0.75rem 0;
+    color: #2d3748;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.student-assignment-card-class {
+    font-size: 0.9rem;
+    color: #718096;
+    margin: 0 0 1rem 0;
+}
+
+.student-assignment-card-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.meta-item {
+    font-size: 0.85rem;
+    color: #4a5568;
+    display: flex;
+    align-items: center;
+}
+
+.student-assignment-attachment {
+    font-size: 0.85rem;
+    padding: 0.5rem;
+    background: #edf2f7;
+    border-radius: 8px;
+    margin-top: 0.75rem;
+}
+
+.student-assignment-attachment a {
+    color: #667eea;
+    font-weight: 500;
+}
+
+.student-assignment-attachment a:hover {
+    color: #764ba2;
+    text-decoration: underline !important;
+}
+
+.student-assignment-card-footer {
+    padding: 1rem 1.25rem;
+    background: #f7fafc;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-student-view {
+    flex: 1;
+    background: white;
+    border: 2px solid #667eea;
+    color: #667eea;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    transition: all 0.3s ease;
+}
+
+.btn-student-view:hover {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+}
+
+.btn-student-action {
+    flex: 1;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    color: white;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    transition: all 0.3s ease;
+}
+
+.btn-student-action:hover {
+    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3);
+}
+
+.student-assignments-empty {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+}
+
+.student-assignments-empty i {
+    font-size: 4rem;
+    color: #cbd5e0;
+    margin-bottom: 1rem;
+}
+
+.student-assignments-empty h4 {
+    color: #4a5568;
+    margin-bottom: 0.5rem;
+}
+
+.student-assignments-empty p {
+    color: #a0aec0;
+    margin: 0;
+}
+
+/* ========== STUDENT CLASSES TAB STYLES ========== */
+.student-classes-header {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    padding: 2rem;
+    border-radius: 15px;
+    color: white;
+    box-shadow: 0 4px 15px rgba(67, 233, 123, 0.3);
+}
+
+.student-classes-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.student-classes-subtitle {
+    font-size: 1rem;
+    opacity: 0.95;
+}
+
+.badge-student-classes {
+    background: rgba(255,255,255,0.25);
+    padding: 0.6rem 1.5rem;
+    font-size: 1rem;
+    border-radius: 50px;
+    font-weight: 600;
+    color: white;
+    border: 2px solid rgba(255,255,255,0.3);
+}
+
+.student-class-card {
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.student-class-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+}
+
+.student-class-card-header {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    padding: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.student-class-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+}
+
+.student-class-grade-badge {
+    background: white;
+    color: #43e97b;
+    padding: 0.4rem 1rem;
+    border-radius: 50px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.student-class-card-body {
+    padding: 1.5rem;
+    flex: 1;
+}
+
+.student-class-card-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin: 0 0 0.75rem 0;
+    color: #2d3748;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.student-class-card-subject {
+    font-size: 0.95rem;
+    color: #718096;
+    margin: 0 0 1rem 0;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.student-class-card-teacher,
+.student-class-card-room {
+    font-size: 0.9rem;
+    color: #4a5568;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+}
+
+.student-class-card-footer {
+    padding: 1rem 1.5rem;
+    background: #f7fafc;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-student-class-primary {
+    flex: 1;
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    border: none;
+    color: white;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 0.6rem 1rem;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-student-class-primary:hover {
+    background: linear-gradient(135deg, #38f9d7 0%, #43e97b 100%);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(67, 233, 123, 0.3);
+}
+
+.btn-student-class-secondary {
+    flex: 1;
+    background: white;
+    border: 2px solid #43e97b;
+    color: #43e97b;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 0.6rem 1rem;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-student-class-secondary:hover {
+    background: #43e97b;
+    color: white;
+    border-color: #43e97b;
+}
+
+.student-classes-empty {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+}
+
+.student-classes-empty i {
+    font-size: 4rem;
+    color: #cbd5e0;
+    margin-bottom: 1rem;
+}
+
+.student-classes-empty h4 {
+    color: #4a5568;
+    margin-bottom: 0.5rem;
+}
+
+.student-classes-empty p {
+    color: #a0aec0;
+    margin: 0;
+}
+
+/* ========== STUDENT GRADES TAB STYLES ========== */
+.gpa-display {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    border: none !important;
+    border-radius: 15px !important;
+}
+
+.student-grades-class-card {
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+    margin-bottom: 1.5rem;
+}
+
+.student-grades-class-card:hover {
+    box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+}
+
+.empty-grades-state {
+    border-radius: 15px !important;
+    text-align: center;
+    padding: 4rem 2rem;
+}
+
+.empty-grades-state i {
+    font-size: 4rem;
+    color: #cbd5e0;
+}
 </style>
 
 <div class="container-fluid px-2 px-md-4">
     <!-- DEBUG: Current section is "{{ section }}" -->
     {% if section == 'home' %}
         <!-- Home Dashboard -->
-        <h2 class="mb-4">Student Dashboard <span class="text-muted fs-6">(Student View)</span></h2>
+        <!-- Modern Student Home Header -->
+        <div class="student-home-header mb-4">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div>
+                    <h2 class="student-home-title mb-1">
+                        <i class="bi bi-house-heart-fill me-2"></i>Welcome Back, {{ student.first_name }}!
+                    </h2>
+                    <p class="student-home-subtitle mb-0">
+                        <i class="bi bi-calendar3 me-2"></i>Your Learning Dashboard
+                    </p>
+                </div>
+                <div class="student-home-role-badge">
+                    <span class="badge badge-student-home"><i class="bi bi-mortarboard-fill me-1"></i>Student</span>
+                </div>
+            </div>
+        </div>
 
-        <!-- GPA and Academic Overview -->
-        <div class="row g-3 g-md-4 mb-4">
-            <div class="col-12 col-md-4">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Academic Overview</h5>
+        <!-- Statistics Overview -->
+        <div class="row g-3 mb-4">
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="student-stat-card">
+                    <div class="student-stat-icon student-stat-gpa">
+                        <i class="bi bi-graph-up"></i>
                     </div>
-                    <div class="card-body text-center">
-                        <h2 class="display-4 text-primary">{{ "%.2f"|format(gpa) }}</h2>
-                        <p class="text-muted mb-0">Current GPA</p>
-                        <div class="mt-3">
-                            <span class="badge bg-success">On Track</span>
-                        </div>
+                    <div class="student-stat-content">
+                        <h3 class="student-stat-number">{{ "%.2f"|format(gpa) }}</h3>
+                        <p class="student-stat-label">Current GPA</p>
+                        <span class="badge bg-success">On Track</span>
                     </div>
                 </div>
             </div>
-            
-            <div class="col-12 col-md-8">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-info text-white">
-                        <h5 class="mb-0"><i class="bi bi-calendar-check me-2"></i>Today's Schedule</h5>
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="student-stat-card">
+                    <div class="student-stat-icon student-stat-classes">
+                        <i class="bi bi-house-door-fill"></i>
                     </div>
-                    <div class="card-body">
-                        {% if today_schedule %}
-                            <div class="list-group list-group-flush">
-                                {% for item in today_schedule %}
-                                    <div class="list-group-item d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <h6 class="mb-1">{{ item.class.name }}</h6>
-                                            <small class="text-muted">{{ item.teacher }}</small>
-                                        </div>
-                                        <div class="text-end">
-                                            <div class="fw-bold">{{ item.time }}</div>
-                                            <small class="text-muted">{{ item.room }}</small>
-                                        </div>
-                                    </div>
-                                {% endfor %}
-                            </div>
-                        {% else %}
-                            <p class="text-muted mb-0">No classes scheduled for today.</p>
-                        {% endif %}
+                    <div class="student-stat-content">
+                        <h3 class="student-stat-number">{{ my_classes|length }}</h3>
+                        <p class="student-stat-label">Enrolled Classes</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="student-stat-card">
+                    <div class="student-stat-icon student-stat-assignments">
+                        <i class="bi bi-journal-check"></i>
+                    </div>
+                    <div class="student-stat-content">
+                        <h3 class="student-stat-number">{{ upcoming_assignments|length if upcoming_assignments else 0 }}</h3>
+                        <p class="student-stat-label">Upcoming Assignments</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="student-stat-card">
+                    <div class="student-stat-icon student-stat-grade">
+                        <i class="bi bi-trophy-fill"></i>
+                    </div>
+                    <div class="student-stat-content">
+                        <h3 class="student-stat-number">{{ student.grade_level or 'N/A' }}</h3>
+                        <p class="student-stat-label">Grade Level</p>
                     </div>
                 </div>
             </div>
@@ -1511,40 +2300,40 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
 
         <div class="row g-3 g-md-4">
             <!-- Left Column -->
-            <div class="col-12 col-lg-5">
-                <!-- Student Information Card -->
-                <div class="card shadow-sm mb-4">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0"><i class="bi bi-person-fill me-2"></i>Student Information</h5>
+            <div class="col-12 col-lg-4">
+                <!-- Student Profile Card -->
+                <div class="student-profile-card mb-4">
+                    <div class="student-profile-header">
+                        <div class="student-profile-avatar">
+                            <i class="bi bi-person-fill"></i>
+                        </div>
+                        <div class="student-profile-info">
+                            <h4 class="student-profile-name">{{ student.first_name }} {{ student.last_name }}</h4>
+                            <p class="student-profile-id">ID: {{ student.state_id or student.student_id or 'N/A' }}</p>
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <ul class="list-group list-group-flush">
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <strong>Name:</strong>
-                                <span>{{ student.first_name }} {{ student.last_name }}</span>
-                            </li>
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <strong>Grade:</strong>
-                                <span>{{ student.grade_level or 'N/A' }}</span>
-                            </li>
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <strong>Date of Birth:</strong>
-                                <span>{{ student.dob or 'N/A' }}</span>
-                            </li>
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <strong>Student ID:</strong>
-                                <span>{{ student.state_id or 'N/A' }}</span>
-                            </li>
-                        </ul>
+                    <div class="student-profile-details">
+                        <div class="student-profile-item">
+                            <i class="bi bi-mortarboard me-2"></i>
+                            <span>Grade {{ student.grade_level or 'N/A' }}</span>
+                        </div>
+                        <div class="student-profile-item">
+                            <i class="bi bi-calendar3 me-2"></i>
+                            <span>{{ student.dob or 'N/A' }}</span>
+                        </div>
+                        <div class="student-profile-item">
+                            <i class="bi bi-envelope me-2"></i>
+                            <span>{{ student.email or 'N/A' }}</span>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Academic Goals Card -->
-                <div class="card shadow-sm mb-4">
-                    <div class="card-header bg-warning text-dark">
+                <div class="student-goals-card mb-4">
+                    <div class="student-goals-header">
                         <h5 class="mb-0"><i class="bi bi-target me-2"></i>Academic Goals</h5>
                     </div>
-                    <div class="card-body">
+                    <div class="student-goals-body">
                         {% if student.enrollments %}
                             {% set active_enrollments = student.enrollments|selectattr('is_active')|list %}
                             {% for enrollment in active_enrollments[:5] %}
@@ -1592,222 +2381,161 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                 </div>
 
                 <!-- Quick Links Card -->
-                <div class="card shadow-sm mb-4">
-                    <div class="card-header bg-success text-white">
-                        <h5 class="mb-0"><i class="bi bi-link-45deg me-2"></i>Quick Links</h5>
+                <div class="student-links-card">
+                    <div class="student-links-header">
+                        <h5 class="mb-0"><i class="bi bi-lightning-fill me-2"></i>Quick Actions</h5>
                     </div>
-                    <div class="card-body">
-                        <div class="d-grid gap-2">
-                            {% if student.enrollments %}
-                                {% set active_enrollments = student.enrollments|selectattr('is_active')|list %}
-                                {% for enrollment in active_enrollments[:5] %}
-                                    {% set class = enrollment.class_info %}
-                                    <a href="{{ url_for('student.view_class', class_id=class.id) }}" class="btn btn-outline-success">{{ class.name }}</a>
-                                {% endfor %}
-                            {% else %}
-                                <p class="text-muted">You are not yet enrolled in any classes.</p>
-                            {% endif %}
-                        </div>
+                    <div class="student-links-body">
+                        {% if student.enrollments %}
+                            {% set active_enrollments = student.enrollments|selectattr('is_active')|list %}
+                            {% for enrollment in active_enrollments[:5] %}
+                                {% set class = enrollment.class_info %}
+                                <a href="{{ url_for('student.view_class', class_id=class.id) }}" class="student-link-btn">
+                                    <i class="bi bi-book me-2"></i>
+                                    <span>{{ class.name }}</span>
+                                    <i class="bi bi-chevron-right ms-auto"></i>
+                                </a>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted">You are not yet enrolled in any classes.</p>
+                        {% endif %}
                     </div>
                 </div>
             </div>
 
             <!-- Right Column -->
-            <div class="col-12 col-lg-7">
-                <!-- Grade Trends Card -->
-                <div class="card shadow-sm mb-4">
-                    <div class="card-header bg-secondary text-white">
-                        <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Grade Trends</h5>
+            <div class="col-12 col-lg-8">
+                <!-- Upcoming Assignments Card -->
+                <div class="student-upcoming-card mb-4">
+                    <div class="student-upcoming-header">
+                        <h5 class="mb-0"><i class="bi bi-calendar-event me-2"></i>Upcoming Assignments</h5>
                     </div>
-                    <div class="card-body">
-                        {% if grade_trends %}
-                            {% for class_id, trends in grade_trends.items() %}
-                                {% if trends %}
-                                    <h6>{{ trends[0].assignment.split(' - ')[0] if trends else 'Class' }}</h6>
-                                    <canvas id="gradeChart{{ class_id }}" width="400" height="200"></canvas>
-                                    <script>
-                                        const ctx{{ class_id }} = document.getElementById('gradeChart{{ class_id }}').getContext('2d');
-                                        new Chart(ctx{{ class_id }}, {
-                                            type: 'line',
-                                            data: {
-                                                labels: [{% for trend in trends %}'{{ trend.date }}'{% if not loop.last %}, {% endif %}{% endfor %}],
-                                                datasets: [{
-                                                    label: 'Grade %',
-                                                    data: [{% for trend in trends %}{{ trend.grade }}{% if not loop.last %}, {% endif %}{% endfor %}],
-                                                    borderColor: 'rgb(75, 192, 192)',
-                                                    tension: 0.1
-                                                }]
-                                            },
-                                            options: {
-                                                responsive: true,
-                                                scales: {
-                                                    y: {
-                                                        beginAtZero: true,
-                                                        max: 100
-                                                    }
-                                                }
-                                            }
-                                        });
-                                    </script>
-                                {% endif %}
+                    <div class="student-upcoming-body">
+                        {% if upcoming_assignments %}
+                            {% for assignment in upcoming_assignments[:5] %}
+                            <div class="student-assignment-item">
+                                <div class="student-assignment-icon">
+                                    <i class="bi bi-journal-text"></i>
+                                </div>
+                                <div class="student-assignment-info">
+                                    <h6 class="student-assignment-title">{{ assignment.title }}</h6>
+                                    <p class="student-assignment-class">{{ assignment.class_info.name if assignment.class_info else 'N/A' }}</p>
+                                </div>
+                                <div class="student-assignment-due">
+                                    <span class="badge bg-warning">Due: {{ assignment.due_date.strftime('%m/%d') if assignment.due_date else 'N/A' }}</span>
+                                </div>
+                            </div>
                             {% endfor %}
                         {% else %}
-                            <p class="text-muted">No grade trends available yet.</p>
+                            <p class="text-muted text-center py-3">No upcoming assignments</p>
                         {% endif %}
                     </div>
                 </div>
 
-                <!-- Notifications Card -->
-                <div class="card shadow-sm mb-4">
-                     <div class="card-header bg-info text-white">
-                        <h5 class="mb-0"><i class="bi bi-bell-fill me-2"></i>Notifications</h5>
+                <!-- Recent Activity Card -->
+                <div class="student-activity-card">
+                    <div class="student-activity-header">
+                        <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Recent Activity</h5>
                     </div>
-                    <div class="card-body">
-                        {% if notifications and notifications|length > 0 %}
-                            <div class="list-group mb-3">
-                                {% for notification in notifications %}
-                                    <div class="list-group-item list-group-item-action {% if not notification.is_read %}list-group-item-primary{% endif %}">
-                                        <div class="d-flex justify-content-between align-items-start">
-                                            <div class="flex-grow-1">
-                                                <strong>{{ notification.title }}</strong>
-                                                <p class="mb-1">{{ notification.message }}</p>
-                                                <small class="text-muted">{{ notification.timestamp.strftime('%b %d, %Y %I:%M %p') }}</small>
-                                            </div>
-                                            <div class="ms-2">
-                                                {% if not notification.is_read %}
-                                                    <span class="badge bg-primary">New</span>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                        <div class="mt-2">
-                                            {% if notification.link %}
-                                                <a href="{{ notification.link }}" class="btn btn-sm btn-outline-primary me-2">View Details</a>
-                                            {% endif %}
-                                            {% if not notification.is_read %}
-                                                <form method="POST" action="{{ url_for('student.mark_notification_read', notification_id=notification.id) }}" style="display: inline;">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                                    <button type="submit" class="btn btn-sm btn-outline-secondary">Mark as Read</button>
-                                                </form>
-                                            {% endif %}
-                                        </div>
+                    <div class="student-activity-body">
+                        <div class="student-activity-timeline">
+                            {% if notifications and notifications|length > 0 %}
+                                {% for notification in notifications[:5] %}
+                                <div class="student-activity-item">
+                                    <div class="student-activity-dot"></div>
+                                    <div class="student-activity-content">
+                                        <h6 class="student-activity-title">{{ notification.title }}</h6>
+                                        <p class="student-activity-text">{{ notification.message }}</p>
+                                        <small class="student-activity-time">{{ notification.timestamp.strftime('%b %d, %I:%M %p') if notification.timestamp else 'Recently' }}</small>
                                     </div>
+                                </div>
                                 {% endfor %}
-                            </div>
-                        {% endif %}
-
-                        {% if announcements and announcements|length > 0 %}
-                            <h6 class="text-primary">Announcements</h6>
-                            <div class="list-group mb-3">
-                                {% for ann in announcements %}
-                                    <div class="list-group-item list-group-item-action">
-                                        <strong>{{ ann.title }}</strong>
-                                        <p class="mb-1">{{ ann.message }}</p>
-                                        <small class="text-muted">From: {{ ann.sender.username if ann.sender else 'Admin' }} | {{ ann.timestamp.strftime('%b %d, %Y %I:%M %p') }}</small>
+                            {% elif past_due_assignments %}
+                                {% for assignment in past_due_assignments[:5] %}
+                                <div class="student-activity-item">
+                                    <div class="student-activity-dot" style="background: #dc3545;"></div>
+                                    <div class="student-activity-content">
+                                        <h6 class="student-activity-title">Past Due: {{ assignment.title }}</h6>
+                                        <p class="student-activity-text">{{ assignment.class_info.name if assignment.class_info else 'N/A' }}</p>
+                                        <small class="student-activity-time">Due: {{ assignment.due_date.strftime('%b %d, %Y') if assignment.due_date else 'N/A' }}</small>
                                     </div>
+                                </div>
                                 {% endfor %}
-                            </div>
-                        {% endif %}
-
-                        {% if past_due_assignments %}
-                            <h6 class="text-danger">Past Due Assignments</h6>
-                            <div class="list-group mb-3">
-                                {% for assignment in past_due_assignments %}
-                                    <a href="#" class="list-group-item list-group-item-action list-group-item-danger">
-                                        <strong>{{ assignment.title }}</strong> ({{ assignment.class_info.name }})
-                                        <small class="d-block">Due: {{ assignment.due_date.strftime('%b %d, %Y') }}</small>
-                                    </a>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-
-                        {% if upcoming_assignments %}
-                            <h6 class="text-warning">Upcoming Assignments</h6>
-                            <div class="list-group">
-                                {% for assignment in upcoming_assignments %}
-                                     <a href="#" class="list-group-item list-group-item-action list-group-item-warning">
-                                        <strong>{{ assignment.title }}</strong> ({{ assignment.class_info.name }})
-                                        <small class="d-block">Due: {{ assignment.due_date.strftime('%b %d, %Y') }}</small>
-                                    </a>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-
-                        {% if not notifications and not announcements and not past_due_assignments and not upcoming_assignments %}
-                            <div class="alert alert-success" role="alert">
-                                <i class="bi bi-check-circle-fill me-2"></i>You have no immediate notifications. Great job staying on top of your work!
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <!-- Recent Grades Card -->
-                <div class="card shadow-sm">
-                     <div class="card-header bg-secondary text-white">
-                        <h5 class="mb-0"><i class="bi bi-check2-circle me-2"></i>Recent Grades</h5>
-                    </div>
-                    <div class="card-body">
-                        <table class="table table-striped table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Assignment</th>
-                                    <th>Class</th>
-                                    <th>Grade</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% if recent_grades %}
-                                    {% for grade in recent_grades %}
-                                    <tr>
-                                        <td>{{ grade.assignment.title }}</td>
-                                        <td>{{ grade.class_name }}</td>
-                                        <td><strong>{{ grade.score }}%</strong></td>
-                                    </tr>
-                                    {% endfor %}
-                                {% else %}
-                                <tr>
-                                    <td colspan="3" class="text-center text-muted">No grades have been posted recently.</td>
-                                </tr>
-                                {% endif %}
-                            </tbody>
-                        </table>
+                            {% else %}
+                                <p class="text-muted text-center py-3">No recent activity</p>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
     {% elif section == 'classes' %}
-        <!-- My Classes View -->
-        <h2 class="mb-4">My Enrolled Classes <span class="text-muted fs-6">(Student View)</span></h2>
+        <!-- Modern Classes View -->
+        <div class="student-classes-header mb-4">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div>
+                    <h2 class="student-classes-title mb-1">
+                        <i class="bi bi-house-door-fill me-2"></i>My Classes
+                    </h2>
+                    <p class="student-classes-subtitle mb-0">
+                        <i class="bi bi-calendar3 me-2"></i>View your enrolled classes and access course materials
+                    </p>
+                </div>
+                <div class="badge badge-student-classes">
+                    {{ my_classes|length }} {% if my_classes|length == 1 %}Class{% else %}Classes{% endif %}
+                </div>
+            </div>
+        </div>
 
-        <div class="row">
+        <!-- Classes Grid -->
+        <div class="row g-3">
             {% for class in my_classes %}
-                <div class="col-md-6 col-lg-4 mb-4">
-                    <div class="card h-100 shadow-sm">
-                        <div class="card-body">
-                            <h5 class="card-title">{{ class.name }}</h5>
-                            <h6 class="card-subtitle mb-2 text-muted">{{ class.subject }} - Grade {{ class.grade_level }}</h6>
-                            <p class="card-text">
-                                <strong>Teacher:</strong> {{ class.teacher.first_name }} {{ class.teacher.last_name if class.teacher else 'N/A' }}<br>
-                                <strong>Subject:</strong> {{ class.subject or 'N/A' }}
-                            </p>
-                            <div class="d-flex flex-column gap-2">
-                                <a href="{{ url_for('student.view_class', class_id=class.id) }}" class="btn btn-primary btn-sm">
-                                    <i class="bi bi-eye me-1"></i>View Class
-                                </a>
-                                <a href="{{ url_for('student.view_class_assignments', class_id=class.id) }}" class="btn btn-outline-info btn-sm">
-                                    <i class="bi bi-journal-text me-1"></i>View Assignments
-                                </a>
-                                <a href="{{ url_for('student.view_class_teacher', class_id=class.id) }}" class="btn btn-outline-secondary btn-sm">
-                                    <i class="bi bi-person me-1"></i>Teacher Info
-                                </a>
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="student-class-card">
+                        <!-- Card Header -->
+                        <div class="student-class-card-header">
+                            <div class="student-class-icon">
+                                <i class="bi bi-book-fill"></i>
                             </div>
+                            <span class="student-class-grade-badge">Grade {{ class.grade_level or 'N/A' }}</span>
+                        </div>
+
+                        <!-- Card Body -->
+                        <div class="student-class-card-body">
+                            <h5 class="student-class-card-title">{{ class.name }}</h5>
+                            <p class="student-class-card-subject">
+                                <i class="bi bi-journals me-1"></i>{{ class.subject or 'General' }}
+                            </p>
+                            <div class="student-class-card-teacher">
+                                <i class="bi bi-person-circle me-1"></i>
+                                <span>{{ class.teacher.first_name }} {{ class.teacher.last_name if class.teacher else 'N/A' }}</span>
+                            </div>
+                            {% if class.room_number %}
+                            <div class="student-class-card-room">
+                                <i class="bi bi-geo-alt me-1"></i>
+                                <span>Room {{ class.room_number }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Card Footer -->
+                        <div class="student-class-card-footer">
+                            <a href="{{ url_for('student.view_class', class_id=class.id) }}" class="btn btn-sm btn-student-class-primary">
+                                <i class="bi bi-box-arrow-up-right me-1"></i>Open
+                            </a>
+                            <a href="{{ url_for('student.view_class_assignments', class_id=class.id) }}" class="btn btn-sm btn-student-class-secondary">
+                                <i class="bi bi-journal-text me-1"></i>Assignments
+                            </a>
                         </div>
                     </div>
                 </div>
             {% else %}
-                <div class="col">
-                    <div class="alert alert-info">
-                        You are not currently enrolled in any classes.
+                <div class="col-12">
+                    <div class="student-classes-empty">
+                        <i class="bi bi-inbox"></i>
+                        <h4>No Classes Enrolled</h4>
+                        <p>You are not currently enrolled in any classes. Contact your school administrator for assistance.</p>
                     </div>
                 </div>
             {% endfor %}
@@ -2725,131 +3453,143 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
         {% endif %}
 
     {% elif section == 'assignments' %}
-        <!-- Assignments List View -->
-        <h2 class="mb-4">My Assignments</h2>
-        
-
-        
-
-
-        <div class="card shadow-sm">
-            <div class="card-header bg-primary text-white">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">
+        <!-- Modern Assignments View -->
+        <div class="student-assignments-header mb-4">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div>
+                    <h2 class="student-assignments-title mb-1">
                         <i class="bi bi-journal-text me-2"></i>My Assignments
-                    </h5>
-                    <div class="d-flex gap-2">
-                        <select id="statusFilter" class="form-select form-select-sm" style="width: auto;">
-                            <option value="">All Statuses</option>
-                            <option value="Un-Submitted">Un-Submitted</option>
-                            <option value="Submitted or Awaiting Grade">Submitted or Awaiting Grade</option>
-                            <option value="Graded">Graded</option>
-                            <option value="Past Due">Past Due</option>
-                            <option value="Extended">Extended</option>
-                            <option value="Voided">Voided</option>
-                        </select>
-                        <select id="typeFilter" class="form-select form-select-sm" style="width: auto;">
-                            <option value="">All Types</option>
-                            <option value="pdf">PDF/Paper</option>
-                            <option value="quiz">Quiz</option>
-                            <option value="discussion">Discussion</option>
-                        </select>
-                        <select id="sortBy" class="form-select form-select-sm" style="width: auto;">
-                            <option value="due_date">Due Date</option>
-                            <option value="title">Title</option>
-                            <option value="class">Class</option>
-                            <option value="status">Status</option>
-                        </select>
-                    </div>
+                    </h2>
+                    <p class="student-assignments-subtitle mb-0">
+                        <i class="bi bi-clipboard-check me-2"></i>Track and complete your coursework
+                    </p>
+                </div>
+                <div class="student-assignments-filters d-flex gap-2 flex-wrap">
+                    <select id="statusFilter" class="form-select form-select-sm student-filter-select">
+                        <option value="">All Statuses</option>
+                        <option value="Un-Submitted">Un-Submitted</option>
+                        <option value="Submitted or Awaiting Grade">Awaiting Grade</option>
+                        <option value="Graded">Graded</option>
+                        <option value="Past Due">Past Due</option>
+                        <option value="Extended">Extended</option>
+                        <option value="Voided">Voided</option>
+                    </select>
+                    <select id="typeFilter" class="form-select form-select-sm student-filter-select">
+                        <option value="">All Types</option>
+                        <option value="pdf">PDF/Paper</option>
+                        <option value="quiz">Quiz</option>
+                        <option value="discussion">Discussion</option>
+                    </select>
+                    <select id="sortBy" class="form-select form-select-sm student-filter-select">
+                        <option value="due_date">Due Date</option>
+                        <option value="title">Title</option>
+                        <option value="class">Class</option>
+                        <option value="status">Status</option>
+                    </select>
                 </div>
             </div>
-            <div class="card-body">
-                <table class="table table-hover align-middle" id="assignmentsTable">
-                    <thead>
-                        <tr>
-                            <th>Due Date</th>
-                            <th>Assignment Title</th>
-                            <th>Class</th>
-                            <th>Status</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% if assignments_with_status %}
-                            {% for assignment, submission, student_status in assignments_with_status %}
-                                <tr>
-                                    <td>{{ assignment.due_date.strftime('%Y-%m-%d') if assignment.due_date else 'No due date' }}</td>
-                                    <td>
-                                        <div>
-                                            <strong>{{ assignment.title }}</strong>
-                                            <br><small class="text-muted">
-                                                {% if assignment.assignment_type == 'quiz' %}
-                                                    <i class="bi bi-question-circle me-1"></i>Quiz Assignment
-                                                {% elif assignment.assignment_type == 'discussion' %}
-                                                    <i class="bi bi-chat-dots me-1"></i>Discussion Assignment
-                                                {% else %}
-                                                    <i class="bi bi-file-earmark-pdf me-1"></i>PDF/Paper Assignment
-                                                {% endif %}
-                                            </small>
-                                            {% if assignment.attachment_filename %}
-                                                <br><small class="text-primary">
-                                                    <i class="bi bi-paperclip me-1"></i>
-                                                    <a href="{{ url_for('student.download_assignment_file', assignment_id=assignment.id) }}" class="text-decoration-none">
-                                                        {{ assignment.attachment_original_filename or assignment.attachment_filename }}
-                                                    </a>
-                                                </small>
-                                            {% endif %}
-                                        </div>
-                                    </td>
-                                    <td>{{ assignment.class_info.name if assignment.class_info else 'Unknown Class' }}</td>
-                                    <td>
-                                        {% if student_status == 'Voided' %}
-                                            <span class="badge bg-secondary">Voided</span>
-                                        {% elif student_status == 'completed' %}
-                                            <span class="badge bg-success">Completed (1/1)</span>
-                                        {% elif student_status == 'Submitted or Awaiting Grade' %}
-                                            <span class="badge bg-info">Submitted or Awaiting Grade</span>
-                                        {% elif student_status == 'Past Due' %}
-                                            <span class="badge bg-danger">Past Due</span>
-                                        {% elif student_status == 'Extended' %}
-                                            <span class="badge bg-warning">Extended</span>
-                                        {% else %}
-                                            <span class="badge bg-primary">Un-Submitted</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <div class="d-flex gap-1">
-                                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="viewAssignment({{ assignment.id }}, '{{ assignment.title }}', '{{ assignment.description or '' }}', '{{ assignment.due_date.strftime('%Y-%m-%d') if assignment.due_date else 'No due date' }}', '{{ assignment.quarter or 'N/A' }}', '{{ assignment.attachment_filename or '' }}', {{ 'true' if submission else 'false' }}, {{ 'true' if grades.get(assignment.id) else 'false' }}, '{{ assignment.assignment_type }}')">
-                                                <i class="bi bi-eye me-1"></i>View
-                                            </button>
-                                            {% if assignment.assignment_type == 'quiz' %}
-                                                <button type="button" class="btn btn-outline-success btn-sm" onclick="takeQuiz({{ assignment.id }}, '{{ assignment.title }}')">
-                                                    <i class="bi bi-question-circle me-1"></i>Take Quiz
-                                                </button>
-                                            {% elif assignment.assignment_type == 'discussion' %}
-                                                <button type="button" class="btn btn-outline-success btn-sm" onclick="joinDiscussion({{ assignment.id }}, '{{ assignment.title }}')">
-                                                    <i class="bi bi-chat-dots me-1"></i>Join Discussion
-                                                </button>
-                                            {% else %}
-                                                <button type="button" class="btn btn-outline-success btn-sm" onclick="submitAssignmentFromTable({{ assignment.id }}, '{{ assignment.title }}', {{ 'true' if submission else 'false' }})">
-                                                    <i class="bi bi-upload me-1"></i>Submit
-                                                </button>
-                                            {% endif %}
-                                            <button type="button" class="btn btn-outline-warning btn-sm" onclick="showExtensionRequestMessage('{{ assignment.title }}')">
-                                                <i class="bi bi-clock me-1"></i>Extension Request
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        {% else %}
-                            <tr>
-                                <td colspan="5" class="text-center text-muted">You have no assignments.</td>
-                            </tr>
-                        {% endif %}
-                    </tbody>
-                </table>
-            </div>
+        </div>
+
+        <!-- Assignments Grid -->
+        <div class="row g-3" id="assignmentsTable">
+            {% if assignments_with_status %}
+                {% for assignment, submission, student_status in assignments_with_status %}
+                <div class="col-12 col-md-6 col-lg-4 assignment-card-wrapper" 
+                     data-status="{{ student_status }}" 
+                     data-type="{{ assignment.assignment_type or 'pdf' }}" 
+                     data-due="{{ assignment.due_date.strftime('%Y-%m-%d') if assignment.due_date else '9999-12-31' }}"
+                     data-title="{{ assignment.title }}"
+                     data-class="{{ assignment.class_info.name if assignment.class_info else 'Unknown' }}">
+                    <div class="student-assignment-card">
+                        <!-- Card Header -->
+                        <div class="student-assignment-card-header">
+                            <div class="student-assignment-type-icon
+                                {% if assignment.assignment_type == 'quiz' %}type-quiz
+                                {% elif assignment.assignment_type == 'discussion' %}type-discussion
+                                {% else %}type-pdf{% endif %}">
+                                {% if assignment.assignment_type == 'quiz' %}
+                                    <i class="bi bi-question-circle-fill"></i>
+                                {% elif assignment.assignment_type == 'discussion' %}
+                                    <i class="bi bi-chat-dots-fill"></i>
+                                {% else %}
+                                    <i class="bi bi-file-earmark-text-fill"></i>
+                                {% endif %}
+                            </div>
+                            <div class="student-assignment-status-badge">
+                                {% if student_status == 'Voided' %}
+                                    <span class="badge bg-secondary">Voided</span>
+                                {% elif student_status == 'completed' %}
+                                    <span class="badge bg-success">Completed</span>
+                                {% elif student_status == 'Submitted or Awaiting Grade' %}
+                                    <span class="badge bg-info">Awaiting Grade</span>
+                                {% elif student_status == 'Past Due' %}
+                                    <span class="badge bg-danger">Past Due</span>
+                                {% elif student_status == 'Extended' %}
+                                    <span class="badge bg-warning">Extended</span>
+                                {% else %}
+                                    <span class="badge bg-primary">Pending</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Card Body -->
+                        <div class="student-assignment-card-body">
+                            <h5 class="student-assignment-card-title">{{ assignment.title }}</h5>
+                            <p class="student-assignment-card-class">
+                                <i class="bi bi-book me-1"></i>{{ assignment.class_info.name if assignment.class_info else 'Unknown Class' }}
+                            </p>
+                            <div class="student-assignment-card-meta">
+                                <span class="meta-item">
+                                    <i class="bi bi-calendar3 me-1"></i>
+                                    Due: {{ assignment.due_date.strftime('%b %d, %Y') if assignment.due_date else 'No due date' }}
+                                </span>
+                                {% if assignment.quarter %}
+                                <span class="meta-item">
+                                    <i class="bi bi-calendar-range me-1"></i>Q{{ assignment.quarter }}
+                                </span>
+                                {% endif %}
+                            </div>
+                            {% if assignment.attachment_filename %}
+                            <div class="student-assignment-attachment">
+                                <i class="bi bi-paperclip me-1"></i>
+                                <a href="{{ url_for('student.download_assignment_file', assignment_id=assignment.id) }}" class="text-decoration-none">
+                                    {{ assignment.attachment_original_filename or assignment.attachment_filename }}
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Card Footer -->
+                        <div class="student-assignment-card-footer">
+                            <button type="button" class="btn btn-sm btn-student-view" onclick="viewAssignment({{ assignment.id }}, '{{ assignment.title }}', '{{ assignment.description or '' }}', '{{ assignment.due_date.strftime('%Y-%m-%d') if assignment.due_date else 'No due date' }}', '{{ assignment.quarter or 'N/A' }}', '{{ assignment.attachment_filename or '' }}', {{ 'true' if submission else 'false' }}, {{ 'true' if grades.get(assignment.id) else 'false' }}, '{{ assignment.assignment_type }}')">
+                                <i class="bi bi-eye me-1"></i>View
+                            </button>
+                            {% if assignment.assignment_type == 'quiz' %}
+                                <button type="button" class="btn btn-sm btn-student-action" onclick="takeQuiz({{ assignment.id }}, '{{ assignment.title }}')">
+                                    <i class="bi bi-play-fill me-1"></i>Take Quiz
+                                </button>
+                            {% elif assignment.assignment_type == 'discussion' %}
+                                <button type="button" class="btn btn-sm btn-student-action" onclick="joinDiscussion({{ assignment.id }}, '{{ assignment.title }}')">
+                                    <i class="bi bi-chat-fill me-1"></i>Discuss
+                                </button>
+                            {% else %}
+                                <button type="button" class="btn btn-sm btn-student-action" onclick="submitAssignmentFromTable({{ assignment.id }}, '{{ assignment.title }}', {{ 'true' if submission else 'false' }})">
+                                    <i class="bi bi-upload me-1"></i>Submit
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="col-12">
+                    <div class="student-assignments-empty">
+                        <i class="bi bi-inbox"></i>
+                        <h4>No Assignments Yet</h4>
+                        <p>You don't have any assignments at this time. Check back later!</p>
+                    </div>
+                </div>
+            {% endif %}
         </div>
         
         <!-- Assignment Modal Functions (moved outside conditional for global access) -->

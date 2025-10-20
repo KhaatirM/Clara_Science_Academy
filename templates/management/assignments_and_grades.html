@@ -69,8 +69,8 @@
                         <i class="bi bi-people-fill"></i>
                     </div>
                     <div class="assignments-stat-content">
-                        <h3 class="assignments-stat-number">{{ accessible_classes|map(attribute='enrollments')|map('selectattr', 'is_active')|map('list')|map('length')|sum }}</h3>
-                        <p class="assignments-stat-label">Total Students</p>
+                        <h3 class="assignments-stat-number">{{ unique_student_count or 0 }}</h3>
+                        <p class="assignments-stat-label">Unique Students</p>
                     </div>
                 </div>
             </div>

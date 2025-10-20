@@ -1354,64 +1354,227 @@
 
     {% elif section == 'classes' %}
         <!-- Classes Management View -->
-        <h2 class="mb-4">Classes Management</h2>
+        <div class="container-fluid px-2 px-md-4">
+            <!-- Modern Classes Header -->
+            <div class="classes-admin-header mb-4">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <div>
+                        <h2 class="classes-admin-title mb-1">
+                            <i class="bi bi-house-door-fill me-2"></i>Classes Management
+                        </h2>
+                        <p class="classes-admin-subtitle mb-0">
+                            <i class="bi bi-book me-2"></i>Manage classes, schedules, and enrollments
+                        </p>
+                    </div>
+                    <div>
+                        <a href="{{ url_for('management.add_class') }}" class="btn btn-classes-add">
+                            <i class="bi bi-plus-circle me-2"></i>Create New Class
+                        </a>
+                    </div>
+                </div>
+            </div>
 
-        <div class="card shadow-sm">
-            <div class="card-header bg-warning text-dark">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="bi bi-house-door-fill me-2"></i>All Classes</h5>
-                    <a href="{{ url_for('management.add_class') }}" class="btn btn-light btn-sm">
-                        <i class="bi bi-plus-circle me-1"></i>Add Class
-                    </a>
+            <!-- Statistics Cards -->
+            <div class="row g-3 mb-4">
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="classes-stat-card">
+                        <div class="classes-stat-icon">
+                            <i class="bi bi-house-door-fill"></i>
+                        </div>
+                        <div class="classes-stat-content">
+                            <h3 class="classes-stat-number">{{ classes|length }}</h3>
+                            <p class="classes-stat-label">Total Classes</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="classes-stat-card">
+                        <div class="classes-stat-icon">
+                            <i class="bi bi-people-fill"></i>
+                        </div>
+                        <div class="classes-stat-content">
+                            <h3 class="classes-stat-number">{{ classes|map(attribute='enrollments')|map('selectattr', 'is_active')|map('list')|map('length')|sum }}</h3>
+                            <p class="classes-stat-label">Total Enrollments</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="classes-stat-card">
+                        <div class="classes-stat-icon">
+                            <i class="bi bi-person-badge"></i>
+                        </div>
+                        <div class="classes-stat-content">
+                            <h3 class="classes-stat-number">{{ classes|map(attribute='teacher')|select|unique|list|length }}</h3>
+                            <p class="classes-stat-label">Active Teachers</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="classes-stat-card">
+                        <div class="classes-stat-icon">
+                            <i class="bi bi-journal-check"></i>
+                        </div>
+                        <div class="classes-stat-content">
+                            <h3 class="classes-stat-number">{{ classes|map(attribute='assignments')|map('list')|map('length')|sum }}</h3>
+                            <p class="classes-stat-label">Total Assignments</p>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="card-body">
-                <div class="row">
-                    {% for class in classes %}
-                        <div class="col-md-6 col-lg-4 mb-4">
-                            <div class="card h-100">
-                                <div class="card-header bg-light">
-                                    <h6 class="card-title mb-0">{{ class.name }}</h6>
-                                </div>
-                                <div class="card-body">
-                                    <p class="card-text">
-                                        <strong>Subject:</strong> {{ class.subject or 'N/A' }}<br>
-                                        <strong>Grade Level:</strong> {{ class.grade_level or 'N/A' }}<br>
-                                        <strong>Teacher:</strong> {{ class.teacher.first_name }} {{ class.teacher.last_name if class.teacher else 'N/A' }}
-                                    </p>
-                                    <div class="btn-group w-100" role="group">
-                                        <a href="{{ url_for('management.view_class', class_id=class.id) }}" class="btn btn-sm btn-outline-primary">View</a>
-                                        <a href="{{ url_for('management.edit_class', class_id=class.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
-                                        <a href="{{ url_for('management.manage_class_roster', class_id=class.id) }}" class="btn btn-sm btn-outline-info">Roster</a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    {% else %}
-                        <div class="col">
-                            <div class="alert alert-info">
-                                No classes found.
-                            </div>
-                        </div>
-                    {% endfor %}
-                </div>
+
+            <!-- Classes Grid -->
+            <div class="classes-grid-header mb-3">
+                <h5 class="mb-0">
+                    <i class="bi bi-grid-3x3-gap-fill me-2"></i>All Classes
+                </h5>
             </div>
+
+            <div class="row g-4">
+                {% for class in classes %}
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="class-card">
+                        <div class="class-card-header">
+                            <div class="class-card-icon">
+                                <i class="bi bi-book-fill"></i>
+                            </div>
+                            <div class="class-card-title-section">
+                                <h6 class="class-card-title">{{ class.name }}</h6>
+                                <p class="class-card-subject">{{ class.subject or 'General' }}</p>
+                            </div>
+                        </div>
+                        <div class="class-card-body">
+                            <div class="class-card-detail">
+                                <i class="bi bi-mortarboard me-2"></i>
+                                <span>Grade: <strong>{{ class.grade_level or 'N/A' }}</strong></span>
+                            </div>
+                            <div class="class-card-detail">
+                                <i class="bi bi-person-badge me-2"></i>
+                                <span>Teacher: <strong>{{ class.teacher.first_name }} {{ class.teacher.last_name if class.teacher else 'N/A' }}</strong></span>
+                            </div>
+                            <div class="class-card-detail">
+                                <i class="bi bi-people-fill me-2"></i>
+                                <span>Students: <strong>{{ class.enrollments|selectattr('is_active')|list|length }}</strong></span>
+                            </div>
+                            <div class="class-card-detail">
+                                <i class="bi bi-journal-check me-2"></i>
+                                <span>Assignments: <strong>{{ class.assignments|list|length }}</strong></span>
+                            </div>
+                        </div>
+                        <div class="class-card-footer">
+                            <a href="{{ url_for('management.view_class', class_id=class.id) }}" class="btn btn-sm btn-class-action">
+                                <i class="bi bi-eye me-1"></i>View
+                            </a>
+                            <a href="{{ url_for('management.edit_class', class_id=class.id) }}" class="btn btn-sm btn-class-action">
+                                <i class="bi bi-pencil me-1"></i>Edit
+                            </a>
+                            <a href="{{ url_for('management.manage_class_roster', class_id=class.id) }}" class="btn btn-sm btn-class-action">
+                                <i class="bi bi-people me-1"></i>Roster
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="col-12">
+                    <div class="classes-empty-state">
+                        <i class="bi bi-inbox display-1 text-muted d-block mb-3"></i>
+                        <h5 class="text-muted">No Classes Found</h5>
+                        <p class="text-muted mb-3">Get started by creating your first class</p>
+                        <a href="{{ url_for('management.add_class') }}" class="btn btn-classes-add">
+                            <i class="bi bi-plus-circle me-2"></i>Create New Class
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
         </div>
 
     {% elif section == 'assignments' %}
         <!-- Assignments Management View -->
-        <h2 class="mb-4">Assignments Management</h2>
-
-        <div class="card shadow-sm">
-            <div class="card-header bg-info text-white">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="bi bi-journal-check me-2"></i>All Assignments</h5>
-                    <a href="{{ url_for('management.add_assignment') }}" class="btn btn-light btn-sm">
-                        <i class="bi bi-plus-circle me-1"></i>Add Assignment
-                    </a>
+        <div class="container-fluid px-2 px-md-4">
+            <!-- Modern Assignments Header -->
+            <div class="assignments-admin-header mb-4">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <div>
+                        <h2 class="assignments-admin-title mb-1">
+                            <i class="bi bi-journal-check me-2"></i>Assignments & Grades
+                        </h2>
+                        <p class="assignments-admin-subtitle mb-0">
+                            <i class="bi bi-clipboard-data me-2"></i>Manage assignments, track submissions, and grade student work
+                        </p>
+                    </div>
+                    <div>
+                        <a href="{{ url_for('management.add_assignment') }}" class="btn btn-assignments-add">
+                            <i class="bi bi-plus-circle me-2"></i>Create Assignment
+                        </a>
+                    </div>
                 </div>
             </div>
-            <div class="card-body">
+
+            <!-- Statistics Cards -->
+            <div class="row g-3 mb-4">
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="assignments-stat-card">
+                        <div class="assignments-stat-icon">
+                            <i class="bi bi-journal-check"></i>
+                        </div>
+                        <div class="assignments-stat-content">
+                            <h3 class="assignments-stat-number">{{ assignments|length }}</h3>
+                            <p class="assignments-stat-label">Total Assignments</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="assignments-stat-card">
+                        <div class="assignments-stat-icon">
+                            <i class="bi bi-clock-history"></i>
+                        </div>
+                        <div class="assignments-stat-content">
+                            <h3 class="assignments-stat-number">{{ assignments|selectattr('due_date')|select('due_date', 'ge', today)|list|length }}</h3>
+                            <p class="assignments-stat-label">Active</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="assignments-stat-card">
+                        <div class="assignments-stat-icon">
+                            <i class="bi bi-exclamation-triangle"></i>
+                        </div>
+                        <div class="assignments-stat-content">
+                            <h3 class="assignments-stat-number">{{ assignments|selectattr('due_date')|rejectattr('due_date', 'none')|list|length }}</h3>
+                            <p class="assignments-stat-label">Due Today/Overdue</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="assignments-stat-card">
+                        <div class="assignments-stat-icon">
+                            <i class="bi bi-check-circle"></i>
+                        </div>
+                        <div class="assignments-stat-content">
+                            <h3 class="assignments-stat-number">{{ assignments|selectattr('attachment_filename')|list|length }}</h3>
+                            <p class="assignments-stat-label">With Attachments</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Assignments Table -->
+            <div class="assignments-table-card">
+                <div class="assignments-table-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-table me-2"></i>All Assignments
+                    </h5>
+                    <div class="assignments-table-view-toggle">
+                        <button class="btn btn-sm btn-assignments-view active" onclick="switchAssignmentsView('table')">
+                            <i class="bi bi-table"></i> Table
+                        </button>
+                        <button class="btn btn-sm btn-assignments-view" onclick="switchAssignmentsView('cards')">
+                            <i class="bi bi-grid-3x3-gap-fill"></i> Cards
+                        </button>
+                    </div>
+                </div>
+                <div class="assignments-table-body" id="assignmentsTableView">
                 <div class="table-responsive">
                     <table class="table table-hover align-middle">
                         <thead>
@@ -1528,13 +1691,93 @@
                                 </tr>
                             {% else %}
                                 <tr>
-                                    <td colspan="5" class="text-center text-muted">No assignments found.</td>
+                                    <td colspan="5" class="text-center text-muted py-5">
+                                        <i class="bi bi-inbox display-1 text-muted d-block mb-3"></i>
+                                        No assignments found.
+                                    </td>
                                 </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
+                </div>
+
+                <!-- Cards View (Hidden by default) -->
+                <div class="assignments-cards-body" id="assignmentsCardsView" style="display: none;">
+                    <div class="row g-3">
+                        {% for assignment in assignments %}
+                        <div class="col-12 col-md-6 col-lg-4">
+                            <div class="assignment-card">
+                                <div class="assignment-card-header">
+                                    <div class="assignment-card-icon">
+                                        <i class="bi bi-journal-text"></i>
+                                    </div>
+                                    <div class="assignment-card-status">
+                                        {% if assignment.due_date and assignment.due_date.date() < today %}
+                                            <span class="badge bg-danger">Past Due</span>
+                                        {% elif assignment.due_date and assignment.due_date.date() == today %}
+                                            <span class="badge bg-warning">Due Today</span>
+                                        {% elif assignment.due_date %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">No Due Date</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="assignment-card-body">
+                                    <h6 class="assignment-card-title">{{ assignment.title }}</h6>
+                                    <div class="assignment-card-detail">
+                                        <i class="bi bi-house-door me-2"></i>
+                                        <span>Class: <strong>{{ assignment.class_info.name if assignment.class_info else 'N/A' }}</strong></span>
+                                    </div>
+                                    <div class="assignment-card-detail">
+                                        <i class="bi bi-calendar3 me-2"></i>
+                                        <span>Due: <strong>{{ assignment.due_date.strftime('%Y-%m-%d') if assignment.due_date else 'N/A' }}</strong></span>
+                                    </div>
+                                    {% if assignment.attachment_filename %}
+                                    <div class="assignment-card-detail">
+                                        <i class="bi bi-paperclip me-2"></i>
+                                        <span>
+                                            <a href="{{ url_for('download_assignment_file', assignment_id=assignment.id) }}" class="text-decoration-none">
+                                                <strong>Has Attachment</strong>
+                                            </a>
+                                        </span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="assignment-card-footer">
+                                    <a href="{{ url_for('management.view_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-assignment-action" title="View">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{{ url_for('management.grade_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-assignment-action" title="Grade">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-assignment-action" title="Edit">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-assignment-action-delete remove-assignment-btn" 
+                                            data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}" title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="col-12">
+                            <div class="assignments-empty-state">
+                                <i class="bi bi-inbox display-1 text-muted d-block mb-3"></i>
+                                <h5 class="text-muted">No Assignments Found</h5>
+                                <p class="text-muted mb-3">Get started by creating your first assignment</p>
+                                <a href="{{ url_for('management.add_assignment') }}" class="btn btn-assignments-add">
+                                    <i class="bi bi-plus-circle me-2"></i>Create Assignment
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
             </div>
+
         </div>
 
         <!-- Delete Confirmation Modal -->
@@ -1581,56 +1824,151 @@
 
     {% elif section == 'attendance' %}
         <!-- Attendance Management View -->
-        <h2 class="mb-4">Attendance Management</h2>
-
-        <div class="alert alert-info">
-            <h5><i class="bi bi-calendar-check-fill me-2"></i>Attendance Tracking</h5>
-            <p>Manage attendance for all classes and generate reports.</p>
-        </div>
-
-        <div class="row">
-            <div class="col-md-6">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0">Take Attendance</h5>
+        <div class="container-fluid px-2 px-md-4">
+            <!-- Modern Attendance Header -->
+            <div class="attendance-admin-header mb-4">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <div>
+                        <h2 class="attendance-admin-title mb-1">
+                            <i class="bi bi-calendar-check me-2"></i>Attendance Management
+                        </h2>
+                        <p class="attendance-admin-subtitle mb-0">
+                            <i class="bi bi-clipboard-check me-2"></i>Track student attendance and generate comprehensive reports
+                        </p>
                     </div>
-                    <div class="card-body">
-                        <p>Select a class to take attendance:</p>
-                        <div class="list-group">
-                            {% for class in classes %}
-                                <a href="{{ url_for('teacher.take_attendance', class_id=class.id) }}" class="list-group-item list-group-item-action">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <h6 class="mb-1">{{ class.name }}</h6>
-                                            <small class="text-muted">{{ class.subject }}</small>
+                    <div>
+                        <a href="{{ url_for('management.unified_attendance') }}" class="btn btn-attendance-unified">
+                            <i class="bi bi-calendar3 me-2"></i>View All Attendance
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics Cards -->
+            <div class="row g-3 mb-4">
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="attendance-stat-card">
+                        <div class="attendance-stat-icon">
+                            <i class="bi bi-house-door-fill"></i>
+                        </div>
+                        <div class="attendance-stat-content">
+                            <h3 class="attendance-stat-number">{{ classes|length }}</h3>
+                            <p class="attendance-stat-label">Total Classes</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="attendance-stat-card">
+                        <div class="attendance-stat-icon">
+                            <i class="bi bi-calendar-check"></i>
+                        </div>
+                        <div class="attendance-stat-content">
+                            <h3 class="attendance-stat-number">{{ classes|length }}</h3>
+                            <p class="attendance-stat-label">Today's Classes</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="attendance-stat-card">
+                        <div class="attendance-stat-icon">
+                            <i class="bi bi-check-circle"></i>
+                        </div>
+                        <div class="attendance-stat-content">
+                            <h3 class="attendance-stat-number">0</h3>
+                            <p class="attendance-stat-label">Completed Today</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="attendance-stat-card">
+                        <div class="attendance-stat-icon">
+                            <i class="bi bi-percent"></i>
+                        </div>
+                        <div class="attendance-stat-content">
+                            <h3 class="attendance-stat-number">95%</h3>
+                            <p class="attendance-stat-label">Attendance Rate</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Take Attendance & Reports Section -->
+            <div class="row g-4 mb-4">
+                <div class="col-12 col-lg-8">
+                    <div class="attendance-classes-card">
+                        <div class="attendance-classes-header">
+                            <h5 class="mb-0">
+                                <i class="bi bi-clipboard-check me-2"></i>Take Attendance by Class
+                            </h5>
+                        </div>
+                        <div class="attendance-classes-body">
+                            <div class="attendance-classes-grid">
+                                {% for class in classes %}
+                                <a href="{{ url_for('management.take_class_attendance', class_id=class.id) }}" class="attendance-class-item">
+                                    <div class="attendance-class-icon">
+                                        <i class="bi bi-book-fill"></i>
+                                    </div>
+                                    <div class="attendance-class-info">
+                                        <h6 class="attendance-class-name">{{ class.name }}</h6>
+                                        <p class="attendance-class-subject">{{ class.subject or 'General' }}</p>
+                                        <div class="attendance-class-meta">
+                                            <span class="badge bg-primary">{{ class.enrollments|selectattr('is_active')|list|length }} students</span>
+                                            <span class="badge bg-success">{{ class.grade_level or 'N/A' }}</span>
                                         </div>
-                                        <span class="badge bg-primary rounded-pill">{{ class.enrolled_student_count }} students</span>
+                                    </div>
+                                    <div class="attendance-class-action">
+                                        <i class="bi bi-chevron-right"></i>
                                     </div>
                                 </a>
-                            {% else %}
-                                <div class="list-group-item text-muted">No classes available for attendance.</div>
-                            {% endfor %}
+                                {% else %}
+                                <div class="attendance-empty-message">
+                                    <i class="bi bi-inbox display-4 text-muted d-block mb-3"></i>
+                                    <p class="text-muted">No classes available for attendance.</p>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-lg-4">
+                    <div class="attendance-reports-card">
+                        <div class="attendance-reports-header">
+                            <h5 class="mb-0">
+                                <i class="bi bi-file-earmark-bar-graph me-2"></i>Quick Reports
+                            </h5>
+                        </div>
+                        <div class="attendance-reports-body">
+                            <a href="#" class="attendance-report-btn">
+                                <i class="bi bi-calendar-day me-2"></i>
+                                <span>Daily Report</span>
+                                <i class="bi bi-chevron-right ms-auto"></i>
+                            </a>
+                            <a href="#" class="attendance-report-btn">
+                                <i class="bi bi-calendar-week me-2"></i>
+                                <span>Weekly Report</span>
+                                <i class="bi bi-chevron-right ms-auto"></i>
+                            </a>
+                            <a href="#" class="attendance-report-btn">
+                                <i class="bi bi-calendar-month me-2"></i>
+                                <span>Monthly Report</span>
+                                <i class="bi bi-chevron-right ms-auto"></i>
+                            </a>
+                            <a href="#" class="attendance-report-btn">
+                                <i class="bi bi-person-lines-fill me-2"></i>
+                                <span>Student Report</span>
+                                <i class="bi bi-chevron-right ms-auto"></i>
+                            </a>
+                            <a href="#" class="attendance-report-btn">
+                                <i class="bi bi-graph-up me-2"></i>
+                                <span>Analytics Dashboard</span>
+                                <i class="bi bi-chevron-right ms-auto"></i>
+                            </a>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="col-md-6">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-success text-white">
-                        <h5 class="mb-0">Attendance Reports</h5>
-                    </div>
-                    <div class="card-body">
-                        <p>Generate and view attendance reports:</p>
-                        <div class="d-grid gap-2">
-                            <a href="#" class="btn btn-outline-success">Daily Report</a>
-                            <a href="#" class="btn btn-outline-success">Weekly Report</a>
-                            <a href="#" class="btn btn-outline-success">Monthly Report</a>
-                            <a href="#" class="btn btn-outline-success">Student Report</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
 
     {% elif section == 'admissions' %}
@@ -5083,6 +5421,829 @@
             align-items: flex-start;
         }
     }
+
+    /* ==================== CLASSES TAB STYLES ==================== */
+    
+    /* Classes Header */
+    .classes-admin-header {
+        background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+        border-radius: 15px;
+        padding: 2rem;
+        color: #333;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+    .classes-admin-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .classes-admin-subtitle {
+        font-size: 1.1rem;
+        opacity: 0.9;
+    }
+
+    .btn-classes-add {
+        background: white;
+        color: #ffd700;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-classes-add:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(255,255,255,0.3);
+        color: #ffd700;
+    }
+
+    /* Classes Statistics Cards */
+    .classes-stat-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        border: 1px solid rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .classes-stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+    }
+
+    .classes-stat-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: white;
+        flex-shrink: 0;
+    }
+
+    .classes-stat-card:nth-child(1) .classes-stat-icon {
+        background: linear-gradient(45deg, #ffd700, #ffed4e);
+    }
+
+    .classes-stat-card:nth-child(2) .classes-stat-icon {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+    }
+
+    .classes-stat-card:nth-child(3) .classes-stat-icon {
+        background: linear-gradient(45deg, #f093fb, #f5576c);
+    }
+
+    .classes-stat-card:nth-child(4) .classes-stat-icon {
+        background: linear-gradient(45deg, #4facfe, #00f2fe);
+    }
+
+    .classes-stat-content {
+        flex: 1;
+    }
+
+    .classes-stat-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 0;
+        color: #2c3e50;
+        line-height: 1;
+    }
+
+    .classes-stat-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin: 0.25rem 0 0 0;
+        font-weight: 500;
+    }
+
+    /* Classes Grid Header */
+    .classes-grid-header {
+        background: white;
+        border-radius: 12px;
+        padding: 1rem 1.5rem;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        border-left: 4px solid #ffd700;
+    }
+
+    .classes-grid-header h5 {
+        color: #2c3e50;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    /* Class Cards */
+    .class-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        border: 1px solid rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+        overflow: hidden;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .class-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+    }
+
+    .class-card-header {
+        background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+        padding: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .class-card-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        background: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        color: #ffd700;
+        flex-shrink: 0;
+    }
+
+    .class-card-title-section {
+        flex: 1;
+    }
+
+    .class-card-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #333;
+        margin: 0;
+    }
+
+    .class-card-subject {
+        font-size: 0.85rem;
+        color: rgba(0,0,0,0.7);
+        margin: 0.25rem 0 0 0;
+    }
+
+    .class-card-body {
+        padding: 1.5rem;
+        flex: 1;
+    }
+
+    .class-card-detail {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #f0f0f0;
+        color: #495057;
+        font-size: 0.9rem;
+    }
+
+    .class-card-detail:last-child {
+        border-bottom: none;
+    }
+
+    .class-card-detail i {
+        color: #ffd700;
+        width: 24px;
+    }
+
+    .class-card-footer {
+        padding: 1rem 1.5rem;
+        background: #f8f9fa;
+        display: flex;
+        gap: 0.5rem;
+        border-top: 1px solid #e9ecef;
+    }
+
+    .btn-class-action {
+        flex: 1;
+        background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+        color: #333;
+        border: none;
+        padding: 0.5rem 0.75rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-class-action:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(255, 215, 0, 0.4);
+        color: #333;
+    }
+
+    /* Classes Empty State */
+    .classes-empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    }
+
+    /* Responsive Design for Classes Tab */
+    @media (max-width: 768px) {
+        .classes-admin-title {
+            font-size: 2rem;
+        }
+        
+        .classes-stat-card {
+            flex-direction: column;
+            text-align: center;
+        }
+    }
+
+    /* ==================== ASSIGNMENTS TAB STYLES ==================== */
+    
+    /* Assignments Header */
+    .assignments-admin-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 15px;
+        padding: 2rem;
+        color: white;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+    .assignments-admin-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .assignments-admin-subtitle {
+        font-size: 1.1rem;
+        opacity: 0.9;
+    }
+
+    .btn-assignments-add {
+        background: white;
+        color: #667eea;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-assignments-add:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(255,255,255,0.3);
+        color: #667eea;
+    }
+
+    /* Assignments Statistics Cards */
+    .assignments-stat-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        border: 1px solid rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .assignments-stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+    }
+
+    .assignments-stat-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: white;
+        flex-shrink: 0;
+    }
+
+    .assignments-stat-card:nth-child(1) .assignments-stat-icon {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+    }
+
+    .assignments-stat-card:nth-child(2) .assignments-stat-icon {
+        background: linear-gradient(45deg, #43e97b, #38f9d7);
+    }
+
+    .assignments-stat-card:nth-child(3) .assignments-stat-icon {
+        background: linear-gradient(45deg, #fa709a, #fee140);
+    }
+
+    .assignments-stat-card:nth-child(4) .assignments-stat-icon {
+        background: linear-gradient(45deg, #4facfe, #00f2fe);
+    }
+
+    .assignments-stat-content {
+        flex: 1;
+    }
+
+    .assignments-stat-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 0;
+        color: #2c3e50;
+        line-height: 1;
+    }
+
+    .assignments-stat-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin: 0.25rem 0 0 0;
+        font-weight: 500;
+    }
+
+    /* Assignments Table Card */
+    .assignments-table-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        border: 1px solid rgba(0,0,0,0.05);
+        overflow: hidden;
+    }
+
+    .assignments-table-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 1.25rem 1.5rem;
+        color: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .assignments-table-header h5 {
+        margin: 0;
+        font-weight: 700;
+    }
+
+    .assignments-table-view-toggle {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .btn-assignments-view {
+        background: rgba(255,255,255,0.2);
+        color: white;
+        border: 2px solid white;
+        padding: 0.375rem 1rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-assignments-view:hover,
+    .btn-assignments-view.active {
+        background: white;
+        color: #667eea;
+    }
+
+    .assignments-table-body {
+        padding: 1.5rem;
+    }
+
+    .assignments-table-body .table thead th {
+        background: #f8f9fa;
+        color: #2c3e50;
+        font-weight: 700;
+        border-bottom: 2px solid #667eea;
+        padding: 1rem;
+    }
+
+    .assignments-table-body .table tbody tr {
+        transition: all 0.3s ease;
+    }
+
+    .assignments-table-body .table tbody tr:hover {
+        background: #f8f9fa;
+        transform: scale(1.01);
+    }
+
+    /* Assignments Cards View */
+    .assignments-cards-body {
+        padding: 1.5rem;
+    }
+
+    .assignment-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        border: 1px solid rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+        overflow: hidden;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .assignment-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+    }
+
+    .assignment-card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 1.25rem 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .assignment-card-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        background: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        color: #667eea;
+    }
+
+    .assignment-card-body {
+        padding: 1.5rem;
+        flex: 1;
+    }
+
+    .assignment-card-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 1rem;
+    }
+
+    .assignment-card-detail {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #f0f0f0;
+        color: #495057;
+        font-size: 0.9rem;
+    }
+
+    .assignment-card-detail:last-child {
+        border-bottom: none;
+    }
+
+    .assignment-card-detail i {
+        color: #667eea;
+        width: 24px;
+    }
+
+    .assignment-card-footer {
+        padding: 1rem 1.5rem;
+        background: #f8f9fa;
+        display: flex;
+        gap: 0.5rem;
+        border-top: 1px solid #e9ecef;
+    }
+
+    .btn-assignment-action {
+        flex: 1;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 0.5rem 0.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-assignment-action:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+
+    .btn-assignment-action-delete {
+        flex: 1;
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        border: none;
+        padding: 0.5rem 0.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-assignment-action-delete:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(245, 87, 108, 0.4);
+        color: white;
+    }
+
+    /* Assignments Empty State */
+    .assignments-empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    }
+
+    /* Responsive Design for Assignments Tab */
+    @media (max-width: 768px) {
+        .assignments-admin-title {
+            font-size: 2rem;
+        }
+        
+        .assignments-stat-card {
+            flex-direction: column;
+            text-align: center;
+        }
+        
+        .assignments-table-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+    }
+
+    /* ==================== ATTENDANCE TAB STYLES ==================== */
+    
+    /* Attendance Header */
+    .attendance-admin-header {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        border-radius: 15px;
+        padding: 2rem;
+        color: white;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+    .attendance-admin-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .attendance-admin-subtitle {
+        font-size: 1.1rem;
+        opacity: 0.9;
+    }
+
+    .btn-attendance-unified {
+        background: white;
+        color: #f093fb;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-attendance-unified:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(255,255,255,0.3);
+        color: #f093fb;
+    }
+
+    /* Attendance Statistics Cards */
+    .attendance-stat-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        border: 1px solid rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .attendance-stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+    }
+
+    .attendance-stat-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: white;
+        flex-shrink: 0;
+    }
+
+    .attendance-stat-card:nth-child(1) .attendance-stat-icon {
+        background: linear-gradient(45deg, #f093fb, #f5576c);
+    }
+
+    .attendance-stat-card:nth-child(2) .attendance-stat-icon {
+        background: linear-gradient(45deg, #43e97b, #38f9d7);
+    }
+
+    .attendance-stat-card:nth-child(3) .attendance-stat-icon {
+        background: linear-gradient(45deg, #4facfe, #00f2fe);
+    }
+
+    .attendance-stat-card:nth-child(4) .attendance-stat-icon {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+    }
+
+    .attendance-stat-content {
+        flex: 1;
+    }
+
+    .attendance-stat-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 0;
+        color: #2c3e50;
+        line-height: 1;
+    }
+
+    .attendance-stat-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin: 0.25rem 0 0 0;
+        font-weight: 500;
+    }
+
+    /* Attendance Classes Card */
+    .attendance-classes-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        border: 1px solid rgba(0,0,0,0.05);
+        overflow: hidden;
+        height: 100%;
+    }
+
+    .attendance-classes-header {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        padding: 1.25rem 1.5rem;
+        color: white;
+    }
+
+    .attendance-classes-header h5 {
+        margin: 0;
+        font-weight: 700;
+    }
+
+    .attendance-classes-body {
+        padding: 1.5rem;
+    }
+
+    .attendance-classes-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .attendance-class-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1.25rem;
+        background: #f8f9fa;
+        border-radius: 12px;
+        border: 2px solid transparent;
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+
+    .attendance-class-item:hover {
+        background: white;
+        border-color: #f093fb;
+        transform: translateX(5px);
+        box-shadow: 0 5px 20px rgba(240, 147, 251, 0.2);
+    }
+
+    .attendance-class-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        color: white;
+        flex-shrink: 0;
+    }
+
+    .attendance-class-info {
+        flex: 1;
+    }
+
+    .attendance-class-name {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #2c3e50;
+        margin: 0 0 0.25rem 0;
+    }
+
+    .attendance-class-subject {
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin: 0 0 0.5rem 0;
+    }
+
+    .attendance-class-meta {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .attendance-class-action {
+        font-size: 1.5rem;
+        color: #f093fb;
+    }
+
+    .attendance-empty-message {
+        text-align: center;
+        padding: 3rem 1rem;
+    }
+
+    /* Attendance Reports Card */
+    .attendance-reports-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        border: 1px solid rgba(0,0,0,0.05);
+        overflow: hidden;
+        height: 100%;
+    }
+
+    .attendance-reports-header {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        padding: 1.25rem 1.5rem;
+        color: white;
+    }
+
+    .attendance-reports-header h5 {
+        margin: 0;
+        font-weight: 700;
+    }
+
+    .attendance-reports-body {
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .attendance-report-btn {
+        display: flex;
+        align-items: center;
+        padding: 1rem 1.25rem;
+        background: #f8f9fa;
+        border: 2px solid transparent;
+        border-radius: 10px;
+        text-decoration: none;
+        color: #495057;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .attendance-report-btn:hover {
+        background: white;
+        border-color: #43e97b;
+        transform: translateX(5px);
+        box-shadow: 0 5px 15px rgba(67, 233, 123, 0.2);
+        color: #43e97b;
+    }
+
+    .attendance-report-btn i:first-child {
+        color: #43e97b;
+    }
+
+    .attendance-report-btn i:last-child {
+        color: #43e97b;
+    }
+
+    /* Responsive Design for Attendance Tab */
+    @media (max-width: 768px) {
+        .attendance-admin-title {
+            font-size: 2rem;
+        }
+        
+        .attendance-stat-card {
+            flex-direction: column;
+            text-align: center;
+        }
+    }
     </style>
 
     <!-- JavaScript for Students Tab -->
@@ -5304,6 +6465,25 @@
                 console.error('Error removing staff member:', error);
                 alert('Error removing staff member. Please try again.');
             });
+        }
+    }
+
+    // Switch Assignments View Function
+    function switchAssignmentsView(view) {
+        const tableView = document.getElementById('assignmentsTableView');
+        const cardsView = document.getElementById('assignmentsCardsView');
+        const buttons = document.querySelectorAll('.btn-assignments-view');
+        
+        if (view === 'table') {
+            tableView.style.display = 'block';
+            cardsView.style.display = 'none';
+            buttons[0].classList.add('active');
+            buttons[1].classList.remove('active');
+        } else {
+            tableView.style.display = 'none';
+            cardsView.style.display = 'block';
+            buttons[0].classList.remove('active');
+            buttons[1].classList.add('active');
         }
     }
     </script>

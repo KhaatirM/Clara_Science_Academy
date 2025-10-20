@@ -1866,10 +1866,11 @@ def class_grades(class_id):
     # Get group grades for students (group assignments)
     from models import GroupGrade
     
-    # Debug: Let's check what group assignments exist and their selected_group_ids
-    current_app.logger.info(f"DEBUG: Processing {len(group_assignments)} group assignments for class {class_id}")
-    for ga in group_assignments:
-        current_app.logger.info(f"DEBUG: Assignment '{ga.title}' - selected_group_ids: '{ga.selected_group_ids}'")
+    # Simple debug: Check if there are any group grades at all for this class
+    total_group_grades = GroupGrade.query.join(GroupAssignment).filter(
+        GroupAssignment.class_id == class_id
+    ).count()
+    print(f"DEBUG: Found {total_group_grades} group grades for class {class_id}")
     
     for student in enrolled_students:
         for group_assignment in group_assignments:
@@ -1904,9 +1905,6 @@ def class_grades(class_id):
                     # Assignment is for specific groups - check if student's group is included
                     should_show_assignment = student_group_id in assignment_group_ids
             
-            # Debug logging
-            current_app.logger.info(f"DEBUG: Student {student.first_name} {student.last_name} (ID: {student.id}) - Group: {student_group_name} (ID: {student_group_id}) - Assignment: '{group_assignment.title}' - Should show: {should_show_assignment}")
-            
             if should_show_assignment:
                 # Student should see this assignment
                 if student_group_id:
@@ -1917,12 +1915,9 @@ def class_grades(class_id):
                         group_assignment_id=group_assignment.id
                     ).first()
                     
-                    current_app.logger.info(f"DEBUG: Looking for grade - Student ID: {student.id}, Assignment ID: {group_assignment.id}, Found: {group_grade is not None}")
-                    
                     if group_grade:
                         try:
                             grade_data = json.loads(group_grade.grade_data) if group_grade.grade_data else {}
-                            current_app.logger.info(f"DEBUG: Grade data: {grade_data}")
                             student_grades[student.id][f'group_{group_assignment.id}'] = {
                                 'grade': grade_data.get('score', 'N/A'),
                                 'comments': grade_data.get('comments', ''),
@@ -4140,6 +4135,7 @@ def class_grades_view(class_id):
 def debug_grades(class_id):
     """Debug route to check grades data"""
     import json
+    from models import GroupGrade
     
     # Get class info
     class_obj = Class.query.get_or_404(class_id)

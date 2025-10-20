@@ -1969,9 +1969,9 @@ def class_grades(class_id):
                     }
                 else:
                     # Assignment is for specific groups and student is not in any of them
-                    # Show "N/A" to indicate this assignment doesn't apply to this student
+                    # Show "Not Assigned" to indicate this assignment doesn't apply to this student
                     student_grades[student.id][f'group_{group_assignment.id}'] = {
-                        'grade': 'N/A',
+                        'grade': 'Not Assigned',
                         'comments': 'Not assigned to this group',
                         'graded_at': None,
                         'type': 'group',
@@ -1979,10 +1979,10 @@ def class_grades(class_id):
                     }
     
     # Calculate averages for each student (including both individual and group assignments)
-    # Only include grades that are applicable to the student (exclude N/A from group assignments they're not part of)
+    # Only include grades that are applicable to the student (exclude N/A, Not Assigned from group assignments they're not part of)
     student_averages = {}
     for student_id, grades in student_grades.items():
-        # Filter out non-applicable grades (N/A, Not Graded, No Group) and only include numeric grades
+        # Filter out non-applicable grades (N/A, Not Assigned, Not Graded, No Group) and only include numeric grades
         valid_grades = []
         for g in grades.values():
             grade_val = g['grade']
@@ -1990,7 +1990,7 @@ def class_grades(class_id):
             if 'Not assigned to this group' in g.get('comments', ''):
                 continue
             # Only include numeric grades
-            if grade_val not in ['N/A', 'Not Graded', 'No Group']:
+            if grade_val not in ['N/A', 'Not Assigned', 'Not Graded', 'No Group']:
                 try:
                     valid_grades.append(float(grade_val))
                 except (ValueError, TypeError):

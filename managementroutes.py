@@ -1866,6 +1866,21 @@ def class_grades(class_id):
     # Get group grades for students (group assignments)
     from models import GroupGrade
     
+    # Debug: Check what groups exist for this class
+    all_groups = StudentGroup.query.filter_by(class_id=class_id).all()
+    print(f"DEBUG: All groups in class {class_id}:")
+    for group in all_groups:
+        print(f"  Group ID: {group.id}, Name: {group.name}")
+    
+    # Debug: Check students in Group 9 specifically
+    group_9_members = StudentGroupMember.query.join(StudentGroup).filter(
+        StudentGroup.class_id == class_id,
+        StudentGroup.id == 9
+    ).all()
+    print(f"DEBUG: Students in Group 9: {len(group_9_members)}")
+    for member in group_9_members:
+        print(f"  Student ID: {member.student_id}, Student: {member.student.first_name} {member.student.last_name}")
+    
     for student in enrolled_students:
         for group_assignment in group_assignments:
             # Check if this group assignment is for specific groups

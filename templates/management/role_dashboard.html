@@ -247,15 +247,82 @@
 
     {% elif section == 'students' %}
         <!-- Students Management View -->
-        <h2 class="mb-4">Students Management</h2>
-
-        <!-- Search Bar -->
-        <!-- Enhanced Search Interface -->
-        <div class="card shadow-sm mb-3">
-            <div class="card-header bg-light">
-                <h6 class="mb-0"><i class="bi bi-search me-2"></i>Advanced Student Search</h6>
+        <div class="container-fluid px-2 px-md-4">
+            <!-- Modern Students Header -->
+            <div class="students-admin-header mb-4">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <div>
+                        <h2 class="students-admin-title mb-1">
+                            <i class="bi bi-people-fill me-2"></i>Students Management
+                        </h2>
+                        <p class="students-admin-subtitle mb-0">
+                            <i class="bi bi-mortarboard me-2"></i>Manage student records, accounts, and information
+                        </p>
+                    </div>
+                    <div>
+                        <a href="{{ url_for('management.add_student') }}" class="btn btn-students-add">
+                            <i class="bi bi-plus-circle me-2"></i>Add New Student
+                        </a>
+                    </div>
+                </div>
             </div>
-            <div class="card-body">
+
+            <!-- Statistics Cards -->
+            <div class="row g-3 mb-4">
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="students-stat-card">
+                        <div class="students-stat-icon">
+                            <i class="bi bi-people-fill"></i>
+                        </div>
+                        <div class="students-stat-content">
+                            <h3 class="students-stat-number">{{ total_students }}</h3>
+                            <p class="students-stat-label">Total Students</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="students-stat-card">
+                        <div class="students-stat-icon">
+                            <i class="bi bi-person-check-fill"></i>
+                        </div>
+                        <div class="students-stat-content">
+                            <h3 class="students-stat-number">{{ students_with_accounts }}</h3>
+                            <p class="students-stat-label">With Accounts</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="students-stat-card">
+                        <div class="students-stat-icon">
+                            <i class="bi bi-person-x-fill"></i>
+                        </div>
+                        <div class="students-stat-content">
+                            <h3 class="students-stat-number">{{ total_students - students_with_accounts }}</h3>
+                            <p class="students-stat-label">Without Accounts</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="students-stat-card">
+                        <div class="students-stat-icon">
+                            <i class="bi bi-trophy-fill"></i>
+                        </div>
+                        <div class="students-stat-content">
+                            <h3 class="students-stat-number">{{ students|selectattr('gpa')|selectattr('gpa', 'ge', 3.5)|list|length }}</h3>
+                            <p class="students-stat-label">GPA ≥ 3.5</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search & Filter Section -->
+            <div class="students-search-card mb-4">
+                <div class="students-search-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-search me-2"></i>Search & Filter Students
+                    </h5>
+                </div>
+                <div class="students-search-body">
                 <form method="GET" action="{{ url_for('management.students') }}" class="row g-3">
                     <!-- Search Query -->
                     <div class="col-md-4">
@@ -335,13 +402,13 @@
                     <!-- Action Buttons -->
                     <div class="col-12">
                         <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-primary">
+                            <button type="submit" class="btn btn-students-search">
                                 <i class="bi bi-search me-2"></i>Search
                             </button>
-                            <a href="{{ url_for('management.students') }}" class="btn btn-outline-secondary">
+                            <a href="{{ url_for('management.students') }}" class="btn btn-students-reset">
                                 <i class="bi bi-arrow-clockwise me-2"></i>Reset
                             </a>
-                            <button type="button" class="btn btn-outline-info" data-bs-toggle="collapse" data-bs-target="#searchTips">
+                            <button type="button" class="btn btn-students-info" data-bs-toggle="collapse" data-bs-target="#searchTips">
                                 <i class="bi bi-info-circle me-2"></i>Search Tips
                             </button>
                         </div>
@@ -350,7 +417,7 @@
                 
                 <!-- Search Tips -->
                 <div class="collapse mt-3" id="searchTips">
-                    <div class="alert alert-info">
+                    <div class="students-info-box">
                         <h6><i class="bi bi-lightbulb me-2"></i>Search Tips:</h6>
                         <ul class="mb-0">
                             <li><strong>All Fields:</strong> Search across student names, contact info, addresses, and parent information</li>
@@ -362,15 +429,17 @@
                         </ul>
                     </div>
                 </div>
+                </div>
             </div>
-        </div>
 
-        <!-- CSV Import/Export Section -->
-        <div class="card shadow-sm mb-3">
-            <div class="card-header bg-light">
-                <h6 class="mb-0"><i class="bi bi-file-earmark-spreadsheet me-2"></i>CSV Import/Export</h6>
-            </div>
-            <div class="card-body">
+            <!-- CSV Import/Export Section -->
+            <div class="students-csv-card mb-4">
+                <div class="students-csv-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-file-earmark-spreadsheet me-2"></i>CSV Import/Export
+                    </h5>
+                </div>
+                <div class="students-csv-body">
                 <div class="row g-3">
                     <!-- Download CSV -->
                     <div class="col-md-4">
@@ -407,8 +476,8 @@
                 
                 <!-- CSV Upload Instructions -->
                 <div class="mt-3">
-                    <div class="alert alert-info mb-0">
-                        <h6 class="alert-heading"><i class="bi bi-info-circle me-2"></i>CSV Upload Instructions:</h6>
+                    <div class="students-info-box mb-0">
+                        <h6><i class="bi bi-info-circle me-2"></i>CSV Upload Instructions:</h6>
                         <ul class="mb-0 small">
                             <li><strong>Download the template</strong> to see the required format and example data</li>
                             <li><strong>Required fields:</strong> First Name and Last Name</li>
@@ -419,51 +488,37 @@
                         </ul>
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <!-- Enhanced Search Results Info -->
-        <div class="row mb-3">
-            <div class="col-md-8">
-                {% if search_query or grade_filter or status_filter %}
-                    <div class="alert alert-info">
-                        <i class="bi bi-info-circle me-2"></i>
-                        <strong>Search Results:</strong> Found {{ total_students }} student(s)
-                        {% if search_query %} matching "{{ search_query }}"{% endif %}
-                        {% if grade_filter %} in grade {{ grade_filter }}{% endif %}
-                        {% if status_filter == 'has_account' %} with accounts{% endif %}
-                        {% if status_filter == 'no_account' %} without accounts{% endif %}
-                    </div>
-                {% endif %}
-            </div>
-            <div class="col-md-4">
-                <div class="card bg-light">
-                    <div class="card-body py-2">
-                        <div class="row text-center">
-                            <div class="col-6">
-                                <small class="text-muted">Total</small><br>
-                                <strong>{{ total_students }}</strong>
-                            </div>
-                            <div class="col-6">
-                                <small class="text-muted">With Accounts</small><br>
-                                <strong class="text-success">{{ students_with_accounts }}</strong>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
-        </div>
 
-        <div class="card shadow-sm">
-            <div class="card-header bg-primary text-white">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="bi bi-people-fill me-2"></i>All Students</h5>
-                    <a href="{{ url_for('management.add_student') }}" class="btn btn-light btn-sm">
-                        <i class="bi bi-plus-circle me-1"></i>Add Student
-                    </a>
-                </div>
+            <!-- Search Results Info -->
+            {% if search_query or grade_filter or status_filter %}
+            <div class="students-results-banner mb-4">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>Search Results:</strong> Found {{ total_students }} student(s)
+                {% if search_query %} matching "{{ search_query }}"{% endif %}
+                {% if grade_filter %} in grade {{ grade_filter }}{% endif %}
+                {% if status_filter == 'has_account' %} with accounts{% endif %}
+                {% if status_filter == 'no_account' %} without accounts{% endif %}
             </div>
-            <div class="card-body">
+            {% endif %}
+
+            <!-- Students Table -->
+            <div class="students-table-card">
+                <div class="students-table-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-table me-2"></i>Student Records
+                    </h5>
+                    <div class="students-table-view-toggle">
+                        <button class="btn btn-sm btn-students-view active" onclick="switchStudentsView('table')">
+                            <i class="bi bi-table"></i> Table
+                        </button>
+                        <button class="btn btn-sm btn-students-view" onclick="switchStudentsView('cards')">
+                            <i class="bi bi-grid-3x3-gap-fill"></i> Cards
+                        </button>
+                    </div>
+                </div>
+                <div class="students-table-body" id="tableView">
                 <div class="table-responsive">
                     <table class="table table-hover align-middle">
                         <thead>
@@ -502,21 +557,101 @@
                                     </td>
                                     <td>
                                         <div class="btn-group" role="group">
-                                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="viewStudent({{ student.id }})">View</button>
-                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="editStudent({{ student.id }})">Edit</button>
-                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeStudent({{ student.id }}, '{{ student.first_name }} {{ student.last_name }}')">Remove</button>
+                                            <button type="button" class="btn btn-sm btn-students-action-view" onclick="viewStudent({{ student.id }})">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-students-action-edit" onclick="editStudent({{ student.id }})">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-students-action-delete" onclick="removeStudent({{ student.id }}, '{{ student.first_name }} {{ student.last_name }}')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
                             {% else %}
                                 <tr>
-                                    <td colspan="7" class="text-center text-muted">No students found.</td>
+                                    <td colspan="7" class="text-center text-muted py-5">
+                                        <i class="bi bi-inbox display-1 text-muted d-block mb-3"></i>
+                                        No students found.
+                                    </td>
                                 </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
+                </div>
+
+                <!-- Cards View (Hidden by default) -->
+                <div class="students-cards-body" id="cardsView" style="display: none;">
+                    <div class="row g-3">
+                        {% for student in students %}
+                        <div class="col-12 col-md-6 col-lg-4">
+                            <div class="student-card">
+                                <div class="student-card-header">
+                                    <div class="student-card-avatar">
+                                        <i class="bi bi-person-fill"></i>
+                                    </div>
+                                    <div class="student-card-info">
+                                        <h6 class="student-card-name">{{ student.first_name }} {{ student.last_name }}</h6>
+                                        <p class="student-card-id">ID: {{ student.student_id or 'N/A' }}</p>
+                                    </div>
+                                </div>
+                                <div class="student-card-body">
+                                    <div class="student-card-detail">
+                                        <i class="bi bi-mortarboard me-2"></i>
+                                        <span>Grade: {{ student.grade_level or 'N/A' }}</span>
+                                    </div>
+                                    <div class="student-card-detail">
+                                        <i class="bi bi-calendar3 me-2"></i>
+                                        <span>DOB: {{ student.dob or 'N/A' }}</span>
+                                    </div>
+                                    <div class="student-card-detail">
+                                        <i class="bi bi-trophy me-2"></i>
+                                        <span>GPA: 
+                                            {% if student.gpa %}
+                                                <span class="badge {% if student.gpa >= 3.5 %}bg-success{% elif student.gpa >= 2.0 %}bg-warning{% else %}bg-danger{% endif %}">
+                                                    {{ "%.2f"|format(student.gpa) }}
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">N/A</span>
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                    <div class="student-card-detail">
+                                        <i class="bi bi-person-circle me-2"></i>
+                                        <span>Account: 
+                                            {% if student.user %}
+                                                <span class="badge bg-success">{{ student.user.username }}</span>
+                                            {% else %}
+                                                <span class="badge bg-warning">No Account</span>
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="student-card-footer">
+                                    <button type="button" class="btn btn-sm btn-students-card-action" onclick="viewStudent({{ student.id }})">
+                                        <i class="bi bi-eye me-1"></i>View
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-students-card-action" onclick="editStudent({{ student.id }})">
+                                        <i class="bi bi-pencil me-1"></i>Edit
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-students-card-action-delete" onclick="removeStudent({{ student.id }}, '{{ student.first_name }} {{ student.last_name }}')">
+                                        <i class="bi bi-trash me-1"></i>Remove
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="col-12 text-center py-5">
+                            <i class="bi bi-inbox display-1 text-muted d-block mb-3"></i>
+                            <p class="text-muted">No students found.</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
             </div>
+
         </div>
 
     {% elif section == 'teachers' %}
@@ -3343,5 +3478,509 @@
             text-align: center;
         }
     }
+
+    /* ==================== STUDENTS TAB STYLES ==================== */
+    
+    /* Students Header */
+    .students-admin-header {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        border-radius: 15px;
+        padding: 2rem;
+        color: white;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+    .students-admin-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .students-admin-subtitle {
+        font-size: 1.1rem;
+        opacity: 0.9;
+    }
+
+    .btn-students-add {
+        background: white;
+        color: #4facfe;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-students-add:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(255,255,255,0.3);
+        color: #4facfe;
+    }
+
+    /* Students Statistics Cards */
+    .students-stat-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        border: 1px solid rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .students-stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+    }
+
+    .students-stat-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: white;
+        flex-shrink: 0;
+    }
+
+    .students-stat-card:nth-child(1) .students-stat-icon {
+        background: linear-gradient(45deg, #4facfe, #00f2fe);
+    }
+
+    .students-stat-card:nth-child(2) .students-stat-icon {
+        background: linear-gradient(45deg, #43e97b, #38f9d7);
+    }
+
+    .students-stat-card:nth-child(3) .students-stat-icon {
+        background: linear-gradient(45deg, #fa709a, #fee140);
+    }
+
+    .students-stat-card:nth-child(4) .students-stat-icon {
+        background: linear-gradient(45deg, #ffd700, #ffed4e);
+    }
+
+    .students-stat-content {
+        flex: 1;
+    }
+
+    .students-stat-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 0;
+        color: #2c3e50;
+        line-height: 1;
+    }
+
+    .students-stat-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin: 0.25rem 0 0 0;
+        font-weight: 500;
+    }
+
+    /* Students Search Card */
+    .students-search-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        border: 1px solid rgba(0,0,0,0.05);
+        overflow: hidden;
+    }
+
+    .students-search-header {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 1.25rem 1.5rem;
+        border-bottom: 2px solid #4facfe;
+    }
+
+    .students-search-header h5 {
+        margin: 0;
+        color: #2c3e50;
+        font-weight: 700;
+    }
+
+    .students-search-body {
+        padding: 1.5rem;
+    }
+
+    .btn-students-search {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: white;
+        border: none;
+        padding: 0.5rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-students-search:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(79, 172, 254, 0.3);
+        color: white;
+    }
+
+    .btn-students-reset {
+        background: white;
+        color: #6c757d;
+        border: 2px solid #dee2e6;
+        padding: 0.5rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-students-reset:hover {
+        background: #f8f9fa;
+        border-color: #4facfe;
+        color: #4facfe;
+    }
+
+    .btn-students-info {
+        background: white;
+        color: #17a2b8;
+        border: 2px solid #17a2b8;
+        padding: 0.5rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-students-info:hover {
+        background: #17a2b8;
+        color: white;
+    }
+
+    .students-info-box {
+        background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+        border: 2px solid #4facfe;
+        border-radius: 12px;
+        padding: 1.25rem;
+    }
+
+    .students-info-box h6 {
+        color: #2c3e50;
+        font-weight: 700;
+        margin-bottom: 0.75rem;
+    }
+
+    .students-info-box ul {
+        margin-bottom: 0;
+        padding-left: 1.25rem;
+    }
+
+    .students-info-box li {
+        margin-bottom: 0.5rem;
+        color: #495057;
+    }
+
+    /* Students CSV Card */
+    .students-csv-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        border: 1px solid rgba(0,0,0,0.05);
+        overflow: hidden;
+    }
+
+    .students-csv-header {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 1.25rem 1.5rem;
+        border-bottom: 2px solid #28a745;
+    }
+
+    .students-csv-header h5 {
+        margin: 0;
+        color: #2c3e50;
+        font-weight: 700;
+    }
+
+    .students-csv-body {
+        padding: 1.5rem;
+    }
+
+    /* Students Results Banner */
+    .students-results-banner {
+        background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+        border: 2px solid #4facfe;
+        border-radius: 12px;
+        padding: 1rem 1.5rem;
+        color: #2c3e50;
+        font-weight: 500;
+    }
+
+    /* Students Table Card */
+    .students-table-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        border: 1px solid rgba(0,0,0,0.05);
+        overflow: hidden;
+    }
+
+    .students-table-header {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        padding: 1.25rem 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .students-table-header h5 {
+        margin: 0;
+        color: white;
+        font-weight: 700;
+    }
+
+    .students-table-view-toggle {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .btn-students-view {
+        background: rgba(255,255,255,0.2);
+        color: white;
+        border: 2px solid white;
+        padding: 0.375rem 1rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-students-view:hover,
+    .btn-students-view.active {
+        background: white;
+        color: #4facfe;
+    }
+
+    .students-table-body {
+        padding: 1.5rem;
+    }
+
+    .students-table-body .table {
+        margin-bottom: 0;
+    }
+
+    .students-table-body .table thead th {
+        background: #f8f9fa;
+        color: #2c3e50;
+        font-weight: 700;
+        border-bottom: 2px solid #4facfe;
+        padding: 1rem;
+    }
+
+    .students-table-body .table tbody tr {
+        transition: all 0.3s ease;
+    }
+
+    .students-table-body .table tbody tr:hover {
+        background: #f8f9fa;
+        transform: scale(1.01);
+    }
+
+    /* Student Action Buttons */
+    .btn-students-action-view {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        transition: all 0.3s ease;
+    }
+
+    .btn-students-action-view:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+
+    .btn-students-action-edit {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: white;
+        border: none;
+        transition: all 0.3s ease;
+    }
+
+    .btn-students-action-edit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(79, 172, 254, 0.4);
+        color: white;
+    }
+
+    .btn-students-action-delete {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        border: none;
+        transition: all 0.3s ease;
+    }
+
+    .btn-students-action-delete:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(245, 87, 108, 0.4);
+        color: white;
+    }
+
+    /* Students Cards View */
+    .students-cards-body {
+        padding: 1.5rem;
+    }
+
+    .student-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        border: 1px solid rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+        overflow: hidden;
+    }
+
+    .student-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+    }
+
+    .student-card-header {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        padding: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .student-card-avatar {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: #4facfe;
+        flex-shrink: 0;
+    }
+
+    .student-card-info {
+        flex: 1;
+    }
+
+    .student-card-name {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: white;
+        margin: 0;
+    }
+
+    .student-card-id {
+        font-size: 0.85rem;
+        color: rgba(255,255,255,0.9);
+        margin: 0.25rem 0 0 0;
+    }
+
+    .student-card-body {
+        padding: 1.5rem;
+    }
+
+    .student-card-detail {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #f0f0f0;
+        color: #495057;
+        font-size: 0.9rem;
+    }
+
+    .student-card-detail:last-child {
+        border-bottom: none;
+    }
+
+    .student-card-detail i {
+        color: #4facfe;
+        width: 24px;
+    }
+
+    .student-card-footer {
+        padding: 1rem 1.5rem;
+        background: #f8f9fa;
+        display: flex;
+        gap: 0.5rem;
+        border-top: 1px solid #e9ecef;
+    }
+
+    .btn-students-card-action {
+        flex: 1;
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: white;
+        border: none;
+        padding: 0.5rem 0.75rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-students-card-action:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(79, 172, 254, 0.4);
+        color: white;
+    }
+
+    .btn-students-card-action-delete {
+        flex: 1;
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        border: none;
+        padding: 0.5rem 0.75rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-students-card-action-delete:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(245, 87, 108, 0.4);
+        color: white;
+    }
+
+    /* Responsive Design for Students Tab */
+    @media (max-width: 768px) {
+        .students-admin-title {
+            font-size: 2rem;
+        }
+        
+        .students-stat-card {
+            flex-direction: column;
+            text-align: center;
+        }
+        
+        .students-table-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+    }
     </style>
+
+    <!-- JavaScript for Students Tab -->
+    <script>
+    function switchStudentsView(view) {
+        const tableView = document.getElementById('tableView');
+        const cardsView = document.getElementById('cardsView');
+        const buttons = document.querySelectorAll('.btn-students-view');
+        
+        if (view === 'table') {
+            tableView.style.display = 'block';
+            cardsView.style.display = 'none';
+            buttons[0].classList.add('active');
+            buttons[1].classList.remove('active');
+        } else {
+            tableView.style.display = 'none';
+            cardsView.style.display = 'block';
+            buttons[0].classList.remove('active');
+            buttons[1].classList.add('active');
+        }
+    }
+    </script>
 {% endblock %} 

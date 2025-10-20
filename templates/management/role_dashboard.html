@@ -652,18 +652,328 @@
                 </div>
             </div>
 
+            <!-- View Student Modal -->
+            <div class="modal fade" id="viewStudentModal" tabindex="-1">
+                <div class="modal-dialog modal-lg modal-dialog-centered">
+                    <div class="modal-content student-modal">
+                        <div class="modal-header student-modal-header">
+                            <h5 class="modal-title">
+                                <i class="bi bi-person-circle me-2"></i>Student Details
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body student-modal-body">
+                            <!-- Student Avatar Section -->
+                            <div class="student-modal-avatar-section">
+                                <div class="student-modal-avatar">
+                                    <i class="bi bi-person-fill"></i>
+                                </div>
+                                <div class="student-modal-name-section">
+                                    <h4 id="viewStudentName" class="student-modal-name">Student Name</h4>
+                                    <p id="viewStudentId" class="student-modal-id">ID: N/A</p>
+                                </div>
+                            </div>
+
+                            <!-- Student Information Grid -->
+                            <div class="student-info-grid">
+                                <div class="student-info-card">
+                                    <div class="student-info-icon">
+                                        <i class="bi bi-mortarboard-fill"></i>
+                                    </div>
+                                    <div class="student-info-content">
+                                        <label>Grade Level</label>
+                                        <span id="viewStudentGrade">N/A</span>
+                                    </div>
+                                </div>
+                                <div class="student-info-card">
+                                    <div class="student-info-icon">
+                                        <i class="bi bi-calendar3"></i>
+                                    </div>
+                                    <div class="student-info-content">
+                                        <label>Date of Birth</label>
+                                        <span id="viewStudentDob">N/A</span>
+                                    </div>
+                                </div>
+                                <div class="student-info-card">
+                                    <div class="student-info-icon">
+                                        <i class="bi bi-trophy-fill"></i>
+                                    </div>
+                                    <div class="student-info-content">
+                                        <label>GPA</label>
+                                        <span id="viewStudentGpa">N/A</span>
+                                    </div>
+                                </div>
+                                <div class="student-info-card">
+                                    <div class="student-info-icon">
+                                        <i class="bi bi-person-badge"></i>
+                                    </div>
+                                    <div class="student-info-content">
+                                        <label>Username</label>
+                                        <span id="viewStudentUsername">N/A</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Contact Information -->
+                            <div class="student-details-section">
+                                <h6 class="student-details-title">
+                                    <i class="bi bi-envelope-fill me-2"></i>Contact Information
+                                </h6>
+                                <div class="student-details-grid">
+                                    <div class="student-detail-item">
+                                        <label>Email</label>
+                                        <span id="viewStudentEmail">N/A</span>
+                                    </div>
+                                    <div class="student-detail-item">
+                                        <label>Phone</label>
+                                        <span id="viewStudentPhone">N/A</span>
+                                    </div>
+                                    <div class="student-detail-item">
+                                        <label>Address</label>
+                                        <span id="viewStudentAddress">N/A</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Parent Information -->
+                            <div class="student-details-section">
+                                <h6 class="student-details-title">
+                                    <i class="bi bi-people-fill me-2"></i>Parent/Guardian Information
+                                </h6>
+                                <div class="student-details-grid">
+                                    <div class="student-detail-item">
+                                        <label>Parent Name</label>
+                                        <span id="viewParentName">N/A</span>
+                                    </div>
+                                    <div class="student-detail-item">
+                                        <label>Parent Email</label>
+                                        <span id="viewParentEmail">N/A</span>
+                                    </div>
+                                    <div class="student-detail-item">
+                                        <label>Parent Phone</label>
+                                        <span id="viewParentPhone">N/A</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Academic Status -->
+                            <div class="student-details-section">
+                                <h6 class="student-details-title">
+                                    <i class="bi bi-book-fill me-2"></i>Academic Status
+                                </h6>
+                                <div id="viewStudentClasses" class="student-classes-list">
+                                    <!-- Classes will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer student-modal-footer">
+                            <button type="button" class="btn btn-student-edit" onclick="openEditFromView()">
+                                <i class="bi bi-pencil me-2"></i>Edit Student
+                            </button>
+                            <button type="button" class="btn btn-student-close" data-bs-dismiss="modal">
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Edit Student Modal -->
+            <div class="modal fade" id="editStudentModal" tabindex="-1">
+                <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                    <div class="modal-content student-modal">
+                        <div class="modal-header student-modal-header-edit">
+                            <h5 class="modal-title">
+                                <i class="bi bi-pencil-square me-2"></i>Edit Student
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <form id="editStudentForm">
+                            <div class="modal-body student-modal-body">
+                                <input type="hidden" id="editStudentIdHidden" name="student_id">
+                                
+                                <!-- Personal Information -->
+                                <div class="edit-section">
+                                    <h6 class="edit-section-title">
+                                        <i class="bi bi-person-fill me-2"></i>Personal Information
+                                    </h6>
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">First Name <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control student-input" id="editFirstName" name="first_name" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Last Name <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control student-input" id="editLastName" name="last_name" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Date of Birth</label>
+                                            <input type="date" class="form-control student-input" id="editDob" name="dob">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Grade Level</label>
+                                            <select class="form-select student-input" id="editGradeLevel" name="grade_level">
+                                                <option value="">Select Grade</option>
+                                                <option value="1">1st Grade</option>
+                                                <option value="2">2nd Grade</option>
+                                                <option value="3">3rd Grade</option>
+                                                <option value="4">4th Grade</option>
+                                                <option value="5">5th Grade</option>
+                                                <option value="6">6th Grade</option>
+                                                <option value="7">7th Grade</option>
+                                                <option value="8">8th Grade</option>
+                                                <option value="9">9th Grade</option>
+                                                <option value="10">10th Grade</option>
+                                                <option value="11">11th Grade</option>
+                                                <option value="12">12th Grade</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-12">
+                                            <label class="form-label">Student ID</label>
+                                            <input type="text" class="form-control student-input" id="editStudentIdDisplay" name="student_id" readonly>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Contact Information -->
+                                <div class="edit-section">
+                                    <h6 class="edit-section-title">
+                                        <i class="bi bi-envelope-fill me-2"></i>Contact Information
+                                    </h6>
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Email</label>
+                                            <input type="email" class="form-control student-input" id="editEmail" name="email">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Phone</label>
+                                            <input type="tel" class="form-control student-input" id="editPhone" name="phone">
+                                        </div>
+                                        <div class="col-md-12">
+                                            <label class="form-label">Address</label>
+                                            <textarea class="form-control student-input" id="editAddress" name="address" rows="2"></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Parent Information -->
+                                <div class="edit-section">
+                                    <h6 class="edit-section-title">
+                                        <i class="bi bi-people-fill me-2"></i>Parent/Guardian Information
+                                    </h6>
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Parent First Name</label>
+                                            <input type="text" class="form-control student-input" id="editParentFirstName" name="parent_first_name">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Parent Last Name</label>
+                                            <input type="text" class="form-control student-input" id="editParentLastName" name="parent_last_name">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Parent Email</label>
+                                            <input type="email" class="form-control student-input" id="editParentEmail" name="parent_email">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Parent Phone</label>
+                                            <input type="tel" class="form-control student-input" id="editParentPhone" name="parent_phone">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer student-modal-footer">
+                                <button type="button" class="btn btn-student-cancel" data-bs-dismiss="modal">
+                                    Cancel
+                                </button>
+                                <button type="submit" class="btn btn-student-save">
+                                    <i class="bi bi-check-circle me-2"></i>Save Changes
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
         </div>
 
     {% elif section == 'teachers' %}
         <!-- Teachers & Staff Management View -->
-        <h2 class="mb-4">Teachers & Staff Management</h2>
-
-        <!-- Advanced Teacher Search -->
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0"><i class="bi bi-search me-2"></i>Advanced Teacher & Staff Search</h5>
+        <div class="container-fluid px-2 px-md-4">
+            <!-- Modern Teachers Header -->
+            <div class="teachers-admin-header mb-4">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <div>
+                        <h2 class="teachers-admin-title mb-1">
+                            <i class="bi bi-person-badge-fill me-2"></i>Teachers & Staff Management
+                        </h2>
+                        <p class="teachers-admin-subtitle mb-0">
+                            <i class="bi bi-briefcase me-2"></i>Manage teachers, staff records, and account information
+                        </p>
+                    </div>
+                    <div>
+                        <a href="{{ url_for('management.add_teacher_staff') }}" class="btn btn-teachers-add">
+                            <i class="bi bi-plus-circle me-2"></i>Add New Staff
+                        </a>
+                    </div>
+                </div>
             </div>
-            <div class="card-body">
+
+            <!-- Statistics Cards -->
+            <div class="row g-3 mb-4">
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="teachers-stat-card">
+                        <div class="teachers-stat-icon">
+                            <i class="bi bi-people-fill"></i>
+                        </div>
+                        <div class="teachers-stat-content">
+                            <h3 class="teachers-stat-number">{{ total_teachers or teachers|length }}</h3>
+                            <p class="teachers-stat-label">Total Staff</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="teachers-stat-card">
+                        <div class="teachers-stat-icon">
+                            <i class="bi bi-person-check-fill"></i>
+                        </div>
+                        <div class="teachers-stat-content">
+                            <h3 class="teachers-stat-number">{{ teachers_with_accounts or 0 }}</h3>
+                            <p class="teachers-stat-label">With Accounts</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="teachers-stat-card">
+                        <div class="teachers-stat-icon">
+                            <i class="bi bi-person-x-fill"></i>
+                        </div>
+                        <div class="teachers-stat-content">
+                            <h3 class="teachers-stat-number">{{ teachers_without_accounts or 0 }}</h3>
+                            <p class="teachers-stat-label">Without Accounts</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="teachers-stat-card">
+                        <div class="teachers-stat-icon">
+                            <i class="bi bi-calendar-check"></i>
+                        </div>
+                        <div class="teachers-stat-content">
+                            <h3 class="teachers-stat-number">{{ teachers|selectattr('employment_type', 'equalto', 'Full Time')|list|length }}</h3>
+                            <p class="teachers-stat-label">Full Time</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search & Filter Section -->
+            <div class="teachers-search-card mb-4">
+                <div class="teachers-search-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-search me-2"></i>Search & Filter Staff
+                    </h5>
+                </div>
+                <div class="teachers-search-body">
                 <form method="GET" action="{{ url_for('management.teachers') }}" id="teacherSearchForm">
                     <div class="row g-3">
                         <!-- Search Query -->
@@ -767,13 +1077,13 @@
                         <!-- Action Buttons -->
                         <div class="col-12">
                             <div class="d-flex gap-2">
-                                <button type="submit" class="btn btn-primary">
+                                <button type="submit" class="btn btn-teachers-search">
                                     <i class="bi bi-search me-2"></i>Search
                                 </button>
-                                <a href="{{ url_for('management.teachers') }}" class="btn btn-outline-secondary">
+                                <a href="{{ url_for('management.teachers') }}" class="btn btn-teachers-reset">
                                     <i class="bi bi-arrow-clockwise me-2"></i>Reset
                                 </a>
-                                <button type="button" class="btn btn-outline-info" data-bs-toggle="collapse" data-bs-target="#searchTips">
+                                <button type="button" class="btn btn-teachers-info" data-bs-toggle="collapse" data-bs-target="#searchTips">
                                     <i class="bi bi-info-circle me-2"></i>Search Tips
                                 </button>
                             </div>
@@ -782,7 +1092,7 @@
                     
                     <!-- Search Tips -->
                     <div class="collapse mt-3" id="searchTips">
-                        <div class="alert alert-info">
+                        <div class="teachers-info-box">
                             <h6><i class="bi bi-lightbulb me-2"></i>Search Tips:</h6>
                             <ul class="mb-0">
                                 <li><strong>All Fields:</strong> Searches across all staff information including name, contact, role, department, address, emergency contacts, and employment details</li>
@@ -800,45 +1110,37 @@
                         </div>
                     </div>
                 </form>
+                </div>
             </div>
-        </div>
 
-        <!-- Search Results Info -->
-        <div class="row mb-3">
-            <div class="col-md-6">
-                <div class="alert alert-success mb-0">
-                    <i class="bi bi-people-fill me-2"></i>
-                    <strong>Total Staff:</strong> {{ total_teachers or teachers|length }}
-                    {% if teachers_with_accounts is defined %}
-                        | <strong>With Accounts:</strong> {{ teachers_with_accounts }}
-                        | <strong>Without Accounts:</strong> {{ teachers_without_accounts }}
-                    {% endif %}
-                </div>
-            </div>
+            <!-- Search Results Info -->
             {% if search_query or department_filter or role_filter or employment_filter %}
-            <div class="col-md-6">
-                <div class="alert alert-info mb-0">
-                    <i class="bi bi-funnel me-2"></i>
-                    <strong>Active Filters:</strong>
-                    {% if search_query %}<span class="badge bg-primary me-1">Search: "{{ search_query }}"</span>{% endif %}
-                    {% if department_filter %}<span class="badge bg-secondary me-1">Dept: "{{ department_filter }}"</span>{% endif %}
-                    {% if role_filter %}<span class="badge bg-warning me-1">Role: "{{ role_filter }}"</span>{% endif %}
-                    {% if employment_filter %}<span class="badge bg-info me-1">Type: "{{ employment_filter }}"</span>{% endif %}
-                </div>
+            <div class="teachers-results-banner mb-4">
+                <i class="bi bi-funnel me-2"></i>
+                <strong>Active Filters:</strong>
+                {% if search_query %}<span class="badge bg-primary me-1">Search: "{{ search_query }}"</span>{% endif %}
+                {% if department_filter %}<span class="badge bg-secondary me-1">Dept: "{{ department_filter }}"</span>{% endif %}
+                {% if role_filter %}<span class="badge bg-warning me-1">Role: "{{ role_filter }}"</span>{% endif %}
+                {% if employment_filter %}<span class="badge bg-info me-1">Type: "{{ employment_filter }}"</span>{% endif %}
             </div>
             {% endif %}
-        </div>
 
-        <div class="card shadow-sm">
-            <div class="card-header bg-success text-white">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="bi bi-person-badge-fill me-2"></i>Teachers & Staff Directory</h5>
-                    <a href="{{ url_for('management.add_teacher_staff') }}" class="btn btn-light btn-sm">
-                        <i class="bi bi-plus-circle me-1"></i>Add Staff
-                    </a>
+            <!-- Teachers Table -->
+            <div class="teachers-table-card">
+                <div class="teachers-table-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-table me-2"></i>Staff Records
+                    </h5>
+                    <div class="teachers-table-view-toggle">
+                        <button class="btn btn-sm btn-teachers-view active" onclick="switchTeachersView('table')">
+                            <i class="bi bi-table"></i> Table
+                        </button>
+                        <button class="btn btn-sm btn-teachers-view" onclick="switchTeachersView('cards')">
+                            <i class="bi bi-grid-3x3-gap-fill"></i> Cards
+                        </button>
+                    </div>
                 </div>
-            </div>
-            <div class="card-body">
+                <div class="teachers-table-body" id="teachersTableView">
                 
                 <div class="table-responsive">
                     <table class="table table-hover align-middle teachers-table">
@@ -929,34 +1231,125 @@
                                         <span class="badge bg-success">Active</span>
                                     </td>
                                     <td>
-                                        <div class="d-flex flex-column gap-1">
-                                            <div class="btn-group btn-group-sm" role="group">
-                                                <button type="button" class="btn btn-outline-primary" onclick="viewTeacher({{ teacher.id }})" title="View Details">
-                                                    <i class="bi bi-eye"></i>
-                                                </button>
-                                                <button type="button" class="btn btn-outline-secondary" onclick="editTeacher({{ teacher.id }})" title="Edit">
-                                                    <i class="bi bi-pencil"></i>
-                                                </button>
-                                                <button type="button" class="btn btn-outline-danger" onclick="removeTeacher({{ teacher.id }}, '{{ teacher.first_name }} {{ teacher.last_name }}')" title="Remove">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
-                                            </div>
+                                        <div class="btn-group" role="group">
+                                            <button type="button" class="btn btn-sm btn-teachers-action-view" onclick="viewTeacher({{ teacher.id }})">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-teachers-action-edit" onclick="editTeacher({{ teacher.id }})">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-teachers-action-delete" onclick="removeTeacher({{ teacher.id }}, '{{ teacher.first_name }} {{ teacher.last_name }}')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
                             {% else %}
                                 <tr>
-                                    <td colspan="8" class="text-center text-muted py-4">
-                                        <i class="bi bi-search display-4 text-muted"></i>
-                                        <p class="mt-2 mb-0">No teachers or staff found matching your criteria.</p>
-                                        <small>Try adjusting your search filters or clearing them to see all staff.</small>
+                                    <td colspan="8" class="text-center text-muted py-5">
+                                        <i class="bi bi-inbox display-1 text-muted d-block mb-3"></i>
+                                        No teachers or staff found matching your criteria.
                                     </td>
                                 </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
+                </div>
+
+                <!-- Cards View (Hidden by default) -->
+                <div class="teachers-cards-body" id="teachersCardsView" style="display: none;">
+                    <div class="row g-3">
+                        {% for teacher in teachers %}
+                        <div class="col-12 col-md-6 col-lg-4">
+                            <div class="teacher-card">
+                                <div class="teacher-card-header">
+                                    <div class="teacher-card-avatar">
+                                        {% if teacher.image %}
+                                            <img src="{{ url_for('static', filename='uploads/' + teacher.image) }}" 
+                                                 alt="{{ teacher.first_name }} {{ teacher.last_name }}">
+                                        {% else %}
+                                            <i class="bi bi-person-fill"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div class="teacher-card-info">
+                                        <h6 class="teacher-card-name">{{ teacher.first_name }}{% if teacher.middle_initial %} {{ teacher.middle_initial }}.{% endif %} {{ teacher.last_name }}</h6>
+                                        <p class="teacher-card-id">ID: {{ teacher.staff_id or 'N/A' }}</p>
+                                    </div>
+                                </div>
+                                <div class="teacher-card-body">
+                                    <div class="teacher-card-detail">
+                                        <i class="bi bi-person-badge me-2"></i>
+                                        <span>Role: 
+                                            {% if teacher.user %}
+                                                {% set badge_class = 'bg-danger' if teacher.user.role == 'Director' else 'bg-warning' if teacher.user.role == 'School Administrator' else 'bg-info' if teacher.user.role == 'Teacher' else 'bg-secondary' if teacher.user.role == 'Tech' else 'bg-light text-dark' %}
+                                                <span class="badge {{ badge_class }}">{{ teacher.user.role }}</span>
+                                            {% else %}
+                                                <span class="badge bg-warning">No Account</span>
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                    <div class="teacher-card-detail">
+                                        <i class="bi bi-building me-2"></i>
+                                        <span>Dept: 
+                                            {% if teacher.department %}
+                                                {% set departments = teacher.department.split(',') %}
+                                                {% for dept in departments[:2] %}
+                                                    <span class="badge bg-info">{{ dept.strip() }}</span>
+                                                {% endfor %}
+                                            {% else %}
+                                                N/A
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                    <div class="teacher-card-detail">
+                                        <i class="bi bi-envelope me-2"></i>
+                                        <span class="text-truncate" style="max-width: 200px;">{{ teacher.email or 'N/A' }}</span>
+                                    </div>
+                                    <div class="teacher-card-detail">
+                                        <i class="bi bi-person-circle me-2"></i>
+                                        <span>Username: 
+                                            {% if teacher.user %}
+                                                <span class="badge bg-primary">{{ teacher.user.username }}</span>
+                                            {% else %}
+                                                <span class="badge bg-warning">No Account</span>
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                    <div class="teacher-card-detail">
+                                        <i class="bi bi-calendar-check me-2"></i>
+                                        <span>Type: 
+                                            {% if teacher.employment_type %}
+                                                <span class="badge bg-secondary">{{ teacher.employment_type }}</span>
+                                            {% else %}
+                                                N/A
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="teacher-card-footer">
+                                    <button type="button" class="btn btn-sm btn-teachers-card-action" onclick="viewTeacher({{ teacher.id }})">
+                                        <i class="bi bi-eye me-1"></i>View
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-teachers-card-action" onclick="editTeacher({{ teacher.id }})">
+                                        <i class="bi bi-pencil me-1"></i>Edit
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-teachers-card-action-delete" onclick="removeTeacher({{ teacher.id }}, '{{ teacher.first_name }} {{ teacher.last_name }}')">
+                                        <i class="bi bi-trash me-1"></i>Remove
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="col-12 text-center py-5">
+                            <i class="bi bi-inbox display-1 text-muted d-block mb-3"></i>
+                            <p class="text-muted">No teachers or staff found.</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
             </div>
+
         </div>
 
     {% elif section == 'classes' %}
@@ -3961,10 +4354,742 @@
             align-items: flex-start;
         }
     }
+
+    /* ==================== STUDENT MODALS STYLES ==================== */
+    
+    /* Student Modal Base */
+    .student-modal .modal-content {
+        border: none;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+
+    /* View Modal Header */
+    .student-modal-header {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: white;
+        padding: 1.5rem 2rem;
+        border-bottom: none;
+    }
+
+    .student-modal-header .modal-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+
+    /* Edit Modal Header */
+    .student-modal-header-edit {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        padding: 1.5rem 2rem;
+        border-bottom: none;
+    }
+
+    .student-modal-header-edit .modal-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+
+    /* Modal Body */
+    .student-modal-body {
+        padding: 2rem;
+        background: #f8f9fa;
+    }
+
+    /* Avatar Section */
+    .student-modal-avatar-section {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+        background: white;
+        padding: 2rem;
+        border-radius: 15px;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    }
+
+    .student-modal-avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        color: white;
+        flex-shrink: 0;
+    }
+
+    .student-modal-name-section {
+        flex: 1;
+    }
+
+    .student-modal-name {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #2c3e50;
+        margin: 0;
+    }
+
+    .student-modal-id {
+        font-size: 1rem;
+        color: #6c757d;
+        margin: 0.5rem 0 0 0;
+        font-weight: 500;
+    }
+
+    /* Student Info Grid */
+    .student-info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .student-info-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
+    }
+
+    .student-info-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+    }
+
+    .student-info-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        color: white;
+        flex-shrink: 0;
+    }
+
+    .student-info-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .student-info-content label {
+        font-size: 0.75rem;
+        color: #6c757d;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.25rem;
+    }
+
+    .student-info-content span {
+        font-size: 1.1rem;
+        color: #2c3e50;
+        font-weight: 700;
+    }
+
+    /* Student Details Section */
+    .student-details-section {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    }
+
+    .student-details-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid #4facfe;
+    }
+
+    .student-details-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.25rem;
+    }
+
+    .student-detail-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .student-detail-item label {
+        font-size: 0.85rem;
+        color: #6c757d;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .student-detail-item span {
+        font-size: 1rem;
+        color: #2c3e50;
+        font-weight: 500;
+    }
+
+    /* Student Classes List */
+    .student-classes-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+
+    .student-class-badge {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        box-shadow: 0 3px 10px rgba(79, 172, 254, 0.3);
+    }
+
+    /* Edit Sections */
+    .edit-section {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    }
+
+    .edit-section-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid #f093fb;
+    }
+
+    .student-input {
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        padding: 0.625rem 1rem;
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+    }
+
+    .student-input:focus {
+        border-color: #4facfe;
+        box-shadow: 0 0 0 0.2rem rgba(79, 172, 254, 0.25);
+    }
+
+    /* Modal Footer */
+    .student-modal-footer {
+        background: white;
+        padding: 1.5rem 2rem;
+        border-top: 1px solid #e9ecef;
+        display: flex;
+        gap: 1rem;
+        justify-content: flex-end;
+    }
+
+    /* Modal Buttons */
+    .btn-student-edit {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        border: none;
+        padding: 0.625rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-student-edit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(240, 147, 251, 0.4);
+        color: white;
+    }
+
+    .btn-student-close {
+        background: white;
+        color: #6c757d;
+        border: 2px solid #dee2e6;
+        padding: 0.625rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-student-close:hover {
+        background: #f8f9fa;
+        border-color: #4facfe;
+        color: #4facfe;
+    }
+
+    .btn-student-save {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        color: white;
+        border: none;
+        padding: 0.625rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-student-save:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(67, 233, 123, 0.4);
+        color: white;
+    }
+
+    .btn-student-cancel {
+        background: white;
+        color: #6c757d;
+        border: 2px solid #dee2e6;
+        padding: 0.625rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-student-cancel:hover {
+        background: #f8f9fa;
+        border-color: #f093fb;
+        color: #f093fb;
+    }
+
+    /* Modal Responsive Design */
+    @media (max-width: 768px) {
+        .student-modal-avatar-section {
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .student-info-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .student-details-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* ==================== TEACHERS TAB STYLES ==================== */
+    
+    /* Teachers Header */
+    .teachers-admin-header {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        border-radius: 15px;
+        padding: 2rem;
+        color: white;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+    .teachers-admin-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .teachers-admin-subtitle {
+        font-size: 1.1rem;
+        opacity: 0.9;
+    }
+
+    .btn-teachers-add {
+        background: white;
+        color: #43e97b;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-teachers-add:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(255,255,255,0.3);
+        color: #43e97b;
+    }
+
+    /* Teachers Statistics Cards */
+    .teachers-stat-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        border: 1px solid rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .teachers-stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+    }
+
+    .teachers-stat-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: white;
+        flex-shrink: 0;
+    }
+
+    .teachers-stat-card:nth-child(1) .teachers-stat-icon {
+        background: linear-gradient(45deg, #43e97b, #38f9d7);
+    }
+
+    .teachers-stat-card:nth-child(2) .teachers-stat-icon {
+        background: linear-gradient(45deg, #fa709a, #fee140);
+    }
+
+    .teachers-stat-card:nth-child(3) .teachers-stat-icon {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+    }
+
+    .teachers-stat-card:nth-child(4) .teachers-stat-icon {
+        background: linear-gradient(45deg, #ffd700, #ffed4e);
+    }
+
+    .teachers-stat-content {
+        flex: 1;
+    }
+
+    .teachers-stat-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 0;
+        color: #2c3e50;
+        line-height: 1;
+    }
+
+    .teachers-stat-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin: 0.25rem 0 0 0;
+        font-weight: 500;
+    }
+
+    /* Teachers Search Card */
+    .teachers-search-card, .teachers-table-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        border: 1px solid rgba(0,0,0,0.05);
+        overflow: hidden;
+    }
+
+    .teachers-search-header, .teachers-table-header {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        padding: 1.25rem 1.5rem;
+        color: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .teachers-search-header h5, .teachers-table-header h5 {
+        margin: 0;
+        font-weight: 700;
+    }
+
+    .teachers-search-body, .teachers-table-body {
+        padding: 1.5rem;
+    }
+
+    .btn-teachers-search {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        color: white;
+        border: none;
+        padding: 0.5rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-teachers-search:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(67, 233, 123, 0.3);
+        color: white;
+    }
+
+    .btn-teachers-reset, .btn-teachers-info {
+        background: white;
+        color: #6c757d;
+        border: 2px solid #dee2e6;
+        padding: 0.5rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-teachers-reset:hover {
+        background: #f8f9fa;
+        border-color: #43e97b;
+        color: #43e97b;
+    }
+
+    .btn-teachers-info {
+        border-color: #17a2b8;
+        color: #17a2b8;
+    }
+
+    .btn-teachers-info:hover {
+        background: #17a2b8;
+        color: white;
+    }
+
+    .teachers-info-box {
+        background: linear-gradient(135deg, #e0f7ea 0%, #c8f1dd 100%);
+        border: 2px solid #43e97b;
+        border-radius: 12px;
+        padding: 1.25rem;
+    }
+
+    .teachers-info-box h6 {
+        color: #2c3e50;
+        font-weight: 700;
+        margin-bottom: 0.75rem;
+    }
+
+    .teachers-results-banner {
+        background: linear-gradient(135deg, #e0f7ea 0%, #c8f1dd 100%);
+        border: 2px solid #43e97b;
+        border-radius: 12px;
+        padding: 1rem 1.5rem;
+        color: #2c3e50;
+        font-weight: 500;
+    }
+
+    .teachers-table-view-toggle {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .btn-teachers-view {
+        background: rgba(255,255,255,0.2);
+        color: white;
+        border: 2px solid white;
+        padding: 0.375rem 1rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-teachers-view:hover,
+    .btn-teachers-view.active {
+        background: white;
+        color: #43e97b;
+    }
+
+    /* Teacher Action Buttons */
+    .btn-teachers-action-view {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        transition: all 0.3s ease;
+    }
+
+    .btn-teachers-action-view:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+
+    .btn-teachers-action-edit {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        color: white;
+        border: none;
+        transition: all 0.3s ease;
+    }
+
+    .btn-teachers-action-edit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(67, 233, 123, 0.4);
+        color: white;
+    }
+
+    .btn-teachers-action-delete {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        border: none;
+        transition: all 0.3s ease;
+    }
+
+    .btn-teachers-action-delete:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(245, 87, 108, 0.4);
+        color: white;
+    }
+
+    /* Teachers Cards View */
+    .teachers-cards-body {
+        padding: 1.5rem;
+    }
+
+    .teacher-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        border: 1px solid rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+        overflow: hidden;
+    }
+
+    .teacher-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+    }
+
+    .teacher-card-header {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        padding: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .teacher-card-avatar {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: #43e97b;
+        flex-shrink: 0;
+        overflow: hidden;
+    }
+
+    .teacher-card-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .teacher-card-info {
+        flex: 1;
+    }
+
+    .teacher-card-name {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: white;
+        margin: 0;
+    }
+
+    .teacher-card-id {
+        font-size: 0.85rem;
+        color: rgba(255,255,255,0.9);
+        margin: 0.25rem 0 0 0;
+    }
+
+    .teacher-card-body {
+        padding: 1.5rem;
+    }
+
+    .teacher-card-detail {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #f0f0f0;
+        color: #495057;
+        font-size: 0.9rem;
+    }
+
+    .teacher-card-detail:last-child {
+        border-bottom: none;
+    }
+
+    .teacher-card-detail i {
+        color: #43e97b;
+        width: 24px;
+    }
+
+    .teacher-card-footer {
+        padding: 1rem 1.5rem;
+        background: #f8f9fa;
+        display: flex;
+        gap: 0.5rem;
+        border-top: 1px solid #e9ecef;
+    }
+
+    .btn-teachers-card-action {
+        flex: 1;
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        color: white;
+        border: none;
+        padding: 0.5rem 0.75rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-teachers-card-action:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(67, 233, 123, 0.4);
+        color: white;
+    }
+
+    .btn-teachers-card-action-delete {
+        flex: 1;
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        border: none;
+        padding: 0.5rem 0.75rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-teachers-card-action-delete:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(245, 87, 108, 0.4);
+        color: white;
+    }
+
+    /* Responsive Design for Teachers Tab */
+    @media (max-width: 768px) {
+        .teachers-admin-title {
+            font-size: 2rem;
+        }
+        
+        .teachers-stat-card {
+            flex-direction: column;
+            text-align: center;
+        }
+        
+        .teachers-table-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+    }
     </style>
 
     <!-- JavaScript for Students Tab -->
     <script>
+    // Store current student ID for edit operations
+    let currentStudentId = null;
+
     function switchStudentsView(view) {
         const tableView = document.getElementById('tableView');
         const cardsView = document.getElementById('cardsView');
@@ -3980,6 +5105,205 @@
             cardsView.style.display = 'block';
             buttons[0].classList.remove('active');
             buttons[1].classList.add('active');
+        }
+    }
+
+    // View Student Function
+    function viewStudent(studentId) {
+        currentStudentId = studentId;
+        
+        // Fetch student data
+        fetch(`/management/student/${studentId}`)
+            .then(response => response.json())
+            .then(data => {
+                // Populate view modal
+                document.getElementById('viewStudentName').textContent = `${data.first_name} ${data.last_name}`;
+                document.getElementById('viewStudentId').textContent = `ID: ${data.student_id || 'N/A'}`;
+                document.getElementById('viewStudentGrade').textContent = data.grade_level || 'N/A';
+                document.getElementById('viewStudentDob').textContent = data.dob || 'N/A';
+                document.getElementById('viewStudentGpa').textContent = data.gpa ? parseFloat(data.gpa).toFixed(2) : 'N/A';
+                document.getElementById('viewStudentUsername').textContent = data.username || 'No Account';
+                document.getElementById('viewStudentEmail').textContent = data.email || 'N/A';
+                document.getElementById('viewStudentPhone').textContent = data.phone || 'N/A';
+                document.getElementById('viewStudentAddress').textContent = data.address || 'N/A';
+                document.getElementById('viewParentName').textContent = data.parent_name || 'N/A';
+                document.getElementById('viewParentEmail').textContent = data.parent_email || 'N/A';
+                document.getElementById('viewParentPhone').textContent = data.parent_phone || 'N/A';
+                
+                // Populate classes
+                const classesList = document.getElementById('viewStudentClasses');
+                if (data.classes && data.classes.length > 0) {
+                    classesList.innerHTML = data.classes.map(cls => 
+                        `<span class="student-class-badge">${cls}</span>`
+                    ).join('');
+                } else {
+                    classesList.innerHTML = '<p class="text-muted">No classes enrolled</p>';
+                }
+                
+                // Show modal
+                const modal = new bootstrap.Modal(document.getElementById('viewStudentModal'));
+                modal.show();
+            })
+            .catch(error => {
+                console.error('Error fetching student data:', error);
+                alert('Error loading student information. Please try again.');
+            });
+    }
+
+    // Edit Student Function
+    function editStudent(studentId) {
+        currentStudentId = studentId;
+        
+        // Fetch student data
+        fetch(`/management/student/${studentId}`)
+            .then(response => response.json())
+            .then(data => {
+                // Populate edit form
+                document.getElementById('editStudentIdHidden').value = studentId;
+                document.getElementById('editFirstName').value = data.first_name || '';
+                document.getElementById('editLastName').value = data.last_name || '';
+                document.getElementById('editDob').value = data.dob || '';
+                document.getElementById('editGradeLevel').value = data.grade_level || '';
+                document.getElementById('editStudentIdDisplay').value = data.student_id || '';
+                document.getElementById('editEmail').value = data.email || '';
+                document.getElementById('editPhone').value = data.phone || '';
+                document.getElementById('editAddress').value = data.address || '';
+                document.getElementById('editParentFirstName').value = data.parent_first_name || '';
+                document.getElementById('editParentLastName').value = data.parent_last_name || '';
+                document.getElementById('editParentEmail').value = data.parent_email || '';
+                document.getElementById('editParentPhone').value = data.parent_phone || '';
+                
+                // Show modal
+                const modal = new bootstrap.Modal(document.getElementById('editStudentModal'));
+                modal.show();
+            })
+            .catch(error => {
+                console.error('Error fetching student data:', error);
+                alert('Error loading student information. Please try again.');
+            });
+    }
+
+    // Open Edit from View Modal
+    function openEditFromView() {
+        // Close view modal
+        const viewModal = bootstrap.Modal.getInstance(document.getElementById('viewStudentModal'));
+        if (viewModal) {
+            viewModal.hide();
+        }
+        
+        // Open edit modal with a slight delay to allow view modal to close
+        setTimeout(() => {
+            editStudent(currentStudentId);
+        }, 300);
+    }
+
+    // Handle Edit Form Submission
+    document.getElementById('editStudentForm')?.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const studentId = document.getElementById('editStudentIdHidden').value;
+        
+        fetch(`/management/student/${studentId}/update`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Close modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('editStudentModal'));
+                if (modal) {
+                    modal.hide();
+                }
+                
+                // Show success message
+                alert('Student information updated successfully!');
+                
+                // Reload page to reflect changes
+                location.reload();
+            } else {
+                alert('Error updating student: ' + (data.message || 'Please try again.'));
+            }
+        })
+        .catch(error => {
+            console.error('Error updating student:', error);
+            alert('Error updating student information. Please try again.');
+        });
+    });
+
+    // Remove Student Function
+    function removeStudent(studentId, studentName) {
+        if (confirm(`Are you sure you want to remove ${studentName}? This action cannot be undone.`)) {
+            fetch(`/management/student/${studentId}/delete`, {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Student removed successfully!');
+                    location.reload();
+                } else {
+                    alert('Error removing student: ' + (data.message || 'Please try again.'));
+                }
+            })
+            .catch(error => {
+                console.error('Error removing student:', error);
+                alert('Error removing student. Please try again.');
+            });
+        }
+    }
+
+    // Switch Teachers View Function
+    function switchTeachersView(view) {
+        const tableView = document.getElementById('teachersTableView');
+        const cardsView = document.getElementById('teachersCardsView');
+        const buttons = document.querySelectorAll('.btn-teachers-view');
+        
+        if (view === 'table') {
+            tableView.style.display = 'block';
+            cardsView.style.display = 'none';
+            buttons[0].classList.add('active');
+            buttons[1].classList.remove('active');
+        } else {
+            tableView.style.display = 'none';
+            cardsView.style.display = 'block';
+            buttons[0].classList.remove('active');
+            buttons[1].classList.add('active');
+        }
+    }
+
+    // View Teacher Function
+    function viewTeacher(teacherId) {
+        // To be implemented with teacher view modal
+        alert('View teacher feature - ID: ' + teacherId);
+    }
+
+    // Edit Teacher Function
+    function editTeacher(teacherId) {
+        // To be implemented with teacher edit modal
+        alert('Edit teacher feature - ID: ' + teacherId);
+    }
+
+    // Remove Teacher Function
+    function removeTeacher(teacherId, teacherName) {
+        if (confirm(`Are you sure you want to remove ${teacherName}? This action cannot be undone.`)) {
+            fetch(`/management/teacher/${teacherId}/delete`, {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Staff member removed successfully!');
+                    location.reload();
+                } else {
+                    alert('Error removing staff member: ' + (data.message || 'Please try again.'));
+                }
+            })
+            .catch(error => {
+                console.error('Error removing staff member:', error);
+                alert('Error removing staff member. Please try again.');
+            });
         }
     }
     </script>

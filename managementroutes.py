@@ -1902,7 +1902,7 @@ def class_grades(class_id):
                     should_show_assignment = student_group_id in assignment_group_ids
             
             # Debug: Check "What is Matter" assignments specifically
-            if group_assignment.title.startswith('What is Matter') and student.id <= 5:
+            if group_assignment.title.startswith('What is Matter'):
                 print(f"DEBUG What is Matter: Student {student.first_name} {student.last_name} (ID: {student.id}) - Group: {student_group_name} (ID: {student_group_id}) - Assignment: '{group_assignment.title}' (ID: {group_assignment.id}) - Target groups: {assignment_group_ids} - Should show: {should_show_assignment}")
             
             
@@ -1915,6 +1915,12 @@ def class_grades(class_id):
                         student_id=student.id,
                         group_assignment_id=group_assignment.id
                     ).first()
+                    
+                    # Debug: Check grade lookup for "What is Matter" assignments
+                    if group_assignment.title.startswith('What is Matter'):
+                        print(f"DEBUG Grade Lookup: Student {student.first_name} {student.last_name} (ID: {student.id}) - Assignment: '{group_assignment.title}' (ID: {group_assignment.id}) - Grade found: {group_grade is not None}")
+                        if group_grade:
+                            print(f"DEBUG Grade Data: {group_grade.grade_data}")
                     
                     if group_grade:
                         try:

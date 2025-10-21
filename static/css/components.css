@@ -6,6 +6,7 @@
  * - Modals and popups
  * - Navigation components
  * - Status indicators
+ * - Member badges and team displays
  */
 
 /* Button Components */
@@ -276,4 +277,61 @@
     content: ">";
     color: #6c757d;
     margin: 0 0.5rem;
+}
+
+/* ===== MEMBER BADGES AND TEAM DISPLAYS ===== */
+
+/* Member Badges */
+.members-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.member-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 12px;
+    border: 1px solid #e0e0e0;
+    transition: all 0.2s ease;
+}
+
+.member-item:hover {
+    background: rgba(255, 255, 255, 1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.member-badge {
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    color: #1565c0;
+    padding: 0.5rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-align: center;
+    border: 1px solid rgba(21, 101, 192, 0.2);
+    transition: all 0.2s ease;
+    margin-bottom: 0.5rem;
+    display: block;
+    width: fit-content;
+}
+
+.member-badge:hover {
+    background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
+    color: white;
+    transform: scale(1.05);
+}
+
+.member-duty {
+    color: #666;
+    font-size: 0.75rem;
+    line-height: 1.3;
+    margin-top: 0.25rem;
+    font-style: italic;
 }

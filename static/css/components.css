@@ -284,9 +284,9 @@
 /* Member Badges */
 .members-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 1.5rem;
-    margin-top: 1.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.75rem;
+    margin-top: 1rem;
     padding: 0 0.5rem;
 }
 
@@ -332,7 +332,7 @@
 .member-badge {
     background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
     color: white;
-    padding: 0.6rem 1.4rem;
+    padding: 0.6rem 1.6rem;
     border-radius: 25px;
     font-size: 0.85rem;
     font-weight: 600;
@@ -342,12 +342,10 @@
     margin-bottom: 0.75rem;
     display: inline-block;
     white-space: nowrap;
-    min-width: fit-content;
-    max-width: 100%;
+    min-width: max-content;
+    width: auto;
     box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
     letter-spacing: 0.025em;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 .member-badge:hover {
@@ -356,22 +354,60 @@
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
 }
 
-.member-duty {
+/* Job Assignments Table */
+.team-jobs-section {
+    margin-top: 1.5rem;
+}
+
+.jobs-table {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.job-row {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    border-bottom: 1px solid #f1f5f9;
+    transition: background-color 0.2s ease;
+}
+
+.job-row:last-child {
+    border-bottom: none;
+}
+
+.job-row:hover {
+    background-color: #f8fafc;
+}
+
+.job-row:nth-child(even) {
+    background-color: #fafbfc;
+}
+
+.job-row:nth-child(even):hover {
+    background-color: #f1f5f9;
+}
+
+.job-name {
+    padding: 1rem 1.25rem;
+    font-weight: 600;
+    color: #1e293b;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-right: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    font-size: 0.9rem;
+}
+
+.job-description {
+    padding: 1rem 1.25rem;
     color: #64748b;
-    font-size: 0.75rem;
+    font-size: 0.85rem;
     line-height: 1.5;
-    margin-top: 0.5rem;
-    font-style: normal;
-    font-weight: 500;
-    width: 100%;
-    text-align: center;
-    padding: 0.5rem;
-    background: rgba(248, 250, 252, 0.6);
-    border-radius: 8px;
-    border-left: 3px solid #3b82f6;
-    word-wrap: break-word;
-    hyphens: auto;
-    overflow-wrap: break-word;
+    display: flex;
+    align-items: center;
 }
 
 /* Responsive adjustments for smaller screens */

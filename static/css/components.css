@@ -279,192 +279,94 @@
     margin: 0 0.5rem;
 }
 
-/* ===== MEMBER BADGES AND TEAM DISPLAYS ===== */
+/* ===== CLEAN TEAM DISPLAYS ===== */
 
-/* Member Badges */
-.members-grid {
+/* Clean Team Grid */
+.clean-team-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 1rem;
     margin-top: 1rem;
-    padding: 0 0.5rem;
 }
 
-.member-badge-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    padding: 1rem;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%);
-    border-radius: 16px;
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    transition: all 0.3s ease;
+.team-member-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 1.25rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
     position: relative;
-    overflow: visible;
 }
 
-.member-badge-container::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, #3b82f6, #8b5cf6, #06b6d4);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.member-badge-container:hover {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 1) 0%, rgba(248, 250, 252, 1) 100%);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-    transform: translateY(-4px);
+.team-member-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
     border-color: #3b82f6;
 }
 
-.member-badge-container:hover::before {
-    opacity: 1;
+.member-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #f3f4f6;
 }
 
-.member-job-title {
-    margin-top: 0.5rem;
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: #3b82f6;
-    background: rgba(59, 130, 246, 0.1);
+.member-name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin: 0;
+}
+
+.job-badge {
     padding: 0.4rem 0.8rem;
-    border-radius: 12px;
-    border: 1px solid rgba(59, 130, 246, 0.2);
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    border: 1px solid;
 }
 
-.member-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    padding: 1.5rem 1.25rem;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%);
-    border-radius: 16px;
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: visible;
-    min-height: 140px;
+.job-badge.sweeping {
+    background: #dbeafe;
+    color: #1e40af;
+    border-color: #93c5fd;
 }
 
-.member-item::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, #3b82f6, #8b5cf6, #06b6d4);
-    opacity: 0;
-    transition: opacity 0.3s ease;
+.job-badge.wipe-down {
+    background: #fef3c7;
+    color: #92400e;
+    border-color: #fcd34d;
 }
 
-.member-item:hover {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 1) 0%, rgba(248, 250, 252, 1) 100%);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-    transform: translateY(-4px);
-    border-color: #3b82f6;
+.job-badge.trash {
+    background: #f3e8ff;
+    color: #7c3aed;
+    border-color: #c4b5fd;
 }
 
-.member-item:hover::before {
-    opacity: 1;
+.job-badge.bathroom {
+    background: #ecfdf5;
+    color: #065f46;
+    border-color: #6ee7b7;
 }
 
-.member-badge {
-    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-    color: white;
-    padding: 0.6rem 1.6rem;
-    border-radius: 25px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    text-align: center;
-    border: none;
-    transition: all 0.3s ease;
-    margin-bottom: 0.75rem;
-    display: inline-block;
-    white-space: nowrap;
-    min-width: max-content;
-    width: auto;
-    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
-    letter-spacing: 0.025em;
+.job-badge.organization {
+    background: #fce7f3;
+    color: #be185d;
+    border-color: #f9a8d4;
 }
 
-.member-badge:hover {
-    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
-    transform: scale(1.05);
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-}
-
-/* Job Assignments Table */
-.team-jobs-section {
-    margin-top: 1.5rem;
-}
-
-.jobs-table {
-    background: white;
-    border-radius: 12px;
-    border: 1px solid #e2e8f0;
-    overflow: hidden;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.job-row {
-    display: grid;
-    grid-template-columns: 1fr 2fr;
-    border-bottom: 1px solid #f1f5f9;
-    transition: background-color 0.2s ease;
-}
-
-.job-row:last-child {
-    border-bottom: none;
-}
-
-.job-row:hover {
-    background-color: #f8fafc;
-}
-
-.job-row:nth-child(even) {
-    background-color: #fafbfc;
-}
-
-.job-row:nth-child(even):hover {
-    background-color: #f1f5f9;
-}
-
-.job-name {
-    padding: 1rem 1.25rem;
-    font-weight: 700;
-    color: #1e293b;
-    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-    border-right: 1px solid #e2e8f0;
-    display: flex;
-    align-items: center;
-    font-size: 0.95rem;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-
-.job-description {
-    padding: 1rem 1.25rem;
-    color: #64748b;
-    font-size: 0.85rem;
+.job-details {
+    color: #6b7280;
+    font-size: 0.9rem;
     line-height: 1.5;
-    display: flex;
-    align-items: center;
-    background: rgba(59, 130, 246, 0.02);
-    border-left: 3px solid #3b82f6;
-    margin-left: 0.5rem;
-    border-radius: 0 8px 8px 0;
-    font-weight: 500;
+    margin: 0;
+    font-style: italic;
 }
 
 /* Responsive adjustments for smaller screens */

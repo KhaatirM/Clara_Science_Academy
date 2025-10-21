@@ -4538,7 +4538,17 @@ def remove_assignment(assignment_id):
         flash("You are not authorized to remove this assignment.", "danger")
         return redirect(url_for('management.assignments_and_grades'))
     
+    # Store class_id before deletion for redirect
+    class_id = assignment.class_id
+    
     try:
+        # Delete associated grades and submissions first
+        Grade.query.filter_by(assignment_id=assignment_id).delete()
+        Submission.query.filter_by(assignment_id=assignment_id).delete()
+        
+        # Delete associated extensions
+        AssignmentExtension.query.filter_by(assignment_id=assignment_id).delete()
+        
         # Delete the assignment file if it exists
         if assignment.attachment_filename:
             filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], assignment.attachment_filename)
@@ -4554,7 +4564,12 @@ def remove_assignment(assignment_id):
         db.session.rollback()
         flash(f'Error removing assignment: {str(e)}', 'danger')
     
-    return redirect(url_for('management.assignments_and_grades'))
+    # Redirect back to assignments page, preserving class_id if it was in the request
+    class_id_param = request.args.get('class_id')
+    if class_id_param:
+        return redirect(url_for('management.assignments_and_grades', class_id=class_id_param))
+    else:
+        return redirect(url_for('management.assignments_and_grades'))
 
 
 @management_blueprint.route('/assignment/change-status/<int:assignment_id>', methods=['POST'])

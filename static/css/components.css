@@ -284,9 +284,10 @@
 /* Member Badges */
 .members-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-    margin-top: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+    padding: 0 0.5rem;
 }
 
 .member-item {
@@ -294,44 +295,90 @@
     flex-direction: column;
     align-items: center;
     text-align: center;
-    padding: 0.75rem;
-    background: rgba(255, 255, 255, 0.8);
-    border-radius: 12px;
-    border: 1px solid #e0e0e0;
-    transition: all 0.2s ease;
+    padding: 1.25rem 1rem;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%);
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.member-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #3b82f6, #8b5cf6, #06b6d4);
+    opacity: 0;
+    transition: opacity 0.3s ease;
 }
 
 .member-item:hover {
-    background: rgba(255, 255, 255, 1);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    transform: translateY(-2px);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 1) 0%, rgba(248, 250, 252, 1) 100%);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    transform: translateY(-4px);
+    border-color: #3b82f6;
+}
+
+.member-item:hover::before {
+    opacity: 1;
 }
 
 .member-badge {
-    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-    color: #1565c0;
-    padding: 0.5rem 0.75rem;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    font-weight: 500;
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    color: white;
+    padding: 0.6rem 1.2rem;
+    border-radius: 25px;
+    font-size: 0.85rem;
+    font-weight: 600;
     text-align: center;
-    border: 1px solid rgba(21, 101, 192, 0.2);
-    transition: all 0.2s ease;
-    margin-bottom: 0.5rem;
+    border: none;
+    transition: all 0.3s ease;
+    margin-bottom: 0.75rem;
     display: block;
     width: fit-content;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+    letter-spacing: 0.025em;
 }
 
 .member-badge:hover {
-    background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
-    color: white;
+    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
     transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
 }
 
 .member-duty {
-    color: #666;
-    font-size: 0.75rem;
-    line-height: 1.3;
-    margin-top: 0.25rem;
-    font-style: italic;
+    color: #64748b;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    margin-top: 0.5rem;
+    font-style: normal;
+    font-weight: 500;
+    max-width: 100%;
+    word-wrap: break-word;
+    hyphens: auto;
+    text-align: center;
+    padding: 0 0.5rem;
+}
+
+/* Responsive adjustments for smaller screens */
+@media (max-width: 768px) {
+    .members-grid {
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+        padding: 0;
+    }
+    
+    .member-item {
+        padding: 1rem 0.75rem;
+    }
+    
+    .member-duty {
+        font-size: 0.75rem;
+        line-height: 1.3;
+    }
 }

@@ -284,7 +284,7 @@
 /* Member Badges */
 .members-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
     gap: 1.5rem;
     margin-top: 1.5rem;
     padding: 0 0.5rem;
@@ -295,14 +295,15 @@
     flex-direction: column;
     align-items: center;
     text-align: center;
-    padding: 1.25rem 1rem;
+    padding: 1.5rem 1.25rem;
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%);
     border-radius: 16px;
     border: 1px solid #e2e8f0;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     transition: all 0.3s ease;
     position: relative;
-    overflow: hidden;
+    overflow: visible;
+    min-height: 140px;
 }
 
 .member-item::before {
@@ -331,7 +332,7 @@
 .member-badge {
     background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
     color: white;
-    padding: 0.6rem 1.2rem;
+    padding: 0.6rem 1.4rem;
     border-radius: 25px;
     font-size: 0.85rem;
     font-weight: 600;
@@ -339,10 +340,14 @@
     border: none;
     transition: all 0.3s ease;
     margin-bottom: 0.75rem;
-    display: block;
-    width: fit-content;
+    display: inline-block;
+    white-space: nowrap;
+    min-width: fit-content;
+    max-width: 100%;
     box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
     letter-spacing: 0.025em;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .member-badge:hover {
@@ -353,16 +358,20 @@
 
 .member-duty {
     color: #64748b;
-    font-size: 0.8rem;
-    line-height: 1.4;
+    font-size: 0.75rem;
+    line-height: 1.5;
     margin-top: 0.5rem;
     font-style: normal;
     font-weight: 500;
-    max-width: 100%;
+    width: 100%;
+    text-align: center;
+    padding: 0.5rem;
+    background: rgba(248, 250, 252, 0.6);
+    border-radius: 8px;
+    border-left: 3px solid #3b82f6;
     word-wrap: break-word;
     hyphens: auto;
-    text-align: center;
-    padding: 0 0.5rem;
+    overflow-wrap: break-word;
 }
 
 /* Responsive adjustments for smaller screens */

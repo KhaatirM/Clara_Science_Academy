@@ -4800,6 +4800,21 @@ def edit_student(student_id):
     """Edit student information via AJAX modal"""
     student = Student.query.get_or_404(student_id)
     try:
+        # Get phone numbers for validation
+        parent1_phone = request.form.get('parent1_phone', student.parent1_phone)
+        parent2_phone = request.form.get('parent2_phone', student.parent2_phone)
+        emergency_phone = request.form.get('emergency_phone', student.emergency_phone)
+        
+        # Validate phone numbers
+        if parent1_phone and (len(parent1_phone) > 20 or '@' in parent1_phone):
+            return jsonify({'success': False, 'message': 'Parent 1 phone number is invalid. Please enter a valid phone number (max 20 characters).'}), 400
+        
+        if parent2_phone and (len(parent2_phone) > 20 or '@' in parent2_phone):
+            return jsonify({'success': False, 'message': 'Parent 2 phone number is invalid. Please enter a valid phone number (max 20 characters).'}), 400
+        
+        if emergency_phone and (len(emergency_phone) > 20 or '@' in emergency_phone):
+            return jsonify({'success': False, 'message': 'Emergency phone number is invalid. Please enter a valid phone number (max 20 characters).'}), 400
+        
         # Basic info
         student.dob = request.form.get('dob', student.dob)
         student.grade_level = request.form.get('grade_level', student.grade_level)
@@ -4809,21 +4824,21 @@ def edit_student(student_id):
         student.parent1_first_name = request.form.get('parent1_first_name', student.parent1_first_name)
         student.parent1_last_name = request.form.get('parent1_last_name', student.parent1_last_name)
         student.parent1_email = request.form.get('parent1_email', student.parent1_email)
-        student.parent1_phone = request.form.get('parent1_phone', student.parent1_phone)
+        student.parent1_phone = parent1_phone
         student.parent1_relationship = request.form.get('parent1_relationship', student.parent1_relationship)
         
         # Parent 2 information
         student.parent2_first_name = request.form.get('parent2_first_name', student.parent2_first_name)
         student.parent2_last_name = request.form.get('parent2_last_name', student.parent2_last_name)
         student.parent2_email = request.form.get('parent2_email', student.parent2_email)
-        student.parent2_phone = request.form.get('parent2_phone', student.parent2_phone)
+        student.parent2_phone = parent2_phone
         student.parent2_relationship = request.form.get('parent2_relationship', student.parent2_relationship)
         
         # Emergency contact
         student.emergency_first_name = request.form.get('emergency_first_name', student.emergency_first_name)
         student.emergency_last_name = request.form.get('emergency_last_name', student.emergency_last_name)
         student.emergency_email = request.form.get('emergency_email', student.emergency_email)
-        student.emergency_phone = request.form.get('emergency_phone', student.emergency_phone)
+        student.emergency_phone = emergency_phone
         student.emergency_relationship = request.form.get('emergency_relationship', student.emergency_relationship)
         
         # Address

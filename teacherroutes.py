@@ -1522,7 +1522,7 @@ def assignments_and_grades():
                             
                             if 'score' in grade_dict and grade.assignment:
                                 score = grade_dict['score']
-                                points = grade.assignment.points or 100  # Default to 100 if no points specified
+                                points = getattr(grade.assignment, 'points', None) or 100  # Default to 100 if no points specified
                                 
                                 assignment_history.append({
                                     'assignment': grade.assignment,

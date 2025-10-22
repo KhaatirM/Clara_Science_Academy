@@ -146,7 +146,7 @@
                             </div>
                             <div class="detail-item">
                                 <i class="bi bi-star text-warning"></i>
-                                <span>{{ assignment.points or 'N/A' }} Points</span>
+                                <span>{{ assignment.points if hasattr(assignment, 'points') else 'N/A' }} Points</span>
                             </div>
                         </div>
                         <div class="progress mb-3">

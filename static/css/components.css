@@ -281,12 +281,6 @@
 
 /* ===== ENHANCED TEAM MEMBERS & ASSIGNMENTS SECTION ===== */
 
-/* Debug: Test if CSS is loading */
-.clean-team-grid {
-    border: 3px solid red !important;
-    background: yellow !important;
-}
-
 /* Section Header Styling */
 .section-title {
     font-size: 1.4rem;

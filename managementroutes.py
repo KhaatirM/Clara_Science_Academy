@@ -502,6 +502,12 @@ def add_student():
             # Auto-generate Student ID based on state and DOB (call after all fields are set)
             student.student_id = student.generate_student_id()
             
+            # Check if student ID already exists
+            existing_student = Student.query.filter_by(student_id=student.student_id).first()
+            if existing_student:
+                flash(f'A student with ID {student.student_id} already exists: {existing_student.first_name} {existing_student.last_name}. This student may have already been added. Please check the student list or contact support if you believe this is an error.', 'danger')
+                return redirect(request.url)
+            
             db.session.add(student)
             db.session.flush()  # Get the student ID
             
@@ -5913,6 +5919,25 @@ def manage_class_roster(class_id):
                          enrolled_students=enrolled_students,
                          available_teachers=available_teachers,
                          today=datetime.now().date())
+
+@management_blueprint.route('/check-student-id/<student_id>')
+@login_required
+@management_required
+def check_student_id(student_id):
+    """Check if a student ID already exists"""
+    existing_student = Student.query.filter_by(student_id=student_id).first()
+    if existing_student:
+        return jsonify({
+            'exists': True,
+            'student': {
+                'id': existing_student.id,
+                'first_name': existing_student.first_name,
+                'last_name': existing_student.last_name,
+                'grade_level': existing_student.grade_level,
+                'has_user_account': existing_student.user is not None
+            }
+        })
+    return jsonify({'exists': False})
 
 @management_blueprint.route('/remove-student/<int:student_id>', methods=['POST'])
 @login_required

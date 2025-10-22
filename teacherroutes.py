@@ -1459,6 +1459,7 @@ def assignments_and_grades():
         
         # Get grade data for grades view
         grade_data = {}
+        student_gpa_data = {}
         if view_mode == 'grades':
             for assignment in assignments:
                 grades = Grade.query.filter_by(assignment_id=assignment.id).all()
@@ -1489,6 +1490,91 @@ def assignments_and_grades():
                     'graded_count': len(graded_grades),
                     'average_score': round(total_score / len(graded_grades), 1) if graded_grades else 0
                 }
+            
+            # Get student GPA data for enhanced grades view
+            if current_user.role == 'Director':
+                all_students = Student.query.all()
+            elif teacher is not None:
+                # Get students from teacher's classes
+                class_ids = [c.id for c in classes]
+                all_students = Student.query.join(Enrollment).filter(Enrollment.class_id.in_(class_ids)).all()
+            else:
+                all_students = []
+            
+            for student in all_students:
+                # Get all grades for this student across all assignments
+                student_grades = Grade.query.filter_by(student_id=student.id).all()
+                
+                # Calculate GPA and collect assignment history
+                assignment_history = []
+                total_points = 0
+                earned_points = 0
+                graded_assignments = 0
+                
+                for grade in student_grades:
+                    if grade.grade_data is not None:
+                        try:
+                            if isinstance(grade.grade_data, dict):
+                                grade_dict = grade.grade_data
+                            else:
+                                import json
+                                grade_dict = json.loads(grade.grade_data)
+                            
+                            if 'score' in grade_dict and grade.assignment:
+                                score = grade_dict['score']
+                                points = grade.assignment.points or 100  # Default to 100 if no points specified
+                                
+                                assignment_history.append({
+                                    'assignment': grade.assignment,
+                                    'score': score,
+                                    'points': points,
+                                    'earned_points': (score / 100) * points,
+                                    'due_date': grade.assignment.due_date,
+                                    'class_name': grade.assignment.class_info.name if grade.assignment.class_info else 'Unknown'
+                                })
+                                
+                                total_points += points
+                                earned_points += (score / 100) * points
+                                graded_assignments += 1
+                        except (json.JSONDecodeError, TypeError):
+                            continue
+                
+                # Calculate GPA (4.0 scale)
+                gpa = 0
+                if graded_assignments > 0:
+                    percentage = (earned_points / total_points) * 100 if total_points > 0 else 0
+                    if percentage >= 97:
+                        gpa = 4.0
+                    elif percentage >= 93:
+                        gpa = 3.7
+                    elif percentage >= 90:
+                        gpa = 3.3
+                    elif percentage >= 87:
+                        gpa = 3.0
+                    elif percentage >= 83:
+                        gpa = 2.7
+                    elif percentage >= 80:
+                        gpa = 2.3
+                    elif percentage >= 77:
+                        gpa = 2.0
+                    elif percentage >= 73:
+                        gpa = 1.7
+                    elif percentage >= 70:
+                        gpa = 1.3
+                    elif percentage >= 67:
+                        gpa = 1.0
+                    else:
+                        gpa = 0.0
+                
+                student_gpa_data[student.id] = {
+                    'student': student,
+                    'gpa': round(gpa, 2),
+                    'total_points': total_points,
+                    'earned_points': round(earned_points, 1),
+                    'percentage': round((earned_points / total_points) * 100, 1) if total_points > 0 else 0,
+                    'graded_assignments': graded_assignments,
+                    'assignment_history': sorted(assignment_history, key=lambda x: x['due_date'], reverse=True)
+                }
     
         from datetime import datetime
         today = datetime.now().date()
@@ -1502,6 +1588,7 @@ def assignments_and_grades():
                              sort_order=sort_order,
                              view_mode=view_mode,
                              grade_data=grade_data,
+                             student_gpa_data=student_gpa_data,
                              teacher=teacher,
                              today=today)
     
@@ -1515,64 +1602,8 @@ def assignments_and_grades():
 @login_required
 @teacher_required
 def my_assignments():
-    """View all assignments created by the teacher, or all assignments for Directors"""
-    teacher = get_teacher_or_admin()
-    
-    # Update assignment statuses before displaying (only for Active assignments past due)
-    update_assignment_statuses()
-    
-    # Get filter and sort parameters
-    class_filter = request.args.get('class_id', '')
-    sort_by = request.args.get('sort', 'due_date')  # 'due_date' or 'title'
-    sort_order = request.args.get('order', 'desc')  # 'asc' or 'desc'
-    
-    # Directors see all classes and assignments, teachers only see their assigned ones
-    if current_user.role == 'Director':
-        classes = Class.query.all()
-        assignments_query = Assignment.query
-    elif teacher is not None:
-        classes = Class.query.filter_by(teacher_id=teacher.id).all()
-        class_ids = [c.id for c in classes]
-        assignments_query = Assignment.query.filter(Assignment.class_id.in_(class_ids))
-    else:
-        # Teacher user without teacher_staff_id - show empty results
-        classes = []
-        assignments_query = Assignment.query.filter(Assignment.id == -1)  # No results
-    
-    # Apply class filter if specified
-    if class_filter and class_filter.strip():
-        try:
-            class_id = int(class_filter)
-            assignments_query = assignments_query.filter(Assignment.class_id == class_id)
-        except ValueError:
-            pass
-    
-    # Apply sorting
-    if sort_by == 'title':
-        if sort_order == 'asc':
-            assignments_query = assignments_query.order_by(Assignment.title.asc())
-        else:
-            assignments_query = assignments_query.order_by(Assignment.title.desc())
-    else:  # due_date
-        if sort_order == 'asc':
-            assignments_query = assignments_query.order_by(Assignment.due_date.asc())
-        else:
-            assignments_query = assignments_query.order_by(Assignment.due_date.desc())
-    
-    assignments = assignments_query.all()
-    
-    from datetime import datetime
-    return render_template('teachers/teacher_assignments.html',
-                         teacher=teacher,
-                         classes=classes,
-                         assignments=assignments,
-                         today=datetime.now(),
-                         section='assignments',
-                         active_tab='assignments',
-                         now=datetime.now(),
-                         selected_class_id=class_filter,
-                         sort_by=sort_by,
-                         sort_order=sort_order)
+    """Redirect to assignments and grades page with assignments view"""
+    return redirect(url_for('teacher.assignments_and_grades', view='assignments'))
 
 @teacher_blueprint.route('/class/<int:class_id>/students')
 @login_required
@@ -1673,155 +1704,16 @@ def grant_extensions():
 @login_required
 @teacher_required
 def my_grades():
-    """View all grades entered by the teacher, or all grades for Directors"""
-    teacher = get_teacher_or_admin()
-    
-    # Directors see all classes, assignments, and grades, teachers only see their assigned ones
-    if current_user.role == 'Director':
-        classes = Class.query.all()
-        assignments = Assignment.query.all()
-        grades = Grade.query.all()
-    elif teacher is not None:
-        classes = Class.query.filter_by(teacher_id=teacher.id).all()
-        class_ids = [c.id for c in classes]
-        assignments = Assignment.query.filter(Assignment.class_id.in_(class_ids)).all()
-        assignment_ids = [a.id for a in assignments]
-        grades = Grade.query.filter(Grade.assignment_id.in_(assignment_ids)).all()
-    else:
-        # Teacher user without teacher_staff_id - show empty results
-        classes = []
-        assignments = []
-        grades = []
-    
-    return render_template('management/role_teacher_dashboard.html', 
-                         teacher=teacher,
-                         classes=classes,
-                         assignments=assignments,
-                         grades=grades,
-                         section='grades',
-                         active_tab='grades')
+    """Redirect to assignments and grades page with grades view"""
+    return redirect(url_for('teacher.assignments_and_grades', view='grades'))
 
 
 @teacher_blueprint.route('/student-grades')
 @login_required
 @teacher_required
 def student_grades():
-    """View detailed student grades for teacher's classes"""
-    # Handle Directors and School Administrators who don't have teacher_staff_id
-    if current_user.role in ['Director', 'School Administrator']:
-        teacher = None
-    else:
-        teacher = get_teacher_or_admin()
-    
-    # Get the class filter if provided
-    class_filter = request.args.get('class_id', type=int)
-    student_filter = request.args.get('student_id', type=int)
-    
-    # Directors and School Administrators see all classes, teachers only see their assigned ones
-    if current_user.role in ['Director', 'School Administrator']:
-        classes = Class.query.all()
-        if class_filter:
-            classes = [c for c in classes if c.id == class_filter]
-    elif teacher is not None:
-        classes = Class.query.filter_by(teacher_id=teacher.id).all()
-        if class_filter:
-            classes = [c for c in classes if c.id == class_filter]
-    else:
-        # Teacher user without teacher_staff_id - show empty results
-        classes = []
-    
-    # Get all students enrolled in these classes
-    class_ids = [c.id for c in classes]
-    enrollments = Enrollment.query.filter(
-        Enrollment.class_id.in_(class_ids),
-        Enrollment.is_active == True
-    ).all()
-    
-    # Group students by class
-    students_by_class = {}
-    for enrollment in enrollments:
-        # Skip enrollments where the student doesn't exist
-        if not enrollment.student:
-            continue
-        class_id = enrollment.class_id
-        if class_id not in students_by_class:
-            students_by_class[class_id] = []
-        students_by_class[class_id].append(enrollment.student)
-    
-    # Get assignments and grades for these classes
-    assignments = Assignment.query.filter(Assignment.class_id.in_(class_ids)).all()
-    assignment_ids = [a.id for a in assignments]
-    
-    # Get all grades for these assignments
-    all_grades = Grade.query.filter(Grade.assignment_id.in_(assignment_ids)).all()
-    
-    # Organize grades by student and assignment
-    grades_by_student = {}
-    for grade in all_grades:
-        student_id = grade.student_id
-        assignment_id = grade.assignment_id
-        
-        if student_id not in grades_by_student:
-            grades_by_student[student_id] = {}
-        
-        grade_data = json.loads(grade.grade_data)
-        grades_by_student[student_id][assignment_id] = {
-            'score': grade_data.get('score', 0),
-            'feedback': grade_data.get('feedback', ''),
-            'graded_at': grade.graded_at,
-            'assignment': grade.assignment
-        }
-    
-    # Calculate GPA for each student by class
-    student_gpas_by_class = {}
-    for class_id in class_ids:
-        student_gpas_by_class[class_id] = {}
-        
-        # Get students in this class
-        class_students = students_by_class.get(class_id, [])
-        class_assignments = [a for a in assignments if a.class_id == class_id]
-        class_assignment_ids = [a.id for a in class_assignments]
-        
-        for student in class_students:
-            student_id = student.id
-            # Get grades only for this class's assignments
-            class_grades = {}
-            for assignment_id in class_assignment_ids:
-                if student_id in grades_by_student and assignment_id in grades_by_student[student_id]:
-                    class_grades[assignment_id] = grades_by_student[student_id][assignment_id]
-            
-            # Calculate GPA for this specific class
-            scores = [grade_info['score'] for grade_info in class_grades.values() if 'score' in grade_info]
-            if scores:
-                # Convert percentage to GPA (90-100 = 4.0, 80-89 = 3.0, etc.)
-                gpa_scores = []
-                for score in scores:
-                    if score >= 90:
-                        gpa_scores.append(4.0)
-                    elif score >= 80:
-                        gpa_scores.append(3.0)
-                    elif score >= 70:
-                        gpa_scores.append(2.0)
-                    elif score >= 60:
-                        gpa_scores.append(1.0)
-                    else:
-                        gpa_scores.append(0.0)
-                
-                student_gpas_by_class[class_id][student_id] = sum(gpa_scores) / len(gpa_scores)
-            else:
-                student_gpas_by_class[class_id][student_id] = 0.0
-    
-    return render_template('management/role_teacher_dashboard.html', 
-                         teacher=teacher,
-                         classes=classes,
-                         assignments=assignments,
-                         students_by_class=students_by_class,
-                         grades_by_student=grades_by_student,
-                         student_gpas_by_class=student_gpas_by_class,
-                         class_filter=class_filter,
-                         student_filter=student_filter,
-                         section='student-grades',
-                         active_tab='student-grades')
+    """Redirect to assignments and grades page with grades view"""
+    return redirect(url_for('teacher.assignments_and_grades', view='grades'))
 
 @teacher_blueprint.route('/attendance')
 @login_required

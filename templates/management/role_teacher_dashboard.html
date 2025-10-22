@@ -130,13 +130,13 @@
                             </div>
                             <span>My Classes</span>
                         </a>
-                        <a href="{{ url_for('teacher.my_assignments') }}" class="home-quick-action home-qa-assignments">
+                        <a href="{{ url_for('teacher.assignments_and_grades') }}?view=assignments" class="home-quick-action home-qa-assignments">
                             <div class="home-qa-icon">
                                 <i class="bi bi-journal-check"></i>
                             </div>
                             <span>Assignments</span>
                         </a>
-                        <a href="{{ url_for('teacher.my_grades') }}" class="home-quick-action home-qa-grades">
+                        <a href="{{ url_for('teacher.assignments_and_grades') }}?view=grades" class="home-quick-action home-qa-grades">
                             <div class="home-qa-icon">
                                 <i class="bi bi-mortarboard-fill"></i>
                             </div>
@@ -148,7 +148,7 @@
                             </div>
                             <span>Attendance</span>
                         </a>
-                        <a href="{{ url_for('teacher.student_grades') }}" class="home-quick-action home-qa-reports">
+                        <a href="{{ url_for('teacher.assignments_and_grades') }}?view=grades" class="home-quick-action home-qa-reports">
                             <div class="home-qa-icon">
                                 <i class="bi bi-graph-up"></i>
                             </div>

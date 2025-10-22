@@ -201,6 +201,8 @@
             <div class="col-12 col-md-6">
                 <label for="parent1_phone" class="form-label">Phone</label>
                 <input type="tel" class="form-control" id="parent1_phone" name="parent1_phone"
+                       maxlength="20" pattern="[0-9\s\-\(\)\+\.]*"
+                       title="Please enter a valid phone number (max 20 characters)"
                        value="{{ student_data.parent1_phone if student_data else '' }}">
             </div>
             <div class="col-12 col-md-6">
@@ -232,6 +234,8 @@
             <div class="col-12 col-md-6">
                 <label for="parent2_phone" class="form-label">Phone</label>
                 <input type="tel" class="form-control" id="parent2_phone" name="parent2_phone"
+                       maxlength="20" pattern="[0-9\s\-\(\)\+\.]*"
+                       title="Please enter a valid phone number (max 20 characters)"
                        value="{{ student_data.parent2_phone if student_data else '' }}">
             </div>
             <div class="col-12 col-md-6">
@@ -263,6 +267,8 @@
             <div class="col-12 col-md-6">
                 <label for="emergency_phone" class="form-label">Phone</label>
                 <input type="tel" class="form-control" id="emergency_phone" name="emergency_phone"
+                       maxlength="20" pattern="[0-9\s\-\(\)\+\.]*"
+                       title="Please enter a valid phone number (max 20 characters)"
                        value="{{ student_data.emergency_phone if student_data else '' }}">
             </div>
             <div class="col-12 col-md-6">

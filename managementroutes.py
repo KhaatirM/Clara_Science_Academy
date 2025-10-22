@@ -365,6 +365,21 @@ def add_student():
         emergency_phone = request.form.get('emergency_phone', '').strip()
         emergency_relationship = request.form.get('emergency_relationship', '').strip()
         
+        # Validate that emergency_phone is not an email and is not too long
+        if emergency_phone:
+            if '@' in emergency_phone or len(emergency_phone) > 20:
+                flash('Emergency phone number is invalid. Please enter a valid phone number (max 20 characters).', 'danger')
+                return redirect(request.url)
+        
+        # Validate parent phone numbers as well
+        if parent1_phone and len(parent1_phone) > 20:
+            flash('Parent 1 phone number is too long. Please enter a valid phone number (max 20 characters).', 'danger')
+            return redirect(request.url)
+        
+        if parent2_phone and len(parent2_phone) > 20:
+            flash('Parent 2 phone number is too long. Please enter a valid phone number (max 20 characters).', 'danger')
+            return redirect(request.url)
+        
         # Additional fields
         previous_school = request.form.get('previous_school', '').strip()
         email = request.form.get('email', '').strip()
@@ -560,6 +575,17 @@ def add_teacher_staff():
         emergency_email = request.form.get('emergency_contact_email', '').strip()
         emergency_phone = request.form.get('emergency_contact_phone', '').strip()
         emergency_relationship = request.form.get('emergency_contact_relationship', '').strip()
+        
+        # Validate that emergency_phone is not an email and is not too long
+        if emergency_phone:
+            if '@' in emergency_phone or len(emergency_phone) > 20:
+                flash('Emergency phone number is invalid. Please enter a valid phone number (max 20 characters).', 'danger')
+                return redirect(request.url)
+        
+        # Validate staff phone number
+        if phone and len(phone) > 20:
+            flash('Phone number is too long. Please enter a valid phone number (max 20 characters).', 'danger')
+            return redirect(request.url)
         
         # Validate required fields
         if not all([first_name, last_name, email]):

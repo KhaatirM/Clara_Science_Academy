@@ -435,8 +435,8 @@ def add_student():
             }
             grade_level = grade_map.get(grade_level_str)
         
-        # Validate required fields
-        if not all([first_name, last_name, dob, grade_level]):
+        # Validate required fields (use 'is not None' for grade_level since 0 is valid for Kindergarten)
+        if not first_name or not last_name or not dob or grade_level is None:
             flash('First name, last name, date of birth, and grade level are required.', 'danger')
             return redirect(request.url)
         

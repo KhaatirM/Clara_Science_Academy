@@ -12,11 +12,11 @@
           <i class="bi bi-building me-3"></i>{{ class_info.name }}
         </h1>
         <p class="classes-admin-subtitle">{{ class_info.subject }} • {{ class_info.get_grade_levels_display() or 'All Grades' }}</p>
-      </div>
+            </div>
       <a href="{{ url_for('management.classes') }}" class="btn-classes-add">
         <i class="bi bi-arrow-left me-2"></i>Back to Classes
-      </a>
-    </div>
+            </a>
+          </div>
   </div>
 
   <!-- Statistics Cards -->
@@ -75,7 +75,7 @@
         <div class="class-card-header-modern">
           <div class="class-card-icon-modern">
             <i class="bi bi-info-circle"></i>
-          </div>
+            </div>
           <div class="class-card-title-section-modern">
             <h5 class="class-card-title-modern">Class Information</h5>
             <p class="class-card-subject-modern">Complete Details</p>
@@ -93,15 +93,34 @@
           <div class="class-card-detail-modern">
             <i class="bi bi-door-open me-2"></i>
             <strong>Room:</strong> {{ class_info.room_number if class_info.room_number else 'N/A' }}
-          </div>
+              </div>
           <div class="class-card-detail-modern">
             <i class="bi bi-calendar-event me-2"></i>
             <strong>Schedule:</strong> {{ class_info.schedule or 'TBD' }}
-          </div>
+            </div>
           <div class="class-card-detail-modern">
             <i class="bi bi-calendar-year me-2"></i>
             <strong>School Year:</strong> {{ class_info.school_year.name if class_info.school_year else 'N/A' }}
-          </div>
+              </div>
+          {% if teacher %}
+            <div class="class-card-detail-modern">
+              <i class="bi bi-person me-2"></i>
+              <strong>Teacher:</strong> {{ teacher.first_name }} {{ teacher.last_name }}
+            </div>
+            <div class="class-card-detail-modern">
+              <i class="bi bi-envelope me-2"></i>
+              <strong>Teacher Email:</strong> {{ teacher.email or 'N/A' }}
+            </div>
+            <div class="class-card-detail-modern">
+              <i class="bi bi-telephone me-2"></i>
+              <strong>Teacher Phone:</strong> {{ teacher.phone or 'N/A' }}
+            </div>
+          {% else %}
+            <div class="class-card-detail-modern">
+              <i class="bi bi-person-x me-2"></i>
+              <strong>Teacher:</strong> No teacher assigned
+            </div>
+          {% endif %}
         </div>
       </div>
       
@@ -110,7 +129,7 @@
         <div class="class-card-header-modern">
           <div class="class-card-icon-modern">
             <i class="bi bi-tools"></i>
-          </div>
+            </div>
           <div class="class-card-title-section-modern">
             <h5 class="class-card-title-modern">Class Management</h5>
             <p class="class-card-subject-modern">Quick Actions</p>
@@ -122,21 +141,21 @@
             <h6 class="class-management-section-title">
               <i class="bi bi-gear me-2"></i>Core Management
             </h6>
-            <div class="row g-2">
-              <div class="col-6 col-md-4">
+              <div class="row g-2">
+                <div class="col-6 col-md-4">
                 <a href="{{ url_for('management.assignment_type_selector') }}" class="btn-class-action-modern">
-                  <i class="bi bi-plus-circle me-1"></i>Add Assignment
-                </a>
-              </div>
-              <div class="col-6 col-md-4">
+                    <i class="bi bi-plus-circle me-1"></i>Add Assignment
+                  </a>
+                </div>
+                <div class="col-6 col-md-4">
                 <a href="{{ url_for('management.attendance') }}" class="btn-class-action-modern">
-                  <i class="bi bi-clipboard-check me-1"></i>Attendance
-                </a>
-              </div>
-              <div class="col-6 col-md-4">
+                    <i class="bi bi-clipboard-check me-1"></i>Attendance
+                  </a>
+                </div>
+                <div class="col-6 col-md-4">
                 <a href="{{ url_for('management.manage_class_roster', class_id=class_info.id) }}" class="btn-class-action-modern">
-                  <i class="bi bi-people me-1"></i>Manage Roster
-                </a>
+                    <i class="bi bi-people me-1"></i>Manage Roster
+                  </a>
               </div>
             </div>
           </div>
@@ -146,21 +165,21 @@
             <h6 class="class-management-section-title">
               <i class="bi bi-shield-check me-2"></i>Administrative
             </h6>
-            <div class="row g-2">
-              <div class="col-6 col-md-4">
+              <div class="row g-2">
+                <div class="col-6 col-md-4">
                 <a href="{{ url_for('management.class_grades_view', class_id=class_info.id) }}" class="btn-class-action-modern">
-                  <i class="bi bi-journal-plus me-1"></i>View Grades
-                </a>
-              </div>
-              <div class="col-6 col-md-4">
+                    <i class="bi bi-journal-plus me-1"></i>View Grades
+                  </a>
+                </div>
+                <div class="col-6 col-md-4">
                 <a href="{{ url_for('management.edit_class', class_id=class_info.id) }}" class="btn-class-action-modern">
-                  <i class="bi bi-pencil me-1"></i>Edit Class
-                </a>
-              </div>
-              <div class="col-6 col-md-4">
+                    <i class="bi bi-pencil me-1"></i>Edit Class
+                  </a>
+                </div>
+                <div class="col-6 col-md-4">
                 <a href="{{ url_for('management.attendance_reports') }}" class="btn-class-action-modern">
-                  <i class="bi bi-graph-up me-1"></i>Reports
-                </a>
+                    <i class="bi bi-graph-up me-1"></i>Reports
+                  </a>
               </div>
             </div>
           </div>
@@ -170,21 +189,21 @@
             <h6 class="class-management-section-title">
               <i class="bi bi-star me-2"></i>Assessment & Feedback
             </h6>
-            <div class="row g-2">
-              <div class="col-6 col-md-4">
+              <div class="row g-2">
+                <div class="col-6 col-md-4">
                 <a href="{{ url_for('management.admin_class_360_feedback', class_id=class_info.id) }}" class="btn-class-action-modern">
-                  <i class="bi bi-arrow-repeat me-1"></i>360° Feedback
-                </a>
-              </div>
-              <div class="col-6 col-md-4">
+                    <i class="bi bi-arrow-repeat me-1"></i>360° Feedback
+                  </a>
+                </div>
+                <div class="col-6 col-md-4">
                 <a href="{{ url_for('management.admin_class_reflection_journals', class_id=class_info.id) }}" class="btn-class-action-modern">
-                  <i class="bi bi-journal-text me-1"></i>Reflection Journals
-                </a>
-              </div>
-              <div class="col-6 col-md-4">
+                    <i class="bi bi-journal-text me-1"></i>Reflection Journals
+                  </a>
+                </div>
+                <div class="col-6 col-md-4">
                 <a href="{{ url_for('management.admin_class_conflicts', class_id=class_info.id) }}" class="btn-class-action-modern">
-                  <i class="bi bi-exclamation-triangle me-1"></i>Conflict Resolution
-                </a>
+                    <i class="bi bi-exclamation-triangle me-1"></i>Conflict Resolution
+                  </a>
               </div>
             </div>
           </div>
@@ -194,65 +213,32 @@
             <h6 class="class-management-section-title">
               <i class="bi bi-people-fill me-2"></i>Group Management
             </h6>
-            <div class="row g-2">
-              <div class="col-6 col-md-4">
+              <div class="row g-2">
+                <div class="col-6 col-md-4">
                 <a href="{{ url_for('management.admin_class_group_assignments', class_id=class_info.id) }}" class="btn-class-action-modern">
-                  <i class="bi bi-journal-plus me-1"></i>Group Assignments
-                </a>
-              </div>
-              <div class="col-6 col-md-4">
+                    <i class="bi bi-journal-plus me-1"></i>Group Assignments
+                  </a>
+                </div>
+                <div class="col-6 col-md-4">
                 <a href="{{ url_for('management.admin_class_groups', class_id=class_info.id) }}" class="btn-class-action-modern">
-                  <i class="bi bi-people me-1"></i>Manage Groups
-                </a>
-              </div>
-              <div class="col-6 col-md-4">
+                    <i class="bi bi-people me-1"></i>Manage Groups
+                  </a>
+                </div>
+                <div class="col-6 col-md-4">
                 <a href="{{ url_for('management.admin_class_deadline_reminders', class_id=class_info.id) }}" class="btn-class-action-modern">
-                  <i class="bi bi-bell me-1"></i>Deadline Reminders
-                </a>
-              </div>
-              <div class="col-6 col-md-4">
+                    <i class="bi bi-bell me-1"></i>Deadline Reminders
+                  </a>
+                </div>
+                <div class="col-6 col-md-4">
                 <a href="{{ url_for('management.admin_class_analytics', class_id=class_info.id) }}" class="btn-class-action-modern">
-                  <i class="bi bi-graph-up me-1"></i>Reports & Analytics
-                </a>
+                    <i class="bi bi-graph-up me-1"></i>Reports & Analytics
+                  </a>
               </div>
             </div>
           </div>
         </div>
       </div>
       
-      <!-- Teacher Information Card -->
-      <div class="class-card-modern mb-4">
-        <div class="class-card-header-modern">
-          <div class="class-card-icon-modern">
-            <i class="bi bi-person-badge"></i>
-          </div>
-          <div class="class-card-title-section-modern">
-            <h5 class="class-card-title-modern">Teacher Information</h5>
-            <p class="class-card-subject-modern">Assigned Teacher</p>
-          </div>
-        </div>
-        <div class="class-card-body-modern">
-          {% if teacher %}
-            <div class="class-card-detail-modern">
-              <i class="bi bi-person me-2"></i>
-              <strong>Name:</strong> {{ teacher.first_name }} {{ teacher.last_name }}
-            </div>
-            <div class="class-card-detail-modern">
-              <i class="bi bi-envelope me-2"></i>
-              <strong>Email:</strong> {{ teacher.email or 'N/A' }}
-            </div>
-            <div class="class-card-detail-modern">
-              <i class="bi bi-telephone me-2"></i>
-              <strong>Phone:</strong> {{ teacher.phone or 'N/A' }}
-            </div>
-          {% else %}
-            <div class="classes-empty-state">
-              <i class="bi bi-person-x"></i>
-              <p>No teacher assigned to this class.</p>
-            </div>
-          {% endif %}
-        </div>
-      </div>
     </div>
 
     <!-- Main Content: Students, Assignments, Attendance -->
@@ -264,7 +250,7 @@
             <div class="class-card-header-modern">
               <div class="class-card-icon-modern">
                 <i class="bi bi-people-fill"></i>
-              </div>
+                </div>
               <div class="class-card-title-section-modern">
                 <h5 class="class-card-title-modern">Enrolled Students</h5>
                 <p class="class-card-subject-modern">{{ enrolled_students|length }} Students</p>
@@ -273,7 +259,7 @@
             <div class="class-card-body-modern">
               {% if enrolled_students %}
                 <div class="class-students-list">
-                  {% for student in enrolled_students %}
+                      {% for student in enrolled_students %}
                     <div class="class-student-item">
                       <div class="class-student-avatar">
                         {% if student.photo_filename %}
@@ -281,16 +267,16 @@
                         {% else %}
                           <span>{{ student.first_name[0] }}{{ student.last_name[0] }}</span>
                         {% endif %}
-                      </div>
+                            </div>
                       <div class="class-student-info">
                         <div class="class-student-name">{{ student.first_name }} {{ student.last_name }}</div>
                         <div class="class-student-details">
                           <span class="class-student-id">ID: {{ student.student_id or 'N/A' }}</span>
                           <span class="class-student-grade">Grade: {{ student.grade_level }}</span>
-                        </div>
-                      </div>
-                    </div>
-                  {% endfor %}
+                              </div>
+                            </div>
+                          </div>
+                      {% endfor %}
                 </div>
               {% else %}
                 <div class="classes-empty-state">
@@ -308,7 +294,7 @@
             <div class="class-card-header-modern">
               <div class="class-card-icon-modern">
                 <i class="bi bi-calendar-check"></i>
-              </div>
+                </div>
               <div class="class-card-title-section-modern">
                 <h5 class="class-card-title-modern">Recent Attendance</h5>
                 <p class="class-card-subject-modern">{{ recent_attendance|length }} Records (7 days)</p>
@@ -317,26 +303,26 @@
             <div class="class-card-body-modern">
               {% if recent_attendance %}
                 <div class="class-attendance-list">
-                  {% for attendance in recent_attendance %}
+                      {% for attendance in recent_attendance %}
                     <div class="class-attendance-item">
                       <div class="class-attendance-avatar">
                         <i class="bi bi-person"></i>
-                      </div>
+                            </div>
                       <div class="class-attendance-info">
                         <div class="class-attendance-student">{{ attendance.student.first_name }} {{ attendance.student.last_name }}</div>
                         <div class="class-attendance-details">
                           <span class="class-attendance-date">{{ attendance.date.strftime('%b %d, %Y') }}</span>
-                          {% if attendance.status == 'Present' %}
+                                {% if attendance.status == 'Present' %}
                             <span class="class-attendance-badge class-attendance-present">Present</span>
-                          {% elif attendance.status == 'Excused Absence' %}
+                                {% elif attendance.status == 'Excused Absence' %}
                             <span class="class-attendance-badge class-attendance-excused">Excused</span>
-                          {% else %}
+                                {% else %}
                             <span class="class-attendance-badge class-attendance-absent">Absent</span>
-                          {% endif %}
-                        </div>
-                      </div>
-                    </div>
-                  {% endfor %}
+                                {% endif %}
+                              </div>
+                            </div>
+                          </div>
+                      {% endfor %}
                 </div>
               {% else %}
                 <div class="classes-empty-state">
@@ -353,7 +339,7 @@
         <div class="class-card-header-modern">
           <div class="class-card-icon-modern">
             <i class="bi bi-journal-text"></i>
-          </div>
+              </div>
           <div class="class-card-title-section-modern">
             <h5 class="class-card-title-modern">Class Assignments</h5>
             <p class="class-card-subject-modern">Complete Overview</p>
@@ -373,11 +359,11 @@
                 <div class="class-assignments-col">Actions</div>
               </div>
               <div class="class-assignments-body">
-                {% for assignment in assignments %}
+                  {% for assignment in assignments %}
                   <div class="class-assignments-row">
                     <div class="class-assignments-col">
                       <div class="class-assignment-title">{{ assignment.title }}</div>
-                    </div>
+                        </div>
                     <div class="class-assignments-col">
                       {% if assignment.due_date %}
                         <span class="class-assignment-due">{{ assignment.due_date.strftime('%Y-%m-%d') }}</span>
@@ -414,7 +400,7 @@
                       </div>
                     </div>
                   </div>
-                {% endfor %}
+                  {% endfor %}
               </div>
             </div>
           {% else %}

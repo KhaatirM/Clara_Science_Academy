@@ -6373,12 +6373,9 @@ def api_create_dynamic_team():
         team = CleaningTeam(
             team_name=f"Dynamic:{data['name']}",
             team_description=data.get('description', ''),
+            team_type=data.get('type', 'other'),
             is_active=True
         )
-        
-        # Add team_type attribute if it doesn't exist
-        if not hasattr(team, 'team_type'):
-            team.team_type = data.get('type', 'other')
         
         db.session.add(team)
         db.session.flush()  # Get the team ID
@@ -6792,12 +6789,24 @@ def api_save_inspection():
     try:
         data = request.get_json()
         
+        # Get the team to determine inspection type
+        team = CleaningTeam.query.get(data.get('team_id'))
+        team_type = team.team_type if team else 'cleaning'
+        
+        # Determine inspection type based on team
+        inspection_type = 'cleaning'  # default
+        if team_type == 'lunch_duty':
+            inspection_type = 'lunch_duty'
+        elif team_type == 'experiment_duty':
+            inspection_type = 'experiment_duty'
+        
         # Create inspection record
         inspection = CleaningInspection(
             team_id=data.get('team_id'),
             inspection_date=datetime.strptime(data.get('inspection_date'), '%Y-%m-%d').date() if isinstance(data.get('inspection_date'), str) else data.get('inspection_date'),
             inspector_name=data.get('inspector_name'),
             inspector_notes=data.get('inspector_notes', ''),
+            inspection_type=inspection_type,
             final_score=data.get('final_score', 100),
             major_deductions=data.get('major_deductions', 0),
             bonus_points=data.get('bonus_points', 0),

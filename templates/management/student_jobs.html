@@ -638,9 +638,9 @@
                             <label for="teamType" class="form-label">Team Type</label>
                             <select class="form-select" id="teamType" required>
                                 <option value="">Select team type...</option>
-                                <option value="experiment">Experiment Team</option>
-                                <option value="project">Project Team</option>
-                                <option value="special">Special Assignment</option>
+                                <option value="cleaning">Cleaning Team</option>
+                                <option value="lunch_duty">Lunch Duty Team</option>
+                                <option value="experiment_duty">Experiment Duty Team</option>
                                 <option value="other">Other</option>
                             </select>
                         </div>
@@ -753,6 +753,112 @@
                             <div class="alert alert-info mt-2 mb-0">
                                 <i class="bi bi-info-circle me-1"></i>
                                 <strong>Note:</strong> Multiple items can be selected and points will be deducted for each item.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Lunch Duty Deductions -->
+                    <div class="card mb-3 border-warning" id="lunchDutyDeductions" style="display: none;">
+                        <div class="card-header bg-warning text-dark">
+                            <h6 class="mb-0"><i class="bi bi-utensils me-1"></i>Lunch Duty Inspection (Stackable)</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6 class="text-danger">Major Deductions (-10 points each)</h6>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="lunchFoodSpilled">
+                                        <label class="form-check-label" for="lunchFoodSpilled">
+                                            Food spilled on serving area
+                                        </label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="lunchNotOnTime">
+                                        <label class="form-check-label" for="lunchNotOnTime">
+                                            Not ready on time for lunch service
+                                        </label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="lunchTrashNotEmpty">
+                                        <label class="form-check-label" for="lunchTrashNotEmpty">
+                                            Trash not emptied and replaced
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="text-warning">Moderate Deductions (-5 points each)</h6>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="lunchUtensilsMissing">
+                                        <label class="form-check-label" for="lunchUtensilsMissing">
+                                            Utensils or supplies missing
+                                        </label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="lunchCountersNotWiped">
+                                        <label class="form-check-label" for="lunchCountersNotWiped">
+                                            Serving counters not wiped down
+                                        </label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="lunchTablesNotCleared">
+                                        <label class="form-check-label" for="lunchTablesNotCleared">
+                                            Tables not cleared properly
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Experiment Duty Deductions -->
+                    <div class="card mb-3 border-primary" id="experimentDutyDeductions" style="display: none;">
+                        <div class="card-header bg-primary text-white">
+                            <h6 class="mb-0"><i class="bi bi-flask me-1"></i>Experiment Duty Inspection (Stackable)</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6 class="text-danger">Major Deductions (-10 points each)</h6>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="expEquipmentMissing">
+                                        <label class="form-check-label" for="expEquipmentMissing">
+                                            Required equipment missing or not set up
+                                        </label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="expSafetyViolation">
+                                        <label class="form-check-label" for="expSafetyViolation">
+                                            Safety equipment not properly placed
+                                        </label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="expNotOnTime">
+                                        <label class="form-check-label" for="expNotOnTime">
+                                            Experiment setup not ready on time
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="text-warning">Moderate Deductions (-5 points each)</h6>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="expSuppliesMissing">
+                                        <label class="form-check-label" for="expSuppliesMissing">
+                                            Lab supplies or materials missing
+                                        </label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="expAreaNotClean">
+                                        <label class="form-check-label" for="expAreaNotClean">
+                                            Lab area not cleaned before experiment
+                                        </label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="expEquipmentNotReturned">
+                                        <label class="form-check-label" for="expEquipmentNotReturned">
+                                            Equipment not returned to storage
+                                        </label>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -982,12 +1088,23 @@ function toggleInspectionSections() {
     const teamSelect = document.getElementById('teamSelect');
     const computerDeductions = document.getElementById('computerTeamDeductions');
     const cleanupDeductions = document.getElementById('cleanupTeamDeductions');
+    const lunchDutyDeductions = document.getElementById('lunchDutyDeductions');
+    const experimentDutyDeductions = document.getElementById('experimentDutyDeductions');
     
+    // Hide all sections first
+    computerDeductions.style.display = 'none';
+    cleanupDeductions.style.display = 'none';
+    lunchDutyDeductions.style.display = 'none';
+    experimentDutyDeductions.style.display = 'none';
+    
+    // Show appropriate section based on team type
     if (teamSelect.value === 'computer') {
         computerDeductions.style.display = 'block';
-        cleanupDeductions.style.display = 'none';
+    } else if (teamSelect.value === 'lunch_duty') {
+        lunchDutyDeductions.style.display = 'block';
+    } else if (teamSelect.value === 'experiment_duty') {
+        experimentDutyDeductions.style.display = 'block';
     } else {
-        computerDeductions.style.display = 'none';
         cleanupDeductions.style.display = 'block';
     }
 }
@@ -1012,6 +1129,28 @@ function calculateScore() {
         if (document.getElementById('chargerLeftOut').checked) score -= 5;
         if (document.getElementById('headphonesLeftOut').checked) score -= 5;
         if (document.getElementById('extensionCordLeftOut').checked) score -= 3;
+    } else if (team === 'lunch_duty') {
+        // Lunch Duty deductions
+        const lunchMajor = ['lunchFoodSpilled', 'lunchNotOnTime', 'lunchTrashNotEmpty'];
+        lunchMajor.forEach(id => {
+            if (document.getElementById(id) && document.getElementById(id).checked) score -= 10;
+        });
+        
+        const lunchModerate = ['lunchUtensilsMissing', 'lunchCountersNotWiped', 'lunchTablesNotCleared'];
+        lunchModerate.forEach(id => {
+            if (document.getElementById(id) && document.getElementById(id).checked) score -= 5;
+        });
+    } else if (team === 'experiment_duty') {
+        // Experiment Duty deductions
+        const expMajor = ['expEquipmentMissing', 'expSafetyViolation', 'expNotOnTime'];
+        expMajor.forEach(id => {
+            if (document.getElementById(id) && document.getElementById(id).checked) score -= 10;
+        });
+        
+        const expModerate = ['expSuppliesMissing', 'expAreaNotClean', 'expEquipmentNotReturned'];
+        expModerate.forEach(id => {
+            if (document.getElementById(id) && document.getElementById(id).checked) score -= 5;
+        });
     } else {
         // Cleanup team deductions (stackable)
         const cleanupDeductions = [
@@ -1100,6 +1239,40 @@ function submitInspection() {
             score -= 3;
             deductions += 3;
         }
+    } else if (team === 'lunch_duty') {
+        // Lunch Duty deductions
+        const lunchMajorDeductions = ['lunchFoodSpilled', 'lunchNotOnTime', 'lunchTrashNotEmpty'];
+        lunchMajorDeductions.forEach(id => {
+            if (document.getElementById(id) && document.getElementById(id).checked) {
+                score -= 10;
+                deductions += 10;
+            }
+        });
+        
+        const lunchModerateDeductions = ['lunchUtensilsMissing', 'lunchCountersNotWiped', 'lunchTablesNotCleared'];
+        lunchModerateDeductions.forEach(id => {
+            if (document.getElementById(id) && document.getElementById(id).checked) {
+                score -= 5;
+                deductions += 5;
+            }
+        });
+    } else if (team === 'experiment_duty') {
+        // Experiment Duty deductions
+        const expMajorDeductions = ['expEquipmentMissing', 'expSafetyViolation', 'expNotOnTime'];
+        expMajorDeductions.forEach(id => {
+            if (document.getElementById(id) && document.getElementById(id).checked) {
+                score -= 10;
+                deductions += 10;
+            }
+        });
+        
+        const expModerateDeductions = ['expSuppliesMissing', 'expAreaNotClean', 'expEquipmentNotReturned'];
+        expModerateDeductions.forEach(id => {
+            if (document.getElementById(id) && document.getElementById(id).checked) {
+                score -= 5;
+                deductions += 5;
+            }
+        });
     } else {
         // Cleanup team deductions (stackable)
         const cleanupDeductions = [

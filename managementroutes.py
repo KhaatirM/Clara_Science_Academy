@@ -6228,7 +6228,8 @@ def student_jobs():
 def api_get_students():
     """API endpoint to get all students for dynamic team creation"""
     try:
-        students = Student.query.filter_by(is_active=True).all()
+        # Get all students (no is_active filter since Student model doesn't have that column)
+        students = Student.query.all()
         student_list = []
         for student in students:
             student_list.append({

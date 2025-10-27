@@ -1877,6 +1877,7 @@ class CleaningTeamMember(db.Model):
     team_id = db.Column(db.Integer, db.ForeignKey('cleaning_team.id'), nullable=False)
     student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
     role = db.Column(db.String(50), nullable=False)  # "Sweeping Team", "Wipe Down Team", "Trash Team", "Bathroom Team"
+    assignment_description = db.Column(db.Text, nullable=True)  # Detailed job assignment description
     is_active = db.Column(db.Boolean, default=True)
     assigned_at = db.Column(db.DateTime, default=datetime.utcnow)
     

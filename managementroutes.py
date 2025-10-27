@@ -6205,6 +6205,7 @@ def student_jobs():
                         'id': member.student.id,
                         'name': f"{member.student.first_name} {member.student.last_name}",
                         'role': member.role,
+                        'assignment_description': member.assignment_description if hasattr(member, 'assignment_description') else '',
                         'member_id': member.id
                     })
             
@@ -6492,13 +6493,14 @@ def api_get_team_members(team_id):
         member_list = []
         
         for member in members:
-            if member.student:
-                member_list.append({
-                    'id': member.student.id,
-                    'name': f"{member.student.first_name} {member.student.last_name}",
-                    'role': member.role,
-                    'member_id': member.id
-                })
+                if member.student:
+                    member_list.append({
+                        'id': member.student.id,
+                        'name': f"{member.student.first_name} {member.student.last_name}",
+                        'role': member.role,
+                        'assignment_description': member.assignment_description if hasattr(member, 'assignment_description') else '',
+                        'member_id': member.id
+                    })
         
         return jsonify({
             'success': True,

@@ -31,7 +31,8 @@ def run_database_fix():
                 'fix_production_assignment_columns_postgres.py',
                 'fix_school_day_attendance_table.py',
                 'fix_bug_report_table_schema.py',
-                'fix_class_table_schema.py'
+                'fix_class_table_schema.py',
+                'fix_production_voided_fields.py'
             ]
             
             all_success = True

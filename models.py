@@ -619,6 +619,12 @@ class Grade(db.Model):
     assignment_id = db.Column(db.Integer, db.ForeignKey('assignment.id'), nullable=False)
     grade_data = db.Column(db.Text, nullable=False)  # JSON string containing score and comments
     graded_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Voiding fields
+    is_voided = db.Column(db.Boolean, default=False, nullable=False)
+    voided_by = db.Column(db.Integer, nullable=True)
+    voided_at = db.Column(db.DateTime, nullable=True)
+    voided_reason = db.Column(db.Text, nullable=True)
 
     student = db.relationship('Student', backref='grades', lazy=True)
     assignment = db.relationship('Assignment', backref='grades', lazy=True)
@@ -1195,6 +1201,12 @@ class GroupGrade(db.Model):
     graded_by = db.Column(db.Integer, db.ForeignKey('teacher_staff.id'), nullable=False)
     graded_at = db.Column(db.DateTime, default=datetime.utcnow)
     comments = db.Column(db.Text, nullable=True)
+    
+    # Voiding fields
+    is_voided = db.Column(db.Boolean, default=False, nullable=False)
+    voided_by = db.Column(db.Integer, nullable=True)
+    voided_at = db.Column(db.DateTime, nullable=True)
+    voided_reason = db.Column(db.Text, nullable=True)
     
     # Relationships
     group_assignment = db.relationship('GroupAssignment', backref='grades')

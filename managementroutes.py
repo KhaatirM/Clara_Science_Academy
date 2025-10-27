@@ -4604,6 +4604,57 @@ def remove_assignment(assignment_id):
         return redirect(url_for('management.assignments_and_grades'))
 
 
+@management_blueprint.route('/void-grade/<int:grade_id>', methods=['POST'])
+@login_required
+@management_required
+def void_grade(grade_id):
+    """Void a grade for an individual assignment"""
+    from datetime import datetime
+    
+    grade = Grade.query.get_or_404(grade_id)
+    reason = request.form.get('reason', 'No reason provided')
+    
+    try:
+        grade.is_voided = True
+        grade.voided_by = current_user.id
+        grade.voided_at = datetime.utcnow()
+        grade.voided_reason = reason
+        
+        db.session.commit()
+        flash('Grade voided successfully.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error voiding grade: {str(e)}', 'danger')
+    
+    return redirect(request.referrer or url_for('management.assignments_and_grades'))
+
+
+@management_blueprint.route('/void-group-grade/<int:grade_id>', methods=['POST'])
+@login_required
+@management_required
+def void_group_grade(grade_id):
+    """Void a grade for a group assignment"""
+    from datetime import datetime
+    from models import GroupGrade
+    
+    grade = GroupGrade.query.get_or_404(grade_id)
+    reason = request.form.get('reason', 'No reason provided')
+    
+    try:
+        grade.is_voided = True
+        grade.voided_by = current_user.id
+        grade.voided_at = datetime.utcnow()
+        grade.voided_reason = reason
+        
+        db.session.commit()
+        flash('Group grade voided successfully.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error voiding group grade: {str(e)}', 'danger')
+    
+    return redirect(request.referrer or url_for('management.assignments_and_grades'))
+
+
 @management_blueprint.route('/assignment/change-status/<int:assignment_id>', methods=['POST'])
 @login_required
 @management_required

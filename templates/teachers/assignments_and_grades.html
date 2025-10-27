@@ -323,71 +323,71 @@
                 </h6>
             </div>
             <div class="card-body p-0">
-                <div class="table-responsive">
+        <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-light">
-                            <tr>
-                                <th>Assignment</th>
-                                <th>Class</th>
-                                <th>Due Date</th>
+                    <tr>
+                        <th>Assignment</th>
+                        <th>Class</th>
+                        <th>Due Date</th>
                                 <th>Progress</th>
-                                <th>Average Score</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for assignment in assignments %}
-                                {% set grade_info = grade_data.get(assignment.id, {}) %}
-                                {% set avg_score = grade_info.get('average_score', 0) %}
-                                {% set total_submissions = grade_info.get('total_submissions', 0) %}
-                                {% set graded_count = grade_info.get('graded_count', 0) %}
-                                <tr>
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <div class="assignment-icon me-3">
-                                                <i class="bi bi-journal-text text-primary"></i>
-                                            </div>
-                                            <div>
-                                                <h6 class="mb-0">{{ assignment.title }}</h6>
-                                                <small class="text-muted">{{ assignment.assignment_type or 'Individual' }}</small>
-                                            </div>
+                        <th>Average Score</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for assignment in assignments %}
+                            {% set grade_info = grade_data.get(assignment.id, {}) %}
+                            {% set avg_score = grade_info.get('average_score', 0) %}
+                            {% set total_submissions = grade_info.get('total_submissions', 0) %}
+                            {% set graded_count = grade_info.get('graded_count', 0) %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="assignment-icon me-3">
+                                            <i class="bi bi-journal-text text-primary"></i>
                                         </div>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-secondary">{{ assignment.class_info.name }}</span>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex flex-column">
-                                            <span class="fw-medium">{{ assignment.due_date.strftime('%b %d, %Y') }}</span>
-                                            <small class="text-muted">{{ assignment.due_date.strftime('%I:%M %p') }}</small>
+                                        <div>
+                                            <h6 class="mb-0">{{ assignment.title }}</h6>
+                                            <small class="text-muted">{{ assignment.assignment_type or 'Individual' }}</small>
                                         </div>
-                                    </td>
-                                    <td>
-                                        <div class="progress" style="width: 120px; height: 8px;">
-                                            {% set progress_percentage = (graded_count / total_submissions * 100) if total_submissions > 0 else 0 %}
-                                            <div class="progress-bar bg-primary" role="progressbar" style="width: {{ progress_percentage }}%"></div>
-                                        </div>
-                                        <small class="text-muted">{{ graded_count }}/{{ total_submissions }} graded</small>
-                                    </td>
-                                    <td>
-                                        <span class="badge {% if avg_score >= 90 %}bg-success{% elif avg_score >= 70 %}bg-warning{% else %}bg-danger{% endif %} fs-6">
-                                            {{ "%.1f"|format(avg_score) }}%
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div class="btn-group" role="group">
-                                            <a href="{{ url_for('teacher.grade_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-primary" title="Grade Assignment">
-                                                <i class="bi bi-pencil-square"></i>
-                                            </a>
-                                            <a href="{{ url_for('teacher.view_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-secondary" title="View Assignment">
-                                                <i class="bi bi-eye"></i>
-                                            </a>
-                                        </div>
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ assignment.class_info.name }}</span>
+                                </td>
+                                <td>
+                                    <div class="d-flex flex-column">
+                                        <span class="fw-medium">{{ assignment.due_date.strftime('%b %d, %Y') }}</span>
+                                        <small class="text-muted">{{ assignment.due_date.strftime('%I:%M %p') }}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="progress" style="width: 120px; height: 8px;">
+                                        {% set progress_percentage = (graded_count / total_submissions * 100) if total_submissions > 0 else 0 %}
+                                        <div class="progress-bar bg-primary" role="progressbar" style="width: {{ progress_percentage }}%"></div>
+                                    </div>
+                                    <small class="text-muted">{{ graded_count }}/{{ total_submissions }} graded</small>
+                                </td>
+                                <td>
+                                    <span class="badge {% if avg_score >= 90 %}bg-success{% elif avg_score >= 70 %}bg-warning{% else %}bg-danger{% endif %} fs-6">
+                                {{ "%.1f"|format(avg_score) }}%
+                            </span>
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                        <a href="{{ url_for('teacher.grade_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-primary" title="Grade Assignment">
+                                            <i class="bi bi-pencil-square"></i>
+                                </a>
+                                        <a href="{{ url_for('teacher.view_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-secondary" title="View Assignment">
+                                            <i class="bi bi-eye"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
                 </div>
             </div>
         </div>

@@ -6621,6 +6621,37 @@ def api_remove_team_members(team_id):
             'error': str(e)
         }), 500
 
+@management_blueprint.route('/api/team-members/<int:member_id>/update', methods=['POST'])
+@login_required
+@management_required
+def api_update_team_member(member_id):
+    """API endpoint to update team member role and assignment"""
+    try:
+        data = request.get_json()
+        role = data.get('role')
+        assignment_description = data.get('assignment_description')
+        
+        # Find the member
+        member = CleaningTeamMember.query.get_or_404(member_id)
+        
+        # Update the member
+        member.role = role
+        member.assignment_description = assignment_description if assignment_description else None
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Member assignment updated successfully'
+        })
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error updating team member: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @management_blueprint.route('/api/save-inspection', methods=['POST'])
 @login_required
 @management_required

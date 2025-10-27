@@ -155,12 +155,15 @@
                                     {% if team_entry.team.team_name == "Team 1" %}
                                         {% if team_entry.members %}
                                             {% for member in team_entry.members %}
-                                <div class="team-member-card">
+                                <div class="team-member-card" data-member-id="{{ member.member_id }}" data-member-name="{{ member.name }}" data-member-role="{{ member.role }}" data-member-assignment="{{ member.assignment_description if member.assignment_description else '' }}">
                                     <div class="member-header">
                                         <span class="member-name">{{ member.name }}</span>
                                         <span class="job-badge sweeping">{{ member.role }}</span>
                                     </div>
                                     <div class="job-details">{{ member.assignment_description if member.assignment_description else 'Member of Cleanup Team 1' }}</div>
+                                    <button class="btn btn-sm btn-outline-secondary mt-2 edit-member-btn" data-team-id="1">
+                                        <i class="bi bi-pencil me-1"></i>Edit Assignment
+                                    </button>
                                 </div>
                                             {% endfor %}
                                         {% else %}
@@ -284,12 +287,15 @@
                                     {% if team_entry.team.team_name == "Team 2" %}
                                         {% if team_entry.members %}
                                             {% for member in team_entry.members %}
-                                <div class="team-member-card">
+                                <div class="team-member-card" data-member-id="{{ member.member_id }}" data-member-name="{{ member.name }}" data-member-role="{{ member.role }}" data-member-assignment="{{ member.assignment_description if member.assignment_description else '' }}">
                                     <div class="member-header">
                                         <span class="member-name">{{ member.name }}</span>
                                         <span class="job-badge sweeping">{{ member.role }}</span>
                                     </div>
                                     <div class="job-details">{{ member.assignment_description if member.assignment_description else 'Member of Cleanup Team 2' }}</div>
+                                    <button class="btn btn-sm btn-outline-secondary mt-2 edit-member-btn" data-team-id="2">
+                                        <i class="bi bi-pencil me-1"></i>Edit Assignment
+                                    </button>
                                 </div>
                                             {% endfor %}
                                         {% else %}
@@ -518,6 +524,43 @@
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-warning" onclick="removeSelectedMembers()">
                     <i class="bi bi-trash me-1"></i>Remove Selected Members
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Member Assignment Modal -->
+<div class="modal fade" id="editMemberModal" tabindex="-1" aria-labelledby="editMemberModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="editMemberModalLabel">
+                    <i class="bi bi-pencil me-2"></i>Edit Member Assignment
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editMemberForm">
+                    <input type="hidden" id="editMemberId">
+                    <div class="mb-3">
+                        <label class="form-label">Member Name</label>
+                        <input type="text" class="form-control" id="editMemberName" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editMemberRole" class="form-label">Role</label>
+                        <input type="text" class="form-control" id="editMemberRole" placeholder="e.g., Sweeping Team, Trash Team, Bathroom Team">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editMemberAssignment" class="form-label">Assignment Description</label>
+                        <textarea class="form-control" id="editMemberAssignment" rows="4" placeholder="e.g., Sweep all 4 classrooms and main hallway, Clean and replenish girls bathroom supplies"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveMemberAssignment()">
+                    <i class="bi bi-check-circle me-1"></i>Save Changes
                 </button>
             </div>
         </div>
@@ -1793,6 +1836,68 @@ function loadExistingTeams() {
             dynamicTeams = [];
             renderDynamicTeams();
         });
+}
+
+// Edit member assignment
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.edit-member-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const card = this.closest('.team-member-card');
+            const memberId = card.getAttribute('data-member-id');
+            const memberName = card.getAttribute('data-member-name');
+            const memberRole = card.getAttribute('data-member-role');
+            const memberAssignment = card.getAttribute('data-member-assignment');
+            
+            // Populate the edit modal
+            document.getElementById('editMemberId').value = memberId;
+            document.getElementById('editMemberName').value = memberName;
+            document.getElementById('editMemberRole').value = memberRole;
+            document.getElementById('editMemberAssignment').value = memberAssignment;
+            
+            // Show the modal
+            const modal = new bootstrap.Modal(document.getElementById('editMemberModal'));
+            modal.show();
+        });
+    });
+});
+
+function saveMemberAssignment() {
+    const memberId = document.getElementById('editMemberId').value;
+    const role = document.getElementById('editMemberRole').value;
+    const assignmentDescription = document.getElementById('editMemberAssignment').value;
+    
+    if (!role.trim()) {
+        alert('Please enter a role for this member.');
+        return;
+    }
+    
+    fetch(`/management/api/team-members/${memberId}/update`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            role: role.trim(),
+            assignment_description: assignmentDescription.trim()
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert('Member assignment updated successfully!', 'success');
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editMemberModal'));
+            modal.hide();
+            // Reload page to reflect changes
+            location.reload();
+        } else {
+            showAlert('Failed to update member assignment: ' + data.error, 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error updating member assignment:', error);
+        showAlert('Error updating member assignment. Please try again.', 'danger');
+    });
 }
 </script>
 

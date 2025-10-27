@@ -549,7 +549,23 @@
                     </div>
                     <div class="mb-3">
                         <label for="editMemberRole" class="form-label">Role</label>
-                        <input type="text" class="form-control" id="editMemberRole" placeholder="e.g., Sweeping Team, Trash Team, Bathroom Team">
+                        <select class="form-select" id="editMemberRole">
+                            <option value="">Select a role...</option>
+                            <option value="Bathroom - Males">Bathroom - Males</option>
+                            <option value="Bathroom - Females">Bathroom - Females</option>
+                            <option value="Wiping - Tables">Wiping - Tables</option>
+                            <option value="Wiping - Surfaces">Wiping - Surfaces</option>
+                            <option value="Sweeping - Classrooms">Sweeping - Classrooms</option>
+                            <option value="Sweeping - Hallway">Sweeping - Hallway</option>
+                            <option value="Sweeping - Bathrooms">Sweeping - Bathrooms</option>
+                            <option value="Trash - Replacing">Trash - Replacing</option>
+                            <option value="Trash - Replenishing">Trash - Replenishing</option>
+                            <option value="other">Other (specify below)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="customRoleContainer" style="display: none;">
+                        <label for="customRole" class="form-label">Custom Role</label>
+                        <input type="text" class="form-control" id="customRole" placeholder="Enter custom role">
                     </div>
                     <div class="mb-3">
                         <label for="editMemberAssignment" class="form-label">Assignment Description</label>
@@ -1851,8 +1867,40 @@ document.addEventListener('DOMContentLoaded', function() {
             // Populate the edit modal
             document.getElementById('editMemberId').value = memberId;
             document.getElementById('editMemberName').value = memberName;
-            document.getElementById('editMemberRole').value = memberRole;
+            
+            // Set the role dropdown
+            const roleSelect = document.getElementById('editMemberRole');
+            const customRoleContainer = document.getElementById('customRoleContainer');
+            const customRoleInput = document.getElementById('customRole');
+            
+            // Check if the role matches any predefined option
+            const roleExists = Array.from(roleSelect.options).some(option => option.value === memberRole);
+            
+            if (roleExists) {
+                roleSelect.value = memberRole;
+                customRoleContainer.style.display = 'none';
+                customRoleInput.value = '';
+            } else if (memberRole) {
+                // Set to "other" and show custom field
+                roleSelect.value = 'other';
+                customRoleContainer.style.display = 'block';
+                customRoleInput.value = memberRole;
+            } else {
+                roleSelect.value = '';
+                customRoleContainer.style.display = 'none';
+            }
+            
             document.getElementById('editMemberAssignment').value = memberAssignment;
+            
+            // Add event listener to show/hide custom role field
+            roleSelect.addEventListener('change', function() {
+                if (this.value === 'other') {
+                    customRoleContainer.style.display = 'block';
+                } else {
+                    customRoleContainer.style.display = 'none';
+                    customRoleInput.value = '';
+                }
+            });
             
             // Show the modal
             const modal = new bootstrap.Modal(document.getElementById('editMemberModal'));
@@ -1863,8 +1911,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function saveMemberAssignment() {
     const memberId = document.getElementById('editMemberId').value;
-    const role = document.getElementById('editMemberRole').value;
+    let role = document.getElementById('editMemberRole').value;
     const assignmentDescription = document.getElementById('editMemberAssignment').value;
+    
+    // If custom role is selected, use the custom value
+    if (role === 'other') {
+        const customRole = document.getElementById('customRole').value.trim();
+        if (!customRole) {
+            alert('Please enter a custom role or select a different role.');
+            return;
+        }
+        role = customRole;
+    }
     
     if (!role.trim()) {
         alert('Please enter a role for this member.');

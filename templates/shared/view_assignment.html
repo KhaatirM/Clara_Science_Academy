@@ -157,7 +157,7 @@
                                 <i class="bi bi-file-text"></i>
                             </div>
                             <div class="stat-content">
-                                <span class="stat-number">{{ assignment.submissions|length if assignment.submissions else 0 }}</span>
+                                <span class="stat-number">{{ submissions_count }}</span>
                                 <span class="stat-label">Submissions</span>
                             </div>
                         </div>
@@ -166,7 +166,7 @@
                                 <i class="bi bi-star"></i>
                             </div>
                             <div class="stat-content">
-                                <span class="stat-number">{{ assignment.points if assignment.points else 0 }}</span>
+                                <span class="stat-number">{{ assignment_points }}</span>
                                 <span class="stat-label">Points</span>
                             </div>
                         </div>

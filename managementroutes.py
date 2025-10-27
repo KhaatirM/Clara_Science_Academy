@@ -4459,8 +4459,30 @@ def view_assignment(assignment_id):
     if class_info and class_info.teacher_id:
         teacher = TeacherStaff.query.get(class_info.teacher_id)
     
-    # Get submissions count (if any)
-    submissions_count = 0  # This would be implemented when submission system is added
+    # Get submissions - check if it's a regular assignment or group assignment
+    from models import Submission, GroupSubmission, GroupAssignment
+    
+    if hasattr(assignment, 'id'):
+        # Try to get regular submissions
+        submissions = Submission.query.filter_by(assignment_id=assignment_id).all()
+        submissions_count = len(submissions)
+    else:
+        submissions_count = 0
+        submissions = []
+    
+    # Check if there's a group assignment with the same assignment
+    group_assignments = GroupAssignment.query.filter_by(class_id=assignment.class_id if assignment.class_id else 0).all()
+    group_submissions_count = 0
+    for ga in group_assignments:
+        # Try to match by title or other identifier
+        if ga.title == assignment.title or ga.id == assignment_id:
+            group_submissions = GroupSubmission.query.filter_by(group_assignment_id=ga.id).all()
+            group_submissions_count += len(group_submissions)
+    
+    total_submissions_count = submissions_count + group_submissions_count
+    
+    # Get points from assignment
+    assignment_points = assignment.total_points if hasattr(assignment, 'total_points') else assignment.points if hasattr(assignment, 'points') else 0
     
     # Get current date for status calculations
     today = datetime.now().date()
@@ -4469,7 +4491,8 @@ def view_assignment(assignment_id):
                          assignment=assignment,
                          class_info=class_info,
                          teacher=teacher,
-                         submissions_count=submissions_count,
+                         submissions_count=total_submissions_count,
+                         assignment_points=assignment_points,
                          today=today)
 
 

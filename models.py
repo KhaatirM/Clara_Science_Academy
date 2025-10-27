@@ -1857,6 +1857,7 @@ class CleaningTeam(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     team_name = db.Column(db.String(100), nullable=False, unique=True)  # "Team 1" or "Team 2"
     team_description = db.Column(db.String(200), nullable=False)  # "4 Classrooms & Hallway Trash"
+    team_type = db.Column(db.String(50), default='cleaning')  # 'cleaning', 'lunch_duty', 'experiment_duty', 'other'
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -1896,6 +1897,7 @@ class CleaningInspection(db.Model):
     team_id = db.Column(db.Integer, db.ForeignKey('cleaning_team.id'), nullable=False)
     inspection_date = db.Column(db.Date, nullable=False)
     inspector_name = db.Column(db.String(100), nullable=False)
+    inspection_type = db.Column(db.String(50), default='cleaning')  # 'cleaning', 'lunch_duty', 'experiment_duty', 'other'
     
     # Score tracking
     starting_score = db.Column(db.Integer, default=100)

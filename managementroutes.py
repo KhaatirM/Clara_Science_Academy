@@ -6256,11 +6256,35 @@ def student_jobs():
                 'current_score': current_score
             }
         
-        return render_template('management/student_jobs.html', team_data=team_data)
+        # Get all inspections from all teams for the global history table
+        all_inspections = CleaningInspection.query.order_by(
+            CleaningInspection.inspection_date.desc()
+        ).limit(50).all()
+        
+        # Prepare inspection history data
+        inspection_history = []
+        for inspection in all_inspections:
+            # Get team name
+            team = CleaningTeam.query.get(inspection.team_id)
+            team_name = team.team_name if team else f"Team {inspection.team_id}"
+            
+            inspection_history.append({
+                'date': inspection.inspection_date,
+                'team_name': team_name,
+                'score': inspection.final_score,
+                'major_deductions': inspection.major_deductions,
+                'bonus_points': inspection.bonus_points,
+                'status': 'Passed' if inspection.final_score >= 60 else 'Failed - Re-do Required',
+                'inspector_name': inspection.inspector_name
+            })
+        
+        return render_template('management/student_jobs.html', 
+                             team_data=team_data, 
+                             inspection_history=inspection_history)
     except Exception as e:
         print(f"Error loading student jobs: {e}")
         flash('Error loading student jobs data.', 'error')
-        return render_template('management/student_jobs.html', team_data=[])
+        return render_template('management/student_jobs.html', team_data=[], inspection_history=[])
 
 
 @management_blueprint.route('/api/students')

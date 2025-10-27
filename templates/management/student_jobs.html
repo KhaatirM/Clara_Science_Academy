@@ -460,9 +460,23 @@
                                 </tr>
                             </thead>
                             <tbody id="inspectionHistory">
-                                <tr>
-                                    <td colspan="7" class="text-center text-muted">No inspections recorded yet</td>
-                                </tr>
+                                {% if inspection_history and inspection_history|length > 0 %}
+                                    {% for inspection in inspection_history %}
+                                    <tr>
+                                        <td>{{ inspection.date.strftime('%m/%d/%Y') }}</td>
+                                        <td>{{ inspection.team_name }}</td>
+                                        <td><span class="badge {% if inspection.score <= 60 %}bg-danger{% elif inspection.score < 80 %}bg-warning{% else %}bg-success{% endif %}">{{ inspection.score }}</span></td>
+                                        <td>{{ inspection.major_deductions }}</td>
+                                        <td>{{ inspection.bonus_points }}</td>
+                                        <td><span class="badge {% if inspection.status == 'Failed - Re-do Required' %}bg-danger{% else %}bg-success{% endif %}">{{ inspection.status }}</span></td>
+                                        <td>{{ inspection.inspector_name }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="7" class="text-center text-muted">No inspections recorded yet</td>
+                                    </tr>
+                                {% endif %}
                             </tbody>
                         </table>
                     </div>
@@ -1180,9 +1194,6 @@ function submitInspection() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Add to inspection history UI
-            addInspectionToHistory(date, teamName, score, deductions, bonuses, score <= 60 ? 'Failed - Re-do Required' : 'Passed', inspector);
-            
             // Show result alert
             const status = score <= 60 ? 'FAILED' : 'PASSED';
             const alertType = score <= 60 ? 'danger' : 'success';
@@ -1192,11 +1203,14 @@ function submitInspection() {
             
             showAlert(message, alertType);
             
-            // Close modal and reset form
+            // Close modal
             const modal = bootstrap.Modal.getInstance(document.getElementById('inspectionModal'));
             modal.hide();
-            document.getElementById('inspectionForm').reset();
-            document.getElementById('inspectionDate').value = new Date().toISOString().split('T')[0];
+            
+            // Reload the page to show updated inspection history
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
         } else {
             showAlert('Failed to save inspection: ' + data.error, 'danger');
         }
@@ -1207,29 +1221,6 @@ function submitInspection() {
     });
 }
 
-// Add inspection to history table
-function addInspectionToHistory(date, team, score, deductions, bonuses, status, inspector) {
-    const tbody = document.getElementById('inspectionHistory');
-    
-    // Remove "No inspections" row if it exists
-    const noDataRow = tbody.querySelector('td[colspan="7"]');
-    if (noDataRow) {
-        noDataRow.parentElement.remove();
-    }
-    
-    const row = document.createElement('tr');
-    row.innerHTML = `
-        <td>${date}</td>
-        <td>${team}</td>
-        <td><span class="badge ${score <= 60 ? 'bg-danger' : score < 80 ? 'bg-warning' : 'bg-success'}">${score}</span></td>
-        <td>${deductions}</td>
-        <td>${bonuses}</td>
-        <td><span class="badge ${status.includes('Failed') ? 'bg-danger' : 'bg-success'}">${status}</span></td>
-        <td>${inspector}</td>
-    `;
-    
-    tbody.insertBefore(row, tbody.firstChild);
-}
 
 // Show alert message
 function showAlert(message, type) {

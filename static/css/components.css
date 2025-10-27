@@ -2652,6 +2652,74 @@
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
+/* ===== STUDENT GRADES VIEW BUTTON ANIMATIONS ===== */
+
+/* Animated view all assignments button */
+.btn-view-all-assignments {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Button hover background effect */
+.btn-view-all-assignments::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(13, 110, 253, 0.1);
+    transform: translate(-50%, -50%);
+    transition: width 0.4s ease, height 0.4s ease;
+    z-index: 0;
+}
+
+.btn-view-all-assignments:hover::before {
+    width: 300px;
+    height: 300px;
+}
+
+/* Keep text above background */
+.btn-view-all-assignments i,
+.btn-view-all-assignments span {
+    position: relative;
+    z-index: 1;
+}
+
+/* Rotate chevron when expanded */
+.btn-view-all-assignments[aria-expanded="true"] i {
+    transform: rotate(180deg);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Smooth button press effect */
+.btn-view-all-assignments:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease;
+}
+
+/* Pulsing animation on page load */
+@keyframes pulse-subtle {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(13, 110, 253, 0);
+    }
+    50% {
+        box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.1);
+    }
+}
+
+.btn-view-all-assignments.animate-pulse {
+    animation: pulse-subtle 2s ease-in-out;
+}
+
+/* Smooth hover lift effect */
+.btn-view-all-assignments:hover:not(:active) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(13, 110, 253, 0.15);
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
     .classes-admin-title {

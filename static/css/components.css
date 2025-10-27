@@ -2511,7 +2511,7 @@
     border: 1px solid rgba(0, 0, 0, 0.05);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     overflow: hidden;
-    height: 45%;
+    height: 50%;
     display: flex;
     flex-direction: column;
 }

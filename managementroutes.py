@@ -6201,11 +6201,18 @@ def student_jobs():
             member_list = []
             for member in members:
                 if member.student:
+                    # Safely get assignment_description
+                    assignment_desc = ''
+                    try:
+                        assignment_desc = member.assignment_description or ''
+                    except:
+                        pass
+                    
                     member_list.append({
                         'id': member.student.id,
                         'name': f"{member.student.first_name} {member.student.last_name}",
                         'role': member.role,
-                        'assignment_description': member.assignment_description if hasattr(member, 'assignment_description') else '',
+                        'assignment_description': assignment_desc,
                         'member_id': member.id
                     })
             
@@ -6494,11 +6501,18 @@ def api_get_team_members(team_id):
         
         for member in members:
                 if member.student:
+                    # Safely get assignment_description
+                    assignment_desc = ''
+                    try:
+                        assignment_desc = member.assignment_description or ''
+                    except:
+                        pass
+                    
                     member_list.append({
                         'id': member.student.id,
                         'name': f"{member.student.first_name} {member.student.last_name}",
                         'role': member.role,
-                        'assignment_description': member.assignment_description if hasattr(member, 'assignment_description') else '',
+                        'assignment_description': assignment_desc,
                         'member_id': member.id
                     })
         

@@ -160,7 +160,7 @@
                                         <span class="member-name">{{ member.name }}</span>
                                         <span class="job-badge sweeping">{{ member.role }}</span>
                                     </div>
-                                    <div class="job-details">Member of Cleanup Team 1</div>
+                                    <div class="job-details">{{ member.assignment_description if member.assignment_description else 'Member of Cleanup Team 1' }}</div>
                                 </div>
                                             {% endfor %}
                                         {% else %}
@@ -289,7 +289,7 @@
                                         <span class="member-name">{{ member.name }}</span>
                                         <span class="job-badge sweeping">{{ member.role }}</span>
                                     </div>
-                                    <div class="job-details">Member of Cleanup Team 2</div>
+                                    <div class="job-details">{{ member.assignment_description if member.assignment_description else 'Member of Cleanup Team 2' }}</div>
                                 </div>
                                             {% endfor %}
                                         {% else %}

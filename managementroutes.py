@@ -4574,12 +4574,29 @@ def remove_assignment(assignment_id):
     class_id = assignment.class_id
     
     try:
-        # Delete associated grades and submissions first
+        from models import QuizQuestion, QuizProgress, DiscussionThread, QuizAnswer, DeadlineReminder
+        
+        # Delete associated quiz questions and answers
+        quiz_questions = QuizQuestion.query.filter_by(assignment_id=assignment_id).all()
+        for question in quiz_questions:
+            QuizAnswer.query.filter_by(question_id=question.id).delete()
+            db.session.delete(question)
+        
+        # Delete associated quiz progress
+        QuizProgress.query.filter_by(assignment_id=assignment_id).delete()
+        
+        # Delete associated discussion threads
+        DiscussionThread.query.filter_by(assignment_id=assignment_id).delete()
+        
+        # Delete associated grades and submissions
         Grade.query.filter_by(assignment_id=assignment_id).delete()
         Submission.query.filter_by(assignment_id=assignment_id).delete()
         
         # Delete associated extensions
         AssignmentExtension.query.filter_by(assignment_id=assignment_id).delete()
+        
+        # Delete associated deadline reminders
+        DeadlineReminder.query.filter_by(assignment_id=assignment_id).delete()
         
         # Delete the assignment file if it exists
         if assignment.attachment_filename:
@@ -4594,6 +4611,8 @@ def remove_assignment(assignment_id):
         flash('Assignment removed successfully.', 'success')
     except Exception as e:
         db.session.rollback()
+        import traceback
+        current_app.logger.error(f'Error removing assignment: {str(e)}\n{traceback.format_exc()}')
         flash(f'Error removing assignment: {str(e)}', 'danger')
     
     # Redirect back to assignments page, preserving class_id if it was in the request

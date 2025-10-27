@@ -6181,6 +6181,25 @@ def student_jobs():
         # Get all cleaning teams
         teams = CleaningTeam.query.filter_by(is_active=True).all()
         
+        # Import datetime for checking reset time
+        from datetime import datetime, timezone
+        from pytz import timezone as tz
+        
+        # Check if it's past Friday 4 PM EST (reset time)
+        # Get current time in EST
+        est = tz('US/Eastern')
+        now_est = datetime.now(est)
+        current_day = now_est.weekday()  # 0=Monday, 4=Friday
+        current_hour = now_est.hour
+        current_minute = now_est.minute
+        
+        # Check if we need to reset (after Friday 4 PM EST)
+        needs_reset = False
+        if current_day == 4 and current_hour >= 16:  # Friday after 4 PM
+            needs_reset = True
+        elif current_day > 4:  # Saturday or Sunday
+            needs_reset = True
+        
         # Get team members for all teams
         team_data = {}
         for team in teams:
@@ -6196,6 +6215,20 @@ def student_jobs():
             ).order_by(
                 CleaningInspection.inspection_date.desc()
             ).limit(5).all()
+            
+            # Get current score - use the most recent inspection's score
+            # But check if we need to reset based on Friday 4 PM EST rule
+            current_score = 100  # Default to 100
+            
+            if needs_reset:
+                # After Friday 4 PM, show default 100 until next inspection
+                current_score = 100
+            elif recent_inspections:
+                # Use the most recent inspection's score
+                current_score = recent_inspections[0].final_score
+            else:
+                # No inspections, show default 100
+                current_score = 100
             
             # Build member list with student info
             member_list = []
@@ -6220,7 +6253,7 @@ def student_jobs():
                 'team': team,
                 'members': member_list,
                 'recent_inspections': recent_inspections,
-                'current_score': recent_inspections[0].final_score if recent_inspections else 100
+                'current_score': current_score
             }
         
         return render_template('management/student_jobs.html', team_data=team_data)
@@ -6616,6 +6649,81 @@ def api_remove_team_members(team_id):
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error removing team members: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@management_blueprint.route('/api/team-inspections/<int:team_id>')
+@login_required
+@management_required
+def api_get_team_inspections(team_id):
+    """API endpoint to get inspection history for a team"""
+    try:
+        inspections = CleaningInspection.query.filter_by(
+            team_id=team_id
+        ).order_by(
+            CleaningInspection.inspection_date.desc()
+        ).limit(20).all()
+        
+        inspection_list = []
+        for inspection in inspections:
+            inspection_list.append({
+                'id': inspection.id,
+                'inspection_date': inspection.inspection_date.strftime('%Y-%m-%d'),
+                'final_score': inspection.final_score,
+                'inspector_name': inspection.inspector_name,
+                'inspector_notes': inspection.inspector_notes
+            })
+        
+        return jsonify({
+            'success': True,
+            'inspections': inspection_list
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error fetching team inspections: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@management_blueprint.route('/api/inspection/<int:inspection_id>')
+@login_required
+@management_required
+def api_get_inspection(inspection_id):
+    """API endpoint to get detailed inspection information"""
+    try:
+        inspection = CleaningInspection.query.get_or_404(inspection_id)
+        
+        return jsonify({
+            'success': True,
+            'inspection': {
+                'id': inspection.id,
+                'inspection_date': inspection.inspection_date.strftime('%Y-%m-%d'),
+                'final_score': inspection.final_score,
+                'major_deductions': inspection.major_deductions,
+                'bonus_points': inspection.bonus_points,
+                'inspector_name': inspection.inspector_name,
+                'inspector_notes': inspection.inspector_notes,
+                'bathroom_not_restocked': inspection.bathroom_not_restocked,
+                'trash_can_left_full': inspection.trash_can_left_full,
+                'floor_not_swept': inspection.floor_not_swept,
+                'materials_left_out': inspection.materials_left_out,
+                'tables_missed': inspection.tables_missed,
+                'classroom_trash_full': inspection.classroom_trash_full,
+                'bathroom_floor_poor': inspection.bathroom_floor_poor,
+                'not_finished_on_time': inspection.not_finished_on_time,
+                'small_debris_left': inspection.small_debris_left,
+                'trash_spilled': inspection.trash_spilled,
+                'dispensers_half_filled': inspection.dispensers_half_filled,
+                'exceptional_finish': inspection.exceptional_finish,
+                'speed_efficiency': inspection.speed_efficiency,
+                'going_above_beyond': inspection.going_above_beyond,
+                'teamwork_award': inspection.teamwork_award
+            }
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error fetching inspection: {e}")
         return jsonify({
             'success': False,
             'error': str(e)

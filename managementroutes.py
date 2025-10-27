@@ -6181,15 +6181,39 @@ def student_jobs():
         # Get all cleaning teams
         teams = CleaningTeam.query.filter_by(is_active=True).all()
         
-        # Get recent inspections for each team
-        team_data = []
+        # Get team members for all teams
+        team_data = {}
         for team in teams:
-            recent_inspections = CleaningInspection.query.filter_by(team_id=team.id).order_by(CleaningInspection.inspection_date.desc()).limit(5).all()
-            team_data.append({
+            # Get team members
+            members = CleaningTeamMember.query.filter_by(
+                team_id=team.id,
+                is_active=True
+            ).all()
+            
+            # Get recent inspections for this team
+            recent_inspections = CleaningInspection.query.filter_by(
+                team_id=team.id
+            ).order_by(
+                CleaningInspection.inspection_date.desc()
+            ).limit(5).all()
+            
+            # Build member list with student info
+            member_list = []
+            for member in members:
+                if member.student:
+                    member_list.append({
+                        'id': member.student.id,
+                        'name': f"{member.student.first_name} {member.student.last_name}",
+                        'role': member.role,
+                        'member_id': member.id
+                    })
+            
+            team_data[team.id] = {
                 'team': team,
+                'members': member_list,
                 'recent_inspections': recent_inspections,
                 'current_score': recent_inspections[0].final_score if recent_inspections else 100
-            })
+            }
         
         return render_template('management/student_jobs.html', team_data=team_data)
     except Exception as e:
@@ -6455,6 +6479,179 @@ def submit_cleaning_inspection():
         return jsonify({
             'success': False,
             'message': 'Error submitting inspection'
+        }), 500
+
+@management_blueprint.route('/api/team-members/<int:team_id>')
+@login_required
+@management_required
+def api_get_team_members(team_id):
+    """API endpoint to get team members for a specific team"""
+    try:
+        members = CleaningTeamMember.query.filter_by(team_id=team_id, is_active=True).all()
+        member_list = []
+        
+        for member in members:
+            if member.student:
+                member_list.append({
+                    'id': member.student.id,
+                    'name': f"{member.student.first_name} {member.student.last_name}",
+                    'role': member.role,
+                    'member_id': member.id
+                })
+        
+        return jsonify({
+            'success': True,
+            'members': member_list
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error fetching team members: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@management_blueprint.route('/api/team-members/<int:team_id>/add', methods=['POST'])
+@login_required
+@management_required
+def api_add_team_members(team_id):
+    """API endpoint to add members to a team"""
+    try:
+        data = request.get_json()
+        student_ids = data.get('student_ids', [])
+        
+        if not student_ids:
+            return jsonify({
+                'success': False,
+                'error': 'No student IDs provided'
+            }), 400
+        
+        # Get team name to determine default role
+        team = CleaningTeam.query.get_or_404(team_id)
+        default_role = 'Team Member'
+        
+        added_count = 0
+        for student_id in student_ids:
+            # Check if member already exists
+            existing = CleaningTeamMember.query.filter_by(
+                team_id=team_id,
+                student_id=student_id,
+                is_active=True
+            ).first()
+            
+            if not existing:
+                member = CleaningTeamMember(
+                    team_id=team_id,
+                    student_id=student_id,
+                    role=default_role,
+                    is_active=True
+                )
+                db.session.add(member)
+                added_count += 1
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Added {added_count} member(s) to team'
+        })
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error adding team members: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@management_blueprint.route('/api/team-members/<int:team_id>/remove', methods=['POST'])
+@login_required
+@management_required
+def api_remove_team_members(team_id):
+    """API endpoint to remove members from a team"""
+    try:
+        data = request.get_json()
+        student_ids = data.get('student_ids', [])
+        
+        if not student_ids:
+            return jsonify({
+                'success': False,
+                'error': 'No student IDs provided'
+            }), 400
+        
+        removed_count = 0
+        for student_id in student_ids:
+            member = CleaningTeamMember.query.filter_by(
+                team_id=team_id,
+                student_id=student_id,
+                is_active=True
+            ).first()
+            
+            if member:
+                # Soft delete by setting is_active to False
+                member.is_active = False
+                removed_count += 1
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Removed {removed_count} member(s) from team'
+        })
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error removing team members: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@management_blueprint.route('/api/save-inspection', methods=['POST'])
+@login_required
+@management_required
+def api_save_inspection():
+    """API endpoint to save inspection details to database"""
+    try:
+        data = request.get_json()
+        
+        # Create inspection record
+        inspection = CleaningInspection(
+            team_id=data.get('team_id'),
+            inspection_date=datetime.strptime(data.get('inspection_date'), '%Y-%m-%d').date() if isinstance(data.get('inspection_date'), str) else data.get('inspection_date'),
+            inspector_name=data.get('inspector_name'),
+            inspector_notes=data.get('inspector_notes', ''),
+            final_score=data.get('final_score', 100),
+            major_deductions=data.get('major_deductions', 0),
+            bonus_points=data.get('bonus_points', 0),
+            bathroom_not_restocked=data.get('bathroom_not_restocked', False),
+            trash_can_left_full=data.get('trash_can_left_full', False),
+            floor_not_swept=data.get('floor_not_swept', False),
+            materials_left_out=data.get('materials_left_out', False),
+            tables_missed=data.get('tables_missed', False),
+            classroom_trash_full=data.get('classroom_trash_full', False),
+            bathroom_floor_poor=data.get('bathroom_floor_poor', False),
+            not_finished_on_time=data.get('not_finished_on_time', False),
+            small_debris_left=data.get('small_debris_left', False),
+            trash_spilled=data.get('trash_spilled', False),
+            dispensers_half_filled=data.get('dispensers_half_filled', False),
+            exceptional_finish=data.get('exceptional_finish', False),
+            speed_efficiency=data.get('speed_efficiency', False),
+            going_above_beyond=data.get('going_above_beyond', False),
+            teamwork_award=data.get('teamwork_award', False)
+        )
+        
+        db.session.add(inspection)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Inspection saved successfully',
+            'inspection_id': inspection.id
+        })
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error saving inspection: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
         }), 500
 
 # ===== GROUP MANAGEMENT ROUTES FOR ADMINISTRATORS =====

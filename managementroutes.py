@@ -317,11 +317,12 @@ def management_dashboard():
     }
     
     # --- AT-RISK STUDENT ALERTS ---
+    from sqlalchemy import or_, and_
+    import json
+    
     at_risk_alerts = []  # Initialize here to ensure it's always defined
+    at_risk_grades = []  # Initialize here to ensure it's always defined
     try:
-        from sqlalchemy import or_, and_
-        import json
-        
         students_to_check = Student.query.all() # Management sees all students
         student_ids = [s.id for s in students_to_check]
 
@@ -369,7 +370,7 @@ def management_dashboard():
     # --- Debugging Print Statements ---
     print(f"--- Debug Dashboard Alerts ---")
     print(f"Checking alerts for user: {current_user.username}, Role: {current_user.role}")
-    print(f"Raw at-risk grades query result count: {len(at_risk_grades) if 'at_risk_grades' in locals() else 0}")
+    print(f"Raw at-risk grades query result count: {len(at_risk_grades)}")
     print(f"Formatted alerts list being sent to template: {at_risk_alerts}")
     print(f"--- End Debug ---")
     # --- End Debugging ---

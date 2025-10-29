@@ -3217,49 +3217,172 @@ function markAllPresent() {
 </style>
 
 {% if at_risk_alerts %}
-<div class="modal fade" id="academicAlertModal" tabindex="-1" role="dialog">
-  <div class="modal-dialog modal-lg" role="document">
+<!-- Bottom-right notification toast -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1055;">
+  <div id="academicAlertToast" class="toast show" role="alert" aria-live="assertive" aria-atomic="true" data-bs-autohide="false">
+    <div class="toast-header bg-warning text-dark">
+      <i class="bi bi-exclamation-triangle-fill me-2"></i>
+      <strong class="me-auto">Academic Alert</strong>
+      <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+    <div class="toast-body">
+      <p class="mb-2">
+        <strong>{{ at_risk_alerts|length }} student{% if at_risk_alerts|length != 1 %}s{% endif %}</strong> 
+        {% if at_risk_alerts|length == 1 %}is raising{% else %}are raising{% endif %} flags for academic concern.
+      </p>
+      <button type="button" class="btn btn-primary btn-sm w-100" onclick="showAcademicDetailsModal()">
+        <i class="bi bi-info-circle me-1"></i>View Details
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Detailed Academic Concerns Modal -->
+<div class="modal fade" id="academicDetailsModal" tabindex="-1" aria-labelledby="academicDetailsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
     <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Student Academic Alerts</h5>
-        <button type="button" class="close" data-dismiss="modal">
-          <span>&times;</span>
-        </button>
+      <div class="modal-header bg-warning text-dark">
+        <h5 class="modal-title" id="academicDetailsModalLabel">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>Student Academic Concerns
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <p>The following students have missing or failing grades that require attention:</p>
-        <ul class="list-group">
+        <div class="row g-3">
           {% for alert in at_risk_alerts %}
-            <li class="list-group-item d-flex justify-content-between align-items-center">
-              <div>
-                <strong>{{ alert.student_name }}</strong> - 
-                <span class="badge badge-warning">{{ alert.alert_reason|title }}</span>
-                <br>
-                <small class="text-muted">
-                  "{{ alert.assignment_name }}" in {{ alert.class_name }}
-                  {% if alert.score is not none %}
-                    (Score: {{ alert.score }})
-                  {% else %}
-                    (Not graded)
-                  {% endif %}
-                </small>
+          <div class="col-12">
+            <div class="card border-warning shadow-sm">
+              <div class="card-header bg-light">
+                <h6 class="mb-0">
+                  <i class="bi bi-person-fill me-2"></i><strong>{{ alert.student_name }}</strong>
+                  <span class="badge bg-warning text-dark ms-2">{{ alert.alert_reason|title }}</span>
+                </h6>
               </div>
-              <a href="{{ url_for('management.view_student_details', student_id=alert.student_user_id) }}" class="btn btn-primary btn-sm">
-                View Details
-              </a>
-            </li>
+              <div class="card-body">
+                <div id="student-details-{{ alert.student_user_id }}" class="student-details-placeholder">
+                  <div class="text-center py-3">
+                    <div class="spinner-border text-primary" role="status">
+                      <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Loading student details...</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
           {% endfor %}
-        </ul>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
       </div>
     </div>
   </div>
 </div>
 
 <script>
-  document.addEventListener('DOMContentLoaded', function() {
-    var modal = new bootstrap.Modal(document.getElementById('academicAlertModal'));
+  function showAcademicDetailsModal() {
+    // Close the toast
+    var toastElement = document.getElementById('academicAlertToast');
+    var toast = bootstrap.Toast.getInstance(toastElement);
+    if (toast) {
+      toast.hide();
+    }
+    
+    // Show the detailed modal
+    var modal = new bootstrap.Modal(document.getElementById('academicDetailsModal'));
     modal.show();
-  });
+    
+    // Load detailed student information for each alert
+    {% for alert in at_risk_alerts %}
+    loadStudentAcademicDetails({{ alert.student_user_id }});
+    {% endfor %}
+  }
+  
+  function loadStudentAcademicDetails(studentId) {
+    // Fetch detailed student information via AJAX
+    fetch(`/management/student/${studentId}/details/data`)
+      .then(response => response.json())
+      .then(data => {
+        const container = document.getElementById(`student-details-${studentId}`);
+        if (data.success) {
+          container.innerHTML = formatStudentDetails(data.student);
+        } else {
+          container.innerHTML = '<div class="alert alert-danger">Error loading student details.</div>';
+        }
+      })
+      .catch(error => {
+        console.error('Error loading student details:', error);
+        const container = document.getElementById(`student-details-${studentId}`);
+        container.innerHTML = '<div class="alert alert-danger">Error loading student details.</div>';
+      });
+  }
+  
+  function formatStudentDetails(student) {
+    let html = '<div class="row">';
+    
+    // Overall GPA Summary
+    html += '<div class="col-12 mb-3">';
+    html += '<h6 class="text-primary"><i class="bi bi-graph-up me-1"></i>Combined GPA from All Classes</h6>';
+    html += '<div class="row g-2">';
+    html += `<div class="col-md-6"><div class="p-2 bg-light rounded"><small>Current GPA:</small><br><strong>${student.current_gpa !== null ? student.current_gpa.toFixed(2) : 'N/A'}</strong></div></div>`;
+    html += `<div class="col-md-6"><div class="p-2 bg-light rounded"><small>Potential GPA (if issues resolved):</small><br><strong class="text-success">${student.hypothetical_gpa !== null ? student.hypothetical_gpa.toFixed(2) : 'N/A'}</strong></div></div>`;
+    html += '</div></div>';
+    
+    // Missing & Failing Assignments by Class
+    html += '<div class="col-12">';
+    html += '<h6 class="text-danger"><i class="bi bi-file-earmark-x me-1"></i>Missing & Failing Assignments by Class</h6>';
+    
+    if (student.missing_assignments && Object.keys(student.missing_assignments).length > 0) {
+      for (const [className, assignments] of Object.entries(student.missing_assignments)) {
+        html += `<div class="mb-3"><strong class="text-primary">${className}</strong>`;
+        
+        if (student.class_gpa && student.class_gpa[className]) {
+          const classGpa = student.class_gpa[className];
+          html += `<div class="mb-2"><small>Class GPA: <strong>${classGpa.current !== null ? classGpa.current.toFixed(2) : 'N/A'}</strong>`;
+          if (classGpa.hypothetical !== null) {
+            html += ` → <strong class="text-success">${classGpa.hypothetical.toFixed(2)}</strong> (potential)`;
+          }
+          html += '</small></div>';
+        }
+        
+        html += '<ul class="list-group list-group-flush">';
+        assignments.forEach(assignment => {
+          html += '<li class="list-group-item d-flex justify-content-between align-items-center">';
+          html += `<div><strong>${assignment.title}</strong><br>`;
+          html += `<small class="text-muted">Due: ${assignment.due_date}</small>`;
+          if (assignment.status) {
+            html += ` <span class="badge bg-${assignment.status === 'missing' ? 'danger' : 'warning'} ms-2">${assignment.status}</span>`;
+          }
+          html += '</div>';
+          if (assignment.score !== null && assignment.score !== undefined) {
+            html += `<span class="badge bg-${assignment.score <= 69 ? 'danger' : 'warning'}">Score: ${assignment.score}</span>`;
+          } else {
+            html += '<span class="badge bg-danger">Not Graded</span>';
+          }
+          html += '</li>';
+        });
+        html += '</ul></div>';
+      }
+    } else {
+      html += '<p class="text-muted">No missing assignments found.</p>';
+    }
+    
+    html += '</div>';
+    html += '</div>';
+    
+    return html;
+  }
 </script>
+
+<style>
+  .toast {
+    min-width: 300px;
+  }
+  
+  .student-details-placeholder {
+    min-height: 200px;
+  }
+</style>
 {% endif %}
 {% endblock %} 

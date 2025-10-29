@@ -208,17 +208,25 @@ def teacher_dashboard():
             score = grade_data.get('score')
             is_overdue = grade.assignment.due_date < datetime.utcnow()
             
-            # Alert if: assignment is overdue OR score is missing/failing
-            if is_overdue or (score is None or score <= 69):
+            # Only alert for truly at-risk: missing (overdue with no score) OR failing (score <= 69)
+            # Don't include passing overdue assignments (70+) - they're not at-risk
+            is_at_risk = False
+            alert_reason = None
+            
+            if score is None and is_overdue:
+                # Missing assignment that's overdue
+                is_at_risk = True
+                alert_reason = "overdue"
+            elif score is not None and score <= 69:
+                # Failing assignment
+                is_at_risk = True
+                if is_overdue:
+                    alert_reason = "overdue and failing"
+                else:
+                    alert_reason = "failing"
+            
+            if is_at_risk:
                 if grade.student.id not in seen_student_ids:
-                    # Determine alert reason
-                    if is_overdue and (score is None or score <= 69):
-                        alert_reason = "overdue and failing"
-                    elif is_overdue:
-                        alert_reason = "overdue"
-                    else:
-                        alert_reason = "failing"
-                    
                     at_risk_alerts.append({
                         'student_name': f"{grade.student.first_name} {grade.student.last_name}",
                         'student_user_id': grade.student.id,  # Use student ID instead of user_id

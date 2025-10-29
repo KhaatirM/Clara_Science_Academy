@@ -338,17 +338,25 @@ def management_dashboard():
                 score = grade_data.get('score')
                 is_overdue = grade.assignment.due_date < datetime.utcnow()
                 
-                # Alert if: assignment is overdue OR score is missing/failing
-                if is_overdue or (score is None or score <= 69):
+                # Only alert for truly at-risk: missing (overdue with no score) OR failing (score <= 69)
+                # Don't include passing overdue assignments (70+) - they're not at-risk
+                is_at_risk = False
+                alert_reason = None
+                
+                if score is None and is_overdue:
+                    # Missing assignment that's overdue
+                    is_at_risk = True
+                    alert_reason = "overdue"
+                elif score is not None and score <= 69:
+                    # Failing assignment
+                    is_at_risk = True
+                    if is_overdue:
+                        alert_reason = "overdue and failing"
+                    else:
+                        alert_reason = "failing"
+                
+                if is_at_risk:
                     if grade.student.id not in seen_student_ids:
-                        # Determine alert reason
-                        if is_overdue and (score is None or score <= 69):
-                            alert_reason = "overdue and failing"
-                        elif is_overdue:
-                            alert_reason = "overdue"
-                        else:
-                            alert_reason = "failing"
-                        
                         at_risk_alerts.append({
                             'student_name': f"{grade.student.first_name} {grade.student.last_name}",
                             'student_user_id': grade.student.id,  # Use student ID instead of user_id
@@ -7750,8 +7758,23 @@ def view_student_details_data(student_id):
                 # Check if assignment is past due or failing
                 is_overdue = g.assignment.due_date < datetime.utcnow()
                 
-                # Include if overdue OR failing/missing
-                if is_overdue or (score is None or score <= 69):
+                # Determine if this is truly at-risk (missing OR failing, not passing overdue assignments)
+                is_at_risk = False
+                status = None
+                
+                if score is None:
+                    # Missing assignment (no grade recorded)
+                    if is_overdue:
+                        is_at_risk = True
+                        status = 'missing'
+                elif score <= 69:
+                    # Failing assignment (score below 70)
+                    is_at_risk = True
+                    status = 'failing'
+                    at_risk_grades_list.append(g)
+                # If score >= 70, don't include even if overdue (they passed, not at-risk)
+                
+                if is_at_risk:
                     class_name = g.assignment.class_info.name
                     
                     if class_name not in missing_assignments_by_class:
@@ -7760,12 +7783,9 @@ def view_student_details_data(student_id):
                     missing_assignments_by_class[class_name].append({
                         'title': g.assignment.title,
                         'due_date': g.assignment.due_date.strftime('%Y-%m-%d'),
-                        'status': 'missing' if score is None else 'failing',
+                        'status': status,
                         'score': score
                     })
-                    
-                    if score is not None and score <= 69:
-                        at_risk_grades_list.append(g)
                         
             except (json.JSONDecodeError, TypeError):
                 continue

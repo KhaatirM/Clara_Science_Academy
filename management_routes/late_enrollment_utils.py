@@ -49,12 +49,50 @@ def get_academic_period_for_assignment(assignment):
     
     # Fall back to finding period by quarter and school year
     if assignment.quarter and assignment.school_year_id:
+        # Assignment quarter might be "1", "2", "3", "4" or "Q1", "Q2", "Q3", "Q4"
+        # AcademicPeriod.name is typically "Q1", "Q2", "Q3", "Q4"
+        quarter_value = assignment.quarter.strip()
+        
+        # Normalize quarter value to "Q1", "Q2", etc.
+        if quarter_value and not quarter_value.startswith('Q'):
+            # It's just a number, add "Q" prefix
+            quarter_name = f"Q{quarter_value}"
+        else:
+            quarter_name = quarter_value
+        
+        # Try exact match first
         period = AcademicPeriod.query.filter_by(
             school_year_id=assignment.school_year_id,
-            name=assignment.quarter,
+            name=quarter_name,
             period_type='quarter'
         ).first()
-        return period
+        
+        if period:
+            return period
+        
+        # Try without the "Q" prefix as fallback
+        if quarter_name.startswith('Q'):
+            period = AcademicPeriod.query.filter_by(
+                school_year_id=assignment.school_year_id,
+                name=quarter_name[1:],  # Remove "Q" prefix
+                period_type='quarter'
+            ).first()
+            if period:
+                return period
+        
+        # Last resort: try matching by due date within period range
+        if assignment.due_date:
+            from sqlalchemy import and_
+            periods = AcademicPeriod.query.filter_by(
+                school_year_id=assignment.school_year_id,
+                period_type='quarter'
+            ).all()
+            
+            assignment_date = assignment.due_date.date() if hasattr(assignment.due_date, 'date') else assignment.due_date
+            
+            for period in periods:
+                if period.start_date <= assignment_date <= period.end_date:
+                    return period
     
     return None
 

@@ -577,32 +577,111 @@ def view_user_details(user_id):
     current_gpa = None
     hypothetical_gpa = None
     at_risk_grades_list = []
+    all_missing_assignments = []
+    class_gpa_breakdown = []
+    class_assignments_impact = {}
 
     if user.student_profile:
         student = user.student_profile 
         all_grades = Grade.query.filter_by(student_id=student.id).all()
         
-        at_risk_grades_list = []
+        # Get all classes this student is enrolled in
+        from models import Enrollment
+        enrollments = Enrollment.query.filter_by(student_id=student.id, is_active=True).all()
+        student_classes = {enrollment.class_id: enrollment.class_obj for enrollment in enrollments if enrollment.class_obj}
+        
+        # Separate grades by class and find missing/at-risk assignments
+        grades_by_class = {}
         for g in all_grades:
+            class_id = g.assignment.class_id
+            if class_id not in grades_by_class:
+                grades_by_class[class_id] = []
+            grades_by_class[class_id].append(g)
+            
             try:
                 grade_data = json.loads(g.grade_data)
                 score = grade_data.get('score')
-                if g.assignment.due_date < datetime.utcnow() and (score is None or score <= 69):
-                    g.display_score = score
-                    at_risk_grades_list.append(g)
+                g.display_score = score
+                
+                # Check if assignment is past due
+                if g.assignment.due_date < datetime.utcnow():
+                    if score is None:
+                        # Missing assignment
+                        all_missing_assignments.append({
+                            'grade': g,
+                            'assignment': g.assignment,
+                            'class_name': g.assignment.class_info.name,
+                            'due_date': g.assignment.due_date,
+                            'status': 'missing'
+                        })
+                    elif score <= 69:
+                        # Failing assignment
+                        at_risk_grades_list.append(g)
+                        all_missing_assignments.append({
+                            'grade': g,
+                            'assignment': g.assignment,
+                            'class_name': g.assignment.class_info.name,
+                            'due_date': g.assignment.due_date,
+                            'status': 'failing',
+                            'score': score
+                        })
             except (json.JSONDecodeError, TypeError):
                 continue
 
-        # Calculate Current GPA
+        # Calculate Current Overall GPA
         current_gpa = calculate_student_gpa(all_grades) 
 
-        # Calculate Hypothetical GPA
+        # Calculate GPA per class
+        for class_id, class_grades in grades_by_class.items():
+            if class_id in student_classes:
+                class_obj = student_classes[class_id]
+                class_current_gpa = calculate_student_gpa(class_grades)
+                
+                # Calculate hypothetical GPA for this class (fixing at-risk assignments)
+                class_at_risk = [g for g in class_grades if g in at_risk_grades_list]
+                class_hypothetical_grades = []
+                for g in class_grades:
+                    if g in class_at_risk:
+                        hypothetical_grade = copy(g)
+                        try:
+                            grade_data = json.loads(g.grade_data)
+                            grade_data['score'] = 70
+                            hypothetical_grade.grade_data = json.dumps(grade_data)
+                            class_hypothetical_grades.append(hypothetical_grade)
+                        except (json.JSONDecodeError, TypeError):
+                            class_hypothetical_grades.append(g)
+                    else:
+                        class_hypothetical_grades.append(g)
+                
+                class_hypothetical_gpa = calculate_student_gpa(class_hypothetical_grades)
+                
+                # Get assignments impacting this class
+                class_impact_assignments = [
+                    item for item in all_missing_assignments 
+                    if item['assignment'].class_id == class_id
+                ]
+                
+                class_gpa_breakdown.append({
+                    'class_name': class_info.name,
+                    'class_id': class_id,
+                    'current_gpa': class_current_gpa,
+                    'hypothetical_gpa': class_hypothetical_gpa,
+                    'impact_assignments': class_impact_assignments,
+                    'total_assignments': len(class_grades)
+                })
+        
+        # Calculate Hypothetical Overall GPA
         hypothetical_grades = []
         for g in all_grades:
             if g in at_risk_grades_list:
                 hypothetical_grade = copy(g)
-                hypothetical_grade.score = 70  # Assume a passing grade
-                hypothetical_grades.append(hypothetical_grade)
+                try:
+                    grade_data = json.loads(g.grade_data)
+                    grade_data['score'] = 70
+                    hypothetical_grade.grade_data = json.dumps(grade_data)
+                    hypothetical_grades.append(hypothetical_grade)
+                except (json.JSONDecodeError, TypeError):
+                    hypothetical_grades.append(g)
             else:
                 hypothetical_grades.append(g)
         
@@ -613,7 +692,9 @@ def view_user_details(user_id):
                          user=user,
                          current_gpa=current_gpa,
                          hypothetical_gpa=hypothetical_gpa,
-                         at_risk_grades_list=at_risk_grades_list)
+                         at_risk_grades_list=at_risk_grades_list,
+                         all_missing_assignments=all_missing_assignments,
+                         class_gpa_breakdown=class_gpa_breakdown)
 
 @tech_blueprint.route('/system/config')
 @login_required

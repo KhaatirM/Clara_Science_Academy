@@ -174,46 +174,143 @@
             </div>
             {% endif %}
             
-            {% if at_risk_grades_list %}
+            {% if all_missing_assignments or class_gpa_breakdown %}
               <div class="card mt-4">
                 <div class="card-header bg-danger text-white">
                   <h5 class="mb-0">Academic Impact Analysis</h5>
                 </div>
                 <div class="card-body">
-                  <div class="row text-center">
-                    <div class="col-md-6">
-                      <div class="card">
-                        <div class="card-body">
-                          <h6 class="card-title">Current Overall GPA</h6>
-                          <h2 class="card-text">{{ "%.2f"|format(current_gpa) if current_gpa else 'N/A' }}</h2>
+                  <!-- Overall GPA Section -->
+                  <div class="mb-4">
+                    <h5 class="mb-3">Combined GPA from All Classes</h5>
+                    <div class="row text-center">
+                      <div class="col-md-6">
+                        <div class="card">
+                          <div class="card-body">
+                            <h6 class="card-title">Current Overall GPA</h6>
+                            <h2 class="card-text">{{ "%.2f"|format(current_gpa) if current_gpa else 'N/A' }}</h2>
+                            <small class="text-muted">Combined from all enrolled classes</small>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div class="col-md-6">
-                      <div class="card">
-                        <div class="card-body">
-                          <h6 class="card-title">Potential GPA (if fixed)</h6>
-                          <h2 class="card-text text-success">
-                            {{ "%.2f"|format(hypothetical_gpa) if hypothetical_gpa else 'N/A' }}
-                          </h2>
+                      <div class="col-md-6">
+                        <div class="card">
+                          <div class="card-body">
+                            <h6 class="card-title">Potential GPA (if fixed)</h6>
+                            <h2 class="card-text text-success">
+                              {{ "%.2f"|format(hypothetical_gpa) if hypothetical_gpa else 'N/A' }}
+                            </h2>
+                            <small class="text-muted">If all missing/failing assignments are completed</small>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  <h5 class="mt-4">At-Risk Assignments</h5>
-                  <p>The following assignments are impacting this student's grades:</p>
-                  <ul class="list-group">
-                    {% for grade in at_risk_grades_list %}
-                      <li class="list-group-item">
-                        <strong>{{ grade.assignment.class_obj.name }}</strong>:
-                        {{ grade.assignment.name }}
-                        <span class="badge badge-danger float-right">
-                          Score: {{ 'Missing' if grade.display_score is none else grade.display_score }}
-                        </span>
-                      </li>
+                  <!-- GPA Breakdown by Class -->
+                  {% if class_gpa_breakdown %}
+                  <div class="mb-4">
+                    <h5 class="mb-3">GPA Breakdown by Class</h5>
+                    <div class="table-responsive">
+                      <table class="table table-bordered table-hover">
+                        <thead class="table-light">
+                          <tr>
+                            <th>Class</th>
+                            <th>Current GPA</th>
+                            <th>Potential GPA</th>
+                            <th>Impact Assignments</th>
+                            <th>Total Assignments</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {% for class_data in class_gpa_breakdown %}
+                          <tr>
+                            <td><strong>{{ class_data.class_name }}</strong></td>
+                            <td>{{ "%.2f"|format(class_data.current_gpa) if class_data.current_gpa else 'N/A' }}</td>
+                            <td class="text-success">{{ "%.2f"|format(class_data.hypothetical_gpa) if class_data.hypothetical_gpa else 'N/A' }}</td>
+                            <td>
+                              {% if class_data.impact_assignments %}
+                                <span class="badge badge-warning">{{ class_data.impact_assignments|length }} issues</span>
+                              {% else %}
+                                <span class="badge badge-success">None</span>
+                              {% endif %}
+                            </td>
+                            <td>{{ class_data.total_assignments }}</td>
+                          </tr>
+                          {% endfor %}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                  {% endif %}
+
+                  <!-- All Missing Assignments Section -->
+                  {% if all_missing_assignments %}
+                  <div class="mb-4">
+                    <h5 class="mb-3">All Missing & Failing Assignments</h5>
+                    <p class="text-muted">The following assignments are past due and impacting this student's grades:</p>
+                    
+                    <!-- Group by class - iterate through unique class names -->
+                    {% set seen_classes = [] %}
+                    {% for item in all_missing_assignments %}
+                      {% if item.class_name not in seen_classes %}
+                        {% set _ = seen_classes.append(item.class_name) %}
+                        <div class="card mb-3">
+                          <div class="card-header bg-light">
+                            <h6 class="mb-0"><strong>{{ item.class_name }}</strong></h6>
+                          </div>
+                          <div class="card-body">
+                            <ul class="list-group list-group-flush">
+                              {% for assignment_item in all_missing_assignments %}
+                                {% if assignment_item.class_name == item.class_name %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                  <div>
+                                    <strong>{{ assignment_item.assignment.title }}</strong>
+                                    <br>
+                                    <small class="text-muted">
+                                      Due: {{ assignment_item.due_date.strftime('%B %d, %Y') }}
+                                      {% if assignment_item.status == 'missing' %}
+                                        <span class="badge badge-danger ms-2">Missing</span>
+                                      {% elif assignment_item.status == 'failing' %}
+                                        <span class="badge badge-warning ms-2">Failing ({{ assignment_item.score }}%)</span>
+                                      {% endif %}
+                                    </small>
+                                  </div>
+                                  <div>
+                                    {% if assignment_item.status == 'missing' %}
+                                      <span class="badge badge-danger">Missing</span>
+                                    {% else %}
+                                      <span class="badge badge-warning">Score: {{ assignment_item.score }}%</span>
+                                    {% endif %}
+                                  </div>
+                                </li>
+                                {% endif %}
+                              {% endfor %}
+                            </ul>
+                          </div>
+                        </div>
+                      {% endif %}
                     {% endfor %}
-                  </ul>
+                  </div>
+                  {% endif %}
+
+                  <!-- Summary -->
+                  {% if all_missing_assignments %}
+                  <div class="alert alert-info">
+                    <h6><i class="bi bi-info-circle"></i> Summary</h6>
+                    <p class="mb-0">
+                      This student has <strong>{{ all_missing_assignments|length }}</strong> 
+                      {% if all_missing_assignments|length == 1 %}assignment{% else %}assignments{% endif %} 
+                      that {% if all_missing_assignments|length == 1 %}is{% else %}are{% endif %} 
+                      past due and impacting their overall GPA. 
+                      {% if hypothetical_gpa and current_gpa %}
+                        Fixing these assignments could improve their GPA from 
+                        <strong>{{ "%.2f"|format(current_gpa) }}</strong> to 
+                        <strong>{{ "%.2f"|format(hypothetical_gpa) }}</strong>.
+                      {% endif %}
+                    </p>
+                  </div>
+                  {% endif %}
                 </div>
               </div>
             {% endif %}

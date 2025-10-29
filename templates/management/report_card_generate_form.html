@@ -29,7 +29,7 @@
           </h4>
         </div>
         <div class="card-body p-4 p-md-5">
-          <form method="POST" action="{{ url_for('management.generate_report_card_form') }}" id="reportCardForm" class="needs-validation" novalidate>
+          <form method="POST" action="{{ url_for('management.generate_report_card_form') }}" id="reportCardForm" class="needs-validation" novalidate target="_blank">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             
             <!-- Step 1: Select Student -->
@@ -457,9 +457,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Form validation and submission
   form.addEventListener('submit', function(e) {
-    e.preventDefault();
+    console.log('Form submit event triggered');
     
+    // First validate the form
     if (!form.checkValidity()) {
+      console.log('Form validation failed');
+      e.preventDefault();
       e.stopPropagation();
       form.classList.add('was-validated');
       
@@ -473,32 +476,61 @@ document.addEventListener('DOMContentLoaded', function() {
       return false;
     }
     
-    // Check if at least one class is selected
-    const selectedClasses = Array.from(classesList.querySelectorAll('input[type="checkbox"]:checked'));
-    if (selectedClasses.length === 0) {
-      alert('Please select at least one class to include in the report card.');
-      classesContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // Check if student is selected
+    if (!studentSelect.value) {
+      console.log('No student selected');
+      e.preventDefault();
+      alert('Please select a student first.');
+      studentSelect.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      studentSelect.focus();
       return false;
     }
+    
+    // Check if at least one class is selected
+    const selectedClasses = Array.from(classesList.querySelectorAll('input[type="checkbox"]:checked'));
+    console.log('Selected classes count:', selectedClasses.length);
+    
+    if (selectedClasses.length === 0) {
+      // Check if classes section is visible (student selected and classes loaded)
+      if (classesContainer.style.display !== 'none' && classesList.innerHTML.trim() !== '') {
+        console.log('Classes loaded but none selected');
+        e.preventDefault();
+        alert('Please select at least one class to include in the report card.');
+        classesContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return false;
+      } else {
+        // Classes might still be loading or student has no classes
+        console.log('Classes not loaded or student has no classes');
+        e.preventDefault();
+        alert('Please wait for classes to load, or the student may not be enrolled in any classes.');
+        return false;
+      }
+    }
+    
+    // All validation passed
+    console.log('All validation passed, submitting form...');
+    console.log('Selected classes:', selectedClasses.map(cb => cb.value));
+    console.log('Student ID:', studentSelect.value);
+    console.log('School Year:', document.getElementById('school_year_id').value);
+    console.log('Quarter:', document.getElementById('quarter').value);
+    
+    // Ensure form target is set to open in new window
+    form.target = '_blank';
     
     // Disable button and show loading state
     generateBtn.disabled = true;
     generateBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Generating PDF...';
     
-    // Change form target to open PDF in new window
-    const originalTarget = form.target;
-    form.target = '_blank';
-    
-    // Submit form normally - browser will handle PDF display/download
-    // Re-enable button after a delay (in case of errors, we'll handle via error page)
+    // Allow form to submit normally (don't prevent default)
+    // Browser will open PDF in new window/tab
+    // Re-enable button after a delay in case of errors
     setTimeout(() => {
       generateBtn.disabled = false;
       generateBtn.innerHTML = '<i class="bi bi-file-earmark-pdf-fill me-2"></i>Generate Report Card PDF';
-      form.target = originalTarget;
-    }, 3000);
+    }, 10000);
     
-    // Allow form to submit normally
-    return true;
+    console.log('Form submission allowed');
+    return true; // Allow form submission
   });
 
   // Update button text on form validation

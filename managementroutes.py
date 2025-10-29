@@ -1009,14 +1009,36 @@ def generate_report_card_form():
             return response
             
         except ImportError:
-            flash('PDF generation requires WeasyPrint. Please install it: pip install weasyprint', 'error')
-            return redirect(url_for('management.view_report_card', report_card_id=report_card.id))
+            current_app.logger.error('WeasyPrint not installed')
+            # Return error message as HTML that will display in new window
+            error_url = url_for('management.report_cards', _external=True)
+            error_html = f'''<!DOCTYPE html>
+<html>
+<head><title>PDF Generation Error</title></head>
+<body style="font-family: Arial; padding: 40px; text-align: center;">
+    <h2 style="color: #dc3545;">PDF Generation Error</h2>
+    <p>PDF generation requires WeasyPrint. Please install it: <code>pip install weasyprint</code></p>
+    <p><a href="{error_url}" style="color: #0d6efd;">Return to Report Cards</a></p>
+</body>
+</html>'''
+            return error_html, 500
         except Exception as e:
             current_app.logger.error(f'Error generating PDF: {str(e)}')
             import traceback
             current_app.logger.error(traceback.format_exc())
-            flash(f'Error generating PDF: {str(e)}', 'danger')
-            return redirect(url_for('management.view_report_card', report_card_id=report_card.id))
+            # Return error message as HTML that will display in new window
+            error_url = url_for('management.report_cards', _external=True)
+            error_html = f'''<!DOCTYPE html>
+<html>
+<head><title>PDF Generation Error</title></head>
+<body style="font-family: Arial; padding: 40px; text-align: center;">
+    <h2 style="color: #dc3545;">PDF Generation Error</h2>
+    <p>An error occurred while generating the PDF: <strong>{str(e)}</strong></p>
+    <p style="font-size: 12px; color: #666;">Please check the server logs for more details.</p>
+    <p><a href="{error_url}" style="color: #0d6efd;">Return to Report Cards</a></p>
+</body>
+</html>'''
+            return error_html, 500
 
     return render_template('management/report_card_generate_form.html', 
                          students=students, 

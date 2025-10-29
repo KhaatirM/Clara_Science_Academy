@@ -6,6 +6,13 @@
       <p><strong>DEBUG INFO:</strong></p>
       <p>Raw at_risk_alerts variable: <code>{{ at_risk_alerts }}</code></p>
       <p>Is at_risk_alerts list non-empty? <strong>{{ True if at_risk_alerts else False }}</strong></p>
+      <p>Number of alerts: <strong>{{ at_risk_alerts|length if at_risk_alerts else 0 }}</strong></p>
+      <p>Variable type: <strong>{{ at_risk_alerts.__class__.__name__ if at_risk_alerts else 'None' }}</strong></p>
+      {% if at_risk_alerts %}
+        <p><strong>ALERTS FOUND! Should show modal.</strong></p>
+      {% else %}
+        <p><strong>NO ALERTS FOUND!</strong></p>
+      {% endif %}
     </div>
     <!-- END DEBUG INFO -->
     

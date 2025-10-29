@@ -157,6 +157,24 @@ def management_dashboard():
         print(f"--- End Debug ---")
         # --- End Debugging ---
         
+        # TEMPORARY: Force test alerts to verify template is working
+        if not at_risk_alerts:
+            print("FORCING TEST ALERTS FOR DEBUGGING")
+            at_risk_alerts = [
+                {
+                    'student_name': 'Test Student 1',
+                    'student_user_id': 1,
+                    'class_name': 'Test Class',
+                    'assignment_name': 'Test Assignment'
+                },
+                {
+                    'student_name': 'Test Student 2', 
+                    'student_user_id': 2,
+                    'class_name': 'Test Class 2',
+                    'assignment_name': 'Test Assignment 2'
+                }
+            ]
+        
         return render_template('role_dashboard.html', 
                              classes=classes,
                              students=students,

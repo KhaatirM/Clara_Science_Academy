@@ -1,10 +1,15 @@
-import schedule
 import time
 import threading
 from datetime import datetime
 from app import create_app
 from models import db, Student, Grade
 import json
+
+try:
+    import schedule
+    SCHEDULE_AVAILABLE = True
+except ImportError:
+    SCHEDULE_AVAILABLE = False
 
 def calculate_student_gpa(grades):
     """Calculate GPA for a list of grades"""
@@ -111,6 +116,10 @@ def update_all_gpas():
 
 def start_gpa_scheduler():
     """Start the GPA scheduler"""
+    if not SCHEDULE_AVAILABLE:
+        print("Schedule module not available. GPA scheduler will not start.")
+        return None
+        
     # Schedule GPA updates 3 times every 24 hours
     # At 6:00 AM, 2:00 PM, and 10:00 PM
     schedule.every().day.at("06:00").do(update_all_gpas)
@@ -134,12 +143,15 @@ if __name__ == "__main__":
     # For testing, run an immediate update
     update_all_gpas()
     
-    # Start the scheduler
-    start_gpa_scheduler()
-    
-    # Keep the main thread alive
-    try:
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        print("GPA scheduler stopped.") 
+    # Start the scheduler if available
+    if SCHEDULE_AVAILABLE:
+        start_gpa_scheduler()
+        
+        # Keep the main thread alive
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            print("GPA scheduler stopped.")
+    else:
+        print("Schedule module not available. Cannot start scheduler.") 

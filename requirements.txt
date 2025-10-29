@@ -12,3 +12,4 @@ psutil
 # pdfplumber  # Temporarily disabled due to import issues
 holidays
 pytz
+schedule

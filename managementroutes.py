@@ -2483,7 +2483,6 @@ def assignments_and_grades():
                                     if isinstance(grade.grade_data, dict):
                                         grade_dict = grade.grade_data
                                     else:
-                                        import json
                                         grade_dict = json.loads(grade.grade_data)
                                     
                                     if 'score' in grade_dict:
@@ -2572,7 +2571,6 @@ def assignments_and_grades():
                                 if isinstance(g.grade_data, dict):
                                     grade_dict = g.grade_data
                                 else:
-                                    import json
                                     grade_dict = json.loads(g.grade_data)
                                 
                                 if 'score' in grade_dict:
@@ -2606,7 +2604,6 @@ def assignments_and_grades():
                                 if isinstance(gg.grade_data, dict):
                                     grade_dict = gg.grade_data
                                 else:
-                                    import json
                                     grade_dict = json.loads(gg.grade_data)
                                 
                                 if 'score' in grade_dict:
@@ -7296,16 +7293,16 @@ def admin_create_group_discussion_assignment(class_id):
 @management_required
 def admin_view_group_assignment(assignment_id):
     """View details of a specific group assignment - Management view."""
+    from models import GroupAssignment, GroupSubmission, StudentGroup, AssignmentExtension
+    import json
+    
     try:
-        from models import GroupAssignment, GroupSubmission, StudentGroup, AssignmentExtension
-        
         group_assignment = GroupAssignment.query.get_or_404(assignment_id)
         
         # Get submissions for this assignment
         submissions = GroupSubmission.query.filter_by(group_assignment_id=assignment_id).all()
         
         # Get groups for this class - filter by selected groups if specified
-        import json
         if group_assignment.selected_group_ids:
             # Parse the selected group IDs
             try:
@@ -7344,10 +7341,10 @@ def admin_view_group_assignment(assignment_id):
 @management_required
 def admin_grade_group_assignment(assignment_id):
     """Grade a group assignment - Management view."""
+    from models import GroupAssignment, StudentGroup, GroupGrade, AssignmentExtension
+    import json
+    
     try:
-        from models import GroupAssignment, StudentGroup, GroupGrade, AssignmentExtension
-        import json
-        
         group_assignment = GroupAssignment.query.get_or_404(assignment_id)
         
         # Get groups for this class - filter by selected groups if specified

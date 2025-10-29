@@ -2,14 +2,6 @@
 
 {% block dashboard_content %}
 <div class="container-fluid px-2 px-md-4">
-    <!-- DEBUG INFO -->
-    <div class="alert alert-warning">
-      <p><strong>DEBUG INFO:</strong></p>
-      <p>Raw at_risk_alerts variable: <code>{{ at_risk_alerts }}</code></p>
-      <p>Is at_risk_alerts list non-empty? <strong>{{ True if at_risk_alerts else False }}</strong></p>
-    </div>
-    <!-- END DEBUG INFO -->
-    
     <!-- DEBUG: Current section is "{{ section }}" -->
     {% if section == 'home' %}
         <!-- Home Dashboard -->

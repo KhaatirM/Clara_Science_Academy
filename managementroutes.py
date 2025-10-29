@@ -4683,28 +4683,41 @@ def remove_assignment(assignment_id):
     class_id = assignment.class_id
     
     try:
-        from models import QuizQuestion, QuizProgress, DiscussionThread, QuizAnswer, DeadlineReminder
+        from models import (
+            QuizQuestion, QuizProgress, DiscussionThread, DiscussionPost, QuizAnswer, 
+            DeadlineReminder, AssignmentExtension
+        )
         
-        # Delete associated quiz questions and answers
+        # Delete associated records in proper order to avoid foreign key constraint issues
+        
+        # 1. Delete quiz answers first (they reference quiz questions)
         quiz_questions = QuizQuestion.query.filter_by(assignment_id=assignment_id).all()
         for question in quiz_questions:
             QuizAnswer.query.filter_by(question_id=question.id).delete()
-            db.session.delete(question)
         
-        # Delete associated quiz progress
+        # 2. Delete quiz questions (they reference assignments)
+        QuizQuestion.query.filter_by(assignment_id=assignment_id).delete()
+        
+        # 3. Delete quiz progress
         QuizProgress.query.filter_by(assignment_id=assignment_id).delete()
         
-        # Delete associated discussion threads
+        # 4. Delete discussion threads and posts
+        discussion_threads = DiscussionThread.query.filter_by(assignment_id=assignment_id).all()
+        for thread in discussion_threads:
+            # Delete posts first (they reference threads)
+            DiscussionPost.query.filter_by(thread_id=thread.id).delete()
         DiscussionThread.query.filter_by(assignment_id=assignment_id).delete()
         
-        # Delete associated grades and submissions
+        # 5. Delete grades (they reference assignments)
         Grade.query.filter_by(assignment_id=assignment_id).delete()
+        
+        # 6. Delete submissions (they reference assignments)
         Submission.query.filter_by(assignment_id=assignment_id).delete()
         
-        # Delete associated extensions
+        # 7. Delete extensions (they reference assignments)
         AssignmentExtension.query.filter_by(assignment_id=assignment_id).delete()
         
-        # Delete associated deadline reminders
+        # 8. Delete deadline reminders (they reference assignments)
         DeadlineReminder.query.filter_by(assignment_id=assignment_id).delete()
         
         # Delete the assignment file if it exists
@@ -4717,12 +4730,43 @@ def remove_assignment(assignment_id):
         db.session.delete(assignment)
         db.session.commit()
         
+        # Check if this is an AJAX/fetch request by checking Accept header or X-Requested-With
+        wants_json = request.accept_mimetypes.accept_json or \
+                    request.headers.get('X-Requested-With') == 'XMLHttpRequest' or \
+                    'application/json' in request.headers.get('Accept', '')
+        
+        if wants_json:
+            # Return JSON response for AJAX requests
+            return jsonify({
+                'success': True,
+                'message': 'Assignment removed successfully.'
+            })
+        
         flash('Assignment removed successfully.', 'success')
     except Exception as e:
         db.session.rollback()
         import traceback
-        current_app.logger.error(f'Error removing assignment: {str(e)}\n{traceback.format_exc()}')
-        flash(f'Error removing assignment: {str(e)}', 'danger')
+        error_trace = traceback.format_exc()
+        error_message = f'Error removing assignment: {str(e)}'
+        
+        # Log the full error for debugging
+        print(f"ERROR REMOVING ASSIGNMENT {assignment_id}:")
+        print(error_message)
+        print(error_trace)
+        current_app.logger.error(f'Error removing assignment {assignment_id}: {error_message}\n{error_trace}')
+        
+        # Check if this is an AJAX/fetch request
+        wants_json = request.accept_mimetypes.accept_json or \
+                    request.headers.get('X-Requested-With') == 'XMLHttpRequest' or \
+                    'application/json' in request.headers.get('Accept', '')
+        
+        if wants_json:
+            return jsonify({
+                'success': False,
+                'message': f'Error removing assignment: {str(e)}'
+            }), 500
+        
+        flash(error_message, 'danger')
     
     # Redirect back to assignments page, preserving class_id if it was in the request
     class_id_param = request.args.get('class_id')

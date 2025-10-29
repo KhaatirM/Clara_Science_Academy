@@ -1015,9 +1015,22 @@ function removeAssignment(assignmentId) {
             
             fetch(`/management/remove-assignment/${assignmentId}`, {
                 method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
                 body: formData
             })
-            .then(response => response.json())
+            .then(response => {
+                // Check if response is JSON or HTML (redirect)
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    return response.json();
+                } else {
+                    // If it's not JSON, assume it redirected successfully
+                    return { success: true, message: 'Assignment removed successfully.' };
+                }
+            })
             .then(data => {
                 if (data.success) {
                     // Reload the page to show updated list

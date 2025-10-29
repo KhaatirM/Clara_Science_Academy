@@ -10,7 +10,7 @@
     {% set show_unofficial_watermark = True %}
     {% include 'management/_report_card_header.html' %}
 
-    <p class="report-period-line"><strong>Report Period:</strong> {{ report_card.quarter }} - {{ report_card.generated_date.strftime('%m/%d/%Y') }}</p>
+    <p class="report-period-line"><strong>Report Period:</strong> {{ report_card.quarter }} - {{ generated_date.strftime('%m/%d/%Y') if generated_date else 'N/A' }}</p>
 
     <div class="section-title">Progress/Grades</div>
 
@@ -51,14 +51,41 @@
             </tr>
         </thead>
         <tbody>
-            <tr>
-                <td>{{ report_card.class_obj.name }} / {{ report_card.teacher_obj.name }}</td>
-                <td>{{ cumulative_grades.per_quarter_results.Q1.overall_letter if cumulative_grades.per_quarter_results.Q1 else 'N/A'}}</td>
-                <td>{{ cumulative_grades.per_quarter_results.Q2.overall_letter if cumulative_grades.per_quarter_results.Q2 else 'N/A'}}</td>
-                <td>{{ cumulative_grades.per_quarter_results.Q3.overall_letter if cumulative_grades.per_quarter_results.Q3 else 'N/A'}}</td>
-                <td>{{ cumulative_grades.per_quarter_results.Q4.overall_letter if cumulative_grades.per_quarter_results.Q4 else 'N/A'}}</td>
-                <td>{{ report_card.comments|nl2br }}</td>
-            </tr>
+            {% if class_objects %}
+                {% for class_obj in class_objects %}
+                    {% set teacher = class_obj.teacher if class_obj.teacher else None %}
+                    {% set class_grade = grades.get(class_obj.name, {}) if grades else {} %}
+                    {% set letter_grade = class_grade.get('letter', '') if class_grade else '' %}
+                    <tr>
+                        <td style="font-weight: bold;">{{ class_obj.name }}<br><small style="font-weight: normal;">{{ (teacher.first_name + ' ' + teacher.last_name) if teacher else 'N/A' }}</small></td>
+                        <td style="text-align: center;">{% if report_card.quarter == 'Q1' %}{{ letter_grade if letter_grade else '—' }}{% else %}—{% endif %}</td>
+                        <td style="text-align: center;">{% if report_card.quarter == 'Q2' %}{{ letter_grade if letter_grade else '—' }}{% else %}—{% endif %}</td>
+                        <td style="text-align: center;">{% if report_card.quarter == 'Q3' %}{{ letter_grade if letter_grade else '—' }}{% else %}—{% endif %}</td>
+                        <td style="text-align: center;">{% if report_card.quarter == 'Q4' %}{{ letter_grade if letter_grade else '—' }}{% else %}—{% endif %}</td>
+                        <td style="font-size: 8.5pt;">{% if include_comments and class_grade.get('comments') %}{{ class_grade.get('comments', '')|nl2br }}{% else %}—{% endif %}</td>
+                    </tr>
+                {% endfor %}
+            {% else %}
+                {% if grades %}
+                    {% for subject, grade_info in grades.items() %}
+                        {% if grade_info is mapping %}
+                            {% set letter_grade = grade_info.get('letter', '') %}
+                        {% else %}
+                            {% set letter_grade = '' %}
+                        {% endif %}
+                        <tr>
+                            <td style="font-weight: bold;">{{ subject }}</td>
+                            <td style="text-align: center;">{% if report_card.quarter == 'Q1' %}{{ letter_grade if letter_grade else '—' }}{% else %}—{% endif %}</td>
+                            <td style="text-align: center;">{% if report_card.quarter == 'Q2' %}{{ letter_grade if letter_grade else '—' }}{% else %}—{% endif %}</td>
+                            <td style="text-align: center;">{% if report_card.quarter == 'Q3' %}{{ letter_grade if letter_grade else '—' }}{% else %}—{% endif %}</td>
+                            <td style="text-align: center;">{% if report_card.quarter == 'Q4' %}{{ letter_grade if letter_grade else '—' }}{% else %}—{% endif %}</td>
+                            <td>{% if include_comments and grade_info.get('comments') %}{{ grade_info.get('comments', '')|nl2br }}{% else %}—{% endif %}</td>
+                        </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr><td colspan="6" style="text-align: center; padding: 15px; color: #666;">No grade data available</td></tr>
+                {% endif %}
+            {% endif %}
         </tbody>
     </table>
 

@@ -823,6 +823,7 @@ def generate_report_card_form():
         school_year_id = request.form.get('school_year_id')
         quarter = request.form.get('quarter')
         class_ids = request.form.getlist('class_ids')  # Get multiple class IDs
+        report_type = request.form.get('report_type', 'official')  # Default to official
         include_attendance = request.form.get('include_attendance') == 'on'
         include_comments = request.form.get('include_comments') == 'on'
         
@@ -906,6 +907,7 @@ def generate_report_card_form():
         # Store grades with metadata about selected classes and options
         report_card_data = {
             'classes': valid_class_ids,
+            'report_type': report_type,
             'include_attendance': include_attendance,
             'include_comments': include_comments,
             'grades': calculated_grades
@@ -993,13 +995,14 @@ def generate_report_card_form():
                 'phone': getattr(student, 'phone', '')
             }
             
-            # Choose template based on grade level
+            # Choose template based on grade level and report type
+            template_prefix = 'unofficial' if report_type == 'unofficial' else 'official'
             if student.grade_level in [1, 2]:
-                template_name = 'management/official_report_card_pdf_template_1_2.html'
+                template_name = f'management/{template_prefix}_report_card_pdf_template_1_2.html'
             elif student.grade_level == 3:
-                template_name = 'management/official_report_card_pdf_template_3.html'
+                template_name = f'management/{template_prefix}_report_card_pdf_template_3.html'
             else:  # Grades 4-8
-                template_name = 'management/official_report_card_pdf_template_4_8.html'
+                template_name = f'management/{template_prefix}_report_card_pdf_template_4_8.html'
             
             # Render the HTML template
             html_content = render_template(
@@ -1011,7 +1014,9 @@ def generate_report_card_form():
                 class_objects=class_objects,
                 include_attendance=include_attendance,
                 include_comments=include_comments,
-                generated_date=datetime.utcnow()
+                generated_date=datetime.utcnow(),
+                report_type=report_type,
+                template_prefix=template_prefix
             )
             
             # Generate PDF
@@ -1131,12 +1136,14 @@ def generate_report_card_pdf(report_card_id):
             grades = report_card_data.get('grades', {})
             attendance = report_card_data.get('attendance', {})
             selected_classes = report_card_data.get('classes', [])
+            report_type = report_card_data.get('report_type', 'official')
             include_attendance = report_card_data.get('include_attendance', False)
             include_comments = report_card_data.get('include_comments', False)
         else:
             grades = report_card_data if report_card_data else {}
             attendance = {}
             selected_classes = []
+            report_type = 'official'  # Default for old report cards
             include_attendance = False
             include_comments = False
         
@@ -1181,13 +1188,14 @@ def generate_report_card_pdf(report_card_id):
             'phone': getattr(student, 'phone', '')
         }
         
-        # Choose template based on grade level
+        # Choose template based on grade level and report type
+        template_prefix = 'unofficial' if report_type == 'unofficial' else 'official'
         if student.grade_level in [1, 2]:
-            template_name = 'management/official_report_card_pdf_template_1_2.html'
+            template_name = f'management/{template_prefix}_report_card_pdf_template_1_2.html'
         elif student.grade_level == 3:
-            template_name = 'management/official_report_card_pdf_template_3.html'
+            template_name = f'management/{template_prefix}_report_card_pdf_template_3.html'
         else:  # Grades 4-8
-            template_name = 'management/official_report_card_pdf_template_4_8.html'
+            template_name = f'management/{template_prefix}_report_card_pdf_template_4_8.html'
         
         # Render the HTML template
         html_content = render_template(
@@ -1199,7 +1207,9 @@ def generate_report_card_pdf(report_card_id):
             class_objects=class_objects,
             include_attendance=include_attendance,
             include_comments=include_comments,
-            generated_date=report_card.generated_at or datetime.utcnow()
+            generated_date=report_card.generated_at or datetime.utcnow(),
+            report_type=report_type,
+            template_prefix=template_prefix
         )
         
         # Generate PDF

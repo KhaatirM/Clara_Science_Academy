@@ -152,6 +152,27 @@
                   <div class="row g-3">
                     <div class="col-md-6">
                       <div class="option-card">
+                        <label class="form-label fw-bold mb-3">
+                          <i class="bi bi-file-earmark-text me-2 text-primary"></i>Report Card Type <span class="text-danger">*</span>
+                        </label>
+                        <div class="form-check mb-2">
+                          <input class="form-check-input" type="radio" name="report_type" id="official_report" value="official" checked required>
+                          <label class="form-check-label" for="official_report">
+                            <strong>Official</strong>
+                            <small class="text-muted d-block">Official report card for official records</small>
+                          </label>
+                        </div>
+                        <div class="form-check">
+                          <input class="form-check-input" type="radio" name="report_type" id="unofficial_report" value="unofficial" required>
+                          <label class="form-check-label" for="unofficial_report">
+                            <strong>Unofficial</strong>
+                            <small class="text-muted d-block">Unofficial report card with watermark</small>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <div class="option-card">
                         <div class="form-check form-switch form-switch-lg">
                           <input class="form-check-input" type="checkbox" id="include_attendance" name="include_attendance">
                           <label class="form-check-label" for="include_attendance">
@@ -168,6 +189,8 @@
                         </div>
                       </div>
                     </div>
+                  </div>
+                  <div class="row g-3 mt-2">
                     <div class="col-md-6">
                       <div class="option-card">
                         <div class="form-check form-switch form-switch-lg">

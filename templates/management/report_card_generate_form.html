@@ -8,9 +8,9 @@
       <div class="d-flex justify-content-between align-items-center">
         <div>
           <h2 class="mb-1 fw-bold">
-            <i class="bi bi-file-earmark-text-fill text-primary me-2"></i>Generate Report Card
+            <i class="bi bi-file-earmark-text-fill text-primary me-2"></i>Generate Report Card PDF
           </h2>
-          <p class="text-muted mb-0">Create comprehensive report cards with a guided step-by-step process</p>
+          <p class="text-muted mb-0">Fill out all the required information below to generate a downloadable PDF report card</p>
         </div>
         <a href="{{ url_for('management.report_cards') }}" class="btn btn-outline-secondary">
           <i class="bi bi-arrow-left me-1"></i>Back to Report Cards
@@ -19,73 +19,32 @@
     </div>
   </div>
 
-  <!-- Progress Indicator -->
-  <div class="row mb-4">
-    <div class="col-12">
-      <div class="card shadow-sm border-0">
-        <div class="card-body py-4">
-          <div class="row align-items-center">
-            <div class="col-md-3 col-6 mb-3 mb-md-0">
-              <div class="step-indicator active" data-step="1">
-                <div class="step-icon">
-                  <i class="bi bi-person-fill"></i>
-                </div>
-                <div class="step-label">Select Student</div>
-                <div class="step-line"></div>
-              </div>
-            </div>
-            <div class="col-md-3 col-6 mb-3 mb-md-0">
-              <div class="step-indicator" data-step="2">
-                <div class="step-icon">
-                  <i class="bi bi-book-fill"></i>
-                </div>
-                <div class="step-label">Select Classes</div>
-                <div class="step-line"></div>
-              </div>
-            </div>
-            <div class="col-md-3 col-6 mb-3 mb-md-0">
-              <div class="step-indicator" data-step="3">
-                <div class="step-icon">
-                  <i class="bi bi-gear-fill"></i>
-                </div>
-                <div class="step-label">Options</div>
-                <div class="step-line"></div>
-              </div>
-            </div>
-            <div class="col-md-3 col-6 mb-3 mb-md-0">
-              <div class="step-indicator" data-step="4">
-                <div class="step-icon">
-                  <i class="bi bi-check-circle-fill"></i>
-                </div>
-                <div class="step-label">Review</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Wizard Content -->
+  <!-- Form Card -->
   <div class="row">
     <div class="col-12">
       <div class="card shadow-lg border-0">
+        <div class="card-header bg-gradient-primary text-white py-4" style="background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);">
+          <h4 class="mb-0">
+            <i class="bi bi-file-earmark-pdf-fill me-2"></i>Report Card Information
+          </h4>
+        </div>
         <div class="card-body p-4 p-md-5">
           <form method="POST" action="{{ url_for('management.generate_report_card_form') }}" id="reportCardForm" class="needs-validation" novalidate>
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             
             <!-- Step 1: Select Student -->
-            <div class="wizard-step active" id="step1">
-              <div class="text-center mb-4">
-                <div class="step-icon-large mb-3">
+            <div class="form-section mb-5">
+              <div class="section-header mb-4">
+                <div class="section-icon">
                   <i class="bi bi-person-circle"></i>
                 </div>
-                <h4 class="fw-bold mb-2">Select a Student</h4>
-                <p class="text-muted">Choose the student for whom you want to generate a report card</p>
+                <div>
+                  <h5 class="fw-bold mb-1">1. Select Student</h5>
+                  <p class="text-muted mb-0 small">Choose the student for whom you want to generate a report card</p>
+                </div>
               </div>
-              
-              <div class="row justify-content-center">
-                <div class="col-md-8">
+              <div class="row">
+                <div class="col-md-8 mx-auto">
                   <div class="mb-4">
                     <label for="student_id" class="form-label fw-semibold">
                       <i class="bi bi-person me-2"></i>Student <span class="text-danger">*</span>
@@ -101,237 +60,153 @@
                     </select>
                     <div class="invalid-feedback">Please select a student.</div>
                   </div>
-                  
-                  <div class="text-center">
-                    <button type="button" class="btn btn-primary btn-lg px-5" id="next-to-step2">
-                      Continue <i class="bi bi-arrow-right ms-2"></i>
-                    </button>
-                  </div>
                 </div>
               </div>
             </div>
 
+            <hr class="my-5">
+
             <!-- Step 2: Select Classes -->
-            <div class="wizard-step" id="step2">
-              <div class="text-center mb-4">
-                <div class="step-icon-large mb-3">
+            <div class="form-section mb-5">
+              <div class="section-header mb-4">
+                <div class="section-icon">
                   <i class="bi bi-book"></i>
                 </div>
-                <h4 class="fw-bold mb-2">Select Classes</h4>
-                <p class="text-muted">Choose one or more classes to include in the report card</p>
+                <div>
+                  <h5 class="fw-bold mb-1">2. Select Classes</h5>
+                  <p class="text-muted mb-0 small">Choose one or more classes to include in the report card</p>
+                </div>
               </div>
-              
               <div id="loading-classes" class="text-center py-5" style="display: none;">
                 <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
                   <span class="visually-hidden">Loading...</span>
                 </div>
                 <p class="mt-3 text-muted">Loading classes for selected student...</p>
               </div>
-              
               <div id="classes-container" style="display: none;">
                 <div class="row g-3 mb-4" id="classes-list">
                   <!-- Classes will be dynamically loaded here -->
                 </div>
-                
                 <div class="alert alert-info border-0 shadow-sm">
                   <i class="bi bi-info-circle me-2"></i>
                   <strong>Tip:</strong> Select at least one class to continue. You can choose multiple classes for a comprehensive report card.
                 </div>
-                
-                <div class="d-flex justify-content-between mt-4">
-                  <button type="button" class="btn btn-outline-secondary btn-lg" id="back-to-step1">
-                    <i class="bi bi-arrow-left me-1"></i>Back
-                  </button>
-                  <button type="button" class="btn btn-primary btn-lg" id="next-to-step3" disabled>
-                    Continue <i class="bi bi-arrow-right ms-1"></i>
-                  </button>
-                </div>
               </div>
-              
               <div id="no-classes-message" class="alert alert-warning border-0" style="display: none;">
                 <i class="bi bi-exclamation-triangle me-2"></i>
-                No classes found for this student. Please select a different student.
+                Please select a student first to see their enrolled classes.
               </div>
             </div>
+
+            <hr class="my-5">
 
             <!-- Step 3: Select Options -->
-            <div class="wizard-step" id="step3">
-              <div class="text-center mb-4">
-                <div class="step-icon-large mb-3">
+            <div class="form-section mb-5">
+              <div class="section-header mb-4">
+                <div class="section-icon">
                   <i class="bi bi-gear"></i>
                 </div>
-                <h4 class="fw-bold mb-2">Select Options</h4>
-                <p class="text-muted">Configure report card settings and additional information</p>
+                <div>
+                  <h5 class="fw-bold mb-1">3. Select Options</h5>
+                  <p class="text-muted mb-0 small">Configure report card settings and additional information</p>
+                </div>
               </div>
-              
-              <div class="row justify-content-center">
-                <div class="col-md-10">
-                  <div class="row g-4">
-                    <div class="col-md-6">
-                      <div class="form-floating">
-                        <select class="form-select" id="school_year_id" name="school_year_id" required>
-                          <option value="">Choose...</option>
-                          {% for year in school_years %}
-                            <option value="{{ year.id }}">{{ year.name }}</option>
-                          {% endfor %}
-                        </select>
-                        <label for="school_year_id">
-                          <i class="bi bi-calendar3 me-2"></i>School Year <span class="text-danger">*</span>
-                        </label>
-                        <div class="invalid-feedback">Please select a school year.</div>
-                      </div>
-                    </div>
-
-                    <div class="col-md-6">
-                      <div class="form-floating">
-                        <select class="form-select" id="quarter" name="quarter" required>
-                          <option value="">Choose...</option>
-                          <option value="Q1">Quarter 1</option>
-                          <option value="Q2">Quarter 2</option>
-                          <option value="Q3">Quarter 3</option>
-                          <option value="Q4">Quarter 4</option>
-                        </select>
-                        <label for="quarter">
-                          <i class="bi bi-calendar4-range me-2"></i>Quarter <span class="text-danger">*</span>
-                        </label>
-                        <div class="invalid-feedback">Please select a quarter.</div>
-                      </div>
-                    </div>
+              <div class="row g-4">
+                <div class="col-md-6">
+                  <div class="form-floating">
+                    <select class="form-select" id="school_year_id" name="school_year_id" required>
+                      <option value="">Choose...</option>
+                      {% for year in school_years %}
+                        <option value="{{ year.id }}">{{ year.name }}</option>
+                      {% endfor %}
+                    </select>
+                    <label for="school_year_id">
+                      <i class="bi bi-calendar3 me-2"></i>School Year <span class="text-danger">*</span>
+                    </label>
+                    <div class="invalid-feedback">Please select a school year.</div>
                   </div>
+                </div>
 
-                  <div class="card border-0 shadow-sm mt-4" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
-                    <div class="card-body p-4">
-                      <h5 class="mb-4 fw-bold">
-                        <i class="bi bi-toggle-on me-2 text-primary"></i>Additional Options
-                      </h5>
-                      <div class="row g-3">
-                        <div class="col-md-6">
-                          <div class="option-card">
-                            <div class="form-check form-switch form-switch-lg">
-                              <input class="form-check-input" type="checkbox" id="include_attendance" name="include_attendance">
-                              <label class="form-check-label" for="include_attendance">
-                                <div class="d-flex align-items-center">
-                                  <div class="option-icon me-3">
-                                    <i class="bi bi-calendar-check"></i>
-                                  </div>
-                                  <div>
-                                    <strong>Include Attendance</strong>
-                                    <small class="text-muted d-block">Add attendance statistics to the report card</small>
-                                  </div>
-                                </div>
-                              </label>
+                <div class="col-md-6">
+                  <div class="form-floating">
+                    <select class="form-select" id="quarter" name="quarter" required>
+                      <option value="">Choose...</option>
+                      <option value="Q1">Quarter 1</option>
+                      <option value="Q2">Quarter 2</option>
+                      <option value="Q3">Quarter 3</option>
+                      <option value="Q4">Quarter 4</option>
+                    </select>
+                    <label for="quarter">
+                      <i class="bi bi-calendar4-range me-2"></i>Quarter <span class="text-danger">*</span>
+                    </label>
+                    <div class="invalid-feedback">Please select a quarter.</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card border-0 shadow-sm mt-4" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
+                <div class="card-body p-4">
+                  <h6 class="mb-4 fw-bold">
+                    <i class="bi bi-toggle-on me-2 text-primary"></i>Additional Options
+                  </h6>
+                  <div class="row g-3">
+                    <div class="col-md-6">
+                      <div class="option-card">
+                        <div class="form-check form-switch form-switch-lg">
+                          <input class="form-check-input" type="checkbox" id="include_attendance" name="include_attendance">
+                          <label class="form-check-label" for="include_attendance">
+                            <div class="d-flex align-items-center">
+                              <div class="option-icon me-3">
+                                <i class="bi bi-calendar-check"></i>
+                              </div>
+                              <div>
+                                <strong>Include Attendance</strong>
+                                <small class="text-muted d-block">Add attendance statistics to the report card</small>
+                              </div>
                             </div>
-                          </div>
-                        </div>
-                        <div class="col-md-6">
-                          <div class="option-card">
-                            <div class="form-check form-switch form-switch-lg">
-                              <input class="form-check-input" type="checkbox" id="include_comments" name="include_comments">
-                              <label class="form-check-label" for="include_comments">
-                                <div class="d-flex align-items-center">
-                                  <div class="option-icon me-3">
-                                    <i class="bi bi-chat-text"></i>
-                                  </div>
-                                  <div>
-                                    <strong>Include Comments</strong>
-                                    <small class="text-muted d-block">Add teacher comments to the report card</small>
-                                  </div>
-                                </div>
-                              </label>
-                            </div>
-                          </div>
+                          </label>
                         </div>
                       </div>
                     </div>
-                  </div>
-
-                  <div class="d-flex justify-content-between mt-4">
-                    <button type="button" class="btn btn-outline-secondary btn-lg" id="back-to-step2">
-                      <i class="bi bi-arrow-left me-1"></i>Back
-                    </button>
-                    <button type="button" class="btn btn-primary btn-lg" id="next-to-step4">
-                      Continue <i class="bi bi-arrow-right ms-1"></i>
-                    </button>
+                    <div class="col-md-6">
+                      <div class="option-card">
+                        <div class="form-check form-switch form-switch-lg">
+                          <input class="form-check-input" type="checkbox" id="include_comments" name="include_comments">
+                          <label class="form-check-label" for="include_comments">
+                            <div class="d-flex align-items-center">
+                              <div class="option-icon me-3">
+                                <i class="bi bi-chat-text"></i>
+                              </div>
+                              <div>
+                                <strong>Include Comments</strong>
+                                <small class="text-muted d-block">Add teacher comments to the report card</small>
+                              </div>
+                            </div>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- Step 4: Review & Generate -->
-            <div class="wizard-step" id="step4">
-              <div class="text-center mb-4">
-                <div class="step-icon-large mb-3">
-                  <i class="bi bi-check-circle"></i>
-                </div>
-                <h4 class="fw-bold mb-2">Review & Generate</h4>
-                <p class="text-muted">Review your selections before generating the report card</p>
-              </div>
-              
-              <div class="row justify-content-center">
-                <div class="col-md-10">
-                  <div class="row g-4">
-                    <div class="col-md-6">
-                      <div class="review-card">
-                        <div class="review-card-header">
-                          <i class="bi bi-person-fill me-2"></i>Student
-                        </div>
-                        <div class="review-card-body">
-                          <p class="mb-0 fw-semibold" id="review-student">-</p>
-                        </div>
-                      </div>
-                    </div>
+            <hr class="my-5">
 
-                    <div class="col-md-6">
-                      <div class="review-card">
-                        <div class="review-card-header">
-                          <i class="bi bi-calendar3 me-2"></i>Period
-                        </div>
-                        <div class="review-card-body">
-                          <p class="mb-1"><strong>School Year:</strong> <span id="review-school-year">-</span></p>
-                          <p class="mb-0"><strong>Quarter:</strong> <span id="review-quarter">-</span></p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div class="col-12">
-                      <div class="review-card">
-                        <div class="review-card-header">
-                          <i class="bi bi-book-fill me-2"></i>Selected Classes
-                        </div>
-                        <div class="review-card-body">
-                          <ul class="list-unstyled mb-0" id="review-classes">
-                            <li>-</li>
-                          </ul>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div class="col-12">
-                      <div class="review-card">
-                        <div class="review-card-header">
-                          <i class="bi bi-toggle-on me-2"></i>Additional Options
-                        </div>
-                        <div class="review-card-body">
-                          <ul class="list-unstyled mb-0" id="review-options">
-                            <li>-</li>
-                          </ul>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="d-flex justify-content-between mt-5">
-                    <button type="button" class="btn btn-outline-secondary btn-lg" id="back-to-step3">
-                      <i class="bi bi-arrow-left me-1"></i>Back
-                    </button>
-                    <button type="submit" class="btn btn-success btn-lg px-5">
-                      <i class="bi bi-file-earmark-pdf-fill me-2"></i>Generate Report Card
-                    </button>
-                  </div>
-                </div>
-              </div>
+            <!-- Generate Button -->
+            <div class="text-center mt-5 pt-4 border-top">
+              <button type="submit" class="btn btn-success btn-lg px-5 py-3" id="generateBtn">
+                <i class="bi bi-file-earmark-pdf-fill me-2"></i>Generate Report Card PDF
+              </button>
+              <p class="text-muted mt-3 small">
+                <i class="bi bi-info-circle me-1"></i>
+                The PDF will be generated and displayed in a new window for download.
+              </p>
             </div>
           </form>
+          
+          <!-- Hidden iframe for PDF display -->
+          <iframe id="pdfFrame" name="pdfFrame" style="display: none;"></iframe>
         </div>
       </div>
     </div>
@@ -339,99 +214,43 @@
 </div>
 
 <style>
-/* Step Indicator Styles */
-.step-indicator {
-  position: relative;
-  text-align: center;
+/* Section Header */
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
 }
 
-.step-icon {
+.section-icon {
   width: 60px;
   height: 60px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+  border-radius: 12px;
+  background: linear-gradient(135deg, #e7f1ff 0%, #cfe2ff 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 10px;
-  font-size: 1.5rem;
-  color: #6c757d;
-  transition: all 0.3s ease;
-  border: 3px solid #e9ecef;
-}
-
-.step-indicator.active .step-icon {
-  background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
-  color: white;
-  border-color: #0d6efd;
-  box-shadow: 0 4px 15px rgba(13, 110, 253, 0.3);
-  transform: scale(1.1);
-}
-
-.step-indicator.completed .step-icon {
-  background: linear-gradient(135deg, #198754 0%, #146c43 100%);
-  color: white;
-  border-color: #198754;
-}
-
-.step-label {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #6c757d;
-  transition: all 0.3s ease;
-}
-
-.step-indicator.active .step-label {
+  font-size: 1.75rem;
   color: #0d6efd;
-  font-weight: 700;
+  flex-shrink: 0;
 }
 
-.step-line {
+.form-section {
+  position: relative;
+}
+
+.form-section::before {
+  content: '';
   position: absolute;
-  top: 30px;
-  left: 50%;
-  width: 100%;
-  height: 3px;
-  background: #e9ecef;
-  z-index: -1;
-  transform: translateX(-50%);
+  left: 30px;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, #0d6efd 0%, #e9ecef 100%);
+  opacity: 0.3;
 }
 
-.step-indicator:last-child .step-line {
+.form-section:last-child::before {
   display: none;
-}
-
-.step-indicator.completed .step-line {
-  background: linear-gradient(90deg, #198754 0%, #e9ecef 100%);
-}
-
-/* Wizard Step Styles */
-.wizard-step {
-  display: none;
-  animation: fadeIn 0.4s ease;
-}
-
-.wizard-step.active {
-  display: block;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.step-icon-large {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto;
-  font-size: 2.5rem;
-  color: white;
-  box-shadow: 0 4px 20px rgba(13, 110, 253, 0.3);
 }
 
 /* Class Selection Cards */
@@ -502,47 +321,6 @@
   color: #0d6efd;
 }
 
-/* Review Cards */
-.review-card {
-  border: 2px solid #e9ecef;
-  border-radius: 12px;
-  overflow: hidden;
-  background: white;
-}
-
-.review-card-header {
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  padding: 15px 20px;
-  font-weight: 700;
-  color: #495057;
-  border-bottom: 2px solid #dee2e6;
-}
-
-.review-card-body {
-  padding: 20px;
-}
-
-.review-card-body ul {
-  margin: 0;
-  padding-left: 0;
-}
-
-.review-card-body li {
-  padding: 8px 0;
-  border-bottom: 1px solid #e9ecef;
-}
-
-.review-card-body li:last-child {
-  border-bottom: none;
-}
-
-.review-card-body li::before {
-  content: "✓";
-  color: #198754;
-  font-weight: bold;
-  margin-right: 10px;
-}
-
 /* Form Switch Large */
 .form-switch-lg .form-check-input {
   width: 3rem;
@@ -550,13 +328,36 @@
   margin-right: 15px;
 }
 
+/* Generate Button */
+#generateBtn {
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  box-shadow: 0 4px 15px rgba(25, 135, 84, 0.3);
+  transition: all 0.3s ease;
+}
+
+#generateBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(25, 135, 84, 0.4);
+}
+
+#generateBtn:active {
+  transform: translateY(0);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
-  .step-indicator {
-    margin-bottom: 20px;
+  .section-header {
+    flex-direction: column;
+    text-align: center;
   }
   
-  .step-line {
+  .section-icon {
+    margin: 0 auto;
+  }
+  
+  .form-section::before {
     display: none;
   }
 }
@@ -570,80 +371,20 @@ document.addEventListener('DOMContentLoaded', function() {
   const loadingClasses = document.getElementById('loading-classes');
   const noClassesMessage = document.getElementById('no-classes-message');
   const classesList = document.getElementById('classes-list');
-  const nextToStep2Btn = document.getElementById('next-to-step2');
-  const nextToStep3Btn = document.getElementById('next-to-step3');
-  const nextToStep4Btn = document.getElementById('next-to-step4');
-  
-  let selectedClasses = [];
-  let currentStep = 1;
+  const generateBtn = document.getElementById('generateBtn');
 
-  // Update step indicators
-  function updateStepIndicators(step) {
-    document.querySelectorAll('.step-indicator').forEach((indicator, index) => {
-      const stepNum = index + 1;
-      indicator.classList.remove('active', 'completed');
-      if (stepNum < step) {
-        indicator.classList.add('completed');
-      } else if (stepNum === step) {
-        indicator.classList.add('active');
-      }
-    });
-  }
-
-  // Show step
-  function showStep(stepNum) {
-    // Hide all steps
-    document.querySelectorAll('.wizard-step').forEach(step => {
-      step.classList.remove('active');
-    });
-    
-    // Show current step
-    const stepElement = document.getElementById(`step${stepNum}`);
-    if (stepElement) {
-      stepElement.classList.add('active');
-    }
-    
-    currentStep = stepNum;
-    updateStepIndicators(stepNum);
-  }
-
-  // Step 1 to Step 2
-  nextToStep2Btn.addEventListener('click', function() {
-    if (studentSelect.value && studentSelect.checkValidity()) {
-      loadStudentClasses(studentSelect.value);
-      showStep(2);
+  // Load classes when student is selected
+  studentSelect.addEventListener('change', function() {
+    if (this.value) {
+      loadStudentClasses(this.value);
     } else {
-      studentSelect.reportValidity();
+      classesContainer.style.display = 'none';
+      noClassesMessage.style.display = 'block';
+      noClassesMessage.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>Please select a student first to see their enrolled classes.';
+      classesList.innerHTML = '';
     }
   });
 
-  // Step 2 to Step 3
-  nextToStep3Btn.addEventListener('click', function() {
-    if (selectedClasses.length > 0) {
-      showStep(3);
-    }
-  });
-
-  // Step 3 to Step 4
-  nextToStep4Btn.addEventListener('click', function() {
-    const schoolYear = document.getElementById('school_year_id');
-    const quarter = document.getElementById('quarter');
-    
-    if (schoolYear.checkValidity() && quarter.checkValidity()) {
-      updateReviewSection();
-      showStep(4);
-    } else {
-      schoolYear.reportValidity();
-      quarter.reportValidity();
-    }
-  });
-
-  // Back buttons
-  document.getElementById('back-to-step1').addEventListener('click', () => showStep(1));
-  document.getElementById('back-to-step2').addEventListener('click', () => showStep(2));
-  document.getElementById('back-to-step3').addEventListener('click', () => showStep(3));
-
-  // Load classes
   function loadStudentClasses(studentId) {
     loadingClasses.style.display = 'block';
     classesContainer.style.display = 'none';
@@ -663,7 +404,7 @@ document.addEventListener('DOMContentLoaded', function() {
             classCard.innerHTML = `
               <div class="class-card" data-class-id="${classItem.id}">
                 <div class="form-check d-flex align-items-center">
-                  <input class="form-check-input" type="checkbox" name="class_ids" value="${classItem.id}" id="class_${classItem.id}">
+                  <input class="form-check-input" type="checkbox" name="class_ids" value="${classItem.id}" id="class_${classItem.id}" checked>
                   <label class="form-check-label flex-grow-1 class-card-content" for="class_${classItem.id}">
                     <h6>${classItem.name}</h6>
                     <small class="text-muted d-block">${classItem.subject} • ${classItem.teacher_name}</small>
@@ -689,8 +430,11 @@ document.addEventListener('DOMContentLoaded', function() {
           });
           
           classesContainer.style.display = 'block';
+          // Select all classes by default
+          updateClassSelection();
         } else {
           noClassesMessage.style.display = 'block';
+          noClassesMessage.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>No classes found for this student.';
         }
       })
       .catch(error => {
@@ -701,8 +445,6 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function updateClassSelection() {
-    selectedClasses = Array.from(classesList.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
-    
     classesList.querySelectorAll('.class-card').forEach(card => {
       const checkbox = card.querySelector('input[type="checkbox"]');
       if (checkbox.checked) {
@@ -711,61 +453,59 @@ document.addEventListener('DOMContentLoaded', function() {
         card.classList.remove('selected');
       }
     });
+  }
+
+  // Form validation and submission
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
     
-    nextToStep3Btn.disabled = selectedClasses.length === 0;
-  }
-
-  function updateReviewSection() {
-    const studentOption = studentSelect.options[studentSelect.selectedIndex];
-    document.getElementById('review-student').textContent = studentOption.text;
-
-    const reviewClassesList = document.getElementById('review-classes');
-    reviewClassesList.innerHTML = '';
-    selectedClasses.forEach(classId => {
-      const checkbox = document.getElementById(`class_${classId}`);
-      if (checkbox) {
-        const label = checkbox.closest('.class-card-content').querySelector('h6').textContent;
-        const li = document.createElement('li');
-        li.textContent = label;
-        reviewClassesList.appendChild(li);
-      }
-    });
-
-    const schoolYearSelect = document.getElementById('school_year_id');
-    const quarterSelect = document.getElementById('quarter');
-    const includeAttendance = document.getElementById('include_attendance');
-    const includeComments = document.getElementById('include_comments');
-
-    document.getElementById('review-school-year').textContent = 
-      schoolYearSelect.options[schoolYearSelect.selectedIndex]?.text || '-';
-    document.getElementById('review-quarter').textContent = 
-      quarterSelect.options[quarterSelect.selectedIndex]?.text || '-';
-
-    const reviewOptions = document.getElementById('review-options');
-    reviewOptions.innerHTML = '';
-    if (!includeAttendance.checked && !includeComments.checked) {
-      reviewOptions.innerHTML = '<li>No additional options selected</li>';
-    } else {
-      if (includeAttendance.checked) {
-        const li = document.createElement('li');
-        li.textContent = 'Include Attendance Statistics';
-        reviewOptions.appendChild(li);
-      }
-      if (includeComments.checked) {
-        const li = document.createElement('li');
-        li.textContent = 'Include Teacher Comments';
-        reviewOptions.appendChild(li);
-      }
-    }
-  }
-
-  // Form validation
-  form.addEventListener('submit', function(event) {
     if (!form.checkValidity()) {
-      event.preventDefault();
-      event.stopPropagation();
+      e.stopPropagation();
+      form.classList.add('was-validated');
+      
+      // Scroll to first invalid field
+      const firstInvalid = form.querySelector(':invalid');
+      if (firstInvalid) {
+        firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        firstInvalid.focus();
+      }
+      
+      return false;
     }
-    form.classList.add('was-validated');
+    
+    // Check if at least one class is selected
+    const selectedClasses = Array.from(classesList.querySelectorAll('input[type="checkbox"]:checked'));
+    if (selectedClasses.length === 0) {
+      alert('Please select at least one class to include in the report card.');
+      classesContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return false;
+    }
+    
+    // Disable button and show loading state
+    generateBtn.disabled = true;
+    generateBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Generating PDF...';
+    
+    // Change form target to open PDF in new window
+    const originalTarget = form.target;
+    form.target = '_blank';
+    
+    // Submit form normally - browser will handle PDF display/download
+    // Re-enable button after a delay (in case of errors, we'll handle via error page)
+    setTimeout(() => {
+      generateBtn.disabled = false;
+      generateBtn.innerHTML = '<i class="bi bi-file-earmark-pdf-fill me-2"></i>Generate Report Card PDF';
+      form.target = originalTarget;
+    }, 3000);
+    
+    // Allow form to submit normally
+    return true;
+  });
+
+  // Update button text on form validation
+  form.addEventListener('input', function() {
+    if (form.checkValidity()) {
+      generateBtn.disabled = false;
+    }
   });
 });
 </script>

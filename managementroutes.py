@@ -942,13 +942,81 @@ def generate_report_card_form():
             
             report_card_data['attendance'] = attendance_data
         
-        # Update report card
+        # Update report card (save for record keeping)
         report_card.grades_details = json.dumps(report_card_data)
         report_card.generated_at = datetime.utcnow()
         db.session.commit()
         
-        flash('Report card data generated successfully.', 'success')
-        return redirect(url_for('management.view_report_card', report_card_id=report_card.id))
+        # Generate and return PDF directly
+        try:
+            from weasyprint import HTML
+            from io import BytesIO
+            from flask import make_response
+            
+            # Get class objects for selected classes
+            class_objects = []
+            if valid_class_ids:
+                for class_id in valid_class_ids:
+                    class_obj = Class.query.get(class_id)
+                    if class_obj:
+                        class_objects.append(class_obj)
+            
+            # Prepare student data for template
+            student_data = {
+                'name': f"{student.first_name} {student.last_name}",
+                'student_id_formatted': student.student_id_formatted if hasattr(student, 'student_id_formatted') else (student.student_id if student.student_id else 'N/A'),
+                'ssn': getattr(student, 'ssn', None),
+                'dob': student.dob.strftime('%m/%d/%Y') if student.dob else 'N/A',
+                'grade': student.grade_level,
+                'gender': getattr(student, 'gender', 'N/A'),
+                'address': f"{getattr(student, 'street', '')}, {getattr(student, 'city', '')}, {getattr(student, 'state', '')} {getattr(student, 'zip_code', '')}".strip(', '),
+                'phone': getattr(student, 'phone', '')
+            }
+            
+            # Choose template based on grade level
+            if student.grade_level in [1, 2]:
+                template_name = 'management/official_report_card_pdf_template_1_2.html'
+            elif student.grade_level == 3:
+                template_name = 'management/official_report_card_pdf_template_3.html'
+            else:  # Grades 4-8
+                template_name = 'management/official_report_card_pdf_template_4_8.html'
+            
+            # Render the HTML template
+            html_content = render_template(
+                template_name,
+                report_card=report_card,
+                student=student_data,
+                grades=calculated_grades,
+                attendance=report_card_data.get('attendance', {}),
+                class_objects=class_objects,
+                include_attendance=include_attendance,
+                include_comments=include_comments,
+                generated_date=datetime.utcnow()
+            )
+            
+            # Generate PDF
+            pdf_buffer = BytesIO()
+            HTML(string=html_content, base_url=request.url_root).write_pdf(pdf_buffer)
+            pdf_buffer.seek(0)
+            
+            # Create response - use inline so browser can display it
+            response = make_response(pdf_buffer.getvalue())
+            response.headers['Content-Type'] = 'application/pdf'
+            filename = f"ReportCard_{student.first_name}_{student.last_name}_{report_card.school_year.name.replace('/', '_')}_{report_card.quarter}.pdf"
+            # Use 'inline' to display in browser, browser can still download if user wants
+            response.headers['Content-Disposition'] = f'inline; filename="{filename}"'
+            
+            return response
+            
+        except ImportError:
+            flash('PDF generation requires WeasyPrint. Please install it: pip install weasyprint', 'error')
+            return redirect(url_for('management.view_report_card', report_card_id=report_card.id))
+        except Exception as e:
+            current_app.logger.error(f'Error generating PDF: {str(e)}')
+            import traceback
+            current_app.logger.error(traceback.format_exc())
+            flash(f'Error generating PDF: {str(e)}', 'danger')
+            return redirect(url_for('management.view_report_card', report_card_id=report_card.id))
 
     return render_template('management/report_card_generate_form.html', 
                          students=students, 

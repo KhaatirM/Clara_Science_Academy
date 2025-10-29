@@ -1148,13 +1148,33 @@ def generate_report_card_pdf(report_card_id):
                 if class_obj:
                     class_objects.append(class_obj)
         
-        # Prepare student data for template
-        from datetime import datetime
+        # Prepare student data for template (robust date handling)
+        from datetime import datetime, date as date_type
+        
+        def _format_date_value(value):
+            try:
+                if value is None:
+                    return 'N/A'
+                # If already a date/datetime object
+                if isinstance(value, (date_type, datetime)):
+                    return value.strftime('%m/%d/%Y')
+                # If it's a string, try common formats, otherwise return as-is
+                if isinstance(value, str):
+                    for fmt in ('%Y-%m-%d', '%m/%d/%Y', '%m/%d/%y', '%Y/%m/%d'):
+                        try:
+                            return datetime.strptime(value, fmt).strftime('%m/%d/%Y')
+                        except Exception:
+                            continue
+                    return value
+                return 'N/A'
+            except Exception:
+                return 'N/A'
+        
         student_data = {
             'name': f"{student.first_name} {student.last_name}",
             'student_id_formatted': student.student_id_formatted if hasattr(student, 'student_id_formatted') else (student.student_id if student.student_id else 'N/A'),
             'ssn': getattr(student, 'ssn', None),
-            'dob': student.dob.strftime('%m/%d/%Y') if student.dob else 'N/A',
+            'dob': _format_date_value(getattr(student, 'dob', None)),
             'grade': student.grade_level,
             'gender': getattr(student, 'gender', 'N/A'),
             'address': f"{getattr(student, 'street', '')}, {getattr(student, 'city', '')}, {getattr(student, 'state', '')} {getattr(student, 'zip_code', '')}".strip(', '),

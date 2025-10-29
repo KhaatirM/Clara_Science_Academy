@@ -1157,6 +1157,9 @@ def grade_assignment(assignment_id):
                     grade = Grade.query.filter_by(student_id=student.id, assignment_id=assignment_id).first()
                     if grade:
                         grade.grade_data = grade_data
+                        # Check if grade should be voided (even if updating)
+                        from management_routes.late_enrollment_utils import check_and_void_grade
+                        check_and_void_grade(grade)
                     else:
                         # Create grade using attribute assignment
                         grade = Grade()
@@ -1164,6 +1167,11 @@ def grade_assignment(assignment_id):
                         grade.assignment_id = assignment_id
                         grade.grade_data = grade_data
                         db.session.add(grade)
+                        # Check if grade should be voided due to late enrollment
+                        from management_routes.late_enrollment_utils import check_and_void_grade
+                        # Flush to get the grade ID, then check void status
+                        db.session.flush()
+                        check_and_void_grade(grade)
                     
                     # Create notification for the student
                     if student.user:

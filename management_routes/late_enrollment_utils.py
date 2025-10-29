@@ -140,6 +140,54 @@ def void_assignments_for_late_enrollment(student_id, class_id):
     return voided_count
 
 
+def check_and_void_grade(grade):
+    """
+    Check if a grade should be voided based on late enrollment and void it if needed.
+    This should be called whenever a grade is created or updated.
+    
+    Args:
+        grade: Grade object (must have student_id and assignment_id set)
+        
+    Returns:
+        bool: True if grade was voided, False otherwise
+    """
+    if not grade or not grade.assignment_id or not grade.student_id:
+        return False
+    
+    # If already voided, don't do anything
+    if hasattr(grade, 'is_voided') and grade.is_voided:
+        return False
+    
+    # Get the assignment and enrollment
+    assignment = Assignment.query.get(grade.assignment_id)
+    if not assignment:
+        return False
+    
+    enrollment = Enrollment.query.filter_by(
+        student_id=grade.student_id,
+        class_id=assignment.class_id,
+        is_active=True
+    ).first()
+    
+    if not enrollment:
+        return False
+    
+    # Check if this assignment should be voided
+    if should_void_assignment_for_student(grade.student_id, assignment, enrollment):
+        grade.is_voided = True
+        grade.voided_at = datetime.utcnow()
+        grade.voided_reason = (
+            f"Student enrolled late ({enrollment.enrolled_at.strftime('%Y-%m-%d')}) "
+            f"within 2 weeks of {assignment.quarter} end. "
+            f"Assignment automatically voided per late enrollment policy."
+        )
+        # Don't commit here - let the calling function handle the commit
+        # This allows it to work within existing transactions
+        return True
+    
+    return False
+
+
 def check_and_void_existing_enrollments():
     """
     Retroactively check all existing enrollments and void assignments for late enrollments.

@@ -164,6 +164,7 @@ def get_current_quarter():
 
 def calculate_student_gpa(student_id):
     """Calculate GPA for a student based on their grades"""
+    import json
     # Get all grades for the student
     grades = Grade.query.filter_by(student_id=student_id).all()
     
@@ -249,6 +250,8 @@ def management_api_class_groups(class_id):
 @management_required
 def management_dashboard():
     from datetime import datetime, timedelta
+    from sqlalchemy import or_, and_
+    import json
     
     # Basic stats
     stats = {
@@ -317,9 +320,6 @@ def management_dashboard():
     }
     
     # --- AT-RISK STUDENT ALERTS ---
-    from sqlalchemy import or_, and_
-    import json
-    
     at_risk_alerts = []  # Initialize here to ensure it's always defined
     at_risk_grades = []  # Initialize here to ensure it's always defined
     try:
@@ -2373,6 +2373,7 @@ def create_discussion_assignment():
 @management_required
 def assignments_and_grades():
     """Combined assignments and grades view for School Administrators and Directors"""
+    import json
     try:
         from datetime import datetime
         
@@ -2661,6 +2662,7 @@ def assignments_and_grades():
 def class_assignments(class_id):
     """View assignments for a specific class"""
     from datetime import datetime
+    import json
     
     # Get the class
     class_obj = Class.query.get_or_404(class_id)

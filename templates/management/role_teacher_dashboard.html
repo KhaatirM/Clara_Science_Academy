@@ -3232,8 +3232,17 @@ function markAllPresent() {
           {% for alert in at_risk_alerts %}
             <li class="list-group-item d-flex justify-content-between align-items-center">
               <div>
-                <strong>{{ alert.student_name }}</strong> has an at-risk grade
-                (e.g., "{{ alert.assignment_name }}" in {{ alert.class_name }}).
+                <strong>{{ alert.student_name }}</strong> - 
+                <span class="badge badge-warning">{{ alert.alert_reason|title }}</span>
+                <br>
+                <small class="text-muted">
+                  "{{ alert.assignment_name }}" in {{ alert.class_name }}
+                  {% if alert.score is not none %}
+                    (Score: {{ alert.score }})
+                  {% else %}
+                    (Not graded)
+                  {% endif %}
+                </small>
               </div>
               <a href="{{ url_for('management.view_student_details', student_id=alert.student_user_id) }}" class="btn btn-primary btn-sm">
                 View Details

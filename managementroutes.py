@@ -316,12 +316,71 @@ def management_dashboard():
         'due_assignments': due_assignments
     }
     
+    # --- AT-RISK STUDENT ALERTS ---
+    at_risk_alerts = []  # Initialize here to ensure it's always defined
+    try:
+        from sqlalchemy import or_, and_
+        import json
+        
+        students_to_check = Student.query.all() # Management sees all students
+        student_ids = [s.id for s in students_to_check]
+
+        # Get ALL grades for our students (not just overdue ones)
+        at_risk_grades = db.session.query(Grade).join(Assignment).join(Student)\
+            .filter(Student.id.in_(student_ids))\
+            .all()
+
+        seen_student_ids = set()
+        for grade in at_risk_grades:
+            try:
+                grade_data = json.loads(grade.grade_data)
+                score = grade_data.get('score')
+                is_overdue = grade.assignment.due_date < datetime.utcnow()
+                
+                # Alert if: assignment is overdue OR score is missing/failing
+                if is_overdue or (score is None or score <= 69):
+                    if grade.student.id not in seen_student_ids:
+                        # Determine alert reason
+                        if is_overdue and (score is None or score <= 69):
+                            alert_reason = "overdue and failing"
+                        elif is_overdue:
+                            alert_reason = "overdue"
+                        else:
+                            alert_reason = "failing"
+                        
+                        at_risk_alerts.append({
+                            'student_name': f"{grade.student.first_name} {grade.student.last_name}",
+                            'student_user_id': grade.student.id,  # Use student ID instead of user_id
+                            'class_name': grade.assignment.class_info.name,
+                            'assignment_name': grade.assignment.title,
+                            'alert_reason': alert_reason,
+                            'score': score,
+                            'due_date': grade.assignment.due_date
+                        })
+                        seen_student_ids.add(grade.student.id)
+            except (json.JSONDecodeError, TypeError) as e:
+                print(f"Error processing grade {grade.id}: {e}")
+                continue
+    except Exception as e:
+        print(f"Error in alert processing: {e}")
+        at_risk_alerts = []  # Ensure it's still a list even if there's an error
+    # --- END ALERTS ---
+    
+    # --- Debugging Print Statements ---
+    print(f"--- Debug Dashboard Alerts ---")
+    print(f"Checking alerts for user: {current_user.username}, Role: {current_user.role}")
+    print(f"Raw at-risk grades query result count: {len(at_risk_grades) if 'at_risk_grades' in locals() else 0}")
+    print(f"Formatted alerts list being sent to template: {at_risk_alerts}")
+    print(f"--- End Debug ---")
+    # --- End Debugging ---
+    
     return render_template('management/role_dashboard.html', 
                          stats=stats,
                          monthly_stats=monthly_stats,
                          weekly_stats=weekly_stats,
                          section='home',
-                         active_tab='home')
+                         active_tab='home',
+                         at_risk_alerts=at_risk_alerts)
 
 # Routes for managing students, teachers, classes etc.
 # Example: Add Student

@@ -195,9 +195,9 @@ def teacher_dashboard():
     students_to_check = current_user.teacher_profile.students if hasattr(current_user, 'teacher_profile') and current_user.teacher_profile else []
     student_ids = [s.id for s in students_to_check]
 
+    # Get ALL grades for our students (not just overdue ones)
     at_risk_grades = db.session.query(Grade).join(Assignment).join(Student)\
         .filter(Student.id.in_(student_ids))\
-        .filter(Assignment.due_date < datetime.utcnow()) \
         .all()
 
     at_risk_alerts = []
@@ -206,13 +206,27 @@ def teacher_dashboard():
         try:
             grade_data = json.loads(grade.grade_data)
             score = grade_data.get('score')
-            if score is None or score <= 69:
+            is_overdue = grade.assignment.due_date < datetime.utcnow()
+            
+            # Alert if: assignment is overdue OR score is missing/failing
+            if is_overdue or (score is None or score <= 69):
                 if grade.student.id not in seen_student_ids:
+                    # Determine alert reason
+                    if is_overdue and (score is None or score <= 69):
+                        alert_reason = "overdue and failing"
+                    elif is_overdue:
+                        alert_reason = "overdue"
+                    else:
+                        alert_reason = "failing"
+                    
                     at_risk_alerts.append({
                         'student_name': f"{grade.student.first_name} {grade.student.last_name}",
                         'student_user_id': grade.student.id,  # Use student ID instead of user_id
                         'class_name': grade.assignment.class_info.name,
-                        'assignment_name': grade.assignment.title
+                        'assignment_name': grade.assignment.title,
+                        'alert_reason': alert_reason,
+                        'score': score,
+                        'due_date': grade.assignment.due_date
                     })
                     seen_student_ids.add(grade.student.id)
         except (json.JSONDecodeError, TypeError):

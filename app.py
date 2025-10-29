@@ -528,6 +528,16 @@ def create_app(config_class=None):
             return json.loads(value)
         except (json.JSONDecodeError, TypeError):
             return {}
+    
+    @app.template_filter('nl2br')
+    def nl2br_filter(value):
+        """Convert newlines to <br> tags"""
+        from markupsafe import Markup
+        if value is None:
+            return Markup('')
+        # Convert newlines to <br> tags and mark as safe HTML
+        html = str(value).replace('\r\n', '<br>\n').replace('\n', '<br>\n').replace('\r', '<br>\n')
+        return Markup(html)
 
     # Add CSP headers to allow necessary JavaScript execution
     @app.after_request

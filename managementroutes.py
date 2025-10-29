@@ -7512,3 +7512,137 @@ def admin_grant_extensions(assignment_id):
         print(f"Error viewing extensions: {e}")
         flash('Error accessing extensions management.', 'error')
         return redirect(url_for('management.admin_view_group_assignment', assignment_id=assignment_id))
+
+@management_blueprint.route('/student/<int:student_id>/details')
+@login_required
+@management_required
+def view_student_details(student_id):
+    """View detailed student information including academic analysis."""
+    from gpa_scheduler import calculate_student_gpa
+    from copy import copy
+    import json
+    
+    student = Student.query.get_or_404(student_id)
+    
+    # Get the user associated with this student (if any)
+    user = User.query.filter_by(student_id=student_id).first()
+    
+    # --- GPA IMPACT ANALYSIS ---
+    current_gpa = None
+    hypothetical_gpa = None
+    at_risk_grades_list = []
+    all_missing_assignments = []
+    class_gpa_breakdown = []
+
+    all_grades = Grade.query.filter_by(student_id=student.id).all()
+    
+    # Get all classes this student is enrolled in
+    enrollments = Enrollment.query.filter_by(student_id=student.id, is_active=True).all()
+    student_classes = {enrollment.class_id: enrollment.class_info for enrollment in enrollments if enrollment.class_info}
+    
+    # Separate grades by class and find missing/at-risk assignments
+    grades_by_class = {}
+    for g in all_grades:
+        class_id = g.assignment.class_id
+        if class_id not in grades_by_class:
+            grades_by_class[class_id] = []
+        grades_by_class[class_id].append(g)
+        
+        try:
+            grade_data = json.loads(g.grade_data)
+            score = grade_data.get('score')
+            g.display_score = score
+            
+            # Check if assignment is past due
+            if g.assignment.due_date < datetime.utcnow():
+                if score is None:
+                    # Missing assignment
+                    all_missing_assignments.append({
+                        'grade': g,
+                        'assignment': g.assignment,
+                        'class_name': g.assignment.class_info.name,
+                        'due_date': g.assignment.due_date,
+                        'status': 'missing'
+                    })
+                elif score <= 69:
+                    # Failing assignment
+                    at_risk_grades_list.append(g)
+                    all_missing_assignments.append({
+                        'grade': g,
+                        'assignment': g.assignment,
+                        'class_name': g.assignment.class_info.name,
+                        'due_date': g.assignment.due_date,
+                        'status': 'failing',
+                        'score': score
+                    })
+        except (json.JSONDecodeError, TypeError):
+            continue
+
+    # Calculate Current Overall GPA
+    current_gpa = calculate_student_gpa(all_grades) 
+
+    # Calculate GPA per class
+    for class_id, class_grades in grades_by_class.items():
+        if class_id in student_classes:
+            class_obj = student_classes[class_id]
+            class_current_gpa = calculate_student_gpa(class_grades)
+            
+            # Calculate hypothetical GPA for this class (fixing at-risk assignments)
+            class_at_risk = [g for g in class_grades if g in at_risk_grades_list]
+            class_hypothetical_grades = []
+            for g in class_grades:
+                if g in class_at_risk:
+                    hypothetical_grade = copy(g)
+                    try:
+                        grade_data = json.loads(g.grade_data)
+                        grade_data['score'] = 70
+                        hypothetical_grade.grade_data = json.dumps(grade_data)
+                        class_hypothetical_grades.append(hypothetical_grade)
+                    except (json.JSONDecodeError, TypeError):
+                        class_hypothetical_grades.append(g)
+                else:
+                    class_hypothetical_grades.append(g)
+            
+            class_hypothetical_gpa = calculate_student_gpa(class_hypothetical_grades)
+            
+            # Get assignments impacting this class
+            class_impact_assignments = [
+                item for item in all_missing_assignments 
+                if item['assignment'].class_id == class_id
+            ]
+            
+            class_gpa_breakdown.append({
+                'class_name': class_obj.name,
+                'class_id': class_id,
+                'current_gpa': class_current_gpa,
+                'hypothetical_gpa': class_hypothetical_gpa,
+                'impact_assignments': class_impact_assignments,
+                'total_assignments': len(class_grades)
+            })
+    
+    # Calculate Hypothetical Overall GPA
+    hypothetical_grades = []
+    for g in all_grades:
+        if g in at_risk_grades_list:
+            hypothetical_grade = copy(g)
+            try:
+                grade_data = json.loads(g.grade_data)
+                grade_data['score'] = 70
+                hypothetical_grade.grade_data = json.dumps(grade_data)
+                hypothetical_grades.append(hypothetical_grade)
+            except (json.JSONDecodeError, TypeError):
+                hypothetical_grades.append(g)
+        else:
+            hypothetical_grades.append(g)
+    
+    hypothetical_gpa = calculate_student_gpa(hypothetical_grades)
+    # --- END GPA ANALYSIS ---
+    
+    return render_template('management/user_details.html', 
+                         user=user,
+                         student=student,
+                         current_gpa=current_gpa,
+                         hypothetical_gpa=hypothetical_gpa,
+                         at_risk_grades_list=at_risk_grades_list,
+                         all_missing_assignments=all_missing_assignments,
+                         class_gpa_breakdown=class_gpa_breakdown)

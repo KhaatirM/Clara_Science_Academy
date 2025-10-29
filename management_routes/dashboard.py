@@ -136,14 +136,14 @@ def management_dashboard():
                 grade_data = json.loads(grade.grade_data)
                 score = grade_data.get('score')
                 if score is None or score <= 69:
-                    if grade.student.user_id not in seen_student_ids:
+                    if grade.student.id not in seen_student_ids:
                         at_risk_alerts.append({
-                            'student_name': grade.student.user.name,
-                            'student_user_id': grade.student.user_id,
-                            'class_name': grade.assignment.class_obj.name,
-                            'assignment_name': grade.assignment.name
+                            'student_name': f"{grade.student.first_name} {grade.student.last_name}",
+                            'student_user_id': grade.student.id,  # Use student ID instead of user_id
+                            'class_name': grade.assignment.class_info.name,
+                            'assignment_name': grade.assignment.title
                         })
-                        seen_student_ids.add(grade.student.user_id)
+                        seen_student_ids.add(grade.student.id)
             except (json.JSONDecodeError, TypeError):
                 continue
         # --- END ALERTS ---

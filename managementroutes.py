@@ -982,12 +982,21 @@ def view_report_card(report_card_id):
     # If attendance is empty but was requested, provide default
     if not attendance and include_attendance:
         attendance = {"Present": 0, "Absent": 0, "Tardy": 0}
+    
+    # Get class objects for selected classes
+    class_objects = []
+    if selected_classes:
+        for class_id in selected_classes:
+            class_obj = Class.query.get(class_id)
+            if class_obj:
+                class_objects.append(class_obj)
 
     return render_template('management/report_card_detail.html', 
                          report_card=report_card, 
                          grades=grades, 
                          attendance=attendance,
                          selected_classes=selected_classes,
+                         class_objects=class_objects,
                          include_attendance=include_attendance,
                          include_comments=include_comments)
 

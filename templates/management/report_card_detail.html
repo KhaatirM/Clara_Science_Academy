@@ -1,62 +1,368 @@
 {% extends "shared/dashboard_layout.html" %}
 
 {% block dashboard_content %}
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 class="mb-0">Report Card Detail</h3>
-    <div>
-      {# FIX: Ensure back button correctly uses role_prefix with underscore #}
-      <a href="{{ url_for(role_prefix ~ 'dashboard_section', section='report_cards') }}" class="btn btn-outline-secondary btn-sm me-2">Back to Report Cards List</a>
-      {# The "Generate PDF" button was removed from here as per user request #}
-    </div>
-  </div>
-
-  <div class="card mb-4">
-    <div class="card-header">
-      Report Card for {{ report_card.student.name }}
-    </div>
-    <div class="card-body">
-      <div class="row">
-        <div class="col-md-6">
-          <p><strong>Student:</strong> {{ report_card.student.name }} (ID: {{ report_card.student.student_id_formatted }})</p>
-          <p><strong>Class:</strong> {{ report_card.class_obj.name }} ({{ report_card.class_obj.subject }})</p>
-          <p><strong>Teacher:</strong> {{ report_card.teacher_obj.name if report_card.teacher_obj else 'N/A' }}</p>
+<div class="container-fluid py-4">
+  <!-- Header -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center flex-wrap">
+        <div>
+          <h2 class="mb-1 fw-bold">
+            <i class="bi bi-file-earmark-text-fill text-primary me-2"></i>Report Card Details
+          </h2>
+          <p class="text-muted mb-0">Comprehensive academic report for {{ report_card.student.first_name }} {{ report_card.student.last_name }}</p>
         </div>
-        <div class="col-md-6 text-md-end">
-          <p><strong>School Year:</strong> {{ report_card.school_year }}</p>
-          <p><strong>Quarter:</strong> {{ report_card.quarter }}</p>
-          <p><strong>Generated On:</strong> {{ report_card.generated_date.strftime('%Y-%m-%d %I:%M %p') }} by {{ report_card.generator_obj.name if report_card.generator_obj else 'System' }}</p>
-        </div>
-      </div>
-      <hr>
-      <h5 class="mb-3">Overall Grade: 
-        <span class="badge bg-{% if report_card.overall_grade_percentage >= 90 %}success{% elif report_card.overall_grade_percentage >= 80 %}primary{% elif report_card.overall_grade_percentage >= 70 %}info{% elif report_card.overall_grade_percentage >= 60 %}warning{% else %}danger{% endif %}"> {# Corrected attribute name here #}
-          {{ report_card.overall_grade_letter }} ({{ report_card.overall_grade_percentage }}%)
-        </span>
-      </h5>
-      
-      <h6 class="mt-4">Assignment Grades:</h6>
-      {% if report_card.grade_summary %}
-        <ul class="list-group list-group-flush">
-          {% for assignment_title, grade in report_card.grade_summary.items() %}
-            <li class="list-group-item d-flex justify-content-between align-items-center">
-              {{ assignment_title }}
-              <span>{{ grade }}</span>
-            </li>
-          {% endfor %}
-        </ul>
-      {% else %}
-        <p>No individual assignment grades recorded for this report card.</p>
-      {% endif %}
-
-      <h6 class="mt-4">Comments:</h6>
-      <div class="card card-body bg-light">
-        {% if report_card.comments %}
-          <p class="card-text">{{ report_card.comments|nl2br }}</p>
-        {% else %}
-          <p class="text-muted">No comments provided for this quarter.</p>
-        {% endif %}
+        <a href="{{ url_for('management.report_cards') }}" class="btn btn-outline-secondary">
+          <i class="bi bi-arrow-left me-1"></i>Back to Report Cards
+        </a>
       </div>
     </div>
   </div>
 
+  <!-- Student Information Card -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card shadow-lg border-0">
+        <div class="card-header bg-gradient-primary text-white py-4" style="background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);">
+          <div class="row align-items-center">
+            <div class="col-md-8">
+              <h4 class="mb-1 fw-bold">
+                <i class="bi bi-person-circle me-2"></i>{{ report_card.student.first_name }} {{ report_card.student.last_name }}
+              </h4>
+              <p class="mb-0 opacity-75">
+                Student ID: {{ report_card.student.student_id_formatted if report_card.student.student_id else 'N/A' }} | 
+                Grade Level: {{ report_card.student.grade_level }} | 
+                Quarter: {{ report_card.quarter }} | 
+                School Year: {{ report_card.school_year.name }}
+              </p>
+            </div>
+            <div class="col-md-4 text-md-end mt-3 mt-md-0">
+              {% if report_card.generated_at %}
+                <small class="d-block opacity-75">Generated: {{ report_card.generated_at.strftime('%B %d, %Y') }}</small>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        <div class="card-body p-0">
+          <div class="row g-0">
+            <div class="col-md-6 p-4 border-end">
+              <h6 class="text-muted mb-3 text-uppercase fw-bold small">Academic Period</h6>
+              <div class="d-flex align-items-center mb-3">
+                <div class="info-icon me-3">
+                  <i class="bi bi-calendar3"></i>
+                </div>
+                <div>
+                  <div class="fw-bold">{{ report_card.school_year.name }}</div>
+                  <small class="text-muted">School Year</small>
+                </div>
+              </div>
+              <div class="d-flex align-items-center">
+                <div class="info-icon me-3">
+                  <i class="bi bi-calendar4-range"></i>
+                </div>
+                <div>
+                  <div class="fw-bold">{{ report_card.quarter }}</div>
+                  <small class="text-muted">Quarter</small>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6 p-4">
+              <h6 class="text-muted mb-3 text-uppercase fw-bold small">Selected Classes</h6>
+              {% if class_objects %}
+                <ul class="list-unstyled mb-0">
+                  {% for class_obj in class_objects %}
+                    <li class="mb-2">
+                      <i class="bi bi-book text-primary me-2"></i>
+                      <strong>{{ class_obj.name }}</strong>
+                      {% if class_obj.subject %}
+                        <small class="text-muted d-block ms-4">{{ class_obj.subject }}</small>
+                      {% endif %}
+                    </li>
+                  {% endfor %}
+                </ul>
+              {% else %}
+                <p class="text-muted mb-0">All enrolled classes</p>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Grades Section -->
+  {% if grades %}
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card shadow border-0">
+        <div class="card-header bg-light py-3">
+          <h5 class="mb-0 fw-bold">
+            <i class="bi bi-graph-up me-2 text-primary"></i>Academic Performance
+          </h5>
+        </div>
+        <div class="card-body">
+          {% if grades is mapping %}
+            <div class="table-responsive">
+              <table class="table table-hover mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th class="fw-bold">Subject/Class</th>
+                    <th class="text-center fw-bold">Grade</th>
+                    <th class="text-center fw-bold">Percentage</th>
+                    <th class="text-center fw-bold">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for subject, grade_info in grades.items() %}
+                    {% if grade_info is mapping %}
+                      {% set percentage = grade_info.get('percentage', grade_info.get('average', 0)) %}
+                      {% set letter_grade = grade_info.get('letter', grade_info.get('grade', 'N/A')) %}
+                    {% else %}
+                      {% set percentage = grade_info if grade_info is number else 0 %}
+                      {% set letter_grade = 'N/A' %}
+                    {% endif %}
+                    <tr>
+                      <td class="fw-semibold">
+                        <i class="bi bi-bookmark-fill me-2 text-primary"></i>{{ subject }}
+                      </td>
+                      <td class="text-center">
+                        <span class="badge bg-primary fs-6 px-3 py-2">{{ letter_grade }}</span>
+                      </td>
+                      <td class="text-center fw-bold">{{ "%.1f"|format(percentage) }}%</td>
+                      <td class="text-center">
+                        {% if percentage >= 90 %}
+                          <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Excellent</span>
+                        {% elif percentage >= 80 %}
+                          <span class="badge bg-info"><i class="bi bi-check-circle me-1"></i>Good</span>
+                        {% elif percentage >= 70 %}
+                          <span class="badge bg-warning"><i class="bi bi-exclamation-circle me-1"></i>Average</span>
+                        {% else %}
+                          <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Needs Improvement</span>
+                        {% endif %}
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <div class="alert alert-info border-0">
+              <i class="bi bi-info-circle me-2"></i>
+              Grade data is being processed. Please check back later.
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Attendance Section -->
+  {% if include_attendance and attendance %}
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card shadow border-0">
+        <div class="card-header bg-light py-3">
+          <h5 class="mb-0 fw-bold">
+            <i class="bi bi-calendar-check me-2 text-success"></i>Attendance Summary
+          </h5>
+        </div>
+        <div class="card-body">
+          {% if attendance is mapping %}
+            {% if attendance.keys() | list | first %}
+              {% for class_name, att_data in attendance.items() %}
+                <div class="mb-4 {% if not loop.last %}border-bottom pb-4{% endif %}">
+                  <h6 class="fw-bold mb-3 text-primary">{{ class_name }}</h6>
+                  <div class="row g-3">
+                    <div class="col-md-3 col-6">
+                      <div class="stat-card">
+                        <div class="stat-icon bg-success">
+                          <i class="bi bi-check-circle"></i>
+                        </div>
+                        <div class="stat-content">
+                          <div class="stat-value">{{ att_data.get('Present', 0) }}</div>
+                          <div class="stat-label">Present</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                      <div class="stat-card">
+                        <div class="stat-icon bg-danger">
+                          <i class="bi bi-x-circle"></i>
+                        </div>
+                        <div class="stat-content">
+                          <div class="stat-value">{{ att_data.get('Unexcused Absence', 0) }}</div>
+                          <div class="stat-label">Unexcused</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                      <div class="stat-card">
+                        <div class="stat-icon bg-warning">
+                          <i class="bi bi-exclamation-circle"></i>
+                        </div>
+                        <div class="stat-content">
+                          <div class="stat-value">{{ att_data.get('Excused Absence', 0) }}</div>
+                          <div class="stat-label">Excused</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                      <div class="stat-card">
+                        <div class="stat-icon bg-info">
+                          <i class="bi bi-clock"></i>
+                        </div>
+                        <div class="stat-content">
+                          <div class="stat-value">{{ att_data.get('Tardy', 0) }}</div>
+                          <div class="stat-label">Tardy</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            {% else %}
+              <p class="text-muted mb-0">No attendance data available for this period.</p>
+            {% endif %}
+          {% else %}
+            <p class="text-muted mb-0">Attendance data format is being updated.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Comments Section -->
+  {% if include_comments %}
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card shadow border-0">
+        <div class="card-header bg-light py-3">
+          <h5 class="mb-0 fw-bold">
+            <i class="bi bi-chat-text me-2 text-info"></i>Teacher Comments
+          </h5>
+        </div>
+        <div class="card-body">
+          <p class="text-muted mb-0">Comments will be displayed here when available.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Action Buttons -->
+  <div class="row">
+    <div class="col-12">
+      <div class="d-flex gap-2 justify-content-end">
+        <a href="{{ url_for('management.report_cards') }}" class="btn btn-outline-secondary">
+          <i class="bi bi-arrow-left me-1"></i>Back to List
+        </a>
+        <button class="btn btn-primary" onclick="window.print()">
+          <i class="bi bi-printer me-1"></i>Print
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+/* Card Header Gradient */
+.bg-gradient-primary {
+  background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+}
+
+/* Info Icon */
+.info-icon {
+  width: 45px;
+  height: 45px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #e7f1ff 0%, #cfe2ff 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  color: #0d6efd;
+}
+
+/* Stat Cards */
+.stat-card {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  background: white;
+  border-radius: 12px;
+  border: 2px solid #e9ecef;
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  border-color: #0d6efd;
+  box-shadow: 0 4px 15px rgba(13, 110, 253, 0.1);
+  transform: translateY(-2px);
+}
+
+.stat-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: white;
+  margin-right: 15px;
+}
+
+.stat-content {
+  flex: 1;
+}
+
+.stat-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #212529;
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: #6c757d;
+  margin-top: 4px;
+  font-weight: 600;
+}
+
+/* Table Enhancements */
+.table th {
+  border-top: none;
+  font-size: 0.875rem;
+  letter-spacing: 0.5px;
+}
+
+.table td {
+  vertical-align: middle;
+  padding: 1rem;
+}
+
+.table-hover tbody tr:hover {
+  background-color: #f8f9ff;
+}
+
+/* Badge Styles */
+.badge {
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .card-header {
+    padding: 1rem !important;
+  }
+  
+  .stat-card {
+    margin-bottom: 15px;
+  }
+}
+</style>
 {% endblock %}

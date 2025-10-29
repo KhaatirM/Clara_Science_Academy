@@ -148,6 +148,15 @@ def management_dashboard():
                 continue
         # --- END ALERTS ---
         
+        # --- Debugging Print Statements ---
+        print(f"--- Debug Dashboard Alerts ---")
+        print(f"Checking alerts for user: {current_user.username}, Role: {current_user.role}")
+        # print(f"Students being checked IDs: {[s.id for s in students_to_check]}") # Optional: If you need to see specific IDs
+        print(f"Raw at-risk grades query result count: {len(at_risk_grades)}")
+        print(f"Formatted alerts list being sent to template: {at_risk_alerts}")
+        print(f"--- End Debug ---")
+        # --- End Debugging ---
+        
         return render_template('role_dashboard.html', 
                              classes=classes,
                              students=students,

@@ -1000,13 +1000,98 @@ def view_report_card(report_card_id):
                          include_attendance=include_attendance,
                          include_comments=include_comments)
 
-# @management_blueprint.route('/report/card/pdf/<int:report_card_id>')
-# @login_required
-# @management_required
-# def generate_report_card_pdf(report_card_id):
-#     # PDF generation temporarily disabled due to import issues
-#     flash('PDF generation is temporarily unavailable. Please check back later.', 'warning')
-#     return redirect(url_for('management.view_report_card', report_card_id=report_card_id))
+@management_blueprint.route('/report/card/pdf/<int:report_card_id>')
+@login_required
+@management_required
+def generate_report_card_pdf(report_card_id):
+    """Generate and download a PDF report card based on student's grade level"""
+    try:
+        from weasyprint import HTML
+        from io import BytesIO
+        from flask import make_response
+        
+        report_card = ReportCard.query.get_or_404(report_card_id)
+        student = report_card.student
+        
+        # Parse report card data
+        report_card_data = json.loads(report_card.grades_details) if report_card.grades_details else {}
+        
+        # Extract data from new structure (backward compatible)
+        if isinstance(report_card_data, dict) and 'grades' in report_card_data:
+            grades = report_card_data.get('grades', {})
+            attendance = report_card_data.get('attendance', {})
+            selected_classes = report_card_data.get('classes', [])
+            include_attendance = report_card_data.get('include_attendance', False)
+            include_comments = report_card_data.get('include_comments', False)
+        else:
+            grades = report_card_data if report_card_data else {}
+            attendance = {}
+            selected_classes = []
+            include_attendance = False
+            include_comments = False
+        
+        # Get class objects
+        class_objects = []
+        if selected_classes:
+            for class_id in selected_classes:
+                class_obj = Class.query.get(class_id)
+                if class_obj:
+                    class_objects.append(class_obj)
+        
+        # Prepare student data for template
+        from datetime import datetime
+        student_data = {
+            'name': f"{student.first_name} {student.last_name}",
+            'student_id_formatted': student.student_id_formatted if hasattr(student, 'student_id_formatted') else (student.student_id if student.student_id else 'N/A'),
+            'ssn': getattr(student, 'ssn', None),
+            'dob': student.dob.strftime('%m/%d/%Y') if student.dob else 'N/A',
+            'grade': student.grade_level,
+            'gender': getattr(student, 'gender', 'N/A'),
+            'address': f"{getattr(student, 'street', '')}, {getattr(student, 'city', '')}, {getattr(student, 'state', '')} {getattr(student, 'zip_code', '')}".strip(', '),
+            'phone': getattr(student, 'phone', '')
+        }
+        
+        # Choose template based on grade level
+        if student.grade_level in [1, 2]:
+            template_name = 'management/official_report_card_pdf_template_1_2.html'
+        elif student.grade_level == 3:
+            template_name = 'management/official_report_card_pdf_template_3.html'
+        else:  # Grades 4-8
+            template_name = 'management/official_report_card_pdf_template_4_8.html'
+        
+        # Render the HTML template
+        html_content = render_template(
+            template_name,
+            report_card=report_card,
+            student=student_data,
+            grades=grades,
+            attendance=attendance,
+            class_objects=class_objects,
+            include_attendance=include_attendance,
+            include_comments=include_comments,
+            generated_date=report_card.generated_at or datetime.utcnow()
+        )
+        
+        # Generate PDF
+        pdf_buffer = BytesIO()
+        HTML(string=html_content, base_url=request.url_root).write_pdf(pdf_buffer)
+        pdf_buffer.seek(0)
+        
+        # Create response
+        response = make_response(pdf_buffer.getvalue())
+        response.headers['Content-Type'] = 'application/pdf'
+        filename = f"ReportCard_{student.first_name}_{student.last_name}_{report_card.school_year.name.replace('/', '_')}_{report_card.quarter}.pdf"
+        response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
+        
+        return response
+        
+    except ImportError:
+        flash('PDF generation requires WeasyPrint. Please install it: pip install weasyprint', 'error')
+        return redirect(url_for('management.view_report_card', report_card_id=report_card_id))
+    except Exception as e:
+        current_app.logger.error(f'Error generating PDF: {str(e)}')
+        flash(f'Error generating PDF: {str(e)}', 'danger')
+        return redirect(url_for('management.view_report_card', report_card_id=report_card_id))
 
 @management_blueprint.route('/students')
 @login_required

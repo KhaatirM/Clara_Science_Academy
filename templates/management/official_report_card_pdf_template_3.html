@@ -8,7 +8,7 @@
 <body>
     {% include 'management/_report_card_header.html' %}
 
-    <p class="report-period-line"><strong>Report Period:</strong> {{ report_card.quarter }} - {{ report_card.generated_date.strftime('%B %d, %Y') }}</p>
+    <p class="report-period-line"><strong>Report Period:</strong> {{ report_card.quarter }} - {{ generated_date.strftime('%B %d, %Y') if generated_date else 'N/A' }}</p>
 
     <div class="section-title">ATTENDANCE:</div>
     <table>

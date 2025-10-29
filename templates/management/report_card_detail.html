@@ -258,7 +258,10 @@
         <a href="{{ url_for('management.report_cards') }}" class="btn btn-outline-secondary">
           <i class="bi bi-arrow-left me-1"></i>Back to List
         </a>
-        <button class="btn btn-primary" onclick="window.print()">
+        <a href="{{ url_for('management.generate_report_card_pdf', report_card_id=report_card.id) }}" class="btn btn-primary" target="_blank">
+          <i class="bi bi-file-earmark-pdf-fill me-1"></i>Download PDF
+        </a>
+        <button class="btn btn-outline-secondary" onclick="window.print()">
           <i class="bi bi-printer me-1"></i>Print
         </button>
       </div>

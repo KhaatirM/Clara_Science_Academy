@@ -8,7 +8,7 @@
 <body>
     {% include 'management/_report_card_header.html' %}
 
-    <p class="report-period-line"><strong>Report Period:</strong> {{ report_card.quarter }} - {{ report_card.generated_date.strftime('%m/%d/%Y') }}</p>
+    <p class="report-period-line"><strong>Report Period:</strong> {{ report_card.quarter }} - {{ generated_date.strftime('%m/%d/%Y') if generated_date else 'N/A' }}</p>
 
     <div class="section-title">Progress/Grades</div>
 
@@ -49,14 +49,39 @@
             </tr>
         </thead>
         <tbody>
-            <tr>
-                <td>{{ report_card.class_obj.name }} / {{ report_card.teacher_obj.name }}</td>
-                <td>{{ cumulative_grades.per_quarter_results.Q1.overall_letter if cumulative_grades.per_quarter_results.Q1 else 'N/A'}}</td>
-                <td>{{ cumulative_grades.per_quarter_results.Q2.overall_letter if cumulative_grades.per_quarter_results.Q2 else 'N/A'}}</td>
-                <td>{{ cumulative_grades.per_quarter_results.Q3.overall_letter if cumulative_grades.per_quarter_results.Q3 else 'N/A'}}</td>
-                <td>{{ cumulative_grades.per_quarter_results.Q4.overall_letter if cumulative_grades.per_quarter_results.Q4 else 'N/A'}}</td>
-                <td>{{ report_card.comments|nl2br }}</td>
-            </tr>
+            {% if class_objects %}
+                {% for class_obj in class_objects %}
+                    {% set teacher = class_obj.teacher if class_obj.teacher else None %}
+                    <tr>
+                        <td>{{ class_obj.name }} / {{ (teacher.first_name + ' ' + teacher.last_name) if teacher else 'N/A' }}</td>
+                        <td>{% if report_card.quarter == 'Q1' and grades %}{{ grades.get(class_obj.name, {}).get('letter', 'N/A') if grades.get(class_obj.name) else 'N/A' }}{% else %}{% endif %}</td>
+                        <td>{% if report_card.quarter == 'Q2' and grades %}{{ grades.get(class_obj.name, {}).get('letter', 'N/A') if grades.get(class_obj.name) else 'N/A' }}{% else %}{% endif %}</td>
+                        <td>{% if report_card.quarter == 'Q3' and grades %}{{ grades.get(class_obj.name, {}).get('letter', 'N/A') if grades.get(class_obj.name) else 'N/A' }}{% else %}{% endif %}</td>
+                        <td>{% if report_card.quarter == 'Q4' and grades %}{{ grades.get(class_obj.name, {}).get('letter', 'N/A') if grades.get(class_obj.name) else 'N/A' }}{% else %}{% endif %}</td>
+                        <td>{% if include_comments %}N/A{% else %}N/A{% endif %}</td>
+                    </tr>
+                {% endfor %}
+            {% else %}
+                {% if grades %}
+                    {% for subject, grade_info in grades.items() %}
+                        {% if grade_info is mapping %}
+                            {% set letter_grade = grade_info.get('letter', 'N/A') %}
+                        {% else %}
+                            {% set letter_grade = 'N/A' %}
+                        {% endif %}
+                        <tr>
+                            <td>{{ subject }}</td>
+                            <td>{% if report_card.quarter == 'Q1' %}{{ letter_grade }}{% else %}{% endif %}</td>
+                            <td>{% if report_card.quarter == 'Q2' %}{{ letter_grade }}{% else %}{% endif %}</td>
+                            <td>{% if report_card.quarter == 'Q3' %}{{ letter_grade }}{% else %}{% endif %}</td>
+                            <td>{% if report_card.quarter == 'Q4' %}{{ letter_grade }}{% else %}{% endif %}</td>
+                            <td>N/A</td>
+                        </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr><td colspan="6">No grade data available</td></tr>
+                {% endif %}
+            {% endif %}
         </tbody>
     </table>
 

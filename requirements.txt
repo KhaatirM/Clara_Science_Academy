@@ -10,6 +10,7 @@ psycopg2-binary
 psutil
 # PyPDF2  # Temporarily disabled due to import usage
 # pdfplumber  # Temporarily disabled due to import issues
+weasyprint
 holidays
 pytz
 schedule

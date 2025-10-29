@@ -8,7 +8,7 @@
 <body>
     {% include 'management/_report_card_header.html' %}
 
-    <p class="report-period-line"><strong>Report Period:</strong> {{ report_card.quarter }} - {{ report_card.generated_date.strftime('%B %d, %Y') }}</p>
+    <p class="report-period-line"><strong>Report Period:</strong> {{ report_card.quarter }} - {{ generated_date.strftime('%B %d, %Y') if generated_date else 'N/A' }}</p>
 
     <div class="section-title">ATTENDANCE:</div>
     <table>
@@ -39,10 +39,60 @@
             </tr>
         </thead>
         <tbody>
-            <tr>
-                <td>{{ report_card.class_obj.name }} ({{ report_card.class_obj.subject }})</td>
-                <td>Overall performance in this subject for the quarter: {{ report_card.overall_grade_letter }} ({{ report_card.overall_grade_percentage }}%)</td>
-            </tr>
+            {% if class_objects %}
+                {% for class_obj in class_objects %}
+                    {% if grades %}
+                        {% set class_grades = {} %}
+                        {% for subject, grade_info in grades.items() %}
+                            {% if grade_info is mapping %}
+                                {% set percentage = grade_info.get('percentage', grade_info.get('average', 0)) %}
+                                {% set letter_grade = grade_info.get('letter', 'N/A') %}
+                            {% else %}
+                                {% set percentage = grade_info if grade_info is number else 0 %}
+                                {% set letter_grade = 'N/A' %}
+                            {% endif %}
+                            {% if not class_grades %}
+                                {% set _ = class_grades.update({subject: {'percentage': percentage, 'letter': letter_grade}}) %}
+                            {% endif %}
+                        {% endfor %}
+                        {% if class_grades %}
+                            {% set first_grade = class_grades.values() | first %}
+                            <tr>
+                                <td>{{ class_obj.name }} ({{ class_obj.subject or 'N/A' }})</td>
+                                <td>Overall performance: {{ first_grade.letter }} ({{ "%.1f"|format(first_grade.percentage) }}%)</td>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td>{{ class_obj.name }} ({{ class_obj.subject or 'N/A' }})</td>
+                                <td>Overall performance: N/A</td>
+                            </tr>
+                        {% endif %}
+                    {% else %}
+                        <tr>
+                            <td>{{ class_obj.name }} ({{ class_obj.subject or 'N/A' }})</td>
+                            <td>Overall performance: N/A</td>
+                        </tr>
+                    {% endif %}
+                {% endfor %}
+            {% else %}
+                {% if grades %}
+                    {% for subject, grade_info in grades.items() %}
+                        {% if grade_info is mapping %}
+                            {% set percentage = grade_info.get('percentage', grade_info.get('average', 0)) %}
+                            {% set letter_grade = grade_info.get('letter', 'N/A') %}
+                        {% else %}
+                            {% set percentage = grade_info if grade_info is number else 0 %}
+                            {% set letter_grade = 'N/A' %}
+                        {% endif %}
+                        <tr>
+                            <td>{{ subject }}</td>
+                            <td>Overall performance: {{ letter_grade }} ({{ "%.1f"|format(percentage) }}%)</td>
+                        </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr><td>No grade data available</td><td></td></tr>
+                {% endif %}
+            {% endif %}
             <tr><td>Writing</td><td></td></tr>
             <tr><td>Language Arts 1</td><td></td></tr>
             <tr><td>Math 1</td><td></td></tr>
@@ -71,10 +121,10 @@
             <tr class="sub-section-title"><td colspan="5">LEARNING TO READ INDEPENDENTLY</td></tr>
             <tr>
                 <td>Demonstrate concept of print, how print is organized and used in reading and writing tasks...</td>
-                <td>{{ cumulative_grades.per_quarter_results.Q1.overall_letter if cumulative_grades.per_quarter_results.Q1 else 'N/A'}}</td>
-                <td>{{ cumulative_grades.per_quarter_results.Q2.overall_letter if cumulative_grades.per_quarter_results.Q2 else 'N/A'}}</td>
-                <td>{{ cumulative_grades.per_quarter_results.Q3.overall_letter if cumulative_grades.per_quarter_results.Q3 else 'N/A'}}</td>
-                <td>{{ cumulative_grades.per_quarter_results.Q4.overall_letter if cumulative_grades.per_quarter_results.Q4 else 'N/A'}}</td>
+                <td>{% if report_card.quarter == 'Q1' %}✓{% else %}{% endif %}</td>
+                <td>{% if report_card.quarter == 'Q2' %}✓{% else %}{% endif %}</td>
+                <td>{% if report_card.quarter == 'Q3' %}✓{% else %}{% endif %}</td>
+                <td>{% if report_card.quarter == 'Q4' %}✓{% else %}{% endif %}</td>
             </tr>
             <tr>
                 <td>Demonstrate phonemic awareness, the ability to hear and manipulate sounds in spoken words...</td>
@@ -98,17 +148,17 @@
             <tr class="sub-section-title"><td colspan="5">NUMBERS, NUMBER SYSTEMS AND NUMBER RELATIONSHIPS</td></tr>
             <tr>
                 <td>Count using whole numbers to 100 by 1’s, 2’s, 5’s, 10’s and 25’s...</td>
-                <td>{{ cumulative_grades.per_quarter_results.Q1.overall_letter if cumulative_grades.per_quarter_results.Q1 else 'N/A'}}</td>
-                <td>{{ cumulative_grades.per_quarter_results.Q2.overall_letter if cumulative_grades.per_quarter_results.Q2 else 'N/A'}}</td>
-                <td>{{ cumulative_grades.per_quarter_results.Q3.overall_letter if cumulative_grades.per_quarter_results.Q3 else 'N/A'}}</td>
-                <td>{{ cumulative_grades.per_quarter_results.Q4.overall_letter if cumulative_grades.per_quarter_results.Q4 else 'N/A'}}</td>
+                <td>{% if report_card.quarter == 'Q1' %}✓{% else %}{% endif %}</td>
+                <td>{% if report_card.quarter == 'Q2' %}✓{% else %}{% endif %}</td>
+                <td>{% if report_card.quarter == 'Q3' %}✓{% else %}{% endif %}</td>
+                <td>{% if report_card.quarter == 'Q4' %}✓{% else %}{% endif %}</td>
             </tr>
         </tbody>
     </table>
 
     <div class="section-title">Teacher Comments:</div>
     <div class="comments-box">
-        <p>{{ report_card.comments|nl2br }}</p>
+        <p>{% if include_comments and grades %}{{ grades.get('comments', 'N/A')|nl2br }}{% else %}N/A{% endif %}</p>
     </div>
 
     <div class="footer">

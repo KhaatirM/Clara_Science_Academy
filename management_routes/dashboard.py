@@ -121,31 +121,36 @@ def management_dashboard():
         }
         
         # --- AT-RISK STUDENT ALERTS ---
-        students_to_check = Student.query.all() # Management sees all students
-        student_ids = [s.id for s in students_to_check]
+        at_risk_alerts = []  # Initialize here to ensure it's always defined
+        try:
+            students_to_check = Student.query.all() # Management sees all students
+            student_ids = [s.id for s in students_to_check]
 
-        at_risk_grades = db.session.query(Grade).join(Assignment).join(Student)\
-            .filter(Student.id.in_(student_ids))\
-            .filter(Assignment.due_date < datetime.utcnow()) \
-            .all()
+            at_risk_grades = db.session.query(Grade).join(Assignment).join(Student)\
+                .filter(Student.id.in_(student_ids))\
+                .filter(Assignment.due_date < datetime.utcnow()) \
+                .all()
 
-        at_risk_alerts = []
-        seen_student_ids = set()
-        for grade in at_risk_grades:
-            try:
-                grade_data = json.loads(grade.grade_data)
-                score = grade_data.get('score')
-                if score is None or score <= 69:
-                    if grade.student.id not in seen_student_ids:
-                        at_risk_alerts.append({
-                            'student_name': f"{grade.student.first_name} {grade.student.last_name}",
-                            'student_user_id': grade.student.id,  # Use student ID instead of user_id
-                            'class_name': grade.assignment.class_info.name,
-                            'assignment_name': grade.assignment.title
-                        })
-                        seen_student_ids.add(grade.student.id)
-            except (json.JSONDecodeError, TypeError):
-                continue
+            seen_student_ids = set()
+            for grade in at_risk_grades:
+                try:
+                    grade_data = json.loads(grade.grade_data)
+                    score = grade_data.get('score')
+                    if score is None or score <= 69:
+                        if grade.student.id not in seen_student_ids:
+                            at_risk_alerts.append({
+                                'student_name': f"{grade.student.first_name} {grade.student.last_name}",
+                                'student_user_id': grade.student.id,  # Use student ID instead of user_id
+                                'class_name': grade.assignment.class_info.name,
+                                'assignment_name': grade.assignment.title
+                            })
+                            seen_student_ids.add(grade.student.id)
+                except (json.JSONDecodeError, TypeError) as e:
+                    print(f"Error processing grade {grade.id}: {e}")
+                    continue
+        except Exception as e:
+            print(f"Error in alert processing: {e}")
+            at_risk_alerts = []  # Ensure it's still a list even if there's an error
         # --- END ALERTS ---
         
         # --- Debugging Print Statements ---
@@ -193,13 +198,14 @@ def management_dashboard():
         return render_template('role_dashboard.html', 
                              classes=[], 
                              students=[],
-                             teachers=[],
+                             teachers=[], 
                              recent_assignments=[], 
                              recent_activity=[], 
                              notifications=[], 
                              stats={},
                              section='dashboard',
-                             active_tab='dashboard')
+                             active_tab='dashboard',
+                             at_risk_alerts=[])  # Always pass at_risk_alerts as empty list
 
 
 

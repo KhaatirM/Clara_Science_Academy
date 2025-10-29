@@ -10,6 +10,7 @@ from models import (
     db, Class, Assignment, Student, Grade, Submission, 
     Notification, Announcement, Enrollment, Attendance, SchoolYear
 )
+from sqlalchemy import or_, and_
 import json
 from datetime import datetime, timedelta
 
@@ -190,6 +191,34 @@ def teacher_dashboard():
         'due_assignments': due_assignments
     }
     
+    # --- AT-RISK STUDENT ALERTS ---
+    students_to_check = current_user.teacher_profile.students if hasattr(current_user, 'teacher_profile') and current_user.teacher_profile else []
+    student_ids = [s.id for s in students_to_check]
+
+    at_risk_grades = db.session.query(Grade).join(Assignment).join(Student)\
+        .filter(Student.id.in_(student_ids))\
+        .filter(Assignment.due_date < datetime.utcnow()) \
+        .all()
+
+    at_risk_alerts = []
+    seen_student_ids = set()
+    for grade in at_risk_grades:
+        try:
+            grade_data = json.loads(grade.grade_data)
+            score = grade_data.get('score')
+            if score is None or score <= 69:
+                if grade.student.user_id not in seen_student_ids:
+                    at_risk_alerts.append({
+                        'student_name': grade.student.user.name,
+                        'student_user_id': grade.student.user_id,
+                        'class_name': grade.assignment.class_obj.name,
+                        'assignment_name': grade.assignment.name
+                    })
+                    seen_student_ids.add(grade.student.user_id)
+        except (json.JSONDecodeError, TypeError):
+            continue
+    # --- END ALERTS ---
+    
     return render_template('role_teacher_dashboard.html', 
                          teacher=teacher, 
                          teacher_data=teacher_data,
@@ -204,7 +233,8 @@ def teacher_dashboard():
                          weekly_stats=weekly_stats,
                          section='home',
                          active_tab='home',
-                         is_admin=is_admin())
+                         is_admin=is_admin(),
+                         at_risk_alerts=at_risk_alerts)
 
 @bp.route('/class/<int:class_id>')
 @login_required

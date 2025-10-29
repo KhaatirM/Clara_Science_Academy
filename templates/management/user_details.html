@@ -173,6 +173,50 @@
                 </div>
             </div>
             {% endif %}
+            
+            {% if at_risk_grades_list %}
+              <div class="card mt-4">
+                <div class="card-header bg-danger text-white">
+                  <h5 class="mb-0">Academic Impact Analysis</h5>
+                </div>
+                <div class="card-body">
+                  <div class="row text-center">
+                    <div class="col-md-6">
+                      <div class="card">
+                        <div class="card-body">
+                          <h6 class="card-title">Current Overall GPA</h6>
+                          <h2 class="card-text">{{ "%.2f"|format(current_gpa) if current_gpa else 'N/A' }}</h2>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <div class="card">
+                        <div class="card-body">
+                          <h6 class="card-title">Potential GPA (if fixed)</h6>
+                          <h2 class="card-text text-success">
+                            {{ "%.2f"|format(hypothetical_gpa) if hypothetical_gpa else 'N/A' }}
+                          </h2>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <h5 class="mt-4">At-Risk Assignments</h5>
+                  <p>The following assignments are impacting this student's grades:</p>
+                  <ul class="list-group">
+                    {% for grade in at_risk_grades_list %}
+                      <li class="list-group-item">
+                        <strong>{{ grade.assignment.class_obj.name }}</strong>:
+                        {{ grade.assignment.name }}
+                        <span class="badge badge-danger float-right">
+                          Score: {{ 'Missing' if grade.display_score is none else grade.display_score }}
+                        </span>
+                      </li>
+                    {% endfor %}
+                  </ul>
+                </div>
+              </div>
+            {% endif %}
         </div>
         <div class="col-12 col-lg-4">
             <div class="card">

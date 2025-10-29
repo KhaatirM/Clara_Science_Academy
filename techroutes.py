@@ -9,7 +9,9 @@ from flask import Blueprint, render_template, request, flash, redirect, url_for,
 from flask_login import login_required, current_user, login_user, logout_user
 
 # Database and model imports
-from models import db, User, MaintenanceMode, ActivityLog, TeacherStaff
+from models import db, User, MaintenanceMode, ActivityLog, TeacherStaff, Student, Grade, Assignment
+from gpa_scheduler import calculate_student_gpa
+from copy import copy
 
 # Authentication and decorators
 from decorators import tech_required
@@ -570,7 +572,48 @@ def reset_user_password(user_id):
 @tech_required
 def view_user_details(user_id):
     user = User.query.get_or_404(user_id)
-    return render_template('management/user_details.html', user=user)
+    
+    # --- GPA IMPACT ANALYSIS ---
+    current_gpa = None
+    hypothetical_gpa = None
+    at_risk_grades_list = []
+
+    if user.student_profile:
+        student = user.student_profile 
+        all_grades = Grade.query.filter_by(student_id=student.id).all()
+        
+        at_risk_grades_list = []
+        for g in all_grades:
+            try:
+                grade_data = json.loads(g.grade_data)
+                score = grade_data.get('score')
+                if g.assignment.due_date < datetime.utcnow() and (score is None or score <= 69):
+                    g.display_score = score
+                    at_risk_grades_list.append(g)
+            except (json.JSONDecodeError, TypeError):
+                continue
+
+        # Calculate Current GPA
+        current_gpa = calculate_student_gpa(all_grades) 
+
+        # Calculate Hypothetical GPA
+        hypothetical_grades = []
+        for g in all_grades:
+            if g in at_risk_grades_list:
+                hypothetical_grade = copy(g)
+                hypothetical_grade.score = 70  # Assume a passing grade
+                hypothetical_grades.append(hypothetical_grade)
+            else:
+                hypothetical_grades.append(g)
+        
+        hypothetical_gpa = calculate_student_gpa(hypothetical_grades)
+    # --- END GPA ANALYSIS ---
+    
+    return render_template('management/user_details.html', 
+                         user=user,
+                         current_gpa=current_gpa,
+                         hypothetical_gpa=hypothetical_gpa,
+                         at_risk_grades_list=at_risk_grades_list)
 
 @tech_blueprint.route('/system/config')
 @login_required

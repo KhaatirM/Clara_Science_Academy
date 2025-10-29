@@ -3256,8 +3256,9 @@ function markAllPresent() {
 </div>
 
 <script>
-  $(document).ready(function() {
-    $('#academicAlertModal').modal('show');
+  document.addEventListener('DOMContentLoaded', function() {
+    var modal = new bootstrap.Modal(document.getElementById('academicAlertModal'));
+    modal.show();
   });
 </script>
 {% endif %}

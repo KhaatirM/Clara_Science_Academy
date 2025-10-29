@@ -192,16 +192,33 @@ def teacher_dashboard():
     }
     
     # --- AT-RISK STUDENT ALERTS ---
-    students_to_check = current_user.teacher_profile.students if hasattr(current_user, 'teacher_profile') and current_user.teacher_profile else []
-    student_ids = [s.id for s in students_to_check]
-
-    # Get ALL non-voided grades for our students (not just overdue ones)
-    at_risk_grades = db.session.query(Grade).join(Assignment).join(Student)\
-        .filter(Student.id.in_(student_ids))\
-        .filter(Grade.is_voided == False)\
-        .all()
-
     at_risk_alerts = []
+    
+    # Get students through teacher's classes
+    if is_admin():
+        # Admins see all students
+        student_ids = [s.id for s in Student.query.all()]
+    elif class_ids:
+        # Get students enrolled in teacher's classes
+        from models import Enrollment
+        enrollments = Enrollment.query.filter(
+            Enrollment.class_id.in_(class_ids),
+            Enrollment.is_active == True
+        ).all()
+        student_ids = [e.student_id for e in enrollments]
+    else:
+        # No classes, no students to check
+        student_ids = []
+    
+    if student_ids:
+        # Get ALL non-voided grades for our students (not just overdue ones)
+        at_risk_grades = db.session.query(Grade).join(Assignment).join(Student)\
+            .filter(Student.id.in_(student_ids))\
+            .filter(Grade.is_voided == False)\
+            .all()
+    else:
+        at_risk_grades = []
+
     seen_student_ids = set()
     for grade in at_risk_grades:
         try:
@@ -245,9 +262,12 @@ def teacher_dashboard():
     # --- Debugging Print Statements ---
     print(f"--- Debug Dashboard Alerts ---")
     print(f"Checking alerts for user: {current_user.username}, Role: {current_user.role}")
-    # print(f"Students being checked IDs: {[s.id for s in students_to_check]}") # Optional: If you need to see specific IDs
+    print(f"Teacher classes: {len(classes)}")
+    print(f"Class IDs: {class_ids}")
+    print(f"Students being checked IDs: {student_ids[:10] if len(student_ids) > 10 else student_ids} (showing first 10 of {len(student_ids)})")
     print(f"Raw at-risk grades query result count: {len(at_risk_grades)}")
     print(f"Formatted alerts list being sent to template: {at_risk_alerts}")
+    print(f"Number of alerts: {len(at_risk_alerts)}")
     print(f"--- End Debug ---")
     # --- End Debugging ---
     

@@ -778,6 +778,37 @@ def remove_teacher_staff(staff_id):
     flash('Teacher/Staff member removed successfully.', 'success')
     return redirect(url_for('management.teachers'))
 
+# Report Card Generation - API endpoint to get classes for a student
+@management_blueprint.route('/api/student/<int:student_id>/classes', methods=['GET'])
+@login_required
+@management_required
+def get_student_classes(student_id):
+    """Get all classes a student is enrolled in"""
+    try:
+        student = Student.query.get_or_404(student_id)
+        enrollments = Enrollment.query.filter_by(student_id=student_id).all()
+        
+        classes_data = []
+        for enrollment in enrollments:
+            class_info = enrollment.class_info
+            if class_info:
+                classes_data.append({
+                    'id': class_info.id,
+                    'name': class_info.name,
+                    'subject': class_info.subject or 'N/A',
+                    'teacher_name': f"{class_info.teacher.first_name} {class_info.teacher.last_name}" if class_info.teacher else 'N/A'
+                })
+        
+        return jsonify({
+            'success': True,
+            'classes': classes_data
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
+
 # Report Card Generation
 @management_blueprint.route('/report/card/generate', methods=['GET', 'POST'])
 @login_required
@@ -787,58 +818,178 @@ def generate_report_card_form():
     school_years = SchoolYear.query.order_by(SchoolYear.name.desc()).all()
     
     if request.method == 'POST':
+        # Get form data
         student_id = request.form.get('student_id')
         school_year_id = request.form.get('school_year_id')
         quarter = request.form.get('quarter')
+        class_ids = request.form.getlist('class_ids')  # Get multiple class IDs
+        include_attendance = request.form.get('include_attendance') == 'on'
+        include_comments = request.form.get('include_comments') == 'on'
         
         if not all([student_id, school_year_id, quarter]):
             flash("Please select a student, school year, and quarter.", 'danger')
             return redirect(request.url)
-
-        # Type assertion - we know these are not None after validation
-        assert student_id is not None
-        assert school_year_id is not None
-        assert quarter is not None
+        
+        if not class_ids:
+            flash("Please select at least one class.", 'danger')
+            return redirect(request.url)
 
         # Validate that the values can be converted to integers
         try:
             student_id_int = int(student_id)
             school_year_id_int = int(school_year_id)
-            quarter_int = int(quarter)
+            quarter_str = str(quarter).strip()
+            class_ids_int = [int(cid) for cid in class_ids]
         except ValueError:
-            flash("Invalid student, school year, or quarter selection.", 'danger')
+            flash("Invalid student, school year, quarter, or class selection.", 'danger')
             return redirect(request.url)
 
-        # The calculation function also saves the report card
-        calculate_and_get_grade_for_student(student_id_int, school_year_id_int, quarter_int)
+        # Verify all selected classes exist and student is enrolled
+        valid_class_ids = []
+        for class_id in class_ids_int:
+            enrollment = Enrollment.query.filter_by(
+                student_id=student_id_int,
+                class_id=class_id
+            ).first()
+            
+            if enrollment:
+                valid_class_ids.append(class_id)
+            else:
+                flash(f"Student is not enrolled in one of the selected classes (ID: {class_id}).", 'warning')
         
-        flash('Report card data generated successfully.', 'success')
+        if not valid_class_ids:
+            flash("No valid classes selected for this student.", 'danger')
+            return redirect(request.url)
         
+        # Calculate grades for selected classes only
+        # Filter grades by selected class_ids
+        from models import Grade, Assignment
+        student = Student.query.get(student_id_int)
+        
+        # Fetch grades only for selected classes
+        grades = db.session.query(Grade).join(Assignment).filter(
+            Grade.student_id == student_id_int,
+            Assignment.school_year_id == school_year_id_int,
+            Assignment.quarter == quarter_str,
+            Assignment.class_id.in_(valid_class_ids),
+            Grade.is_voided == False
+        ).all()
+        
+        # Calculate grades (dispatch based on grade level)
+        # Import calculation functions directly from app module
+        import app
+        calculated_grades = {}
+        if student.grade_level in [1, 2]:
+            calculated_grades = app._calculate_grades_1_2(grades, quarter_str)
+        elif student.grade_level == 3:
+            calculated_grades = app._calculate_grades_3(grades, quarter_str)
+        elif student.grade_level in [4, 5, 6, 7, 8]:
+            calculated_grades = app._calculate_grades_4_8(grades, quarter_str)
+        else:
+            current_app.logger.warning(f"No grade calculation logic for grade level: {student.grade_level}")
+            calculated_grades = {}
+        
+        # Get or create report card
         report_card = ReportCard.query.filter_by(
-            student_id=student_id,
-            school_year_id=school_year_id,
-            quarter=quarter
+            student_id=student_id_int,
+            school_year_id=school_year_id_int,
+            quarter=quarter_str
         ).first()
         
-        if report_card:
-            return redirect(url_for('management.view_report_card', report_card_id=report_card.id))
-        else:
-            flash('Could not find the generated report card.', 'danger')
+        if not report_card:
+            report_card = ReportCard()
+            report_card.student_id = student_id_int
+            report_card.school_year_id = school_year_id_int
+            report_card.quarter = quarter_str
+            db.session.add(report_card)
+        
+        # Store grades with metadata about selected classes and options
+        report_card_data = {
+            'classes': valid_class_ids,
+            'include_attendance': include_attendance,
+            'include_comments': include_comments,
+            'grades': calculated_grades
+        }
+        
+        # Add attendance if requested
+        if include_attendance:
+            from models import Attendance
+            attendance_data = {}
+            for class_id in valid_class_ids:
+                # Get attendance for this class in the quarter period
+                # For now, get all attendance for this student in this class
+                attendance_records = Attendance.query.filter_by(
+                    student_id=student_id_int,
+                    class_id=class_id
+                ).all()
+                
+                attendance_summary = {
+                    'Present': 0,
+                    'Unexcused Absence': 0,
+                    'Excused Absence': 0,
+                    'Tardy': 0
+                }
+                
+                for att in attendance_records:
+                    status = att.status or 'Present'
+                    if status in attendance_summary:
+                        attendance_summary[status] += 1
+                    else:
+                        attendance_summary['Present'] += 1
+                
+                class_obj = Class.query.get(class_id)
+                attendance_data[class_obj.name if class_obj else f"Class {class_id}"] = attendance_summary
+            
+            report_card_data['attendance'] = attendance_data
+        
+        # Update report card
+        report_card.grades_details = json.dumps(report_card_data)
+        report_card.generated_at = datetime.utcnow()
+        db.session.commit()
+        
+        flash('Report card data generated successfully.', 'success')
+        return redirect(url_for('management.view_report_card', report_card_id=report_card.id))
 
-    return render_template('management/report_card_generate_form.html', students=students, school_years=school_years)
+    return render_template('management/report_card_generate_form.html', 
+                         students=students, 
+                         school_years=school_years)
 
 @management_blueprint.route('/report/card/view/<int:report_card_id>')
 @login_required
 @management_required
 def view_report_card(report_card_id):
     report_card = ReportCard.query.get_or_404(report_card_id)
-    grades = json.loads(report_card.grades_details) if report_card.grades_details else {}
-    # attendance = json.loads(report_card.attendance_details) if report_card.attendance_details else {}
     
-    # Dummy attendance data for now
-    attendance = {"Present": 45, "Absent": 2, "Tardy": 1}
+    # Parse report card data (new format includes metadata)
+    report_card_data = json.loads(report_card.grades_details) if report_card.grades_details else {}
+    
+    # Extract data from new structure (backward compatible with old format)
+    if isinstance(report_card_data, dict) and 'grades' in report_card_data:
+        # New format with metadata
+        grades = report_card_data.get('grades', {})
+        attendance = report_card_data.get('attendance', {})
+        selected_classes = report_card_data.get('classes', [])
+        include_attendance = report_card_data.get('include_attendance', False)
+        include_comments = report_card_data.get('include_comments', False)
+    else:
+        # Old format (just grades dict)
+        grades = report_card_data if report_card_data else {}
+        attendance = {}
+        selected_classes = []
+        include_attendance = False
+        include_comments = False
+    
+    # If attendance is empty but was requested, provide default
+    if not attendance and include_attendance:
+        attendance = {"Present": 0, "Absent": 0, "Tardy": 0}
 
-    return render_template('management/report_card_detail.html', report_card=report_card, grades=grades, attendance=attendance)
+    return render_template('management/report_card_detail.html', 
+                         report_card=report_card, 
+                         grades=grades, 
+                         attendance=attendance,
+                         selected_classes=selected_classes,
+                         include_attendance=include_attendance,
+                         include_comments=include_comments)
 
 # @management_blueprint.route('/report/card/pdf/<int:report_card_id>')
 # @login_required
@@ -3454,11 +3605,14 @@ def attendance_reports():
 @login_required
 @management_required
 def report_cards():
-    report_cards = ReportCard.query.all()
+    report_cards = ReportCard.query.order_by(ReportCard.generated_at.desc()).limit(10).all()
     school_years = SchoolYear.query.all()
     students = Student.query.all()
     classes = Class.query.all()
     quarters = ['Q1', 'Q2', 'Q3', 'Q4']
+    
+    # Get recent report cards for display
+    recent_reports = ReportCard.query.order_by(ReportCard.generated_at.desc()).limit(5).all()
     
     return render_template('management/role_dashboard.html', 
                          report_cards=report_cards,
@@ -3466,6 +3620,7 @@ def report_cards():
                          students=students,
                          classes=classes,
                          quarters=quarters,
+                         recent_reports=recent_reports,
                          section='report_cards',
                          active_tab='report_cards')
 

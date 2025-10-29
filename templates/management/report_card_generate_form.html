@@ -1,76 +1,461 @@
 {% extends "shared/dashboard_layout.html" %}
 
 {% block dashboard_content %}
+<div class="container-fluid py-4">
   <div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 class="mb-0">Generate New Report Card</h3>
-    {# FIX: Correctly use role_prefix with dashboard_section #}
-    <a href="{{ url_for(role_prefix ~ 'dashboard_section', section='report_cards') }}" class="btn btn-outline-secondary btn-sm">Back to Report Cards List</a>
+    <h3 class="mb-0"><i class="bi bi-file-earmark-text me-2"></i>Generate Report Card</h3>
+    <a href="{{ url_for('management.report_cards') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Back to Report Cards
+    </a>
   </div>
 
-  <form method="POST" action="{{ form_action }}" class="needs-validation" novalidate>
+  <!-- Multi-step Wizard -->
+  <div class="card shadow-sm">
+    <div class="card-header bg-primary text-white">
+      <ul class="nav nav-pills nav-justified mb-0" id="wizard-tabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active" id="step1-tab" data-bs-toggle="tab" data-bs-target="#step1" type="button" role="tab" aria-controls="step1" aria-selected="true">
+            <span class="step-number">1</span>
+            <span class="step-label">Select Student</span>
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="step2-tab" data-bs-toggle="tab" data-bs-target="#step2" type="button" role="tab" aria-controls="step2" aria-selected="false" disabled>
+            <span class="step-number">2</span>
+            <span class="step-label">Select Classes</span>
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="step3-tab" data-bs-toggle="tab" data-bs-target="#step3" type="button" role="tab" aria-controls="step3" aria-selected="false" disabled>
+            <span class="step-number">3</span>
+            <span class="step-label">Select Options</span>
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="step4-tab" data-bs-toggle="tab" data-bs-target="#step4" type="button" role="tab" aria-controls="step4" aria-selected="false" disabled>
+            <span class="step-number">4</span>
+            <span class="step-label">Review & Generate</span>
+          </button>
+        </li>
+      </ul>
+    </div>
+
+    <div class="card-body p-4">
+      <form method="POST" action="{{ url_for('management.generate_report_card_form') }}" id="reportCardForm" class="needs-validation" novalidate>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-    <div class="row g-3">
-      <div class="col-md-6">
-        <label for="student_id" class="form-label">Select Student <span class="text-danger">*</span></label>
-        <select class="form-select" id="student_id" name="student_id" required>
-          <option value="">Choose Student...</option>
-          {% for student in all_students %}
-            <option value="{{ student.id }}" {% if selected_student_id == student.id %}selected{% endif %}>{{ student.name }} (ID: {{ student.student_id_formatted }})</option>
+        
+        <div class="tab-content" id="wizard-tab-content">
+          <!-- Step 1: Select Student -->
+          <div class="tab-pane fade show active" id="step1" role="tabpanel" aria-labelledby="step1-tab">
+            <div class="row justify-content-center">
+              <div class="col-md-8">
+                <h5 class="mb-4"><i class="bi bi-person-circle me-2"></i>Step 1: Select a Student</h5>
+                <div class="mb-4">
+                  <label for="student_id" class="form-label fw-bold">Student <span class="text-danger">*</span></label>
+                  <select class="form-select form-select-lg" id="student_id" name="student_id" required>
+                    <option value="">Choose a student...</option>
+                    {% for student in students %}
+                      <option value="{{ student.id }}">
+                        {{ student.first_name }} {{ student.last_name }} - Grade {{ student.grade_level }}
+                        {% if student.student_id %} (ID: {{ student.student_id }}){% endif %}
+                      </option>
           {% endfor %}
         </select>
         <div class="invalid-feedback">Please select a student.</div>
+                </div>
+                <div class="text-center">
+                  <button type="button" class="btn btn-primary btn-lg" id="next-to-step2">
+                    Next <i class="bi bi-arrow-right ms-1"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
       </div>
 
-      <div class="col-md-6">
-        <label for="class_id" class="form-label">Select Class <span class="text-danger">*</span></label>
-        <select class="form-select" id="class_id" name="class_id" required>
-          <option value="">Choose Class...</option>
-          {% for class_item in all_classes %}
-            <option value="{{ class_item.id }}" {% if selected_class_id == class_item.id %}selected{% endif %}>{{ class_item.name }} ({{ class_item.subject }})</option>
-          {% endfor %}
-        </select>
-        <div class="invalid-feedback">Please select a class.</div>
+          <!-- Step 2: Select Classes -->
+          <div class="tab-pane fade" id="step2" role="tabpanel" aria-labelledby="step2-tab">
+            <div class="row justify-content-center">
+              <div class="col-md-10">
+                <h5 class="mb-4"><i class="bi bi-book me-2"></i>Step 2: Select Classes</h5>
+                <div id="loading-classes" class="text-center py-5" style="display: none;">
+                  <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading classes...</span>
+                  </div>
+                  <p class="mt-3 text-muted">Loading classes for selected student...</p>
+                </div>
+                <div id="classes-container" style="display: none;">
+                  <p class="text-muted mb-3">Select one or more classes to include in the report card:</p>
+                  <div id="classes-list" class="mb-4">
+                    <!-- Classes will be dynamically loaded here -->
+                  </div>
+                  <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <small>Select at least one class to continue.</small>
+                  </div>
+                  <div class="d-flex justify-content-between">
+                    <button type="button" class="btn btn-secondary" id="back-to-step1">
+                      <i class="bi bi-arrow-left me-1"></i>Back
+                    </button>
+                    <button type="button" class="btn btn-primary" id="next-to-step3" disabled>
+                      Next <i class="bi bi-arrow-right ms-1"></i>
+                    </button>
+                  </div>
+                </div>
+                <div id="no-classes-message" class="alert alert-warning" style="display: none;">
+                  <i class="bi bi-exclamation-triangle me-2"></i>
+                  No classes found for this student. Please select a different student.
+                </div>
+              </div>
+            </div>
       </div>
 
-      <div class="col-md-6">
-        <label for="school_year" class="form-label">School Year <span class="text-danger">*</span></label>
-        <select class="form-select" id="school_year" name="school_year" required>
-          <option value="">Choose School Year...</option>
+          <!-- Step 3: Select Options -->
+          <div class="tab-pane fade" id="step3" role="tabpanel" aria-labelledby="step3-tab">
+            <div class="row justify-content-center">
+              <div class="col-md-8">
+                <h5 class="mb-4"><i class="bi bi-gear me-2"></i>Step 3: Select Options</h5>
+                
+                <div class="mb-4">
+                  <label for="school_year_id" class="form-label fw-bold">School Year <span class="text-danger">*</span></label>
+                  <select class="form-select" id="school_year_id" name="school_year_id" required>
+                    <option value="">Choose school year...</option>
           {% for year in school_years %}
-            <option value="{{ year }}" {% if selected_school_year == year %}selected{% endif %}>{{ year }}</option>
+                      <option value="{{ year.id }}">{{ year.name }}</option>
           {% endfor %}
         </select>
         <div class="invalid-feedback">Please select a school year.</div>
       </div>
 
-      <div class="col-md-6">
-        <label for="quarter" class="form-label">Quarter <span class="text-danger">*</span></label>
+                <div class="mb-4">
+                  <label for="quarter" class="form-label fw-bold">Quarter <span class="text-danger">*</span></label>
         <select class="form-select" id="quarter" name="quarter" required>
-          <option value="">Choose Quarter...</option>
-          {% for q in quarters %}
-            <option value="{{ q }}" {% if selected_quarter == q %}selected{% endif %}>{{ q }}</option>
-          {% endfor %}
+                    <option value="">Choose quarter...</option>
+                    <option value="Q1">Quarter 1</option>
+                    <option value="Q2">Quarter 2</option>
+                    <option value="Q3">Quarter 3</option>
+                    <option value="Q4">Quarter 4</option>
         </select>
         <div class="invalid-feedback">Please select a quarter.</div>
       </div>
 
+                <div class="card border-primary mb-4">
+                  <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="bi bi-check-square me-2"></i>Additional Options</h6>
+                  </div>
+                  <div class="card-body">
+                    <div class="form-check mb-3">
+                      <input class="form-check-input" type="checkbox" id="include_attendance" name="include_attendance">
+                      <label class="form-check-label" for="include_attendance">
+                        <strong>Include Attendance</strong>
+                        <small class="text-muted d-block">Add attendance statistics to the report card</small>
+                      </label>
+                    </div>
+                    <div class="form-check mb-3">
+                      <input class="form-check-input" type="checkbox" id="include_comments" name="include_comments">
+                      <label class="form-check-label" for="include_comments">
+                        <strong>Include Comments</strong>
+                        <small class="text-muted d-block">Add teacher comments to the report card</small>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="d-flex justify-content-between">
+                  <button type="button" class="btn btn-secondary" id="back-to-step2">
+                    <i class="bi bi-arrow-left me-1"></i>Back
+                  </button>
+                  <button type="button" class="btn btn-primary" id="next-to-step4">
+                    Next <i class="bi bi-arrow-right ms-1"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 4: Review & Generate -->
+          <div class="tab-pane fade" id="step4" role="tabpanel" aria-labelledby="step4-tab">
+            <div class="row justify-content-center">
+              <div class="col-md-8">
+                <h5 class="mb-4"><i class="bi bi-check-circle me-2"></i>Step 4: Review & Generate</h5>
+                
+                <div class="card mb-4">
+                  <div class="card-body">
+                    <h6 class="card-title"><i class="bi bi-person me-2"></i>Student</h6>
+                    <p class="mb-0" id="review-student">-</p>
+                  </div>
+                </div>
+
+                <div class="card mb-4">
+                  <div class="card-body">
+                    <h6 class="card-title"><i class="bi bi-book me-2"></i>Selected Classes</h6>
+                    <ul class="mb-0" id="review-classes">
+                      <li>-</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div class="card mb-4">
+                  <div class="card-body">
+                    <h6 class="card-title"><i class="bi bi-gear me-2"></i>Options</h6>
+                    <div class="row">
+                      <div class="col-md-6 mb-2">
+                        <strong>School Year:</strong> <span id="review-school-year">-</span>
+                      </div>
+                      <div class="col-md-6 mb-2">
+                        <strong>Quarter:</strong> <span id="review-quarter">-</span>
+                      </div>
       <div class="col-12">
-        <label for="comments" class="form-label">Comments (Optional)</label>
-        <textarea class="form-control" id="comments" name="comments" rows="3"></textarea>
+                        <strong>Additional Options:</strong>
+                        <ul class="mb-0" id="review-options">
+                          <li>None</li>
+                        </ul>
+                      </div>
+                    </div>
       </div>
     </div>
 
-    <hr class="my-4">
+                <div class="d-flex justify-content-between">
+                  <button type="button" class="btn btn-secondary" id="back-to-step3">
+                    <i class="bi bi-arrow-left me-1"></i>Back
+                  </button>
+                  <button type="submit" class="btn btn-success btn-lg">
+                    <i class="bi bi-file-earmark-pdf me-2"></i>Generate Report Card
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 
-    <button class="btn btn-primary btn-lg" type="submit">Generate Report Card</button>
-    {# FIX: Correctly use role_prefix with dashboard_section for the cancel button #}
-    <a href="{{ url_for(role_prefix ~ 'dashboard_section', section='report_cards') }}" class="btn btn-secondary btn-lg ms-2" role="button">
-      Cancel
-    </a>
-  </form>
+<style>
+.step-number {
+  display: inline-block;
+  width: 30px;
+  height: 30px;
+  line-height: 30px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.2);
+  margin-right: 8px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.nav-link.active .step-number {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+.nav-link:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.class-checkbox-card {
+  border: 2px solid #dee2e6;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 10px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.class-checkbox-card:hover {
+  border-color: #0d6efd;
+  background-color: #f8f9fa;
+}
+
+.class-checkbox-card.selected {
+  border-color: #0d6efd;
+  background-color: #e7f1ff;
+}
+
+.class-checkbox-card input[type="checkbox"] {
+  margin-right: 10px;
+}
+</style>
 
 <script>
-// Bootstrap validation script
-(function () { 'use strict'; var forms = document.querySelectorAll('.needs-validation'); Array.prototype.slice.call(forms).forEach(function (form) { form.addEventListener('submit', function (event) { if (!form.checkValidity()) { event.preventDefault(); event.stopPropagation(); } form.classList.add('was-validated'); } , false); }); })();
+document.addEventListener('DOMContentLoaded', function() {
+  const form = document.getElementById('reportCardForm');
+  const studentSelect = document.getElementById('student_id');
+  const classesContainer = document.getElementById('classes-container');
+  const loadingClasses = document.getElementById('loading-classes');
+  const noClassesMessage = document.getElementById('no-classes-message');
+  const classesList = document.getElementById('classes-list');
+  const nextToStep2Btn = document.getElementById('next-to-step2');
+  const nextToStep3Btn = document.getElementById('next-to-step3');
+  const nextToStep4Btn = document.getElementById('next-to-step4');
+  
+  let selectedClasses = [];
+
+  // Step 1 to Step 2
+  nextToStep2Btn.addEventListener('click', function() {
+    if (studentSelect.value) {
+      loadStudentClasses(studentSelect.value);
+      enableStep(2);
+    }
+  });
+
+  // Step 2 to Step 3
+  nextToStep3Btn.addEventListener('click', function() {
+    if (selectedClasses.length > 0) {
+      enableStep(3);
+    }
+  });
+
+  // Step 3 to Step 4
+  nextToStep4Btn.addEventListener('click', function() {
+    updateReviewSection();
+    enableStep(4);
+  });
+
+  // Back buttons
+  document.getElementById('back-to-step1').addEventListener('click', () => enableStep(1));
+  document.getElementById('back-to-step2').addEventListener('click', () => enableStep(2));
+  document.getElementById('back-to-step3').addEventListener('click', () => enableStep(3));
+
+  // Load classes when student is selected
+  function loadStudentClasses(studentId) {
+    loadingClasses.style.display = 'block';
+    classesContainer.style.display = 'none';
+    noClassesMessage.style.display = 'none';
+    classesList.innerHTML = '';
+
+    fetch(`/management/api/student/${studentId}/classes`)
+      .then(response => response.json())
+      .then(data => {
+        loadingClasses.style.display = 'none';
+        
+        if (data.success && data.classes.length > 0) {
+          classesList.innerHTML = '';
+          data.classes.forEach(classItem => {
+            const classCard = document.createElement('div');
+            classCard.className = 'class-checkbox-card';
+            classCard.innerHTML = `
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="class_ids" value="${classItem.id}" id="class_${classItem.id}">
+                <label class="form-check-label" for="class_${classItem.id}">
+                  <strong>${classItem.name}</strong><br>
+                  <small class="text-muted">Subject: ${classItem.subject} | Teacher: ${classItem.teacher_name}</small>
+                </label>
+              </div>
+            `;
+            classesList.appendChild(classCard);
+            
+            // Add click handler for the card
+            classCard.addEventListener('click', function(e) {
+              if (e.target.tagName !== 'INPUT') {
+                const checkbox = classCard.querySelector('input[type="checkbox"]');
+                checkbox.checked = !checkbox.checked;
+                updateClassSelection();
+              } else {
+                updateClassSelection();
+              }
+            });
+          });
+          
+          // Add change listeners to checkboxes
+          classesList.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+            checkbox.addEventListener('change', updateClassSelection);
+          });
+          
+          classesContainer.style.display = 'block';
+        } else {
+          noClassesMessage.style.display = 'block';
+        }
+      })
+      .catch(error => {
+        loadingClasses.style.display = 'none';
+        classesList.innerHTML = '<div class="alert alert-danger">Error loading classes. Please try again.</div>';
+        console.error('Error:', error);
+      });
+  }
+
+  function updateClassSelection() {
+    selectedClasses = Array.from(classesList.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+    
+    // Update visual selection
+    classesList.querySelectorAll('.class-checkbox-card').forEach(card => {
+      const checkbox = card.querySelector('input[type="checkbox"]');
+      if (checkbox.checked) {
+        card.classList.add('selected');
+      } else {
+        card.classList.remove('selected');
+      }
+    });
+    
+    // Enable/disable next button
+    nextToStep3Btn.disabled = selectedClasses.length === 0;
+  }
+
+  function enableStep(stepNumber) {
+    // Enable tab
+    const tab = document.getElementById(`step${stepNumber}-tab`);
+    if (tab) {
+      tab.disabled = false;
+      const tabInstance = new bootstrap.Tab(tab);
+      tabInstance.show();
+    }
+  }
+
+  function updateReviewSection() {
+    // Student
+    const studentOption = studentSelect.options[studentSelect.selectedIndex];
+    document.getElementById('review-student').textContent = studentOption.text;
+
+    // Classes
+    const reviewClassesList = document.getElementById('review-classes');
+    reviewClassesList.innerHTML = '';
+    selectedClasses.forEach(classId => {
+      const checkbox = document.getElementById(`class_${classId}`);
+      if (checkbox) {
+        const label = checkbox.closest('.class-checkbox-card').querySelector('strong').textContent;
+        const li = document.createElement('li');
+        li.textContent = label;
+        reviewClassesList.appendChild(li);
+      }
+    });
+
+    // Options
+    const schoolYearSelect = document.getElementById('school_year_id');
+    const quarterSelect = document.getElementById('quarter');
+    const includeAttendance = document.getElementById('include_attendance');
+    const includeComments = document.getElementById('include_comments');
+
+    document.getElementById('review-school-year').textContent = 
+      schoolYearSelect.options[schoolYearSelect.selectedIndex]?.text || '-';
+    document.getElementById('review-quarter').textContent = 
+      quarterSelect.options[quarterSelect.selectedIndex]?.text || '-';
+
+    const reviewOptions = document.getElementById('review-options');
+    reviewOptions.innerHTML = '';
+    if (!includeAttendance.checked && !includeComments.checked) {
+      reviewOptions.innerHTML = '<li>None</li>';
+    } else {
+      if (includeAttendance.checked) {
+        const li = document.createElement('li');
+        li.textContent = 'Include Attendance';
+        reviewOptions.appendChild(li);
+      }
+      if (includeComments.checked) {
+        const li = document.createElement('li');
+        li.textContent = 'Include Comments';
+        reviewOptions.appendChild(li);
+      }
+    }
+  }
+
+  // Form validation
+  form.addEventListener('submit', function(event) {
+    if (!form.checkValidity()) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    form.classList.add('was-validated');
+  });
+});
 </script>
 {% endblock %}

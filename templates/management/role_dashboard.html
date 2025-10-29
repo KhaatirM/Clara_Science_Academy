@@ -2175,41 +2175,25 @@
             <div class="col-md-6">
                 <div class="card shadow-sm">
                     <div class="card-header bg-warning text-dark">
-                        <h5 class="mb-0">Generate Report Cards</h5>
+                        <h5 class="mb-0"><i class="bi bi-file-earmark-text me-2"></i>Generate Report Cards</h5>
                     </div>
                     <div class="card-body">
-                        <form method="POST" action="{{ url_for('management.generate_report_card_form') }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                            <div class="mb-3">
-                                <label for="student_id" class="form-label">Select Student</label>
-                                <select class="form-select" id="student_id" name="student_id" required>
-                                    <option value="">Choose a student...</option>
-                                    {% for student in students %}
-                                        <option value="{{ student.id }}">{{ student.first_name }} {{ student.last_name }} - Grade {{ student.grade_level }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label for="school_year" class="form-label">School Year</label>
-                                <select class="form-select" id="school_year" name="school_year" required>
-                                    <option value="">Choose school year...</option>
-                                    {% for year in school_years %}
-                                        <option value="{{ year.id }}">{{ year.name }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label for="quarter" class="form-label">Quarter</label>
-                                <select class="form-select" id="quarter" name="quarter" required>
-                                    <option value="">Choose quarter...</option>
-                                    <option value="1">Q1</option>
-                                    <option value="2">Q2</option>
-                                    <option value="3">Q3</option>
-                                    <option value="4">Q4</option>
-                                </select>
-                            </div>
-                            <button type="submit" class="btn btn-warning">Generate Report Card</button>
-                        </form>
+                        <p class="text-muted mb-4">
+                            Use our enhanced multi-step wizard to generate report cards with custom class selection, attendance data, and more options.
+                        </p>
+                        <div class="d-grid gap-2">
+                            <a href="{{ url_for('management.generate_report_card_form') }}" class="btn btn-warning btn-lg">
+                                <i class="bi bi-plus-circle me-2"></i>Generate New Report Card
+                            </a>
+                        </div>
+                        <hr class="my-4">
+                        <h6 class="mb-3"><i class="bi bi-info-circle me-2"></i>Features:</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Select specific classes to include</li>
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Include attendance statistics</li>
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Add teacher comments</li>
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Multi-step wizard interface</li>
+                        </ul>
                     </div>
                 </div>
             </div>
@@ -2217,23 +2201,31 @@
             <div class="col-md-6">
                 <div class="card shadow-sm">
                     <div class="card-header bg-info text-white">
-                        <h5 class="mb-0">Recent Report Cards</h5>
+                        <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Recent Report Cards</h5>
                     </div>
                     <div class="card-body">
                         <div class="list-group">
-                            {% for report in recent_reports %}
-                                <div class="list-group-item">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <h6 class="mb-1">{{ report.student.first_name }} {{ report.student.last_name }}</h6>
-                                            <small class="text-muted">{{ report.school_year.name }} - Q{{ report.quarter }}</small>
+                            {% if recent_reports %}
+                                {% for report in recent_reports %}
+                                    <div class="list-group-item">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <h6 class="mb-1">{{ report.student.first_name }} {{ report.student.last_name }}</h6>
+                                                <small class="text-muted">{{ report.school_year.name }} - {{ report.quarter }}</small>
+                                            </div>
+                                            <a href="{{ url_for('management.view_report_card', report_card_id=report.id) }}" class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-eye me-1"></i>View
+                                            </a>
                                         </div>
-                                        <a href="{{ url_for('management.view_report_card', report_id=report.id) }}" class="btn btn-sm btn-outline-primary">View</a>
                                     </div>
-                                </div>
+                                {% endfor %}
                             {% else %}
-                                <div class="text-muted">No recent report cards.</div>
-                            {% endfor %}
+                                <div class="text-muted text-center py-4">
+                                    <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                    <p class="mb-0">No recent report cards.</p>
+                                    <small>Generate a new report card to get started.</small>
+                                </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>

@@ -195,9 +195,10 @@ def teacher_dashboard():
     students_to_check = current_user.teacher_profile.students if hasattr(current_user, 'teacher_profile') and current_user.teacher_profile else []
     student_ids = [s.id for s in students_to_check]
 
-    # Get ALL grades for our students (not just overdue ones)
+    # Get ALL non-voided grades for our students (not just overdue ones)
     at_risk_grades = db.session.query(Grade).join(Assignment).join(Student)\
         .filter(Student.id.in_(student_ids))\
+        .filter(Grade.is_voided == False)\
         .all()
 
     at_risk_alerts = []

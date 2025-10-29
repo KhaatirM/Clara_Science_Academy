@@ -176,6 +176,10 @@ def calculate_student_gpa(student_id):
     
     for grade in grades:
         try:
+            # Skip voided grades (late enrollment, etc.)
+            if hasattr(grade, 'is_voided') and grade.is_voided:
+                continue
+            
             # Parse the grade data (stored as JSON)
             grade_data = json.loads(grade.grade_data)
             score = grade_data.get('score', 0)
@@ -326,9 +330,10 @@ def management_dashboard():
         students_to_check = Student.query.all() # Management sees all students
         student_ids = [s.id for s in students_to_check]
 
-        # Get ALL grades for our students (not just overdue ones)
+        # Get ALL non-voided grades for our students (not just overdue ones)
         at_risk_grades = db.session.query(Grade).join(Assignment).join(Student)\
             .filter(Student.id.in_(student_ids))\
+            .filter(Grade.is_voided == False)\
             .all()
 
         seen_student_ids = set()
@@ -1702,6 +1707,12 @@ def class_roster(class_id):
                     
                     if added_count > 0:
                         db.session.commit()
+                        # Automatically void assignments for late-enrolling students
+                        from management_routes.late_enrollment_utils import void_assignments_for_late_enrollment
+                        for student_id in student_ids:
+                            voided_count = void_assignments_for_late_enrollment(int(student_id), class_id)
+                            if voided_count > 0:
+                                print(f"Automatically voided {voided_count} assignment(s) for student {student_id} due to late enrollment")
                         flash(f'{added_count} student(s) added to class successfully!', 'success')
                     else:
                         flash('Selected students are already enrolled in this class.', 'warning')
@@ -5999,6 +6010,15 @@ def manage_class_roster(class_id):
                 if added_count > 0:
                     try:
                         db.session.commit()
+                        # Automatically void assignments for late-enrolling students
+                        from management_routes.late_enrollment_utils import void_assignments_for_late_enrollment
+                        for student_id in student_ids:
+                            try:
+                                voided_count = void_assignments_for_late_enrollment(int(student_id), class_id)
+                                if voided_count > 0:
+                                    print(f"Automatically voided {voided_count} assignment(s) for student {student_id} due to late enrollment")
+                            except Exception as e:
+                                print(f"Error voiding assignments for student {student_id}: {e}")
                         flash(f'Successfully enrolled {added_count} student(s) in the class.', 'success')
                     except Exception as e:
                         db.session.rollback()
@@ -7601,7 +7621,8 @@ def view_student_details(student_id):
     all_missing_assignments = []
     class_gpa_breakdown = []
 
-    all_grades = Grade.query.filter_by(student_id=student.id).all()
+    # Get all non-voided grades for the student
+    all_grades = Grade.query.filter_by(student_id=student.id).filter(Grade.is_voided == False).all()
     
     # Get all classes this student is enrolled in
     enrollments = Enrollment.query.filter_by(student_id=student.id, is_active=True).all()
@@ -7734,7 +7755,8 @@ def view_student_details_data(student_id):
         all_missing_assignments = []
         class_gpa_breakdown = {}
 
-        all_grades = Grade.query.filter_by(student_id=student.id).all()
+        # Get all non-voided grades for the student
+        all_grades = Grade.query.filter_by(student_id=student.id).filter(Grade.is_voided == False).all()
         
         # Get all classes this student is enrolled in
         enrollments = Enrollment.query.filter_by(student_id=student.id, is_active=True).all()

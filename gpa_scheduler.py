@@ -21,6 +21,10 @@ def calculate_student_gpa(grades):
     
     for grade in grades:
         try:
+            # Skip voided grades (late enrollment, etc.)
+            if hasattr(grade, 'is_voided') and grade.is_voided:
+                continue
+            
             # Parse the grade data (stored as JSON)
             grade_data = json.loads(grade.grade_data)
             score = grade_data.get('score', 0)
@@ -72,6 +76,10 @@ def update_all_gpas():
                 
                 for grade in grades:
                     try:
+                        # Skip voided grades (late enrollment, etc.)
+                        if hasattr(grade, 'is_voided') and grade.is_voided:
+                            continue
+                        
                         # Parse the grade data (stored as JSON)
                         grade_data = json.loads(grade.grade_data)
                         score = grade_data.get('score', 0)

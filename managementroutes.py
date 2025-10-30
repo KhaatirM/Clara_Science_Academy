@@ -5519,22 +5519,60 @@ def view_teacher(teacher_id):
             address_parts.append(teacher.zip_code)
         address = ", ".join(address_parts)
     
+    # Normalize date fields to strings
+    def _fmt_date(value):
+        try:
+            if value is None:
+                return None
+            from datetime import date, datetime as _dt
+            if isinstance(value, (date, _dt)):
+                return value.strftime('%Y-%m-%d')
+            return str(value)
+        except Exception:
+            return None
+
+    # Grades taught may be stored as JSON string
+    grades_taught_str = None
+    try:
+        if teacher.grades_taught:
+            if isinstance(teacher.grades_taught, str):
+                grades_taught_str = teacher.grades_taught
+            else:
+                import json as _json
+                grades_taught_str = _json.dumps(teacher.grades_taught)
+    except Exception:
+        grades_taught_str = None
+
     return jsonify({
         'id': teacher.id,
         'first_name': teacher.first_name,
+        'middle_initial': getattr(teacher, 'middle_initial', None),
         'last_name': teacher.last_name,
         'staff_id': teacher.staff_id,
-        'age': None,  # Not available for teachers
-        'dob': None,  # Not available for teachers
+        'dob': _fmt_date(getattr(teacher, 'dob', None)),
         'role': role,
+        'assigned_role': getattr(teacher, 'assigned_role', None),
+        'employment_type': getattr(teacher, 'employment_type', None),
+        'subject': getattr(teacher, 'subject', None),
         'email': teacher.email,
         'username': teacher.user.username if teacher.user else None,
         'department': teacher.department,
         'position': teacher.position,
-        'hire_date': teacher.hire_date,
+        'hire_date': _fmt_date(teacher.hire_date),
         'phone': teacher.phone,
+        'street': teacher.street,
+        'apt_unit': teacher.apt_unit,
+        'city': teacher.city,
+        'state': teacher.state,
+        'zip_code': teacher.zip_code,
         'address': address,
         'emergency_contact': emergency_contact,
+        'emergency_first_name': getattr(teacher, 'emergency_first_name', None),
+        'emergency_last_name': getattr(teacher, 'emergency_last_name', None),
+        'emergency_email': getattr(teacher, 'emergency_email', None),
+        'emergency_phone': getattr(teacher, 'emergency_phone', None),
+        'emergency_relationship': getattr(teacher, 'emergency_relationship', None),
+        'grades_taught': grades_taught_str or '',
         'assigned_classes': [{'id': c.id, 'name': c.name, 'subject': c.subject} for c in assigned_classes],
         'total_students': total_students
     })

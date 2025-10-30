@@ -6283,39 +6283,7 @@
         }
     }
 
-    // View Teacher Function
-    function viewTeacher(teacherId) {
-        // To be implemented with teacher view modal
-        alert('View teacher feature - ID: ' + teacherId);
-    }
-
-    // Edit Teacher Function
-    function editTeacher(teacherId) {
-        // To be implemented with teacher edit modal
-        alert('Edit teacher feature - ID: ' + teacherId);
-    }
-
-    // Remove Teacher Function
-    function removeTeacher(teacherId, teacherName) {
-        if (confirm(`Are you sure you want to remove ${teacherName}? This action cannot be undone.`)) {
-            fetch(`/management/teacher/${teacherId}/delete`, {
-                method: 'POST'
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('Staff member removed successfully!');
-                    location.reload();
-                } else {
-                    alert('Error removing staff member: ' + (data.message || 'Please try again.'));
-                }
-            })
-            .catch(error => {
-                console.error('Error removing staff member:', error);
-                alert('Error removing staff member. Please try again.');
-            });
-        }
-    }
+    // (Duplicate placeholder teacher actions removed; real implementations are defined earlier in this file.)
 
     // Switch Assignments View Function
     function switchAssignmentsView(view) {

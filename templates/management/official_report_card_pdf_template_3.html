@@ -75,40 +75,37 @@
     </table>
 
     <div class="section-title">Assignment Grades ({{ report_card.quarter }}):</div>
+    {% set ns = namespace(has_assignments=false) %}
     {% if grades %}
-        {% set has_assignments = false %}
         {% for subject, grade_info in grades.items() %}
-            {% if grade_info is mapping and grade_info.get('assignments') %}
-                {% set has_assignments = true %}
-                {% break %}
+            {% if grade_info is mapping and grade_info.get('assignments') and grade_info.get('assignments')|length > 0 %}
+                {% set ns.has_assignments = true %}
             {% endif %}
         {% endfor %}
-        {% if has_assignments %}
-            <table>
-                <thead>
-                    <tr>
-                        <th>Subject/Course</th>
-                        <th>Assignment Title</th>
-                        <th>Grade</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for subject, grade_info in grades.items() %}
-                        {% if grade_info is mapping and grade_info.get('assignments') %}
-                            {% for assignment in grade_info.get('assignments', []) %}
-                                <tr>
-                                    <td>{{ subject }}</td>
-                                    <td>{{ assignment.get('title', 'N/A') }}</td>
-                                    <td>{{ assignment.get('grade', 'N/A') }}</td>
-                                </tr>
-                            {% endfor %}
-                        {% endif %}
-                    {% endfor %}
-                </tbody>
-            </table>
-        {% else %}
-            <p>No individual assignment grades recorded for this quarter.</p>
-        {% endif %}
+    {% endif %}
+    {% if ns.has_assignments %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Subject/Course</th>
+                    <th>Assignment Title</th>
+                    <th>Grade</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for subject, grade_info in grades.items() %}
+                    {% if grade_info is mapping and grade_info.get('assignments') %}
+                        {% for assignment in grade_info.get('assignments', []) %}
+                            <tr>
+                                <td>{{ subject }}</td>
+                                <td>{{ assignment.get('title', 'N/A') }}</td>
+                                <td>{{ assignment.get('grade', 'N/A') }}</td>
+                            </tr>
+                        {% endfor %}
+                    {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
     {% else %}
         <p>No individual assignment grades recorded for this quarter.</p>
     {% endif %}

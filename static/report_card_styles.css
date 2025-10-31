@@ -2,11 +2,11 @@
 
 /* General Body and Font Styling */
 body {
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-family: 'Times New Roman', Times, serif;
     margin: 0.1in;
     font-size: 9pt;
     line-height: 1.1;
-    color: #333333;
+    color: #000000;
 }
 
 /* Header: Main 3-Column Table */
@@ -51,17 +51,17 @@ body {
 /* Header: Central Column Content (Logo & Title) */
 .central-column h1 {
     font-size: 18pt;
-    font-weight: 600;
+    font-weight: bold;
     margin: 10px 0 0 0;
-    color: #1a1a1a;
-    padding: 12px 0 10px 0;
-    text-decoration: none;
-    letter-spacing: 2px;
+    color: #000000;
+    padding: 5px 0;
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    letter-spacing: 0;
     text-transform: uppercase;
-    font-family: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
-    border-top: 2px solid #2c3e50;
-    border-bottom: 2px solid #2c3e50;
-    line-height: 1.2;
+    font-family: 'Times New Roman', Times, serif;
+    border: none;
+    line-height: 1.3;
 }
 
 .logo-overlay-container {
@@ -101,6 +101,7 @@ body {
     width: 100%;
     border-collapse: collapse;
     font-size: 8.5pt;
+    font-family: 'Times New Roman', Times, serif;
 }
 
 .info-grid-table td {
@@ -111,6 +112,7 @@ body {
     box-sizing: border-box;
     white-space: nowrap;
     overflow: hidden;
+    font-family: 'Times New Roman', Times, serif;
 }
 
 /* Specific Border and Style Rules for Info Grid Cells */
@@ -174,21 +176,25 @@ body {
     font-size: 8.5pt;
     height: 100%;
     box-sizing: border-box;
+    font-family: 'Times New Roman', Times, serif;
 }
 
 .school-info-container .info-line {
     line-height: 1.2;
     margin-bottom: 2px;
     font-weight: normal;
+    font-family: 'Times New Roman', Times, serif;
 }
 
 .school-info-container .info-label {
     font-weight: bold;
+    font-family: 'Times New Roman', Times, serif;
 }
 
 .school-info-container .school-name-address {
     margin-bottom: 5px;
     font-weight: normal;
+    font-family: 'Times New Roman', Times, serif;
 }
 
 .school-info-container .phone-line {

@@ -40,39 +40,82 @@
             </tr>
         </thead>
         <tbody>
-            <tr>
-                <td>{{ report_card.class_obj.name }} ({{ report_card.class_obj.subject }})</td>
-                <td>{{ report_card.overall_grade_letter }} ({{ report_card.overall_grade_percentage }}%)</td>
-                <td>N/A</td>
-            </tr>
+            {% if class_objects %}
+                {% for class_obj in class_objects %}
+                    {% set class_grade = grades.get(class_obj.name, {}) if grades else {} %}
+                    {% set letter_grade = class_grade.get('letter', 'N/A') if class_grade else 'N/A' %}
+                    {% set percentage = class_grade.get('percentage', class_grade.get('average', 0)) if class_grade else 0 %}
+                    <tr>
+                        <td>{{ class_obj.name }} ({{ class_obj.subject or 'N/A' }})</td>
+                        <td>{{ letter_grade }} ({{ "%.1f"|format(percentage) }}%)</td>
+                        <td>{% if include_comments and class_grade.get('comments') %}{{ class_grade.get('comments', '')|nl2br }}{% else %}N/A{% endif %}</td>
+                    </tr>
+                {% endfor %}
+            {% else %}
+                {% if grades %}
+                    {% for subject, grade_info in grades.items() %}
+                        {% if grade_info is mapping %}
+                            {% set letter_grade = grade_info.get('letter', 'N/A') %}
+                            {% set percentage = grade_info.get('percentage', grade_info.get('average', 0)) %}
+                        {% else %}
+                            {% set letter_grade = 'N/A' %}
+                            {% set percentage = grade_info if grade_info is number else 0 %}
+                        {% endif %}
+                        <tr>
+                            <td>{{ subject }}</td>
+                            <td>{{ letter_grade }} ({{ "%.1f"|format(percentage) }}%)</td>
+                            <td>{% if include_comments and grade_info.get('comments') %}{{ grade_info.get('comments', '')|nl2br }}{% else %}N/A{% endif %}</td>
+                        </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr><td colspan="3" style="text-align: center; padding: 15px; color: #666;">No grade data available</td></tr>
+                {% endif %}
+            {% endif %}
         </tbody>
     </table>
 
-    <div class="section-title">Assignment Grades for {{ report_card.class_obj.name }} ({{ report_card.quarter }}):</div>
-    {% if report_card.grade_summary %}
-        <table>
-            <thead>
-                <tr>
-                    <th>Assignment Title</th>
-                    <th>Grade</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for title, grade in report_card.grade_summary.items() %}
-                <tr>
-                    <td>{{ title }}</td>
-                    <td>{{ grade }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <div class="section-title">Assignment Grades ({{ report_card.quarter }}):</div>
+    {% if grades %}
+        {% set has_assignments = false %}
+        {% for subject, grade_info in grades.items() %}
+            {% if grade_info is mapping and grade_info.get('assignments') %}
+                {% set has_assignments = true %}
+                {% break %}
+            {% endif %}
+        {% endfor %}
+        {% if has_assignments %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Subject/Course</th>
+                        <th>Assignment Title</th>
+                        <th>Grade</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for subject, grade_info in grades.items() %}
+                        {% if grade_info is mapping and grade_info.get('assignments') %}
+                            {% for assignment in grade_info.get('assignments', []) %}
+                                <tr>
+                                    <td>{{ subject }}</td>
+                                    <td>{{ assignment.get('title', 'N/A') }}</td>
+                                    <td>{{ assignment.get('grade', 'N/A') }}</td>
+                                </tr>
+                            {% endfor %}
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No individual assignment grades recorded for this quarter.</p>
+        {% endif %}
     {% else %}
         <p>No individual assignment grades recorded for this quarter.</p>
     {% endif %}
 
     <div class="section-title">Teacher Comments:</div>
     <div class="comments-box">
-        <p>{{ report_card.comments|nl2br }}</p>
+        <p>{% if include_comments and grades %}{{ grades.get('comments', 'N/A')|nl2br }}{% else %}N/A{% endif %}</p>
     </div>
 
     <div class="footer">

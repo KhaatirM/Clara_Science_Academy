@@ -195,6 +195,33 @@
   transform: translateY(-5px);
   box-shadow: 0 1rem 3rem rgba(0,0,0,.175) !important;
 }
+
+/* Fix for jumbled cards - ensure proper text display */
+.student-card .card {
+  min-height: 350px;
+}
+
+.student-card h5,
+.student-card p,
+.student-card small,
+.student-card strong,
+.student-card span,
+.student-card div {
+  word-wrap: normal !important;
+  word-break: normal !important;
+  white-space: normal !important;
+  writing-mode: horizontal-tb !important;
+  text-orientation: mixed !important;
+}
+
+.student-card .card-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.student-card .d-grid {
+  margin-top: auto;
+}
 </style>
 
 <script>

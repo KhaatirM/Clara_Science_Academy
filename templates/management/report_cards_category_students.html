@@ -60,16 +60,16 @@
   <div class="row g-4" id="studentsGrid">
     {% if students and students|length > 0 %}
       {% for student in students %}
-        <div class="col-md-6 col-lg-4 student-card" data-grade="{{ student.grade_level }}" data-name="{{ student.first_name }} {{ student.last_name }}" data-id="{{ student.student_id if student.student_id else '' }}">
-          <div class="card h-100 border-0 shadow-sm hover-lift">
+        <div class="col-12 col-sm-6 col-md-4 col-lg-3 student-card" data-grade="{{ student.grade_level }}" data-name="{{ student.first_name }} {{ student.last_name }}" data-id="{{ student.student_id if student.student_id else '' }}">
+          <div class="card h-100 border-0 shadow-sm hover-lift" style="min-width: 280px;">
             <div class="card-body p-4">
-              <div class="d-flex align-items-start mb-3">
-                <div class="rounded-circle bg-{{ category_color }} bg-opacity-10 d-flex align-items-center justify-content-center me-3" style="width: 60px; height: 60px; flex-shrink: 0;">
-                  <span class="text-{{ category_color }} fw-bold fs-4">{{ student.first_name[0] }}{{ student.last_name[0] }}</span>
+              <div class="d-flex align-items-start mb-3" style="min-height: 70px;">
+                <div class="rounded-circle bg-{{ category_color }} bg-opacity-10 d-flex align-items-center justify-content-center me-3" style="width: 60px; height: 60px; flex-shrink: 0; min-width: 60px;">
+                  <span class="text-{{ category_color }} fw-bold fs-4" style="white-space: nowrap;">{{ student.first_name[0] }}{{ student.last_name[0] }}</span>
                 </div>
-                <div class="flex-grow-1">
-                  <h5 class="mb-1 fw-bold">{{ student.first_name }} {{ student.last_name }}</h5>
-                  <p class="text-muted small mb-0">
+                <div class="flex-grow-1" style="min-width: 0; overflow: hidden;">
+                  <h5 class="mb-1 fw-bold" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ student.first_name }} {{ student.last_name }}</h5>
+                  <p class="text-muted small mb-0" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                     <i class="bi bi-card-text me-1"></i>
                     {% if student.student_id %}
                       ID: {{ student.student_id }}
@@ -83,15 +83,15 @@
               <div class="mb-3">
                 <div class="row g-2">
                   <div class="col-6">
-                    <div class="bg-light rounded p-2 text-center">
-                      <small class="text-muted d-block">Grade Level</small>
-                      <strong class="text-{{ category_color }}">{{ student.grade_level }}</strong>
+                    <div class="bg-light rounded p-2 text-center" style="min-height: 60px; display: flex; flex-direction: column; justify-content: center;">
+                      <small class="text-muted d-block" style="white-space: nowrap; font-size: 0.75rem;">Grade Level</small>
+                      <strong class="text-{{ category_color }}" style="font-size: 1.25rem;">{{ student.grade_level }}</strong>
                     </div>
                   </div>
                   <div class="col-6">
-                    <div class="bg-light rounded p-2 text-center">
-                      <small class="text-muted d-block">Enrolled Classes</small>
-                      <strong class="text-{{ category_color }}">{{ student.enrollments|length if student.enrollments else 0 }}</strong>
+                    <div class="bg-light rounded p-2 text-center" style="min-height: 60px; display: flex; flex-direction: column; justify-content: center;">
+                      <small class="text-muted d-block" style="white-space: nowrap; font-size: 0.75rem;">Enrolled Classes</small>
+                      <strong class="text-{{ category_color }}" style="font-size: 1.25rem;">{{ student.enrollments|length if student.enrollments else 0 }}</strong>
                     </div>
                   </div>
                 </div>
@@ -197,30 +197,89 @@
 }
 
 /* Fix for jumbled cards - ensure proper text display */
-.student-card .card {
-  min-height: 350px;
+.student-card {
+  min-width: 300px;
+  max-width: 350px;
 }
 
-.student-card h5,
-.student-card p,
-.student-card small,
-.student-card strong,
-.student-card span,
-.student-card div {
-  word-wrap: normal !important;
-  word-break: normal !important;
-  white-space: normal !important;
+.student-card .card {
+  min-height: 420px;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* Force all text to display horizontally */
+.student-card * {
   writing-mode: horizontal-tb !important;
   text-orientation: mixed !important;
 }
 
+.student-card h5 {
+  line-height: 1.4 !important;
+  font-size: 1.1rem !important;
+  display: block !important;
+}
+
+.student-card p,
+.student-card small,
+.student-card strong {
+  display: inline-block !important;
+  vertical-align: baseline !important;
+}
+
 .student-card .card-body {
-  display: flex;
-  flex-direction: column;
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 1.25rem !important;
+  width: 100%;
 }
 
 .student-card .d-grid {
   margin-top: auto;
+  width: 100%;
+}
+
+.student-card .btn {
+  white-space: nowrap !important;
+  text-align: center !important;
+}
+
+/* Ensure proper grid spacing */
+#studentsGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  justify-content: flex-start;
+}
+
+#studentsGrid > div {
+  flex: 0 0 auto;
+  width: auto;
+}
+
+/* Prevent text from stacking vertically */
+.student-card .d-flex {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: flex-start !important;
+}
+
+.student-card .flex-grow-1 {
+  flex-grow: 1 !important;
+  flex-shrink: 1 !important;
+  min-width: 0 !important;
+}
+
+.student-card .row {
+  display: flex !important;
+  flex-direction: row !important;
+  margin: 0 -0.25rem !important;
+}
+
+.student-card .col-6 {
+  flex: 0 0 50% !important;
+  max-width: 50% !important;
+  padding: 0 0.25rem !important;
 }
 </style>
 

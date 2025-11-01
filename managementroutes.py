@@ -867,28 +867,45 @@ def generate_report_card_form():
         from models import Grade, Assignment
         student = Student.query.get(student_id_int)
         
-        # Fetch grades only for selected classes
-        grades = db.session.query(Grade).join(Assignment).filter(
-            Grade.student_id == student_id_int,
-            Assignment.school_year_id == school_year_id_int,
-            Assignment.quarter == quarter_str,
-            Assignment.class_id.in_(valid_class_ids),
-            Grade.is_voided == False
-        ).all()
+        # Determine quarters to include (cumulative data)
+        # For Q3, include Q1 and Q2 data; for Q4, include Q1, Q2, Q3
+        quarter_mapping = {
+            'Q1': ['Q1'],
+            'Q2': ['Q1', 'Q2'],
+            'Q3': ['Q1', 'Q2', 'Q3'],
+            'Q4': ['Q1', 'Q2', 'Q3', 'Q4']
+        }
+        quarters_to_include = quarter_mapping.get(quarter_str, [quarter_str])
         
-        # Calculate grades (dispatch based on grade level)
+        # Fetch grades for all cumulative quarters for selected classes
+        grades_by_quarter = {}
+        for q in quarters_to_include:
+            quarter_grades = db.session.query(Grade).join(Assignment).filter(
+                Grade.student_id == student_id_int,
+                Assignment.school_year_id == school_year_id_int,
+                Assignment.quarter == q,
+                Assignment.class_id.in_(valid_class_ids),
+                Grade.is_voided == False
+            ).all()
+            grades_by_quarter[q] = quarter_grades
+        
+        # Calculate grades for each quarter (dispatch based on grade level)
         # Import calculation functions directly from app module
         import app
-        calculated_grades = {}
-        if student.grade_level in [1, 2]:
-            calculated_grades = app._calculate_grades_1_2(grades, quarter_str)
-        elif student.grade_level == 3:
-            calculated_grades = app._calculate_grades_3(grades, quarter_str)
-        elif student.grade_level in [4, 5, 6, 7, 8]:
-            calculated_grades = app._calculate_grades_4_8(grades, quarter_str)
-        else:
-            current_app.logger.warning(f"No grade calculation logic for grade level: {student.grade_level}")
-            calculated_grades = {}
+        calculated_grades_by_quarter = {}
+        for q, q_grades in grades_by_quarter.items():
+            if student.grade_level in [1, 2]:
+                calculated_grades_by_quarter[q] = app._calculate_grades_1_2(q_grades, q)
+            elif student.grade_level == 3:
+                calculated_grades_by_quarter[q] = app._calculate_grades_3(q_grades, q)
+            elif student.grade_level in [4, 5, 6, 7, 8]:
+                calculated_grades_by_quarter[q] = app._calculate_grades_4_8(q_grades, q)
+            else:
+                current_app.logger.warning(f"No grade calculation logic for grade level: {student.grade_level}")
+                calculated_grades_by_quarter[q] = {}
+        
+        # Set the primary calculated_grades to the current quarter
+        calculated_grades = calculated_grades_by_quarter.get(quarter_str, {})
         
         # Get or create report card
         report_card = ReportCard.query.filter_by(
@@ -1010,6 +1027,7 @@ def generate_report_card_form():
                 report_card=report_card,
                 student=student_data,
                 grades=calculated_grades,
+                grades_by_quarter=calculated_grades_by_quarter,  # Cumulative quarter data
                 attendance=report_card_data.get('attendance', {}),
                 class_objects=class_objects,
                 include_attendance=include_attendance,
@@ -3839,6 +3857,7 @@ def attendance_reports():
 @login_required
 @management_required
 def report_cards():
+    """Enhanced report cards management with grade categories."""
     report_cards = ReportCard.query.order_by(ReportCard.generated_at.desc()).limit(10).all()
     school_years = SchoolYear.query.all()
     students = Student.query.all()
@@ -3846,17 +3865,89 @@ def report_cards():
     quarters = ['Q1', 'Q2', 'Q3', 'Q4']
     
     # Get recent report cards for display
-    recent_reports = ReportCard.query.order_by(ReportCard.generated_at.desc()).limit(5).all()
+    recent_reports = ReportCard.query.order_by(ReportCard.generated_at.desc()).limit(10).all()
     
-    return render_template('management/role_dashboard.html', 
+    return render_template('management/report_cards_enhanced.html', 
                          report_cards=report_cards,
                          school_years=school_years,
                          students=students,
                          classes=classes,
                          quarters=quarters,
-                         recent_reports=recent_reports,
-                         section='report_cards',
-                         active_tab='report_cards')
+                         recent_reports=recent_reports)
+
+@management_blueprint.route('/report-cards/category/<category>')
+@login_required
+@management_required
+def report_cards_by_category(category):
+    """Display students by grade category for report card generation."""
+    # Define category mappings
+    categories = {
+        'k-2': {
+            'name': 'Elementary School (K-2)',
+            'grades': [0, 1, 2],  # 0 for Kindergarten
+            'icon': 'alphabet-uppercase',
+            'color': 'primary'
+        },
+        '3-5': {
+            'name': 'Elementary School (3rd-5th)',
+            'grades': [3, 4, 5],
+            'icon': 'book',
+            'color': 'success'
+        },
+        '6-8': {
+            'name': 'Middle School (6th-8th)',
+            'grades': [6, 7, 8],
+            'icon': 'mortarboard',
+            'color': 'warning'
+        }
+    }
+    
+    if category not in categories:
+        flash('Invalid grade category selected.', 'danger')
+        return redirect(url_for('management.report_cards'))
+    
+    category_info = categories[category]
+    
+    # Get students in this grade category
+    students = Student.query.filter(
+        Student.grade_level.in_(category_info['grades'])
+    ).order_by(Student.last_name, Student.first_name).all()
+    
+    return render_template('management/report_cards_category_students.html',
+                         students=students,
+                         category=category,
+                         category_name=category_info['name'],
+                         category_icon=category_info['icon'],
+                         category_color=category_info['color'],
+                         grade_levels=category_info['grades'])
+
+@management_blueprint.route('/report-cards/generate/<int:student_id>')
+@login_required
+@management_required
+def generate_report_card_for_student(student_id):
+    """Enhanced report card generation form for a specific student."""
+    student = Student.query.get_or_404(student_id)
+    category = request.args.get('category', '')
+    
+    # Get all data needed for the form
+    school_years = SchoolYear.query.order_by(SchoolYear.name.desc()).all()
+    
+    # Get student's enrolled classes
+    from models import Enrollment
+    enrollments = Enrollment.query.filter_by(
+        student_id=student_id,
+        is_active=True
+    ).all()
+    
+    classes = [enrollment.class_obj for enrollment in enrollments if enrollment.class_obj]
+    
+    return render_template('management/report_card_generate_form.html',
+                         student=student,
+                         students=[student],  # For compatibility with existing template
+                         school_years=school_years,
+                         classes=classes,
+                         category=category,
+                         pre_selected_student=student_id)
 
 @management_blueprint.route('/admissions')
 @login_required

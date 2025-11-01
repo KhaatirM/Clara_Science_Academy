@@ -52,31 +52,44 @@
             {% if class_objects %}
                 {% for class_obj in class_objects %}
                     {% set teacher = class_obj.teacher if class_obj.teacher else None %}
-                    {% set class_grade = grades.get(class_obj.name, {}) if grades else {} %}
-                    {% set letter_grade = class_grade.get('letter', '') if class_grade else '' %}
                     <tr>
                         <td style="font-weight: bold;">{{ class_obj.name }}<br><small style="font-weight: normal;">{{ (teacher.first_name + ' ' + teacher.last_name) if teacher else 'N/A' }}</small></td>
-                        <td style="text-align: center;">{% if report_card.quarter == 'Q1' %}{{ letter_grade if letter_grade else '—' }}{% else %}—{% endif %}</td>
-                        <td style="text-align: center;">{% if report_card.quarter == 'Q2' %}{{ letter_grade if letter_grade else '—' }}{% else %}—{% endif %}</td>
-                        <td style="text-align: center;">{% if report_card.quarter == 'Q3' %}{{ letter_grade if letter_grade else '—' }}{% else %}—{% endif %}</td>
-                        <td style="text-align: center;">{% if report_card.quarter == 'Q4' %}{{ letter_grade if letter_grade else '—' }}{% else %}—{% endif %}</td>
-                        <td style="font-size: 8.5pt;">{% if include_comments and class_grade.get('comments') %}{{ class_grade.get('comments', '')|nl2br }}{% else %}—{% endif %}</td>
+                        {# Show cumulative data for Q1 through current quarter #}
+                        {% for quarter in ['Q1', 'Q2', 'Q3', 'Q4'] %}
+                            {% if grades_by_quarter and grades_by_quarter.get(quarter) %}
+                                {% set q_grades = grades_by_quarter.get(quarter, {}) %}
+                                {% set class_grade = q_grades.get(class_obj.name, {}) if q_grades else {} %}
+                                {% set letter_grade = class_grade.get('letter', '') if class_grade else '' %}
+                                <td style="text-align: center;">{{ letter_grade if letter_grade else '—' }}</td>
+                            {% else %}
+                                <td style="text-align: center;">—</td>
+                            {% endif %}
+                        {% endfor %}
+                        {# Show comments for current quarter only #}
+                        {% set current_class_grade = grades.get(class_obj.name, {}) if grades else {} %}
+                        <td style="font-size: 8.5pt;">{% if include_comments and current_class_grade.get('comments') %}{{ current_class_grade.get('comments', '')|nl2br }}{% else %}—{% endif %}</td>
                     </tr>
                 {% endfor %}
             {% else %}
                 {% if grades %}
                     {% for subject, grade_info in grades.items() %}
-                        {% if grade_info is mapping %}
-                            {% set letter_grade = grade_info.get('letter', '') %}
-                        {% else %}
-                            {% set letter_grade = '' %}
-                        {% endif %}
                         <tr>
                             <td style="font-weight: bold;">{{ subject }}</td>
-                            <td style="text-align: center;">{% if report_card.quarter == 'Q1' %}{{ letter_grade if letter_grade else '—' }}{% else %}—{% endif %}</td>
-                            <td style="text-align: center;">{% if report_card.quarter == 'Q2' %}{{ letter_grade if letter_grade else '—' }}{% else %}—{% endif %}</td>
-                            <td style="text-align: center;">{% if report_card.quarter == 'Q3' %}{{ letter_grade if letter_grade else '—' }}{% else %}—{% endif %}</td>
-                            <td style="text-align: center;">{% if report_card.quarter == 'Q4' %}{{ letter_grade if letter_grade else '—' }}{% else %}—{% endif %}</td>
+                            {# Show cumulative data for Q1 through current quarter #}
+                            {% for quarter in ['Q1', 'Q2', 'Q3', 'Q4'] %}
+                                {% if grades_by_quarter and grades_by_quarter.get(quarter) %}
+                                    {% set q_grades = grades_by_quarter.get(quarter, {}) %}
+                                    {% set q_grade_info = q_grades.get(subject, {}) if q_grades else {} %}
+                                    {% if q_grade_info is mapping %}
+                                        {% set letter_grade = q_grade_info.get('letter', '') %}
+                                    {% else %}
+                                        {% set letter_grade = '' %}
+                                    {% endif %}
+                                    <td style="text-align: center;">{{ letter_grade if letter_grade else '—' }}</td>
+                                {% else %}
+                                    <td style="text-align: center;">—</td>
+                                {% endif %}
+                            {% endfor %}
                             <td>{% if include_comments and grade_info.get('comments') %}{{ grade_info.get('comments', '')|nl2br }}{% else %}—{% endif %}</td>
                         </tr>
                     {% endfor %}

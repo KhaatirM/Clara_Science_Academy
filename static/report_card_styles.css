@@ -116,96 +116,53 @@ body {
 }
 
 /* Specific Border and Style Rules for Info Grid Cells */
+/* All label cells - bold font */
 .info-grid-table .student-name-label,
 .info-grid-table .id-label-cell,
 .info-grid-table .state-id-label-cell,
 .info-grid-table .dob-label-cell,
 .info-grid-table .grade-label-cell,
-.info-grid-table .gender-label-cell {
-    border-top: 1px solid black;
-    border-left: 1px solid black;
-    font-weight: normal;
-    padding-bottom: 0;
-    border-bottom: none;
-}
-.info-grid-table .student-name-label,
-.info-grid-table .state-id-label-cell,
-.info-grid-table .gender-label-cell {
-    border-right: 1px solid black;
+.info-grid-table .gender-label-cell,
+.info-grid-table .address-label-cell,
+.info-grid-table .school-name-label,
+.info-grid-table .school-phone-label,
+.info-grid-table .school-ceeb-label,
+.info-grid-table .school-entrance-label,
+.info-grid-table .school-grad-label {
+    border: 1px solid black;
+    font-weight: bold;
+    padding: 4px 6px;
+    background-color: #ffffff;
 }
 
+/* All value cells - normal font */
 .info-grid-table .student-name-value,
 .info-grid-table .id-value-cell,
 .info-grid-table .state-id-value-cell,
 .info-grid-table .dob-value-cell,
 .info-grid-table .grade-value-cell,
-.info-grid-table .gender-value-cell {
-    border-left: 1px solid black;
-    border-bottom: 1px solid black;
-    font-weight: bold;
-    padding-top: 0;
-}
-.info-grid-table .student-name-value,
-.info-grid-table .state-id-value-cell,
-.info-grid-table .gender-value-cell {
-    border-right: 1px solid black;
-}
-
-.info-grid-table .address-label-cell {
-    border-left: 1px solid black;
-    border-right: 1px solid black;
+.info-grid-table .gender-value-cell,
+.info-grid-table .address-value-cell,
+.info-grid-table .school-name-value,
+.info-grid-table .school-phone-value,
+.info-grid-table .school-ceeb-value,
+.info-grid-table .school-entrance-value,
+.info-grid-table .school-grad-value {
+    border: 1px solid black;
     font-weight: normal;
-    vertical-align: top;
-    padding-bottom: 0;
-}
-
-.info-grid-table .address-value-cell {
-    border-left: 1px solid black;
-    border-right: 1px solid black;
-    border-bottom: 1px solid black;
-    font-weight: bold;
+    padding: 4px 6px;
+    background-color: #ffffff;
     vertical-align: top;
     white-space: normal;
-    height: auto;
-    padding-top: 0;
 }
 
-/* School Info Container (Right Column) */
+/* School Info Container - legacy styles (now using info-grid-table) */
 .school-info-container {
-    padding: 6px;
+    padding: 0;
     font-size: 8.5pt;
     height: 100%;
     box-sizing: border-box;
     font-family: 'Times New Roman', Times, serif;
-}
-
-.school-info-container .info-line {
-    line-height: 1.2;
-    margin-bottom: 2px;
-    font-weight: normal;
-    font-family: 'Times New Roman', Times, serif;
-}
-
-.school-info-container .info-label {
-    font-weight: bold;
-    font-family: 'Times New Roman', Times, serif;
-}
-
-.school-info-container .school-name-address {
-    margin-bottom: 5px;
-    font-weight: normal;
-    font-family: 'Times New Roman', Times, serif;
-}
-
-.school-info-container .phone-line {
-    margin-top: 5px;
-    display: block;
-}
-
-.school-info-container hr {
-    border: none;
-    border-top: 1px solid black;
-    margin: 5px 0;
 }
 
 /* General Content Styling */

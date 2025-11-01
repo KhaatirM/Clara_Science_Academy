@@ -1,0 +1,245 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid py-4">
+  <!-- Header Section -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+          <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-2">
+              <li class="breadcrumb-item"><a href="{{ url_for('management.report_cards') }}">Report Cards</a></li>
+              <li class="breadcrumb-item active" aria-current="page">{{ category_name }}</li>
+            </ol>
+          </nav>
+          <h2 class="mb-1 fw-bold">
+            <i class="bi bi-{{ category_icon }} me-2 text-{{ category_color }}"></i>{{ category_name }}
+          </h2>
+          <p class="text-muted mb-0">Select a student to generate their report card</p>
+        </div>
+        <div>
+          <a href="{{ url_for('management.report_cards') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Back to Categories
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search and Filter -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <div class="row g-3 align-items-end">
+            <div class="col-md-8">
+              <label for="searchStudent" class="form-label fw-semibold">
+                <i class="bi bi-search me-2"></i>Search Students
+              </label>
+              <input type="text" class="form-control form-control-lg" id="searchStudent" placeholder="Search by name or student ID...">
+            </div>
+            <div class="col-md-4">
+              <label for="filterGrade" class="form-label fw-semibold">
+                <i class="bi bi-funnel me-2"></i>Filter by Grade
+              </label>
+              <select class="form-select form-select-lg" id="filterGrade">
+                <option value="">All Grades in Category</option>
+                {% for grade in grade_levels %}
+                  <option value="{{ grade }}">Grade {{ grade }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Students Grid -->
+  <div class="row g-4" id="studentsGrid">
+    {% if students and students|length > 0 %}
+      {% for student in students %}
+        <div class="col-md-6 col-lg-4 student-card" data-grade="{{ student.grade_level }}" data-name="{{ student.first_name }} {{ student.last_name }}" data-id="{{ student.student_id if student.student_id else '' }}">
+          <div class="card h-100 border-0 shadow-sm hover-lift">
+            <div class="card-body p-4">
+              <div class="d-flex align-items-start mb-3">
+                <div class="rounded-circle bg-{{ category_color }} bg-opacity-10 d-flex align-items-center justify-content-center me-3" style="width: 60px; height: 60px; flex-shrink: 0;">
+                  <span class="text-{{ category_color }} fw-bold fs-4">{{ student.first_name[0] }}{{ student.last_name[0] }}</span>
+                </div>
+                <div class="flex-grow-1">
+                  <h5 class="mb-1 fw-bold">{{ student.first_name }} {{ student.last_name }}</h5>
+                  <p class="text-muted small mb-0">
+                    <i class="bi bi-card-text me-1"></i>
+                    {% if student.student_id %}
+                      ID: {{ student.student_id }}
+                    {% else %}
+                      No ID
+                    {% endif %}
+                  </p>
+                </div>
+              </div>
+              
+              <div class="mb-3">
+                <div class="row g-2">
+                  <div class="col-6">
+                    <div class="bg-light rounded p-2 text-center">
+                      <small class="text-muted d-block">Grade Level</small>
+                      <strong class="text-{{ category_color }}">{{ student.grade_level }}</strong>
+                    </div>
+                  </div>
+                  <div class="col-6">
+                    <div class="bg-light rounded p-2 text-center">
+                      <small class="text-muted d-block">Enrolled Classes</small>
+                      <strong class="text-{{ category_color }}">{{ student.enrollments|length if student.enrollments else 0 }}</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="d-grid">
+                <a href="{{ url_for('management.generate_report_card_for_student', student_id=student.id, category=category) }}" class="btn btn-{{ category_color }} btn-lg">
+                  <i class="bi bi-file-earmark-text me-2"></i>Generate Report Card
+                </a>
+              </div>
+
+              <!-- Recent Report Cards -->
+              {% set student_reports = student.report_cards|sort(attribute='generated_at', reverse=True)|list %}
+              {% if student_reports and student_reports|length > 0 %}
+                <div class="mt-3 pt-3 border-top">
+                  <small class="text-muted fw-semibold d-block mb-2">
+                    <i class="bi bi-clock-history me-1"></i>Recent Report Cards
+                  </small>
+                  {% for report in student_reports[:3] %}
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                      <small class="text-muted">{{ report.quarter }} - {{ report.school_year.name if report.school_year else 'N/A' }}</small>
+                      <div class="btn-group btn-group-sm">
+                        <a href="{{ url_for('management.view_report_card', report_card_id=report.id) }}" class="btn btn-outline-secondary btn-sm" title="View">
+                          <i class="bi bi-eye"></i>
+                        </a>
+                        <a href="{{ url_for('management.generate_report_card_pdf', report_card_id=report.id) }}" class="btn btn-outline-secondary btn-sm" title="PDF" target="_blank">
+                          <i class="bi bi-file-pdf"></i>
+                        </a>
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="col-12">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body text-center py-5">
+            <div class="mb-3">
+              <i class="bi bi-inbox" style="font-size: 4rem; color: #cbd5e0;"></i>
+            </div>
+            <h5 class="text-muted mb-2">No Students Found</h5>
+            <p class="text-muted">There are no students in the {{ category_name }} category.</p>
+            <a href="{{ url_for('management.report_cards') }}" class="btn btn-primary mt-3">
+              <i class="bi bi-arrow-left me-2"></i>Back to Categories
+            </a>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Statistics Summary -->
+  {% if students and students|length > 0 %}
+    <div class="row g-4 mt-4">
+      <div class="col-md-4">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body text-center">
+            <h6 class="text-muted mb-2">Students in Category</h6>
+            <h2 class="mb-0 fw-bold text-{{ category_color }}">{{ students|length }}</h2>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body text-center">
+            <h6 class="text-muted mb-2">Grade Levels</h6>
+            <h2 class="mb-0 fw-bold text-{{ category_color }}">{{ grade_levels|length }}</h2>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body text-center">
+            <h6 class="text-muted mb-2">Total Report Cards</h6>
+            <h2 class="mb-0 fw-bold text-{{ category_color }}">
+              {% set total_reports = students|sum(attribute='report_cards|length', start=0) %}
+              {{ total_reports }}
+            </h2>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+</div>
+
+<style>
+.hover-lift {
+  transition: all 0.3s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 1rem 3rem rgba(0,0,0,.175) !important;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('searchStudent');
+  const gradeFilter = document.getElementById('filterGrade');
+  const studentCards = document.querySelectorAll('.student-card');
+
+  function filterStudents() {
+    const searchTerm = searchInput.value.toLowerCase();
+    const selectedGrade = gradeFilter.value;
+
+    studentCards.forEach(card => {
+      const name = card.getAttribute('data-name').toLowerCase();
+      const id = card.getAttribute('data-id').toLowerCase();
+      const grade = card.getAttribute('data-grade');
+
+      const matchesSearch = name.includes(searchTerm) || id.includes(searchTerm);
+      const matchesGrade = !selectedGrade || grade === selectedGrade;
+
+      if (matchesSearch && matchesGrade) {
+        card.style.display = '';
+      } else {
+        card.style.display = 'none';
+      }
+    });
+
+    // Show/hide no results message
+    const visibleCards = Array.from(studentCards).filter(card => card.style.display !== 'none');
+    const noResultsMsg = document.getElementById('noResultsMessage');
+    
+    if (visibleCards.length === 0 && !noResultsMsg) {
+      const grid = document.getElementById('studentsGrid');
+      const msg = document.createElement('div');
+      msg.id = 'noResultsMessage';
+      msg.className = 'col-12';
+      msg.innerHTML = `
+        <div class="alert alert-info text-center">
+          <i class="bi bi-search me-2"></i>No students match your search criteria.
+        </div>
+      `;
+      grid.appendChild(msg);
+    } else if (visibleCards.length > 0 && noResultsMsg) {
+      noResultsMsg.remove();
+    }
+  }
+
+  searchInput.addEventListener('input', filterStudents);
+  gradeFilter.addEventListener('change', filterStudents);
+});
+</script>
+{% endblock %}
+

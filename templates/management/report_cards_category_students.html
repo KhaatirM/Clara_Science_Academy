@@ -171,8 +171,13 @@
           <div class="card-body text-center">
             <h6 class="text-muted mb-2">Total Report Cards</h6>
             <h2 class="mb-0 fw-bold text-{{ category_color }}">
-              {% set total_reports = students|sum(attribute='report_cards|length', start=0) %}
-              {{ total_reports }}
+              {% set ns = namespace(total=0) %}
+              {% for student in students %}
+                {% if student.report_cards %}
+                  {% set ns.total = ns.total + student.report_cards|length %}
+                {% endif %}
+              {% endfor %}
+              {{ ns.total }}
             </h2>
           </div>
         </div>

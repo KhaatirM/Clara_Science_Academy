@@ -443,6 +443,9 @@
                                                     <button class="btn btn-outline-info btn-sm" onclick="grantExtensions({{ assignment.id }})" title="Grant Student Extensions">
                                                         <i class="fas fa-clock me-1"></i>Extensions
                                                     </button>
+                                                    <button class="btn btn-outline-danger btn-sm" onclick="openVoidModal({{ assignment.id }}, '{{ assignment.title|replace("'", "\\'") }}', 'individual')" title="Void Assignment for Students">
+                                                        <i class="bi bi-slash-circle me-1"></i>Void
+                                                    </button>
                                                     {% if assignment.status == 'Active' %}
                                                     <button class="btn btn-outline-warning btn-sm" onclick="changeAssignmentStatus({{ assignment.id }}, 'Inactive')" title="Deactivate Assignment">
                                                         <i class="fas fa-pause me-1"></i>Deactivate
@@ -497,6 +500,9 @@
                                                     </button>
                                                     <button class="btn btn-outline-secondary btn-sm" onclick="editGroupAssignment({{ group_assignment.id }})" title="Edit Group Assignment Details">
                                                         <i class="fas fa-cog me-1"></i>Edit
+                                                    </button>
+                                                    <button class="btn btn-outline-danger btn-sm" onclick="openVoidModal({{ group_assignment.id }}, '{{ group_assignment.title|replace("'", "\\'") }}', 'group')" title="Void Group Assignment">
+                                                        <i class="bi bi-slash-circle me-1"></i>Void
                                                     </button>
                                                     <button class="btn btn-outline-danger btn-sm" onclick="removeGroupAssignment({{ group_assignment.id }})" title="Remove Group Assignment">
                                                         <i class="fas fa-trash me-1"></i>Remove
@@ -1075,5 +1081,98 @@ document.addEventListener('DOMContentLoaded', function() {
         toggleView(view);
     }
 });
+
+// Void Assignment Modal Functions
+let currentVoidAssignmentId = null;
+let currentVoidAssignmentType = 'individual';
+
+function openVoidModal(assignmentId, assignmentTitle, assignmentType) {
+    currentVoidAssignmentId = assignmentId;
+    currentVoidAssignmentType = assignmentType;
+    
+    document.getElementById('voidAssignmentTitle').textContent = `Assignment: ${assignmentTitle}`;
+    document.getElementById('void_reason').value = '';
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('voidAssignmentModal'));
+    modal.show();
+}
+
+// Submit void assignment
+function submitVoidAssignment() {
+    const reason = document.getElementById('void_reason').value || 'Voided by administrator';
+    
+    const formData = new FormData();
+    formData.append('csrf_token', '{{ csrf_token() }}');
+    formData.append('assignment_type', currentVoidAssignmentType);
+    formData.append('reason', reason);
+    formData.append('void_all', 'true');
+    
+    const btn = event.target;
+    const originalHTML = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Voiding...';
+    
+    fetch(`/management/void-assignment/${currentVoidAssignmentId}`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('voidAssignmentModal')).hide();
+            alert(data.message);
+            location.reload();
+        } else {
+            alert('Error: ' + data.message);
+            btn.disabled = false;
+            btn.innerHTML = originalHTML;
+        }
+    })
+    .catch(error => {
+        alert('Error voiding assignment: ' + error);
+        btn.disabled = false;
+        btn.innerHTML = originalHTML;
+    });
+}
 </script>
+
+<!-- Void Assignment Modal -->
+<div class="modal fade" id="voidAssignmentModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-slash-circle me-2"></i>Void Assignment for All Students
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Warning:</strong> This will void the assignment for ALL students in the class. Quarter grades will be recalculated immediately.
+                </div>
+                
+                <h6 class="fw-bold mb-3" id="voidAssignmentTitle"></h6>
+                
+                <div class="mb-3">
+                    <label for="void_reason" class="form-label fw-bold">Reason for Voiding:</label>
+                    <textarea class="form-control" id="void_reason" rows="3" placeholder="Enter reason (e.g., 'Assignment canceled', 'Technical issues', etc.)"></textarea>
+                </div>
+                
+                <p class="text-muted small">
+                    <i class="bi bi-info-circle me-1"></i>
+                    To void for specific students, go to Class → Grades Table and use the void button in the assignment column header.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" onclick="submitVoidAssignment()">
+                    <i class="bi bi-slash-circle me-1"></i>Void for All Students
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}

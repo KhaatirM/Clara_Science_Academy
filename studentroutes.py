@@ -75,6 +75,10 @@ def get_student_assignment_status(assignment, submission, grade):
     if assignment.status == 'Voided':
         return 'Voided'
     
+    # Check if the student's grade is voided
+    if grade and grade.is_voided:
+        return 'Voided'
+    
     # Check if assignment has been graded - this takes priority over due date
     if grade:
         return 'completed'

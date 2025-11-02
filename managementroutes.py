@@ -779,6 +779,29 @@ def remove_teacher_staff(staff_id):
     return redirect(url_for('management.teachers'))
 
 # Report Card Generation - API endpoint to get classes for a student
+@management_blueprint.route('/class/<int:class_id>/enrolled-students-json', methods=['GET'])
+@login_required
+@management_required
+def get_enrolled_students_json(class_id):
+    """Get enrolled students for a class as JSON (for void modal)"""
+    try:
+        enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
+        students_data = []
+        
+        for enrollment in enrollments:
+            if enrollment.student:
+                students_data.append({
+                    'id': enrollment.student.id,
+                    'first_name': enrollment.student.first_name,
+                    'last_name': enrollment.student.last_name,
+                    'grade_level': enrollment.student.grade_level,
+                    'student_id': enrollment.student.student_id
+                })
+        
+        return jsonify({'success': True, 'students': students_data})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 @management_blueprint.route('/api/student/<int:student_id>/classes', methods=['GET'])
 @login_required
 @management_required

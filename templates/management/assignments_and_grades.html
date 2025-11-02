@@ -297,6 +297,9 @@
                                         <button class="btn btn-outline-info btn-sm" onclick="grantExtensions({{ assignment.id }})" title="Grant Extensions">
                                             <i class="fas fa-clock me-1"></i>Extensions
                                         </button>
+                                        <button class="btn btn-outline-danger btn-sm" onclick="openVoidModal({{ assignment.id }}, '{{ assignment.title|replace("'", "\\'") }}', 'individual', {{ assignment.class_id }})" title="Void Assignment">
+                                            <i class="bi bi-slash-circle me-1"></i>Void
+                                        </button>
                                         {% if assignment.status == 'Active' %}
                                         <button class="btn btn-outline-warning btn-sm" onclick="changeAssignmentStatus({{ assignment.id }}, 'Inactive')" title="Deactivate Assignment">
                                             <i class="fas fa-pause me-1"></i>Deactivate
@@ -1086,27 +1089,74 @@ document.addEventListener('DOMContentLoaded', function() {
 let currentVoidAssignmentId = null;
 let currentVoidAssignmentType = 'individual';
 
-function openVoidModal(assignmentId, assignmentTitle, assignmentType) {
+function openVoidModal(assignmentId, assignmentTitle, assignmentType, classId) {
     currentVoidAssignmentId = assignmentId;
     currentVoidAssignmentType = assignmentType;
     
     document.getElementById('voidAssignmentTitle').textContent = `Assignment: ${assignmentTitle}`;
     document.getElementById('void_reason').value = '';
     
+    // Load students for this class
+    if (classId) {
+        loadStudentsForVoid(classId);
+    }
+    
     // Show modal
     const modal = new bootstrap.Modal(document.getElementById('voidAssignmentModal'));
     modal.show();
 }
 
+function loadStudentsForVoid(classId) {
+    const studentsContainer = document.getElementById('void_students_list');
+    studentsContainer.innerHTML = '<div class="text-center"><span class="spinner-border spinner-border-sm"></span> Loading students...</div>';
+    
+    fetch(`/management/class/${classId}/enrolled-students-json`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.students && data.students.length > 0) {
+                let html = '';
+                data.students.forEach(student => {
+                    html += `
+                        <div class="form-check">
+                            <input class="form-check-input void-student-checkbox" type="checkbox" value="${student.id}" id="void_student_${student.id}">
+                            <label class="form-check-label" for="void_student_${student.id}">
+                                ${student.first_name} ${student.last_name} (Grade ${student.grade_level})
+                            </label>
+                        </div>
+                    `;
+                });
+                studentsContainer.innerHTML = html;
+            } else {
+                studentsContainer.innerHTML = '<p class="text-muted">No students enrolled</p>';
+            }
+        })
+        .catch(error => {
+            studentsContainer.innerHTML = '<p class="text-danger">Error loading students</p>';
+        });
+}
+
 // Submit void assignment
 function submitVoidAssignment() {
+    const voidScope = document.querySelector('input[name="void_scope"]:checked').value;
     const reason = document.getElementById('void_reason').value || 'Voided by administrator';
+    const voidAll = voidScope === 'all';
+    
+    let studentIds = [];
+    if (!voidAll) {
+        studentIds = Array.from(document.querySelectorAll('.void-student-checkbox:checked')).map(cb => cb.value);
+        
+        if (studentIds.length === 0) {
+            alert('Please select at least one student to void the assignment for.');
+            return;
+        }
+    }
     
     const formData = new FormData();
     formData.append('csrf_token', '{{ csrf_token() }}');
     formData.append('assignment_type', currentVoidAssignmentType);
     formData.append('reason', reason);
-    formData.append('void_all', 'true');
+    formData.append('void_all', voidAll);
+    studentIds.forEach(id => formData.append('student_ids', id));
     
     const btn = event.target;
     const originalHTML = btn.innerHTML;
@@ -1150,29 +1200,69 @@ function submitVoidAssignment() {
             <div class="modal-body">
                 <div class="alert alert-warning">
                     <i class="bi bi-exclamation-triangle me-2"></i>
-                    <strong>Warning:</strong> This will void the assignment for ALL students in the class. Quarter grades will be recalculated immediately.
+                    <strong>Warning:</strong> Voiding will exclude this assignment from grade calculations. Quarter grades will be recalculated immediately.
                 </div>
                 
                 <h6 class="fw-bold mb-3" id="voidAssignmentTitle"></h6>
                 
                 <div class="mb-3">
-                    <label for="void_reason" class="form-label fw-bold">Reason for Voiding:</label>
-                    <textarea class="form-control" id="void_reason" rows="3" placeholder="Enter reason (e.g., 'Assignment canceled', 'Technical issues', etc.)"></textarea>
+                    <label class="form-label fw-bold">Void for:</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="void_scope" id="void_all_students" value="all" checked>
+                        <label class="form-check-label" for="void_all_students">
+                            <strong>All Students</strong>
+                            <small class="text-muted d-block">Void this assignment for every student in the class</small>
+                        </label>
+                    </div>
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="radio" name="void_scope" id="void_specific_students" value="specific">
+                        <label class="form-check-label" for="void_specific_students">
+                            <strong>Specific Students</strong>
+                            <small class="text-muted d-block">Choose which students to void this assignment for</small>
+                        </label>
+                    </div>
                 </div>
                 
-                <p class="text-muted small">
-                    <i class="bi bi-info-circle me-1"></i>
-                    To void for specific students, go to Class → Grades Table and use the void button in the assignment column header.
-                </p>
+                <div id="student_selection" style="display: none;" class="mb-3">
+                    <label class="form-label fw-bold">Select Students:</label>
+                    <div class="border rounded p-3" style="max-height: 250px; overflow-y: auto;" id="void_students_list">
+                        <div class="text-center"><span class="spinner-border spinner-border-sm"></span> Loading...</div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="void_reason" class="form-label fw-bold">Reason for Voiding:</label>
+                    <textarea class="form-control" id="void_reason" rows="3" placeholder="Enter reason (e.g., 'Assignment canceled', 'Late enrollment', etc.)"></textarea>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-danger" onclick="submitVoidAssignment()">
-                    <i class="bi bi-slash-circle me-1"></i>Void for All Students
+                    <i class="bi bi-slash-circle me-1"></i>Void Assignment
                 </button>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+// Toggle student selection visibility
+document.addEventListener('DOMContentLoaded', function() {
+    const voidModal = document.getElementById('voidAssignmentModal');
+    if (voidModal) {
+        voidModal.addEventListener('shown.bs.modal', function() {
+            document.querySelectorAll('input[name="void_scope"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    if (this.value === 'specific') {
+                        document.getElementById('student_selection').style.display = 'block';
+                    } else {
+                        document.getElementById('student_selection').style.display = 'none';
+                    }
+                });
+            });
+        });
+    }
+});
+</script>
 
 {% endblock %}

@@ -633,6 +633,42 @@ class Grade(db.Model):
         return f"Grade(Student: {self.student_id}, Assignment: {self.assignment_id})"
 
 
+class QuarterGrade(db.Model):
+    """
+    Model for storing calculated quarter grades that refresh automatically.
+    Stores one record per student per class per quarter.
+    """
+    __tablename__ = 'quarter_grade'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
+    class_id = db.Column(db.Integer, db.ForeignKey('class.id'), nullable=False)
+    school_year_id = db.Column(db.Integer, db.ForeignKey('school_year.id'), nullable=False)
+    quarter = db.Column(db.String(10), nullable=False)  # 'Q1', 'Q2', 'Q3', 'Q4'
+    
+    # Grade data
+    letter_grade = db.Column(db.String(5), nullable=True)  # 'A', 'B+', etc.
+    percentage = db.Column(db.Float, nullable=True)
+    assignments_count = db.Column(db.Integer, default=0)
+    
+    # Metadata
+    last_calculated = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    student = db.relationship('Student', backref='quarter_grades', lazy=True)
+    class_info = db.relationship('Class', backref='quarter_grades', lazy=True)
+    school_year = db.relationship('SchoolYear', backref='quarter_grades', lazy=True)
+    
+    # Unique constraint to prevent duplicates
+    __table_args__ = (
+        db.UniqueConstraint('student_id', 'class_id', 'school_year_id', 'quarter', name='uq_student_class_quarter'),
+    )
+    
+    def __repr__(self):
+        return f"QuarterGrade(Student: {self.student_id}, Class: {self.class_id}, Quarter: {self.quarter}, Grade: {self.letter_grade})"
+
+
 class ReportCard(db.Model):
     """
     Model for storing report card records.

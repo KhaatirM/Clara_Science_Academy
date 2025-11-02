@@ -13,7 +13,7 @@ from extensions import db, login_manager, csrf
 from flask_migrate import Migrate
 
 # Import models here to avoid circular imports
-from models import User, Student, Grade, SchoolYear, ReportCard, Assignment, Notification, MaintenanceMode, ActivityLog, AssignmentExtension
+from models import User, Student, Grade, SchoolYear, ReportCard, Assignment, Notification, MaintenanceMode, ActivityLog, AssignmentExtension, QuarterGrade, Class, Enrollment, AcademicPeriod
 
 def _calculate_grades_for_subjects(grades, subjects):
     """

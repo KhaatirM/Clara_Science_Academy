@@ -168,12 +168,13 @@ def void_assignments_for_late_enrollment(student_id, class_id):
     for assignment in assignments:
         if should_void_assignment_for_student(student_id, assignment, enrollment):
             # Find or create grades for this assignment and void them
-            grades = Grade.query.filter_by(
+            grade = Grade.query.filter_by(
                 student_id=student_id,
                 assignment_id=assignment.id
-            ).all()
+            ).first()
             
-            for grade in grades:
+            if grade:
+                # Grade exists - void it
                 if not grade.is_voided:
                     grade.is_voided = True
                     grade.voided_at = datetime.utcnow()
@@ -184,6 +185,25 @@ def void_assignments_for_late_enrollment(student_id, class_id):
                         f"Assignment automatically voided per late enrollment policy."
                     )
                     voided_count += 1
+            else:
+                # No grade exists - create a placeholder voided grade
+                import json
+                new_grade = Grade(
+                    student_id=student_id,
+                    assignment_id=assignment.id,
+                    grade_data=json.dumps({'score': 'N/A', 'comments': ''}),
+                    is_voided=True,
+                    voided_at=datetime.utcnow(),
+                    voided_by=1,  # System user
+                    voided_reason=(
+                        f"Student enrolled late ({enrollment.enrolled_at.strftime('%Y-%m-%d')}) "
+                        f"within 2 weeks of Q{assignment.quarter} end. "
+                        f"Assignment automatically voided per late enrollment policy."
+                    ),
+                    graded_at=None
+                )
+                db.session.add(new_grade)
+                voided_count += 1
     
     # Void group assignments
     for group_assignment in group_assignments:
@@ -192,23 +212,44 @@ def void_assignments_for_late_enrollment(student_id, class_id):
             member = StudentGroupMember.query.filter_by(student_id=student_id).first()
             
             if member:
-                # Find group grades
-                group_grades = GroupGrade.query.filter_by(
+                # Find group grade for this specific student
+                group_grade = GroupGrade.query.filter_by(
                     group_assignment_id=group_assignment.id,
-                    student_group_id=member.student_group_id
-                ).all()
+                    student_id=student_id
+                ).first()
                 
-                for grade in group_grades:
-                    if not grade.is_voided:
-                        grade.is_voided = True
-                        grade.voided_at = datetime.utcnow()
-                        grade.voided_by = 1  # System user
-                        grade.voided_reason = (
+                if group_grade:
+                    # Grade exists - void it
+                    if not group_grade.is_voided:
+                        group_grade.is_voided = True
+                        group_grade.voided_at = datetime.utcnow()
+                        group_grade.voided_by = 1  # System user
+                        group_grade.voided_reason = (
                             f"Student enrolled late ({enrollment.enrolled_at.strftime('%Y-%m-%d')}) "
                             f"within 2 weeks of Q{group_assignment.quarter} end. "
                             f"Group assignment automatically voided per late enrollment policy."
                         )
                         voided_count += 1
+                else:
+                    # No grade exists - create a placeholder voided grade
+                    import json
+                    new_group_grade = GroupGrade(
+                        student_id=student_id,
+                        group_assignment_id=group_assignment.id,
+                        student_group_id=member.student_group_id,
+                        grade_data=json.dumps({'score': 'N/A', 'comments': ''}),
+                        is_voided=True,
+                        voided_at=datetime.utcnow(),
+                        voided_by=1,  # System user
+                        voided_reason=(
+                            f"Student enrolled late ({enrollment.enrolled_at.strftime('%Y-%m-%d')}) "
+                            f"within 2 weeks of Q{group_assignment.quarter} end. "
+                            f"Group assignment automatically voided per late enrollment policy."
+                        ),
+                        graded_at=None
+                    )
+                    db.session.add(new_group_grade)
+                    voided_count += 1
     
     if voided_count > 0:
         db.session.commit()

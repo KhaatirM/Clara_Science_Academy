@@ -6774,7 +6774,7 @@ def calculate_assignment_graded_status(assignment):
 
 def calculate_group_assignment_graded_status(group_assignment):
     """Calculate graded status for a group assignment."""
-    from models import StudentGroup
+    from models import StudentGroup, GroupGrade
     
     group_grades = GroupGrade.query.filter_by(group_assignment_id=group_assignment.id, is_voided=False).all()
     

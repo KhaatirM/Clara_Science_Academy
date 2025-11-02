@@ -185,6 +185,29 @@ def create_template_context(student, section, active_tab, **kwargs):
     
     return base_context
 
+@student_blueprint.route('/submissions')
+@login_required
+@student_required
+def student_submissions():
+    """Student submissions page for 360 feedback, journals, and conflicts"""
+    student = Student.query.get_or_404(current_user.student_id)
+    
+    # Get student's feedback submissions
+    from models import FeedbackResponse, ReflectionJournal, GroupConflict
+    feedback_submissions = FeedbackResponse.query.filter_by(responder_id=student.id).order_by(FeedbackResponse.submitted_at.desc()).all()
+    
+    # Get student's reflection journals
+    journal_submissions = ReflectionJournal.query.filter_by(student_id=student.id).order_by(ReflectionJournal.submitted_at.desc()).all()
+    
+    # Get student's conflict reports
+    conflict_reports = GroupConflict.query.filter_by(reporter_id=student.id).order_by(GroupConflict.reported_at.desc()).all()
+    
+    return render_template('students/student_submissions.html',
+                         student=student,
+                         feedback_submissions=feedback_submissions,
+                         journal_submissions=journal_submissions,
+                         conflict_reports=conflict_reports)
+
 @student_blueprint.route('/dashboard')
 @login_required
 @student_required

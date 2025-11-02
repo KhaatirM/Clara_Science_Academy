@@ -23,12 +23,20 @@ def calculate_quarter_grade_for_student_class(student_id, class_id, school_year_
     Returns:
         dict: {'letter_grade': 'A', 'percentage': 95.5, 'assignments_count': 10}
     """
+    # Convert quarter string to number if needed (handle both 'Q1' and 1 formats)
+    quarter_number = int(quarter.replace('Q', '')) if isinstance(quarter, str) and quarter.startswith('Q') else int(quarter)
+    
     # Fetch all non-voided grades for this student, class, and quarter
+    # Check both string format (Q1, Q2) and integer format (1, 2)
     grades = db.session.query(Grade).join(Assignment).filter(
         Grade.student_id == student_id,
         Assignment.class_id == class_id,
         Assignment.school_year_id == school_year_id,
-        Assignment.quarter == quarter,
+        db.or_(
+            Assignment.quarter == quarter,
+            Assignment.quarter == quarter_number,
+            Assignment.quarter == str(quarter_number)
+        ),
         Grade.is_voided == False
     ).all()
     

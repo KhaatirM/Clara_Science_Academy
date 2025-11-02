@@ -588,7 +588,7 @@ def view_user_details(user_id):
         # Get all classes this student is enrolled in
         from models import Enrollment
         enrollments = Enrollment.query.filter_by(student_id=student.id, is_active=True).all()
-        student_classes = {enrollment.class_id: enrollment.class_obj for enrollment in enrollments if enrollment.class_obj}
+        student_classes = {enrollment.class_id: enrollment.class_info for enrollment in enrollments if enrollment.class_info}
         
         # Separate grades by class and find missing/at-risk assignments
         grades_by_class = {}

@@ -41,10 +41,17 @@
             </tr>
         </thead>
         <tbody>
-            <tr>
-                <td>{{ report_card.class_obj.name }} ({{ report_card.class_obj.subject }})</td>
-                <td>Overall performance in this subject for the quarter: {{ report_card.overall_grade_letter }} ({{ report_card.overall_grade_percentage }}%)</td>
-            </tr>
+            {% if class_objects %}
+                {% for class_obj in class_objects %}
+                    {% set class_grade = grades.get(class_obj.name, {}) if grades else {} %}
+                    {% set letter_grade = class_grade.get('letter', 'N/A') if class_grade else 'N/A' %}
+                    {% set percentage = class_grade.get('percentage', class_grade.get('average', 0)) if class_grade else 0 %}
+                    <tr>
+                        <td>{{ class_obj.name }} ({{ class_obj.subject or 'N/A' }})</td>
+                        <td>Overall performance: {{ letter_grade }} ({{ "%.1f"|format(percentage) }}%)</td>
+                    </tr>
+                {% endfor %}
+            {% endif %}
             <tr><td>Writing</td><td></td></tr>
             <tr><td>Language Arts 1</td><td></td></tr>
             <tr><td>Math 1</td><td></td></tr>

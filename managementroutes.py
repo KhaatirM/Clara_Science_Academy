@@ -3939,7 +3939,7 @@ def generate_report_card_for_student(student_id):
         is_active=True
     ).all()
     
-    classes = [enrollment.class_obj for enrollment in enrollments if enrollment.class_obj]
+    classes = [enrollment.class_info for enrollment in enrollments if enrollment.class_info]
     
     return render_template('management/report_card_generate_form.html',
                          student=student,

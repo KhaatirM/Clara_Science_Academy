@@ -42,15 +42,26 @@
             </tr>
         </thead>
         <tbody>
-            <tr>
-                <td>{{ report_card.class_obj.name }} ({{ report_card.class_obj.subject }})</td>
-                <td>{{ report_card.overall_grade_letter }} ({{ report_card.overall_grade_percentage }}%)</td>
-                <td>N/A</td>
-            </tr>
+            {% if class_objects %}
+                {% for class_obj in class_objects %}
+                    {% set class_grade = grades.get(class_obj.name, {}) if grades else {} %}
+                    {% set letter_grade = class_grade.get('letter', 'N/A') if class_grade else 'N/A' %}
+                    {% set percentage = class_grade.get('percentage', class_grade.get('average', 0)) if class_grade else 0 %}
+                    <tr>
+                        <td>{{ class_obj.name }} ({{ class_obj.subject or 'N/A' }})</td>
+                        <td>{{ letter_grade }} ({{ "%.1f"|format(percentage) }}%)</td>
+                        <td>{% if class_grade.get('comments') %}{{ class_grade.get('comments') }}{% else %}N/A{% endif %}</td>
+                    </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="3">No grade data available</td>
+                </tr>
+            {% endif %}
         </tbody>
     </table>
 
-    <div class="section-title">Assignment Grades for {{ report_card.class_obj.name }} ({{ report_card.quarter }}):</div>
+    <div class="section-title">Assignment Grades ({{ report_card.quarter }}):</div>
     {% if report_card.grade_summary %}
         <table>
             <thead>

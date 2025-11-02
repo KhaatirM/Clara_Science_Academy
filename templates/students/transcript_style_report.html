@@ -49,12 +49,13 @@
         <tbody>
             {% for class_id, data in class_grades_data.items() %}
             <tr>
-                <td>{{ data.class_obj.name }} / {{ (data.class_obj.teacher.first_name + ' ' + data.class_obj.teacher.last_name) if data.class_obj.teacher else 'N/A' }}</td>
-                <td>{{ data.grades.Q1 }}</td>
-                <td>{{ data.grades.Q2 }}</td>
-                <td>{{ data.grades.Q3 }}</td>
-                <td>{{ data.grades.Q4 }}</td>
-                <td style="white-space: normal;">{{ data.comments | join('<br>') | safe }}</td>
+                {% set class_info = data.class_info if data.class_info is defined else data.class_obj if data.class_obj is defined else None %}
+                <td>{{ class_info.name if class_info else 'N/A' }} / {{ (class_info.teacher.first_name + ' ' + class_info.teacher.last_name) if class_info and class_info.teacher else 'N/A' }}</td>
+                <td>{{ data.grades.Q1 if data.grades else '—' }}</td>
+                <td>{{ data.grades.Q2 if data.grades else '—' }}</td>
+                <td>{{ data.grades.Q3 if data.grades else '—' }}</td>
+                <td>{{ data.grades.Q4 if data.grades else '—' }}</td>
+                <td style="white-space: normal;">{{ data.comments | join('<br>') | safe if data.comments else '' }}</td>
             </tr>
             {% else %}
             <tr>

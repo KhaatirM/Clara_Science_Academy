@@ -25,17 +25,20 @@ def calculate_quarter_grade_for_student_class(student_id, class_id, school_year_
     """
     # Convert quarter string to number if needed (handle both 'Q1' and 1 formats)
     quarter_number = int(quarter.replace('Q', '')) if isinstance(quarter, str) and quarter.startswith('Q') else int(quarter)
+    quarter_str = str(quarter_number)  # String version: '1', '2', '3', '4'
+    quarter_q_format = f'Q{quarter_number}'  # Q format: 'Q1', 'Q2', 'Q3', 'Q4'
     
     # Fetch all non-voided grades for this student, class, and quarter
-    # Check both string format (Q1, Q2) and integer format (1, 2)
+    # PostgreSQL requires exact type matching, so we check string variations
+    from sqlalchemy import cast, String
     grades = db.session.query(Grade).join(Assignment).filter(
         Grade.student_id == student_id,
         Assignment.class_id == class_id,
         Assignment.school_year_id == school_year_id,
         db.or_(
-            Assignment.quarter == quarter,
-            Assignment.quarter == quarter_number,
-            Assignment.quarter == str(quarter_number)
+            Assignment.quarter == quarter_q_format,  # 'Q1'
+            Assignment.quarter == quarter_str,        # '1'
+            cast(Assignment.quarter, String) == quarter_str  # Cast for safety
         ),
         Grade.is_voided == False
     ).all()

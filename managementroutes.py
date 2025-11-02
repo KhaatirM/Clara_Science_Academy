@@ -927,7 +927,8 @@ def generate_report_card_form():
             'report_type': report_type,
             'include_attendance': include_attendance,
             'include_comments': include_comments,
-            'grades': calculated_grades
+            'grades': calculated_grades,
+            'grades_by_quarter': calculated_grades_by_quarter  # Store all quarter grades
         }
         
         # Add attendance if requested

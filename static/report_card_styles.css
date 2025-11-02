@@ -1,9 +1,16 @@
 /* --- Report Card & Transcript PDF Styles --- */
 
+/* Page margins for PDF generation */
+@page {
+    size: Letter;
+    margin: 0.4in 0.5in;  /* top/bottom: 0.4in, left/right: 0.5in */
+}
+
 /* General Body and Font Styling */
 body {
     font-family: 'Times New Roman', Times, serif;
-    margin: 0.1in;
+    margin: 0;
+    padding: 0;
     font-size: 9pt;
     line-height: 1.1;
     color: #000000;

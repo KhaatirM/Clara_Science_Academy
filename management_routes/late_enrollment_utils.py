@@ -122,7 +122,14 @@ def should_void_assignment_for_student(student_id, assignment, enrollment):
         # If we can't determine the period, don't void (conservative approach)
         return False
     
-    # Check if enrollment was within 2 weeks of this specific quarter's end
+    # Check if enrollment was within 2 weeks of this specific quarter's end OR after quarter ended
+    enrollment_date = enrollment.enrolled_at.date() if isinstance(enrollment.enrolled_at, datetime) else enrollment.enrolled_at
+    
+    # If enrolled after quarter ended, definitely void
+    if enrollment_date > academic_period.end_date:
+        return True
+    
+    # If enrolled within 2 weeks before quarter end, void
     return is_late_enrollment(enrollment.enrolled_at, academic_period)
 
 
@@ -151,8 +158,13 @@ def void_assignments_for_late_enrollment(student_id, class_id):
     # Get all assignments for this class
     assignments = Assignment.query.filter_by(class_id=class_id).all()
     
+    # Also get group assignments
+    from models import GroupAssignment, GroupGrade, StudentGroupMember
+    group_assignments = GroupAssignment.query.filter_by(class_id=class_id).all()
+    
     voided_count = 0
     
+    # Void individual assignments
     for assignment in assignments:
         if should_void_assignment_for_student(student_id, assignment, enrollment):
             # Find or create grades for this assignment and void them
@@ -165,15 +177,54 @@ def void_assignments_for_late_enrollment(student_id, class_id):
                 if not grade.is_voided:
                     grade.is_voided = True
                     grade.voided_at = datetime.utcnow()
+                    grade.voided_by = 1  # System user
                     grade.voided_reason = (
                         f"Student enrolled late ({enrollment.enrolled_at.strftime('%Y-%m-%d')}) "
-                        f"within 2 weeks of {assignment.quarter} end. "
+                        f"within 2 weeks of Q{assignment.quarter} end. "
                         f"Assignment automatically voided per late enrollment policy."
                     )
                     voided_count += 1
     
+    # Void group assignments
+    for group_assignment in group_assignments:
+        if should_void_assignment_for_student(student_id, group_assignment, enrollment):
+            # Find student's group
+            member = StudentGroupMember.query.filter_by(student_id=student_id).first()
+            
+            if member:
+                # Find group grades
+                group_grades = GroupGrade.query.filter_by(
+                    group_assignment_id=group_assignment.id,
+                    student_group_id=member.student_group_id
+                ).all()
+                
+                for grade in group_grades:
+                    if not grade.is_voided:
+                        grade.is_voided = True
+                        grade.voided_at = datetime.utcnow()
+                        grade.voided_by = 1  # System user
+                        grade.voided_reason = (
+                            f"Student enrolled late ({enrollment.enrolled_at.strftime('%Y-%m-%d')}) "
+                            f"within 2 weeks of Q{group_assignment.quarter} end. "
+                            f"Group assignment automatically voided per late enrollment policy."
+                        )
+                        voided_count += 1
+    
     if voided_count > 0:
         db.session.commit()
+        
+        # Update quarter grades for this student
+        from utils.quarter_grade_calculator import update_all_quarter_grades_for_student
+        try:
+            class_obj = Class.query.get(class_id)
+            if class_obj and class_obj.school_year_id:
+                update_all_quarter_grades_for_student(
+                    student_id=student_id,
+                    school_year_id=class_obj.school_year_id,
+                    force=True
+                )
+        except Exception as e:
+            print(f"Could not update quarter grades for student {student_id}: {e}")
     
     return voided_count
 
@@ -214,9 +265,10 @@ def check_and_void_grade(grade):
     if should_void_assignment_for_student(grade.student_id, assignment, enrollment):
         grade.is_voided = True
         grade.voided_at = datetime.utcnow()
+        grade.voided_by = 1  # System user
         grade.voided_reason = (
             f"Student enrolled late ({enrollment.enrolled_at.strftime('%Y-%m-%d')}) "
-            f"within 2 weeks of {assignment.quarter} end. "
+            f"within 2 weeks of Q{assignment.quarter} end. "
             f"Assignment automatically voided per late enrollment policy."
         )
         # Don't commit here - let the calling function handle the commit

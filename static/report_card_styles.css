@@ -3,7 +3,7 @@
 /* Page margins for PDF generation */
 @page {
     size: Letter;
-    margin: 0.4in 0.5in;  /* top/bottom: 0.4in, left/right: 0.5in */
+    margin: 0.1in 0.125in;  /* top/bottom: 0.1in, left/right: 0.125in (75% tighter) */
 }
 
 /* General Body and Font Styling */
@@ -123,7 +123,7 @@ body {
 }
 
 /* Specific Border and Style Rules for Info Grid Cells */
-/* All label cells - bold font */
+/* All label cells - bold font, no borders */
 .info-grid-table .student-name-label,
 .info-grid-table .id-label-cell,
 .info-grid-table .state-id-label-cell,
@@ -136,7 +136,7 @@ body {
 .info-grid-table .school-ceeb-label,
 .info-grid-table .school-entrance-label,
 .info-grid-table .school-grad-label {
-    border: 1px solid black;
+    border: none;
     font-weight: bold;
     padding: 4px 6px;
     background-color: #ffffff;

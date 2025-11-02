@@ -1183,6 +1183,7 @@ def generate_report_card_pdf(report_card_id):
         # Extract data from new structure (backward compatible)
         if isinstance(report_card_data, dict) and 'grades' in report_card_data:
             grades = report_card_data.get('grades', {})
+            grades_by_quarter = report_card_data.get('grades_by_quarter', {})
             attendance = report_card_data.get('attendance', {})
             selected_classes = report_card_data.get('classes', [])
             report_type = report_card_data.get('report_type', 'official')
@@ -1190,6 +1191,7 @@ def generate_report_card_pdf(report_card_id):
             include_comments = report_card_data.get('include_comments', False)
         else:
             grades = report_card_data if report_card_data else {}
+            grades_by_quarter = {}
             attendance = {}
             selected_classes = []
             report_type = 'official'  # Default for old report cards
@@ -1252,6 +1254,7 @@ def generate_report_card_pdf(report_card_id):
             report_card=report_card,
             student=student_data,
             grades=grades,
+            grades_by_quarter=grades_by_quarter,  # Cumulative quarter data
             attendance=attendance,
             class_objects=class_objects,
             include_attendance=include_attendance,

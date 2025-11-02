@@ -1,0 +1,294 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block title %}My Submissions{% endblock %}
+
+{% block dashboard_content %}
+<style>
+    .submission-card {
+        transition: all 0.3s ease;
+        border-radius: 15px;
+        overflow: hidden;
+    }
+    .submission-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 24px rgba(0,0,0,0.15) !important;
+    }
+    .icon-circle {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+        font-size: 2rem;
+    }
+</style>
+
+<div class="container-fluid px-2 px-md-4">
+    <!-- Header -->
+    <div class="mb-4">
+        <h2 class="mb-1"><i class="bi bi-pencil-square me-2" style="color: #667eea;"></i>My Submissions</h2>
+        <p class="text-muted">Share feedback, reflect on your learning, and report concerns</p>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-md-4">
+            <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);">
+                <div class="card-body text-white text-center py-4">
+                    <i class="bi bi-arrow-repeat display-4 mb-2 opacity-75"></i>
+                    <h2 class="mb-0 fw-bold">{{ feedback_submissions|length }}</h2>
+                    <p class="mb-0 small text-white-50">360° Feedback Submitted</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                <div class="card-body text-white text-center py-4">
+                    <i class="bi bi-journal-text display-4 mb-2 opacity-75"></i>
+                    <h2 class="mb-0 fw-bold">{{ journal_submissions|length }}</h2>
+                    <p class="mb-0 small text-white-50">Reflection Journals</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                <div class="card-body text-white text-center py-4">
+                    <i class="bi bi-exclamation-triangle-fill display-4 mb-2 opacity-75"></i>
+                    <h2 class="mb-0 fw-bold">{{ conflict_reports|length }}</h2>
+                    <p class="mb-0 small text-white-50">Conflict Reports</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Submission Options -->
+    <div class="row g-4 mb-4">
+        <!-- 360° Feedback -->
+        <div class="col-12 col-md-4">
+            <div class="card submission-card border-0 shadow-sm h-100">
+                <div class="card-body text-center p-4">
+                    <div class="icon-circle" style="background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);">
+                        <i class="bi bi-arrow-repeat text-white"></i>
+                    </div>
+                    <h4 class="mb-3">360° Feedback</h4>
+                    <p class="text-muted mb-4">Provide comprehensive feedback on your peers' collaboration and contributions</p>
+                    <button class="btn btn-primary w-100" style="background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); border: none; border-radius: 25px;" data-bs-toggle="modal" data-bs-target="#feedbackModal">
+                        <i class="bi bi-plus-circle me-2"></i>Submit Feedback
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reflection Journal -->
+        <div class="col-12 col-md-4">
+            <div class="card submission-card border-0 shadow-sm h-100">
+                <div class="card-body text-center p-4">
+                    <div class="icon-circle" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                        <i class="bi bi-journal-text text-white"></i>
+                    </div>
+                    <h4 class="mb-3">Reflection Journal</h4>
+                    <p class="text-muted mb-4">Reflect on your learning experiences and group collaboration</p>
+                    <button class="btn btn-primary w-100" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); border: none; border-radius: 25px;" data-bs-toggle="modal" data-bs-target="#journalModal">
+                        <i class="bi bi-plus-circle me-2"></i>Write Journal Entry
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Conflict Resolution -->
+        <div class="col-12 col-md-4">
+            <div class="card submission-card border-0 shadow-sm h-100">
+                <div class="card-body text-center p-4">
+                    <div class="icon-circle" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                        <i class="bi bi-exclamation-triangle-fill text-white"></i>
+                    </div>
+                    <h4 class="mb-3">Report Conflict</h4>
+                    <p class="text-muted mb-4">Report group conflicts to help maintain a positive learning environment</p>
+                    <button class="btn btn-primary w-100" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border: none; border-radius: 25px;" data-bs-toggle="modal" data-bs-target="#conflictModal">
+                        <i class="bi bi-plus-circle me-2"></i>Report Conflict
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Submissions History -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Recent Submissions</h5>
+        </div>
+        <div class="card-body">
+            <ul class="nav nav-tabs mb-4" role="tablist">
+                <li class="nav-item">
+                    <a class="nav-link active" data-bs-toggle="tab" href="#feedback-tab">360° Feedback ({{ feedback_submissions|length }})</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#journal-tab">Journals ({{ journal_submissions|length }})</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#conflict-tab">Conflicts ({{ conflict_reports|length }})</a>
+                </li>
+            </ul>
+
+            <div class="tab-content">
+                <!-- Feedback Tab -->
+                <div id="feedback-tab" class="tab-pane fade show active">
+                    {% if feedback_submissions %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Target Student</th>
+                                        <th>Session</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for feedback in feedback_submissions[:10] %}
+                                    <tr>
+                                        <td><small>{{ feedback.submitted_at.strftime('%m/%d/%Y %I:%M %p') }}</small></td>
+                                        <td>{{ feedback.target_student.first_name }} {{ feedback.target_student.last_name }}</td>
+                                        <td>{{ feedback.session.title }}</td>
+                                        <td><span class="badge bg-success">Submitted</span></td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center py-4">No 360° feedback submitted yet</p>
+                    {% endif %}
+                </div>
+
+                <!-- Journal Tab -->
+                <div id="journal-tab" class="tab-pane fade">
+                    {% if journal_submissions %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Group</th>
+                                        <th>Assignment</th>
+                                        <th>Collaboration Rating</th>
+                                        <th>Learning Rating</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for journal in journal_submissions[:10] %}
+                                    <tr>
+                                        <td><small>{{ journal.submitted_at.strftime('%m/%d/%Y %I:%M %p') }}</small></td>
+                                        <td>{{ journal.group.name }}</td>
+                                        <td>{{ journal.group_assignment.title }}</td>
+                                        <td><span class="badge bg-success">{{ journal.collaboration_rating }}/5</span></td>
+                                        <td><span class="badge bg-info">{{ journal.learning_rating }}/5</span></td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center py-4">No reflection journals submitted yet</p>
+                    {% endif %}
+                </div>
+
+                <!-- Conflict Tab -->
+                <div id="conflict-tab" class="tab-pane fade">
+                    {% if conflict_reports %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Group</th>
+                                        <th>Type</th>
+                                        <th>Severity</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for conflict in conflict_reports[:10] %}
+                                    <tr>
+                                        <td><small>{{ conflict.reported_at.strftime('%m/%d/%Y %I:%M %p') }}</small></td>
+                                        <td>{{ conflict.group.name }}</td>
+                                        <td>{{ conflict.conflict_type.replace('_', ' ').title() }}</td>
+                                        <td>
+                                            <span class="badge 
+                                                {% if conflict.severity_level == 'critical' %}bg-danger
+                                                {% elif conflict.severity_level == 'high' %}bg-warning
+                                                {% else %}bg-info
+                                                {% endif %}">
+                                                {{ conflict.severity_level.title() }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge 
+                                                {% if conflict.status == 'resolved' %}bg-success
+                                                {% elif conflict.status == 'investigating' %}bg-info
+                                                {% else %}bg-warning
+                                                {% endif %}">
+                                                {{ conflict.status.title() }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center py-4">No conflicts reported</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals for submissions would go here -->
+<!-- For now, these are placeholders - actual submission forms would be implemented based on existing models -->
+<div class="modal fade" id="feedbackModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Submit 360° Feedback</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted">360° Feedback submission form coming soon...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="journalModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Write Reflection Journal</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted">Reflection journal form coming soon...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="conflictModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Report Conflict</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted">Conflict report form coming soon...</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

@@ -889,20 +889,52 @@ def generate_report_card_form():
             ).all()
             grades_by_quarter[q] = quarter_grades
         
-        # Calculate grades for each quarter (dispatch based on grade level)
-        # Import calculation functions directly from app module
-        import app
+        # Calculate grades for each quarter by CLASS (not hardcoded subjects)
+        def _calculate_grades_by_class(grades_list):
+            """Calculate grades grouped by class name"""
+            from collections import defaultdict
+            grades_by_class = defaultdict(list)
+            
+            # Group grades by class
+            for grade in grades_list:
+                if grade.assignment and grade.assignment.class_id:
+                    class_obj = Class.query.get(grade.assignment.class_id)
+                    if class_obj:
+                        try:
+                            grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
+                            if grade_data and 'score' in grade_data and grade_data['score'] is not None:
+                                grades_by_class[class_obj.name].append(float(grade_data['score']))
+                        except (json.JSONDecodeError, TypeError, ValueError) as e:
+                            current_app.logger.warning(f"Could not parse grade data: {e}")
+            
+            # Calculate average and letter grade for each class
+            calculated = {}
+            for class_name, scores in grades_by_class.items():
+                if scores:
+                    average = sum(scores) / len(scores)
+                    # Convert to letter grade
+                    if average >= 95: letter = 'A'
+                    elif average >= 90: letter = 'A-'
+                    elif average >= 87: letter = 'B+'
+                    elif average >= 83: letter = 'B'
+                    elif average >= 80: letter = 'B-'
+                    elif average >= 77: letter = 'C+'
+                    elif average >= 73: letter = 'C'
+                    elif average >= 70: letter = 'C-'
+                    elif average >= 65: letter = 'D'
+                    else: letter = 'F'
+                    
+                    calculated[class_name] = {
+                        'average': round(average, 2),
+                        'percentage': round(average, 2),
+                        'letter': letter,
+                        'assignments_count': len(scores)
+                    }
+            return calculated
+        
         calculated_grades_by_quarter = {}
         for q, q_grades in grades_by_quarter.items():
-            if student.grade_level in [1, 2]:
-                calculated_grades_by_quarter[q] = app._calculate_grades_1_2(q_grades, q)
-            elif student.grade_level == 3:
-                calculated_grades_by_quarter[q] = app._calculate_grades_3(q_grades, q)
-            elif student.grade_level in [4, 5, 6, 7, 8]:
-                calculated_grades_by_quarter[q] = app._calculate_grades_4_8(q_grades, q)
-            else:
-                current_app.logger.warning(f"No grade calculation logic for grade level: {student.grade_level}")
-                calculated_grades_by_quarter[q] = {}
+            calculated_grades_by_quarter[q] = _calculate_grades_by_class(q_grades)
         
         # Set the primary calculated_grades to the current quarter
         calculated_grades = calculated_grades_by_quarter.get(quarter_str, {})

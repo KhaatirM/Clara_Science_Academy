@@ -2460,20 +2460,23 @@ def class_grades(class_id):
                         'grade': grade_data.get('score', 'N/A'),
                         'comments': grade_data.get('comments', ''),
                         'graded_at': grade.graded_at,
-                        'type': 'individual'
+                        'type': 'individual',
+                        'is_voided': grade.is_voided if hasattr(grade, 'is_voided') else False
                     }
                 except (json.JSONDecodeError, TypeError):
                     student_grades[student.id][assignment.id] = {
                         'grade': 'N/A',
                         'comments': 'Error parsing grade data',
                         'graded_at': grade.graded_at,
-                        'type': 'individual'
+                        'type': 'individual',
+                        'is_voided': grade.is_voided if hasattr(grade, 'is_voided') else False
                     }
             else:
                 student_grades[student.id][assignment.id] = {
                     'grade': 'Not Graded',
                     'comments': '',
                     'graded_at': None,
+                    'is_voided': False,
                     'type': 'individual'
                 }
     
@@ -2542,7 +2545,8 @@ def class_grades(class_id):
                                 'comments': grade_data.get('comments', ''),
                                 'graded_at': group_grade.graded_at,
                                 'type': 'group',
-                                'group_name': student_group_name
+                                'group_name': student_group_name,
+                                'is_voided': group_grade.is_voided if hasattr(group_grade, 'is_voided') else False
                             }
                         except (json.JSONDecodeError, TypeError, AttributeError):
                             student_grades[student.id][f'group_{group_assignment.id}'] = {
@@ -2550,7 +2554,8 @@ def class_grades(class_id):
                                 'comments': 'Error parsing grade data',
                                 'graded_at': None,
                                 'type': 'group',
-                                'group_name': student_group_name
+                                'group_name': student_group_name,
+                                'is_voided': group_grade.is_voided if hasattr(group_grade, 'is_voided') else False
                             }
                     else:
                         student_grades[student.id][f'group_{group_assignment.id}'] = {
@@ -2558,7 +2563,8 @@ def class_grades(class_id):
                             'comments': '',
                             'graded_at': None,
                             'type': 'group',
-                            'group_name': student_group_name
+                            'group_name': student_group_name,
+                            'is_voided': False
                         }
                 else:
                     # Student is not in any group but assignment is for all groups
@@ -2567,7 +2573,8 @@ def class_grades(class_id):
                         'comments': 'Student not assigned to a group',
                         'graded_at': None,
                         'type': 'group',
-                        'group_name': 'N/A'
+                        'group_name': 'N/A',
+                        'is_voided': False
                     }
             else:
                 # Student should not see this assignment (not in the assigned group)
@@ -2578,6 +2585,7 @@ def class_grades(class_id):
                         'grade': 'No Group',
                         'comments': 'Student not assigned to a group',
                         'graded_at': None,
+                        'is_voided': False,
                         'type': 'group',
                         'group_name': 'N/A'
                     }

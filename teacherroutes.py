@@ -1417,6 +1417,137 @@ def update_assignment_statuses():
         db.session.rollback()
         print(f"Error updating assignment statuses: {e}")
 
+@teacher_blueprint.route('/void-assignment/<int:assignment_id>', methods=['POST'])
+@login_required
+@teacher_required
+def void_assignment_for_students(assignment_id):
+    """Void an assignment for all students or specific students (Teacher version)."""
+    try:
+        assignment_type = request.form.get('assignment_type', 'individual')
+        student_ids = request.form.getlist('student_ids')
+        reason = request.form.get('reason', 'Voided by teacher')
+        void_all = request.form.get('void_all', 'false').lower() == 'true'
+        
+        teacher = get_teacher_or_admin()
+        voided_count = 0
+        
+        if assignment_type == 'group':
+            group_assignment = GroupAssignment.query.get_or_404(assignment_id)
+            
+            # Authorization check
+            if not is_admin() and teacher and group_assignment.class_info.teacher_id != teacher.id:
+                return jsonify({'success': False, 'message': 'Not authorized'}), 403
+            
+            if void_all or not student_ids:
+                group_grades = GroupGrade.query.filter_by(
+                    group_assignment_id=assignment_id,
+                    is_voided=False
+                ).all()
+                
+                for grade in group_grades:
+                    grade.is_voided = True
+                    grade.voided_by = current_user.id
+                    grade.voided_at = datetime.utcnow()
+                    grade.voided_reason = reason
+                    voided_count += 1
+                
+                message = f'Voided group assignment "{group_assignment.title}" for all students ({voided_count} grades)'
+            else:
+                for student_id in student_ids:
+                    from models import StudentGroupMember
+                    member = StudentGroupMember.query.filter_by(student_id=int(student_id)).first()
+                    
+                    if member:
+                        group_grade = GroupGrade.query.filter_by(
+                            group_assignment_id=assignment_id,
+                            student_group_id=member.student_group_id,
+                            is_voided=False
+                        ).first()
+                        
+                        if group_grade:
+                            group_grade.is_voided = True
+                            group_grade.voided_by = current_user.id
+                            group_grade.voided_at = datetime.utcnow()
+                            group_grade.voided_reason = reason
+                            voided_count += 1
+                
+                message = f'Voided group assignment "{group_assignment.title}" for {voided_count} student(s)'
+        else:
+            assignment = Assignment.query.get_or_404(assignment_id)
+            
+            # Authorization check
+            if not is_admin() and teacher and assignment.class_info.teacher_id != teacher.id:
+                return jsonify({'success': False, 'message': 'Not authorized'}), 403
+            
+            if void_all or not student_ids:
+                grades = Grade.query.filter_by(
+                    assignment_id=assignment_id,
+                    is_voided=False
+                ).all()
+                
+                for grade in grades:
+                    grade.is_voided = True
+                    grade.voided_by = current_user.id
+                    grade.voided_at = datetime.utcnow()
+                    grade.voided_reason = reason
+                    voided_count += 1
+                
+                message = f'Voided assignment "{assignment.title}" for all students ({voided_count} grades)'
+            else:
+                for student_id in student_ids:
+                    grade = Grade.query.filter_by(
+                        assignment_id=assignment_id,
+                        student_id=int(student_id),
+                        is_voided=False
+                    ).first()
+                    
+                    if grade:
+                        grade.is_voided = True
+                        grade.voided_by = current_user.id
+                        grade.voided_at = datetime.utcnow()
+                        grade.voided_reason = reason
+                        voided_count += 1
+                
+                message = f'Voided assignment "{assignment.title}" for {voided_count} student(s)'
+        
+        db.session.commit()
+        
+        # Update quarter grades for affected students
+        from utils.quarter_grade_calculator import update_quarter_grade
+        if assignment_type == 'individual':
+            quarter = assignment.quarter
+            school_year_id = assignment.school_year_id
+            class_id = assignment.class_id
+        else:
+            quarter = group_assignment.quarter
+            school_year_id = group_assignment.school_year_id
+            class_id = group_assignment.class_id
+        
+        students_to_update = student_ids if student_ids else []
+        if not students_to_update:
+            if assignment_type == 'individual':
+                students_to_update = [g.student_id for g in Grade.query.filter_by(assignment_id=assignment_id).all()]
+            else:
+                students_to_update = [g.student_id for g in GroupGrade.query.filter_by(group_assignment_id=assignment_id).all()]
+        
+        for sid in students_to_update:
+            try:
+                update_quarter_grade(
+                    student_id=int(sid),
+                    class_id=class_id,
+                    school_year_id=school_year_id,
+                    quarter=quarter,
+                    force=True
+                )
+            except Exception as e:
+                current_app.logger.warning(f"Could not update quarter grade for student {sid}: {e}")
+        
+        return jsonify({'success': True, 'message': message, 'voided_count': voided_count})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 @teacher_blueprint.route('/assignments-and-grades')
 @login_required
 @teacher_required

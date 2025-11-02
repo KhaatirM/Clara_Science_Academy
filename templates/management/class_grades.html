@@ -172,7 +172,12 @@
                                         <td class="align-middle text-center">
                                             {% set grade_info = student_grades.get(student.id, {}).get(assignment.id, {}) %}
                                             {% set grade = grade_info.get('grade', 'Not Graded') %}
-                                            {% if grade == 'Not Graded' %}
+                                            {% set is_voided = grade_info.get('is_voided', False) %}
+                                            {% if is_voided %}
+                                                <span class="badge bg-secondary text-white">
+                                                    <i class="bi bi-slash-circle me-1"></i>Voided
+                                                </span>
+                                            {% elif grade == 'Not Graded' %}
                                                 <span class="badge bg-secondary bg-opacity-20 text-dark border border-secondary">Not Graded</span>
                                             {% elif grade == 'N/A' %}
                                                 <span class="badge bg-danger bg-opacity-20 text-dark border border-danger">N/A</span>
@@ -194,7 +199,12 @@
                                         <td class="align-middle text-center">
                                             {% set grade_info = student_grades.get(student.id, {}).get('group_' ~ group_assignment.id, {}) %}
                                             {% set grade = grade_info.get('grade', 'Not Graded') %}
-                                            {% if grade == 'Not Graded' %}
+                                            {% set is_voided = grade_info.get('is_voided', False) %}
+                                            {% if is_voided %}
+                                                <span class="badge bg-secondary text-white">
+                                                    <i class="bi bi-slash-circle me-1"></i>Voided
+                                                </span>
+                                            {% elif grade == 'Not Graded' %}
                                                 <span class="badge bg-secondary bg-opacity-20 text-dark border border-secondary">Not Graded</span>
                                             {% elif grade == 'No Group' %}
                                                 <span class="badge bg-warning bg-opacity-20 text-dark border border-warning">No Group</span>

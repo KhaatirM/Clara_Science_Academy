@@ -5402,6 +5402,131 @@ def remove_assignment(assignment_id):
         return redirect(url_for('management.assignments_and_grades'))
 
 
+@management_blueprint.route('/void-assignment/<int:assignment_id>', methods=['POST'])
+@login_required
+@management_required
+def void_assignment_for_students(assignment_id):
+    """Void an assignment for all students or specific students."""
+    try:
+        assignment_type = request.form.get('assignment_type', 'individual')
+        student_ids = request.form.getlist('student_ids')
+        reason = request.form.get('reason', 'Voided by administrator')
+        void_all = request.form.get('void_all', 'false').lower() == 'true'
+        
+        voided_count = 0
+        
+        if assignment_type == 'group':
+            group_assignment = GroupAssignment.query.get_or_404(assignment_id)
+            
+            if void_all or not student_ids:
+                group_grades = GroupGrade.query.filter_by(
+                    group_assignment_id=assignment_id,
+                    is_voided=False
+                ).all()
+                
+                for grade in group_grades:
+                    grade.is_voided = True
+                    grade.voided_by = current_user.id
+                    grade.voided_at = datetime.utcnow()
+                    grade.voided_reason = reason
+                    voided_count += 1
+                
+                message = f'Voided group assignment "{group_assignment.title}" for all students ({voided_count} grades)'
+            else:
+                for student_id in student_ids:
+                    from models import StudentGroupMember
+                    member = StudentGroupMember.query.filter_by(student_id=int(student_id)).first()
+                    
+                    if member:
+                        group_grade = GroupGrade.query.filter_by(
+                            group_assignment_id=assignment_id,
+                            student_group_id=member.student_group_id,
+                            is_voided=False
+                        ).first()
+                        
+                        if group_grade:
+                            group_grade.is_voided = True
+                            group_grade.voided_by = current_user.id
+                            grade.voided_at = datetime.utcnow()
+                            group_grade.voided_reason = reason
+                            voided_count += 1
+                
+                message = f'Voided group assignment "{group_assignment.title}" for {voided_count} student(s)'
+        else:
+            assignment = Assignment.query.get_or_404(assignment_id)
+            
+            if void_all or not student_ids:
+                grades = Grade.query.filter_by(
+                    assignment_id=assignment_id,
+                    is_voided=False
+                ).all()
+                
+                for grade in grades:
+                    grade.is_voided = True
+                    grade.voided_by = current_user.id
+                    grade.voided_at = datetime.utcnow()
+                    grade.voided_reason = reason
+                    voided_count += 1
+                
+                message = f'Voided assignment "{assignment.title}" for all students ({voided_count} grades)'
+            else:
+                for student_id in student_ids:
+                    grade = Grade.query.filter_by(
+                        assignment_id=assignment_id,
+                        student_id=int(student_id),
+                        is_voided=False
+                    ).first()
+                    
+                    if grade:
+                        grade.is_voided = True
+                        grade.voided_by = current_user.id
+                        grade.voided_at = datetime.utcnow()
+                        grade.voided_reason = reason
+                        voided_count += 1
+                
+                message = f'Voided assignment "{assignment.title}" for {voided_count} student(s)'
+        
+        db.session.commit()
+        
+        # Update quarter grades for affected students (force recalculation)
+        from utils.quarter_grade_calculator import update_quarter_grade
+        if assignment_type == 'individual':
+            quarter = assignment.quarter
+            school_year_id = assignment.school_year_id
+            class_id = assignment.class_id
+        else:
+            quarter = group_assignment.quarter
+            school_year_id = group_assignment.school_year_id
+            class_id = group_assignment.class_id
+        
+        # Refresh quarter grades for affected students
+        students_to_update = []
+        if student_ids:
+            students_to_update = student_ids
+        else:
+            if assignment_type == 'individual':
+                students_to_update = [g.student_id for g in Grade.query.filter_by(assignment_id=assignment_id).all()]
+            else:
+                students_to_update = [g.student_id for g in GroupGrade.query.filter_by(group_assignment_id=assignment_id).all()]
+        
+        for sid in students_to_update:
+            try:
+                update_quarter_grade(
+                    student_id=int(sid),
+                    class_id=class_id,
+                    school_year_id=school_year_id,
+                    quarter=quarter,
+                    force=True
+                )
+            except Exception as e:
+                current_app.logger.warning(f"Could not update quarter grade for student {sid}: {e}")
+        
+        return jsonify({'success': True, 'message': message, 'voided_count': voided_count})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 @management_blueprint.route('/void-grade/<int:grade_id>', methods=['POST'])
 @login_required
 @management_required
@@ -6630,6 +6755,42 @@ def parse_date_string(date_str):
     
     return None
 
+def calculate_assignment_graded_status(assignment):
+    """Calculate graded status for an individual assignment."""
+    grades = Grade.query.filter_by(assignment_id=assignment.id, is_voided=False).all()
+    
+    if not grades:
+        return 'Active' if assignment.status == 'Active' else 'Awaiting Grade'
+    
+    enrollments = Enrollment.query.filter_by(class_id=assignment.class_id, is_active=True).count()
+    graded_count = len(grades)
+    
+    if graded_count >= enrollments and enrollments > 0:
+        return 'Graded'
+    elif assignment.status == 'Active':
+        return 'Active'
+    else:
+        return 'Awaiting Grade'
+
+def calculate_group_assignment_graded_status(group_assignment):
+    """Calculate graded status for a group assignment."""
+    from models import StudentGroup
+    
+    group_grades = GroupGrade.query.filter_by(group_assignment_id=group_assignment.id, is_voided=False).all()
+    
+    if not group_grades:
+        return 'Active' if group_assignment.status == 'Active' else 'Awaiting Grade'
+    
+    assigned_groups = StudentGroup.query.filter_by(class_id=group_assignment.class_id).count()
+    graded_count = len(group_grades)
+    
+    if graded_count >= assigned_groups and assigned_groups > 0:
+        return 'Graded'
+    elif group_assignment.status == 'Active':
+        return 'Active'
+    else:
+        return 'Awaiting Grade'
+
 @management_blueprint.route('/view-class/<int:class_id>')
 @login_required
 @management_required
@@ -6648,8 +6809,27 @@ def view_class(class_id):
         Enrollment.is_active == True
     ).order_by(Student.last_name, Student.first_name).all()
     
-    # Get assignments for this class, ordered by due date
+    # Get individual assignments for this class
     assignments = Assignment.query.filter_by(class_id=class_id).order_by(Assignment.due_date.desc()).all()
+    
+    # Get group assignments for this class
+    from models import GroupAssignment
+    group_assignments = GroupAssignment.query.filter_by(class_id=class_id).order_by(GroupAssignment.due_date.desc()).all()
+    
+    # Combine both types with type indicator
+    all_assignments = []
+    for assignment in assignments:
+        assignment.assignment_type = 'individual'
+        assignment.graded_status = calculate_assignment_graded_status(assignment)
+        all_assignments.append(assignment)
+    
+    for group_assignment in group_assignments:
+        group_assignment.assignment_type = 'group'
+        group_assignment.graded_status = calculate_group_assignment_graded_status(group_assignment)
+        all_assignments.append(group_assignment)
+    
+    # Sort by due date
+    all_assignments.sort(key=lambda x: x.due_date if x.due_date else datetime.max.date(), reverse=True)
     
     # Get recent attendance records for this class (last 7 days)
     from datetime import timedelta
@@ -6671,6 +6851,8 @@ def view_class(class_id):
                          teacher=teacher,
                          enrolled_students=enrolled_students,
                          assignments=assignments,
+                         group_assignments=group_assignments,
+                         all_assignments=all_assignments,
                          recent_attendance=recent_attendance,
                          today=today,
                          is_current_user_teacher=is_current_user_teacher,

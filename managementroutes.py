@@ -3965,16 +3965,13 @@ def report_cards():
     all_classes = Class.query.order_by(Class.name).all()
     quarters = ['All', 'Q1', 'Q2', 'Q3', 'Q4']
     
-    return render_template('management/report_cards_list.html', 
+    return render_template('management/report_cards_enhanced.html', 
                          report_cards=report_cards_list,
-                         school_years=school_years,
-                         all_students=all_students,
-                         all_classes=all_classes,
-                         quarters=quarters,
-                         selected_school_year=selected_school_year,
-                         selected_quarter=selected_quarter,
-                         selected_student_id=selected_student_id,
-                         selected_class_id=selected_class_id)
+                         recent_reports=report_cards_list,
+                         school_years=SchoolYear.query.all(),
+                         students=Student.query.all(),
+                         classes=Class.query.all(),
+                         quarters=quarters)
 
 @management_blueprint.route('/report-cards/category/<category>')
 @login_required

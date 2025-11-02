@@ -158,13 +158,22 @@
                       </td>
                       <td class="text-center">
                         <div class="btn-group btn-group-sm" role="group">
-                          <a href="{{ url_for('management.view_report_card', report_card_id=report.id) }}" class="btn btn-outline-primary" title="View Report Card">
+                          <a href="{{ url_for('management.student_report_card_history', student_id=report.student.id) }}" class="btn btn-outline-secondary" title="View History">
+                            <i class="bi bi-clock-history"></i>
+                          </a>
+                          <a href="{{ url_for('management.view_report_card', report_card_id=report.id) }}" class="btn btn-outline-primary" title="View Details">
                             <i class="bi bi-eye"></i>
                           </a>
                           <a href="{{ url_for('management.generate_report_card_pdf', report_card_id=report.id) }}" class="btn btn-outline-success" title="Download PDF" target="_blank">
                             <i class="bi bi-file-pdf"></i>
                           </a>
+                          <button type="button" class="btn btn-outline-danger" title="Delete" onclick="if(confirm('Delete this report card? This cannot be undone.')) { document.getElementById('delete-form-{{ report.id }}').submit(); }">
+                            <i class="bi bi-trash"></i>
+                          </button>
                         </div>
+                        <form id="delete-form-{{ report.id }}" method="POST" action="{{ url_for('management.delete_report_card', report_card_id=report.id) }}" style="display: none;">
+                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        </form>
                       </td>
                     </tr>
                   {% endfor %}

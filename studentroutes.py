@@ -249,8 +249,13 @@ def student_dashboard():
             grade_percentages = []
             for g in class_grades:
                 grade_data = json.loads(g.grade_data)
-                if 'score' in grade_data:
-                    grade_percentages.append(grade_data['score'])
+                if 'score' in grade_data and grade_data['score'] is not None:
+                    try:
+                        # Convert to float in case it's stored as string
+                        score = float(grade_data['score'])
+                        grade_percentages.append(score)
+                    except (ValueError, TypeError):
+                        continue  # Skip invalid scores
             
             if grade_percentages:
                 avg_grade = round(sum(grade_percentages) / len(grade_percentages), 2)
@@ -544,8 +549,13 @@ def student_classes():
             grade_percentages = []
             for g in class_grades:
                 grade_data = json.loads(g.grade_data)
-                if 'score' in grade_data:
-                    grade_percentages.append(grade_data['score'])
+                if 'score' in grade_data and grade_data['score'] is not None:
+                    try:
+                        # Convert to float in case it's stored as string
+                        score = float(grade_data['score'])
+                        grade_percentages.append(score)
+                    except (ValueError, TypeError):
+                        continue  # Skip invalid scores
             
             if grade_percentages:
                 avg_grade = round(sum(grade_percentages) / len(grade_percentages), 2)

@@ -169,7 +169,7 @@
         </div>
         <div class="card-body">
           <div class="d-grid gap-2">
-            <a href="{{ url_for('class.class_group_assignments', class_id=class_obj.id) }}" class="btn btn-primary btn-sm">
+            <a href="{{ url_for('management.admin_class_group_assignments', class_id=class_obj.id) }}" class="btn btn-primary btn-sm">
               <i class="bi bi-file-text me-1"></i>View Group Assignments
             </a>
             <a href="{{ url_for('management.view_class', class_id=class_obj.id) }}" class="btn btn-outline-secondary btn-sm">

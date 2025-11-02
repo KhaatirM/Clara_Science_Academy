@@ -1037,9 +1037,40 @@ def generate_report_card_form():
                 template_prefix=template_prefix
             )
             
+            # Read CSS file from filesystem and inject it into the HTML
+            import os
+            import re
+            import base64
+            css_path = os.path.join(current_app.root_path, 'static', 'report_card_styles.css')
+            try:
+                with open(css_path, 'r', encoding='utf-8') as f:
+                    css_content = f.read()
+                # Inject CSS into the HTML (replace the link tag with embedded style)
+                html_content = re.sub(
+                    r'<link rel="stylesheet" href="[^"]*report_card_styles\.css[^"]*">',
+                    f'<style>{css_content}</style>',
+                    html_content
+                )
+            except Exception as e:
+                current_app.logger.warning(f'Could not load CSS file: {str(e)}')
+            
+            # Read logo file and convert to base64 for embedding
+            logo_path = os.path.join(current_app.root_path, 'static', 'img', 'clara_logo.png')
+            try:
+                with open(logo_path, 'rb') as f:
+                    logo_data = base64.b64encode(f.read()).decode('utf-8')
+                # Replace logo src with base64 data
+                html_content = re.sub(
+                    r'<img src="[^"]*clara_logo\.png[^"]*"',
+                    f'<img src="data:image/png;base64,{logo_data}"',
+                    html_content
+                )
+            except Exception as e:
+                current_app.logger.warning(f'Could not load logo file: {str(e)}')
+            
             # Generate PDF
             pdf_buffer = BytesIO()
-            HTML(string=html_content, base_url=request.url_root).write_pdf(pdf_buffer)
+            HTML(string=html_content).write_pdf(pdf_buffer)
             pdf_buffer.seek(0)
             
             # Create response - use inline so browser can display it
@@ -1230,9 +1261,45 @@ def generate_report_card_pdf(report_card_id):
             template_prefix=template_prefix
         )
         
+        # Read CSS file from filesystem and inject it into the HTML
+        import os
+        css_path = os.path.join(current_app.root_path, 'static', 'report_card_styles.css')
+        try:
+            with open(css_path, 'r', encoding='utf-8') as f:
+                css_content = f.read()
+            # Inject CSS into the HTML (replace the link tag with embedded style)
+            html_content = html_content.replace(
+                '<link rel="stylesheet" href="{{ url_for(\'static\', filename=\'report_card_styles.css\') }}">',
+                f'<style>{css_content}</style>'
+            )
+            # Also handle already-rendered link tags
+            import re
+            html_content = re.sub(
+                r'<link rel="stylesheet" href="[^"]*report_card_styles\.css[^"]*">',
+                f'<style>{css_content}</style>',
+                html_content
+            )
+        except Exception as e:
+            current_app.logger.warning(f'Could not load CSS file: {str(e)}')
+        
+        # Read logo file and convert to base64 for embedding
+        logo_path = os.path.join(current_app.root_path, 'static', 'img', 'clara_logo.png')
+        try:
+            import base64
+            with open(logo_path, 'rb') as f:
+                logo_data = base64.b64encode(f.read()).decode('utf-8')
+            # Replace logo src with base64 data
+            html_content = re.sub(
+                r'<img src="[^"]*clara_logo\.png[^"]*"',
+                f'<img src="data:image/png;base64,{logo_data}"',
+                html_content
+            )
+        except Exception as e:
+            current_app.logger.warning(f'Could not load logo file: {str(e)}')
+        
         # Generate PDF
         pdf_buffer = BytesIO()
-        HTML(string=html_content, base_url=request.url_root).write_pdf(pdf_buffer)
+        HTML(string=html_content).write_pdf(pdf_buffer)
         pdf_buffer.seek(0)
         
         # Create response

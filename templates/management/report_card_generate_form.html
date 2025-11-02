@@ -32,34 +32,58 @@
           <form method="POST" action="{{ url_for('management.generate_report_card_form') }}" id="reportCardForm" class="needs-validation" novalidate target="_blank">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             
-            <!-- Step 1: Select Student -->
+            <!-- Step 1: Student Info -->
             <div class="form-section mb-5">
               <div class="section-header mb-4">
                 <div class="section-icon">
                   <i class="bi bi-person-circle"></i>
                 </div>
                 <div>
-                  <h5 class="fw-bold mb-1">1. Select Student</h5>
-                  <p class="text-muted mb-0 small">Choose the student for whom you want to generate a report card</p>
+                  <h5 class="fw-bold mb-1">1. Student Information</h5>
+                  <p class="text-muted mb-0 small">Report card will be generated for this student</p>
                 </div>
               </div>
               <div class="row">
                 <div class="col-md-8 mx-auto">
-                  <div class="mb-4">
-                    <label for="student_id" class="form-label fw-semibold">
-                      <i class="bi bi-person me-2"></i>Student <span class="text-danger">*</span>
-                    </label>
-                    <select class="form-select form-select-lg" id="student_id" name="student_id" required>
-                      <option value="">Choose a student...</option>
-                      {% for student in students %}
-                        <option value="{{ student.id }}">
-                          {{ student.first_name }} {{ student.last_name }} - Grade {{ student.grade_level }}
-                          {% if student.student_id %} (ID: {{ student.student_id }}){% endif %}
-                        </option>
-                      {% endfor %}
-                    </select>
-                    <div class="invalid-feedback">Please select a student.</div>
-                  </div>
+                  {% if pre_selected_student %}
+                    <!-- Student pre-selected from category page -->
+                    <input type="hidden" id="student_id" name="student_id" value="{{ pre_selected_student }}">
+                    <div class="alert alert-info border-0 shadow-sm mb-0">
+                      <div class="d-flex align-items-center">
+                        <div class="student-icon me-3">
+                          <i class="bi bi-person-circle"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                          {% set selected_student = students|selectattr('id', 'equalto', pre_selected_student)|first %}
+                          <h5 class="mb-1">{{ selected_student.first_name }} {{ selected_student.last_name }}</h5>
+                          <p class="text-muted mb-0">
+                            Grade {{ selected_student.grade_level }} 
+                            {% if selected_student.student_id %} | ID: {{ selected_student.student_id }}{% endif %}
+                          </p>
+                        </div>
+                        <a href="{{ url_for('management.report_cards') }}" class="btn btn-sm btn-outline-secondary">
+                          <i class="bi bi-arrow-repeat me-1"></i>Change Student
+                        </a>
+                      </div>
+                    </div>
+                  {% else %}
+                    <!-- Manual student selection -->
+                    <div class="mb-4">
+                      <label for="student_id" class="form-label fw-semibold">
+                        <i class="bi bi-person me-2"></i>Student <span class="text-danger">*</span>
+                      </label>
+                      <select class="form-select form-select-lg" id="student_id" name="student_id" required>
+                        <option value="">Choose a student...</option>
+                        {% for student in students %}
+                          <option value="{{ student.id }}">
+                            {{ student.first_name }} {{ student.last_name }} - Grade {{ student.grade_level }}
+                            {% if student.student_id %} (ID: {{ student.student_id }}){% endif %}
+                          </option>
+                        {% endfor %}
+                      </select>
+                      <div class="invalid-feedback">Please select a student.</div>
+                    </div>
+                  {% endif %}
                 </div>
               </div>
             </div>
@@ -112,36 +136,25 @@
                 </div>
               </div>
               <div class="row g-4">
-                <div class="col-md-6">
+                <div class="col-md-12">
                   <div class="form-floating">
                     <select class="form-select" id="school_year_id" name="school_year_id" required>
-                      <option value="">Choose...</option>
                       {% for year in school_years %}
-                        <option value="{{ year.id }}">{{ year.name }}</option>
+                        <option value="{{ year.id }}" {% if year.is_active %}selected{% endif %}>{{ year.name }}</option>
                       {% endfor %}
                     </select>
                     <label for="school_year_id">
                       <i class="bi bi-calendar3 me-2"></i>School Year <span class="text-danger">*</span>
                     </label>
-                    <div class="invalid-feedback">Please select a school year.</div>
+                    <small class="text-muted mt-1 d-block">Current year is pre-selected. Change to generate historical report cards.</small>
                   </div>
                 </div>
-
-                <div class="col-md-6">
-                  <div class="form-floating">
-                    <select class="form-select" id="quarter" name="quarter" required>
-                      <option value="">Choose...</option>
-                      <option value="Q1">Quarter 1</option>
-                      <option value="Q2">Quarter 2</option>
-                      <option value="Q3">Quarter 3</option>
-                      <option value="Q4">Quarter 4</option>
-                    </select>
-                    <label for="quarter">
-                      <i class="bi bi-calendar4-range me-2"></i>Quarter <span class="text-danger">*</span>
-                    </label>
-                    <div class="invalid-feedback">Please select a quarter.</div>
-                  </div>
-                </div>
+              </div>
+              
+              <div class="alert alert-info border-0 shadow-sm mt-4">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>Note:</strong> This report card will show grades for ALL quarters that have data. 
+                Quarters without posted grades will show "—".
               </div>
 
               <div class="card border-0 shadow-sm mt-4" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
@@ -237,6 +250,12 @@
 </div>
 
 <style>
+/* Student Icon */
+.student-icon {
+  font-size: 3rem;
+  color: #0d6efd;
+}
+
 /* Section Header */
 .section-header {
   display: flex;
@@ -396,17 +415,25 @@ document.addEventListener('DOMContentLoaded', function() {
   const classesList = document.getElementById('classes-list');
   const generateBtn = document.getElementById('generateBtn');
 
-  // Load classes when student is selected
-  studentSelect.addEventListener('change', function() {
-    if (this.value) {
-      loadStudentClasses(this.value);
-    } else {
-      classesContainer.style.display = 'none';
-      noClassesMessage.style.display = 'block';
-      noClassesMessage.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>Please select a student first to see their enrolled classes.';
-      classesList.innerHTML = '';
-    }
-  });
+  // Load classes when student is selected (or on page load if pre-selected)
+  if (studentSelect) {
+    studentSelect.addEventListener('change', function() {
+      if (this.value) {
+        loadStudentClasses(this.value);
+      } else {
+        classesContainer.style.display = 'none';
+        noClassesMessage.style.display = 'block';
+        noClassesMessage.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>Please select a student first to see their enrolled classes.';
+        classesList.innerHTML = '';
+      }
+    });
+  }
+  
+  // Auto-load classes if student is pre-selected
+  const studentIdField = document.getElementById('student_id');
+  if (studentIdField && studentIdField.value) {
+    loadStudentClasses(studentIdField.value);
+  }
 
   function loadStudentClasses(studentId) {
     loadingClasses.style.display = 'block';
@@ -500,12 +527,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Check if student is selected
-    if (!studentSelect.value) {
+    const studentIdValue = document.getElementById('student_id').value;
+    if (!studentIdValue) {
       console.log('No student selected');
       e.preventDefault();
       alert('Please select a student first.');
-      studentSelect.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      studentSelect.focus();
       return false;
     }
     
@@ -533,9 +559,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // All validation passed
     console.log('All validation passed, submitting form...');
     console.log('Selected classes:', selectedClasses.map(cb => cb.value));
-    console.log('Student ID:', studentSelect.value);
+    console.log('Student ID:', studentIdValue);
     console.log('School Year:', document.getElementById('school_year_id').value);
-    console.log('Quarter:', document.getElementById('quarter').value);
     
     // Ensure form target is set to open in new window
     form.target = '_blank';

@@ -12,9 +12,14 @@
           </h2>
           <p class="text-muted mb-0">Comprehensive academic report for {{ report_card.student.first_name }} {{ report_card.student.last_name }}</p>
         </div>
-        <a href="{{ url_for('management.report_cards') }}" class="btn btn-outline-secondary">
-          <i class="bi bi-arrow-left me-1"></i>Back to Report Cards
-        </a>
+        <div>
+          <a href="{{ url_for('management.generate_report_card_pdf', report_card_id=report_card.id) }}" class="btn btn-primary me-2" target="_blank">
+            <i class="bi bi-download me-1"></i>Download PDF
+          </a>
+          <a href="{{ url_for('management.report_cards') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Back to Report Cards
+          </a>
+        </div>
       </div>
     </div>
   </div>

@@ -821,14 +821,13 @@ def generate_report_card_form():
         # Get form data
         student_id = request.form.get('student_id')
         school_year_id = request.form.get('school_year_id')
-        quarter = request.form.get('quarter')
         class_ids = request.form.getlist('class_ids')  # Get multiple class IDs
         report_type = request.form.get('report_type', 'official')  # Default to official
         include_attendance = request.form.get('include_attendance') == 'on'
         include_comments = request.form.get('include_comments') == 'on'
         
-        if not all([student_id, school_year_id, quarter]):
-            flash("Please select a student, school year, and quarter.", 'danger')
+        if not all([student_id, school_year_id]):
+            flash("Please select a student and school year.", 'danger')
             return redirect(request.url)
         
         if not class_ids:
@@ -839,11 +838,28 @@ def generate_report_card_form():
         try:
             student_id_int = int(student_id)
             school_year_id_int = int(school_year_id)
-            quarter_str = str(quarter).strip()
             class_ids_int = [int(cid) for cid in class_ids]
         except ValueError:
-            flash("Invalid student, school year, quarter, or class selection.", 'danger')
+            flash("Invalid student, school year, or class selection.", 'danger')
             return redirect(request.url)
+        
+        # Auto-determine the current/latest quarter
+        from datetime import date
+        quarters = AcademicPeriod.query.filter_by(
+            school_year_id=school_year_id_int,
+            period_type='quarter',
+            is_active=True
+        ).order_by(AcademicPeriod.start_date).all()
+        
+        today = date.today()
+        
+        # Find the current or most recent quarter
+        quarter_str = 'Q1'  # Default
+        for q in quarters:
+            if today >= q.start_date:
+                quarter_str = q.name
+        
+        current_app.logger.info(f"Auto-determined quarter: {quarter_str} for date {today}")
 
         # Verify all selected classes exist and student is enrolled
         valid_class_ids = []
@@ -867,27 +883,9 @@ def generate_report_card_form():
         from models import Grade, Assignment
         student = Student.query.get(student_id_int)
         
-        # Determine quarters to include (cumulative data)
-        # For Q3, include Q1 and Q2 data; for Q4, include Q1, Q2, Q3
-        quarter_mapping = {
-            'Q1': ['Q1'],
-            'Q2': ['Q1', 'Q2'],
-            'Q3': ['Q1', 'Q2', 'Q3'],
-            'Q4': ['Q1', 'Q2', 'Q3', 'Q4']
-        }
-        quarters_to_include = quarter_mapping.get(quarter_str, [quarter_str])
-        
-        # Fetch grades for all cumulative quarters for selected classes
-        grades_by_quarter = {}
-        for q in quarters_to_include:
-            quarter_grades = db.session.query(Grade).join(Assignment).filter(
-                Grade.student_id == student_id_int,
-                Assignment.school_year_id == school_year_id_int,
-                Assignment.quarter == q,
-                Assignment.class_id.in_(valid_class_ids),
-                Grade.is_voided == False
-            ).all()
-            grades_by_quarter[q] = quarter_grades
+        # Always include ALL quarters (Q1, Q2, Q3, Q4) for comprehensive report
+        # The system will show "—" for quarters without data
+        quarters_to_include = ['Q1', 'Q2', 'Q3', 'Q4']
         
         # Update quarter grades in database (calculates/refreshes if needed)
         from utils.quarter_grade_calculator import update_all_quarter_grades_for_student, get_quarter_grades_for_report
@@ -3936,23 +3934,47 @@ def attendance_reports():
 @login_required
 @management_required
 def report_cards():
-    """Enhanced report cards management with grade categories."""
-    report_cards = ReportCard.query.order_by(ReportCard.generated_at.desc()).limit(10).all()
-    school_years = SchoolYear.query.all()
-    students = Student.query.all()
-    classes = Class.query.all()
-    quarters = ['Q1', 'Q2', 'Q3', 'Q4']
+    """Enhanced report cards management with grade categories and filtering."""
+    # Get filter parameters
+    selected_school_year = request.args.get('school_year', 'All')
+    selected_quarter = request.args.get('quarter', 'All')
+    selected_student_id = request.args.get('student_id', type=int)
+    selected_class_id = request.args.get('class_id', type=int)
     
-    # Get recent report cards for display
-    recent_reports = ReportCard.query.order_by(ReportCard.generated_at.desc()).limit(10).all()
+    # Build query
+    query = ReportCard.query
     
-    return render_template('management/report_cards_enhanced.html', 
-                         report_cards=report_cards,
+    # Apply filters
+    if selected_school_year != 'All':
+        school_year = SchoolYear.query.filter_by(name=selected_school_year).first()
+        if school_year:
+            query = query.filter_by(school_year_id=school_year.id)
+    
+    if selected_quarter != 'All':
+        query = query.filter_by(quarter=selected_quarter)
+    
+    if selected_student_id:
+        query = query.filter_by(student_id=selected_student_id)
+    
+    # Order by most recent first
+    report_cards_list = query.order_by(ReportCard.generated_at.desc()).all()
+    
+    # Get data for filters
+    school_years = [sy.name for sy in SchoolYear.query.order_by(SchoolYear.name.desc()).all()]
+    all_students = Student.query.order_by(Student.last_name, Student.first_name).all()
+    all_classes = Class.query.order_by(Class.name).all()
+    quarters = ['All', 'Q1', 'Q2', 'Q3', 'Q4']
+    
+    return render_template('management/report_cards_list.html', 
+                         report_cards=report_cards_list,
                          school_years=school_years,
-                         students=students,
-                         classes=classes,
+                         all_students=all_students,
+                         all_classes=all_classes,
                          quarters=quarters,
-                         recent_reports=recent_reports)
+                         selected_school_year=selected_school_year,
+                         selected_quarter=selected_quarter,
+                         selected_student_id=selected_student_id,
+                         selected_class_id=selected_class_id)
 
 @management_blueprint.route('/report-cards/category/<category>')
 @login_required
@@ -3999,6 +4021,54 @@ def report_cards_by_category(category):
                          category_icon=category_info['icon'],
                          category_color=category_info['color'],
                          grade_levels=category_info['grades'])
+
+@management_blueprint.route('/report-cards/student/<int:student_id>')
+@login_required
+@management_required
+def student_report_card_history(student_id):
+    """View all report cards for a specific student (historical view)."""
+    student = Student.query.get_or_404(student_id)
+    
+    # Get all report cards for this student, ordered by school year and quarter
+    report_cards_list = ReportCard.query.filter_by(
+        student_id=student_id
+    ).join(SchoolYear).order_by(
+        SchoolYear.start_date.desc(),
+        ReportCard.quarter.desc()
+    ).all()
+    
+    # Group by school year for better display
+    report_cards_by_year = {}
+    for rc in report_cards_list:
+        year_name = rc.school_year.name if rc.school_year else 'Unknown'
+        if year_name not in report_cards_by_year:
+            report_cards_by_year[year_name] = []
+        report_cards_by_year[year_name].append(rc)
+    
+    return render_template('management/student_report_card_history.html',
+                         student=student,
+                         report_cards_by_year=report_cards_by_year,
+                         total_count=len(report_cards_list))
+
+@management_blueprint.route('/report-cards/delete/<int:report_card_id>', methods=['POST'])
+@login_required
+@management_required
+def delete_report_card(report_card_id):
+    """Delete a report card."""
+    try:
+        report_card = ReportCard.query.get_or_404(report_card_id)
+        student_name = f"{report_card.student.first_name} {report_card.student.last_name}" if report_card.student else "Unknown"
+        quarter = report_card.quarter
+        
+        db.session.delete(report_card)
+        db.session.commit()
+        
+        flash(f'Report card deleted successfully for {student_name} ({quarter}).', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting report card: {str(e)}', 'danger')
+    
+    return redirect(request.referrer or url_for('management.report_cards'))
 
 @management_blueprint.route('/report-cards/generate/<int:student_id>')
 @login_required

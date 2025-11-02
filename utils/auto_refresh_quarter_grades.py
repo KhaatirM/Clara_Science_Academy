@@ -91,8 +91,8 @@ def refresh_all_quarter_grades(force=False, school_year_id=None):
         
         quarter_map = {q.name: q for q in quarters}
         
-        # Get all active students
-        students = Student.query.filter_by(is_active=True).all()
+        # Get all students
+        students = Student.query.all()
         stats['total_students'] += len(students)
         
         for student in students:
@@ -170,8 +170,7 @@ def refresh_quarter_grades_for_ended_quarters():
         
         # Get all students enrolled in classes for this school year
         students = Student.query.join(Enrollment).join(Class).filter(
-            Class.school_year_id == quarter.school_year_id,
-            Student.is_active == True
+            Class.school_year_id == quarter.school_year_id
         ).distinct().all()
         
         for student in students:

@@ -398,10 +398,10 @@
                     <div class="class-assignments-col">
                       <div class="class-assignment-actions">
                         {% if assignment.assignment_type == 'group' %}
-                          <a href="{{ url_for('management.view_group_assignment', assignment_id=assignment.id) }}" class="btn-class-action-modern btn-sm">
+                          <a href="{{ url_for('management.admin_view_group_assignment', assignment_id=assignment.id) }}" class="btn-class-action-modern btn-sm">
                             <i class="bi bi-eye me-1"></i>View
                           </a>
-                          <a href="{{ url_for('management.grade_group_assignment', assignment_id=assignment.id) }}" class="btn-class-action-modern btn-sm">
+                          <a href="{{ url_for('management.admin_grade_group_assignment', assignment_id=assignment.id) }}" class="btn-class-action-modern btn-sm">
                             <i class="bi bi-pencil-square me-1"></i>Grade
                           </a>
                         {% else %}

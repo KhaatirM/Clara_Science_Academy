@@ -1,0 +1,639 @@
+/* ===== TEACHER DASHBOARD ENHANCED STYLES ===== */
+/*
+ * Modern, cohesive design system for all teacher pages
+ * Includes: Group Assignments, Deadline Reminders, Reports, Analytics, 
+ * 360° Feedback, Reflection Journals, Conflict Resolution
+ */
+
+/* ==================== MODERN PAGE HEADERS ==================== */
+.modern-page-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 16px;
+    padding: 2rem;
+    color: white;
+    box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
+    margin-bottom: 2rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.modern-page-header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    border-radius: 50%;
+}
+
+.modern-page-header-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.modern-page-header-subtitle {
+    font-size: 1.1rem;
+    opacity: 0.95;
+    margin: 0;
+}
+
+.modern-page-header-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.btn-modern-primary {
+    background: white;
+    color: #667eea;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 12px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.btn-modern-primary:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(255,255,255,0.4);
+    color: #667eea;
+}
+
+.btn-modern-secondary {
+    background: rgba(255,255,255,0.2);
+    color: white;
+    border: 2px solid white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 12px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-modern-secondary:hover {
+    background: white;
+    color: #667eea;
+}
+
+/* ==================== MODERN STAT CARDS ==================== */
+.modern-stat-card {
+    background: white;
+    border-radius: 16px;
+    padding: 1.75rem;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    border: 1px solid rgba(0,0,0,0.05);
+    transition: all 0.3s ease;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.modern-stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--stat-color, #667eea), var(--stat-color-end, #764ba2));
+}
+
+.modern-stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+}
+
+.modern-stat-icon {
+    width: 70px;
+    height: 70px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.75rem;
+    color: white;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.modern-stat-content {
+    flex: 1;
+}
+
+.modern-stat-value {
+    font-size: 2.75rem;
+    font-weight: 800;
+    color: #2c3e50;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+}
+
+.modern-stat-label {
+    font-size: 0.95rem;
+    color: #6c757d;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Stat card color variants */
+.modern-stat-card.stat-primary {
+    --stat-color: #667eea;
+    --stat-color-end: #764ba2;
+}
+
+.modern-stat-card.stat-primary .modern-stat-icon {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.modern-stat-card.stat-success {
+    --stat-color: #10b981;
+    --stat-color-end: #059669;
+}
+
+.modern-stat-card.stat-success .modern-stat-icon {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.modern-stat-card.stat-warning {
+    --stat-color: #f59e0b;
+    --stat-color-end: #d97706;
+}
+
+.modern-stat-card.stat-warning .modern-stat-icon {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+.modern-stat-card.stat-info {
+    --stat-color: #06b6d4;
+    --stat-color-end: #0891b2;
+}
+
+.modern-stat-card.stat-info .modern-stat-icon {
+    background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+}
+
+.modern-stat-card.stat-danger {
+    --stat-color: #ef4444;
+    --stat-color-end: #dc2626;
+}
+
+.modern-stat-card.stat-danger .modern-stat-icon {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+/* ==================== MODERN CONTENT CARDS ==================== */
+.modern-content-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    border: 1px solid rgba(0,0,0,0.05);
+    transition: all 0.3s ease;
+    overflow: hidden;
+    height: 100%;
+}
+
+.modern-content-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+}
+
+.modern-card-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1.5rem;
+    border: none;
+}
+
+.modern-card-header-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.modern-card-header-subtitle {
+    font-size: 0.9rem;
+    opacity: 0.9;
+    margin: 0.5rem 0 0 0;
+}
+
+.modern-card-body {
+    padding: 1.75rem;
+}
+
+.modern-card-footer {
+    padding: 1.25rem 1.75rem;
+    background: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+}
+
+/* ==================== ITEM CARDS (for lists) ==================== */
+.modern-item-card {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.modern-item-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: var(--item-color, #667eea);
+    transition: width 0.3s ease;
+}
+
+.modern-item-card:hover {
+    border-color: var(--item-color, #667eea);
+    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.15);
+    transform: translateX(5px);
+}
+
+.modern-item-card:hover::before {
+    width: 6px;
+}
+
+.modern-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 1rem;
+}
+
+.modern-item-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 0.25rem;
+}
+
+.modern-item-meta {
+    font-size: 0.85rem;
+    color: #6c757d;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.modern-item-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.modern-item-description {
+    font-size: 0.95rem;
+    color: #495057;
+    margin-bottom: 1rem;
+    line-height: 1.6;
+}
+
+.modern-item-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+/* ==================== MODERN BADGES ==================== */
+.modern-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.modern-badge-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.modern-badge-success {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+}
+
+.modern-badge-warning {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+}
+
+.modern-badge-danger {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+}
+
+.modern-badge-info {
+    background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+    color: white;
+}
+
+.modern-badge-secondary {
+    background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+    color: white;
+}
+
+/* ==================== MODERN ALERTS ==================== */
+.modern-alert {
+    border-radius: 12px;
+    border: none;
+    padding: 1.5rem;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    margin-bottom: 1.5rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.modern-alert::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 5px;
+    background: var(--alert-color, #667eea);
+}
+
+.modern-alert-heading {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.modern-alert-primary {
+    --alert-color: #667eea;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.05) 100%);
+    color: #5a67d8;
+}
+
+.modern-alert-success {
+    --alert-color: #10b981;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.05) 100%);
+    color: #047857;
+}
+
+.modern-alert-warning {
+    --alert-color: #f59e0b;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.05) 100%);
+    color: #b45309;
+}
+
+.modern-alert-danger {
+    --alert-color: #ef4444;
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.05) 100%);
+    color: #b91c1c;
+}
+
+.modern-alert-info {
+    --alert-color: #06b6d4;
+    background: linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(8, 145, 178, 0.05) 100%);
+    color: #0369a1;
+}
+
+/* ==================== MODERN TABLES ==================== */
+.modern-table-container {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+}
+
+.modern-table {
+    margin: 0;
+}
+
+.modern-table thead {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+.modern-table thead th {
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+    color: #495057;
+    padding: 1.25rem 1rem;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.modern-table tbody tr {
+    transition: all 0.2s ease;
+}
+
+.modern-table tbody tr:hover {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.03) 100%);
+}
+
+.modern-table tbody td {
+    padding: 1.25rem 1rem;
+    vertical-align: middle;
+}
+
+/* ==================== MODERN TABS ==================== */
+.modern-tabs {
+    display: flex;
+    gap: 0.5rem;
+    border-bottom: 2px solid #e9ecef;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.modern-tab {
+    padding: 1rem 1.5rem;
+    border: none;
+    background: transparent;
+    color: #6c757d;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-bottom: 3px solid transparent;
+    position: relative;
+}
+
+.modern-tab:hover {
+    color: #667eea;
+    background: rgba(102, 126, 234, 0.05);
+}
+
+.modern-tab.active {
+    color: #667eea;
+    border-bottom-color: #667eea;
+}
+
+/* ==================== MODERN PROGRESS BARS ==================== */
+.modern-progress {
+    height: 12px;
+    background: #e9ecef;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.modern-progress-bar {
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.6s ease;
+    background: linear-gradient(90deg, var(--progress-color, #667eea), var(--progress-color-end, #764ba2));
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.modern-progress-primary .modern-progress-bar {
+    --progress-color: #667eea;
+    --progress-color-end: #764ba2;
+}
+
+.modern-progress-success .modern-progress-bar {
+    --progress-color: #10b981;
+    --progress-color-end: #059669;
+}
+
+.modern-progress-warning .modern-progress-bar {
+    --progress-color: #f59e0b;
+    --progress-color-end: #d97706;
+}
+
+.modern-progress-danger .modern-progress-bar {
+    --progress-color: #ef4444;
+    --progress-color-end: #dc2626;
+}
+
+/* ==================== MODERN EMPTY STATES ==================== */
+.modern-empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 50%, #f8f9fa 100%);
+    border-radius: 16px;
+    border: 2px dashed #dee2e6;
+}
+
+.modern-empty-icon {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    margin: 0 auto 1.5rem;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.modern-empty-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 0.75rem;
+}
+
+.modern-empty-description {
+    color: #6c757d;
+    font-size: 1.05rem;
+    margin-bottom: 1.5rem;
+}
+
+/* ==================== ANIMATIONS ==================== */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade-in-up {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+.animate-delay-1 { animation-delay: 0.1s; }
+.animate-delay-2 { animation-delay: 0.2s; }
+.animate-delay-3 { animation-delay: 0.3s; }
+.animate-delay-4 { animation-delay: 0.4s; }
+
+/* ==================== RESPONSIVE DESIGN ==================== */
+@media (max-width: 768px) {
+    .modern-page-header-title {
+        font-size: 1.75rem;
+    }
+
+    .modern-page-header-subtitle {
+        font-size: 0.95rem;
+    }
+
+    .modern-stat-card {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+    }
+
+    .modern-stat-icon {
+        width: 60px;
+        height: 60px;
+        font-size: 1.5rem;
+    }
+
+    .modern-stat-value {
+        font-size: 2.25rem;
+    }
+
+    .modern-item-card {
+        padding: 1.25rem;
+    }
+
+    .modern-item-actions {
+        flex-direction: column;
+    }
+
+    .modern-item-actions .btn {
+        width: 100%;
+    }
+}
+
+/* ==================== UTILITY CLASSES ==================== */
+.gradient-text {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.modern-shadow-sm {
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+}
+
+.modern-shadow {
+    box-shadow: 0 5px 20px rgba(0,0,0,0.12);
+}
+
+.modern-shadow-lg {
+    box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+}
+

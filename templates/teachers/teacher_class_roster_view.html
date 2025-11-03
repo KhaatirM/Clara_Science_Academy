@@ -69,7 +69,7 @@
     <!-- Left Column: Class Info & Management -->
     <div class="col-12 col-lg-4">
       <!-- Class Information Card -->
-      <div class="teacher-class-card-modern mb-4">
+      <div class="teacher-class-card-modern mb-4" style="max-height: 350px;">
         <div class="teacher-class-card-header">
           <div class="teacher-class-card-icon">
             <i class="bi bi-info-circle"></i>
@@ -79,7 +79,7 @@
             <p class="teacher-class-card-subject">Course Details</p>
           </div>
         </div>
-        <div class="teacher-class-card-body">
+        <div class="teacher-class-card-body" style="padding-bottom: 1rem;">
           <div class="teacher-class-info-section">
             <div class="teacher-class-info-item">
               <i class="bi bi-book me-2"></i>
@@ -106,7 +106,7 @@
       </div>
       
       <!-- Class Management Card -->
-      <div class="teacher-class-card-modern mb-4">
+      <div class="teacher-class-card-modern mb-4" style="max-height: 500px;">
         <div class="teacher-class-card-header">
           <div class="teacher-class-card-icon">
             <i class="bi bi-tools"></i>
@@ -116,7 +116,7 @@
             <p class="teacher-class-card-subject">Quick Actions</p>
           </div>
         </div>
-        <div class="teacher-class-card-body">
+        <div class="teacher-class-card-body" style="padding-bottom: 1rem; overflow-y: auto;">
           <!-- Core Management Actions -->
           <div class="mb-4">
             <h6 class="teacher-class-section-title">
@@ -192,7 +192,7 @@
       </div>
       
       <!-- Announcements Card -->
-      <div class="teacher-class-card-modern mb-4">
+      <div class="teacher-class-card-modern mb-4" style="max-height: 350px;">
         <div class="teacher-class-card-header">
           <div class="teacher-class-card-icon">
             <i class="bi bi-megaphone"></i>
@@ -202,7 +202,7 @@
             <p class="teacher-class-card-subject">Latest Updates</p>
           </div>
         </div>
-        <div class="teacher-class-card-body">
+        <div class="teacher-class-card-body" style="max-height: 250px; overflow-y: auto; padding-bottom: 1rem;">
           {% if announcements %}
             <div class="teacher-class-announcements">
               {% for ann in announcements %}

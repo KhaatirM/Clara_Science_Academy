@@ -185,6 +185,116 @@ def create_template_context(student, section, active_tab, **kwargs):
     
     return base_context
 
+@student_blueprint.route('/submit-360-feedback', methods=['POST'])
+@login_required
+@student_required
+def submit_360_feedback():
+    """Handle 360 degree feedback submission"""
+    student = Student.query.get_or_404(current_user.student_id)
+    
+    try:
+        from models import Feedback360Response
+        
+        feedback360_id = request.form.get('feedback360_id')
+        feedback_data = request.form.get('feedback_data')
+        is_anonymous = request.form.get('is_anonymous') == 'true'
+        
+        # Create new response
+        new_response = Feedback360Response(
+            feedback360_id=int(feedback360_id),
+            respondent_id=student.id,
+            respondent_type='peer',  # Could be peer, self, or teacher
+            feedback_data=feedback_data,
+            is_anonymous=is_anonymous
+        )
+        
+        db.session.add(new_response)
+        db.session.commit()
+        
+        flash('360° Feedback submitted successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error submitting feedback: {str(e)}', 'error')
+    
+    return redirect(url_for('student.student_submissions'))
+
+@student_blueprint.route('/submit-reflection-journal', methods=['POST'])
+@login_required
+@student_required
+def submit_reflection_journal():
+    """Handle reflection journal submission"""
+    student = Student.query.get_or_404(current_user.student_id)
+    
+    try:
+        from models import ReflectionJournal
+        
+        group_assignment_id = request.form.get('group_assignment_id')
+        group_id = request.form.get('group_id')
+        reflection_text = request.form.get('reflection_text')
+        collaboration_rating = request.form.get('collaboration_rating')
+        learning_rating = request.form.get('learning_rating')
+        challenges_faced = request.form.get('challenges_faced', '')
+        lessons_learned = request.form.get('lessons_learned', '')
+        
+        # Create new journal
+        new_journal = ReflectionJournal(
+            student_id=student.id,
+            group_id=int(group_id),
+            group_assignment_id=int(group_assignment_id),
+            reflection_text=reflection_text,
+            collaboration_rating=int(collaboration_rating),
+            learning_rating=int(learning_rating),
+            challenges_faced=challenges_faced,
+            lessons_learned=lessons_learned
+        )
+        
+        db.session.add(new_journal)
+        db.session.commit()
+        
+        flash('Reflection journal submitted successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error submitting journal: {str(e)}', 'error')
+    
+    return redirect(url_for('student.student_submissions'))
+
+@student_blueprint.route('/submit-conflict-report', methods=['POST'])
+@login_required
+@student_required
+def submit_conflict_report():
+    """Handle conflict report submission"""
+    student = Student.query.get_or_404(current_user.student_id)
+    
+    try:
+        from models import GroupConflict
+        
+        group_assignment_id = request.form.get('group_assignment_id')
+        group_id = request.form.get('group_id')
+        conflict_type = request.form.get('conflict_type')
+        severity_level = request.form.get('severity_level')
+        conflict_description = request.form.get('conflict_description')
+        
+        # Create new conflict report
+        new_conflict = GroupConflict(
+            group_id=int(group_id),
+            group_assignment_id=int(group_assignment_id),
+            reported_by=student.id,
+            conflict_type=conflict_type,
+            conflict_description=conflict_description,
+            severity_level=severity_level,
+            status='reported'
+        )
+        
+        db.session.add(new_conflict)
+        db.session.commit()
+        
+        flash('Conflict report submitted successfully! Your teacher will review it.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error submitting conflict report: {str(e)}', 'error')
+    
+    return redirect(url_for('student.student_submissions'))
+
 @student_blueprint.route('/submissions')
 @login_required
 @student_required
@@ -196,25 +306,54 @@ def student_submissions():
     feedback_submissions = []
     journal_submissions = []
     conflict_reports = []
+    available_feedback_sessions = []
+    student_group_assignments = []
     
-    # Try to get student's feedback submissions (may not exist in all deployments)
+    # Get current school year
+    current_school_year = SchoolYear.query.filter_by(is_active=True).first()
+    
+    # Try to get student's feedback submissions
     try:
-        from models import FeedbackResponse
-        feedback_submissions = FeedbackResponse.query.filter_by(responder_id=student.id).order_by(FeedbackResponse.submitted_at.desc()).all()
+        from models import Feedback360Response, Feedback360
+        feedback_submissions = Feedback360Response.query.filter_by(respondent_id=student.id).order_by(Feedback360Response.submitted_at.desc()).all()
+        
+        # Get available active feedback sessions for student's classes
+        if current_school_year:
+            enrollments = Enrollment.query.filter_by(student_id=student.id, is_active=True).all()
+            class_ids = [e.class_id for e in enrollments]
+            available_feedback_sessions = Feedback360.query.filter(
+                Feedback360.class_id.in_(class_ids),
+                Feedback360.is_active == True
+            ).all()
     except Exception as e:
         current_app.logger.warning(f"Could not load feedback submissions: {e}")
     
     # Try to get student's reflection journals
     try:
-        from models import ReflectionJournal
+        from models import ReflectionJournal, StudentGroupMember, GroupAssignment
         journal_submissions = ReflectionJournal.query.filter_by(student_id=student.id).order_by(ReflectionJournal.submitted_at.desc()).all()
+        
+        # Get student's group assignments
+        group_memberships = StudentGroupMember.query.filter_by(student_id=student.id).all()
+        for membership in group_memberships:
+            group = membership.group
+            if group and group.class_id:
+                # Get group assignments for this group's class
+                assignments = GroupAssignment.query.filter_by(class_id=group.class_id).all()
+                for assignment in assignments:
+                    student_group_assignments.append({
+                        'id': assignment.id,
+                        'title': assignment.title,
+                        'class_name': group.class_info.name if group.class_info else 'Unknown Class',
+                        'group_id': group.id
+                    })
     except Exception as e:
         current_app.logger.warning(f"Could not load reflection journals: {e}")
     
     # Try to get student's conflict reports
     try:
         from models import GroupConflict
-        conflict_reports = GroupConflict.query.filter_by(reporter_id=student.id).order_by(GroupConflict.reported_at.desc()).all()
+        conflict_reports = GroupConflict.query.filter_by(reported_by=student.id).order_by(GroupConflict.reported_at.desc()).all()
     except Exception as e:
         current_app.logger.warning(f"Could not load conflict reports: {e}")
     
@@ -222,7 +361,9 @@ def student_submissions():
                          student=student,
                          feedback_submissions=feedback_submissions,
                          journal_submissions=journal_submissions,
-                         conflict_reports=conflict_reports)
+                         conflict_reports=conflict_reports,
+                         available_feedback_sessions=available_feedback_sessions,
+                         student_group_assignments=student_group_assignments)
 
 @student_blueprint.route('/dashboard')
 @login_required

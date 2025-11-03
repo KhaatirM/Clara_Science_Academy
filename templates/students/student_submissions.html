@@ -247,48 +247,215 @@
     </div>
 </div>
 
-<!-- Modals for submissions would go here -->
-<!-- For now, these are placeholders - actual submission forms would be implemented based on existing models -->
+<!-- 360° Feedback Modal -->
 <div class="modal fade" id="feedbackModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Submit 360° Feedback</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p class="text-muted">360° Feedback submission form coming soon...</p>
-            </div>
+            <form method="POST" action="{{ url_for('student.submit_360_feedback') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-header" style="background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);">
+                    <h5 class="modal-title text-white"><i class="bi bi-arrow-repeat me-2"></i>Submit 360° Feedback</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Select Feedback Session</label>
+                        <select name="feedback360_id" class="form-select" required id="feedbackSessionSelect">
+                            <option value="">Choose a session...</option>
+                            {% if available_feedback_sessions %}
+                                {% for session in available_feedback_sessions %}
+                                    <option value="{{ session.id }}">{{ session.title }} ({{ session.target_student.first_name }} {{ session.target_student.last_name }})</option>
+                                {% endfor %}
+                            {% else %}
+                                <option disabled>No active feedback sessions available</option>
+                            {% endif %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Your Feedback (JSON format)</label>
+                        <textarea name="feedback_data" class="form-control" rows="6" required 
+                                  placeholder='{"communication": 5, "teamwork": 4, "leadership": 5, "comments": "Great collaborator!"}'></textarea>
+                        <small class="text-muted">Provide your feedback in JSON format with ratings and comments</small>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input type="checkbox" name="is_anonymous" value="true" class="form-check-input" id="anonymousCheck">
+                        <label class="form-check-label" for="anonymousCheck">Submit anonymously</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn text-white" style="background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);">
+                        <i class="bi bi-send me-1"></i>Submit Feedback
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 
+<!-- Reflection Journal Modal -->
 <div class="modal fade" id="journalModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Write Reflection Journal</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p class="text-muted">Reflection journal form coming soon...</p>
-            </div>
+            <form method="POST" action="{{ url_for('student.submit_reflection_journal') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-header" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                    <h5 class="modal-title text-white"><i class="bi bi-journal-text me-2"></i>Write Reflection Journal</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Select Group Assignment</label>
+                        <select name="group_assignment_id" class="form-select" required id="groupAssignmentSelect" onchange="loadGroupForAssignment()">
+                            <option value="">Choose an assignment...</option>
+                            {% if student_group_assignments %}
+                                {% for assignment in student_group_assignments %}
+                                    <option value="{{ assignment.id }}" data-group-id="{{ assignment.group_id }}">{{ assignment.title }} - {{ assignment.class_name }}</option>
+                                {% endfor %}
+                            {% else %}
+                                <option disabled>No group assignments available</option>
+                            {% endif %}
+                        </select>
+                    </div>
+                    <input type="hidden" name="group_id" id="groupIdInput">
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Reflection</label>
+                        <textarea name="reflection_text" class="form-control" rows="5" required 
+                                  placeholder="Share your thoughts on the group work experience..."></textarea>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Collaboration Rating</label>
+                            <select name="collaboration_rating" class="form-select" required>
+                                <option value="">Select rating...</option>
+                                <option value="5">⭐⭐⭐⭐⭐ Excellent (5)</option>
+                                <option value="4">⭐⭐⭐⭐ Good (4)</option>
+                                <option value="3">⭐⭐⭐ Average (3)</option>
+                                <option value="2">⭐⭐ Fair (2)</option>
+                                <option value="1">⭐ Poor (1)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Learning Rating</label>
+                            <select name="learning_rating" class="form-select" required>
+                                <option value="">Select rating...</option>
+                                <option value="5">⭐⭐⭐⭐⭐ Excellent (5)</option>
+                                <option value="4">⭐⭐⭐⭐ Good (4)</option>
+                                <option value="3">⭐⭐⭐ Average (3)</option>
+                                <option value="2">⭐⭐ Fair (2)</option>
+                                <option value="1">⭐ Poor (1)</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Challenges Faced (Optional)</label>
+                        <textarea name="challenges_faced" class="form-control" rows="3" 
+                                  placeholder="What challenges did your group encounter?"></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Lessons Learned (Optional)</label>
+                        <textarea name="lessons_learned" class="form-control" rows="3" 
+                                  placeholder="What did you learn from this experience?"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn text-white" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                        <i class="bi bi-send me-1"></i>Submit Journal
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 
+<!-- Conflict Report Modal -->
 <div class="modal fade" id="conflictModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Report Conflict</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p class="text-muted">Conflict report form coming soon...</p>
-            </div>
+            <form method="POST" action="{{ url_for('student.submit_conflict_report') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-header" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                    <h5 class="modal-title text-white"><i class="bi bi-exclamation-triangle-fill me-2"></i>Report Conflict</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Confidential Reporting:</strong> This report will be reviewed by your teacher to help resolve the issue.
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Select Group Assignment</label>
+                        <select name="group_assignment_id" class="form-select" required id="conflictAssignmentSelect" onchange="loadGroupForConflict()">
+                            <option value="">Choose an assignment...</option>
+                            {% if student_group_assignments %}
+                                {% for assignment in student_group_assignments %}
+                                    <option value="{{ assignment.id }}" data-group-id="{{ assignment.group_id }}">{{ assignment.title }} - {{ assignment.class_name }}</option>
+                                {% endfor %}
+                            {% else %}
+                                <option disabled>No group assignments available</option>
+                            {% endif %}
+                        </select>
+                    </div>
+                    <input type="hidden" name="group_id" id="conflictGroupIdInput">
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Conflict Type</label>
+                        <select name="conflict_type" class="form-select" required>
+                            <option value="">Select type...</option>
+                            <option value="communication">Communication Issues</option>
+                            <option value="workload">Unequal Workload Distribution</option>
+                            <option value="personality">Personality Conflicts</option>
+                            <option value="participation">Lack of Participation</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Severity Level</label>
+                        <select name="severity_level" class="form-select" required>
+                            <option value="">Select severity...</option>
+                            <option value="low">Low - Minor issue</option>
+                            <option value="medium">Medium - Affecting work</option>
+                            <option value="high">High - Significant impact</option>
+                            <option value="critical">Critical - Urgent intervention needed</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Describe the Conflict</label>
+                        <textarea name="conflict_description" class="form-control" rows="5" required 
+                                  placeholder="Please provide details about the conflict..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn text-white" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                        <i class="bi bi-send me-1"></i>Submit Report
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
+
+<script>
+function loadGroupForAssignment() {
+    const select = document.getElementById('groupAssignmentSelect');
+    const groupId = select.options[select.selectedIndex].getAttribute('data-group-id');
+    document.getElementById('groupIdInput').value = groupId;
+}
+
+function loadGroupForConflict() {
+    const select = document.getElementById('conflictAssignmentSelect');
+    const groupId = select.options[select.selectedIndex].getAttribute('data-group-id');
+    document.getElementById('conflictGroupIdInput').value = groupId;
+}
+</script>
 {% endblock %}
 

@@ -267,14 +267,14 @@
                         </div>
                         <div class="gpa-badge">
                             <span class="gpa-value">{{ data.gpa }}</span>
-                            <small class="gpa-label">GPA</small>
+                            <small class="gpa-label">{% if class_filter %}Class GPA{% else %}GPA{% endif %}</small>
                         </div>
                     </div>
                     
                     <div class="student-gpa-stats">
                         <div class="stat-item">
                             <div class="stat-value">{{ data.percentage }}%</div>
-                            <div class="stat-label">Overall</div>
+                            <div class="stat-label">{% if class_filter %}Class Grade{% else %}Overall Grade{% endif %}</div>
                         </div>
                         <div class="stat-item">
                             <div class="stat-value">{{ data.graded_assignments }}</div>
@@ -290,15 +290,28 @@
                         <h6 class="history-title">Recent Assignments</h6>
                         <div class="history-list">
                             {% for history in data.assignment_history[:5] %}
-                            <div class="history-item">
+                            <div class="history-item {% if history.is_voided %}voided-assignment{% endif %}">
                                 <div class="history-assignment">
-                                    <span class="assignment-name">{{ history.assignment.title }}</span>
+                                    <span class="assignment-name">
+                                        {{ history.assignment.title }}
+                                        {% if history.is_voided %}
+                                            <span class="voided-badge" title="Voided: {{ history.voided_reason or 'No reason provided' }}">
+                                                <i class="bi bi-slash-circle"></i> VOIDED
+                                            </span>
+                                        {% endif %}
+                                    </span>
                                     <small class="assignment-class">{{ history.class_name }}</small>
                                 </div>
                                 <div class="history-grade">
-                                    <span class="grade-score {% if history.score >= 90 %}text-success{% elif history.score >= 70 %}text-warning{% else %}text-danger{% endif %}">
-                                        {{ history.score }}%
-                                    </span>
+                                    {% if history.is_voided %}
+                                        <span class="grade-score text-muted" style="text-decoration: line-through;">
+                                            {{ history.score }}%
+                                        </span>
+                                    {% else %}
+                                        <span class="grade-score {% if history.score >= 90 %}text-success{% elif history.score >= 70 %}text-warning{% else %}text-danger{% endif %}">
+                                            {{ history.score }}%
+                                        </span>
+                                    {% endif %}
                                     <small class="grade-date">{{ history.due_date.strftime('%m/%d') }}</small>
                                 </div>
                             </div>

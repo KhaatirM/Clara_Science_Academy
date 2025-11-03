@@ -711,6 +711,39 @@
 
 .history-item:hover {
     background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+}
+
+/* Voided Assignment Styles */
+.voided-assignment {
+    background: linear-gradient(135deg, #fee2e2, #fef2f2) !important;
+    border-color: #fca5a5 !important;
+    opacity: 0.85;
+}
+
+.voided-assignment:hover {
+    background: linear-gradient(135deg, #fecaca, #fee2e2) !important;
+    opacity: 1;
+}
+
+.voided-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    background: linear-gradient(135deg, #dc2626, #991b1b);
+    color: white;
+    padding: 0.15rem 0.5rem;
+    border-radius: 6px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-left: 0.5rem;
+    box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
+}
+
+.voided-badge i {
+    font-size: 0.75rem;
+}
     border-color: #3b82f6;
     transform: translateX(2px);
 }

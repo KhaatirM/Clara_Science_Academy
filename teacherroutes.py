@@ -1654,7 +1654,18 @@ def assignments_and_grades():
                 }
             
             # Get student GPA data for enhanced grades view
-            if current_user.role == 'Director':
+            # If class filter is applied, only show students from that class
+            if class_filter and class_filter.strip():
+                try:
+                    class_id = int(class_filter)
+                    all_students = Student.query.join(Enrollment).filter(
+                        Enrollment.class_id == class_id,
+                        Enrollment.is_active == True
+                    ).all()
+                except ValueError:
+                    # Invalid class_id, show no students
+                    all_students = []
+            elif current_user.role == 'Director':
                 all_students = Student.query.all()
             elif teacher is not None:
                 # Get students from teacher's classes
@@ -1664,8 +1675,20 @@ def assignments_and_grades():
                 all_students = []
             
             for student in all_students:
-                # Get all grades for this student across all assignments
-                student_grades = Grade.query.filter_by(student_id=student.id).all()
+                # Get grades for this student - filter by class if specified
+                if class_filter and class_filter.strip():
+                    try:
+                        class_id = int(class_filter)
+                        # Get grades only from the selected class
+                        student_grades = Grade.query.join(Assignment).filter(
+                            Grade.student_id == student.id,
+                            Assignment.class_id == class_id
+                        ).all()
+                    except ValueError:
+                        student_grades = Grade.query.filter_by(student_id=student.id).all()
+                else:
+                    # Get all grades for this student across all assignments
+                    student_grades = Grade.query.filter_by(student_id=student.id).all()
                 
                 # Calculate GPA and collect assignment history
                 assignment_history = []
@@ -1686,18 +1709,25 @@ def assignments_and_grades():
                                 score = grade_dict['score']
                                 points = getattr(grade.assignment, 'points', None) or 100  # Default to 100 if no points specified
                                 
+                                # Check if assignment is voided for this student
+                                is_voided = getattr(grade, 'is_voided', False)
+                                
                                 assignment_history.append({
                                     'assignment': grade.assignment,
                                     'score': score,
                                     'points': points,
                                     'earned_points': (score / 100) * points,
                                     'due_date': grade.assignment.due_date,
-                                    'class_name': grade.assignment.class_info.name if grade.assignment.class_info else 'Unknown'
+                                    'class_name': grade.assignment.class_info.name if grade.assignment.class_info else 'Unknown',
+                                    'is_voided': is_voided,
+                                    'voided_reason': getattr(grade, 'voided_reason', None) if is_voided else None
                                 })
                                 
-                                total_points += points
-                                earned_points += (score / 100) * points
-                                graded_assignments += 1
+                                # Only count non-voided assignments toward GPA
+                                if not is_voided:
+                                    total_points += points
+                                    earned_points += (score / 100) * points
+                                    graded_assignments += 1
                         except (json.JSONDecodeError, TypeError):
                             continue
                 

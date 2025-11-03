@@ -152,7 +152,7 @@
                         <i class="bi bi-eye"></i>
                       </a>
                       <button type="button" class="btn btn-outline-danger btn-sm" 
-                              onclick="confirmDeleteFeedback({{ session.id }}, '{{ session.title|replace("'", "\\'") }}')" 
+                              onclick="confirmDeleteSession({{ session.id }}, '{{ session.title|replace("'", "\\'") }}')" 
                               title="Delete">
                         <i class="bi bi-trash"></i>
                       </button>
@@ -183,15 +183,15 @@
 </div>
 
 <!-- Hidden delete form -->
-<form id="deleteFeedbackForm" method="POST" style="display: none;">
+<form id="deleteSessionForm" method="POST" style="display: none;">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 </form>
 
 <script>
-function confirmDeleteFeedback(feedbackId, feedbackTitle) {
-    if (confirm(`Are you sure you want to delete the feedback session "${feedbackTitle}"?\n\nThis action cannot be undone and will delete all responses.`)) {
-        const form = document.getElementById('deleteFeedbackForm');
-        form.action = "{{ url_for('teacher.delete_360_feedback', feedback_id=0) }}".replace('0', feedbackId);
+function confirmDeleteSession(sessionId, sessionTitle) {
+    if (confirm(`Are you sure you want to delete the feedback session "${sessionTitle}"?\n\nThis action cannot be undone and will delete all responses.`)) {
+        const form = document.getElementById('deleteSessionForm');
+        form.action = "{{ url_for('teacher.delete_360_feedback', session_id=0) }}".replace('0', sessionId);
         form.submit();
     }
 }

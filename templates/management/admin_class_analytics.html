@@ -17,37 +17,41 @@
     </div>
   </div>
 
-  <!-- Overview Stats -->
-  <div class="row g-3 g-md-4 mb-4">
+  <!-- Enhanced Stats Cards -->
+  <div class="row g-3 mb-4">
     <div class="col-12 col-md-3">
-      <div class="card shadow-sm">
-        <div class="card-body text-center">
-          <h4 class="text-primary">{{ groups|length }}</h4>
-          <p class="mb-0">Active Groups</p>
+      <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+        <div class="card-body text-white text-center py-4">
+          <i class="bi bi-people-fill display-4 mb-2 opacity-75"></i>
+          <h2 class="mb-0 fw-bold">{{ groups|length }}</h2>
+          <p class="mb-0 small text-white-50">Active Groups</p>
         </div>
       </div>
     </div>
     <div class="col-12 col-md-3">
-      <div class="card shadow-sm">
-        <div class="card-body text-center">
-          <h4 class="text-success">{{ group_assignments|length }}</h4>
-          <p class="mb-0">Group Assignments</p>
+      <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);">
+        <div class="card-body text-white text-center py-4">
+          <i class="bi bi-journal-text display-4 mb-2 opacity-75"></i>
+          <h2 class="mb-0 fw-bold">{{ group_assignments|length }}</h2>
+          <p class="mb-0 small text-white-50">Group Assignments</p>
         </div>
       </div>
     </div>
     <div class="col-12 col-md-3">
-      <div class="card shadow-sm">
-        <div class="card-body text-center">
-          <h4 class="text-info">{{ collaboration_metrics|length }}</h4>
-          <p class="mb-0">Collaboration Metrics</p>
+      <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+        <div class="card-body text-white text-center py-4">
+          <i class="bi bi-graph-up display-4 mb-2 opacity-75"></i>
+          <h2 class="mb-0 fw-bold">{{ collaboration_metrics|length }}</h2>
+          <p class="mb-0 small text-white-50">Metrics Tracked</p>
         </div>
       </div>
     </div>
     <div class="col-12 col-md-3">
-      <div class="card shadow-sm">
-        <div class="card-body text-center">
-          <h4 class="text-warning">{{ benchmarks|length }}</h4>
-          <p class="mb-0">Performance Benchmarks</p>
+      <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+        <div class="card-body text-white text-center py-4">
+          <i class="bi bi-trophy-fill display-4 mb-2 opacity-75"></i>
+          <h2 class="mb-0 fw-bold">{{ benchmarks|length }}</h2>
+          <p class="mb-0 small text-white-50">Benchmarks</p>
         </div>
       </div>
     </div>
@@ -58,9 +62,9 @@
     <!-- Main Analytics -->
     <div class="col-12 col-lg-8">
       <!-- Group Performance Chart -->
-      <div class="card shadow-sm mb-4">
-        <div class="card-header bg-primary text-white">
-          <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Group Performance Overview</h5>
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+          <h5 class="mb-0 text-white"><i class="bi bi-graph-up me-2"></i>Group Performance Overview</h5>
         </div>
         <div class="card-body">
           {% if groups %}
@@ -125,9 +129,9 @@
       </div>
 
       <!-- Collaboration Metrics -->
-      <div class="card shadow-sm">
-        <div class="card-header bg-info text-white">
-          <h5 class="mb-0"><i class="bi bi-people-fill me-2"></i>Collaboration Metrics</h5>
+      <div class="card border-0 shadow-sm">
+        <div class="card-header" style="background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);">
+          <h5 class="mb-0 text-white"><i class="bi bi-people-fill me-2"></i>Collaboration Metrics</h5>
         </div>
         <div class="card-body">
           {% if collaboration_metrics %}

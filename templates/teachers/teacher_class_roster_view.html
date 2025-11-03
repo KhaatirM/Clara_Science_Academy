@@ -230,7 +230,7 @@
       <div class="row g-4">
         <!-- Enrolled Students Card -->
         <div class="col-12 col-md-6">
-          <div class="teacher-class-card-modern h-100">
+          <div class="teacher-class-card-modern">
             <div class="teacher-class-card-header">
               <div class="teacher-class-card-icon">
                 <i class="bi bi-people-fill"></i>
@@ -240,7 +240,7 @@
                 <p class="teacher-class-card-subject">{{ enrolled_students|length }} Students</p>
               </div>
             </div>
-            <div class="teacher-class-card-body">
+            <div class="teacher-class-card-body" style="max-height: 400px; overflow-y: auto;">
               {% if enrolled_students %}
                 <div class="teacher-class-students-list">
                   {% for student in enrolled_students %}
@@ -271,7 +271,7 @@
         
         <!-- Recent Assignments Card -->
         <div class="col-12 col-md-6">
-          <div class="teacher-class-card-modern h-100">
+          <div class="teacher-class-card-modern">
             <div class="teacher-class-card-header">
               <div class="teacher-class-card-icon">
                 <i class="bi bi-journal-text"></i>
@@ -281,7 +281,7 @@
                 <p class="teacher-class-card-subject">{{ assignments|length }} Assignments</p>
               </div>
             </div>
-            <div class="teacher-class-card-body">
+            <div class="teacher-class-card-body" style="max-height: 400px; overflow-y: auto;">
               {% if assignments %}
                 <div class="teacher-class-assignments-list">
                   {% for assignment in assignments %}
@@ -321,7 +321,7 @@
             <p class="teacher-class-card-subject">Last 7 Days</p>
           </div>
         </div>
-        <div class="teacher-class-card-body">
+        <div class="teacher-class-card-body" style="max-height: 400px; overflow-y: auto;">
           {% if recent_attendance %}
             <div class="teacher-class-attendance-table">
               <div class="teacher-class-attendance-header">

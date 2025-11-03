@@ -649,20 +649,26 @@ def student_grades():
         # Process regular assignment grades
         for grade in grades:
             grade_data = json.loads(grade.grade_data)
-            if 'score' in grade_data:
-                score = grade_data['score']
-                assignment_grades[grade.assignment.title] = f"{score}%"
-                total_score += score
-                valid_grades += 1
+            if 'score' in grade_data and grade_data['score'] is not None:
+                try:
+                    score = float(grade_data['score'])  # Convert to float
+                    assignment_grades[grade.assignment.title] = f"{score}%"
+                    total_score += score
+                    valid_grades += 1
+                except (ValueError, TypeError):
+                    continue  # Skip invalid scores
         
         # Process group assignment grades
         for group_grade in group_grades:
             grade_data = json.loads(group_grade.grade_data) if isinstance(group_grade.grade_data, str) else group_grade.grade_data
-            if 'score' in grade_data:
-                score = grade_data['score']
-                assignment_grades[group_grade.group_assignment.title] = f"{score}%"
-                total_score += score
-                valid_grades += 1
+            if 'score' in grade_data and grade_data['score'] is not None:
+                try:
+                    score = float(grade_data['score'])  # Convert to float
+                    assignment_grades[group_grade.group_assignment.title] = f"{score}%"
+                    total_score += score
+                    valid_grades += 1
+                except (ValueError, TypeError):
+                    continue  # Skip invalid scores
         
         if valid_grades > 0:
             class_average = round(total_score / valid_grades, 2)

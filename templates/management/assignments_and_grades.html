@@ -98,10 +98,10 @@
                         </div>
                         <div class="assignment-class-info">
                             <h6 class="assignment-class-title">{{ class_obj.name }}</h6>
-                            <p class="assignment-class-subject">{{ class_obj.subject or 'General' }}</p>
-                        </div>
-                        <div class="assignment-class-badge">
-                            <span class="badge bg-white text-dark">{{ class_assignments.get(class_obj.id, 0) }} assignments</span>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <p class="assignment-class-subject mb-0">{{ class_obj.subject or 'General' }}</p>
+                                <span class="badge bg-white text-dark ms-2">{{ class_assignments.get(class_obj.id, 0) }} assignments</span>
+                            </div>
                         </div>
                     </div>
                     

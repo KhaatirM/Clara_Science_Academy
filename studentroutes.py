@@ -192,15 +192,31 @@ def student_submissions():
     """Student submissions page for 360 feedback, journals, and conflicts"""
     student = Student.query.get_or_404(current_user.student_id)
     
-    # Get student's feedback submissions
-    from models import FeedbackResponse, ReflectionJournal, GroupConflict
-    feedback_submissions = FeedbackResponse.query.filter_by(responder_id=student.id).order_by(FeedbackResponse.submitted_at.desc()).all()
+    # Initialize empty lists as defaults
+    feedback_submissions = []
+    journal_submissions = []
+    conflict_reports = []
     
-    # Get student's reflection journals
-    journal_submissions = ReflectionJournal.query.filter_by(student_id=student.id).order_by(ReflectionJournal.submitted_at.desc()).all()
+    # Try to get student's feedback submissions (may not exist in all deployments)
+    try:
+        from models import FeedbackResponse
+        feedback_submissions = FeedbackResponse.query.filter_by(responder_id=student.id).order_by(FeedbackResponse.submitted_at.desc()).all()
+    except Exception as e:
+        current_app.logger.warning(f"Could not load feedback submissions: {e}")
     
-    # Get student's conflict reports
-    conflict_reports = GroupConflict.query.filter_by(reporter_id=student.id).order_by(GroupConflict.reported_at.desc()).all()
+    # Try to get student's reflection journals
+    try:
+        from models import ReflectionJournal
+        journal_submissions = ReflectionJournal.query.filter_by(student_id=student.id).order_by(ReflectionJournal.submitted_at.desc()).all()
+    except Exception as e:
+        current_app.logger.warning(f"Could not load reflection journals: {e}")
+    
+    # Try to get student's conflict reports
+    try:
+        from models import GroupConflict
+        conflict_reports = GroupConflict.query.filter_by(reporter_id=student.id).order_by(GroupConflict.reported_at.desc()).all()
+    except Exception as e:
+        current_app.logger.warning(f"Could not load conflict reports: {e}")
     
     return render_template('students/student_submissions.html',
                          student=student,

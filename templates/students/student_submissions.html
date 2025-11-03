@@ -149,9 +149,9 @@
                                 <tbody>
                                     {% for feedback in feedback_submissions[:10] %}
                                     <tr>
-                                        <td><small>{{ feedback.submitted_at.strftime('%m/%d/%Y %I:%M %p') }}</small></td>
-                                        <td>{{ feedback.target_student.first_name }} {{ feedback.target_student.last_name }}</td>
-                                        <td>{{ feedback.session.title }}</td>
+                                        <td><small>{{ feedback.submitted_at.strftime('%m/%d/%Y %I:%M %p') if feedback.submitted_at else 'N/A' }}</small></td>
+                                        <td>{{ feedback.target_student.first_name if feedback.target_student else 'N/A' }} {{ feedback.target_student.last_name if feedback.target_student else '' }}</td>
+                                        <td>{{ feedback.session.title if feedback.session else 'N/A' }}</td>
                                         <td><span class="badge bg-success">Submitted</span></td>
                                     </tr>
                                     {% endfor %}
@@ -180,11 +180,11 @@
                                 <tbody>
                                     {% for journal in journal_submissions[:10] %}
                                     <tr>
-                                        <td><small>{{ journal.submitted_at.strftime('%m/%d/%Y %I:%M %p') }}</small></td>
-                                        <td>{{ journal.group.name }}</td>
-                                        <td>{{ journal.group_assignment.title }}</td>
-                                        <td><span class="badge bg-success">{{ journal.collaboration_rating }}/5</span></td>
-                                        <td><span class="badge bg-info">{{ journal.learning_rating }}/5</span></td>
+                                        <td><small>{{ journal.submitted_at.strftime('%m/%d/%Y %I:%M %p') if journal.submitted_at else 'N/A' }}</small></td>
+                                        <td>{{ journal.group.name if journal.group else 'N/A' }}</td>
+                                        <td>{{ journal.group_assignment.title if journal.group_assignment else 'N/A' }}</td>
+                                        <td><span class="badge bg-success">{{ journal.collaboration_rating if journal.collaboration_rating else 0 }}/5</span></td>
+                                        <td><span class="badge bg-info">{{ journal.learning_rating if journal.learning_rating else 0 }}/5</span></td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
@@ -212,16 +212,16 @@
                                 <tbody>
                                     {% for conflict in conflict_reports[:10] %}
                                     <tr>
-                                        <td><small>{{ conflict.reported_at.strftime('%m/%d/%Y %I:%M %p') }}</small></td>
-                                        <td>{{ conflict.group.name }}</td>
-                                        <td>{{ conflict.conflict_type.replace('_', ' ').title() }}</td>
+                                        <td><small>{{ conflict.reported_at.strftime('%m/%d/%Y %I:%M %p') if conflict.reported_at else 'N/A' }}</small></td>
+                                        <td>{{ conflict.group.name if conflict.group else 'N/A' }}</td>
+                                        <td>{{ conflict.conflict_type.replace('_', ' ').title() if conflict.conflict_type else 'N/A' }}</td>
                                         <td>
                                             <span class="badge 
                                                 {% if conflict.severity_level == 'critical' %}bg-danger
                                                 {% elif conflict.severity_level == 'high' %}bg-warning
                                                 {% else %}bg-info
                                                 {% endif %}">
-                                                {{ conflict.severity_level.title() }}
+                                                {{ conflict.severity_level.title() if conflict.severity_level else 'N/A' }}
                                             </span>
                                         </td>
                                         <td>
@@ -230,7 +230,7 @@
                                                 {% elif conflict.status == 'investigating' %}bg-info
                                                 {% else %}bg-warning
                                                 {% endif %}">
-                                                {{ conflict.status.title() }}
+                                                {{ conflict.status.title() if conflict.status else 'N/A' }}
                                             </span>
                                         </td>
                                     </tr>

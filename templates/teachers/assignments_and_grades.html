@@ -84,9 +84,11 @@
                     </div>
                 </div>
                 <div class="col-12 col-md-3">
-            <label for="classFilter" class="form-label">Filter by Class</label>
-            <select class="form-select" id="classFilter" onchange="applyFilters()">
-                <option value="">All Classes</option>
+            <label for="classFilter" class="form-label">Select Class</label>
+            <select class="form-select" id="classFilter" onchange="applyFilters()" required>
+                {% if not class_filter %}
+                <option value="" disabled selected>Choose a class...</option>
+                {% endif %}
                 {% for class_obj in classes %}
                 <option value="{{ class_obj.id }}" {% if class_filter == class_obj.id|string %}selected{% endif %}>
                     {{ class_obj.name }}
@@ -246,7 +248,16 @@
 
     <!-- Grades View -->
     <div id="gradesView" class="view-content" style="display: {% if view_mode == 'grades' %}block{% else %}none{% endif %};">
-        {% if student_gpa_data %}
+        {% if not class_filter %}
+        <!-- Prompt to Select a Class -->
+        <div class="empty-state">
+            <div class="empty-state-icon">
+                <i class="bi bi-ui-checks"></i>
+            </div>
+            <h4>Please Select a Class</h4>
+            <p class="text-muted">Choose a specific class from the dropdown above to view student grades and performance data.</p>
+        </div>
+        {% elif student_gpa_data %}
         <!-- Student GPA Cards Section -->
         <div class="row g-4 mb-4">
             <div class="col-12">

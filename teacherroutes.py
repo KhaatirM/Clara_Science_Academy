@@ -1573,6 +1573,14 @@ def assignments_and_grades():
             classes = Class.query.filter_by(teacher_id=teacher.id).all()
             class_ids = [c.id for c in classes]
             assignments_query = Assignment.query.filter(Assignment.class_id.in_(class_ids))
+            
+            # For grades view, require a class to be selected - auto-redirect to first class
+            if view_mode == 'grades' and not class_filter and classes:
+                return redirect(url_for('teacher.assignments_and_grades', 
+                                      class_id=classes[0].id, 
+                                      view='grades',
+                                      sort=sort_by,
+                                      order=sort_order))
         else:
             # Teacher user without teacher_staff_id - show empty results
             classes = []

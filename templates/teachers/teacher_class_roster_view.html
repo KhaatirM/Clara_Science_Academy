@@ -79,25 +79,25 @@
             <p class="teacher-class-card-subject">Course Details</p>
           </div>
         </div>
-        <div class="teacher-class-card-body" style="padding: 1rem;">
-          <div class="teacher-class-info-section" style="display: flex; flex-direction: column; gap: 0.75rem;">
-            <div class="teacher-class-info-item" style="margin-bottom: 0;">
+        <div class="teacher-class-card-body" style="padding: 0.75rem;">
+          <div class="teacher-class-info-section" style="display: flex; flex-direction: column; gap: 0.5rem;">
+            <div class="teacher-class-info-item" style="margin-bottom: 0; padding: 0.25rem 0;">
               <i class="bi bi-book me-2"></i>
               <strong>Subject:</strong> {{ class_item.subject }}
             </div>
-            <div class="teacher-class-info-item" style="margin-bottom: 0;">
+            <div class="teacher-class-info-item" style="margin-bottom: 0; padding: 0.25rem 0;">
               <i class="bi bi-mortarboard me-2"></i>
               <strong>Grade Level:</strong> {{ class_item.grade_level or 'N/A' }}
             </div>
-            <div class="teacher-class-info-item" style="margin-bottom: 0;">
+            <div class="teacher-class-info-item" style="margin-bottom: 0; padding: 0.25rem 0;">
               <i class="bi bi-door-open me-2"></i>
               <strong>Room:</strong> {{ class_item.room_number if class_item.room_number else 'N/A' }}
             </div>
-            <div class="teacher-class-info-item" style="margin-bottom: 0;">
+            <div class="teacher-class-info-item" style="margin-bottom: 0; padding: 0.25rem 0;">
               <i class="bi bi-clock me-2"></i>
               <strong>Schedule:</strong> {{ class_item.schedule_info if class_item.schedule_info else 'TBD' }}
             </div>
-            <div class="teacher-class-info-item" style="margin-bottom: 0;">
+            <div class="teacher-class-info-item" style="margin-bottom: 0; padding: 0.25rem 0;">
               <i class="bi bi-calendar3 me-2"></i>
               <strong>School Year:</strong> {{ class_item.school_year.name if class_item.school_year else 'N/A' }}
             </div>
@@ -106,7 +106,7 @@
       </div>
       
       <!-- Class Management Card -->
-      <div class="teacher-class-card-modern mb-4" style="max-height: 500px;">
+      <div class="teacher-class-card-modern mb-4">
         <div class="teacher-class-card-header">
           <div class="teacher-class-card-icon">
             <i class="bi bi-tools"></i>
@@ -116,7 +116,7 @@
             <p class="teacher-class-card-subject">Quick Actions</p>
           </div>
         </div>
-        <div class="teacher-class-card-body" style="padding-bottom: 1rem; overflow-y: auto;">
+        <div class="teacher-class-card-body" style="padding: 0.75rem;">
           <!-- Core Management Actions -->
           <div class="mb-4">
             <h6 class="teacher-class-section-title">
@@ -192,7 +192,7 @@
       </div>
       
       <!-- Announcements Card -->
-      <div class="teacher-class-card-modern mb-4" style="max-height: 350px;">
+      <div class="teacher-class-card-modern mb-4">
         <div class="teacher-class-card-header">
           <div class="teacher-class-card-icon">
             <i class="bi bi-megaphone"></i>
@@ -202,7 +202,7 @@
             <p class="teacher-class-card-subject">Latest Updates</p>
           </div>
         </div>
-        <div class="teacher-class-card-body" style="max-height: 250px; overflow-y: auto; padding-bottom: 1rem;">
+        <div class="teacher-class-card-body" style="max-height: 200px; overflow-y: auto; padding: 0.75rem;">
           {% if announcements %}
             <div class="teacher-class-announcements">
               {% for ann in announcements %}
@@ -321,7 +321,7 @@
             <p class="teacher-class-card-subject">Last 7 Days</p>
           </div>
         </div>
-        <div class="teacher-class-card-body" style="max-height: 250px; overflow-y: auto; padding: 1rem;">
+        <div class="teacher-class-card-body" style="max-height: 180px; overflow-y: auto; padding: 0.75rem;">
           {% if recent_attendance %}
             <div class="teacher-class-attendance-table">
               <div class="teacher-class-attendance-header">

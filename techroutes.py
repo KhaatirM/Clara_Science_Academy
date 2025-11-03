@@ -662,7 +662,7 @@ def view_user_details(user_id):
                 ]
                 
                 class_gpa_breakdown.append({
-                    'class_name': class_info.name,
+                    'class_name': class_obj.name,
                     'class_id': class_id,
                     'current_gpa': class_current_gpa,
                     'hypothetical_gpa': class_hypothetical_gpa,

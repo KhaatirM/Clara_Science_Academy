@@ -2,6 +2,10 @@
 
 {% block title %}Assignments & Grades Management{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/assignments.css') }}">
+{% endblock %}
+
 {% block dashboard_content %}
 <div class="container-fluid px-2 px-md-4">
     <!-- Modern Assignments Header -->

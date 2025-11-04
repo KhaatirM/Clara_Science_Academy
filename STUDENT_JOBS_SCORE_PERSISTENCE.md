@@ -1,7 +1,7 @@
 # Student Jobs - Score Persistence and Weekly Reset
 
 ## Summary
-Implemented score persistence for team inspections with automatic weekly reset every Friday at 4:00 PM EST.
+Implemented score persistence for team inspections with automatic weekly reset every Monday at 12:00 AM EST (midnight).
 
 ## Features
 
@@ -11,14 +11,14 @@ Implemented score persistence for team inspections with automatic weekly reset e
 - Scores persist across page reloads and navigation
 
 ### 2. **Weekly Reset**
-- **Reset Time**: Every Friday at 4:00 PM Eastern Time
+- **Reset Time**: Every Monday at 12:00 AM (midnight) Eastern Time
 - **Reset Behavior**: All team scores automatically return to 100 points
-- **Reset Logic**: After Friday 4 PM, scores show 100 until a new inspection is conducted
+- **Reset Logic**: At the start of each week (Monday midnight), scores reset to 100 until a new inspection is conducted
 
 ### 3. **Score Display**
 - Team cards show the most recent inspection score
 - Score persists until:
-  - Friday at 4 PM EST (automatic reset)
+  - Monday at 12:00 AM EST (automatic reset)
   - A new inspection is conducted
 - Color coding based on score:
   - Green: 80+ points
@@ -29,24 +29,24 @@ Implemented score persistence for team inspections with automatic weekly reset e
 
 ### Backend (`managementroutes.py`)
 ```python
-# Check if it's past Friday 4 PM EST
+# Calculate the start of the current week (Monday at 12:00 AM EST)
 est = tz('US/Eastern')
 now_est = datetime.now(est)
-current_day = now_est.weekday()  # 0=Monday, 4=Friday
-current_hour = now_est.hour
+current_weekday = now_est.weekday()  # 0=Monday, 6=Sunday
+days_since_monday = current_weekday
+current_week_start = now_est.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=days_since_monday)
 
-# Determine if reset is needed
-needs_reset = False
-if current_day == 4 and current_hour >= 16:  # Friday after 4 PM
-    needs_reset = True
-elif current_day > 4:  # Saturday or Sunday
-    needs_reset = True
-
-# Return appropriate score
-if needs_reset:
-    current_score = 100
-elif recent_inspections:
-    current_score = recent_inspections[0].final_score
+# Get most recent inspection and check if it's from this week
+if recent_inspections:
+    latest_inspection = recent_inspections[0]
+    inspection_datetime = est.localize(latest_inspection.inspection_date) if latest_inspection.inspection_date.tzinfo is None else latest_inspection.inspection_date.astimezone(est)
+    
+    if inspection_datetime < current_week_start:
+        # Inspection is from last week - reset to 100
+        current_score = 100
+    else:
+        # Inspection is from this week - use its score
+        current_score = latest_inspection.final_score
 else:
     current_score = 100
 ```
@@ -62,15 +62,15 @@ else:
 
 ## Reset Schedule
 
-**Week Start**: Monday (scores from 100 unless prior inspection exists)
-**Reset Time**: Friday at 4:00 PM EST
-**Week End**: Scores reset to 100 after Friday 4 PM until next inspection
+**Week Start**: Monday at 12:00 AM (midnight) EST
+**Reset Time**: Every Monday at 12:00 AM EST
+**Reset Behavior**: All scores reset to 100 at the start of each week
 
 ## Usage
 
 1. **Recording Inspection**: When an inspection is saved, the score updates immediately
-2. **Viewing Score**: Score persists on the team card header
-3. **After Reset**: On Friday after 4 PM, all scores show 100 until new inspections
+2. **Viewing Score**: Score persists on the team card header throughout the week
+3. **After Reset**: Every Monday at midnight, all scores reset to 100 until new inspections are conducted
 4. **History**: Past inspections are always available via the "History" button
 
 ## Benefits

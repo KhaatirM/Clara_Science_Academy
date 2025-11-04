@@ -7221,23 +7221,20 @@ def student_jobs():
         teams = CleaningTeam.query.filter_by(is_active=True).all()
         
         # Import datetime for checking reset time
-        from datetime import datetime, timezone
+        from datetime import datetime, timezone, timedelta
         from pytz import timezone as tz
         
-        # Check if it's past Friday 4 PM EST (reset time)
+        # Check if we need to reset points (every Monday at 12:00 AM EST)
         # Get current time in EST
         est = tz('US/Eastern')
         now_est = datetime.now(est)
-        current_day = now_est.weekday()  # 0=Monday, 4=Friday
-        current_hour = now_est.hour
-        current_minute = now_est.minute
         
-        # Check if we need to reset (after Friday 4 PM EST)
-        needs_reset = False
-        if current_day == 4 and current_hour >= 16:  # Friday after 4 PM
-            needs_reset = True
-        elif current_day > 4:  # Saturday or Sunday
-            needs_reset = True
+        # Calculate the start of the current week (Monday at 12:00 AM)
+        current_weekday = now_est.weekday()  # 0=Monday, 6=Sunday
+        days_since_monday = current_weekday
+        current_week_start = now_est.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=days_since_monday)
+        
+        # We'll check later if inspections are from before this week's Monday
         
         # Get team members for all teams
         team_data = {}
@@ -7256,17 +7253,28 @@ def student_jobs():
             ).limit(5).all()
             
             # Get current score - use the most recent inspection's score
-            # But check if we need to reset based on Friday 4 PM EST rule
+            # But check if we need to reset based on Monday 12:00 AM EST rule
             current_score = 100  # Default to 100
             
-            if needs_reset:
-                # After Friday 4 PM, show default 100 until next inspection
-                current_score = 100
-            elif recent_inspections:
-                # Use the most recent inspection's score
-                current_score = recent_inspections[0].final_score
+            if recent_inspections:
+                # Get the most recent inspection
+                latest_inspection = recent_inspections[0]
+                
+                # Make the inspection date timezone-aware (assume it's in EST)
+                if latest_inspection.inspection_date.tzinfo is None:
+                    inspection_datetime = est.localize(latest_inspection.inspection_date)
+                else:
+                    inspection_datetime = latest_inspection.inspection_date.astimezone(est)
+                
+                # Check if the inspection was before this week's Monday at 12:00 AM
+                if inspection_datetime < current_week_start:
+                    # Inspection is from last week or earlier - reset to 100
+                    current_score = 100
+                else:
+                    # Inspection is from this week - use its score
+                    current_score = latest_inspection.final_score
             else:
-                # No inspections, show default 100
+                # No inspections exist, show default 100
                 current_score = 100
             
             # Build member list with student info

@@ -4,6 +4,10 @@
     Welcome - Clara Science Academy
 {% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/home-enhanced.css') }}">
+{% endblock %}
+
 {% block content %}
 <!-- Slideshow Background -->
 <div class="slideshow-container">
@@ -18,6 +22,9 @@
     <div class="slideshow-image" style="background-image: url('/static/img/backimg/image9.png');"></div>
     <div class="slideshow-overlay"></div>
 </div>
+
+<!-- Floating Particles -->
+<div class="particles-container" id="particlesContainer"></div>
 
 <!-- Hero Section -->
 <div class="hero-section">
@@ -292,19 +299,34 @@
 <!-- Technology Section -->
 <div class="technology-section py-5">
     <div class="container">
-        <div class="row align-items-center">
-            <div class="col-lg-6">
-                <div class="tech-image">
-                    <div class="image-placeholder">
-                        <i class="fas fa-laptop"></i>
-                        <p>Modern Technology</p>
+        <div class="row align-items-center g-5">
+            <div class="col-lg-5">
+                <div class="tech-showcase-card">
+                    <div class="tech-icon-grid">
+                        <div class="tech-icon-item" style="animation-delay: 0.1s;">
+                            <i class="fas fa-laptop"></i>
+                        </div>
+                        <div class="tech-icon-item" style="animation-delay: 0.2s;">
+                            <i class="fas fa-mobile-alt"></i>
+                        </div>
+                        <div class="tech-icon-item" style="animation-delay: 0.3s;">
+                            <i class="fas fa-cloud"></i>
+                        </div>
+                        <div class="tech-icon-item" style="animation-delay: 0.4s;">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                    </div>
+                    <div class="tech-showcase-label">
+                        <i class="fas fa-rocket me-2"></i>
+                        <span>Modern Technology Platform</span>
                     </div>
                 </div>
             </div>
-            <div class="col-lg-6">
-                <h2 class="section-title mb-4">Cutting-Edge Technology</h2>
-                <p class="lead">Digital Innovation in Education</p>
-                <p>Our student management system leverages the latest technology to provide seamless, efficient, and secure educational administration. From real-time attendance tracking to comprehensive grade management, we've integrated modern solutions to enhance the learning experience.</p>
+            <div class="col-lg-7">
+                <h2 class="section-title mb-3 text-start">Cutting-Edge Technology</h2>
+                <div class="section-divider mb-4"></div>
+                <p class="lead text-muted mb-4">Digital Innovation in Education</p>
+                <p class="about-text mb-4">Our student management system leverages the latest technology to provide seamless, efficient, and secure educational administration. From real-time attendance tracking to comprehensive grade management, we've integrated modern solutions to enhance the learning experience.</p>
                 <ul class="tech-features">
                     <li><i class="fas fa-check-circle"></i> Real-time attendance tracking and monitoring</li>
                     <li><i class="fas fa-check-circle"></i> Digital grade books and automated report cards</li>
@@ -1116,25 +1138,75 @@
 </div>
 
 <script>
-// Consolidated homepage functionality
+// ===== PREMIUM HOMEPAGE FUNCTIONALITY =====
 document.addEventListener('DOMContentLoaded', function() {
-    // Show update popup on page load (only once per session for this update)
-    if (!sessionStorage.getItem('updateModalShownNov3_2025')) {
-        console.log('Showing update modal...');
-        const updateModalElement = document.getElementById('updateModal');
-        if (updateModalElement) {
-            const updateModal = new bootstrap.Modal(updateModalElement);
-            updateModal.show();
-            sessionStorage.setItem('updateModalShownNov3_2025', 'true');
-            console.log('Update modal shown successfully');
-        } else {
-            console.error('Update modal element not found');
+    // ===== CREATE FLOATING PARTICLES =====
+    function createParticles() {
+        const container = document.getElementById('particlesContainer');
+        if (!container) return;
+        
+        const particleCount = 50;
+        for (let i = 0; i < particleCount; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.left = Math.random() * 100 + '%';
+            particle.style.animationDelay = Math.random() * 20 + 's';
+            particle.style.animationDuration = (15 + Math.random() * 10) + 's';
+            container.appendChild(particle);
         }
-    } else {
-        console.log('Update modal already shown in this session');
+    }
+    createParticles();
+    
+    // ===== ANIMATED NUMBER COUNTERS =====
+    function animateCounter(element, target, duration = 2000) {
+        const start = 0;
+        const increment = target / (duration / 16);
+        let current = start;
+        
+        const timer = setInterval(() => {
+            current += increment;
+            if (current >= target) {
+                element.textContent = target;
+                clearInterval(timer);
+            } else {
+                element.textContent = Math.floor(current);
+            }
+        }, 16);
     }
     
-    // Slideshow functionality for homepage
+    // Trigger counters when stat boxes come into view
+    const statObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting && !entry.target.dataset.animated) {
+                const numberElement = entry.target.querySelector('.stat-number');
+                if (numberElement) {
+                    const text = numberElement.textContent;
+                    const number = parseInt(text.replace(/\D/g, ''));
+                    if (number) {
+                        numberElement.textContent = '0';
+                        animateCounter(numberElement, number);
+                        
+                        // Add the + sign back if it was there
+                        if (text.includes('+')) {
+                            setTimeout(() => {
+                                const plusSpan = document.createElement('span');
+                                plusSpan.className = 'stat-plus';
+                                plusSpan.textContent = '+';
+                                numberElement.appendChild(plusSpan);
+                            }, 2000);
+                        }
+                    }
+                    entry.target.dataset.animated = 'true';
+                }
+            }
+        });
+    }, { threshold: 0.5 });
+    
+    document.querySelectorAll('.modern-stat-box').forEach(box => {
+        statObserver.observe(box);
+    });
+    
+    // ===== SLIDESHOW WITH KEN BURNS EFFECT =====
     const slideshowImages = document.querySelectorAll('.slideshow-image');
     let currentSlide = 0;
     
@@ -1149,17 +1221,13 @@ document.addEventListener('DOMContentLoaded', function() {
         showSlide(currentSlide);
     }
     
-    // Initialize slideshow
     showSlide(0);
-    
-    // Change slide every 6 seconds
     setInterval(nextSlide, 6000);
     
-    // Smooth scrolling for anchor links
+    // ===== SMOOTH SCROLL WITH EASING =====
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function (e) {
             const href = this.getAttribute('href');
-            // Only handle valid anchor links (not just "#")
             if (href && href !== '#' && href.length > 1) {
                 e.preventDefault();
                 const target = document.querySelector(href);
@@ -1173,29 +1241,96 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Add scroll animations
+    // ===== ADVANCED SCROLL ANIMATIONS =====
     const observerOptions = {
-        threshold: 0.1,
-        rootMargin: '0px 0px -50px 0px'
+        threshold: 0.15,
+        rootMargin: '0px 0px -100px 0px'
     };
 
     const observer = new IntersectionObserver(function(entries) {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
                 entry.target.style.opacity = '1';
-                entry.target.style.transform = 'translateY(0)';
+                entry.target.style.transform = 'translateY(0) scale(1)';
+                
+                // Add stagger effect for cards
+                const cards = entry.target.querySelectorAll('.feature-card, .program-card, .modern-testimonial, .modern-contact');
+                cards.forEach((card, index) => {
+                    setTimeout(() => {
+                        card.style.opacity = '1';
+                        card.style.transform = 'translateY(0) scale(1)';
+                    }, index * 100);
+                });
             }
         });
     }, observerOptions);
 
-    // Observe elements for scroll animations
-    document.querySelectorAll('.feature-card, .program-card, .testimonial-card, .contact-card').forEach(el => {
-        el.style.opacity = '0';
-        el.style.transform = 'translateY(30px)';
-        el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+    // Observe sections
+    document.querySelectorAll('.features-section, .programs-section, .testimonials-section, .contact-section').forEach(el => {
         observer.observe(el);
     });
     
+    // ===== HERO BUTTON RIPPLE EFFECT =====
+    document.querySelectorAll('.hero-btn').forEach(button => {
+        button.addEventListener('click', function(e) {
+            const ripple = document.createElement('span');
+            ripple.className = 'ripple';
+            this.appendChild(ripple);
+            
+            setTimeout(() => ripple.remove(), 600);
+        });
+    });
+    
+    // ===== PARALLAX EFFECT ON SCROLL =====
+    let ticking = false;
+    window.addEventListener('scroll', function() {
+        if (!ticking) {
+            window.requestAnimationFrame(function() {
+                const scrolled = window.pageYOffset;
+                const parallaxElements = document.querySelectorAll('.hero-content');
+                parallaxElements.forEach(el => {
+                    el.style.transform = `translateY(${scrolled * 0.3}px)`;
+                });
+                ticking = false;
+            });
+            ticking = true;
+        }
+    });
+    
+    // ===== SHOW UPDATE MODAL =====
+    if (!sessionStorage.getItem('updateModalShownNov3_2025')) {
+        const updateModalElement = document.getElementById('updateModal');
+        if (updateModalElement) {
+            const updateModal = new bootstrap.Modal(updateModalElement);
+            updateModal.show();
+            sessionStorage.setItem('updateModalShownNov3_2025', 'true');
+        }
+    }
+    
+    // ===== ADD MOUSE FOLLOW EFFECT TO HERO =====
+    const heroContent = document.querySelector('.hero-content');
+    if (heroContent) {
+        document.addEventListener('mousemove', (e) => {
+            const rect = heroContent.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            
+            const deltaX = (x - centerX) / centerX;
+            const deltaY = (y - centerY) / centerY;
+            
+            const tiltX = deltaY * 5;
+            const tiltY = -deltaX * 5;
+            
+            heroContent.style.transform = `perspective(1000px) rotateX(${tiltX}deg) rotateY(${tiltY}deg)`;
+        });
+        
+        heroContent.addEventListener('mouseleave', () => {
+            heroContent.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg)';
+        });
+    }
 });
 </script>
 

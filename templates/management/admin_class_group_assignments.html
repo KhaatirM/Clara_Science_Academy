@@ -1,34 +1,7 @@
 {% extends "shared/dashboard_layout.html" %}
 
 {% block dashboard_content %}
-<style>
-    .assignment-card {
-        transition: all 0.3s ease;
-        border: none;
-        border-radius: 15px;
-        overflow: hidden;
-    }
-    .assignment-card:hover {
-        transform: translateY(-8px);
-        box-shadow: 0 12px 24px rgba(0,0,0,0.15) !important;
-    }
-    .assignment-status-badge {
-        position: absolute;
-        top: 15px;
-        right: 15px;
-        padding: 6px 14px;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 600;
-    }
-    .collaboration-badge {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 4px 10px;
-        border-radius: 15px;
-        font-size: 0.75rem;
-    }
-</style>
+<!-- CSS now in /static/css/components.css -->
 
 <div class="container-fluid px-2 px-md-4">
   <!-- Enhanced Header -->

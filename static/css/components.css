@@ -2846,3 +2846,189 @@
         text-align: center;
     }
 }
+
+/* ===== STUDENT SUBMISSIONS STYLES ===== */
+.submission-card {
+    transition: all 0.3s ease;
+    border-radius: 15px;
+    overflow: hidden;
+}
+
+.submission-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 24px rgba(0,0,0,0.15) !important;
+}
+
+.icon-circle {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+    font-size: 2rem;
+}
+
+.submission-stat-card-1 {
+    background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
+}
+
+.submission-stat-card-2 {
+    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+}
+
+.submission-stat-card-3 {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.submission-btn-1 {
+    background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
+    border: none;
+    border-radius: 25px;
+}
+
+.submission-btn-2 {
+    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    border: none;
+    border-radius: 25px;
+}
+
+.submission-btn-3 {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    border: none;
+    border-radius: 25px;
+}
+
+.submission-icon-1 {
+    background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
+}
+
+.submission-icon-2 {
+    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+}
+
+.submission-icon-3 {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+/* ===== COMMON CARD STYLES FOR ADMIN PAGES ===== */
+.conflict-card,
+.journal-card,
+.group-card,
+.assignment-card {
+    transition: all 0.3s ease;
+    border-radius: 15px;
+    overflow: hidden;
+}
+
+.conflict-card:hover,
+.journal-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 24px rgba(0,0,0,0.15) !important;
+}
+
+.group-card {
+    border: 1px solid #e0e0e0;
+}
+
+.group-card:hover,
+.assignment-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
+}
+
+.teacher-class-groups .group-card {
+    border: none;
+}
+
+/* Admin group assignments */
+.admin-group-assignments .assignment-card {
+    border: none;
+}
+
+/* Conflict severity indicator */
+.severity-indicator {
+    width: 5px;
+    height: 100%;
+    position: absolute;
+    left: 0;
+    top: 0;
+}
+
+/* Journal rating badge */
+.rating-badge {
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 600;
+}
+
+/* Group member badge */
+.member-badge {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white !important;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+}
+
+/* Group icon */
+.group-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.group-icon-circle {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    margin: 0 auto 12px;
+}
+
+/* Assignment status badge */
+.assignment-status-badge {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+/* Collaboration badge */
+.collaboration-badge {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 15px;
+    font-size: 0.85rem;
+}
+
+/* Group search */
+.group-search {
+    border-radius: 25px;
+    padding-left: 2.5rem;
+}
+
+.search-icon {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6c757d;
+}
+
+.admin-badge {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}

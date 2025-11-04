@@ -3,39 +3,19 @@
 {% block title %}My Submissions{% endblock %}
 
 {% block dashboard_content %}
-<style>
-    .submission-card {
-        transition: all 0.3s ease;
-        border-radius: 15px;
-        overflow: hidden;
-    }
-    .submission-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 12px 24px rgba(0,0,0,0.15) !important;
-    }
-    .icon-circle {
-        width: 80px;
-        height: 80px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 0 auto 1rem;
-        font-size: 2rem;
-    }
-</style>
+<!-- CSS now in /static/css/components.css -->
 
 <div class="container-fluid px-2 px-md-4">
     <!-- Header -->
     <div class="mb-4">
-        <h2 class="mb-1"><i class="bi bi-pencil-square me-2" style="color: #667eea;"></i>My Submissions</h2>
+        <h2 class="mb-1"><i class="bi bi-pencil-square me-2 gradient-text"></i>My Submissions</h2>
         <p class="text-muted">Share feedback, reflect on your learning, and report concerns</p>
     </div>
 
     <!-- Stats Cards -->
     <div class="row g-3 mb-4">
         <div class="col-12 col-md-4">
-            <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);">
+            <div class="card border-0 shadow-sm submission-stat-card-1">
                 <div class="card-body text-white text-center py-4">
                     <i class="bi bi-arrow-repeat display-4 mb-2 opacity-75"></i>
                     <h2 class="mb-0 fw-bold">{{ feedback_submissions|length }}</h2>
@@ -44,7 +24,7 @@
             </div>
         </div>
         <div class="col-12 col-md-4">
-            <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+            <div class="card border-0 shadow-sm submission-stat-card-2">
                 <div class="card-body text-white text-center py-4">
                     <i class="bi bi-journal-text display-4 mb-2 opacity-75"></i>
                     <h2 class="mb-0 fw-bold">{{ journal_submissions|length }}</h2>
@@ -53,7 +33,7 @@
             </div>
         </div>
         <div class="col-12 col-md-4">
-            <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+            <div class="card border-0 shadow-sm submission-stat-card-3">
                 <div class="card-body text-white text-center py-4">
                     <i class="bi bi-exclamation-triangle-fill display-4 mb-2 opacity-75"></i>
                     <h2 class="mb-0 fw-bold">{{ conflict_reports|length }}</h2>
@@ -69,12 +49,12 @@
         <div class="col-12 col-md-4">
             <div class="card submission-card border-0 shadow-sm h-100">
                 <div class="card-body text-center p-4">
-                    <div class="icon-circle" style="background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);">
+                    <div class="icon-circle submission-icon-1">
                         <i class="bi bi-arrow-repeat text-white"></i>
                     </div>
                     <h4 class="mb-3">360° Feedback</h4>
                     <p class="text-muted mb-4">Provide comprehensive feedback on your peers' collaboration and contributions</p>
-                    <button class="btn btn-primary w-100" style="background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); border: none; border-radius: 25px;" data-bs-toggle="modal" data-bs-target="#feedbackModal">
+                    <button class="btn btn-primary w-100 submission-btn-1" data-bs-toggle="modal" data-bs-target="#feedbackModal">
                         <i class="bi bi-plus-circle me-2"></i>Submit Feedback
                     </button>
                 </div>
@@ -85,12 +65,12 @@
         <div class="col-12 col-md-4">
             <div class="card submission-card border-0 shadow-sm h-100">
                 <div class="card-body text-center p-4">
-                    <div class="icon-circle" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                    <div class="icon-circle submission-icon-2">
                         <i class="bi bi-journal-text text-white"></i>
                     </div>
                     <h4 class="mb-3">Reflection Journal</h4>
                     <p class="text-muted mb-4">Reflect on your learning experiences and group collaboration</p>
-                    <button class="btn btn-primary w-100" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); border: none; border-radius: 25px;" data-bs-toggle="modal" data-bs-target="#journalModal">
+                    <button class="btn btn-primary w-100 submission-btn-2" data-bs-toggle="modal" data-bs-target="#journalModal">
                         <i class="bi bi-plus-circle me-2"></i>Write Journal Entry
                     </button>
                 </div>
@@ -101,12 +81,12 @@
         <div class="col-12 col-md-4">
             <div class="card submission-card border-0 shadow-sm h-100">
                 <div class="card-body text-center p-4">
-                    <div class="icon-circle" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                    <div class="icon-circle submission-icon-3">
                         <i class="bi bi-exclamation-triangle-fill text-white"></i>
                     </div>
                     <h4 class="mb-3">Report Conflict</h4>
                     <p class="text-muted mb-4">Report group conflicts to help maintain a positive learning environment</p>
-                    <button class="btn btn-primary w-100" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border: none; border-radius: 25px;" data-bs-toggle="modal" data-bs-target="#conflictModal">
+                    <button class="btn btn-primary w-100 submission-btn-3" data-bs-toggle="modal" data-bs-target="#conflictModal">
                         <i class="bi bi-plus-circle me-2"></i>Report Conflict
                     </button>
                 </div>

@@ -1,49 +1,7 @@
 {% extends "shared/dashboard_layout.html" %}
 
 {% block dashboard_content %}
-<style>
-    .group-card {
-        transition: all 0.3s ease;
-        border: 1px solid #e0e0e0;
-        border-radius: 12px;
-        overflow: hidden;
-    }
-    .group-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 8px 20px rgba(0,0,0,0.12) !important;
-    }
-    .group-icon-circle {
-        width: 60px;
-        height: 60px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 24px;
-        margin: 0 auto 12px;
-    }
-    .member-badge {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-size: 0.875rem;
-    }
-    .admin-badge {
-        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    }
-    .group-search {
-        border-radius: 25px;
-        padding-left: 2.5rem;
-    }
-    .search-icon {
-        position: absolute;
-        left: 1rem;
-        top: 50%;
-        transform: translateY(-50%);
-        color: #6c757d;
-    }
-</style>
+<!-- CSS now in /static/css/components.css -->
 
 <div class="container-fluid px-2 px-md-4">
     <!-- Header Section -->

@@ -5723,6 +5723,36 @@
     box-shadow: 0 6px 20px rgba(0,0,0,0.25) !important;
 }
 
+/* Extension Badge */
+.badge-extension {
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%) !important;
+    color: white !important;
+    font-size: 1rem !important;
+    font-weight: 800 !important;
+    padding: 0.5rem 1rem !important;
+    border-radius: 12px !important;
+    letter-spacing: 0.5px !important;
+    box-shadow: 0 3px 12px rgba(23, 162, 184, 0.3) !important;
+    border: 2px solid #17a2b8 !important;
+    animation: extensionPulse 2s ease-in-out infinite !important;
+}
+
+@keyframes extensionPulse {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 3px 12px rgba(23, 162, 184, 0.3);
+    }
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 5px 18px rgba(23, 162, 184, 0.5);
+    }
+}
+
+.badge-extension:hover {
+    transform: scale(1.1) !important;
+    box-shadow: 0 6px 20px rgba(23, 162, 184, 0.5) !important;
+}
+
 /* ===== VOID ASSIGNMENT MODAL ===== */
 .void-modal .modal-content {
     border: none;

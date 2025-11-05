@@ -3519,8 +3519,16 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                     {% set score = grade_data_dict.get('score') if grade_data_dict else none %}
                                 {% endif %}
                                 
+                                {# Check if student has an active extension #}
+                                {% set has_extension = student_status == 'Extended' %}
+                                
                                 {% if student_status == 'Voided' %}
                                     <span class="badge bg-secondary">Voided</span>
+                                {% elif has_extension and not score %}
+                                    {# Show Extension badge if extension granted and not yet graded #}
+                                    <span class="badge badge-extension">
+                                        <i class="bi bi-clock-history me-1"></i>Extension
+                                    </span>
                                 {% elif score is not none and score > 0 %}
                                     {# Show letter grade if graded with score > 0 #}
                                     {% if score >= 97 %}

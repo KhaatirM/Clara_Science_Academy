@@ -253,6 +253,52 @@
 </div>
 
 <script>
+// Open extension modal
+function openExtensionModal() {
+    {% if current_user.role in ['Director', 'School Administrator'] %}
+        window.location.href = "{{ url_for('management.grant_extensions', assignment_id=assignment.id) }}";
+    {% else %}
+        // For teachers, redirect to assignments page and open modal via parameter
+        alert('Extension functionality: This will open the extensions modal. Assignment ID: {{ assignment.id }}');
+        // TODO: Implement inline extension modal or redirect
+        window.location.href = "{{ url_for('teacher.assignments_and_grades') }}";
+    {% endif %}
+}
+
+// Open void modal
+function openVoidModalView() {
+    if (confirm('Are you sure you want to void this assignment? This will exclude it from GPA calculations for all students.')) {
+        const formData = new FormData();
+        formData.append('csrf_token', '{{ csrf_token() }}');
+        formData.append('status', 'Voided');
+        
+        fetch('/teacher/assignment/{{ assignment.id }}/change-status', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            if (response.redirected) {
+                window.location.href = response.url;
+            } else {
+                return response.json();
+            }
+        })
+        .then(data => {
+            if (data && data.success) {
+                showNotification('Assignment voided successfully!', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else if (data && data.error) {
+                showNotification('Error: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            // If fetch failed, try redirect approach
+            window.location.href = "{{ url_for('teacher.assignments_and_grades') }}";
+        });
+    }
+}
+
 function confirmDelete(title, assignmentId) {
     document.getElementById('assignmentTitle').textContent = title;
     {% if current_user.role in ['Director', 'School Administrator'] %}

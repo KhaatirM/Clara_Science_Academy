@@ -67,7 +67,7 @@ def calculate_gpa(grades):
     gpa_points = [percentage_to_gpa(grade) for grade in grades]
     return round(sum(gpa_points) / len(gpa_points), 2)
 
-def get_student_assignment_status(assignment, submission, grade):
+def get_student_assignment_status(assignment, submission, grade, student_id=None):
     """Determine the student-facing status for an assignment."""
     from datetime import datetime
     
@@ -79,6 +79,28 @@ def get_student_assignment_status(assignment, submission, grade):
     if grade and grade.is_voided:
         return 'Voided'
     
+    # Check if assignment has an active extension for this student (before checking graded status)
+    if student_id:
+        from models import AssignmentExtension
+        extension = AssignmentExtension.query.filter_by(
+            assignment_id=assignment.id,
+            student_id=student_id,
+            is_active=True
+        ).first()
+        
+        if extension:
+            # Check if extension deadline has passed and assignment is not graded
+            if not grade:
+                extension_due_date = extension.extended_due_date.date() if hasattr(extension.extended_due_date, 'date') else extension.extended_due_date
+                today = datetime.now().date()
+                
+                if extension_due_date >= today:
+                    # Extension is still active
+                    return 'Extended'
+                else:
+                    # Extension deadline has passed and not graded
+                    return 'Past Due'
+    
     # Check if assignment has been graded - this takes priority over due date
     if grade:
         return 'completed'
@@ -86,17 +108,6 @@ def get_student_assignment_status(assignment, submission, grade):
     # Check if assignment has been submitted
     if submission:
         return 'Submitted or Awaiting Grade'
-    
-    # Check if assignment has an extension
-    from models import AssignmentExtension
-    extension = AssignmentExtension.query.filter_by(
-        assignment_id=assignment.id,
-        student_id=assignment.class_info.enrollments[0].student_id if assignment.class_info.enrollments else None,
-        is_active=True
-    ).first()
-    
-    if extension:
-        return 'Extended'
     
     # Check if assignment is past due (only if not completed/submitted)
     if assignment.due_date:
@@ -596,7 +607,7 @@ def student_assignments():
         grade = grades_dict.get(assignment.id)
         
         # Determine student-facing status
-        student_status = get_student_assignment_status(assignment, submission, grade)
+        student_status = get_student_assignment_status(assignment, submission, grade, student.id)
         
         assignments_with_status.append((assignment, submission, student_status))
         
@@ -656,7 +667,7 @@ def class_assignments(class_id):
         grade = grades_dict.get(assignment.id)
         
         # Determine student-facing status
-        student_status = get_student_assignment_status(assignment, submission, grade)
+        student_status = get_student_assignment_status(assignment, submission, grade, student.id)
         
         assignments_with_status.append((assignment, submission, student_status))
     
@@ -1352,7 +1363,7 @@ def view_class_assignments(class_id):
         grade = student_grades.get(assignment.id)
         
         # Determine student-facing status
-        student_status = get_student_assignment_status(assignment, submission, grade)
+        student_status = get_student_assignment_status(assignment, submission, grade, student.id)
         
         assignments_with_status.append((assignment, submission, student_status))
     

@@ -166,15 +166,33 @@
                     </div>
                     <div class="assignment-card-footer">
                         <div class="btn-group w-100" role="group">
-                            <a href="{{ url_for('teacher.view_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-secondary btn-sm">
+                            <a href="{{ url_for('teacher.view_assignment', assignment_id=assignment.id) }}" 
+                               class="btn btn-outline-secondary btn-sm" 
+                               title="View Details">
                                 <i class="bi bi-eye"></i>
                             </a>
-                            <a href="{{ url_for('teacher.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-warning btn-sm">
+                            <a href="{{ url_for('teacher.edit_assignment', assignment_id=assignment.id) }}" 
+                               class="btn btn-outline-warning btn-sm"
+                               title="Edit Assignment">
                                 <i class="bi bi-pencil"></i>
                             </a>
-                            <a href="{{ url_for('teacher.grade_assignment', assignment_id=assignment.id) }}" class="btn btn-primary btn-sm">
+                            <a href="{{ url_for('teacher.grade_assignment', assignment_id=assignment.id) }}" 
+                               class="btn btn-primary btn-sm"
+                               title="Grade Students">
                                 <i class="bi bi-check-circle"></i>
                             </a>
+                            <button type="button" 
+                                    class="btn btn-outline-info btn-sm" 
+                                    onclick="openExtensionsModal({{ assignment.id }}, '{{ assignment.title }}', {{ assignment.class_id }})"
+                                    title="Grant Extensions">
+                                <i class="bi bi-clock-history"></i>
+                            </button>
+                            <button type="button" 
+                                    class="btn btn-outline-danger btn-sm" 
+                                    onclick="openVoidModal({{ assignment.id }}, '{{ assignment.title }}', 'individual')"
+                                    title="Void Assignment">
+                                <i class="bi bi-slash-circle"></i>
+                            </button>
                             </div>
                         </div>
                     </div>
@@ -220,12 +238,33 @@
                     </div>
                     <div class="assignment-card-footer">
                         <div class="btn-group w-100" role="group">
-                            <a href="{{ url_for('teacher.view_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-outline-secondary btn-sm">
+                            <a href="{{ url_for('teacher.view_group_assignment', assignment_id=group_assignment.id) }}" 
+                               class="btn btn-outline-secondary btn-sm"
+                               title="View Details">
                                 <i class="bi bi-eye"></i>
                             </a>
-                            <a href="{{ url_for('teacher.grade_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-info btn-sm">
+                            <a href="{{ url_for('teacher.edit_group_assignment', assignment_id=group_assignment.id) }}" 
+                               class="btn btn-outline-warning btn-sm"
+                               title="Edit Assignment">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <a href="{{ url_for('teacher.grade_group_assignment', assignment_id=group_assignment.id) }}" 
+                               class="btn btn-success btn-sm"
+                               title="Grade Groups">
                                 <i class="bi bi-check-circle"></i>
                             </a>
+                            <button type="button" 
+                                    class="btn btn-outline-info btn-sm" 
+                                    onclick="openExtensionsModal({{ group_assignment.id }}, '{{ group_assignment.title }}', {{ group_assignment.class_id }})"
+                                    title="Grant Extensions">
+                                <i class="bi bi-clock-history"></i>
+                            </button>
+                            <button type="button" 
+                                    class="btn btn-outline-danger btn-sm" 
+                                    onclick="openVoidModal({{ group_assignment.id }}, '{{ group_assignment.title }}', 'group')"
+                                    title="Void Assignment">
+                                <i class="bi bi-slash-circle"></i>
+                            </button>
                             </div>
                         </div>
                     </div>
@@ -761,4 +800,396 @@ document.addEventListener('DOMContentLoaded', function() {
 .stat-card:nth-child(3) { animation-delay: 0.3s; }
 .stat-card:nth-child(4) { animation-delay: 0.4s; }
 </style>
+
+<!-- Grant Extensions Modal -->
+<div class="modal fade" id="extensionsModal" tabindex="-1" aria-labelledby="extensionsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content extensions-modal">
+      <div class="modal-header extensions-modal-header">
+        <div class="extensions-header-content">
+          <div class="extensions-header-icon">
+            <i class="bi bi-clock-history"></i>
+          </div>
+          <div>
+            <h5 class="modal-title" id="extensionsModalLabel">Grant Assignment Extensions</h5>
+            <p class="extensions-subtitle mb-0">Extend deadline for selected students</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="extensionsForm" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <input type="hidden" id="extensionAssignmentId" name="assignment_id">
+        <input type="hidden" id="extensionClassId" name="class_id">
+        <div class="modal-body extensions-modal-body">
+          <!-- Assignment Info -->
+          <div class="extension-assignment-info mb-4">
+            <div class="extension-info-header">
+              <i class="bi bi-file-text-fill me-2"></i>Assignment Details
+            </div>
+            <div class="extension-info-body">
+              <div class="extension-assignment-name" id="extensionAssignmentName"></div>
+              <div class="extension-due-date" id="extensionOriginalDueDate"></div>
+            </div>
+          </div>
+          
+          <!-- New Due Date -->
+          <div class="mb-4">
+            <label for="extended_due_date" class="extension-label">
+              <i class="bi bi-calendar-event me-2"></i>New Due Date & Time
+            </label>
+            <input type="datetime-local" 
+                   class="form-control extension-date-input" 
+                   id="extended_due_date" 
+                   name="extended_due_date" 
+                   required>
+            <small class="text-muted mt-1 d-block">
+              <i class="bi bi-info-circle me-1"></i>Select a new deadline for the selected students
+            </small>
+          </div>
+          
+          <!-- Student Selection -->
+          <div class="mb-4">
+            <div class="extension-label mb-3">
+              <i class="bi bi-people-fill me-2"></i>Select Students
+              <button type="button" class="btn btn-sm btn-outline-primary ms-2" onclick="selectAllStudents()">
+                <i class="bi bi-check-all me-1"></i>Select All
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="deselectAllStudents()">
+                <i class="bi bi-x me-1"></i>Deselect All
+              </button>
+            </div>
+            <div class="students-selection-container" id="studentsSelectionContainer">
+              <div class="loading-container">
+                <div class="loading-spinner"></div>
+                <p class="loading-text">Loading students...</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Reason -->
+          <div class="mb-3">
+            <label for="extension_reason" class="extension-label">
+              <i class="bi bi-chat-left-text me-2"></i>Reason for Extension (Optional)
+            </label>
+            <textarea class="form-control extension-reason-input" 
+                      id="extension_reason" 
+                      name="reason" 
+                      rows="3" 
+                      maxlength="300"
+                      placeholder="e.g., Medical emergency, technical issues, family situation..."></textarea>
+            <small class="text-muted">This will be visible to administrators</small>
+          </div>
+        </div>
+        <div class="modal-footer extensions-modal-footer">
+          <button type="button" class="btn btn-extension-cancel" data-bs-dismiss="modal">
+            <i class="bi bi-x-circle me-2"></i>Cancel
+          </button>
+          <button type="submit" class="btn btn-extension-confirm">
+            <i class="bi bi-check-circle-fill me-2"></i>Grant Extensions
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Void Assignment Modal -->
+<div class="modal fade" id="voidAssignmentModal" tabindex="-1" aria-labelledby="voidAssignmentModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content void-modal">
+      <div class="modal-header void-modal-header">
+        <h5 class="modal-title" id="voidAssignmentModalLabel">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>Void Assignment
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="voidAssignmentForm" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <input type="hidden" id="voidAssignmentId" name="assignment_id">
+        <input type="hidden" id="voidAssignmentType" name="assignment_type">
+        <div class="modal-body void-modal-body">
+          <div class="void-warning-section">
+            <div class="void-warning-icon">
+              <i class="bi bi-exclamation-octagon-fill"></i>
+            </div>
+            <div class="void-warning-text">
+              <h6>Warning: This action will void the assignment</h6>
+              <p>Voiding an assignment will:</p>
+              <ul>
+                <li>Exclude it from GPA calculations</li>
+                <li>Mark it as "Voided" for all students</li>
+                <li>Preserve the data for record keeping</li>
+                <li>This action can be reversed later</li>
+              </ul>
+            </div>
+          </div>
+          
+          <div class="void-assignment-info mb-3">
+            <label class="form-label fw-bold">Assignment:</label>
+            <div class="void-assignment-name" id="voidAssignmentName"></div>
+          </div>
+          
+          <div class="mb-3">
+            <label for="voidReason" class="form-label fw-bold">
+              <i class="bi bi-chat-left-text me-1"></i>Reason for Voiding (Optional)
+            </label>
+            <textarea class="form-control void-reason-input" 
+                      id="voidReason" 
+                      name="void_reason" 
+                      rows="4" 
+                      maxlength="500"
+                      placeholder="Enter a reason for voiding this assignment (e.g., covered in another assessment, technical issues, etc.)"></textarea>
+            <small class="text-muted">This reason will be saved for future reference</small>
+          </div>
+        </div>
+        <div class="modal-footer void-modal-footer">
+          <button type="button" class="btn btn-void-cancel" data-bs-dismiss="modal">
+            <i class="bi bi-x-circle me-2"></i>Cancel
+          </button>
+          <button type="submit" class="btn btn-void-confirm">
+            <i class="bi bi-slash-circle me-2"></i>Void Assignment
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+// Open extensions modal
+function openExtensionsModal(assignmentId, assignmentTitle, classId) {
+    document.getElementById('extensionAssignmentId').value = assignmentId;
+    document.getElementById('extensionClassId').value = classId;
+    document.getElementById('extensionAssignmentName').textContent = assignmentTitle;
+    document.getElementById('extension_reason').value = '';
+    
+    // Set minimum date to today
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const minDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+    document.getElementById('extended_due_date').min = minDateTime;
+    
+    // Load students for this class
+    loadStudentsForExtension(classId);
+    
+    const modal = new bootstrap.Modal(document.getElementById('extensionsModal'));
+    modal.show();
+}
+
+// Load students for extension selection
+function loadStudentsForExtension(classId) {
+    const container = document.getElementById('studentsSelectionContainer');
+    container.innerHTML = '<div class="loading-container"><div class="loading-spinner"></div><p class="loading-text">Loading students...</p></div>';
+    
+    fetch(`/teacher/class/${classId}/students-for-extensions`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.students) {
+                renderStudentCheckboxes(data.students);
+            } else {
+                container.innerHTML = '<div class="alert alert-warning">No students found in this class.</div>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading students:', error);
+            container.innerHTML = '<div class="alert alert-danger">Error loading students. Please try again.</div>';
+        });
+}
+
+// Render student checkboxes
+function renderStudentCheckboxes(students) {
+    const container = document.getElementById('studentsSelectionContainer');
+    let html = '<div class="row g-2">';
+    
+    students.forEach(student => {
+        html += '<div class="col-md-6">';
+        html += '<div class="student-checkbox-card">';
+        html += `<input class="form-check-input student-extension-checkbox" type="checkbox" id="student_ext_${student.id}" name="student_ids" value="${student.id}">`;
+        html += `<label class="form-check-label" for="student_ext_${student.id}">`;
+        html += '<div class="student-checkbox-avatar">';
+        html += `${student.first_name[0]}${student.last_name[0]}`;
+        html += '</div>';
+        html += '<div class="student-checkbox-info">';
+        html += `<div class="student-checkbox-name">${student.first_name} ${student.last_name}</div>`;
+        html += `<div class="student-checkbox-grade">Grade ${student.grade_level || 'N/A'}</div>`;
+        html += '</div>';
+        html += '</label>';
+        html += '</div></div>';
+    });
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+// Select all students
+function selectAllStudents() {
+    document.querySelectorAll('.student-extension-checkbox').forEach(cb => cb.checked = true);
+}
+
+// Deselect all students
+function deselectAllStudents() {
+    document.querySelectorAll('.student-extension-checkbox').forEach(cb => cb.checked = false);
+}
+
+// Handle extensions form submission
+document.addEventListener('DOMContentLoaded', function() {
+    const extensionsForm = document.getElementById('extensionsForm');
+    if (extensionsForm) {
+        extensionsForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const checkboxes = document.querySelectorAll('.student-extension-checkbox:checked');
+            if (checkboxes.length === 0) {
+                alert('Please select at least one student to grant an extension.');
+                return;
+            }
+            
+            const formData = new FormData(extensionsForm);
+            const submitBtn = extensionsForm.querySelector('.btn-extension-confirm');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Granting Extensions...';
+            submitBtn.disabled = true;
+            
+            fetch('{{ url_for("teacher.grant_extensions") }}', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (response.ok) {
+                    location.reload();
+                } else {
+                    return response.json().then(data => {
+                        throw new Error(data.error || 'Failed to grant extensions');
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error: ' + error.message);
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            });
+        });
+    }
+});
+
+// Open void modal with assignment info
+function openVoidModal(assignmentId, assignmentTitle, assignmentType) {
+    document.getElementById('voidAssignmentId').value = assignmentId;
+    document.getElementById('voidAssignmentType').value = assignmentType;
+    document.getElementById('voidAssignmentName').textContent = assignmentTitle;
+    document.getElementById('voidReason').value = '';
+    
+    const modal = new bootstrap.Modal(document.getElementById('voidAssignmentModal'));
+    modal.show();
+}
+
+// Handle void form submission
+document.addEventListener('DOMContentLoaded', function() {
+    const voidForm = document.getElementById('voidAssignmentForm');
+    if (voidForm) {
+        voidForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const assignmentId = document.getElementById('voidAssignmentId').value;
+            const assignmentType = document.getElementById('voidAssignmentType').value;
+            const voidReason = document.getElementById('voidReason').value;
+            const formData = new FormData();
+            formData.append('csrf_token', '{{ csrf_token() }}');
+            formData.append('status', 'Voided');
+            formData.append('void_reason', voidReason);
+            
+            // Determine the correct route based on assignment type
+            let voidUrl = '';
+            if (assignmentType === 'group') {
+                voidUrl = `/teacher/group-assignment/${assignmentId}/change-status`;
+            } else {
+                voidUrl = `/teacher/assignment/${assignmentId}/change-status`;
+            }
+            
+            // Show loading state
+            const submitBtn = voidForm.querySelector('.btn-void-confirm');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Voiding...';
+            submitBtn.disabled = true;
+            
+            fetch(voidUrl, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (response.redirected) {
+                    window.location.href = response.url;
+                } else {
+                    return response.json();
+                }
+            })
+            .then(data => {
+                if (data && data.success) {
+                    location.reload();
+                } else if (data && data.error) {
+                    alert('Error: ' + data.error);
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while voiding the assignment');
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            });
+        });
+    }
+});
+
+// Create assignment redirect
+function createAssignment() {
+    window.location.href = "{{ url_for('teacher.add_assignment_select_class') }}";
+}
+
+// Toggle view between assignments and grades
+function toggleView(view) {
+    const assignmentsView = document.getElementById('assignmentsView');
+    const gradesView = document.getElementById('gradesView');
+    const assignmentsBtn = document.getElementById('assignmentsBtn');
+    const gradesBtn = document.getElementById('gradesBtn');
+    
+    if (view === 'assignments') {
+        assignmentsView.style.display = 'block';
+        gradesView.style.display = 'none';
+        assignmentsBtn.classList.remove('btn-outline-primary');
+        assignmentsBtn.classList.add('btn-primary');
+        gradesBtn.classList.remove('btn-primary');
+        gradesBtn.classList.add('btn-outline-primary');
+    } else {
+        assignmentsView.style.display = 'none';
+        gradesView.style.display = 'block';
+        assignmentsBtn.classList.remove('btn-primary');
+        assignmentsBtn.classList.add('btn-outline-primary');
+        gradesBtn.classList.remove('btn-outline-primary');
+        gradesBtn.classList.add('btn-primary');
+    }
+}
+
+// Apply filters
+function applyFilters() {
+    const classFilter = document.getElementById('classFilter').value;
+    const sortBy = document.getElementById('sortBy').value;
+    const sortOrder = document.getElementById('sortOrder').value;
+    
+    // Build URL with query parameters
+    const params = new URLSearchParams();
+    if (classFilter) params.append('class_filter', classFilter);
+    if (sortBy) params.append('sort_by', sortBy);
+    if (sortOrder) params.append('sort_order', sortOrder);
+    
+    window.location.href = `{{ url_for('teacher.assignments_and_grades') }}?${params.toString()}`;
+}
+</script>
 {% endblock %}

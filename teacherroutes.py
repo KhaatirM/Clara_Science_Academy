@@ -1120,6 +1120,172 @@ def change_assignment_status(assignment_id):
         return redirect(url_for('teacher.my_assignments'))
 
 
+@teacher_blueprint.route('/group-assignment/<int:assignment_id>/change-status', methods=['POST'])
+@login_required
+@teacher_required
+def change_group_assignment_status(assignment_id):
+    """Change group assignment status"""
+    from models import GroupAssignment
+    
+    group_assignment = GroupAssignment.query.get_or_404(assignment_id)
+    class_obj = group_assignment.class_info
+    
+    # Authorization check - Directors and School Administrators can change any assignment, teachers can only change their own
+    current_teacher = get_teacher_or_admin()
+    if not is_admin() and current_teacher and class_obj.teacher_id != current_teacher.id:
+        flash("You are not authorized to change this group assignment status.", "danger")
+        return redirect(url_for('teacher.teacher_dashboard'))
+    
+    new_status = request.form.get('status')
+    
+    # Validate status
+    valid_statuses = ['Active', 'Inactive', 'Voided']
+    if new_status not in valid_statuses:
+        flash("Invalid status selected.", "danger")
+        return redirect(url_for('teacher.view_class', class_id=class_obj.id))
+    
+    try:
+        group_assignment.status = new_status
+        
+        # If voiding, also save the reason
+        if new_status == 'Voided':
+            void_reason = request.form.get('void_reason', '')
+            if void_reason:
+                # Store void reason in a notes field if available, or we could add a new field
+                if hasattr(group_assignment, 'void_reason'):
+                    group_assignment.void_reason = void_reason
+        
+        db.session.commit()
+        
+        flash(f'Group assignment status changed to {new_status} successfully.', 'success')
+        return redirect(url_for('teacher.assignments_and_grades'))
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error changing group assignment status: {str(e)}', 'danger')
+        return redirect(url_for('teacher.assignments_and_grades'))
+
+
+@teacher_blueprint.route('/class/<int:class_id>/students-for-extensions')
+@login_required
+@teacher_required
+def get_students_for_extensions(class_id):
+    """Get list of students in a class for extension granting"""
+    from flask import jsonify
+    
+    try:
+        class_obj = Class.query.get_or_404(class_id)
+        
+        # Authorization check
+        current_teacher = get_teacher_or_admin()
+        if not is_admin() and current_teacher and class_obj.teacher_id != current_teacher.id:
+            return jsonify({'success': False, 'error': 'Not authorized'})
+        
+        # Get enrolled students
+        enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
+        students = []
+        
+        for enrollment in enrollments:
+            student = enrollment.student
+            if student:
+                students.append({
+                    'id': student.id,
+                    'first_name': student.first_name,
+                    'last_name': student.last_name,
+                    'grade_level': student.grade_level,
+                    'email': student.email
+                })
+        
+        return jsonify({'success': True, 'students': students})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@teacher_blueprint.route('/grant-extensions', methods=['POST'])
+@login_required
+@teacher_required
+def grant_extensions():
+    """Grant extensions to students for assignments"""
+    from models import AssignmentExtension
+    from flask import jsonify
+    
+    try:
+        assignment_id = request.form.get('assignment_id', type=int)
+        class_id = request.form.get('class_id', type=int)
+        extended_due_date_str = request.form.get('extended_due_date')
+        reason = request.form.get('reason', '')
+        student_ids = request.form.getlist('student_ids')
+        
+        if not all([assignment_id, class_id, extended_due_date_str, student_ids]):
+            flash('Missing required fields', 'danger')
+            return redirect(url_for('teacher.assignments_and_grades'))
+        
+        # Parse the extended due date
+        extended_due_date = datetime.strptime(extended_due_date_str, '%Y-%m-%dT%H:%M')
+        
+        # Get the assignment
+        assignment = Assignment.query.get_or_404(assignment_id)
+        
+        # Authorization check
+        current_teacher = get_teacher_or_admin()
+        if not is_admin() and current_teacher and assignment.class_info.teacher_id != current_teacher.id:
+            flash('You are not authorized to grant extensions for this assignment.', 'danger')
+            return redirect(url_for('teacher.assignments_and_grades'))
+        
+        # Get the granter (teacher) ID
+        granter = TeacherStaff.query.filter_by(user_id=current_user.id).first()
+        if not granter:
+            flash('Teacher staff record not found.', 'danger')
+            return redirect(url_for('teacher.assignments_and_grades'))
+        
+        granted_count = 0
+        
+        for student_id_str in student_ids:
+            try:
+                student_id = int(student_id_str)
+                
+                # Check if extension already exists
+                existing_extension = AssignmentExtension.query.filter_by(
+                    assignment_id=assignment_id,
+                    student_id=student_id,
+                    is_active=True
+                ).first()
+                
+                if existing_extension:
+                    # Update existing extension
+                    existing_extension.extended_due_date = extended_due_date
+                    existing_extension.reason = reason
+                    existing_extension.granted_by = granter.id
+                    existing_extension.granted_at = datetime.utcnow()
+                else:
+                    # Create new extension
+                    new_extension = AssignmentExtension(
+                        assignment_id=assignment_id,
+                        student_id=student_id,
+                        extended_due_date=extended_due_date,
+                        reason=reason,
+                        granted_by=granter.id
+                    )
+                    db.session.add(new_extension)
+                
+                granted_count += 1
+                
+            except ValueError:
+                continue
+        
+        db.session.commit()
+        
+        flash(f'Extensions granted to {granted_count} student(s) successfully!', 'success')
+        return redirect(url_for('teacher.assignments_and_grades'))
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f'Error granting extensions: {str(e)}')
+        flash(f'Error granting extensions: {str(e)}', 'danger')
+        return redirect(url_for('teacher.assignments_and_grades'))
+
+
 @teacher_blueprint.route('/grade/assignment/<int:assignment_id>', methods=['GET', 'POST'])
 @login_required
 @teacher_required

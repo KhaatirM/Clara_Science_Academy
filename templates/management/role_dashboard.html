@@ -6668,37 +6668,104 @@
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body academic-concerns-body">
-        <div class="row g-4">
+        <!-- Concerns Toolbar -->
+        <div class="concerns-toolbar mb-4">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <div class="concerns-search">
+                <i class="bi bi-search search-icon-concerns"></i>
+                <input type="text" 
+                       id="concernsSearchInput" 
+                       class="form-control concerns-search-input" 
+                       placeholder="Search by student name, class, or assignment..."
+                       oninput="filterConcerns()">
+              </div>
+            </div>
+            <div class="col-md-3">
+              <select class="form-select concerns-filter" id="concernsTypeFilter" onchange="filterConcerns()">
+                <option value="">All Alert Types</option>
+                <option value="failing">Failing Only</option>
+                <option value="missing">Missing Only</option>
+                <option value="overdue">Overdue Only</option>
+              </select>
+            </div>
+            <div class="col-md-2">
+              <select class="form-select concerns-filter" id="concernsGPAFilter" onchange="filterConcerns()">
+                <option value="">All GPAs</option>
+                <option value="critical">Critical (&lt;2.0)</option>
+                <option value="warning">Warning (2.0-2.9)</option>
+                <option value="low">Below 3.0</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <select class="form-select concerns-filter" id="concernsSortOrder" onchange="filterConcerns()">
+                <option value="student-asc">Student Name (A-Z)</option>
+                <option value="student-desc">Student Name (Z-A)</option>
+                <option value="gpa-asc">GPA (Low to High)</option>
+                <option value="gpa-desc">GPA (High to Low)</option>
+                <option value="assignments-desc">Most Assignments First</option>
+              </select>
+            </div>
+          </div>
+          <div class="concerns-stats mt-3">
+            <span class="concerns-count-badge">
+              <i class="bi bi-exclamation-triangle-fill me-1"></i>
+              <span id="visibleConcernsCount">{{ at_risk_alerts|length }}</span> of {{ at_risk_alerts|length }} students shown
+            </span>
+            <button class="btn btn-sm btn-concerns-reset" onclick="resetConcernsFilters()">
+              <i class="bi bi-arrow-clockwise me-1"></i>Reset Filters
+            </button>
+          </div>
+        </div>
+
+        <!-- Students List -->
+        <div class="concerns-students-container" id="concernsStudentsContainer">
           {% for alert in at_risk_alerts %}
-          <div class="col-12">
-            <div class="academic-concern-card">
-              <div class="academic-concern-header">
-                <div class="d-flex align-items-center gap-3">
-                  <div class="academic-concern-avatar">
-                    {{ alert.student_name[0] if alert.student_name else '?' }}
-                  </div>
-                  <div class="flex-grow-1">
-                    <h5 class="academic-concern-name mb-1">{{ alert.student_name }}</h5>
-                    <div class="academic-concern-badges">
-                      <span class="academic-concern-badge badge-{{ 'danger' if 'failing' in alert.alert_reason.lower() else 'warning' }}">
-                        <i class="bi bi-{{ 'exclamation-octagon' if 'failing' in alert.alert_reason.lower() else 'exclamation-triangle' }}-fill me-1"></i>
-                        {{ alert.alert_reason|title }}
-                      </span>
-                    </div>
+          <div class="academic-concern-card" 
+               data-student-id="{{ alert.student_user_id }}"
+               data-student-name="{{ alert.student_name }}"
+               data-alert-type="{{ alert.alert_reason.lower() }}">
+            <div class="academic-concern-header">
+              <div class="d-flex align-items-center gap-3">
+                <div class="academic-concern-avatar">
+                  {{ alert.student_name[0] if alert.student_name else '?' }}
+                </div>
+                <div class="flex-grow-1">
+                  <h5 class="academic-concern-name mb-1">{{ alert.student_name }}</h5>
+                  <div class="academic-concern-badges">
+                    <span class="academic-concern-badge badge-{{ 'danger' if 'failing' in alert.alert_reason.lower() else 'warning' }}">
+                      <i class="bi bi-{{ 'exclamation-octagon' if 'failing' in alert.alert_reason.lower() else 'exclamation-triangle' }}-fill me-1"></i>
+                      {{ alert.alert_reason|title }}
+                    </span>
                   </div>
                 </div>
+                <button class="btn-dismiss-student" 
+                        onclick="dismissStudentConcern({{ alert.student_user_id }})"
+                        title="Dismiss this student's concerns">
+                  <i class="bi bi-x-lg"></i>
+                </button>
               </div>
-              <div class="academic-concern-body">
-                <div id="student-details-{{ alert.student_user_id }}" class="student-details-placeholder">
-                  <div class="loading-container">
-                    <div class="loading-spinner"></div>
-                    <p class="loading-text">Loading student details...</p>
-                  </div>
+            </div>
+            <div class="academic-concern-body">
+              <div id="student-details-{{ alert.student_user_id }}" class="student-details-placeholder">
+                <div class="loading-container">
+                  <div class="loading-spinner"></div>
+                  <p class="loading-text">Loading student details...</p>
                 </div>
               </div>
             </div>
           </div>
           {% endfor %}
+        </div>
+
+        <!-- No Results Message -->
+        <div id="noConcernsMessage" class="no-concerns-filtered" style="display: none;">
+          <i class="bi bi-filter-circle"></i>
+          <h5>No students match your filters</h5>
+          <p>Try adjusting your search criteria or reset filters</p>
+          <button class="btn btn-primary" onclick="resetConcernsFilters()">
+            <i class="bi bi-arrow-clockwise me-2"></i>Reset Filters
+          </button>
         </div>
       </div>
       <div class="modal-footer academic-concerns-footer">
@@ -6818,11 +6885,12 @@
         
         // Assignment cards
         html += '<div class="assignment-cards-grid">';
-        assignments.forEach(assignment => {
+        assignments.forEach((assignment, idx) => {
           const isFailing = assignment.score !== null && assignment.score <= 69;
           const isMissing = assignment.status === 'missing';
+          const assignmentId = `assignment-${student.student_id || 'unknown'}-${className.replace(/\s+/g, '-')}-${idx}`;
           
-          html += `<div class="assignment-concern-card ${isFailing ? 'card-failing' : 'card-warning'}">`;
+          html += `<div class="assignment-concern-card ${isFailing ? 'card-failing' : 'card-warning'}" id="${assignmentId}">`;
           html += '<div class="assignment-concern-header">';
           html += `<div class="assignment-concern-icon ${isFailing ? 'icon-danger' : 'icon-warning'}">`;
           html += `<i class="bi bi-${isFailing ? 'x-circle' : 'exclamation-circle'}-fill"></i>`;
@@ -6831,7 +6899,11 @@
           html += `<div class="assignment-concern-title">${assignment.title}</div>`;
           html += `<div class="assignment-concern-due">`;
           html += `<i class="bi bi-calendar-event"></i> Due: ${assignment.due_date}`;
-          html += '</div></div></div>';
+          html += '</div></div>';
+          html += `<button class="btn-dismiss-assignment" onclick="dismissAssignment('${assignmentId}')" title="Dismiss this assignment">`;
+          html += '<i class="bi bi-x-lg"></i>';
+          html += '</button>';
+          html += '</div>';
           
           html += '<div class="assignment-concern-footer">';
           if (assignment.status) {
@@ -6862,6 +6934,145 @@
     
     return html;
   }
+  
+  // Dismiss individual assignment from concerns
+  function dismissAssignment(assignmentId) {
+    const assignmentCard = document.getElementById(assignmentId);
+    if (assignmentCard && confirm('Are you sure you want to dismiss this assignment concern?')) {
+      assignmentCard.style.animation = 'fadeOutRight 0.5s ease-out';
+      setTimeout(() => {
+        assignmentCard.remove();
+        checkEmptyAssignments();
+      }, 500);
+    }
+  }
+  
+  // Dismiss entire student concern
+  function dismissStudentConcern(studentId) {
+    const studentCard = document.querySelector(`[data-student-id="${studentId}"]`);
+    if (studentCard && confirm('Are you sure you want to dismiss all concerns for this student?')) {
+      studentCard.style.animation = 'fadeOutRight 0.5s ease-out';
+      setTimeout(() => {
+        studentCard.remove();
+        updateConcernsCount();
+      }, 500);
+    }
+  }
+  
+  // Check if all assignments in a section are dismissed
+  function checkEmptyAssignments() {
+    const assignmentGrids = document.querySelectorAll('.assignment-cards-grid');
+    assignmentGrids.forEach(grid => {
+      if (grid.children.length === 0) {
+        const classGroup = grid.closest('.class-assignments-group');
+        if (classGroup) {
+          classGroup.innerHTML = '<div class="all-resolved-message"><i class="bi bi-check-circle-fill"></i> All assignments in this class have been addressed!</div>';
+        }
+      }
+    });
+  }
+  
+  // Filter concerns based on search, type, GPA, and sort
+  function filterConcerns() {
+    const searchTerm = document.getElementById('concernsSearchInput').value.toLowerCase();
+    const typeFilter = document.getElementById('concernsTypeFilter').value;
+    const gpaFilter = document.getElementById('concernsGPAFilter').value;
+    const sortOrder = document.getElementById('concernsSortOrder').value;
+    
+    const studentCards = Array.from(document.querySelectorAll('.academic-concern-card'));
+    let visibleCount = 0;
+    
+    // Filter and collect visible cards
+    const visibleCards = [];
+    studentCards.forEach(card => {
+      const studentName = card.getAttribute('data-student-name').toLowerCase();
+      const alertType = card.getAttribute('data-alert-type');
+      let shouldShow = true;
+      
+      // Search filter
+      if (searchTerm) {
+        const detailsDiv = card.querySelector('.student-details-placeholder');
+        const detailsText = detailsDiv ? detailsDiv.textContent.toLowerCase() : '';
+        if (!studentName.includes(searchTerm) && !detailsText.includes(searchTerm)) {
+          shouldShow = false;
+        }
+      }
+      
+      // Type filter
+      if (typeFilter) {
+        if (!alertType.includes(typeFilter)) {
+          shouldShow = false;
+        }
+      }
+      
+      // Show/hide card
+      if (shouldShow) {
+        card.style.display = 'block';
+        visibleCards.push(card);
+        visibleCount++;
+      } else {
+        card.style.display = 'none';
+      }
+    });
+    
+    // Sort visible cards
+    if (sortOrder && visibleCards.length > 0) {
+      sortStudentCards(visibleCards, sortOrder);
+    }
+    
+    // Update count
+    document.getElementById('visibleConcernsCount').textContent = visibleCount;
+    
+    // Show/hide no results message
+    const noResultsMsg = document.getElementById('noConcernsMessage');
+    const container = document.getElementById('concernsStudentsContainer');
+    if (visibleCount === 0) {
+      noResultsMsg.style.display = 'block';
+      container.style.display = 'none';
+    } else {
+      noResultsMsg.style.display = 'none';
+      container.style.display = 'block';
+    }
+  }
+  
+  // Sort student cards
+  function sortStudentCards(cards, order) {
+    const container = document.getElementById('concernsStudentsContainer');
+    
+    cards.sort((a, b) => {
+      const nameA = a.getAttribute('data-student-name');
+      const nameB = b.getAttribute('data-student-name');
+      
+      if (order === 'student-asc') {
+        return nameA.localeCompare(nameB);
+      } else if (order === 'student-desc') {
+        return nameB.localeCompare(nameA);
+      }
+      // More complex sorts would require additional data attributes
+      return 0;
+    });
+    
+    // Reorder in DOM
+    cards.forEach(card => {
+      container.appendChild(card);
+    });
+  }
+  
+  // Reset all filters
+  function resetConcernsFilters() {
+    document.getElementById('concernsSearchInput').value = '';
+    document.getElementById('concernsTypeFilter').value = '';
+    document.getElementById('concernsGPAFilter').value = '';
+    document.getElementById('concernsSortOrder').value = 'student-asc';
+    filterConcerns();
+  }
+  
+  // Update concerns count after dismissal
+  function updateConcernsCount() {
+    const visibleCards = document.querySelectorAll('.academic-concern-card[style*="display: block"], .academic-concern-card:not([style*="display: none"])');
+    const totalCards = document.querySelectorAll('.academic-concern-card');
+    document.getElementById('visibleConcernsCount').textContent = visibleCards.length;
+  }
 </script>
 
 <style>
@@ -6871,6 +7082,17 @@
   
   .student-details-placeholder {
     min-height: 200px;
+  }
+  
+  @keyframes fadeOutRight {
+    from {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateX(100px);
+    }
   }
 </style>
 {% endif %}

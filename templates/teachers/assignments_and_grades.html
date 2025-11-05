@@ -165,36 +165,36 @@
                         </div>
                     </div>
                     <div class="assignment-card-footer">
-                        <div class="btn-group w-100" role="group">
+                        <div class="action-buttons-grid">
                             <a href="{{ url_for('teacher.view_assignment', assignment_id=assignment.id) }}" 
-                               class="btn btn-outline-secondary btn-sm" 
+                               class="btn btn-action btn-action-view" 
                                title="View Details">
-                                <i class="bi bi-eye"></i>
-                            </a>
-                            <a href="{{ url_for('teacher.edit_assignment', assignment_id=assignment.id) }}" 
-                               class="btn btn-outline-warning btn-sm"
-                               title="Edit Assignment">
-                                <i class="bi bi-pencil"></i>
+                                <i class="bi bi-eye"></i><span class="btn-text">View</span>
                             </a>
                             <a href="{{ url_for('teacher.grade_assignment', assignment_id=assignment.id) }}" 
-                               class="btn btn-primary btn-sm"
+                               class="btn btn-action btn-action-grade"
                                title="Grade Students">
-                                <i class="bi bi-check-circle"></i>
+                                <i class="bi bi-check-circle"></i><span class="btn-text">Grade</span>
+                            </a>
+                            <a href="{{ url_for('teacher.edit_assignment', assignment_id=assignment.id) }}" 
+                               class="btn btn-action btn-action-edit"
+                               title="Edit Assignment">
+                                <i class="bi bi-pencil"></i><span class="btn-text">Edit</span>
                             </a>
                             <button type="button" 
-                                    class="btn btn-outline-info btn-sm" 
+                                    class="btn btn-action btn-action-extension" 
                                     onclick="openExtensionsModal({{ assignment.id }}, '{{ assignment.title }}', {{ assignment.class_id }})"
                                     title="Grant Extensions">
-                                <i class="bi bi-clock-history"></i>
+                                <i class="bi bi-clock-history"></i><span class="btn-text">Extend</span>
                             </button>
                             <button type="button" 
-                                    class="btn btn-outline-danger btn-sm" 
+                                    class="btn btn-action btn-action-void" 
                                     onclick="openVoidModal({{ assignment.id }}, '{{ assignment.title }}', 'individual')"
                                     title="Void Assignment">
-                                <i class="bi bi-slash-circle"></i>
+                                <i class="bi bi-slash-circle"></i><span class="btn-text">Void</span>
                             </button>
-                            </div>
                         </div>
+                    </div>
                     </div>
                 </div>
                 {% endfor %}
@@ -237,36 +237,36 @@
                         </div>
                     </div>
                     <div class="assignment-card-footer">
-                        <div class="btn-group w-100" role="group">
+                        <div class="action-buttons-grid">
                             <a href="{{ url_for('teacher.view_group_assignment', assignment_id=group_assignment.id) }}" 
-                               class="btn btn-outline-secondary btn-sm"
+                               class="btn btn-action btn-action-view"
                                title="View Details">
-                                <i class="bi bi-eye"></i>
-                            </a>
-                            <a href="{{ url_for('teacher.edit_group_assignment', assignment_id=group_assignment.id) }}" 
-                               class="btn btn-outline-warning btn-sm"
-                               title="Edit Assignment">
-                                <i class="bi bi-pencil"></i>
+                                <i class="bi bi-eye"></i><span class="btn-text">View</span>
                             </a>
                             <a href="{{ url_for('teacher.grade_group_assignment', assignment_id=group_assignment.id) }}" 
-                               class="btn btn-success btn-sm"
+                               class="btn btn-action btn-action-grade"
                                title="Grade Groups">
-                                <i class="bi bi-check-circle"></i>
+                                <i class="bi bi-check-circle"></i><span class="btn-text">Grade</span>
+                            </a>
+                            <a href="{{ url_for('teacher.edit_group_assignment', assignment_id=group_assignment.id) }}" 
+                               class="btn btn-action btn-action-edit"
+                               title="Edit Assignment">
+                                <i class="bi bi-pencil"></i><span class="btn-text">Edit</span>
                             </a>
                             <button type="button" 
-                                    class="btn btn-outline-info btn-sm" 
+                                    class="btn btn-action btn-action-extension" 
                                     onclick="openExtensionsModal({{ group_assignment.id }}, '{{ group_assignment.title }}', {{ group_assignment.class_id }})"
                                     title="Grant Extensions">
-                                <i class="bi bi-clock-history"></i>
+                                <i class="bi bi-clock-history"></i><span class="btn-text">Extend</span>
                             </button>
                             <button type="button" 
-                                    class="btn btn-outline-danger btn-sm" 
+                                    class="btn btn-action btn-action-void" 
                                     onclick="openVoidModal({{ group_assignment.id }}, '{{ group_assignment.title }}', 'group')"
                                     title="Void Assignment">
-                                <i class="bi bi-slash-circle"></i>
+                                <i class="bi bi-slash-circle"></i><span class="btn-text">Void</span>
                             </button>
-                            </div>
                         </div>
+                    </div>
                     </div>
                 </div>
                 {% endfor %}

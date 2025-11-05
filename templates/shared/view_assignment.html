@@ -1,240 +1,201 @@
 {% extends "shared/dashboard_layout.html" %}
 
 {% block dashboard_content %}
-<div class="view-assignment-container">
-    <!-- Header Section -->
-    <div class="assignment-header">
-        <div class="header-content">
-            <div class="assignment-title-section">
-                <h1 class="assignment-title">{{ assignment.title }}</h1>
-                <div class="assignment-meta">
-                    <span class="assignment-class">{{ class_info.name if class_info else 'Unknown Class' }}</span>
-                    <span class="assignment-teacher">by {{ assignment.class_info.teacher.first_name if assignment.class_info and assignment.class_info.teacher else 'Unknown Teacher' }}</span>
+<div class="container-fluid px-2 px-md-4">
+    <!-- Compact Header Section -->
+    <div class="view-assignment-header mb-4">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <h2 class="mb-2">
+                    <i class="bi bi-file-earmark-text me-2 text-primary"></i>{{ assignment.title }}
+                </h2>
+                <div class="assignment-header-meta">
+                    <span class="meta-badge meta-class">
+                        <i class="bi bi-book me-1"></i>{{ class_info.name if class_info else 'Unknown Class' }}
+                    </span>
+                    <span class="meta-badge meta-teacher">
+                        <i class="bi bi-person me-1"></i>{{ assignment.class_info.teacher.first_name if assignment.class_info and assignment.class_info.teacher else 'Unknown' }}
+                    </span>
                 </div>
             </div>
-            <div class="assignment-status">
+            <div class="d-flex gap-2 flex-wrap align-items-start">
                 {% if assignment.due_date %}
                     {% set due_date = assignment.due_date.date() if assignment.due_date.__class__.__name__ == 'datetime' else assignment.due_date %}
                     {% set today_date = today.date() if today.__class__.__name__ == 'datetime' else today %}
                     {% set days_remaining = (due_date - today_date).days %}
                     {% if days_remaining < 0 %}
-                        <span class="status-badge overdue">{{ -days_remaining }} days overdue</span>
+                        <span class="view-status-badge badge-overdue">{{ -days_remaining }} DAYS OVERDUE</span>
                     {% elif days_remaining == 0 %}
-                        <span class="status-badge due-today">Due today</span>
+                        <span class="view-status-badge badge-due-today">DUE TODAY</span>
                     {% else %}
-                        <span class="status-badge due-soon">{{ days_remaining }} days remaining</span>
+                        <span class="view-status-badge badge-due-soon">{{ days_remaining }} DAYS LEFT</span>
                     {% endif %}
                 {% endif %}
-                <span class="status-badge {{ assignment.status.lower() }}">{{ assignment.status.title() }}</span>
+                <span class="view-status-badge badge-{{ assignment.status.lower() }}">{{ assignment.status.upper() }}</span>
             </div>
         </div>
     </div>
 
-    <!-- Main Content Grid -->
-    <div class="assignment-content-grid">
-        <!-- Main Content Column -->
-        <div class="main-content-column">
-            <!-- Assignment Details -->
-            <div class="content-card assignment-details">
-                <div class="card-header">
-                    <h3><i class="bi bi-info-circle"></i> Assignment Details</h3>
-                </div>
-                <div class="card-body">
-                    {% if assignment.description %}
-                        <div class="detail-section">
-                            <label>Description:</label>
-                            <div class="description-content">{{ assignment.description|safe }}</div>
+    <!-- Compact Two-Column Layout -->
+    <div class="row g-4">
+        <!-- Left Column - Assignment Details & Actions -->
+        <div class="col-lg-8">
+            <!-- Combined Details Card -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body p-4">
+                    <div class="row g-3">
+                        <!-- Description (if exists) -->
+                        {% if assignment.description %}
+                        <div class="col-12">
+                            <div class="compact-detail-section">
+                                <label><i class="bi bi-card-text me-2"></i>Description</label>
+                                <p class="compact-description">{{ assignment.description }}</p>
+                            </div>
                         </div>
-                    {% endif %}
-                    
-                    <div class="details-grid">
-                        <div class="detail-item">
-                            <label>Due Date:</label>
-                            <span>
-                                {% if assignment.due_date %}
-                                    {% if assignment.due_date.__class__.__name__ == 'datetime' %}
-                                        {{ assignment.due_date.strftime('%B %d, %Y at %I:%M %p') }}
-                                    {% else %}
-                                        {{ assignment.due_date.strftime('%B %d, %Y') }}
-                                    {% endif %}
-                                {% else %}
-                                    No due date
-                                {% endif %}
-                            </span>
+                        {% endif %}
+                        
+                        <!-- Details Grid -->
+                        <div class="col-md-6">
+                            <div class="compact-detail-item">
+                                <i class="bi bi-calendar-event text-primary"></i>
+                                <div>
+                                    <label>Due Date</label>
+                                    <span>
+                                        {% if assignment.due_date %}
+                                            {{ assignment.due_date.strftime('%B %d, %Y at %I:%M %p') if assignment.due_date.__class__.__name__ == 'datetime' else assignment.due_date.strftime('%B %d, %Y') }}
+                                        {% else %}
+                                            No due date
+                                        {% endif %}
+                                    </span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="detail-item">
-                            <label>Quarter:</label>
-                            <span>{{ assignment.quarter if assignment.quarter else 'N/A' }}</span>
+                        <div class="col-md-6">
+                            <div class="compact-detail-item">
+                                <i class="bi bi-grid-3x3 text-success"></i>
+                                <div>
+                                    <label>Quarter</label>
+                                    <span>{{ assignment.quarter if assignment.quarter else 'N/A' }}</span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="detail-item">
-                            <label>Assignment Type:</label>
-                            <span class="type-badge {{ assignment.assignment_type.lower() }}">{{ assignment.assignment_type.title() }}</span>
+                        <div class="col-md-6">
+                            <div class="compact-detail-item">
+                                <i class="bi bi-file-earmark text-warning"></i>
+                                <div>
+                                    <label>Type</label>
+                                    <span class="type-badge-compact">{{ assignment.assignment_type.title() }}</span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="detail-item">
-                            <label>Points:</label>
-                            <span>{{ assignment.points if assignment.points else 'N/A' }}</span>
+                        <div class="col-md-6">
+                            <div class="compact-detail-item">
+                                <i class="bi bi-star-fill text-info"></i>
+                                <div>
+                                    <label>Points</label>
+                                    <span>{{ assignment.points if assignment.points else 'N/A' }}</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Assignment Materials -->
-            {% if assignment.attachment_path %}
-            <div class="content-card assignment-materials">
-                <div class="card-header">
-                    <h3><i class="bi bi-paperclip"></i> Assignment Materials</h3>
+            <!-- Quick Action Buttons (Moved to main column) -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="bi bi-lightning-fill me-2"></i>Quick Actions</h6>
                 </div>
-                <div class="card-body">
-                    <div class="material-item">
-                        <div class="material-info">
-                            <i class="bi bi-file-pdf"></i>
-                            <span class="material-name">{{ assignment.attachment_path.split('/')[-1] }}</span>
-                        </div>
-                        <a href="{{ url_for('static', filename=assignment.attachment_path) }}" 
-                           class="btn btn-primary download-btn" download>
-                            <i class="bi bi-download"></i> Download
+                <div class="card-body p-3">
+                    <div class="compact-action-grid">
+                        <a href="{{ url_for('teacher.edit_assignment', assignment_id=assignment.id) }}" 
+                           class="btn btn-compact btn-compact-edit">
+                            <i class="bi bi-pencil-square"></i>
+                            <span>Edit</span>
                         </a>
+                        <a href="{{ url_for('teacher.grade_assignment', assignment_id=assignment.id) }}" 
+                           class="btn btn-compact btn-compact-grade">
+                            <i class="bi bi-check-circle-fill"></i>
+                            <span>Grade</span>
+                        </a>
+                        <button class="btn btn-compact btn-compact-extension" 
+                                onclick="openExtensionModal()">
+                            <i class="bi bi-clock-history"></i>
+                            <span>Extensions</span>
+                        </button>
+                        <button class="btn btn-compact btn-compact-void" 
+                                onclick="openVoidModalView()">
+                            <i class="bi bi-slash-circle"></i>
+                            <span>Void</span>
+                        </button>
+                        <button onclick="goBack()" class="btn btn-compact btn-compact-back">
+                            <i class="bi bi-arrow-left-circle"></i>
+                            <span>Back</span>
+                        </button>
                     </div>
                 </div>
             </div>
-            {% endif %}
-
-            <!-- Assignment Instructions -->
-            {% if assignment.instructions %}
-            <div class="content-card assignment-instructions">
-                <div class="card-header">
-                    <h3><i class="bi bi-list-ol"></i> Instructions</h3>
-                </div>
-                <div class="card-body">
-                    <div class="instructions-content">{{ assignment.instructions|safe }}</div>
-                </div>
-            </div>
-            {% endif %}
         </div>
 
-        <!-- Sidebar Column -->
-        <div class="sidebar-column">
-            <!-- Class Information -->
-            <div class="sidebar-card class-info">
-                <div class="card-header">
-                    <h4><i class="bi bi-people"></i> Class Information</h4>
+        <!-- Right Column - Compact Stats & Class Info -->
+        <div class="col-lg-4">
+            <!-- Statistics Card -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0"><i class="bi bi-graph-up me-2"></i>Statistics</h6>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-3">
+                    <div class="compact-stats-row">
+                        <div class="compact-stat">
+                            <div class="compact-stat-icon bg-primary">
+                                <i class="bi bi-file-text-fill"></i>
+                            </div>
+                            <div>
+                                <div class="compact-stat-value">{{ submissions_count }}</div>
+                                <div class="compact-stat-label">Submissions</div>
+                            </div>
+                        </div>
+                        <div class="compact-stat">
+                            <div class="compact-stat-icon bg-warning">
+                                <i class="bi bi-star-fill"></i>
+                            </div>
+                            <div>
+                                <div class="compact-stat-value">{{ assignment_points }}</div>
+                                <div class="compact-stat-label">Points</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Class Info Card -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0"><i class="bi bi-people-fill me-2"></i>Class Info</h6>
+                </div>
+                <div class="card-body p-3">
                     {% if class_info %}
-                        <div class="info-grid">
-                            <div class="info-item">
-                                <label>Class:</label>
-                                <span>{{ class_info.name }}</span>
+                        <div class="compact-info-list">
+                            <div class="compact-info-row">
+                                <span class="compact-info-label">Class:</span>
+                                <span class="compact-info-value">{{ class_info.name }}</span>
                             </div>
-                            <div class="info-item">
-                                <label>Subject:</label>
-                                <span>{{ class_info.subject }}</span>
+                            <div class="compact-info-row">
+                                <span class="compact-info-label">Subject:</span>
+                                <span class="compact-info-value">{{ class_info.subject }}</span>
                             </div>
-                            <div class="info-item">
-                                <label>Grade Level:</label>
-                                <span>{{ class_info.grade_level if class_info.grade_level else 'N/A' }}</span>
+                            <div class="compact-info-row">
+                                <span class="compact-info-label">Grade:</span>
+                                <span class="compact-info-value">{{ class_info.grade_level if class_info.grade_level else 'N/A' }}</span>
                             </div>
-                            <div class="info-item">
-                                <label>Teacher:</label>
-                                <span>{{ class_info.teacher.first_name if class_info.teacher else 'N/A' }}</span>
+                            <div class="compact-info-row">
+                                <span class="compact-info-label">Teacher:</span>
+                                <span class="compact-info-value">{{ class_info.teacher.first_name if class_info.teacher else 'N/A' }}</span>
                             </div>
                         </div>
                     {% else %}
-                        <p class="text-muted">Class information not available</p>
+                        <p class="text-muted mb-0 small">No class info available</p>
                     {% endif %}
-                </div>
-            </div>
-
-            <!-- Assignment Statistics -->
-            <div class="sidebar-card assignment-stats">
-                <div class="card-header">
-                    <h4><i class="bi bi-graph-up"></i> Statistics</h4>
-                </div>
-                <div class="card-body">
-                    <div class="stats-grid">
-                        <div class="stat-item">
-                            <div class="stat-icon">
-                                <i class="bi bi-file-text"></i>
-                            </div>
-                            <div class="stat-content">
-                                <span class="stat-number">{{ submissions_count }}</span>
-                                <span class="stat-label">Submissions</span>
-                            </div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-icon">
-                                <i class="bi bi-star"></i>
-                            </div>
-                            <div class="stat-content">
-                                <span class="stat-number">{{ assignment_points }}</span>
-                                <span class="stat-label">Points</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="stat-actions">
-                        <a href="#" class="btn btn-outline-primary btn-sm">
-                            <i class="bi bi-eye"></i> View Submissions
-                        </a>
-                        <a href="#" class="btn btn-primary btn-sm">
-                            <i class="bi bi-check-circle"></i> Grade Assignment
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Quick Actions -->
-            <div class="sidebar-card quick-actions">
-                <div class="card-header">
-                    <h4><i class="bi bi-lightning"></i> Quick Actions</h4>
-                </div>
-                <div class="card-body">
-                    <div class="action-buttons">
-                        {% if current_user.role in ['Director', 'School Administrator'] %}
-                            <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" 
-                               class="btn btn-outline-secondary btn-block">
-                                <i class="bi bi-pencil"></i> Edit Assignment
-                            </a>
-                            <button class="btn btn-outline-warning btn-block" 
-                                    onclick="changeStatus({{ assignment.id }}, '{{ assignment.status }}')">
-                                <i class="bi bi-toggle-on"></i> Change Status
-                            </button>
-                            <a href="{{ url_for('management.grant_extensions', assignment_id=assignment.id) }}" 
-                               class="btn btn-outline-info btn-block">
-                                <i class="bi bi-clock"></i> Grant Extensions
-                            </a>
-                            <button class="btn btn-outline-danger btn-block" 
-                                    onclick="confirmDelete('{{ assignment.title }}', {{ assignment.id }})">
-                                <i class="bi bi-trash"></i> Remove Assignment
-                            </button>
-                        {% else %}
-                            <a href="{{ url_for('teacher.edit_assignment', assignment_id=assignment.id) }}" 
-                               class="btn btn-outline-secondary btn-block">
-                                <i class="bi bi-pencil"></i> Edit Assignment
-                            </a>
-                            <button class="btn btn-outline-warning btn-block" 
-                                    onclick="changeStatus({{ assignment.id }}, '{{ assignment.status }}')">
-                                <i class="bi bi-toggle-on"></i> Change Status
-                            </button>
-                            <a href="{{ url_for('teacher.grant_extensions', assignment_id=assignment.id) }}" 
-                               class="btn btn-outline-info btn-block">
-                                <i class="bi bi-clock"></i> Grant Extensions
-                            </a>
-                            <button class="btn btn-outline-danger btn-block" 
-                                    onclick="confirmDelete('{{ assignment.title }}', {{ assignment.id }})">
-                                <i class="bi bi-trash"></i> Remove Assignment
-                            </button>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Back Navigation -->
-            <div class="sidebar-card back-navigation">
-                <div class="card-body">
-                    <button onclick="goBack()" class="btn btn-secondary btn-block">
-                        <i class="bi bi-arrow-left"></i> Back to Previous Page
-                    </button>
                 </div>
             </div>
         </div>

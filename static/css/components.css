@@ -4983,6 +4983,394 @@
     margin: 0;
 }
 
+/* ===== COMPACT VIEW ASSIGNMENT PAGE ===== */
+.view-assignment-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 2rem;
+    border-radius: 16px;
+    color: white;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.assignment-header-meta {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.meta-badge {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: white;
+}
+
+.view-status-badge {
+    padding: 0.75rem 1.5rem;
+    border-radius: 12px;
+    font-weight: 800;
+    font-size: 0.875rem;
+    letter-spacing: 0.5px;
+}
+
+.badge-overdue {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
+    box-shadow: 0 3px 10px rgba(220, 53, 69, 0.3);
+}
+
+.badge-due-today {
+    background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+    color: white;
+    box-shadow: 0 3px 10px rgba(255, 193, 7, 0.3);
+}
+
+.badge-due-soon {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+}
+
+.badge-inactive {
+    background: #6c757d;
+    color: white;
+}
+
+.compact-detail-section {
+    border-bottom: 2px solid #f8f9fa;
+    padding-bottom: 1rem;
+}
+
+.compact-detail-section label {
+    font-weight: 800;
+    color: #2c3e50;
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+    display: block;
+}
+
+.compact-description {
+    color: #6c757d;
+    margin: 0;
+    line-height: 1.6;
+}
+
+.compact-detail-item {
+    display: flex;
+    align-items: start;
+    gap: 1rem;
+}
+
+.compact-detail-item i {
+    font-size: 1.75rem;
+    margin-top: 0.25rem;
+}
+
+.compact-detail-item label {
+    font-size: 0.75rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+    display: block;
+    margin-bottom: 0.25rem;
+}
+
+.compact-detail-item span {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.type-badge-compact {
+    background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 0.875rem;
+}
+
+/* Compact Action Grid */
+.compact-action-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.75rem;
+}
+
+.btn-compact {
+    padding: 1rem 0.75rem;
+    border-radius: 12px;
+    font-weight: 700;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    border: 2px solid;
+    transition: all 0.3s ease;
+}
+
+.btn-compact i {
+    font-size: 1.5rem;
+}
+
+.btn-compact span {
+    font-size: 0.75rem;
+}
+
+.btn-compact-edit {
+    background: white;
+    border-color: #ffc107;
+    color: #ffc107;
+}
+
+.btn-compact-edit:hover {
+    background: #ffc107;
+    color: white;
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
+}
+
+.btn-compact-grade {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-color: #667eea;
+    color: white;
+}
+
+.btn-compact-grade:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    color: white;
+}
+
+.btn-compact-extension {
+    background: white;
+    border-color: #17a2b8;
+    color: #17a2b8;
+}
+
+.btn-compact-extension:hover {
+    background: #17a2b8;
+    color: white;
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(23, 162, 184, 0.3);
+}
+
+.btn-compact-void {
+    background: white;
+    border-color: #dc3545;
+    color: #dc3545;
+}
+
+.btn-compact-void:hover {
+    background: #dc3545;
+    color: white;
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+}
+
+.btn-compact-back {
+    background: white;
+    border-color: #6c757d;
+    color: #6c757d;
+}
+
+.btn-compact-back:hover {
+    background: #6c757d;
+    color: white;
+    transform: translateY(-3px);
+}
+
+/* Compact Stats */
+.compact-stats-row {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+
+.compact-stat {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.compact-stat-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    flex-shrink: 0;
+}
+
+.compact-stat-value {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: #2c3e50;
+    line-height: 1;
+}
+
+.compact-stat-label {
+    font-size: 0.75rem;
+    color: #6c757d;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+/* Compact Info List */
+.compact-info-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.compact-info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #f8f9fa;
+}
+
+.compact-info-row:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.compact-info-label {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #6c757d;
+}
+
+.compact-info-value {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+    .compact-action-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 576px) {
+    .compact-action-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* ===== ASSIGNMENT CARD ACTION BUTTONS ===== */
+.action-buttons-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.5rem;
+    padding: 0;
+}
+
+.btn-action {
+    padding: 0.5rem 0.25rem;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    border: 2px solid;
+}
+
+.btn-action i {
+    font-size: 1.1rem;
+}
+
+.btn-text {
+    font-size: 0.7rem;
+    line-height: 1;
+}
+
+.btn-action-view {
+    background: white;
+    border-color: #6c757d;
+    color: #6c757d;
+}
+
+.btn-action-view:hover {
+    background: #6c757d;
+    color: white;
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+}
+
+.btn-action-grade {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-color: #667eea;
+    color: white;
+}
+
+.btn-action-grade:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    color: white;
+}
+
+.btn-action-edit {
+    background: white;
+    border-color: #ffc107;
+    color: #ffc107;
+}
+
+.btn-action-edit:hover {
+    background: #ffc107;
+    color: white;
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
+}
+
+.btn-action-extension {
+    background: white;
+    border-color: #17a2b8;
+    color: #17a2b8;
+}
+
+.btn-action-extension:hover {
+    background: #17a2b8;
+    color: white;
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(23, 162, 184, 0.3);
+}
+
+.btn-action-void {
+    background: white;
+    border-color: #dc3545;
+    color: #dc3545;
+}
+
+.btn-action-void:hover {
+    background: #dc3545;
+    color: white;
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+}
+
+/* Responsive: Stack on small screens */
+@media (max-width: 768px) {
+    .action-buttons-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+    }
+    
+    .btn-action {
+        padding: 0.75rem 0.5rem;
+    }
+}
+
 /* ===== GRANT EXTENSIONS MODAL ===== */
 .extensions-modal .modal-content {
     border: none;
@@ -5229,6 +5617,110 @@
     transform: translateY(-3px);
     box-shadow: 0 6px 20px rgba(23, 162, 184, 0.4);
     color: white;
+}
+
+/* ===== STUDENT ASSIGNMENT LETTER GRADE BADGES ===== */
+.grade-badge {
+    font-size: 1rem !important;
+    font-weight: 800 !important;
+    padding: 0.5rem 1rem !important;
+    border-radius: 12px !important;
+    letter-spacing: 1px !important;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.15) !important;
+    border: 2px solid transparent !important;
+    animation: gradeBadgeEntry 0.5s ease-out !important;
+}
+
+@keyframes gradeBadgeEntry {
+    from {
+        opacity: 0;
+        transform: scale(0.8) rotate(-10deg);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) rotate(0deg);
+    }
+}
+
+/* A Grades - Excellent (Green) */
+.grade-a-plus,
+.grade-a,
+.grade-a-minus {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+    color: white !important;
+    border-color: #28a745 !important;
+}
+
+.grade-a-plus {
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.4) !important;
+    animation: gradePulse 2s ease-in-out infinite !important;
+}
+
+@keyframes gradePulse {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 4px 15px rgba(40, 167, 69, 0.4);
+    }
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 6px 20px rgba(40, 167, 69, 0.6);
+    }
+}
+
+/* B Grades - Good (Cyan/Teal) */
+.grade-b-plus,
+.grade-b,
+.grade-b-minus {
+    background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%) !important;
+    color: white !important;
+    border-color: #17a2b8 !important;
+    box-shadow: 0 3px 12px rgba(23, 162, 184, 0.3) !important;
+}
+
+/* C Grades - Passing (Yellow/Orange) */
+.grade-c-plus,
+.grade-c,
+.grade-c-minus {
+    background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%) !important;
+    color: white !important;
+    border-color: #ffc107 !important;
+    box-shadow: 0 3px 12px rgba(255, 193, 7, 0.3) !important;
+}
+
+/* D Grades - Low (Orange/Red) */
+.grade-d-plus,
+.grade-d,
+.grade-d-minus {
+    background: linear-gradient(135deg, #fd7e14 0%, #dc3545 100%) !important;
+    color: white !important;
+    border-color: #fd7e14 !important;
+    box-shadow: 0 3px 12px rgba(253, 126, 20, 0.3) !important;
+}
+
+/* F Grade - Failing (Red) */
+.grade-f {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
+    color: white !important;
+    border-color: #dc3545 !important;
+    box-shadow: 0 4px 15px rgba(220, 53, 69, 0.4) !important;
+    animation: failingPulse 2s ease-in-out infinite !important;
+}
+
+@keyframes failingPulse {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 4px 15px rgba(220, 53, 69, 0.4);
+    }
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 6px 20px rgba(220, 53, 69, 0.6);
+    }
+}
+
+/* Hover effects for grade badges */
+.grade-badge:hover {
+    transform: scale(1.1) !important;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.25) !important;
 }
 
 /* ===== VOID ASSIGNMENT MODAL ===== */

@@ -2004,68 +2004,6 @@ def get_class_students(class_id):
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
-@teacher_blueprint.route('/grant-extensions', methods=['POST'])
-@login_required
-@teacher_required
-def grant_extensions():
-    """Grant extensions to selected students for an assignment"""
-    try:
-        assignment_id = request.form.get('assignment_id')
-        extended_due_date_str = request.form.get('extended_due_date')
-        reason = request.form.get('reason', '')
-        student_ids = request.form.getlist('student_ids')
-        
-        if not assignment_id or not extended_due_date_str or not student_ids:
-            return jsonify({'success': False, 'error': 'Missing required fields'})
-        
-        # Parse the extended due date
-        from datetime import datetime
-        extended_due_date = datetime.fromisoformat(extended_due_date_str.replace('Z', '+00:00'))
-        
-        # Get assignment and verify authorization
-        assignment = Assignment.query.get_or_404(assignment_id)
-        teacher = get_teacher_or_admin()
-        
-        if current_user.role != 'Director' and assignment.class_info.teacher_id != teacher.id:
-            return jsonify({'success': False, 'error': 'Unauthorized'})
-        
-        # Grant extensions to selected students
-        granted_count = 0
-        for student_id in student_ids:
-            # Check if extension already exists and deactivate it
-            existing_extension = AssignmentExtension.query.filter_by(
-                assignment_id=assignment_id,
-                student_id=student_id,
-                is_active=True
-            ).first()
-            
-            if existing_extension:
-                existing_extension.is_active = False
-            
-            # Create new extension
-            extension = AssignmentExtension(
-                assignment_id=assignment_id,
-                student_id=student_id,
-                extended_due_date=extended_due_date,
-                reason=reason,
-                granted_by=teacher.id
-            )
-            
-            db.session.add(extension)
-            granted_count += 1
-        
-        db.session.commit()
-        
-        return jsonify({
-            'success': True, 
-            'message': f'Extensions granted to {granted_count} student(s)',
-            'granted_count': granted_count
-        })
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)})
-
 @teacher_blueprint.route('/grades')
 @login_required
 @teacher_required

@@ -3512,8 +3512,12 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                 {% endif %}
                             </div>
                             <div class="student-assignment-status-badge">
-                                {% set grade_info = grades.get(assignment.id) %}
-                                {% set score = grade_info.score if grade_info and grade_info.score is not none else none %}
+                                {% set grade_obj = grades.get(assignment.id) %}
+                                {% set score = none %}
+                                {% if grade_obj and grade_obj.grade_data %}
+                                    {% set grade_data_dict = grade_obj.grade_data|from_json %}
+                                    {% set score = grade_data_dict.get('score') if grade_data_dict else none %}
+                                {% endif %}
                                 
                                 {% if student_status == 'Voided' %}
                                     <span class="badge bg-secondary">Voided</span>

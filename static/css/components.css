@@ -3792,3 +3792,579 @@
     box-shadow: 0 3px 10px rgba(220, 53, 69, 0.3);
     animation: pulse 2s ease-in-out infinite;
 }
+
+/* ===== ACADEMIC CONCERNS MODAL ===== */
+.academic-concerns-modal .modal-content {
+    border: none;
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    overflow: hidden;
+}
+
+.academic-concerns-header {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    padding: 2rem;
+    border: none;
+    position: relative;
+    overflow: hidden;
+}
+
+.academic-concerns-header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 400px;
+    height: 400px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(20px, 20px); }
+}
+
+.academic-concerns-header-content {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    position: relative;
+    z-index: 1;
+}
+
+.academic-concerns-icon-circle {
+    width: 70px;
+    height: 70px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: white;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.academic-concerns-header .modal-title {
+    color: white;
+    font-weight: 800;
+    font-size: 1.75rem;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.academic-concerns-subtitle {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.academic-concerns-body {
+    padding: 2rem;
+    background: #f8f9fa;
+}
+
+/* Academic Concern Card */
+.academic-concern-card {
+    background: white;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    border: 2px solid #e9ecef;
+}
+
+.academic-concern-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.academic-concern-header {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 1.5rem 2rem;
+    border-bottom: 3px solid #dc3545;
+}
+
+.academic-concern-avatar {
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+    font-weight: 800;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+}
+
+.academic-concern-name {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #2c3e50;
+    margin: 0;
+}
+
+.academic-concern-badges {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.academic-concern-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 0.875rem;
+    animation: slideInRight 0.5s ease-out;
+}
+
+.academic-concern-badge.badge-danger {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
+    box-shadow: 0 3px 10px rgba(220, 53, 69, 0.3);
+}
+
+.academic-concern-badge.badge-warning {
+    background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+    color: white;
+    box-shadow: 0 3px 10px rgba(255, 193, 7, 0.3);
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.academic-concern-body {
+    padding: 2rem;
+}
+
+/* Loading States */
+.loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+    gap: 1rem;
+}
+
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid #f8f9fa;
+    border-top-color: #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.loading-text {
+    color: #6c757d;
+    font-weight: 600;
+    margin: 0;
+}
+
+/* GPA Summary Section */
+.gpa-summary-section {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    border-left: 5px solid #667eea;
+}
+
+.gpa-summary-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #f8f9fa;
+}
+
+.gpa-summary-header i {
+    font-size: 1.5rem;
+    color: #667eea;
+}
+
+.gpa-summary-header h6 {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #2c3e50;
+    margin: 0;
+}
+
+.gpa-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+}
+
+.gpa-stat-card {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+    border: 2px solid #e9ecef;
+}
+
+.gpa-stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+}
+
+.gpa-stat-card.gpa-current {
+    border-left: 5px solid #667eea;
+}
+
+.gpa-stat-card.gpa-potential {
+    border-left: 5px solid #28a745;
+}
+
+.gpa-stat-card.gpa-improvement {
+    border-left: 5px solid #17a2b8;
+}
+
+.gpa-stat-icon {
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.75rem;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.gpa-potential .gpa-stat-icon {
+    background: linear-gradient(135deg, #28a745 0%, #218838 100%);
+}
+
+.gpa-improvement .gpa-stat-icon {
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+}
+
+.gpa-stat-content {
+    flex: 1;
+}
+
+.gpa-stat-label {
+    font-size: 0.75rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+}
+
+.gpa-stat-value {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #2c3e50;
+    line-height: 1;
+}
+
+.gpa-potential-value {
+    color: #28a745;
+}
+
+.gpa-gain-value {
+    color: #17a2b8;
+}
+
+.gpa-stat-note {
+    font-size: 0.7rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+    font-weight: 600;
+}
+
+/* Assignments Section */
+.assignments-section {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    border-left: 5px solid #dc3545;
+}
+
+.assignments-section-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #f8f9fa;
+}
+
+.assignments-section-header i {
+    font-size: 1.5rem;
+    color: #dc3545;
+}
+
+.assignments-section-header h6 {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #2c3e50;
+    margin: 0;
+}
+
+.class-assignments-group {
+    margin-bottom: 2rem;
+}
+
+.class-name-header {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #667eea;
+    margin-bottom: 1rem;
+    padding: 1rem 1.5rem;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(102, 126, 234, 0.05) 100%);
+    border-radius: 12px;
+    border-left: 4px solid #667eea;
+}
+
+.class-gpa-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1.5rem;
+    background: #f8f9fa;
+    border-radius: 10px;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+    flex-wrap: wrap;
+}
+
+.class-gpa-label {
+    color: #6c757d;
+    font-weight: 700;
+}
+
+.class-gpa-current {
+    font-weight: 800;
+    color: #2c3e50;
+    font-size: 1.1rem;
+}
+
+.class-gpa-potential {
+    font-weight: 800;
+    color: #28a745;
+    font-size: 1.1rem;
+}
+
+.class-gpa-badge {
+    background: linear-gradient(135deg, #28a745 0%, #218838 100%);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.assignment-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+}
+
+.assignment-concern-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.25rem;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+    border: 2px solid #e9ecef;
+}
+
+.assignment-concern-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+}
+
+.assignment-concern-card.card-failing {
+    border-left: 4px solid #dc3545;
+    background: linear-gradient(135deg, #fff 0%, #fff5f5 100%);
+}
+
+.assignment-concern-card.card-warning {
+    border-left: 4px solid #ffc107;
+    background: linear-gradient(135deg, #fff 0%, #fffbf0 100%);
+}
+
+.assignment-concern-header {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.assignment-concern-icon {
+    width: 45px;
+    height: 45px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.assignment-concern-icon.icon-danger {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
+    box-shadow: 0 3px 10px rgba(220, 53, 69, 0.3);
+}
+
+.assignment-concern-icon.icon-warning {
+    background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+    color: white;
+    box-shadow: 0 3px 10px rgba(255, 193, 7, 0.3);
+}
+
+.assignment-concern-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.assignment-concern-title {
+    font-weight: 700;
+    color: #2c3e50;
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+    line-height: 1.3;
+}
+
+.assignment-concern-due {
+    font-size: 0.85rem;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.assignment-concern-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    padding-top: 1rem;
+    border-top: 2px solid #f8f9fa;
+    flex-wrap: wrap;
+}
+
+.assignment-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.assignment-status-pill.status-missing {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
+}
+
+.assignment-status-pill.status-failing {
+    background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+    color: white;
+}
+
+.assignment-score-badge {
+    padding: 0.5rem 1rem;
+    border-radius: 10px;
+    font-weight: 800;
+    font-size: 1rem;
+    min-width: 70px;
+    text-align: center;
+}
+
+.assignment-score-badge.score-failing {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
+    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+}
+
+.assignment-score-badge.score-warning {
+    background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+    color: white;
+    box-shadow: 0 2px 8px rgba(255, 193, 7, 0.3);
+}
+
+.assignment-score-badge.score-missing {
+    background: #6c757d;
+    color: white;
+}
+
+/* No Concerns Message */
+.no-concerns-message {
+    text-align: center;
+    padding: 3rem;
+    color: #28a745;
+}
+
+.no-concerns-message i {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    display: block;
+}
+
+.no-concerns-message p {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+/* Modal Footer */
+.academic-concerns-footer {
+    background: white;
+    border: none;
+    padding: 1.5rem 2rem;
+}
+
+.btn-academic-close {
+    background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+    color: white;
+    border: none;
+    padding: 0.75rem 2rem;
+    border-radius: 12px;
+    font-weight: 700;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+}
+
+.btn-academic-close:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(108, 117, 125, 0.4);
+    color: white;
+}

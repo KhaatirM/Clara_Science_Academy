@@ -6652,31 +6652,47 @@
 <!-- Detailed Academic Concerns Modal -->
 <div class="modal fade" id="academicDetailsModal" tabindex="-1" aria-labelledby="academicDetailsModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-xl modal-dialog-scrollable">
-    <div class="modal-content">
-      <div class="modal-header bg-warning text-dark">
-        <h5 class="modal-title" id="academicDetailsModalLabel">
-          <i class="bi bi-exclamation-triangle-fill me-2"></i>Student Academic Concerns
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    <div class="modal-content academic-concerns-modal">
+      <div class="modal-header academic-concerns-header">
+        <div class="academic-concerns-header-content">
+          <div class="academic-concerns-icon-circle">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+          </div>
+          <div>
+            <h5 class="modal-title mb-1" id="academicDetailsModalLabel">
+              Student Academic Concerns
+            </h5>
+            <p class="academic-concerns-subtitle mb-0">Review and address student performance issues</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <div class="modal-body">
-        <div class="row g-3">
+      <div class="modal-body academic-concerns-body">
+        <div class="row g-4">
           {% for alert in at_risk_alerts %}
           <div class="col-12">
-            <div class="card border-warning shadow-sm">
-              <div class="card-header bg-light">
-                <h6 class="mb-0">
-                  <i class="bi bi-person-fill me-2"></i><strong>{{ alert.student_name }}</strong>
-                  <span class="badge bg-warning text-dark ms-2">{{ alert.alert_reason|title }}</span>
-                </h6>
-              </div>
-              <div class="card-body">
-                <div id="student-details-{{ alert.student_user_id }}" class="student-details-placeholder">
-                  <div class="text-center py-3">
-                    <div class="spinner-border text-primary" role="status">
-                      <span class="visually-hidden">Loading...</span>
+            <div class="academic-concern-card">
+              <div class="academic-concern-header">
+                <div class="d-flex align-items-center gap-3">
+                  <div class="academic-concern-avatar">
+                    {{ alert.student_name[0] if alert.student_name else '?' }}
+                  </div>
+                  <div class="flex-grow-1">
+                    <h5 class="academic-concern-name mb-1">{{ alert.student_name }}</h5>
+                    <div class="academic-concern-badges">
+                      <span class="academic-concern-badge badge-{{ 'danger' if 'failing' in alert.alert_reason.lower() else 'warning' }}">
+                        <i class="bi bi-{{ 'exclamation-octagon' if 'failing' in alert.alert_reason.lower() else 'exclamation-triangle' }}-fill me-1"></i>
+                        {{ alert.alert_reason|title }}
+                      </span>
                     </div>
-                    <p class="mt-2 text-muted">Loading student details...</p>
+                  </div>
+                </div>
+              </div>
+              <div class="academic-concern-body">
+                <div id="student-details-{{ alert.student_user_id }}" class="student-details-placeholder">
+                  <div class="loading-container">
+                    <div class="loading-spinner"></div>
+                    <p class="loading-text">Loading student details...</p>
                   </div>
                 </div>
               </div>
@@ -6685,8 +6701,10 @@
           {% endfor %}
         </div>
       </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      <div class="modal-footer academic-concerns-footer">
+        <button type="button" class="btn btn-academic-close" data-bs-dismiss="modal">
+          <i class="bi bi-x-circle me-2"></i>Close
+        </button>
       </div>
     </div>
   </div>
@@ -6731,57 +6749,116 @@
   }
   
   function formatStudentDetails(student) {
-    let html = '<div class="row">';
+    let html = '<div class="academic-details-container">';
     
-    // Overall GPA Summary
-    html += '<div class="col-12 mb-3">';
-    html += '<h6 class="text-primary"><i class="bi bi-graph-up me-1"></i>Combined GPA from All Classes</h6>';
-    html += '<div class="row g-2">';
-    html += `<div class="col-md-6"><div class="p-2 bg-light rounded"><small>Current GPA:</small><br><strong>${student.current_gpa !== null ? student.current_gpa.toFixed(2) : 'N/A'}</strong></div></div>`;
-    html += `<div class="col-md-6"><div class="p-2 bg-light rounded"><small>Potential GPA (if issues resolved):</small><br><strong class="text-success">${student.hypothetical_gpa !== null ? student.hypothetical_gpa.toFixed(2) : 'N/A'}</strong></div></div>`;
+    // Overall GPA Summary with modern cards
+    html += '<div class="gpa-summary-section">';
+    html += '<div class="gpa-summary-header">';
+    html += '<i class="bi bi-graph-up-arrow"></i>';
+    html += '<h6>Academic Performance Overview</h6>';
+    html += '</div>';
+    html += '<div class="gpa-cards-grid">';
+    
+    // Current GPA Card
+    html += '<div class="gpa-stat-card gpa-current">';
+    html += '<div class="gpa-stat-icon"><i class="bi bi-trophy"></i></div>';
+    html += '<div class="gpa-stat-content">';
+    html += '<div class="gpa-stat-label">Current GPA</div>';
+    html += `<div class="gpa-stat-value">${student.current_gpa !== null ? student.current_gpa.toFixed(2) : 'N/A'}</div>`;
+    html += '</div></div>';
+    
+    // Potential GPA Card
+    html += '<div class="gpa-stat-card gpa-potential">';
+    html += '<div class="gpa-stat-icon"><i class="bi bi-star-fill"></i></div>';
+    html += '<div class="gpa-stat-content">';
+    html += '<div class="gpa-stat-label">Potential GPA</div>';
+    html += `<div class="gpa-stat-value gpa-potential-value">${student.hypothetical_gpa !== null ? student.hypothetical_gpa.toFixed(2) : 'N/A'}</div>';`;
+    html += '<div class="gpa-stat-note">If issues resolved</div>';
+    html += '</div></div>';
+    
+    // GPA Improvement
+    if (student.current_gpa && student.hypothetical_gpa) {
+      const improvement = (student.hypothetical_gpa - student.current_gpa).toFixed(2);
+      html += '<div class="gpa-stat-card gpa-improvement">';
+      html += '<div class="gpa-stat-icon"><i class="bi bi-arrow-up-circle-fill"></i></div>';
+      html += '<div class="gpa-stat-content">';
+      html += '<div class="gpa-stat-label">Potential Gain</div>';
+      html += `<div class="gpa-stat-value gpa-gain-value">+${improvement}</div>`;
+      html += '<div class="gpa-stat-note">Points possible</div>';
+      html += '</div></div>';
+    }
+    
     html += '</div></div>';
     
     // Missing & Failing Assignments by Class
-    html += '<div class="col-12">';
-    html += '<h6 class="text-danger"><i class="bi bi-file-earmark-x me-1"></i>Missing & Failing Assignments by Class</h6>';
+    html += '<div class="assignments-section">';
+    html += '<div class="assignments-section-header">';
+    html += '<i class="bi bi-exclamation-diamond-fill"></i>';
+    html += '<h6>Assignments Requiring Attention</h6>';
+    html += '</div>';
     
     if (student.missing_assignments && Object.keys(student.missing_assignments).length > 0) {
       for (const [className, assignments] of Object.entries(student.missing_assignments)) {
-        html += `<div class="mb-3"><strong class="text-primary">${className}</strong>`;
+        html += '<div class="class-assignments-group">';
+        html += `<div class="class-name-header">${className}</div>`;
         
+        // Class GPA indicator
         if (student.class_gpa && student.class_gpa[className]) {
           const classGpa = student.class_gpa[className];
-          html += `<div class="mb-2"><small>Class GPA: <strong>${classGpa.current !== null ? classGpa.current.toFixed(2) : 'N/A'}</strong>`;
+          html += '<div class="class-gpa-indicator">';
+          html += '<span class="class-gpa-label">Class GPA:</span>';
+          html += `<span class="class-gpa-current">${classGpa.current !== null ? classGpa.current.toFixed(2) : 'N/A'}</span>`;
           if (classGpa.hypothetical !== null) {
-            html += ` → <strong class="text-success">${classGpa.hypothetical.toFixed(2)}</strong> (potential)`;
-          }
-          html += '</small></div>';
-        }
-        
-        html += '<ul class="list-group list-group-flush">';
-        assignments.forEach(assignment => {
-          html += '<li class="list-group-item d-flex justify-content-between align-items-center">';
-          html += `<div><strong>${assignment.title}</strong><br>`;
-          html += `<small class="text-muted">Due: ${assignment.due_date}</small>`;
-          if (assignment.status) {
-            html += ` <span class="badge bg-${assignment.status === 'missing' ? 'danger' : 'warning'} ms-2">${assignment.status}</span>`;
+            html += '<i class="bi bi-arrow-right mx-2"></i>';
+            html += `<span class="class-gpa-potential">${classGpa.hypothetical.toFixed(2)}</span>`;
+            html += '<span class="class-gpa-badge">potential</span>';
           }
           html += '</div>';
-          if (assignment.score !== null && assignment.score !== undefined) {
-            html += `<span class="badge bg-${assignment.score <= 69 ? 'danger' : 'warning'}">Score: ${assignment.score}</span>`;
-          } else {
-            html += '<span class="badge bg-danger">Not Graded</span>';
+        }
+        
+        // Assignment cards
+        html += '<div class="assignment-cards-grid">';
+        assignments.forEach(assignment => {
+          const isFailing = assignment.score !== null && assignment.score <= 69;
+          const isMissing = assignment.status === 'missing';
+          
+          html += `<div class="assignment-concern-card ${isFailing ? 'card-failing' : 'card-warning'}">`;
+          html += '<div class="assignment-concern-header">';
+          html += `<div class="assignment-concern-icon ${isFailing ? 'icon-danger' : 'icon-warning'}">`;
+          html += `<i class="bi bi-${isFailing ? 'x-circle' : 'exclamation-circle'}-fill"></i>`;
+          html += '</div>';
+          html += '<div class="assignment-concern-info">';
+          html += `<div class="assignment-concern-title">${assignment.title}</div>`;
+          html += `<div class="assignment-concern-due">`;
+          html += `<i class="bi bi-calendar-event"></i> Due: ${assignment.due_date}`;
+          html += '</div></div></div>';
+          
+          html += '<div class="assignment-concern-footer">';
+          if (assignment.status) {
+            html += `<span class="assignment-status-pill status-${assignment.status}">`;
+            html += `<i class="bi bi-${assignment.status === 'missing' ? 'dash-circle' : 'exclamation-triangle'}-fill"></i>`;
+            html += `${assignment.status}`;
+            html += '</span>';
           }
-          html += '</li>';
+          if (assignment.score !== null && assignment.score !== undefined) {
+            html += `<span class="assignment-score-badge ${assignment.score <= 69 ? 'score-failing' : 'score-warning'}">`;
+            html += `${assignment.score}%`;
+            html += '</span>';
+          } else {
+            html += '<span class="assignment-score-badge score-missing">Not Graded</span>';
+          }
+          html += '</div></div>';
         });
-        html += '</ul></div>';
+        html += '</div></div>';
       }
     } else {
-      html += '<p class="text-muted">No missing assignments found.</p>';
+      html += '<div class="no-concerns-message">';
+      html += '<i class="bi bi-check-circle-fill"></i>';
+      html += '<p>No missing or failing assignments found!</p>';
+      html += '</div>';
     }
     
-    html += '</div>';
-    html += '</div>';
+    html += '</div></div>';
     
     return html;
   }

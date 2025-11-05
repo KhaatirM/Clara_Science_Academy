@@ -517,8 +517,17 @@
             {% endif %}
 
             <!-- Academic Alerts Summary -->
-            {% set critical_students = students|selectattr('gpa', 'defined')|selectattr('gpa', 'lt', 2.0)|list %}
-            {% set warning_students = students|selectattr('gpa', 'defined')|select('gpa', 'ge', 2.0)|selectattr('gpa', 'lt', 3.0)|list %}
+            {% set critical_students = [] %}
+            {% set warning_students = [] %}
+            {% for student in students %}
+                {% if student.gpa %}
+                    {% if student.gpa < 2.0 %}
+                        {% set _ = critical_students.append(student) %}
+                    {% elif student.gpa >= 2.0 and student.gpa < 3.0 %}
+                        {% set _ = warning_students.append(student) %}
+                    {% endif %}
+                {% endif %}
+            {% endfor %}
             
             {% if critical_students|length > 0 or warning_students|length > 0 %}
             <div class="academic-alerts-banner mb-4">

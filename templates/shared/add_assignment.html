@@ -470,11 +470,27 @@ document.addEventListener('DOMContentLoaded', function() {
         submitBtn.disabled = true;
     });
     
-    // Set default due date to tomorrow at 11:59 PM
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(23, 59, 0, 0);
-    document.getElementById('due_date').value = tomorrow.toISOString().slice(0, 16);
+    // Set default due date based on assignment context
+    {% if context == 'in-class' and default_due_date %}
+        // For in-class assignments, set to 4:00 PM EST today
+        const inClassDate = new Date('{{ default_due_date.strftime("%Y-%m-%dT%H:%M") }}');
+        document.getElementById('due_date').value = inClassDate.toISOString().slice(0, 16);
+        document.getElementById('due_date').readOnly = true;
+        document.getElementById('due_date').style.backgroundColor = '#e9ecef';
+        
+        // Add info message about auto-set date
+        const dueDateDiv = document.getElementById('due_date').parentElement;
+        const infoMsg = document.createElement('div');
+        infoMsg.className = 'alert alert-info mt-2 mb-0';
+        infoMsg.innerHTML = '<i class="bi bi-info-circle me-2"></i><strong>In-Class Assignment:</strong> Due date automatically set to 4:00 PM EST today.';
+        dueDateDiv.appendChild(infoMsg);
+    {% else %}
+        // For homework assignments, set to tomorrow at 11:59 PM
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(23, 59, 0, 0);
+        document.getElementById('due_date').value = tomorrow.toISOString().slice(0, 16);
+    {% endif %}
     
     // Initialize preview
     updateAssignmentPreview();

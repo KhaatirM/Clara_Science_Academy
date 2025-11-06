@@ -638,10 +638,14 @@ def create_discussion_assignment():
 @teacher_required
 def add_assignment_select_class():
     """Add a new assignment - class selection page"""
+    # Get assignment context from query parameter (in-class or homework)
+    context = request.args.get('context', 'homework')
+    
     if request.method == 'POST':
         class_id = request.form.get('class_id', type=int)
         if class_id:
-            return redirect(url_for('teacher.add_assignment', class_id=class_id))
+            # Pass context through to the add_assignment page
+            return redirect(url_for('teacher.add_assignment', class_id=class_id, context=context))
         else:
             flash("Please select a class.", "danger")
     
@@ -655,7 +659,7 @@ def add_assignment_select_class():
         # Teacher user without teacher_staff_id - show empty results
         classes = []
     
-    return render_template('shared/add_assignment_select_class.html', classes=classes)
+    return render_template('shared/add_assignment_select_class.html', classes=classes, context=context)
 
 @teacher_blueprint.route('/class/<int:class_id>/assignment/add', methods=['GET', 'POST'])
 @login_required
@@ -756,7 +760,24 @@ def add_assignment(class_id):
     # Get current quarter for pre-selection
     current_quarter = get_current_quarter()
     
-    return render_template('shared/add_assignment.html', class_obj=class_obj, current_quarter=current_quarter)
+    # Get assignment context from query parameter (in-class or homework)
+    context = request.args.get('context', 'homework')
+    
+    # Calculate default due date for in-class assignments
+    from datetime import datetime, time
+    import pytz
+    default_due_date = None
+    if context == 'in-class':
+        # Set to 4:00 PM EST today
+        est = pytz.timezone('America/New_York')
+        now_est = datetime.now(est)
+        default_due_date = now_est.replace(hour=16, minute=0, second=0, microsecond=0)
+    
+    return render_template('shared/add_assignment.html', 
+                          class_obj=class_obj, 
+                          current_quarter=current_quarter,
+                          context=context,
+                          default_due_date=default_due_date)
 
 @teacher_blueprint.route('/class/<int:class_id>/assignment/add/enhanced', methods=['GET', 'POST'])
 @login_required

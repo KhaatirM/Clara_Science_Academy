@@ -263,11 +263,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Redirect based on target selection
                 if (target === 'individual') {
-                    {% if current_user.role in ['Director', 'School Administrator'] %}
-                        window.location.href = `{{ url_for('management.add_assignment') }}`;
-                    {% else %}
-                        window.location.href = `{{ url_for('teacher.add_assignment_select_class') }}`;
-                    {% endif %}
+                    // Show assignment context modal (In-Class vs Homework)
+                    showAssignmentContextModal();
                 } else if (target === 'group') {
                     {% if current_user.role in ['Director', 'School Administrator'] %}
                         window.location.href = `{{ url_for('management.group_assignment_type_selector') }}`;
@@ -281,6 +278,107 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Show modal
         const modal = new bootstrap.Modal(document.getElementById('assignmentTargetModal'));
+        modal.show();
+    }
+    
+    function showAssignmentContextModal() {
+        // Create and show modal for assignment context selection (In-Class vs Homework)
+        const modalHtml = `
+            <div class="modal fade" id="assignmentContextModal" tabindex="-1" aria-labelledby="assignmentContextModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header bg-info text-white">
+                            <h5 class="modal-title" id="assignmentContextModalLabel">
+                                <i class="bi bi-clock-history me-2"></i>Assignment Context
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p class="mb-4">Where will students complete this assignment?</p>
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <div class="card h-100 assignment-context-card" data-context="in-class" style="cursor: pointer; transition: all 0.3s;">
+                                        <div class="card-body text-center p-4">
+                                            <div class="mb-3">
+                                                <i class="bi bi-building text-info" style="font-size: 3rem;"></i>
+                                            </div>
+                                            <h5 class="card-title text-info">In-Class Assignment</h5>
+                                            <p class="card-text text-muted mb-2">
+                                                Students complete this during class time.
+                                            </p>
+                                            <small class="text-muted">
+                                                <i class="bi bi-info-circle me-1"></i>Due date will automatically be set to 4:00 PM EST today
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="card h-100 assignment-context-card" data-context="homework" style="cursor: pointer; transition: all 0.3s;">
+                                        <div class="card-body text-center p-4">
+                                            <div class="mb-3">
+                                                <i class="bi bi-house-door text-warning" style="font-size: 3rem;"></i>
+                                            </div>
+                                            <h5 class="card-title text-warning">Homework Assignment</h5>
+                                            <p class="card-text text-muted mb-2">
+                                                Students complete this outside of class.
+                                            </p>
+                                            <small class="text-muted">
+                                                <i class="bi bi-info-circle me-1"></i>You will set the due date manually
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                <i class="bi bi-arrow-left me-1"></i>Back
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Remove existing modal if it exists
+        const existingModal = document.getElementById('assignmentContextModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        // Add modal to body
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        // Add hover effects
+        document.querySelectorAll('.assignment-context-card').forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                this.style.transform = 'scale(1.02)';
+                this.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+            });
+            card.addEventListener('mouseleave', function() {
+                this.style.transform = 'scale(1)';
+                this.style.boxShadow = '';
+            });
+        });
+
+        // Add click handlers for context cards
+        document.querySelectorAll('.assignment-context-card').forEach(card => {
+            card.addEventListener('click', function() {
+                const context = this.dataset.context;
+                const modal = bootstrap.Modal.getInstance(document.getElementById('assignmentContextModal'));
+                modal.hide();
+                
+                // Redirect based on context selection
+                {% if current_user.role in ['Director', 'School Administrator'] %}
+                    window.location.href = `{{ url_for('management.add_assignment') }}?context=${context}`;
+                {% else %}
+                    window.location.href = `{{ url_for('teacher.add_assignment_select_class') }}?context=${context}`;
+                {% endif %}
+            });
+        });
+
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('assignmentContextModal'));
         modal.show();
     }
 });

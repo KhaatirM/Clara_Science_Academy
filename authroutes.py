@@ -591,14 +591,40 @@ os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
 def get_google_oauth_flow():
     """Create and return a Google OAuth Flow object."""
-    # Check if client_secret.json exists
+    import json
+    import tempfile
+    
+    # Try to get client secret from environment variable first (for production)
+    client_secret_json = os.environ.get('GOOGLE_CLIENT_SECRET_JSON')
+    
+    if client_secret_json:
+        # Parse JSON from environment variable
+        try:
+            client_config = json.loads(client_secret_json)
+            
+            # Create flow from client config dictionary
+            flow = Flow.from_client_config(
+                client_config,
+                scopes=current_app.config.get('GOOGLE_OAUTH_SCOPES'),
+                redirect_uri=url_for('auth.google_callback', _external=True)
+            )
+            
+            current_app.logger.info("Google OAuth flow created from environment variable")
+            return flow
+            
+        except json.JSONDecodeError as e:
+            current_app.logger.error(f"Invalid JSON in GOOGLE_CLIENT_SECRET_JSON: {str(e)}")
+            raise ValueError("Invalid Google OAuth configuration in environment variable")
+    
+    # Fallback to file-based configuration (for local development)
     client_secrets_file = current_app.config.get('GOOGLE_CLIENT_SECRETS_FILE')
     
     if not os.path.exists(client_secrets_file):
         current_app.logger.error(f"Google client_secret.json not found at {client_secrets_file}")
         raise FileNotFoundError(
             "Google OAuth configuration file (client_secret.json) not found. "
-            "Please download it from Google Cloud Console and place it in the project root."
+            "Please download it from Google Cloud Console and place it in the project root, "
+            "or set the GOOGLE_CLIENT_SECRET_JSON environment variable."
         )
     
     flow = Flow.from_client_secrets_file(
@@ -607,6 +633,7 @@ def get_google_oauth_flow():
         redirect_uri=url_for('auth.google_callback', _external=True)
     )
     
+    current_app.logger.info("Google OAuth flow created from client_secret.json file")
     return flow
 
 
@@ -675,19 +702,41 @@ def google_login():
 def google_callback():
     """Handle the Google OAuth callback."""
     try:
+        import json
+        
         # Verify state to prevent CSRF attacks
         state = session.get('oauth_state')
         if not state:
             flash('Invalid login session. Please try again.', 'danger')
             return redirect(url_for('auth.login'))
         
-        # Create OAuth flow with the stored state
-        flow = Flow.from_client_secrets_file(
-            current_app.config.get('GOOGLE_CLIENT_SECRETS_FILE'),
-            scopes=None,  # Don't need to specify scopes for callback
-            state=state,
-            redirect_uri=url_for('auth.google_callback', _external=True)
-        )
+        # Try to get client secret from environment variable first (for production)
+        client_secret_json = os.environ.get('GOOGLE_CLIENT_SECRET_JSON')
+        
+        if client_secret_json:
+            # Parse JSON from environment variable
+            try:
+                client_config = json.loads(client_secret_json)
+                
+                # Create OAuth flow with the stored state from config
+                flow = Flow.from_client_config(
+                    client_config,
+                    scopes=None,  # Don't need to specify scopes for callback
+                    state=state,
+                    redirect_uri=url_for('auth.google_callback', _external=True)
+                )
+            except json.JSONDecodeError as e:
+                current_app.logger.error(f"Invalid JSON in GOOGLE_CLIENT_SECRET_JSON: {str(e)}")
+                flash('Google Sign-In configuration error. Please contact your administrator.', 'danger')
+                return redirect(url_for('auth.login'))
+        else:
+            # Fallback to file-based configuration
+            flow = Flow.from_client_secrets_file(
+                current_app.config.get('GOOGLE_CLIENT_SECRETS_FILE'),
+                scopes=None,  # Don't need to specify scopes for callback
+                state=state,
+                redirect_uri=url_for('auth.google_callback', _external=True)
+            )
         
         # Fetch the token using the authorization response
         flow.fetch_token(authorization_response=request.url)

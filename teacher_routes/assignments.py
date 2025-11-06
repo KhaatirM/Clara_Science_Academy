@@ -351,37 +351,80 @@ def change_assignment_status(assignment_id):
 def grant_extensions():
     """Grant extensions to students for assignments"""
     try:
+        from models import AssignmentExtension, Student
+        from datetime import datetime
+        from flask import jsonify
+        
         assignment_id = request.form.get('assignment_id', type=int)
         student_ids = request.form.getlist('student_ids')
-        extension_days = request.form.get('extension_days', type=int, default=1)
+        extended_due_date_str = request.form.get('extended_due_date')
+        reason = request.form.get('reason', '')
         
-        if not assignment_id or not student_ids:
-            flash("Missing required information.", "danger")
-            return redirect(url_for('teacher.my_assignments'))
+        if not assignment_id or not student_ids or not extended_due_date_str:
+            return jsonify({'success': False, 'error': 'Missing required information'}), 400
         
         assignment = Assignment.query.get_or_404(assignment_id)
         
         # Check authorization for this assignment's class
         if not is_authorized_for_class(assignment.class_info):
-            flash("You are not authorized to grant extensions for this assignment.", "danger")
-            return redirect(url_for('teacher.my_assignments'))
+            return jsonify({'success': False, 'error': 'Not authorized'}), 403
+        
+        # Parse the extended due date
+        try:
+            extended_due_date = datetime.strptime(extended_due_date_str, '%Y-%m-%dT%H:%M')
+        except ValueError:
+            return jsonify({'success': False, 'error': 'Invalid date format'}), 400
+        
+        # Get teacher ID
+        teacher = get_teacher_or_admin()
+        if not teacher:
+            return jsonify({'success': False, 'error': 'Teacher not found'}), 400
         
         # Grant extensions to selected students
         extended_count = 0
-        for student_id in student_ids:
+        for student_id_str in student_ids:
             try:
-                student_id = int(student_id)
-                # Here you would implement extension logic
-                # For now, we'll just count the students
+                student_id = int(student_id_str)
+                
+                # Check if student exists
+                student = Student.query.get(student_id)
+                if not student:
+                    continue
+                
+                # Check if extension already exists for this student and assignment
+                existing_extension = AssignmentExtension.query.filter_by(
+                    assignment_id=assignment_id,
+                    student_id=student_id,
+                    is_active=True
+                ).first()
+                
+                if existing_extension:
+                    # Update existing extension
+                    existing_extension.extended_due_date = extended_due_date
+                    existing_extension.reason = reason
+                    existing_extension.granted_at = datetime.utcnow()
+                    existing_extension.granted_by = teacher.id
+                else:
+                    # Create new extension
+                    new_extension = AssignmentExtension(
+                        assignment_id=assignment_id,
+                        student_id=student_id,
+                        extended_due_date=extended_due_date,
+                        reason=reason,
+                        granted_by=teacher.id,
+                        is_active=True
+                    )
+                    db.session.add(new_extension)
+                
                 extended_count += 1
             except ValueError:
                 continue
         
-        flash(f'Extensions granted to {extended_count} students.', 'success')
-        return redirect(url_for('teacher.view_assignment', assignment_id=assignment_id))
+        db.session.commit()
+        return jsonify({'success': True, 'granted_count': extended_count})
         
     except Exception as e:
+        db.session.rollback()
         print(f"Error granting extensions: {str(e)}")
-        flash(f'Error granting extensions: {str(e)}', 'danger')
-        return redirect(url_for('teacher.my_assignments'))
+        return jsonify({'success': False, 'error': str(e)}), 500
 

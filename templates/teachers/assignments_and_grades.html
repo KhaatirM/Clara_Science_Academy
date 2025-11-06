@@ -189,7 +189,7 @@
                             </button>
                             <button type="button" 
                                     class="btn btn-action btn-action-void" 
-                                    onclick="openVoidModal({{ assignment.id }}, '{{ assignment.title }}', 'individual')"
+                                    onclick="openVoidModal({{ assignment.id }}, '{{ assignment.title }}', 'individual', {{ assignment.class_id }})"
                                     title="Void Assignment">
                                 <i class="bi bi-slash-circle"></i><span class="btn-text">Void</span>
                             </button>
@@ -261,7 +261,7 @@
                             </button>
                             <button type="button" 
                                     class="btn btn-action btn-action-void" 
-                                    onclick="openVoidModal({{ group_assignment.id }}, '{{ group_assignment.title }}', 'group')"
+                                    onclick="openVoidModal({{ group_assignment.id }}, '{{ group_assignment.title }}', 'group', {{ group_assignment.class_id }})"
                                     title="Void Assignment">
                                 <i class="bi bi-slash-circle"></i><span class="btn-text">Void</span>
                             </button>
@@ -896,7 +896,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <!-- Void Assignment Modal -->
 <div class="modal fade" id="voidAssignmentModal" tabindex="-1" aria-labelledby="voidAssignmentModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content void-modal">
       <div class="modal-header void-modal-header">
         <h5 class="modal-title" id="voidAssignmentModalLabel">
@@ -908,6 +908,7 @@ document.addEventListener('DOMContentLoaded', function() {
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         <input type="hidden" id="voidAssignmentId" name="assignment_id">
         <input type="hidden" id="voidAssignmentType" name="assignment_type">
+        <input type="hidden" id="voidClassId" name="class_id">
         <div class="modal-body void-modal-body">
           <div class="void-warning-section">
             <div class="void-warning-icon">
@@ -918,16 +919,35 @@ document.addEventListener('DOMContentLoaded', function() {
               <p>Voiding an assignment will:</p>
               <ul>
                 <li>Exclude it from GPA calculations</li>
-                <li>Mark it as "Voided" for all students</li>
+                <li>Mark it as "Voided" for selected students</li>
                 <li>Preserve the data for record keeping</li>
                 <li>This action can be reversed later</li>
               </ul>
             </div>
           </div>
           
-          <div class="void-assignment-info mb-3">
+          <div class="void-assignment-info mb-4">
             <label class="form-label fw-bold">Assignment:</label>
             <div class="void-assignment-name" id="voidAssignmentName"></div>
+          </div>
+          
+          <!-- Student Selection -->
+          <div class="mb-4">
+            <div class="extension-label mb-3">
+              <i class="bi bi-people-fill me-2"></i>Select Students to Void For
+              <button type="button" class="btn btn-sm btn-outline-primary ms-2" onclick="selectAllVoidStudents()">
+                <i class="bi bi-check-all me-1"></i>Select All
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="deselectAllVoidStudents()">
+                <i class="bi bi-x me-1"></i>Deselect All
+              </button>
+            </div>
+            <div class="students-selection-container" id="voidStudentsSelectionContainer">
+              <div class="loading-container">
+                <div class="loading-spinner"></div>
+                <p class="loading-text">Loading students...</p>
+              </div>
+            </div>
           </div>
           
           <div class="mb-3">
@@ -1079,14 +1099,73 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Open void modal with assignment info
-function openVoidModal(assignmentId, assignmentTitle, assignmentType) {
+function openVoidModal(assignmentId, assignmentTitle, assignmentType, classId) {
     document.getElementById('voidAssignmentId').value = assignmentId;
     document.getElementById('voidAssignmentType').value = assignmentType;
+    document.getElementById('voidClassId').value = classId;
     document.getElementById('voidAssignmentName').textContent = assignmentTitle;
     document.getElementById('voidReason').value = '';
     
+    // Load students for this class
+    loadStudentsForVoid(classId);
+    
     const modal = new bootstrap.Modal(document.getElementById('voidAssignmentModal'));
     modal.show();
+}
+
+// Load students for void selection
+function loadStudentsForVoid(classId) {
+    const container = document.getElementById('voidStudentsSelectionContainer');
+    container.innerHTML = '<div class="loading-container"><div class="loading-spinner"></div><p class="loading-text">Loading students...</p></div>';
+    
+    fetch(`/teacher/class/${classId}/students-for-extensions`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.students) {
+                renderVoidStudentCheckboxes(data.students);
+            } else {
+                container.innerHTML = '<div class="alert alert-warning">No students found in this class.</div>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading students:', error);
+            container.innerHTML = '<div class="alert alert-danger">Error loading students. Please try again.</div>';
+        });
+}
+
+// Render student checkboxes for void
+function renderVoidStudentCheckboxes(students) {
+    const container = document.getElementById('voidStudentsSelectionContainer');
+    let html = '<div class="row g-2">';
+    
+    students.forEach(student => {
+        html += '<div class="col-md-6">';
+        html += '<div class="student-checkbox-card">';
+        html += `<input class="form-check-input student-void-checkbox" type="checkbox" id="student_void_${student.id}" name="student_ids" value="${student.id}">`;
+        html += `<label class="form-check-label" for="student_void_${student.id}">`;
+        html += '<div class="student-checkbox-avatar">';
+        html += `${student.first_name[0]}${student.last_name[0]}`;
+        html += '</div>';
+        html += '<div class="student-checkbox-info">';
+        html += `<div class="student-checkbox-name">${student.first_name} ${student.last_name}</div>`;
+        html += `<div class="student-checkbox-grade">Grade ${student.grade_level || 'N/A'}</div>`;
+        html += '</div>';
+        html += '</label>';
+        html += '</div></div>';
+    });
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+// Select all void students
+function selectAllVoidStudents() {
+    document.querySelectorAll('.student-void-checkbox').forEach(cb => cb.checked = true);
+}
+
+// Deselect all void students
+function deselectAllVoidStudents() {
+    document.querySelectorAll('.student-void-checkbox').forEach(cb => cb.checked = false);
 }
 
 // Handle void form submission
@@ -1096,21 +1175,17 @@ document.addEventListener('DOMContentLoaded', function() {
         voidForm.addEventListener('submit', function(e) {
             e.preventDefault();
             
+            // Check if at least one student is selected
+            const checkboxes = document.querySelectorAll('.student-void-checkbox:checked');
+            if (checkboxes.length === 0) {
+                alert('Please select at least one student to void the assignment for.');
+                return;
+            }
+            
             const assignmentId = document.getElementById('voidAssignmentId').value;
             const assignmentType = document.getElementById('voidAssignmentType').value;
             const voidReason = document.getElementById('voidReason').value;
-            const formData = new FormData();
-            formData.append('csrf_token', '{{ csrf_token() }}');
-            formData.append('status', 'Voided');
-            formData.append('void_reason', voidReason);
-            
-            // Determine the correct route based on assignment type
-            let voidUrl = '';
-            if (assignmentType === 'group') {
-                voidUrl = `/teacher/group-assignment/${assignmentId}/change-status`;
-            } else {
-                voidUrl = `/teacher/assignment/${assignmentId}/change-status`;
-            }
+            const formData = new FormData(voidForm);
             
             // Show loading state
             const submitBtn = voidForm.querySelector('.btn-void-confirm');
@@ -1118,22 +1193,20 @@ document.addEventListener('DOMContentLoaded', function() {
             submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Voiding...';
             submitBtn.disabled = true;
             
+            // Determine the void URL
+            const voidUrl = `/teacher/void-assignment/${assignmentId}`;
+            
             fetch(voidUrl, {
                 method: 'POST',
                 body: formData
             })
-            .then(response => {
-                if (response.redirected) {
-                    window.location.href = response.url;
-                } else {
-                    return response.json();
-                }
-            })
+            .then(response => response.json())
             .then(data => {
-                if (data && data.success) {
+                if (data.success) {
+                    alert(`Successfully voided assignment for ${data.voided_count} student(s).`);
                     location.reload();
-                } else if (data && data.error) {
-                    alert('Error: ' + data.error);
+                } else {
+                    alert('Error: ' + (data.message || 'Unknown error'));
                     submitBtn.innerHTML = originalText;
                     submitBtn.disabled = false;
                 }

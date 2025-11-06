@@ -1793,40 +1793,41 @@ def assignments_and_grades():
         except:
             group_assignments = []
         
-        # Get grade data for grades view
+        # Get grade data for ALL assignments (needed for both views)
         grade_data = {}
+        for assignment in assignments:
+            grades = Grade.query.filter_by(assignment_id=assignment.id, is_voided=False).all()
+            
+            # Process grade data safely
+            graded_grades = []
+            total_score = 0
+            for g in grades:
+                if g.grade_data is not None:
+                    try:
+                        # Handle both dict and JSON string cases
+                        if isinstance(g.grade_data, dict):
+                            grade_dict = g.grade_data
+                        else:
+                            import json
+                            grade_dict = json.loads(g.grade_data)
+                        
+                        if 'score' in grade_dict:
+                            graded_grades.append(grade_dict)
+                            total_score += grade_dict['score']
+                    except (json.JSONDecodeError, TypeError):
+                        # Skip invalid grade data
+                        continue
+            
+            grade_data[assignment.id] = {
+                'grades': grades,
+                'total_submissions': len(grades),
+                'graded_count': len(graded_grades),
+                'average_score': round(total_score / len(graded_grades), 1) if graded_grades else 0
+            }
+        
+        # Get detailed student GPA data for grades view
         student_gpa_data = {}
         if view_mode == 'grades':
-            for assignment in assignments:
-                grades = Grade.query.filter_by(assignment_id=assignment.id).all()
-                
-                # Process grade data safely
-                graded_grades = []
-                total_score = 0
-                for g in grades:
-                    if g.grade_data is not None:
-                        try:
-                            # Handle both dict and JSON string cases
-                            if isinstance(g.grade_data, dict):
-                                grade_dict = g.grade_data
-                            else:
-                                import json
-                                grade_dict = json.loads(g.grade_data)
-                            
-                            if 'score' in grade_dict:
-                                graded_grades.append(grade_dict)
-                                total_score += grade_dict['score']
-                        except (json.JSONDecodeError, TypeError):
-                            # Skip invalid grade data
-                            continue
-                
-                grade_data[assignment.id] = {
-                    'grades': grades,
-                    'total_submissions': len(grades),
-                    'graded_count': len(graded_grades),
-                    'average_score': round(total_score / len(graded_grades), 1) if graded_grades else 0
-                }
-            
             # Get student GPA data for enhanced grades view
             # If class filter is applied, only show students from that class
             if class_filter and class_filter.strip():

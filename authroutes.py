@@ -25,6 +25,9 @@ from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 import pathlib
 
+# SQLAlchemy imports for OR queries
+from sqlalchemy import or_
+
 auth_blueprint = Blueprint('auth', __name__)
 
 @auth_blueprint.route('/login', methods=['GET', 'POST'])
@@ -709,8 +712,13 @@ def google_callback():
         
         current_app.logger.info(f"Google OAuth successful for email: {google_email}")
         
-        # Check if user exists in the database
-        user = User.query.filter_by(email=google_email).first()
+        # Check if user exists in the database (check both personal email and Google Workspace email)
+        user = User.query.filter(
+            or_(
+                User.email == google_email,  # Check personal email
+                User.google_workspace_email == google_email  # Check Google Workspace email
+            )
+        ).first()
         
         if user:
             # User exists - log them in

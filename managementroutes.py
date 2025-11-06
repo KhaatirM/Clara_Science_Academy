@@ -584,12 +584,36 @@ def add_student():
             db.session.add(student)
             db.session.flush()  # Get the student ID
             
+            # Auto-generate Google Workspace email for student
+            # Format: firstname.lastname@clarascienceacademy.org
+            generated_workspace_email = None
+            if first_name and last_name:
+                first = first_name.lower().replace(' ', '').replace('-', '')
+                last = last_name.lower().replace(' ', '').replace('-', '')
+                generated_workspace_email = f"{first}.{last}@clarascienceacademy.org"
+                
+                # Check if this email is already in use
+                existing_user = User.query.filter_by(google_workspace_email=generated_workspace_email).first()
+                if existing_user:
+                    # Add a number suffix if duplicate
+                    counter = 2
+                    while existing_user:
+                        generated_workspace_email = f"{first}.{last}{counter}@clarascienceacademy.org"
+                        existing_user = User.query.filter_by(google_workspace_email=generated_workspace_email).first()
+                        counter += 1
+            
+            # If no email was provided in the form, use the generated workspace email
+            if not email and generated_workspace_email:
+                student.email = generated_workspace_email
+            
             # Create user account
             user = User()
             user.username = username
             user.password_hash = generate_password_hash(password)
             user.role = 'Student'
             user.student_id = student.id
+            user.email = student.email  # Set personal email from student record
+            user.google_workspace_email = generated_workspace_email  # Set generated workspace email
             user.is_temporary_password = True  # New users must change password
             user.password_changed_at = None
             
@@ -597,7 +621,11 @@ def add_student():
             db.session.commit()
             
             # Show success message with credentials
-            flash(f'Student added successfully! Username: {username}, Password: {password}. Student will be required to change password on first login.', 'success')
+            success_msg = f'Student added successfully! Username: {username}, Password: {password}.'
+            if generated_workspace_email:
+                success_msg += f' Google Workspace Email: {generated_workspace_email}.'
+            success_msg += ' Student will be required to change password on first login.'
+            flash(success_msg, 'success')
             return redirect(url_for('management.students'))
             
         except Exception as e:
@@ -736,12 +764,32 @@ def add_teacher_staff():
             # Generate staff ID
             teacher_staff.staff_id = teacher_staff.generate_staff_id()
             
+            # Auto-generate Google Workspace email for teacher/staff
+            # Format: firstname.lastname@clarascienceacademy.org
+            generated_workspace_email = None
+            if first_name and last_name:
+                first = first_name.lower().replace(' ', '').replace('-', '')
+                last = last_name.lower().replace(' ', '').replace('-', '')
+                generated_workspace_email = f"{first}.{last}@clarascienceacademy.org"
+                
+                # Check if this email is already in use
+                existing_user = User.query.filter_by(google_workspace_email=generated_workspace_email).first()
+                if existing_user:
+                    # Add a number suffix if duplicate
+                    counter = 2
+                    while existing_user:
+                        generated_workspace_email = f"{first}.{last}{counter}@clarascienceacademy.org"
+                        existing_user = User.query.filter_by(google_workspace_email=generated_workspace_email).first()
+                        counter += 1
+            
             # Create user account
             user = User()
             user.username = username
             user.password_hash = generate_password_hash(password)
             user.role = assigned_role
             user.teacher_staff_id = teacher_staff.id
+            user.email = email  # Set personal email from form
+            user.google_workspace_email = generated_workspace_email  # Set generated workspace email
             user.is_temporary_password = True  # New users must change password
             user.password_changed_at = None
             
@@ -749,7 +797,11 @@ def add_teacher_staff():
             db.session.commit()
             
             # Show success message with credentials
-            flash(f'{assigned_role} added successfully! Username: {username}, Password: {password}, Staff ID: {teacher_staff.staff_id}. User will be required to change password on first login.', 'success')
+            success_msg = f'{assigned_role} added successfully! Username: {username}, Password: {password}, Staff ID: {teacher_staff.staff_id}.'
+            if generated_workspace_email:
+                success_msg += f' Google Workspace Email: {generated_workspace_email}.'
+            success_msg += ' User will be required to change password on first login.'
+            flash(success_msg, 'success')
             return redirect(url_for('management.teachers'))
             
         except Exception as e:
@@ -5770,6 +5822,7 @@ def view_student(student_id):
         'grade_level': student.grade_level,
         'student_id': student.student_id,
         'email': student.email,
+        'google_workspace_email': student.user.google_workspace_email if student.user else None,
         'gpa': gpa,
         'assigned_classes': assigned_classes,
         'photo_filename': student.photo_filename,
@@ -5858,6 +5911,25 @@ def edit_student(student_id):
         student.city = request.form.get('city', student.city)
         student.state = request.form.get('state', student.state)
         student.zip_code = request.form.get('zip_code', student.zip_code)
+        
+        # Update student's personal email
+        student_email = request.form.get('email', student.email)
+        if student_email:
+            student.email = student_email
+        
+        # Update Google Workspace email in User account if student has one
+        google_workspace_email = request.form.get('google_workspace_email', '').strip()
+        if student.user:
+            if google_workspace_email:
+                # Check if this email is already used by another user
+                existing_user = User.query.filter_by(google_workspace_email=google_workspace_email).first()
+                if existing_user and existing_user.id != student.user.id:
+                    return jsonify({'success': False, 'message': f'Google Workspace email {google_workspace_email} is already in use by another user.'}), 400
+                
+                student.user.google_workspace_email = google_workspace_email
+            else:
+                # Clear the Google Workspace email if field is empty
+                student.user.google_workspace_email = None
         
         db.session.commit()
         return jsonify({'success': True, 'message': 'Student updated successfully.'})
@@ -5948,6 +6020,7 @@ def view_teacher(teacher_id):
         'employment_type': getattr(teacher, 'employment_type', None),
         'subject': getattr(teacher, 'subject', None),
         'email': teacher.email,
+        'google_workspace_email': teacher.user.google_workspace_email if teacher.user else None,
         'username': teacher.user.username if teacher.user else None,
         'department': teacher.department,
         'position': teacher.position,
@@ -6027,6 +6100,19 @@ def edit_teacher(teacher_id):
                 teacher.user.role = 'IT Support'
             else:
                 teacher.user.role = request.form.get('assigned_role', teacher.user.role)
+            
+            # Update Google Workspace email
+            google_workspace_email = request.form.get('google_workspace_email', '').strip()
+            if google_workspace_email:
+                # Check if this email is already used by another user
+                existing_user = User.query.filter_by(google_workspace_email=google_workspace_email).first()
+                if existing_user and existing_user.id != teacher.user.id:
+                    return jsonify({'success': False, 'message': f'Google Workspace email {google_workspace_email} is already in use by another user.'}), 400
+                
+                teacher.user.google_workspace_email = google_workspace_email
+            else:
+                # Clear the Google Workspace email if field is empty
+                teacher.user.google_workspace_email = None
         
         db.session.commit()
         return jsonify({'success': True, 'message': 'Teacher/Staff updated successfully.'})

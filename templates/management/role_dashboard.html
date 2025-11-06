@@ -1109,14 +1109,23 @@
                                     </h6>
                                     <div class="row g-3">
                                         <div class="col-md-6">
-                                            <label class="form-label">Email</label>
+                                            <label class="form-label">Personal Email</label>
                                             <input type="email" class="form-control student-input" id="editEmail" name="email">
+                                            <small class="text-muted">For parent contact and personal communications</small>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">
+                                                Google Workspace Email
+                                                <i class="bi bi-google text-primary ms-1" data-bs-toggle="tooltip" title="For Google Sign-In authentication"></i>
+                                            </label>
+                                            <input type="email" class="form-control student-input" id="editGoogleWorkspaceEmail" name="google_workspace_email" placeholder="student@clarascienceacademy.org">
+                                            <small class="text-muted">For Google Sign-In (e.g., firstname.lastname@clarascienceacademy.org)</small>
                                         </div>
                                         <div class="col-md-6">
                                             <label class="form-label">Phone</label>
                                             <input type="tel" class="form-control student-input" id="editPhone" name="phone">
                                         </div>
-                                        <div class="col-md-12">
+                                        <div class="col-md-6">
                                             <label class="form-label">Address</label>
                                             <textarea class="form-control student-input" id="editAddress" name="address" rows="2"></textarea>
                                         </div>
@@ -3376,6 +3385,23 @@
                     </div>
                   </div>
                   
+                  <h6 class='mt-4 mb-3'><i class='bi bi-envelope me-2'></i>Contact & Authentication</h6>
+                  <div class='row'>
+                    <div class='col-md-6 mb-3'>
+                      <label>Personal Email</label>
+                      <input type='email' class='form-control' name='email' value='${data.email || ''}' placeholder='student@example.com'>
+                      <small class='text-muted'>For parent contact and communications</small>
+                    </div>
+                    <div class='col-md-6 mb-3'>
+                      <label>
+                        Google Workspace Email
+                        <i class='bi bi-google text-primary ms-1' title='For Google Sign-In'></i>
+                      </label>
+                      <input type='email' class='form-control' name='google_workspace_email' value='${data.google_workspace_email || ''}' placeholder='student@clarascienceacademy.org'>
+                      <small class='text-muted'>For Google Sign-In authentication</small>
+                    </div>
+                  </div>
+                  
                   <h6 class='mt-4 mb-3'>Parent Information</h6>
                   <div class='row'>
                     <div class='col-md-6 mb-3'>
@@ -3545,8 +3571,17 @@
                                         <input type="text" class="form-control" name="staff_ssn" value="${data.staff_ssn || ''}" placeholder="XXX-XX-XXXX">
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">Email <span class="text-danger">*</span></label>
+                                        <label class="form-label">Personal Email <span class="text-danger">*</span></label>
                                         <input type="email" class="form-control" name="email" value="${data.email || ''}" required>
+                                        <small class="text-muted">For personal communications</small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">
+                                            Google Workspace Email
+                                            <i class="bi bi-google text-primary ms-1" title="For Google Sign-In"></i>
+                                        </label>
+                                        <input type="email" class="form-control" name="google_workspace_email" value="${data.google_workspace_email || ''}" placeholder="teacher@clarascienceacademy.org">
+                                        <small class="text-muted">For Google Sign-In authentication</small>
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label">Phone Number</label>

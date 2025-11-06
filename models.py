@@ -17,6 +17,10 @@ class User(db.Model, UserMixin):
     student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=True)
     teacher_staff_id = db.Column(db.Integer, db.ForeignKey('teacher_staff.id'), nullable=True)
     
+    # Email fields
+    email = db.Column(db.String(120), unique=True, nullable=True)  # Personal email
+    google_workspace_email = db.Column(db.String(120), unique=True, nullable=True)  # Google Workspace email (@clarascienceacademy.org)
+    
     # Password management flags
     is_temporary_password = db.Column(db.Boolean, default=False, nullable=False)
     password_changed_at = db.Column(db.DateTime, nullable=True)

@@ -110,6 +110,12 @@ ENV/
 env.bak/
 venv.bak/
 
+# Google OAuth Credentials
+# IMPORTANT: Never commit client_secret.json to version control!
+client_secret.json
+google_credentials.json
+*client_secret*.json
+
 # Spyder project settings
 .spyderproject
 .spyproject

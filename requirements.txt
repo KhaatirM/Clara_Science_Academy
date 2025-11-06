@@ -14,3 +14,4 @@ weasyprint
 holidays
 pytz
 schedule
+google-auth-oauthlib

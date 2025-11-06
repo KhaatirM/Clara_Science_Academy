@@ -1,8 +1,9 @@
 # Standard library imports
 from datetime import datetime
+import os
 
 # Core Flask imports
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, session, current_app
 from flask_login import login_user, logout_user, login_required, current_user
 from flask_wtf.csrf import CSRFError
 
@@ -17,6 +18,12 @@ from app import log_activity
 
 # Werkzeug utilities
 from werkzeug.security import check_password_hash, generate_password_hash
+
+# Google OAuth imports
+from google_auth_oauthlib.flow import Flow
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
+import pathlib
 
 auth_blueprint = Blueprint('auth', __name__)
 
@@ -571,3 +578,218 @@ def change_password_ajax():
             'success': False,
             'message': 'An error occurred while changing your password. Please try again.'
         }), 500
+
+
+# ==================== GOOGLE OAUTH 2.0 ROUTES ====================
+
+# Disable HTTPS requirement for local development (ONLY FOR DEVELOPMENT)
+# In production, remove this line - HTTPS is required
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+
+def get_google_oauth_flow():
+    """Create and return a Google OAuth Flow object."""
+    # Check if client_secret.json exists
+    client_secrets_file = current_app.config.get('GOOGLE_CLIENT_SECRETS_FILE')
+    
+    if not os.path.exists(client_secrets_file):
+        current_app.logger.error(f"Google client_secret.json not found at {client_secrets_file}")
+        raise FileNotFoundError(
+            "Google OAuth configuration file (client_secret.json) not found. "
+            "Please download it from Google Cloud Console and place it in the project root."
+        )
+    
+    flow = Flow.from_client_secrets_file(
+        client_secrets_file,
+        scopes=current_app.config.get('GOOGLE_OAUTH_SCOPES'),
+        redirect_uri=url_for('auth.google_callback', _external=True)
+    )
+    
+    return flow
+
+
+@auth_blueprint.route('/google-login')
+def google_login():
+    """Initiate Google OAuth login flow."""
+    try:
+        # Check for maintenance mode
+        maintenance = None
+        try:
+            maintenance = MaintenanceMode.query.filter_by(is_active=True).first()
+        except:
+            pass
+        
+        if maintenance and maintenance.end_time > datetime.now():
+            flash('System is currently under maintenance. Please try again later.', 'warning')
+            return redirect(url_for('auth.login'))
+        
+        # Create OAuth flow
+        flow = get_google_oauth_flow()
+        
+        # Generate authorization URL
+        authorization_url, state = flow.authorization_url(
+            # Enable offline access so you can refresh an access token without re-prompting the user
+            access_type='offline',
+            # Enable incremental authorization
+            include_granted_scopes='true',
+            # Force account selection (optional - uncomment if you want users to always choose account)
+            # prompt='select_account'
+        )
+        
+        # Store the state in session to verify in callback
+        session['oauth_state'] = state
+        
+        # Log the Google login initiation
+        log_activity(
+            user_id=None,
+            action='google_login_initiated',
+            details={'redirect_uri': url_for('auth.google_callback', _external=True)},
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent')
+        )
+        
+        return redirect(authorization_url)
+        
+    except FileNotFoundError as e:
+        current_app.logger.error(f"Google OAuth config error: {str(e)}")
+        flash('Google Sign-In is not configured. Please contact your administrator.', 'danger')
+        return redirect(url_for('auth.login'))
+    except Exception as e:
+        current_app.logger.error(f"Error initiating Google login: {str(e)}")
+        log_activity(
+            user_id=None,
+            action='google_login_failed',
+            details={'error': str(e)},
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent'),
+            success=False,
+            error_message=str(e)
+        )
+        flash('An error occurred while connecting to Google. Please try again or use your password.', 'danger')
+        return redirect(url_for('auth.login'))
+
+
+@auth_blueprint.route('/auth/google/callback')
+def google_callback():
+    """Handle the Google OAuth callback."""
+    try:
+        # Verify state to prevent CSRF attacks
+        state = session.get('oauth_state')
+        if not state:
+            flash('Invalid login session. Please try again.', 'danger')
+            return redirect(url_for('auth.login'))
+        
+        # Create OAuth flow with the stored state
+        flow = Flow.from_client_secrets_file(
+            current_app.config.get('GOOGLE_CLIENT_SECRETS_FILE'),
+            scopes=None,  # Don't need to specify scopes for callback
+            state=state,
+            redirect_uri=url_for('auth.google_callback', _external=True)
+        )
+        
+        # Fetch the token using the authorization response
+        flow.fetch_token(authorization_response=request.url)
+        
+        # Get user credentials
+        credentials = flow.credentials
+        
+        # Verify the token and get user info
+        request_session = google_requests.Request()
+        id_info = id_token.verify_oauth2_token(
+            credentials.id_token,
+            request_session,
+            current_app.config.get('GOOGLE_CLIENT_ID')
+        )
+        
+        # Extract user information
+        google_email = id_info.get('email')
+        google_name = id_info.get('name')
+        google_given_name = id_info.get('given_name')
+        google_family_name = id_info.get('family_name')
+        google_picture = id_info.get('picture')
+        
+        current_app.logger.info(f"Google OAuth successful for email: {google_email}")
+        
+        # Check if user exists in the database
+        user = User.query.filter_by(email=google_email).first()
+        
+        if user:
+            # User exists - log them in
+            login_user(user, remember=True)
+            
+            # Increment login count
+            user.login_count += 1
+            db.session.commit()
+            
+            # Log successful Google login
+            log_activity(
+                user_id=user.id,
+                action='google_login_success',
+                details={
+                    'email': google_email,
+                    'role': user.role,
+                    'login_count': user.login_count,
+                    'google_name': google_name
+                },
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get('User-Agent')
+            )
+            
+            flash(f'Welcome back, {user.first_name or google_given_name}! Logged in successfully with Google.', 'success')
+            
+            # Clear the OAuth state from session
+            session.pop('oauth_state', None)
+            
+            return redirect(url_for('auth.dashboard'))
+        else:
+            # User does not exist in the system
+            current_app.logger.warning(f"Google login attempted with unregistered email: {google_email}")
+            
+            # Log failed Google login attempt
+            log_activity(
+                user_id=None,
+                action='google_login_failed',
+                details={
+                    'email': google_email,
+                    'reason': 'email_not_registered',
+                    'google_name': google_name
+                },
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get('User-Agent'),
+                success=False,
+                error_message='Email not registered in system'
+            )
+            
+            flash(
+                'Your Google Account is not associated with an account at Clara Science Academy. '
+                'Please log in with your username and password, or contact an administrator to link your Google account.',
+                'warning'
+            )
+            
+            # Clear the OAuth state from session
+            session.pop('oauth_state', None)
+            
+            return redirect(url_for('auth.login'))
+            
+    except Exception as e:
+        current_app.logger.error(f"Error in Google OAuth callback: {str(e)}")
+        
+        # Log the error
+        log_activity(
+            user_id=None,
+            action='google_callback_error',
+            details={'error': str(e), 'url': request.url},
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent'),
+            success=False,
+            error_message=str(e)
+        )
+        
+        flash(
+            'An error occurred while signing in with Google. Please try again or use your password to login.',
+            'danger'
+        )
+        
+        # Clear the OAuth state from session
+        session.pop('oauth_state', None)
+        
+        return redirect(url_for('auth.login'))

@@ -35,6 +35,19 @@ class Config:
     
     # Max file upload size (e.g., 16MB)
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024
+    
+    # Google OAuth 2.0 Configuration
+    # Get these from environment variables or use defaults for development
+    GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID') or 'your-client-id-goes-here'
+    GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET') or 'your-client-secret-goes-here'
+    # Path to the client_secret.json file (downloaded from Google Cloud Console)
+    GOOGLE_CLIENT_SECRETS_FILE = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'client_secret.json')
+    # OAuth scopes for Google Sign-In
+    GOOGLE_OAUTH_SCOPES = [
+        'https://www.googleapis.com/auth/userinfo.profile',
+        'https://www.googleapis.com/auth/userinfo.email',
+        'openid'
+    ]
 
     # Ensure the upload folder exists
     if not os.path.exists(UPLOAD_FOLDER):
@@ -65,3 +78,11 @@ class TestingConfig(Config):
     TESTING = True
     SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'  # In-memory database for tests
 
+# Note: Google OAuth configuration has been moved into the Config class above
+# To set up Google OAuth:
+# 1. Download client_secret.json from Google Cloud Console
+# 2. Place it in the project root directory
+# 3. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables (optional, can use file)
+# 4. Configure authorized redirect URIs in Google Cloud Console:
+#    - http://127.0.0.1:5000/auth/google/callback (development)
+#    - https://your-domain.com/auth/google/callback (production)

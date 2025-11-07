@@ -5437,6 +5437,8 @@
 .extensions-modal-body {
     padding: 2rem;
     background: #f8f9fa;
+    max-height: 60vh;
+    overflow-y: auto;
 }
 
 .extension-assignment-info {
@@ -5792,6 +5794,8 @@
 .void-modal-body {
     padding: 2rem;
     background: #f8f9fa;
+    max-height: 60vh;
+    overflow-y: auto;
 }
 
 .void-warning-section {

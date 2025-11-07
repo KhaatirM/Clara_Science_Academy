@@ -248,11 +248,6 @@
                                title="Grade Groups">
                                 <i class="bi bi-check-circle"></i><span class="btn-text">Grade</span>
                             </a>
-                            <a href="{{ url_for('teacher.edit_group_assignment', assignment_id=group_assignment.id) }}" 
-                               class="btn btn-action btn-action-edit"
-                               title="Edit Assignment">
-                                <i class="bi bi-pencil"></i><span class="btn-text">Edit</span>
-                            </a>
                             <button type="button" 
                                     class="btn btn-action btn-action-extension" 
                                     onclick="openExtensionsModal({{ group_assignment.id }}, '{{ group_assignment.title }}', {{ group_assignment.class_id }})"

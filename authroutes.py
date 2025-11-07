@@ -746,10 +746,24 @@ def google_callback():
         
         # Verify the token and get user info
         request_session = google_requests.Request()
+        
+        # Get client ID from config or extract from JSON
+        client_id = current_app.config.get('GOOGLE_CLIENT_ID')
+        if not client_id:
+            # Try to extract from GOOGLE_CLIENT_SECRET_JSON environment variable
+            client_secret_json = os.environ.get('GOOGLE_CLIENT_SECRET_JSON')
+            if client_secret_json:
+                import json
+                try:
+                    client_config = json.loads(client_secret_json)
+                    client_id = client_config.get('web', {}).get('client_id')
+                except:
+                    pass
+        
         id_info = id_token.verify_oauth2_token(
             credentials.id_token,
             request_session,
-            current_app.config.get('GOOGLE_CLIENT_ID')
+            client_id
         )
         
         # Extract user information

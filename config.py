@@ -37,9 +37,10 @@ class Config:
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024
     
     # Google OAuth 2.0 Configuration
-    # Get these from environment variables or use defaults for development
-    GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID') or 'your-client-id-goes-here'
-    GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET') or 'your-client-secret-goes-here'
+    # IMPORTANT: Set GOOGLE_CLIENT_ID environment variable in production
+    # The client ID is extracted from GOOGLE_CLIENT_SECRET_JSON if not set directly
+    GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
+    GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
     # Path to the client_secret.json file (downloaded from Google Cloud Console)
     GOOGLE_CLIENT_SECRETS_FILE = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'client_secret.json')
     # OAuth scopes for Google Sign-In

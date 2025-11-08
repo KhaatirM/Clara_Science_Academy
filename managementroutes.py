@@ -2655,12 +2655,17 @@ def class_grades(class_id):
     
     # Calculate averages for each student (including both individual and group assignments)
     # Only include grades that are applicable to the student (exclude N/A, Not Assigned from group assignments they're not part of)
+    # IMPORTANT: Exclude voided grades from average calculation
     student_averages = {}
     for student_id, grades in student_grades.items():
         # Filter out non-applicable grades (N/A, Not Assigned, Not Graded, No Group) and only include numeric grades
+        # ALSO exclude voided grades
         valid_grades = []
         for g in grades.values():
             grade_val = g['grade']
+            # Skip voided grades - CRITICAL FIX
+            if g.get('is_voided', False):
+                continue
             # Skip if the comment indicates the student isn't part of this assignment
             if 'Not assigned to this group' in g.get('comments', ''):
                 continue

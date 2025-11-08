@@ -568,10 +568,80 @@
 </style>
 
 <script>
+// Global variables
+const totalStudents = {{ students|length }};
+
+// Global updateStats function so it can be called from anywhere
+function updateStats() {
+        console.log('updateStats() called');
+        
+        // More specific selectors for attendance status radio buttons
+        const presentCount = document.querySelectorAll('input[name^="status-"][value="Present"]:checked').length;
+        const lateCount = document.querySelectorAll('input[name^="status-"][value="Late"]:checked').length;
+        const unexcusedCount = document.querySelectorAll('input[name^="status-"][value="Unexcused Absence"]:checked').length;
+        const excusedCount = document.querySelectorAll('input[name^="status-"][value="Excused Absence"]:checked').length;
+        const suspendedCount = document.querySelectorAll('input[name^="status-"][value="Suspended"]:checked').length;
+        const absentCount = unexcusedCount + excusedCount;
+        const markedCount = presentCount + lateCount + absentCount + suspendedCount;
+        
+        const attendanceRate = totalStudents > 0 ? Math.round((presentCount / totalStudents) * 100) : 0;
+        
+        console.log('Counts:', {
+            present: presentCount,
+            late: lateCount,
+            absent: absentCount,
+            rate: attendanceRate,
+            marked: markedCount,
+            total: totalStudents
+        });
+        
+        // Update stat cards with animation
+        const presentEl = document.getElementById('presentCount');
+        const lateEl = document.getElementById('lateCount');
+        const absentEl = document.getElementById('absentCount');
+        const rateEl = document.getElementById('attendanceRate');
+        
+        if (presentEl && lateEl && absentEl && rateEl) {
+            animateValue('presentCount', parseInt(presentEl.textContent) || 0, presentCount);
+            animateValue('lateCount', parseInt(lateEl.textContent) || 0, lateCount);
+            animateValue('absentCount', parseInt(absentEl.textContent) || 0, absentCount);
+            animateValue('attendanceRate', parseInt(rateEl.textContent) || 0, attendanceRate);
+        } else {
+            console.error('Could not find stat elements');
+        }
+        
+        // Update completion status
+        const markedCountEl = document.getElementById('markedCount');
+        if (markedCountEl) {
+            markedCountEl.textContent = markedCount;
+        }
+    }
+
+// Animation function
+function animateValue(id, start, end) {
+        const element = document.getElementById(id);
+        if (!element) return;
+        
+        const duration = 300;
+        const range = end - start;
+        const increment = range / (duration / 16);
+        let current = start;
+        
+        const timer = setInterval(() => {
+            current += increment;
+            if ((increment > 0 && current >= end) || (increment < 0 && current <= end)) {
+                element.textContent = id === 'attendanceRate' ? end + '%' : end;
+                clearInterval(timer);
+            } else {
+                element.textContent = id === 'attendanceRate' ? Math.round(current) + '%' : Math.round(current);
+            }
+        }, 16);
+    }
+
+// DOM Ready handler
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('attendanceForm');
     const saveBtn = document.getElementById('saveAttendanceBtn');
-    const totalStudents = {{ students|length }};
     
     // Form submission validation
     form.addEventListener('submit', function(e) {
@@ -591,71 +661,33 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Real-time statistics update
-    const radioButtons = document.querySelectorAll('input[type="radio"]');
+    const radioButtons = document.querySelectorAll('input[type="radio"][name^="status-"]');
     const attendanceLabels = document.querySelectorAll('.btn-attendance');
+    
+    console.log('Found radio buttons:', radioButtons.length);
+    console.log('Found attendance labels:', attendanceLabels.length);
     
     // Add change event listeners to radio buttons
     radioButtons.forEach(radio => {
-        radio.addEventListener('change', updateStats);
+        radio.addEventListener('change', function() {
+            console.log('Radio changed:', this.name, '=', this.value);
+            updateStats();
+        });
     });
     
     // Also add click event listeners to labels for Bootstrap btn-check pattern
     attendanceLabels.forEach(label => {
         label.addEventListener('click', function() {
+            console.log('Label clicked:', this.textContent.trim());
             // Small delay to allow radio button to update
-            setTimeout(updateStats, 50);
+            setTimeout(updateStats, 100);
         });
     });
     
-    function updateStats() {
-        const presentCount = document.querySelectorAll('input[value="Present"]:checked').length;
-        const lateCount = document.querySelectorAll('input[value="Late"]:checked').length;
-        const absentCount = document.querySelectorAll('input[value="Unexcused Absence"]:checked, input[value="Excused Absence"]:checked').length;
-        const suspendedCount = document.querySelectorAll('input[value="Suspended"]:checked').length;
-        const markedCount = presentCount + lateCount + absentCount + suspendedCount;
-        
-        const attendanceRate = totalStudents > 0 ? Math.round((presentCount / totalStudents) * 100) : 0;
-        
-        // Update stat cards with animation
-        const presentEl = document.getElementById('presentCount');
-        const lateEl = document.getElementById('lateCount');
-        const absentEl = document.getElementById('absentCount');
-        const rateEl = document.getElementById('attendanceRate');
-        
-        if (presentEl && lateEl && absentEl && rateEl) {
-            animateValue('presentCount', parseInt(presentEl.textContent) || 0, presentCount);
-            animateValue('lateCount', parseInt(lateEl.textContent) || 0, lateCount);
-            animateValue('absentCount', parseInt(absentEl.textContent) || 0, absentCount);
-            animateValue('attendanceRate', parseInt(rateEl.textContent) || 0, attendanceRate);
-        }
-        
-        // Update completion status
-        const markedCountEl = document.getElementById('markedCount');
-        if (markedCountEl) {
-            markedCountEl.textContent = markedCount;
-        }
-    }
-    
-    function animateValue(id, start, end) {
-        const element = document.getElementById(id);
-        const duration = 300;
-        const range = end - start;
-        const increment = range / (duration / 16);
-        let current = start;
-        
-        const timer = setInterval(() => {
-            current += increment;
-            if ((increment > 0 && current >= end) || (increment < 0 && current <= end)) {
-                element.textContent = id === 'attendanceRate' ? end + '%' : end;
-                clearInterval(timer);
-            } else {
-                element.textContent = id === 'attendanceRate' ? Math.round(current) + '%' : Math.round(current);
-            }
-        }, 16);
-    }
-    
-    // Initialize stats
-    updateStats();
+    // Initialize stats on page load
+    setTimeout(function() {
+        updateStats();
+    }, 100);
 });
 
 // Quick action functions
@@ -664,8 +696,14 @@ function markAll(status) {
     radios.forEach(radio => {
         radio.checked = true;
         // Trigger change event for stats update
-        radio.dispatchEvent(new Event('change'));
+        radio.dispatchEvent(new Event('change', { bubbles: true }));
     });
+    // Force stats update after bulk operation
+    setTimeout(function() {
+        if (typeof updateStats === 'function') {
+            updateStats();
+        }
+    }, 100);
 }
 
 function clearAll() {
@@ -674,8 +712,12 @@ function clearAll() {
         radios.forEach(radio => {
             radio.checked = false;
         });
-        // Update stats
-        document.querySelectorAll('input[type="radio"]')[0].dispatchEvent(new Event('change'));
+        // Force stats update after clearing
+        setTimeout(function() {
+            if (typeof updateStats === 'function') {
+                updateStats();
+            }
+        }, 100);
     }
 }
 

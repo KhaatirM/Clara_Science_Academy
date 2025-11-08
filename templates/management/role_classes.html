@@ -24,7 +24,28 @@
                         <p class="card-text mb-2"><strong>Teacher:</strong> {{ (class.teacher.first_name + ' ' + class.teacher.last_name) if class.teacher else 'Not Assigned' }}</p>
                         <p class="card-text mb-2"><strong>Subject:</strong> {{ class.subject or 'N/A' }}</p>
                         <p class="card-text mb-2"><strong>Students:</strong> {{ class.students|length if class.students else 0 }}</p>
-                        <p class="card-text mb-3"><strong>Schedule:</strong> {{ class.schedule or 'N/A' }}</p>
+                        <p class="card-text mb-2"><strong>Schedule:</strong> {{ class.schedule or 'N/A' }}</p>
+                        
+                        {% if current_user.role == 'Teacher' %}
+                            <!-- Google Classroom Status -->
+                            <div class="mb-2 pb-2 border-bottom">
+                                {% if class.google_classroom_id %}
+                                    <p class="card-text mb-0">
+                                        <strong>Google Classroom:</strong>
+                                        <span class="badge bg-success ms-1">
+                                            <i class="fas fa-check-circle"></i> Linked
+                                        </span>
+                                    </p>
+                                {% else %}
+                                    <p class="card-text mb-0">
+                                        <strong>Google Classroom:</strong>
+                                        <span class="badge bg-warning text-dark ms-1">
+                                            <i class="fas fa-times-circle"></i> Not Linked
+                                        </span>
+                                    </p>
+                                {% endif %}
+                            </div>
+                        {% endif %}
                     </div>
                     
                     <div class="d-grid gap-2">
@@ -35,9 +56,39 @@
                             </div>
                         {% elif current_user.role == 'Teacher' %}
                             <div class="d-flex gap-1">
-                                <a href="#" class="btn btn-sm btn-outline-primary flex-fill">View Roster</a>
+                                <a href="{{ url_for('teacher.dashboard.view_class', class_id=class.id) }}" class="btn btn-sm btn-outline-primary flex-fill">View Roster</a>
                                 <a href="#" class="btn btn-sm btn-outline-success flex-fill">Enter Grades</a>
                             </div>
+                            
+                            <!-- Google Classroom Actions -->
+                            {% if class.google_classroom_id %}
+                                <div class="d-flex gap-1">
+                                    <a href="https://classroom.google.com/c/{{ class.google_classroom_id }}" 
+                                       target="_blank" 
+                                       class="btn btn-sm btn-outline-primary flex-fill"
+                                       title="Open in Google Classroom">
+                                        <i class="fas fa-external-link-alt"></i> Open Classroom
+                                    </a>
+                                    <a href="{{ url_for('teacher.dashboard.unlink_classroom', class_id=class.id) }}" 
+                                       class="btn btn-sm btn-outline-warning flex-fill"
+                                       onclick="return confirm('Are you sure you want to unlink this Google Classroom? The classroom will still exist in Google.');">
+                                        <i class="fas fa-unlink"></i> Unlink
+                                    </a>
+                                </div>
+                            {% else %}
+                                <div class="d-flex gap-1">
+                                    <a href="{{ url_for('teacher.dashboard.link_existing_classroom', class_id=class.id) }}" 
+                                       class="btn btn-sm btn-info flex-fill text-white"
+                                       title="Link to an existing Google Classroom">
+                                        <i class="fas fa-link"></i> Link Existing
+                                    </a>
+                                    <a href="{{ url_for('teacher.dashboard.create_and_link_classroom', class_id=class.id) }}" 
+                                       class="btn btn-sm btn-success flex-fill"
+                                       title="Create a new Google Classroom and link it">
+                                        <i class="fas fa-plus-circle"></i> Create New
+                                    </a>
+                                </div>
+                            {% endif %}
                         {% endif %}
                         
                         {% if current_user.role in ['Director', 'School Administrator'] %}

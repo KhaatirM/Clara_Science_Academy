@@ -2129,9 +2129,60 @@ def add_class():
                     if teacher:
                         new_class.additional_teachers.append(teacher)
             
+            # --- NEW GOOGLE CLASSROOM LOGIC ---
+            google_classroom_created = False
+            try:
+                # Import the Google Classroom service helper
+                from google_classroom_service import get_google_service
+                
+                # 1. Find the primary teacher's User account
+                teacher_staff = TeacherStaff.query.get(new_class.teacher_id)
+                
+                # Try to get the user associated with this teacher
+                if teacher_staff and teacher_staff.user:
+                    teacher_user = teacher_staff.user
+                    
+                    if teacher_user and teacher_user.google_refresh_token:
+                        # 2. Build the service, authenticated as this teacher
+                        service = get_google_service(teacher_user)
+                        
+                        if service:
+                            # 3. Create the Google Classroom
+                            course_body = {
+                                'name': new_class.name,
+                                'ownerId': 'me'  # 'me' = the authenticated teacher
+                            }
+                            if new_class.description:
+                                course_body['description'] = new_class.description
+                            if new_class.subject:
+                                course_body['section'] = new_class.subject
+                            
+                            course = service.courses().create(body=course_body).execute()
+                            
+                            # 4. Save the new Classroom ID to our database
+                            new_class.google_classroom_id = course.get('id')
+                            google_classroom_created = True
+                            current_app.logger.info(f"Successfully created Google Classroom (ID: {course.get('id')}) for class {new_class.id}")
+                        else:
+                            current_app.logger.warning(f"Failed to build Google service for teacher {teacher_user.id}. The teacher may need to re-connect their account.")
+                    else:
+                        current_app.logger.info(f"Teacher {teacher_staff.id} has not connected their Google account. Google Classroom was not created.")
+                else:
+                    current_app.logger.info(f"No user account found for teacher {new_class.teacher_id}. Google Classroom was not created.")
+            
+            except Exception as e:
+                current_app.logger.error(f"Error during automatic classroom creation: {e}")
+                # Don't fail the entire class creation if Google Classroom fails
+            # --- END OF NEW LOGIC ---
+            
             db.session.commit()
             
-            flash(f'Class "{name}" created successfully!', 'success')
+            # Provide appropriate success message based on whether Google Classroom was created
+            if google_classroom_created:
+                flash(f'Class "{name}" created successfully and linked to Google Classroom!', 'success')
+            else:
+                flash(f'Class "{name}" created successfully. Note: Google Classroom was not created. The assigned teacher may need to connect their Google account.', 'info')
+            
             return redirect(url_for('management.classes'))
             
         except Exception as e:

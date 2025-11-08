@@ -15,3 +15,6 @@ holidays
 pytz
 schedule
 google-auth-oauthlib
+google-api-python-client
+cryptography
+requests

@@ -28,6 +28,39 @@ class User(db.Model, UserMixin):
     
     # Login tracking
     login_count = db.Column(db.Integer, default=0, nullable=False)
+    
+    # Google OAuth tokens (encrypted)
+    _google_refresh_token = db.Column(db.String(512), nullable=True)
+    
+    @property
+    def google_refresh_token(self):
+        """
+        Decrypts the refresh token when accessed.
+        """
+        if not self._google_refresh_token:
+            return None
+        try:
+            from flask import current_app
+            from cryptography.fernet import Fernet
+            f = Fernet(current_app.config['ENCRYPTION_KEY'].encode('utf-8') if isinstance(current_app.config['ENCRYPTION_KEY'], str) else current_app.config['ENCRYPTION_KEY'])
+            return f.decrypt(self._google_refresh_token.encode('utf-8')).decode('utf-8')
+        except Exception as e:
+            from flask import current_app
+            current_app.logger.error(f"Failed to decrypt token for user {self.id}: {e}")
+            return None
+    
+    @google_refresh_token.setter
+    def google_refresh_token(self, token):
+        """
+        Encrypts the refresh token when set.
+        """
+        if token is None:
+            self._google_refresh_token = None
+        else:
+            from flask import current_app
+            from cryptography.fernet import Fernet
+            f = Fernet(current_app.config['ENCRYPTION_KEY'].encode('utf-8') if isinstance(current_app.config['ENCRYPTION_KEY'], str) else current_app.config['ENCRYPTION_KEY'])
+            self._google_refresh_token = f.encrypt(token.encode('utf-8')).decode('utf-8')
 
     def __repr__(self):
         return f"User('{self.username}', '{self.role}')"
@@ -367,6 +400,9 @@ class Class(db.Model):
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    
+    # Google Classroom integration
+    google_classroom_id = db.Column(db.String(100), nullable=True, unique=True)
 
     # Relationships
     teacher = db.relationship('TeacherStaff', backref='primary_classes', lazy=True, foreign_keys=[teacher_id])

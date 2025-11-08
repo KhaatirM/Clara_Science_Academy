@@ -1,0 +1,78 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block title %}Link Existing Google Classroom{% endblock %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4 mt-3">
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h2 class="card-title mb-0">
+                <i class="fas fa-link me-2"></i>Link Existing Google Classroom
+            </h2>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>You are linking:</strong> {{ class_to_link.name }}
+            </div>
+            
+            <p class="mb-3">
+                Please select the matching Google Classroom you already created. This will link it to your class in the system.
+            </p>
+            
+            <form action="{{ url_for('teacher.dashboard.save_google_classroom_link', class_id=class_to_link.id) }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                
+                <div class="form-group mb-4">
+                    <label for="google_course_id" class="form-label">
+                        <strong>Your Available Google Classrooms</strong>
+                    </label>
+                    <select class="form-control form-select" id="google_course_id" name="google_course_id" required>
+                        <option value="">-- Please select a class --</option>
+                        {% for course in courses %}
+                            <option value="{{ course.id }}">
+                                {{ course.name }}
+                                {% if course.get('section') %}
+                                    - {{ course.get('section') }}
+                                {% endif %}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <small class="form-text text-muted">
+                        Only active Google Classrooms that aren't already linked are shown.
+                    </small>
+                </div>
+                
+                <hr class="my-4">
+                
+                <div class="d-flex flex-column flex-md-row gap-2">
+                    <a href="{{ url_for('teacher.dashboard.my_classes') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-link me-1"></i>Link Selected Class
+                    </button>
+                </div>
+            </form>
+            
+            <div class="alert alert-light mt-4 border">
+                <h6 class="mb-2">
+                    <i class="fas fa-question-circle me-2"></i>Don't see your class?
+                </h6>
+                <p class="mb-2">Here are a few things you can try:</p>
+                <ul class="mb-2">
+                    <li>
+                        <a href="{{ url_for('teacher.dashboard.create_and_link_classroom', class_id=class_to_link.id) }}">
+                            Create a new one automatically
+                        </a>
+                    </li>
+                    <li>Check that the class is "Active" in Google Classroom</li>
+                    <li>Make sure the class isn't already linked to another class in this system</li>
+                    <li>Verify you're signed in with your @clarascienceacademy.org account</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

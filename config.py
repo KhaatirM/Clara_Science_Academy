@@ -37,18 +37,23 @@ class Config:
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024
     
     # Google OAuth 2.0 Configuration
-    # IMPORTANT: Set GOOGLE_CLIENT_ID environment variable in production
-    # The client ID is extracted from GOOGLE_CLIENT_SECRET_JSON if not set directly
+    # IMPORTANT: Set these environment variables in production
     GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
     GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
     # Path to the client_secret.json file (downloaded from Google Cloud Console)
+    # This file should NOT be committed to git - add to .gitignore
     GOOGLE_CLIENT_SECRETS_FILE = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'client_secret.json')
-    # OAuth scopes for Google Sign-In
+    # OAuth scopes for Google Sign-In and Classroom
     GOOGLE_OAUTH_SCOPES = [
         'https://www.googleapis.com/auth/userinfo.profile',
         'https://www.googleapis.com/auth/userinfo.email',
         'openid'
     ]
+    
+    # Encryption key for storing sensitive data like refresh tokens
+    # IMPORTANT: Set this environment variable in production
+    # Generate a key using: from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())
+    ENCRYPTION_KEY = os.environ.get('ENCRYPTION_KEY')
 
     # Ensure the upload folder exists
     if not os.path.exists(UPLOAD_FOLDER):

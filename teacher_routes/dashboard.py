@@ -2,17 +2,19 @@
 Dashboard and overview routes for teachers.
 """
 
-from flask import Blueprint, render_template, redirect, url_for, flash
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
 from flask_login import login_required, current_user
 from decorators import teacher_required
 from .utils import get_teacher_or_admin, is_admin, is_authorized_for_class
 from models import (
     db, Class, Assignment, Student, Grade, Submission, 
-    Notification, Announcement, Enrollment, Attendance, SchoolYear
+    Notification, Announcement, Enrollment, Attendance, SchoolYear, User, TeacherStaff
 )
 from sqlalchemy import or_, and_
 import json
 from datetime import datetime, timedelta
+from google_classroom_service import get_google_service
+from googleapiclient.errors import HttpError
 
 bp = Blueprint('dashboard', __name__)
 
@@ -440,4 +442,186 @@ def calendar():
                          assignments=assignments, 
                          classes=classes, 
                          teacher=teacher)
+
+
+# ===== GOOGLE CLASSROOM LINKING ROUTES =====
+
+@bp.route('/class/<int:class_id>/create-and-link')
+@login_required
+@teacher_required
+def create_and_link_classroom(class_id):
+    """
+    OPTION 1: CREATE A NEW GOOGLE CLASSROOM AND LINK IT
+    Creates a brand new Google Classroom and links it to the existing class in the system.
+    """
+    class_to_link = Class.query.get_or_404(class_id)
+    
+    # Check authorization for this class
+    if not is_authorized_for_class(class_to_link):
+        flash("You are not authorized to modify this class.", "danger")
+        return redirect(url_for('teacher.dashboard.my_classes'))
+    
+    # Check if teacher has connected their account
+    if not current_user.google_refresh_token:
+        flash("You must connect your Google account first.", "warning")
+        return redirect(url_for('teacher.settings.google_connect_account'))
+
+    try:
+        service = get_google_service(current_user)
+        if not service:
+            flash("Could not connect to Google. Please try reconnecting your account.", "danger")
+            return redirect(url_for('teacher.dashboard.my_classes'))
+
+        # Create the new course
+        course_body = {
+            'name': class_to_link.name,
+            'ownerId': 'me'
+        }
+        if class_to_link.description:
+            course_body['description'] = class_to_link.description
+        if class_to_link.subject:
+            course_body['section'] = class_to_link.subject
+        
+        course = service.courses().create(body=course_body).execute()
+        google_id = course.get('id')
+        
+        # Save the new ID to our database
+        class_to_link.google_classroom_id = google_id
+        db.session.commit()
+        
+        flash(f"Successfully created and linked new Google Classroom: '{course.get('name')}'", "success")
+        current_app.logger.info(f"Teacher {current_user.id} created and linked Google Classroom {google_id} for class {class_id}")
+
+    except HttpError as e:
+        flash(f"Google API error: {e._get_reason()}", "danger")
+        current_app.logger.error(f"Google API error creating classroom: {e}")
+    except Exception as e:
+        flash(f"An unexpected error occurred: {e}", "danger")
+        current_app.logger.error(f"Unexpected error creating classroom: {e}")
+        
+    return redirect(url_for('teacher.dashboard.my_classes'))
+
+
+@bp.route('/class/<int:class_id>/link-existing')
+@login_required
+@teacher_required
+def link_existing_classroom(class_id):
+    """
+    OPTION 2, Route A: SHOW THE LIST OF EXISTING GOOGLE CLASSROOMS
+    Displays a list of the teacher's existing Google Classrooms that can be linked.
+    """
+    class_to_link = Class.query.get_or_404(class_id)
+    
+    # Check authorization for this class
+    if not is_authorized_for_class(class_to_link):
+        flash("You are not authorized to modify this class.", "danger")
+        return redirect(url_for('teacher.dashboard.my_classes'))
+    
+    # Check if teacher has connected their account
+    if not current_user.google_refresh_token:
+        flash("You must connect your Google account first to see your existing classes.", "warning")
+        return redirect(url_for('teacher.settings.google_connect_account'))
+    
+    try:
+        service = get_google_service(current_user)
+        if not service:
+            flash("Could not connect to Google. Please try reconnecting your account.", "danger")
+            return redirect(url_for('teacher.dashboard.my_classes'))
+
+        # Fetch the list of the teacher's active courses
+        results = service.courses().list(teacherId='me', courseStates=['ACTIVE']).execute()
+        courses = results.get('courses', [])
+        
+        # Filter out any courses that are *already* linked to another class in your system
+        linked_ids = {c.google_classroom_id for c in Class.query.filter(Class.google_classroom_id.isnot(None)).all()}
+        available_courses = [c for c in courses if c.get('id') not in linked_ids]
+        
+        if not available_courses:
+            flash("You have no available Google Classrooms to link. All your classes are either already linked or you have no active classes.", "info")
+            return redirect(url_for('teacher.dashboard.my_classes'))
+
+        return render_template(
+            'teachers/link_existing_classroom.html',
+            class_to_link=class_to_link,
+            courses=available_courses
+        )
+
+    except HttpError as e:
+        flash(f"Google API error: {e._get_reason()}", "danger")
+        current_app.logger.error(f"Google API error fetching classrooms: {e}")
+    except Exception as e:
+        flash(f"An unexpected error occurred: {e}", "danger")
+        current_app.logger.error(f"Unexpected error fetching classrooms: {e}")
+
+    return redirect(url_for('teacher.dashboard.my_classes'))
+
+
+@bp.route('/class/<int:class_id>/save-link', methods=['POST'])
+@login_required
+@teacher_required
+def save_google_classroom_link(class_id):
+    """
+    OPTION 2, Route B: SAVE THE LINK FROM THE FORM
+    Saves the selected Google Classroom ID to the class in the database.
+    """
+    class_to_link = Class.query.get_or_404(class_id)
+    
+    # Check authorization for this class
+    if not is_authorized_for_class(class_to_link):
+        flash("You are not authorized to modify this class.", "danger")
+        return redirect(url_for('teacher.dashboard.my_classes'))
+    
+    google_course_id = request.form.get('google_course_id')
+    
+    if not google_course_id:
+        flash("You did not select a class.", "danger")
+        return redirect(url_for('teacher.dashboard.link_existing_classroom', class_id=class_id))
+    
+    # Verify this classroom ID isn't already linked to another class
+    existing_link = Class.query.filter(
+        Class.google_classroom_id == google_course_id,
+        Class.id != class_id
+    ).first()
+    
+    if existing_link:
+        flash(f"This Google Classroom is already linked to another class: {existing_link.name}", "danger")
+        return redirect(url_for('teacher.dashboard.link_existing_classroom', class_id=class_id))
+    
+    # Save the ID
+    class_to_link.google_classroom_id = google_course_id
+    db.session.commit()
+    
+    flash("Successfully linked to your existing Google Classroom!", "success")
+    current_app.logger.info(f"Teacher {current_user.id} linked Google Classroom {google_course_id} to class {class_id}")
+    
+    return redirect(url_for('teacher.dashboard.my_classes'))
+
+
+@bp.route('/class/<int:class_id>/unlink')
+@login_required
+@teacher_required
+def unlink_classroom(class_id):
+    """
+    UNLINK ROUTE: Remove the Google Classroom link from the class.
+    Note: This doesn't delete the Google Classroom, just removes the link in our system.
+    """
+    class_to_unlink = Class.query.get_or_404(class_id)
+    
+    # Check authorization for this class
+    if not is_authorized_for_class(class_to_unlink):
+        flash("You are not authorized to modify this class.", "danger")
+        return redirect(url_for('teacher.dashboard.my_classes'))
+    
+    if not class_to_unlink.google_classroom_id:
+        flash("This class is not linked to a Google Classroom.", "info")
+        return redirect(url_for('teacher.dashboard.my_classes'))
+    
+    old_id = class_to_unlink.google_classroom_id
+    class_to_unlink.google_classroom_id = None
+    db.session.commit()
+    
+    flash("Successfully unlinked from Google Classroom. The course still exists in your Google account.", "info")
+    current_app.logger.info(f"Teacher {current_user.id} unlinked Google Classroom {old_id} from class {class_id}")
+    
+    return redirect(url_for('teacher.dashboard.my_classes'))
 

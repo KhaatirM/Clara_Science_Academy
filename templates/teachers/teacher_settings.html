@@ -85,6 +85,49 @@
                     <button type="button" class="btn btn-success">Save Preferences</button>
                 </div>
             </div>
+            <!-- Google Classroom Integration -->
+            <div class="card mt-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-google me-2"></i>Google Classroom Integration
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if google_connected %}
+                        <div class="alert alert-success mb-3">
+                            <i class="bi bi-check-circle-fill me-2"></i>
+                            <strong>Connected!</strong> Your Google account is linked.
+                        </div>
+                        <p class="text-muted mb-3">
+                            You can now automatically create and link Google Classrooms for your classes.
+                        </p>
+                        <form action="{{ url_for('teacher.settings.google_disconnect_account') }}" method="POST" style="display: inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <button type="submit" class="btn btn-warning" 
+                                    onclick="return confirm('Are you sure you want to disconnect your Google account? You will need to reconnect to use Google Classroom features.');">
+                                <i class="bi bi-x-circle me-1"></i>Disconnect Google Account
+                            </button>
+                        </form>
+                    {% else %}
+                        <div class="alert alert-info mb-3">
+                            <i class="bi bi-info-circle-fill me-2"></i>
+                            <strong>Not Connected</strong> - Connect your Google account to enable automatic Google Classroom creation.
+                        </div>
+                        <p class="text-muted mb-3">
+                            Connecting allows you to:
+                        </p>
+                        <ul class="text-muted mb-3">
+                            <li>Automatically create Google Classrooms when classes are added</li>
+                            <li>Link existing Google Classrooms to your classes</li>
+                            <li>Manage classrooms directly from this system</li>
+                        </ul>
+                        <a href="{{ url_for('teacher.settings.google_connect_account') }}" class="btn btn-primary">
+                            <i class="bi bi-google me-2"></i>Connect Google Account
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+            
             <div class="card mt-4">
                 <div class="card-header">
                     <h5>Data & Privacy</h5>

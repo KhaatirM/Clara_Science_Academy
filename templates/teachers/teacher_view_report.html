@@ -15,7 +15,7 @@
           <li><a class="dropdown-item" href="{{ url_for('teacher.export_report', report_id=report.id, format='csv') }}">CSV</a></li>
         </ul>
       </div>
-      <a href="{{ url_for('teacher.class_reports', class_id=class_obj.id) }}" class="btn btn-outline-secondary btn-sm">
+      <a href="{{ url_for('teacher.grading.class_reports', class_id=class_obj.id) }}" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-arrow-left me-1"></i>Back to Reports
       </a>
     </div>

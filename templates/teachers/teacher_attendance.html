@@ -22,7 +22,7 @@
                             <p class="card-text"><strong>Subject:</strong> {{ class.subject }}</p>
                             <p class="card-text"><strong>School Year:</strong> {{ class.school_year.name if class.school_year else 'N/A' }}</p>
                             <div class="mt-3 d-flex flex-column flex-md-row gap-2">
-                                <a href="{{ url_for('teacher.take_attendance', class_id=class.id) }}" class="btn btn-outline-primary btn-sm">
+                                <a href="{{ url_for('teacher.attendance.take_attendance', class_id=class.id) }}" class="btn btn-outline-primary btn-sm">
                                     <i class="bi bi-clipboard-check me-1"></i>Take Attendance
                                 </a>
                                 <a href="{{ url_for('teacher.dashboard.view_class', class_id=class.id) }}" class="btn btn-outline-info btn-sm">

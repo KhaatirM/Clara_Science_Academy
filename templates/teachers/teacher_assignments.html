@@ -369,7 +369,7 @@ document.addEventListener('DOMContentLoaded', function() {
             newStatusSelect.value = currentStatus;
             
             // Update form action
-            statusChangeForm.action = `{{ url_for('teacher.change_assignment_status', assignment_id=0) }}`.replace('0', assignmentId);
+            statusChangeForm.action = `{{ url_for('teacher.assignments.change_assignment_status', assignment_id=0) }}`.replace('0', assignmentId);
             
             // Show modal
             const modal = new bootstrap.Modal(statusModal);

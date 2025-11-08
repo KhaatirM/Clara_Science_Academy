@@ -10,7 +10,7 @@
           <i class="bi bi-arrow-left me-1"></i>Back to Group Assignments
         </a>
       {% else %}
-        <a href="{{ url_for('teacher.view_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-outline-secondary btn-sm">
+        <a href="{{ url_for('teacher.assignments.view_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-outline-secondary btn-sm">
           <i class="bi bi-arrow-left me-1"></i>Back to Assignment
         </a>
       {% endif %}

@@ -5,7 +5,7 @@
   <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
     <h3 class="mb-2 mb-md-0"><i class="bi bi-journal-text me-2"></i>Reflection Journals - {{ group_assignment.title }}</h3>
     <div class="d-flex gap-2">
-      <a href="{{ url_for('teacher.view_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-outline-secondary btn-sm">
+      <a href="{{ url_for('teacher.assignments.view_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-arrow-left me-1"></i>Back to Assignment
       </a>
     </div>
@@ -191,10 +191,10 @@
         </div>
         <div class="card-body">
           <div class="d-grid gap-2">
-            <a href="{{ url_for('teacher.view_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-primary btn-sm">
+            <a href="{{ url_for('teacher.assignments.view_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-primary btn-sm">
               <i class="bi bi-file-text me-1"></i>View Assignment
             </a>
-            <a href="{{ url_for('teacher.class_reflection_journals', class_id=class_obj.id) }}" class="btn btn-success btn-sm">
+            <a href="{{ url_for('teacher.assignments.class_reflection_journals', class_id=class_obj.id) }}" class="btn btn-success btn-sm">
               <i class="bi bi-list me-1"></i>All Class Journals
             </a>
           </div>

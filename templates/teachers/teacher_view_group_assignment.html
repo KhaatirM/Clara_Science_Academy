@@ -10,7 +10,7 @@
           <i class="bi bi-arrow-left me-1"></i>Back to Group Assignments
         </a>
       {% else %}
-        <a href="{{ url_for('teacher.class_group_assignments', class_id=group_assignment.class_id) }}" class="btn btn-outline-secondary btn-sm">
+        <a href="{{ url_for('teacher.assignments.class_group_assignments', class_id=group_assignment.class_id) }}" class="btn btn-outline-secondary btn-sm">
           <i class="bi bi-arrow-left me-1"></i>Back to Assignments
         </a>
       {% endif %}
@@ -194,7 +194,7 @@
                   <i class="bi bi-plus-circle me-1"></i>Create Groups
                 </a>
               {% else %}
-                <a href="{{ url_for('teacher.class_groups', class_id=group_assignment.class_id) }}" class="btn btn-primary btn-sm mt-2">
+                <a href="{{ url_for('teacher.assignments.class_groups', class_id=group_assignment.class_id) }}" class="btn btn-primary btn-sm mt-2">
                   <i class="bi bi-plus-circle me-1"></i>Create Groups
                 </a>
               {% endif %}

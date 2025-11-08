@@ -53,7 +53,7 @@
                             {% elif role_name == 'director' %}
                                 {% set dashboard_url = url_for('management.management_dashboard') %}
                             {% elif role_name == 'teacher' %}
-                                {% set dashboard_url = url_for('teacher.teacher_dashboard') %}
+                                {% set dashboard_url = url_for('teacher.dashboard.teacher_dashboard') %}
                             {% elif role_name == 'student' %}
                                 {% set dashboard_url = url_for('student.student_dashboard') %}
                             {% elif role_name == 'tech' %}

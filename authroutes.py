@@ -200,7 +200,7 @@ def dashboard():
     if current_user.role == 'Student':
         return redirect(url_for('student.student_dashboard'))
     elif is_teacher_role(current_user.role):
-        return redirect(url_for('teacher.teacher_dashboard'))
+        return redirect(url_for('teacher.dashboard.teacher_dashboard'))
     elif current_user.role in ['School Administrator', 'Director']:
         return redirect(url_for('management.management_dashboard'))
     elif current_user.role in ['Tech', 'IT Support']:
@@ -554,7 +554,7 @@ def change_password_ajax():
         if current_user.role in ['Director', 'School Administrator']:
             redirect_url = url_for('management.dashboard')
         elif current_user.role == 'Teacher':
-            redirect_url = url_for('teacher.dashboard')
+            redirect_url = url_for('teacher.dashboard.teacher_dashboard')
         elif current_user.role == 'Student':
             redirect_url = url_for('student.dashboard')
         else:

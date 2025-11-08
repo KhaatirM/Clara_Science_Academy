@@ -50,7 +50,7 @@
                         </a>
                         
                         {% if current_user.is_authenticated %}
-                            <a href="{{ url_for('student.student_dashboard') if current_user.role == 'Student' else url_for('teacher.teacher_dashboard') if current_user.role == 'Teacher' else url_for('management.management_dashboard') }}" class="btn btn-outline-primary btn-lg">
+                            <a href="{{ url_for('student.student_dashboard') if current_user.role == 'Student' else url_for('teacher.dashboard.teacher_dashboard') if current_user.role == 'Teacher' else url_for('management.management_dashboard') }}" class="btn btn-outline-primary btn-lg">
                                 <i class="fas fa-tachometer-alt"></i> Dashboard
                             </a>
                         {% endif %}

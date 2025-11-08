@@ -50,7 +50,7 @@ def teacher_dashboard():
     except Exception as e:
         print(f"Error in teacher dashboard: {e}")
         flash("An error occurred while loading the dashboard.", "danger")
-        return render_template('role_teacher_dashboard.html', 
+        return render_template('management/role_teacher_dashboard.html', 
                              teacher=None, 
                              classes=[], 
                              recent_activity=[], 

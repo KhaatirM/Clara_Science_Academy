@@ -96,7 +96,7 @@ def grade_assignment(assignment_id):
     submissions = Submission.query.filter_by(assignment_id=assignment_id).all()
     submissions_dict = {submission.student_id: submission for submission in submissions}
     
-    return render_template('teacher_grade_assignment.html', 
+    return render_template('teachers/teacher_grade_assignment.html', 
                          assignment=assignment,
                          students=students,
                          grades=grades_dict,

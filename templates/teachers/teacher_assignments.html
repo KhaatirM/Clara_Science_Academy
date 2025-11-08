@@ -1,26 +1,365 @@
 {% extends "shared/dashboard_layout.html" %}
 
 {% block dashboard_content %}
-<div class="container-fluid px-2 px-md-4">
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2 gap-md-0">
-        <h3 class="mb-2 mb-md-0">My Assignments</h3>
-        <div class="d-flex gap-2">
-            <a href="{{ url_for('teacher.assignments.assignment_type_selector') }}" class="btn btn-sm text-white" style="background: linear-gradient(135deg, #2E8B57 0%, #228B22 50%, #556B2F 100%);">
-                <i class="bi bi-plus-circle me-1 me-md-2"></i>Add Assignment
-            </a>
-            <button class="btn btn-sm text-white" style="background: linear-gradient(135deg, #2E8B57 0%, #228B22 50%, #556B2F 100%);" onclick="window.history.back()">
-                <i class="bi bi-arrow-left me-1 me-md-2"></i>Back to Dashboard
-            </button>
+<style>
+    .assignments-page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 20px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        color: white;
+    }
+    
+    .assignments-page-header h2 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 0;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .header-buttons {
+        display: flex;
+        gap: 1rem;
+    }
+    
+    .btn-add-assignment {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        border: none;
+        color: white;
+        padding: 0.75rem 2rem;
+        border-radius: 30px;
+        font-weight: 600;
+        box-shadow: 0 8px 20px rgba(67, 233, 123, 0.4);
+        transition: all 0.3s ease;
+    }
+    
+    .btn-add-assignment:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 30px rgba(67, 233, 123, 0.6);
+        color: white;
+    }
+    
+    .btn-back {
+        background: rgba(255,255,255,0.2);
+        backdrop-filter: blur(10px);
+        border: 2px solid rgba(255,255,255,0.3);
+        color: white;
+        padding: 0.75rem 2rem;
+        border-radius: 30px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-back:hover {
+        background: rgba(255,255,255,0.3);
+        color: white;
+    }
+    
+    .filter-card-modern {
+        background: white;
+        border: none;
+        border-radius: 20px;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+        padding: 2rem;
+    }
+    
+    .form-label-modern {
+        font-weight: 700;
+        color: #667eea;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-select-modern, .form-control-modern {
+        border: 2px solid #e9ecef;
+        border-radius: 12px;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+        font-weight: 500;
+    }
+    
+    .form-select-modern:focus, .form-control-modern:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    
+    .btn-clear-filters {
+        background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+        border: none;
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-clear-filters:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(255, 107, 107, 0.4);
+        color: white;
+    }
+    
+    .assignment-count-banner {
+        background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
+        border: none;
+        border-radius: 15px;
+        padding: 1rem 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    
+    .assignment-card-modern {
+        background: white;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+        margin-bottom: 2rem;
+        position: relative;
+    }
+    
+    .assignment-card-modern::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 5px;
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        transform: scaleX(0);
+        transition: transform 0.3s ease;
+    }
+    
+    .assignment-card-modern:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+    }
+    
+    .assignment-card-modern:hover::before {
+        transform: scaleX(1);
+    }
+    
+    .assignment-card-header-modern {
+        padding: 1.5rem;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    
+    .assignment-icon-modern {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.5rem;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+    
+    .assignment-meta-modern {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+    
+    .meta-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: 25px;
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+    
+    .meta-badge-date {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: white;
+    }
+    
+    .meta-badge-class {
+        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        color: white;
+    }
+    
+    .meta-badge-status {
+        background: linear-gradient(135deg, #ffd43b 0%, #fab005 100%);
+        color: #333;
+    }
+    
+    .meta-badge-status.active {
+        background: linear-gradient(135deg, #51cf66 0%, #40c057 100%);
+        color: white;
+    }
+    
+    .assignment-card-body-modern {
+        padding: 1.5rem;
+    }
+    
+    .assignment-title-modern {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #2d3748;
+        margin-bottom: 1rem;
+    }
+    
+    .assignment-description-modern {
+        color: #718096;
+        font-size: 0.95rem;
+        line-height: 1.6;
+        margin-bottom: 1.5rem;
+    }
+    
+    .assignment-types-modern {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-bottom: 1.5rem;
+    }
+    
+    .type-badge {
+        padding: 0.35rem 0.75rem;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .type-badge-quiz {
+        background: #e3f2fd;
+        color: #1976d2;
+        border: 2px solid #1976d2;
+    }
+    
+    .type-badge-pdf {
+        background: #ffebee;
+        color: #d32f2f;
+        border: 2px solid #d32f2f;
+    }
+    
+    .type-badge-essay {
+        background: #f3e5f5;
+        color: #7b1fa2;
+        border: 2px solid #7b1fa2;
+    }
+    
+    .type-badge-discussion {
+        background: #e8f5e9;
+        color: #388e3c;
+        border: 2px solid #388e3c;
+    }
+    
+    .assignment-card-footer-modern {
+        padding: 1rem 1.5rem;
+        background: #f8f9fa;
+        border-top: 1px solid #e2e8f0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+    
+    .action-btn-modern {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.6rem 1.2rem;
+        border-radius: 12px;
+        border: none;
+        font-size: 0.9rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        white-space: nowrap;
+    }
+    
+    .action-btn-modern:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .action-btn-view {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .action-btn-grade {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        color: white;
+    }
+    
+    .action-btn-edit {
+        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        color: white;
+    }
+    
+    .action-btn-status {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: white;
+    }
+    
+    .action-btn-remove {
+        background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+        color: white;
+    }
+    
+    .action-btn-extensions {
+        background: linear-gradient(135deg, #ffd43b 0%, #fab005 100%);
+        color: #333;
+    }
+    
+    .action-btn-view-class {
+        background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        color: #333;
+    }
+    
+    @media (max-width: 768px) {
+        .assignment-card-footer-modern {
+            flex-direction: column;
+        }
+        
+        .action-btn-modern {
+            width: 100%;
+        }
+    }
+</style>
+
+<div class="container-fluid px-2 px-md-4 py-4">
+    <!-- Enhanced Header -->
+    <div class="assignments-page-header">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+            <div>
+                <h2><i class="bi bi-journal-check me-3"></i>My Assignments</h2>
+                <p class="mb-0 opacity-90">Manage and track all your assignments</p>
+            </div>
+            <div class="header-buttons">
+                <a href="{{ url_for('teacher.assignments.assignment_type_selector') }}" class="btn-add-assignment">
+                    <i class="bi bi-plus-circle-fill me-2"></i>Add Assignment
+                </a>
+                <button class="btn-back" onclick="window.history.back()">
+                    <i class="bi bi-arrow-left me-2"></i>Back
+                </button>
+            </div>
         </div>
     </div>
 
-    <!-- Filter and Sort Controls -->
-    <div class="card mb-4" style="background-color: #f8f9fa; border: 1px solid #e9ecef;">
-        <div class="card-body">
-            <form method="GET" class="row g-3" id="filterForm">
+    <!-- Enhanced Filter Card -->
+    <div class="filter-card-modern">
+        <form method="GET" class="row g-4" id="filterForm">
                 <div class="col-12 col-sm-6 col-md-3">
-                    <label for="class_filter" class="form-label fw-bold">Filter by Class</label>
-                    <select class="form-select" id="class_filter" name="class_id" onchange="this.form.submit()">
+                    <label for="class_filter" class="form-label-modern">Filter by Class</label>
+                    <select class="form-select-modern" id="class_filter" name="class_id" onchange="this.form.submit()">
                         <option value="">All Classes</option>
                         {% for class in classes %}
                             <option value="{{ class.id }}" {% if selected_class_id|string == class.id|string %}selected{% endif %}>
@@ -30,15 +369,15 @@
                     </select>
                 </div>
                 <div class="col-12 col-sm-6 col-md-3">
-                    <label for="sort_by" class="form-label fw-bold">Sort by</label>
-                    <select class="form-select" id="sort_by" name="sort" onchange="this.form.submit()">
+                    <label for="sort_by" class="form-label-modern">Sort by</label>
+                    <select class="form-select-modern" id="sort_by" name="sort" onchange="this.form.submit()">
                         <option value="due_date" {% if sort_by == 'due_date' %}selected{% endif %}>Due Date</option>
                         <option value="title" {% if sort_by == 'title' %}selected{% endif %}>Assignment Title</option>
                     </select>
                 </div>
                 <div class="col-12 col-sm-6 col-md-3">
-                    <label for="sort_order" class="form-label fw-bold">Order</label>
-                    <select class="form-select" id="sort_order" name="order" onchange="this.form.submit()">
+                    <label for="sort_order" class="form-label-modern">Order</label>
+                    <select class="form-select-modern" id="sort_order" name="order" onchange="this.form.submit()">
                         <option value="desc" {% if sort_order == 'desc' %}selected{% endif %}>
                             {% if sort_by == 'due_date' %}Latest First{% else %}Z to A{% endif %}
                         </option>
@@ -48,8 +387,8 @@
                     </select>
                 </div>
                 <div class="col-12 col-sm-6 col-md-3 d-flex align-items-end">
-                    <button type="button" class="btn btn-outline-secondary" onclick="clearFilters()">
-                        <i class="bi bi-arrow-clockwise me-1"></i>Clear Filters
+                    <button type="button" class="btn-clear-filters" onclick="clearFilters()">
+                        <i class="bi bi-arrow-clockwise me-2"></i>Clear Filters
                     </button>
                 </div>
             </form>
@@ -58,118 +397,110 @@
 
     {% if assignments %}
         <!-- Assignment Summary -->
-        <div class="row mb-3">
-            <div class="col-12">
-                <div class="alert alert-info d-flex justify-content-between align-items-center">
-                    <span><i class="bi bi-info-circle me-2"></i>Showing {{ assignments|length }} assignment{{ 's' if assignments|length != 1 else '' }}</span>
-                    {% if selected_class_id %}
-                        <span class="badge bg-primary">Filtered by class</span>
-                    {% endif %}
-                </div>
+        <div class="assignment-count-banner">
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="fw-bold"><i class="bi bi-info-circle me-2"></i>Showing {{ assignments|length }} assignment{{ 's' if assignments|length != 1 else '' }}</span>
+                {% if selected_class_id %}
+                    <span class="badge bg-white text-primary">Filtered by class</span>
+                {% endif %}
             </div>
         </div>
 
-        <div class="table-responsive">
-            <table class="table table-striped table-hover align-middle assignments-table">
-                <thead class="table-dark">
-                    <tr>
-                        <th class="sortable" data-sort="due_date">
-                            Due Date
-                            {% if sort_by == 'due_date' %}
-                                <i class="bi bi-arrow-{% if sort_order == 'asc' %}up{% else %}down{% endif %} ms-1"></i>
-                            {% endif %}
-                        </th>
-                        <th class="sortable" data-sort="title">
-                            Assignment Title
-                            {% if sort_by == 'title' %}
-                                <i class="bi bi-arrow-{% if sort_order == 'asc' %}up{% else %}down{% endif %} ms-1"></i>
-                            {% endif %}
-                        </th>
-                        <th>Class</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for assignment in assignments %}
-                        <tr>
-                            <td data-label="Due Date">{{ assignment.due_date.strftime('%m/%d/%Y %I:%M %p') }}</td>
-                            <td data-label="Assignment Title">
-                                <strong>{{ assignment.title }}</strong>
-                                <div class="d-flex flex-wrap gap-1 mt-1">
-                                    {% if assignment.assignment_type == 'quiz' %}
-                                        <span class="badge bg-warning text-dark" style="font-size: 0.7rem;">
-                                            <i class="bi bi-question-circle me-1"></i>Quiz
-                                        </span>
-                                    {% elif assignment.assignment_type == 'discussion' %}
-                                        <span class="badge bg-info" style="font-size: 0.7rem;">
-                                            <i class="bi bi-chat-dots me-1"></i>Discussion
-                                        </span>
-                                    {% else %}
-                                        <span class="badge bg-primary" style="font-size: 0.7rem;">
-                                            <i class="bi bi-file-earmark-pdf me-1"></i>PDF/Paper
-                                        </span>
-                                    {% endif %}
-                                </div>
-                                {% if assignment.description %}
-                                    <br><small class="text-muted">{{ assignment.description[:100] }}{% if assignment.description|length > 100 %}...{% endif %}</small>
-                                {% endif %}
-                                {% if assignment.attachment_filename %}
-                                    <br><small class="text-primary">
-                                        <i class="bi bi-paperclip me-1"></i>
-                                        <a href="{{ url_for('download_assignment_file', assignment_id=assignment.id) }}" class="text-decoration-none">
-                                            {{ assignment.attachment_original_filename }}
-                                        </a>
-                                    </small>
-                                {% endif %}
-                            </td>
-                            <td data-label="Class">{{ assignment.class_info.name }}</td>
-                            <td data-label="Status">
-                                {% if assignment.status == 'Active' %}
-                                    <span class="badge bg-success">Active</span>
-                                {% elif assignment.status == 'Inactive' %}
-                                    <span class="badge bg-warning text-dark">Inactive</span>
-                                {% elif assignment.status == 'Voided' %}
-                                    <span class="badge bg-danger">Voided</span>
-                                {% else %}
-                                    <span class="badge bg-secondary">{{ assignment.status|title }}</span>
-                                {% endif %}
-                            </td>
-                            <td data-label="Actions">
-                                <div class="d-flex flex-column flex-sm-row gap-1">
-                                    <a href="{{ url_for('teacher.assignments.view_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-secondary btn-sm">
-                                        <i class="bi bi-eye me-1"></i>View
-                                    </a>
-                                    <a href="{{ url_for('teacher.grading.grade_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-primary btn-sm">
-                                        <i class="bi bi-pencil me-1"></i>Grade
-                                    </a>
-                                    <a href="{{ url_for('teacher.assignments.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-warning btn-sm">
-                                        <i class="bi bi-pencil-square me-1"></i>Edit
-                                    </a>
-                                    <button type="button" class="btn btn-outline-info btn-sm change-status-btn"
-                                            data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}" 
-                                            data-current-status="{{ assignment.status }}">
-                                        <i class="bi bi-gear me-1"></i>Status
-                                    </button>
-                                    <button type="button" class="btn btn-outline-danger btn-sm remove-assignment-btn"
-                                            data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}">
-                                        <i class="bi bi-trash me-1"></i>Remove
-                                    </button>
-                                    <button type="button" class="btn btn-outline-success btn-sm manage-extensions-btn"
-                                            data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}"
-                                            data-class-id="{{ assignment.class_id }}">
-                                        <i class="bi bi-clock-history me-1"></i>Extensions
-                                    </button>
-                                    <a href="{{ url_for('teacher.dashboard.view_class', class_id=assignment.class_id) }}" class="btn btn-outline-info btn-sm">
-                                        <i class="bi bi-eye me-1"></i>View Class
-                                    </a>
-                                </div>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <!-- Modern Card Layout -->
+        {% for assignment in assignments %}
+        <div class="assignment-card-modern">
+            <!-- Card Header -->
+            <div class="assignment-card-header-modern">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="assignment-icon-modern">
+                        <i class="bi bi-journal-text"></i>
+                    </div>
+                </div>
+                <div class="assignment-meta-modern">
+                    <span class="meta-badge meta-badge-date">
+                        <i class="bi bi-calendar"></i>
+                        {{ assignment.due_date.strftime('%m/%d/%Y %I:%M %p') }}
+                    </span>
+                    <span class="meta-badge meta-badge-class">
+                        <i class="bi bi-house-door"></i>
+                        {{ assignment.class_info.name }}
+                    </span>
+                    <span class="meta-badge meta-badge-status {% if assignment.is_active %}active{% endif %}">
+                        <i class="bi bi-{{ 'check-circle' if assignment.is_active else 'x-circle' }}"></i>
+                        {{ 'Active' if assignment.is_active else 'Inactive' }}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Card Body -->
+            <div class="assignment-card-body-modern">
+                <h3 class="assignment-title-modern">{{ assignment.title }}</h3>
+                
+                <!-- Assignment Types -->
+                <div class="assignment-types-modern">
+                    {% if assignment.assignment_type == 'quiz' %}
+                        <span class="type-badge type-badge-quiz">
+                            <i class="bi bi-question-circle me-1"></i>Quiz
+                        </span>
+                    {% elif assignment.assignment_type == 'discussion' %}
+                        <span class="type-badge type-badge-discussion">
+                            <i class="bi bi-chat-dots me-1"></i>Discussion
+                        </span>
+                    {% elif assignment.assignment_type == 'essay' %}
+                        <span class="type-badge type-badge-essay">
+                            <i class="bi bi-file-text me-1"></i>Essay
+                        </span>
+                    {% else %}
+                        <span class="type-badge type-badge-pdf">
+                            <i class="bi bi-file-earmark-pdf me-1"></i>PDF/Paper
+                        </span>
+                    {% endif %}
+                </div>
+                
+                {% if assignment.description %}
+                    <p class="assignment-description-modern">{{ assignment.description[:150] }}{% if assignment.description|length > 150 %}...{% endif %}</p>
+                {% endif %}
+                
+                {% if assignment.attachment_filename %}
+                    <div class="mb-3">
+                        <a href="{{ url_for('download_assignment_file', assignment_id=assignment.id) }}" class="text-decoration-none text-primary fw-bold">
+                            <i class="bi bi-paperclip me-2"></i>{{ assignment.attachment_original_filename }}
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Card Footer with Action Buttons -->
+            <div class="assignment-card-footer-modern">
+                <a href="{{ url_for('teacher.assignments.view_assignment', assignment_id=assignment.id) }}" class="action-btn-modern action-btn-view">
+                    <i class="bi bi-eye"></i><span>View</span>
+                </a>
+                <a href="{{ url_for('teacher.grading.grade_assignment', assignment_id=assignment.id) }}" class="action-btn-modern action-btn-grade">
+                    <i class="bi bi-check-circle"></i><span>Grade</span>
+                </a>
+                <a href="{{ url_for('teacher.assignments.edit_assignment', assignment_id=assignment.id) }}" class="action-btn-modern action-btn-edit">
+                    <i class="bi bi-pencil-square"></i><span>Edit</span>
+                </a>
+                <button type="button" class="action-btn-modern action-btn-status change-status-btn"
+                        data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}" 
+                        data-current-status="{{ assignment.status }}">
+                    <i class="bi bi-gear"></i><span>Status</span>
+                </button>
+                <button type="button" class="action-btn-modern action-btn-remove remove-assignment-btn"
+                        data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}">
+                    <i class="bi bi-trash"></i><span>Remove</span>
+                </button>
+                <button type="button" class="action-btn-modern action-btn-extensions manage-extensions-btn"
+                        data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}"
+                        data-class-id="{{ assignment.class_id }}">
+                    <i class="bi bi-clock-history"></i><span>Extensions</span>
+                </button>
+                <a href="{{ url_for('teacher.dashboard.view_class', class_id=assignment.class_id) }}" class="action-btn-modern action-btn-view-class">
+                    <i class="bi bi-house-door"></i><span>View Class</span>
+                </a>
+            </div>
         </div>
+        {% endfor %}
     {% else %}
         <div class="alert alert-info">
             <h5>No Assignments Created</h5>

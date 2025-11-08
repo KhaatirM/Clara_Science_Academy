@@ -46,8 +46,7 @@ def calculate_quarter_grade_for_student_class(student_id, class_id, school_year_
     # Check if student was enrolled during the quarter
     enrollment = Enrollment.query.filter_by(
         student_id=student_id,
-        class_id=class_id,
-        is_active=True
+        class_id=class_id
     ).first()
     
     if not enrollment:
@@ -60,14 +59,29 @@ def calculate_quarter_grade_for_student_class(student_id, class_id, school_year_
         period_type='quarter'
     ).first()
     
-    # If student enrolled after quarter ended, don't calculate grade
-    if academic_period and enrollment.enrolled_at:
+    if not academic_period:
+        return None  # Quarter period not found
+    
+    # Check if student was enrolled during this quarter
+    if enrollment.enrolled_at:
         # Convert datetime to date if needed
         enrolled_date = enrollment.enrolled_at.date() if hasattr(enrollment.enrolled_at, 'date') else enrollment.enrolled_at
+        quarter_start = academic_period.start_date
         quarter_end = academic_period.end_date
         
-        if enrolled_date >= quarter_end:
-            return None  # Student enrolled after quarter ended
+        # Student enrolled after quarter ended - don't include
+        if enrolled_date > quarter_end:
+            return None
+    
+    # Check if student was unenrolled before or during the quarter
+    if not enrollment.is_active and enrollment.dropped_at:
+        # Convert datetime to date if needed
+        dropped_date = enrollment.dropped_at.date() if hasattr(enrollment.dropped_at, 'date') else enrollment.dropped_at
+        quarter_start = academic_period.start_date
+        
+        # Student dropped before quarter started - don't include
+        if dropped_date < quarter_start:
+            return None
     
     # Calculate average from grades
     scores = []

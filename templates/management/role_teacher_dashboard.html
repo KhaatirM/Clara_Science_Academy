@@ -383,7 +383,7 @@
                                     <i class="bi bi-eye me-1"></i>View Class
                                 </a>
                                 <div class="btn-group" role="group">
-                                    <a href="{{ url_for('teacher.add_assignment', class_id=class.id) }}" class="btn btn-outline-success btn-sm" title="Add Assignment">
+                                    <a href="{{ url_for('teacher.assignment_type_selector') }}" class="btn btn-outline-success btn-sm" title="Add Assignment">
                                         <i class="bi bi-plus-circle"></i>
                                     </a>
                                     <a href="{{ url_for('teacher.take_attendance', class_id=class.id) }}" class="btn btn-outline-warning btn-sm" title="Take Attendance">
@@ -1259,7 +1259,7 @@
                         <div class="student-info-dir">
                             <h6 class="student-name-dir mb-1">{{ student.first_name }} {{ student.last_name }}</h6>
                             <div class="d-flex gap-2 flex-wrap">
-                                <span class="badge badge-grade-dir">Grade {{ student.grade_level or 'N/A' }}</span>
+                                <span class="badge badge-grade-dir">Grade {{ student.grade_level | display_grade }}</span>
                                 {% if student.is_active %}
                                 <span class="badge bg-success">Active</span>
                                 {% else %}

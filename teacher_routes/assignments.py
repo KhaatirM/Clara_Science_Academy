@@ -23,7 +23,7 @@ bp = Blueprint('assignments', __name__)
 @teacher_required
 def assignment_type_selector():
     """Assignment type selection page"""
-    return render_template('assignment_type_selector.html')
+    return render_template('shared/assignment_type_selector.html')
 
 @bp.route('/assignment/add', methods=['GET', 'POST'])
 @login_required

@@ -83,10 +83,11 @@ def calculate_student_gpa(student_id):
     try:
         from models import Grade, Assignment
         
-        # Get all grades for the student, excluding Voided assignments
+        # Get all grades for the student, excluding Voided assignments and voided grades
         grades = Grade.query.join(Assignment).filter(
             Grade.student_id == student_id,
-            Assignment.status != 'Voided'  # Exclude Voided assignments from GPA calculation
+            Assignment.status != 'Voided',  # Exclude Voided assignments from GPA calculation
+            Grade.is_voided == False  # Exclude voided individual grades
         ).all()
         
         if not grades:

@@ -529,6 +529,16 @@ def create_app(config_class=None):
         except (json.JSONDecodeError, TypeError):
             return {}
     
+    @app.template_filter('display_grade')
+    def display_grade_filter(grade_level):
+        """Display grade level with proper formatting (0 -> K, None -> N/A)"""
+        if grade_level == 0:
+            return 'K'
+        elif grade_level:
+            return str(grade_level)
+        else:
+            return 'N/A'
+    
     @app.template_filter('nl2br')
     def nl2br_filter(value):
         """Convert newlines to <br> tags"""

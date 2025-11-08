@@ -2315,7 +2315,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                     <div class="student-profile-details">
                         <div class="student-profile-item">
                             <i class="bi bi-mortarboard me-2"></i>
-                            <span>Grade {{ student.grade_level or 'N/A' }}</span>
+                            <span>Grade {{ student.grade_level | display_grade }}</span>
                         </div>
                         <div class="student-profile-item">
                             <i class="bi bi-calendar3 me-2"></i>

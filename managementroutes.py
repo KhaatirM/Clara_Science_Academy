@@ -858,10 +858,10 @@ def get_enrolled_students_json(class_id):
 @login_required
 @management_required
 def get_student_classes(student_id):
-    """Get all classes a student is enrolled in"""
+    """Get all classes a student is actively enrolled in"""
     try:
         student = Student.query.get_or_404(student_id)
-        enrollments = Enrollment.query.filter_by(student_id=student_id).all()
+        enrollments = Enrollment.query.filter_by(student_id=student_id, is_active=True).all()
         
         classes_data = []
         for enrollment in enrollments:
@@ -936,18 +936,19 @@ def generate_report_card_form():
         
         current_app.logger.info(f"Auto-determined quarter: {quarter_str} for date {today}")
 
-        # Verify all selected classes exist and student is enrolled
+        # Verify all selected classes exist and student is ACTIVELY enrolled
         valid_class_ids = []
         for class_id in class_ids_int:
             enrollment = Enrollment.query.filter_by(
                 student_id=student_id_int,
-                class_id=class_id
+                class_id=class_id,
+                is_active=True  # Only include active enrollments
             ).first()
             
             if enrollment:
                 valid_class_ids.append(class_id)
             else:
-                flash(f"Student is not enrolled in one of the selected classes (ID: {class_id}).", 'warning')
+                flash(f"Student is not actively enrolled in one of the selected classes (ID: {class_id}).", 'warning')
         
         if not valid_class_ids:
             flash("No valid classes selected for this student.", 'danger')

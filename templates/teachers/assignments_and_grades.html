@@ -463,32 +463,39 @@
 <script>
 // View toggle functionality
 function toggleView(view) {
-    // Hide all views
-    document.getElementById('assignmentsView').style.display = 'none';
-    document.getElementById('gradesView').style.display = 'none';
+    const assignmentsView = document.getElementById('assignmentsView');
+    const gradesView = document.getElementById('gradesView');
+    const assignmentsBtn = document.getElementById('assignmentsBtn');
+    const gradesBtn = document.getElementById('gradesBtn');
     
-    // Remove active class from all buttons
-    document.getElementById('assignmentsBtn').classList.remove('active');
-    document.getElementById('gradesBtn').classList.remove('active');
-    
-    // Show selected view and activate button
     if (view === 'assignments') {
-        document.getElementById('assignmentsView').style.display = 'block';
-        document.getElementById('assignmentsBtn').classList.add('active');
+        assignmentsView.style.display = 'block';
+        gradesView.style.display = 'none';
+        assignmentsBtn.classList.remove('btn-outline-primary');
+        assignmentsBtn.classList.add('btn-primary');
+        gradesBtn.classList.remove('btn-primary');
+        gradesBtn.classList.add('btn-outline-primary');
     } else {
-        document.getElementById('gradesView').style.display = 'block';
-        document.getElementById('gradesBtn').classList.add('active');
+        assignmentsView.style.display = 'none';
+        gradesView.style.display = 'block';
+        assignmentsBtn.classList.remove('btn-primary');
+        assignmentsBtn.classList.add('btn-outline-primary');
+        gradesBtn.classList.remove('btn-outline-primary');
+        gradesBtn.classList.add('btn-primary');
     }
     
-    // Update URL without page reload
-    const url = new URL(window.location);
-    url.searchParams.set('view', view);
-    window.history.pushState({}, '', url);
+    // Update URL with new view and reload to get proper data
+    const classFilter = document.getElementById('classFilter').value;
+    const sortBy = document.getElementById('sortBy').value;
+    const sortOrder = document.getElementById('sortOrder').value;
     
-    // Reload page to get updated data for grades view
-    if (view === 'grades') {
-        window.location.href = url.toString();
-    }
+    const params = new URLSearchParams();
+    if (classFilter) params.append('class_id', classFilter);
+    if (sortBy) params.append('sort', sortBy);
+    if (sortOrder) params.append('order', sortOrder);
+    params.append('view', view);
+    
+    window.location.href = `{{ url_for('teacher.assignments_and_grades') }}?${params.toString()}`;
 }
 
 // Apply filters
@@ -496,20 +503,23 @@ function applyFilters() {
     const classFilter = document.getElementById('classFilter').value;
     const sortBy = document.getElementById('sortBy').value;
     const sortOrder = document.getElementById('sortOrder').value;
-    const currentView = document.querySelector('.view-content[style*="block"]').id.replace('View', '');
     
-    const url = new URL(window.location);
-    url.searchParams.set('class_id', classFilter);
-    url.searchParams.set('sort', sortBy);
-    url.searchParams.set('order', sortOrder);
-    url.searchParams.set('view', currentView);
+    // Determine current view from the visible content
+    const assignmentsView = document.getElementById('assignmentsView');
+    const currentView = (assignmentsView.style.display === 'none') ? 'grades' : 'assignments';
     
-    window.location.href = url.toString();
+    // Build URL with query parameters
+    const params = new URLSearchParams();
+    if (classFilter) params.append('class_id', classFilter);
+    if (sortBy) params.append('sort', sortBy);
+    if (sortOrder) params.append('order', sortOrder);
+    params.append('view', currentView);
+    
+    window.location.href = `{{ url_for('teacher.assignments_and_grades') }}?${params.toString()}`;
 }
 
 // Create assignment function
 function createAssignment() {
-    // This would open a modal or redirect to assignment creation page
     window.location.href = "{{ url_for('teacher.assignment_type_selector') }}";
 }
 
@@ -1216,48 +1226,5 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Create assignment redirect
-function createAssignment() {
-    window.location.href = "{{ url_for('teacher.add_assignment_select_class') }}";
-}
-
-// Toggle view between assignments and grades
-function toggleView(view) {
-    const assignmentsView = document.getElementById('assignmentsView');
-    const gradesView = document.getElementById('gradesView');
-    const assignmentsBtn = document.getElementById('assignmentsBtn');
-    const gradesBtn = document.getElementById('gradesBtn');
-    
-    if (view === 'assignments') {
-        assignmentsView.style.display = 'block';
-        gradesView.style.display = 'none';
-        assignmentsBtn.classList.remove('btn-outline-primary');
-        assignmentsBtn.classList.add('btn-primary');
-        gradesBtn.classList.remove('btn-primary');
-        gradesBtn.classList.add('btn-outline-primary');
-    } else {
-        assignmentsView.style.display = 'none';
-        gradesView.style.display = 'block';
-        assignmentsBtn.classList.remove('btn-primary');
-        assignmentsBtn.classList.add('btn-outline-primary');
-        gradesBtn.classList.remove('btn-outline-primary');
-        gradesBtn.classList.add('btn-primary');
-    }
-}
-
-// Apply filters
-function applyFilters() {
-    const classFilter = document.getElementById('classFilter').value;
-    const sortBy = document.getElementById('sortBy').value;
-    const sortOrder = document.getElementById('sortOrder').value;
-    
-    // Build URL with query parameters
-    const params = new URLSearchParams();
-    if (classFilter) params.append('class_filter', classFilter);
-    if (sortBy) params.append('sort_by', sortBy);
-    if (sortOrder) params.append('sort_order', sortOrder);
-    
-    window.location.href = `{{ url_for('teacher.assignments_and_grades') }}?${params.toString()}`;
-}
 </script>
 {% endblock %}

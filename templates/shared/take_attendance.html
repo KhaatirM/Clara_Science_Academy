@@ -592,8 +592,19 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Real-time statistics update
     const radioButtons = document.querySelectorAll('input[type="radio"]');
+    const attendanceLabels = document.querySelectorAll('.btn-attendance');
+    
+    // Add change event listeners to radio buttons
     radioButtons.forEach(radio => {
         radio.addEventListener('change', updateStats);
+    });
+    
+    // Also add click event listeners to labels for Bootstrap btn-check pattern
+    attendanceLabels.forEach(label => {
+        label.addEventListener('click', function() {
+            // Small delay to allow radio button to update
+            setTimeout(updateStats, 50);
+        });
     });
     
     function updateStats() {
@@ -606,13 +617,23 @@ document.addEventListener('DOMContentLoaded', function() {
         const attendanceRate = totalStudents > 0 ? Math.round((presentCount / totalStudents) * 100) : 0;
         
         // Update stat cards with animation
-        animateValue('presentCount', parseInt(document.getElementById('presentCount').textContent), presentCount);
-        animateValue('lateCount', parseInt(document.getElementById('lateCount').textContent), lateCount);
-        animateValue('absentCount', parseInt(document.getElementById('absentCount').textContent), absentCount);
-        animateValue('attendanceRate', parseInt(document.getElementById('attendanceRate').textContent), attendanceRate);
+        const presentEl = document.getElementById('presentCount');
+        const lateEl = document.getElementById('lateCount');
+        const absentEl = document.getElementById('absentCount');
+        const rateEl = document.getElementById('attendanceRate');
+        
+        if (presentEl && lateEl && absentEl && rateEl) {
+            animateValue('presentCount', parseInt(presentEl.textContent) || 0, presentCount);
+            animateValue('lateCount', parseInt(lateEl.textContent) || 0, lateCount);
+            animateValue('absentCount', parseInt(absentEl.textContent) || 0, absentCount);
+            animateValue('attendanceRate', parseInt(rateEl.textContent) || 0, attendanceRate);
+        }
         
         // Update completion status
-        document.getElementById('markedCount').textContent = markedCount;
+        const markedCountEl = document.getElementById('markedCount');
+        if (markedCountEl) {
+            markedCountEl.textContent = markedCount;
+        }
     }
     
     function animateValue(id, start, end) {

@@ -35,208 +35,165 @@
         color: white;
     }
     
-    .student-card-container {
+    /* Full Student Card Styling - Like Staff Records */
+    .student-full-card {
         background: white;
         border-radius: 20px;
-        padding: 2rem;
+        overflow: hidden;
         box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
         height: 100%;
-    }
-    
-    .student-card-modern {
-        background: white;
-        border: 2px solid #e9ecef;
-        border-radius: 15px;
-        padding: 1rem;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        text-align: center;
-        width: 140px;
-        height: 180px;
         display: flex;
         flex-direction: column;
-        align-items: center;
-        justify-content: center;
     }
     
-    .student-card-modern:hover {
-        transform: translateY(-8px);
-        border-color: #4facfe;
-        box-shadow: 0 10px 30px rgba(79, 172, 254, 0.3);
-        background: linear-gradient(135deg, #f5f7fa 0%, #e0f7ff 100%);
+    .student-full-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.15);
     }
     
-    .student-card-modern.selected {
-        border-color: #4facfe;
-        background: linear-gradient(135deg, #e0f7ff 0%, #b3e5fc 100%);
-        box-shadow: 0 10px 30px rgba(79, 172, 254, 0.4);
-    }
-    
-    .student-img-modern {
-        width: 80px;
-        height: 80px;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 3px solid #4facfe;
-        box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
-        margin-bottom: 0.75rem;
-    }
-    
-    .student-name-tag {
-        font-weight: 600;
-        color: #2d3748;
-        font-size: 0.9rem;
-        line-height: 1.3;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-    }
-    
-    .details-panel-modern {
-        background: white;
-        border-radius: 20px;
-        padding: 2rem;
-        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-        min-height: 600px;
-        position: sticky;
-        top: 20px;
-    }
-    
-    .student-detail-header {
-        text-align: center;
-        margin-bottom: 2rem;
-        padding-bottom: 1.5rem;
-        border-bottom: 2px solid #e9ecef;
-    }
-    
-    .student-detail-img {
-        width: 120px;
-        height: 120px;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 4px solid #4facfe;
-        box-shadow: 0 8px 25px rgba(79, 172, 254, 0.4);
-        margin-bottom: 1rem;
-    }
-    
-    .student-detail-name {
-        font-size: 1.8rem;
-        font-weight: 700;
-        color: #2d3748;
-        margin-bottom: 0.5rem;
-    }
-    
-    .student-detail-grade {
-        display: inline-block;
-        padding: 0.5rem 1.5rem;
-        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    .student-full-card-header {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        padding: 1.5rem;
         color: white;
-        border-radius: 25px;
-        font-weight: 600;
-        font-size: 0.9rem;
     }
     
-    .detail-info-item {
-        display: flex;
-        align-items: center;
-        padding: 1rem;
-        margin-bottom: 0.75rem;
-        background: linear-gradient(135deg, #f5f7fa 0%, #e0f7ff 100%);
-        border-radius: 12px;
-        border-left: 4px solid #4facfe;
-        transition: all 0.3s ease;
+    .student-card-photo {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid white;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     }
     
-    .detail-info-item:hover {
-        transform: translateX(5px);
-        background: linear-gradient(135deg, #e0f7ff 0%, #b3e5fc 100%);
-        box-shadow: 0 4px 15px rgba(79, 172, 254, 0.2);
-    }
-    
-    .detail-info-icon {
-        width: 40px;
-        height: 40px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-right: 1rem;
+    .student-card-name {
         font-size: 1.2rem;
+        font-weight: 700;
         color: white;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        margin: 0;
     }
     
-    .icon-dob { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
-    .icon-id { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
-    .icon-email { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
-    .icon-address { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .student-card-id {
+        font-size: 0.85rem;
+        color: rgba(255,255,255,0.9);
+        margin: 0;
+    }
     
-    .detail-info-content {
+    .student-full-card-body {
+        padding: 1.5rem;
         flex-grow: 1;
     }
     
-    .detail-info-label {
-        font-size: 0.8rem;
-        color: #718096;
+    .student-info-row {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.75rem;
+        margin-bottom: 0.75rem;
+        background: #f8f9fa;
+        border-radius: 10px;
+        transition: all 0.3s ease;
+    }
+    
+    .student-info-row:hover {
+        background: #e9ecef;
+        transform: translateX(3px);
+    }
+    
+    .info-icon {
+        width: 35px;
+        height: 35px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1rem;
+        flex-shrink: 0;
+    }
+    
+    .info-icon-grade { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+    .info-icon-dob { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+    .info-icon-email { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+    .info-icon-address { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    
+    .info-content {
+        flex-grow: 1;
+        min-width: 0;
+    }
+    
+    .info-label {
+        font-size: 0.75rem;
+        color: #6c757d;
         font-weight: 600;
         text-transform: uppercase;
         margin-bottom: 0.25rem;
         letter-spacing: 0.5px;
     }
     
-    .detail-info-value {
-        font-size: 1rem;
+    .info-value {
+        font-size: 0.95rem;
         color: #2d3748;
         font-weight: 600;
+        word-break: break-word;
     }
     
-    .student-actions-modern {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1rem;
-        margin-top: 2rem;
-        padding-top: 2rem;
-        border-top: 2px solid #e9ecef;
-    }
-    
-    .action-btn-student {
-        padding: 1rem;
-        border-radius: 12px;
+    .badge-grade {
+        display: inline-block;
+        padding: 0.35rem 1rem;
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: white;
+        border-radius: 20px;
+        font-size: 0.85rem;
         font-weight: 600;
+    }
+    
+    .student-full-card-footer {
+        padding: 1rem 1.5rem;
+        background: #f8f9fa;
+        border-top: 1px solid #e9ecef;
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .btn-student-action {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.25rem;
+        padding: 0.75rem 0.5rem;
+        border-radius: 10px;
         border: none;
+        font-size: 0.85rem;
+        font-weight: 600;
         transition: all 0.3s ease;
         text-decoration: none;
-        text-align: center;
         color: white;
     }
     
-    .action-btn-student:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    .btn-student-action:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         color: white;
     }
     
-    .btn-view-grades {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    .btn-student-action i {
+        font-size: 1.2rem;
     }
     
-    .btn-view-attendance {
+    .btn-student-grades {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    }
+    
+    .btn-student-attendance {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+    
+    .btn-student-edit {
         background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-    }
-    
-    .empty-details {
-        text-align: center;
-        padding: 4rem 2rem;
-        color: #718096;
-    }
-    
-    .empty-details i {
-        font-size: 4rem;
-        color: #4facfe;
-        margin-bottom: 1rem;
-        opacity: 0.5;
     }
     
     @media (max-width: 992px) {
@@ -263,126 +220,96 @@
         </div>
     </div>
 
+    <!-- Full Information Cards Grid -->
     <div class="row g-4">
-        <!-- Student Grid -->
-        <div class="col-12 col-lg-7">
-            <div class="student-card-container">
-                <h4 class="mb-4 fw-bold" style="color: #4facfe;">
-                    <i class="bi bi-grid-3x3-gap-fill me-2"></i>All Students ({{ students|length }})
-                </h4>
-                <div class="d-flex flex-wrap gap-3">
-                        {% for student in students %}
-                            {% set image_path = 'uploads/' ~ student.photo_filename if student.photo_filename else 'img/default_avatar.png' %}
-                            <div class="student-card-modern"
-                                 data-id="{{ student.id }}"
-                                 data-name="{{ student.first_name }} {{ student.last_name }}"
-                                 data-dob="{% if current_user.role == 'Director' %}{{ student.dob if student.dob else 'N/A' }}{% else %}{{ student.date_of_birth.strftime('%Y-%m-%d') if student.date_of_birth else 'N/A' }}{% endif %}"
-                                 data-grade="{{ student.grade_level }}"
-                                 data-state-id="{{ student.state_id or 'N/A' }}"
-                                 data-address="{{ student.address or 'N/A' }}"
-                                 data-email="{{ student.email or 'N/A' }}"
-                                 data-image="{{ url_for('static', filename=image_path) }}">
-                                
-                                <img src="{{ url_for('static', filename=image_path) }}" alt="Photo of {{ student.first_name }}" class="student-img-modern">
-                                
-                                <div class="student-name-tag">{{ student.first_name }} {{ student.last_name }}</div>
-                            </div>
-                        {% else %}
-                            <div class="text-center py-5 w-100">
-                                <i class="bi bi-person-x" style="font-size: 4rem; color: #4facfe; opacity: 0.5;"></i>
-                                <p class="text-muted mt-3">No students found.</p>
-                            </div>
-                        {% endfor %}
+        {% for student in students %}
+        {% set image_path = 'uploads/' ~ student.photo_filename if student.photo_filename else 'img/default_avatar.png' %}
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="student-full-card">
+                <!-- Card Header -->
+                <div class="student-full-card-header">
+                    <div class="d-flex align-items-center gap-3">
+                        <img src="{{ url_for('static', filename=image_path) }}" alt="Photo of {{ student.first_name }}" class="student-card-photo">
+                        <div class="flex-grow-1">
+                            <h5 class="student-card-name mb-1">{{ student.first_name }} {{ student.last_name }}</h5>
+                            <p class="student-card-id mb-0">ID: {{ student.state_id or 'N/A' }}</p>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <!-- Details Panel -->
-        <div class="col-12 col-lg-5">
-            <div class="details-panel-modern">
-                <div id="details-panel" class="empty-details">
-                    <i class="bi bi-person-badge"></i>
-                    <h5 class="fw-bold mb-2">Student Details</h5>
-                    <p>Select a student to see their information</p>
+                
+                <!-- Card Body -->
+                <div class="student-full-card-body">
+                    <div class="student-info-row">
+                        <div class="info-icon info-icon-grade">
+                            <i class="bi bi-mortarboard-fill"></i>
+                        </div>
+                        <div class="info-content">
+                            <div class="info-label">Grade Level</div>
+                            <div class="info-value">
+                                <span class="badge-grade">{{ student.grade_level }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="student-info-row">
+                        <div class="info-icon info-icon-dob">
+                            <i class="bi bi-calendar-event"></i>
+                        </div>
+                        <div class="info-content">
+                            <div class="info-label">Date of Birth</div>
+                            <div class="info-value">{{ student.date_of_birth.strftime('%m/%d/%Y') if student.date_of_birth else 'N/A' }}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="student-info-row">
+                        <div class="info-icon info-icon-email">
+                            <i class="bi bi-envelope-fill"></i>
+                        </div>
+                        <div class="info-content">
+                            <div class="info-label">Email</div>
+                            <div class="info-value">{{ student.email or 'N/A' }}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="student-info-row">
+                        <div class="info-icon info-icon-address">
+                            <i class="bi bi-geo-alt-fill"></i>
+                        </div>
+                        <div class="info-content">
+                            <div class="info-label">Address</div>
+                            <div class="info-value">{{ student.address or 'N/A' }}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Card Footer with Actions -->
+                <div class="student-full-card-footer">
+                    <a href="/student/{{ student.id }}/grades" class="btn-student-action btn-student-grades">
+                        <i class="bi bi-journal-check"></i><span>Grades</span>
+                    </a>
+                    <a href="/student/{{ student.id }}/attendance" class="btn-student-action btn-student-attendance">
+                        <i class="bi bi-calendar-check"></i><span>Attendance</span>
+                    </a>
+                    {% if current_user.role in ['Director', 'School Administrator'] %}
+                    <a href="{{ url_for('management.edit_student', student_id=student.id) }}" class="btn-student-action btn-student-edit">
+                        <i class="bi bi-pencil-square"></i><span>Edit</span>
+                    </a>
+                    {% endif %}
                 </div>
             </div>
         </div>
+        {% else %}
+        <div class="col-12">
+            <div class="text-center py-5" style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); border-radius: 20px; padding: 4rem;">
+                <i class="bi bi-person-x" style="font-size: 5rem; color: #4facfe; opacity: 0.7;"></i>
+                <h4 class="mt-4 mb-3 fw-bold">No Students Found</h4>
+                <p class="text-muted">There are currently no students in the system.</p>
+            </div>
+        </div>
+        {% endfor %}
     </div>
 </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const detailsPanel = document.getElementById('details-panel');
-
-    document.querySelectorAll('.student-card-modern').forEach(card => {
-        card.addEventListener('click', function() {
-            // Update details panel
-            const student = this.dataset;
-            detailsPanel.innerHTML = `
-                <div class="student-detail-header">
-                    <img src="${student.image}" alt="Photo of ${student.name}" class="student-detail-img">
-                    <h3 class="student-detail-name">${student.name}</h3>
-                    <span class="student-detail-grade"><i class="bi bi-mortarboard-fill me-1"></i>${student.grade}</span>
-                </div>
-                
-                <div class="detail-info-item">
-                    <div class="detail-info-icon icon-dob">
-                        <i class="bi bi-calendar-event"></i>
-                    </div>
-                    <div class="detail-info-content">
-                        <div class="detail-info-label">Date of Birth</div>
-                        <div class="detail-info-value">${student.dob}</div>
-                    </div>
-                </div>
-                
-                <div class="detail-info-item">
-                    <div class="detail-info-icon icon-id">
-                        <i class="bi bi-card-text"></i>
-                    </div>
-                    <div class="detail-info-content">
-                        <div class="detail-info-label">State ID</div>
-                        <div class="detail-info-value">${student.stateId}</div>
-                    </div>
-                </div>
-                
-                <div class="detail-info-item">
-                    <div class="detail-info-icon icon-email">
-                        <i class="bi bi-envelope"></i>
-                    </div>
-                    <div class="detail-info-content">
-                        <div class="detail-info-label">Email</div>
-                        <div class="detail-info-value">${student.email}</div>
-                    </div>
-                </div>
-                
-                <div class="detail-info-item">
-                    <div class="detail-info-icon icon-address">
-                        <i class="bi bi-geo-alt"></i>
-                    </div>
-                    <div class="detail-info-content">
-                        <div class="detail-info-label">Address</div>
-                        <div class="detail-info-value">${student.address}</div>
-                    </div>
-                </div>
-                
-                <div class="student-actions-modern">
-                    <a href="/student/${student.id}/grades" class="action-btn-student btn-view-grades">
-                        <i class="bi bi-journal-check me-2"></i>View Grades
-                    </a>
-                    <a href="/student/${student.id}/attendance" class="action-btn-student btn-view-attendance">
-                        <i class="bi bi-calendar-check me-2"></i>View Attendance
-                    </a>
-                </div>
-            `;
-
-            // Highlight selected card
-            document.querySelectorAll('.student-card-modern').forEach(c => c.classList.remove('selected'));
-            this.classList.add('selected');
-        });
-    });
-});
-</script>
 {% endblock %} 
 
  

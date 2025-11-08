@@ -11,8 +11,11 @@ from flask import Blueprint
 teacher_blueprint = Blueprint('teacher', __name__)
 
 # Import all route modules to register their routes
+# Note: dashboard and settings now import teacher_blueprint directly,
+# so they don't need to be registered separately
 from . import (
-    dashboard,
+    dashboard,  # Uses teacher_blueprint directly
+    settings,   # Uses teacher_blueprint directly
     assignments, 
     quizzes,
     attendance,
@@ -20,12 +23,11 @@ from . import (
     groups,
     communications,
     analytics,
-    templates,
-    settings
+    templates
 )
 
-# Register all blueprints with the main teacher blueprint
-teacher_blueprint.register_blueprint(dashboard.bp, url_prefix='')
+# Register sub-blueprints with the main teacher blueprint
+# (dashboard and settings are already using teacher_blueprint directly)
 teacher_blueprint.register_blueprint(assignments.bp, url_prefix='')
 teacher_blueprint.register_blueprint(quizzes.bp, url_prefix='')
 teacher_blueprint.register_blueprint(attendance.bp, url_prefix='')
@@ -34,5 +36,4 @@ teacher_blueprint.register_blueprint(groups.bp, url_prefix='')
 teacher_blueprint.register_blueprint(communications.bp, url_prefix='')
 teacher_blueprint.register_blueprint(analytics.bp, url_prefix='')
 teacher_blueprint.register_blueprint(templates.bp, url_prefix='')
-teacher_blueprint.register_blueprint(settings.bp, url_prefix='')
 

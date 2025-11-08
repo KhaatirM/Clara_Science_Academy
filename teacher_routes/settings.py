@@ -9,7 +9,8 @@ from .utils import get_teacher_or_admin, is_admin
 from models import db, User
 from google_auth_oauthlib.flow import Flow
 
-bp = Blueprint('settings', __name__)
+# Import the main teacher blueprint instead of creating a new one
+from . import teacher_blueprint as bp
 
 @bp.route('/settings')
 @login_required

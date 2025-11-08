@@ -16,7 +16,8 @@ from datetime import datetime, timedelta
 from google_classroom_service import get_google_service
 from googleapiclient.errors import HttpError
 
-bp = Blueprint('dashboard', __name__)
+# Import the main teacher blueprint instead of creating a new one
+from . import teacher_blueprint as bp
 
 def update_assignment_statuses():
     """Update assignment statuses based on due dates."""

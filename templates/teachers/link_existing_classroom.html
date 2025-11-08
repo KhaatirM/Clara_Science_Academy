@@ -20,7 +20,7 @@
                 Please select the matching Google Classroom you already created. This will link it to your class in the system.
             </p>
             
-            <form action="{{ url_for('teacher.save_google_classroom_link', class_id=class_to_link.id) }}" method="POST">
+            <form action="{{ url_for('teacher.dashboard.save_google_classroom_link', class_id=class_to_link.id) }}" method="POST">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 
                 <div class="form-group mb-4">
@@ -46,7 +46,7 @@
                 <hr class="my-4">
                 
                 <div class="d-flex flex-column flex-md-row gap-2">
-                    <a href="{{ url_for('teacher.my_classes') }}" class="btn btn-secondary">
+                    <a href="{{ url_for('teacher.dashboard.my_classes') }}" class="btn btn-secondary">
                         <i class="fas fa-arrow-left me-1"></i>Cancel
                     </a>
                     <button type="submit" class="btn btn-primary">
@@ -62,7 +62,7 @@
                 <p class="mb-2">Here are a few things you can try:</p>
                 <ul class="mb-2">
                     <li>
-                        <a href="{{ url_for('teacher.create_and_link_classroom', class_id=class_to_link.id) }}">
+                        <a href="{{ url_for('teacher.dashboard.create_and_link_classroom', class_id=class_to_link.id) }}">
                             Create a new one automatically
                         </a>
                     </li>

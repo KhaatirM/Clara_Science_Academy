@@ -16,8 +16,7 @@ from datetime import datetime, timedelta
 from google_classroom_service import get_google_service
 from googleapiclient.errors import HttpError
 
-# Import the main teacher blueprint instead of creating a new one
-from . import teacher_blueprint as bp
+bp = Blueprint('dashboard', __name__)
 
 def update_assignment_statuses():
     """Update assignment statuses based on due dates."""
@@ -460,7 +459,7 @@ def create_and_link_classroom(class_id):
     # Check authorization for this class
     if not is_authorized_for_class(class_to_link):
         flash("You are not authorized to modify this class.", "danger")
-        return redirect(url_for('teacher.my_classes'))
+        return redirect(url_for('teacher.dashboard.my_classes'))
     
     # Check if teacher has connected their account
     if not current_user.google_refresh_token:
@@ -471,7 +470,7 @@ def create_and_link_classroom(class_id):
         service = get_google_service(current_user)
         if not service:
             flash("Could not connect to Google. Please try reconnecting your account.", "danger")
-            return redirect(url_for('teacher.my_classes'))
+            return redirect(url_for('teacher.dashboard.my_classes'))
 
         # Create the new course
         course_body = {
@@ -516,7 +515,7 @@ def link_existing_classroom(class_id):
     # Check authorization for this class
     if not is_authorized_for_class(class_to_link):
         flash("You are not authorized to modify this class.", "danger")
-        return redirect(url_for('teacher.my_classes'))
+        return redirect(url_for('teacher.dashboard.my_classes'))
     
     # Check if teacher has connected their account
     if not current_user.google_refresh_token:
@@ -527,7 +526,7 @@ def link_existing_classroom(class_id):
         service = get_google_service(current_user)
         if not service:
             flash("Could not connect to Google. Please try reconnecting your account.", "danger")
-            return redirect(url_for('teacher.my_classes'))
+            return redirect(url_for('teacher.dashboard.my_classes'))
 
         # Fetch the list of the teacher's active courses
         results = service.courses().list(teacherId='me', courseStates=['ACTIVE']).execute()
@@ -539,7 +538,7 @@ def link_existing_classroom(class_id):
         
         if not available_courses:
             flash("You have no available Google Classrooms to link. All your classes are either already linked or you have no active classes.", "info")
-            return redirect(url_for('teacher.my_classes'))
+            return redirect(url_for('teacher.dashboard.my_classes'))
 
         return render_template(
             'teachers/link_existing_classroom.html',
@@ -570,13 +569,13 @@ def save_google_classroom_link(class_id):
     # Check authorization for this class
     if not is_authorized_for_class(class_to_link):
         flash("You are not authorized to modify this class.", "danger")
-        return redirect(url_for('teacher.my_classes'))
+        return redirect(url_for('teacher.dashboard.my_classes'))
     
     google_course_id = request.form.get('google_course_id')
     
     if not google_course_id:
         flash("You did not select a class.", "danger")
-        return redirect(url_for('teacher.link_existing_classroom', class_id=class_id))
+        return redirect(url_for('teacher.dashboard.link_existing_classroom', class_id=class_id))
     
     # Verify this classroom ID isn't already linked to another class
     existing_link = Class.query.filter(
@@ -586,7 +585,7 @@ def save_google_classroom_link(class_id):
     
     if existing_link:
         flash(f"This Google Classroom is already linked to another class: {existing_link.name}", "danger")
-        return redirect(url_for('teacher.link_existing_classroom', class_id=class_id))
+        return redirect(url_for('teacher.dashboard.link_existing_classroom', class_id=class_id))
     
     # Save the ID
     class_to_link.google_classroom_id = google_course_id
@@ -611,11 +610,11 @@ def unlink_classroom(class_id):
     # Check authorization for this class
     if not is_authorized_for_class(class_to_unlink):
         flash("You are not authorized to modify this class.", "danger")
-        return redirect(url_for('teacher.my_classes'))
+        return redirect(url_for('teacher.dashboard.my_classes'))
     
     if not class_to_unlink.google_classroom_id:
         flash("This class is not linked to a Google Classroom.", "info")
-        return redirect(url_for('teacher.my_classes'))
+        return redirect(url_for('teacher.dashboard.my_classes'))
     
     old_id = class_to_unlink.google_classroom_id
     class_to_unlink.google_classroom_id = None

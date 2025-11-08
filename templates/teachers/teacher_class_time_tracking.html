@@ -8,7 +8,7 @@
       <a href="{{ url_for('management.admin_class_analytics', class_id=class_obj.id) if role_prefix else url_for('teacher.class_analytics', class_id=class_obj.id) }}" class="btn btn-outline-info btn-sm">
         <i class="bi bi-bar-chart me-1"></i>Analytics
       </a>
-      <a href="{{ url_for('management.view_class', class_id=class_obj.id) if role_prefix else url_for('teacher.view_class', class_id=class_obj.id) }}" class="btn btn-outline-secondary btn-sm">
+      <a href="{{ url_for('management.view_class', class_id=class_obj.id) if role_prefix else url_for('teacher.dashboard.view_class', class_id=class_obj.id) }}" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-arrow-left me-1"></i>Back to Class
       </a>
     </div>

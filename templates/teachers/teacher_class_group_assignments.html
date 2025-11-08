@@ -18,7 +18,7 @@
         </p>
       </div>
       <div class="modern-page-header-actions">
-        <a href="{{ url_for('teacher.view_class', class_id=class_obj.id) }}" class="btn-modern-secondary">
+        <a href="{{ url_for('teacher.dashboard.view_class', class_id=class_obj.id) }}" class="btn-modern-secondary">
           <i class="bi bi-arrow-left me-2"></i>Back to Class
         </a>
         <a href="{{ url_for('teacher.group_assignment_type_selector', class_id=class_obj.id) }}" class="btn-modern-primary">

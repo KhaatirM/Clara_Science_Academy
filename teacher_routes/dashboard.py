@@ -273,7 +273,7 @@ def teacher_dashboard():
     print(f"--- End Debug ---")
     # --- End Debugging ---
     
-    return render_template('role_teacher_dashboard.html', 
+    return render_template('management/role_teacher_dashboard.html', 
                          teacher=teacher, 
                          teacher_data=teacher_data,
                          classes=classes,

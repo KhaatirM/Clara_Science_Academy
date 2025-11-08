@@ -431,6 +431,14 @@ def assignments_and_grades():
         # Redirect to assignments page
         return redirect(url_for('teacher.dashboard.my_assignments'))
 
+@bp.route('/resources')
+@login_required
+@teacher_required
+def resources():
+    """Resources page - placeholder that redirects to dashboard"""
+    flash("Resources page is being updated. Please check back later.", "info")
+    return redirect(url_for('teacher.dashboard.teacher_dashboard'))
+
 @bp.route('/calendar')
 @login_required
 @teacher_required

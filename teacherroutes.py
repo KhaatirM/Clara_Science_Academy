@@ -1392,6 +1392,239 @@ def grade_assignment(assignment_id):
                          submissions=submissions)
 
 
+@teacher_blueprint.route('/attendance/download-template/<int:class_id>')
+@login_required
+@teacher_required
+def download_attendance_template(class_id):
+    """Download CSV template for bulk attendance upload for a specific class."""
+    try:
+        from flask import Response, current_app
+        import csv
+        import io
+        from datetime import date
+        
+        class_obj = Class.query.get_or_404(class_id)
+        
+        # Check authorization
+        teacher = get_teacher_or_admin()
+        if not is_admin() and teacher and class_obj.teacher_id != teacher.id:
+            flash("You are not authorized to access this class.", "danger")
+            return redirect(url_for('teacher.my_classes'))
+        
+        # Get enrolled students for this class
+        enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
+        students = [enrollment.student for enrollment in enrollments if enrollment.student is not None]
+        
+        # Create CSV template in memory
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # Write header
+        writer.writerow([
+            'Date (MM/DD/YYYY)',
+            'Student ID',
+            'Student Name',
+            'Status',
+            'Notes (Optional)'
+        ])
+        
+        # Write example rows with actual students from the class
+        example_date = date.today().strftime('%m/%d/%Y')
+        for student in students[:3]:  # Show first 3 students as examples
+            writer.writerow([
+                example_date,
+                student.student_id or 'N/A',
+                f'{student.first_name} {student.last_name}',
+                'Present',
+                'Example note - optional'
+            ])
+        
+        # Add instruction rows
+        writer.writerow([])
+        writer.writerow(['# INSTRUCTIONS:'])
+        writer.writerow(['# 1. Date format must be MM/DD/YYYY (e.g., 11/08/2025)'])
+        writer.writerow(['# 2. Valid Status values: Present, Late, Unexcused Absence, Excused Absence, Suspended'])
+        writer.writerow(['# 3. Student ID must match exactly (case-sensitive)'])
+        writer.writerow(['# 4. Student Name is for reference only - matching is done by Student ID'])
+        writer.writerow(['# 5. Notes are optional'])
+        writer.writerow(['# 6. Delete these instruction rows before uploading'])
+        writer.writerow([])
+        writer.writerow(['# ENROLLED STUDENTS IN THIS CLASS:'])
+        writer.writerow(['# Student ID', '# Student Name', '# Grade'])
+        for student in students:
+            grade_display = 'K' if student.grade_level == 0 else (str(student.grade_level) if student.grade_level else 'N/A')
+            writer.writerow([
+                f'# {student.student_id or "N/A"}',
+                f'# {student.first_name} {student.last_name}',
+                f'# Grade {grade_display}'
+            ])
+        
+        # Create response
+        output.seek(0)
+        filename = f'attendance_template_{class_obj.name.replace(" ", "_")}_{date.today().strftime("%Y%m%d")}.csv'
+        return Response(
+            output.getvalue(),
+            mimetype='text/csv',
+            headers={'Content-Disposition': f'attachment; filename={filename}'}
+        )
+        
+    except Exception as e:
+        current_app.logger.error(f"Error generating attendance template: {e}")
+        flash('Error generating template. Please try again.', 'danger')
+        return redirect(url_for('teacher.my_classes'))
+
+@teacher_blueprint.route('/attendance/upload-csv/<int:class_id>', methods=['POST'])
+@login_required
+@teacher_required
+def upload_attendance_csv(class_id):
+    """Upload bulk attendance data from CSV for a specific class."""
+    try:
+        from flask import current_app
+        import csv
+        import io
+        from datetime import date
+        
+        class_obj = Class.query.get_or_404(class_id)
+        
+        # Check authorization
+        teacher = get_teacher_or_admin()
+        if not is_admin() and teacher and class_obj.teacher_id != teacher.id:
+            flash("You are not authorized to upload attendance for this class.", "danger")
+            return redirect(url_for('teacher.my_classes'))
+        
+        # Check if file was uploaded
+        if 'attendance_file' not in request.files:
+            flash('No file uploaded.', 'danger')
+            return redirect(url_for('teacher.take_attendance', class_id=class_id))
+        
+        file = request.files['attendance_file']
+        
+        if file.filename == '':
+            flash('No file selected.', 'danger')
+            return redirect(url_for('teacher.take_attendance', class_id=class_id))
+        
+        if not file.filename.endswith('.csv'):
+            flash('Please upload a CSV file.', 'danger')
+            return redirect(url_for('teacher.take_attendance', class_id=class_id))
+        
+        # Read and parse CSV
+        stream = io.StringIO(file.stream.read().decode("UTF-8"), newline=None)
+        csv_reader = csv.DictReader(stream)
+        
+        # Get enrolled students for validation
+        enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
+        student_id_map = {enrollment.student.student_id: enrollment.student.id 
+                          for enrollment in enrollments if enrollment.student and enrollment.student.student_id}
+        
+        # Valid attendance statuses
+        valid_statuses = ['Present', 'Late', 'Unexcused Absence', 'Excused Absence', 'Suspended']
+        
+        # Track statistics
+        records_added = 0
+        records_updated = 0
+        records_skipped = 0
+        errors = []
+        
+        for row_num, row in enumerate(csv_reader, start=2):
+            try:
+                # Skip comment rows
+                date_str = row.get('Date (MM/DD/YYYY)', '').strip()
+                if date_str.startswith('#') or not date_str:
+                    continue
+                
+                student_id_str = row.get('Student ID', '').strip()
+                status = row.get('Status', '').strip()
+                notes = row.get('Notes (Optional)', '').strip()
+                
+                # Validate required fields
+                if not date_str or not student_id_str or not status:
+                    errors.append(f'Row {row_num}: Missing required fields')
+                    records_skipped += 1
+                    continue
+                
+                # Parse date
+                try:
+                    attendance_date = datetime.strptime(date_str, '%m/%d/%Y').date()
+                except ValueError:
+                    try:
+                        attendance_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+                    except ValueError:
+                        errors.append(f'Row {row_num}: Invalid date format')
+                        records_skipped += 1
+                        continue
+                
+                # Validate date is not in the future
+                if attendance_date > date.today():
+                    errors.append(f'Row {row_num}: Cannot upload future dates')
+                    records_skipped += 1
+                    continue
+                
+                # Validate status
+                if status not in valid_statuses:
+                    errors.append(f'Row {row_num}: Invalid status "{status}"')
+                    records_skipped += 1
+                    continue
+                
+                # Find student by ID
+                if student_id_str not in student_id_map:
+                    errors.append(f'Row {row_num}: Student "{student_id_str}" not in class')
+                    records_skipped += 1
+                    continue
+                
+                student_db_id = student_id_map[student_id_str]
+                
+                # Check if attendance record already exists
+                existing_record = Attendance.query.filter_by(
+                    class_id=class_id,
+                    student_id=student_db_id,
+                    date=attendance_date
+                ).first()
+                
+                if existing_record:
+                    existing_record.status = status
+                    if notes:
+                        existing_record.notes = notes
+                    existing_record.teacher_id = teacher.id if teacher else None
+                    records_updated += 1
+                else:
+                    new_record = Attendance(
+                        class_id=class_id,
+                        student_id=student_db_id,
+                        date=attendance_date,
+                        status=status,
+                        notes=notes,
+                        teacher_id=teacher.id if teacher else None
+                    )
+                    db.session.add(new_record)
+                    records_added += 1
+                
+            except Exception as e:
+                errors.append(f'Row {row_num}: {str(e)}')
+                records_skipped += 1
+                continue
+        
+        db.session.commit()
+        
+        # Generate summary
+        success_msg = f'Bulk upload complete: {records_added} added, {records_updated} updated'
+        if records_skipped > 0:
+            success_msg += f', {records_skipped} skipped'
+        
+        flash(success_msg, 'success')
+        
+        # Show errors
+        if errors:
+            for error in errors[:10]:
+                flash(error, 'warning')
+        
+        return redirect(url_for('teacher.take_attendance', class_id=class_id))
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error uploading attendance CSV: {e}")
+        flash(f'Error processing CSV: {str(e)}', 'danger')
+        return redirect(url_for('teacher.take_attendance', class_id=class_id))
+
 @teacher_blueprint.route('/attendance/take/<int:class_id>', methods=['GET', 'POST'])
 @login_required
 @teacher_required

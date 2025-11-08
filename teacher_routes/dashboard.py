@@ -108,7 +108,7 @@ def teacher_dashboard():
             'title': f'New submission for {submission.assignment.title}',
             'description': f'{submission.student.first_name} {submission.student.last_name} submitted work',
             'timestamp': submission.submitted_at,
-            'link': url_for('teacher.grade_assignment', assignment_id=submission.assignment_id)
+            'link': url_for('teacher.grading.grade_assignment', assignment_id=submission.assignment_id)
         })
     
     # Recent grades entered
@@ -124,7 +124,7 @@ def teacher_dashboard():
                 'title': f'Grade entered for {grade.assignment.title}',
                 'description': f'Graded {grade.student.first_name} {grade.student.last_name} - Score: {grade_data.get("score", "N/A")}',
                 'timestamp': grade.graded_at,
-                'link': url_for('teacher.grade_assignment', assignment_id=grade.assignment_id)
+                'link': url_for('teacher.grading.grade_assignment', assignment_id=grade.assignment_id)
             })
         except (json.JSONDecodeError, TypeError):
             continue

@@ -417,6 +417,20 @@ def teachers_staff():
     teachers = TeacherStaff.query.all()
     return render_template('management/role_teachers_staff.html', teachers=teachers)
 
+@bp.route('/assignments-and-grades')
+@login_required
+@teacher_required  
+def assignments_and_grades():
+    """Combined view of assignments and grades - redirect to appropriate page based on view parameter"""
+    view_mode = request.args.get('view', 'assignments')
+    
+    if view_mode == 'grades':
+        # Redirect to grades page
+        return redirect(url_for('teacher.dashboard.my_assignments'))  # Or wherever grades are
+    else:
+        # Redirect to assignments page
+        return redirect(url_for('teacher.dashboard.my_assignments'))
+
 @bp.route('/calendar')
 @login_required
 @teacher_required

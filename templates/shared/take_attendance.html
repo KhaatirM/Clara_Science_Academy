@@ -573,55 +573,74 @@ const totalStudents = {{ students|length }};
 
 // Global updateStats function so it can be called from anywhere
 function updateStats() {
-        console.log('updateStats() called');
-        
-        // More specific selectors for attendance status radio buttons
-        const presentCount = document.querySelectorAll('input[name^="status-"][value="Present"]:checked').length;
-        const lateCount = document.querySelectorAll('input[name^="status-"][value="Late"]:checked').length;
-        const unexcusedCount = document.querySelectorAll('input[name^="status-"][value="Unexcused Absence"]:checked').length;
-        const excusedCount = document.querySelectorAll('input[name^="status-"][value="Excused Absence"]:checked').length;
-        const suspendedCount = document.querySelectorAll('input[name^="status-"][value="Suspended"]:checked').length;
-        const absentCount = unexcusedCount + excusedCount;
-        const markedCount = presentCount + lateCount + absentCount + suspendedCount;
-        
-        const attendanceRate = totalStudents > 0 ? Math.round((presentCount / totalStudents) * 100) : 0;
-        
-        console.log('Counts:', {
-            present: presentCount,
-            late: lateCount,
-            absent: absentCount,
-            rate: attendanceRate,
-            marked: markedCount,
-            total: totalStudents
+    console.log('updateStats() called');
+    
+    // More specific selectors for attendance status radio buttons
+    const presentCount = document.querySelectorAll('input[name^="status-"][value="Present"]:checked').length;
+    const lateCount = document.querySelectorAll('input[name^="status-"][value="Late"]:checked').length;
+    const unexcusedCount = document.querySelectorAll('input[name^="status-"][value="Unexcused Absence"]:checked').length;
+    const excusedCount = document.querySelectorAll('input[name^="status-"][value="Excused Absence"]:checked').length;
+    const suspendedCount = document.querySelectorAll('input[name^="status-"][value="Suspended"]:checked').length;
+    const absentCount = unexcusedCount + excusedCount;
+    const markedCount = presentCount + lateCount + absentCount + suspendedCount;
+    
+    const attendanceRate = totalStudents > 0 ? Math.round((presentCount / totalStudents) * 100) : 0;
+    
+    console.log('Counts:', {
+        present: presentCount,
+        late: lateCount,
+        absent: absentCount,
+        rate: attendanceRate,
+        marked: markedCount,
+        total: totalStudents
+    });
+    
+    // Update stat cards directly (no animation)
+    const presentEl = document.getElementById('presentCount');
+    const lateEl = document.getElementById('lateCount');
+    const absentEl = document.getElementById('absentCount');
+    const rateEl = document.getElementById('attendanceRate');
+    
+    if (presentEl && lateEl && absentEl && rateEl) {
+        console.log('Updating elements directly...');
+        presentEl.textContent = presentCount;
+        lateEl.textContent = lateCount;
+        absentEl.textContent = absentCount;
+        rateEl.textContent = attendanceRate + '%';
+        console.log('Elements updated successfully');
+    } else {
+        console.error('Could not find stat elements:', {
+            presentEl: !!presentEl,
+            lateEl: !!lateEl,
+            absentEl: !!absentEl,
+            rateEl: !!rateEl
         });
-        
-        // Update stat cards with animation
-        const presentEl = document.getElementById('presentCount');
-        const lateEl = document.getElementById('lateCount');
-        const absentEl = document.getElementById('absentCount');
-        const rateEl = document.getElementById('attendanceRate');
-        
-        if (presentEl && lateEl && absentEl && rateEl) {
-            animateValue('presentCount', parseInt(presentEl.textContent) || 0, presentCount);
-            animateValue('lateCount', parseInt(lateEl.textContent) || 0, lateCount);
-            animateValue('absentCount', parseInt(absentEl.textContent) || 0, absentCount);
-            animateValue('attendanceRate', parseInt(rateEl.textContent) || 0, attendanceRate);
-        } else {
-            console.error('Could not find stat elements');
-        }
-        
-        // Update completion status
-        const markedCountEl = document.getElementById('markedCount');
-        if (markedCountEl) {
-            markedCountEl.textContent = markedCount;
-        }
     }
+    
+    // Update completion status
+    const markedCountEl = document.getElementById('markedCount');
+    if (markedCountEl) {
+        markedCountEl.textContent = markedCount;
+    }
+}
 
 // Animation function
-function animateValue(id, start, end) {
+    function animateValue(id, start, end) {
         const element = document.getElementById(id);
-        if (!element) return;
+        if (!element) {
+            console.error('Element not found:', id);
+            return;
+        }
         
+        // Direct update - skip animation for now to ensure it works
+        if (id === 'attendanceRate') {
+            element.textContent = end + '%';
+        } else {
+            element.textContent = end;
+        }
+        
+        // Original animation code commented out for debugging
+        /*
         const duration = 300;
         const range = end - start;
         const increment = range / (duration / 16);
@@ -636,6 +655,7 @@ function animateValue(id, start, end) {
                 element.textContent = id === 'attendanceRate' ? Math.round(current) + '%' : Math.round(current);
             }
         }, 16);
+        */
     }
 
 // DOM Ready handler

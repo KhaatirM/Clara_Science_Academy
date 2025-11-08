@@ -369,7 +369,12 @@
                                             </div>
                                             <div class="ms-2">
                                                 {% set grade = grade_info.get('grade', 'Not Graded') %}
-                                                {% if grade == 'Not Graded' %}
+                                                {% set is_voided = grade_info.get('is_voided', False) %}
+                                                {% if is_voided %}
+                                                    <span class="badge bg-secondary bg-opacity-50 text-dark">
+                                                        <i class="bi bi-slash-circle me-1"></i>Voided
+                                                    </span>
+                                                {% elif grade == 'Not Graded' %}
                                                     <span class="badge bg-secondary">Not Graded</span>
                                                 {% elif grade == 'No Group' %}
                                                     <span class="badge bg-warning">No Group</span>

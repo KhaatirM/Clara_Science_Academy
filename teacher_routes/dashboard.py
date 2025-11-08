@@ -377,7 +377,7 @@ def my_assignments():
             class_ids = [c.id for c in classes]
             assignments = Assignment.query.filter(Assignment.class_id.in_(class_ids)).order_by(Assignment.due_date.desc()).all()
     
-    return render_template('teacher_assignments.html', assignments=assignments, teacher=teacher)
+    return render_template('teachers/teacher_assignments.html', assignments=assignments, teacher=teacher)
 
 @bp.route('/students')
 @login_required
@@ -407,7 +407,7 @@ def my_students():
             ).all()
             students = [enrollment.student for enrollment in enrollments if enrollment.student is not None]
     
-    return render_template('role_students.html', students=students, teacher=teacher)
+    return render_template('management/role_students.html', students=students, teacher=teacher)
 
 @bp.route('/teachers-staff')
 @login_required
@@ -415,7 +415,7 @@ def my_students():
 def teachers_staff():
     """Display all teachers and staff members."""
     teachers = TeacherStaff.query.all()
-    return render_template('role_teachers_staff.html', teachers=teachers)
+    return render_template('management/role_teachers_staff.html', teachers=teachers)
 
 @bp.route('/calendar')
 @login_required
@@ -438,7 +438,7 @@ def calendar():
     class_ids = [c.id for c in classes]
     assignments = Assignment.query.filter(Assignment.class_id.in_(class_ids)).all()
     
-    return render_template('role_calendar.html', 
+    return render_template('management/role_calendar.html', 
                          assignments=assignments, 
                          classes=classes, 
                          teacher=teacher)

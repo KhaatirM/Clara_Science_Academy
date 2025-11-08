@@ -39,7 +39,7 @@ def google_connect_account():
                 'https://www.googleapis.com/auth/classroom.courses',
                 'https://www.googleapis.com/auth/classroom.rosters'
             ],
-            redirect_uri=url_for('teacher.settings.google_connect_callback', _external=True)
+            redirect_uri=url_for('teacher.google_connect_callback', _external=True)
         )
         
         # 'access_type=offline' is what gives us the refresh_token
@@ -55,7 +55,7 @@ def google_connect_account():
     except Exception as e:
         current_app.logger.error(f"Error starting Google OAuth flow: {e}")
         flash(f"An error occurred while connecting to Google: {e}", "danger")
-        return redirect(url_for('teacher.settings.settings'))
+        return redirect(url_for('teacher.settings'))
 
 
 @bp.route('/google-account/callback')
@@ -67,14 +67,14 @@ def google_connect_callback():
     """
     if 'oauth_state' not in session or session['oauth_state'] != request.args.get('state'):
         flash('State mismatch. Please try linking again.', 'danger')
-        return redirect(url_for('teacher.settings.settings'))
+        return redirect(url_for('teacher.settings'))
 
     try:
         flow = Flow.from_client_secrets_file(
             current_app.config.get('GOOGLE_CLIENT_SECRETS_FILE', 'client_secret.json'),
             scopes=None,
             state=session.pop('oauth_state'),
-            redirect_uri=url_for('teacher.settings.google_connect_callback', _external=True)
+            redirect_uri=url_for('teacher.google_connect_callback', _external=True)
         )
         
         flow.fetch_token(authorization_response=request.url)
@@ -84,7 +84,7 @@ def google_connect_callback():
 
         if not refresh_token:
             flash("Failed to get a refresh token. Please ensure you are fully granting permission.", "warning")
-            return redirect(url_for('teacher.settings.settings'))
+            return redirect(url_for('teacher.settings'))
         
         # Securely save the encrypted token to the logged-in user
         user = User.query.get(current_user.id)

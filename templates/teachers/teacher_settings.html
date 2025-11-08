@@ -101,7 +101,7 @@
                         <p class="text-muted mb-3">
                             You can now automatically create and link Google Classrooms for your classes.
                         </p>
-                        <form action="{{ url_for('teacher.settings.google_disconnect_account') }}" method="POST" style="display: inline;">
+                        <form action="{{ url_for('teacher.google_disconnect_account') }}" method="POST" style="display: inline;">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                             <button type="submit" class="btn btn-warning" 
                                     onclick="return confirm('Are you sure you want to disconnect your Google account? You will need to reconnect to use Google Classroom features.');">
@@ -121,7 +121,7 @@
                             <li>Link existing Google Classrooms to your classes</li>
                             <li>Manage classrooms directly from this system</li>
                         </ul>
-                        <a href="{{ url_for('teacher.settings.google_connect_account') }}" class="btn btn-primary">
+                        <a href="{{ url_for('teacher.google_connect_account') }}" class="btn btn-primary">
                             <i class="bi bi-google me-2"></i>Connect Google Account
                         </a>
                     {% endif %}

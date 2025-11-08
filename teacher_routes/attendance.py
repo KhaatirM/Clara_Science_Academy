@@ -100,7 +100,7 @@ def take_attendance(class_id):
         Attendance.date >= datetime.now().date() - timedelta(days=7)
     ).order_by(Attendance.date.desc()).all()
     
-    return render_template('take_attendance.html', 
+    return render_template('shared/take_attendance.html', 
                          class_obj=class_obj,
                          students=students,
                          recent_attendance=recent_attendance)

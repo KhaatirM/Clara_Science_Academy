@@ -21,7 +21,7 @@
         <a href="{{ url_for('teacher.dashboard.view_class', class_id=class_obj.id) }}" class="btn-modern-secondary">
           <i class="bi bi-arrow-left me-2"></i>Back to Class
         </a>
-        <a href="{{ url_for('teacher.create_deadline_reminder', class_id=class_obj.id) }}" class="btn-modern-primary">
+        <a href="{{ url_for('teacher.assignments.create_deadline_reminder', class_id=class_obj.id) }}" class="btn-modern-primary">
           <i class="bi bi-plus-circle me-2"></i>Create Reminder
         </a>
       </div>
@@ -175,7 +175,7 @@
                   </td>
                   <td class="text-end">
                     <div class="btn-group">
-                      <a href="{{ url_for('teacher.edit_deadline_reminder', reminder_id=reminder.id) }}" 
+                      <a href="{{ url_for('teacher.assignments.edit_deadline_reminder', reminder_id=reminder.id) }}" 
                          class="btn btn-outline-primary btn-sm" title="Edit">
                         <i class="bi bi-pencil"></i>
                       </a>
@@ -200,7 +200,7 @@
           <p class="modern-empty-description">
             Create deadline reminders to automatically notify students about upcoming assignments and deadlines.
           </p>
-          <a href="{{ url_for('teacher.create_deadline_reminder', class_id=class_obj.id) }}" 
+          <a href="{{ url_for('teacher.assignments.create_deadline_reminder', class_id=class_obj.id) }}" 
              class="btn-modern-primary">
             <i class="bi bi-plus-circle me-2"></i>Create Your First Reminder
           </a>
@@ -219,7 +219,7 @@
 function confirmDeleteReminder(reminderId, reminderTitle) {
     if (confirm(`Are you sure you want to delete the reminder "${reminderTitle}"?\n\nThis action cannot be undone.`)) {
         const form = document.getElementById('deleteReminderForm');
-        form.action = "{{ url_for('teacher.delete_deadline_reminder', reminder_id=0) }}".replace('0', reminderId);
+        form.action = "{{ url_for('teacher.assignments.delete_deadline_reminder', reminder_id=0) }}".replace('0', reminderId);
         form.submit();
     }
 }

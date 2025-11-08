@@ -177,7 +177,7 @@
                       onclick="updateProgress({{ data.group.id }}, {{ assignment.id }})">
                 <i class="bi bi-pencil me-1"></i>Update
               </button>
-              <a href="{{ url_for('teacher.manage_group', group_id=data.group.id) }}" 
+              <a href="{{ url_for('teacher.assignments.manage_group', group_id=data.group.id) }}" 
                  class="btn btn-outline-info btn-sm">
                 <i class="bi bi-gear"></i>
               </a>

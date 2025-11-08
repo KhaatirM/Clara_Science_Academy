@@ -390,7 +390,7 @@
                                title="View Details">
                                 <i class="bi bi-eye"></i><span class="btn-text">View</span>
                             </a>
-                            <a href="{{ url_for('teacher.grade_group_assignment', assignment_id=group_assignment.id) }}" 
+                            <a href="{{ url_for('teacher.grading.grade_group_assignment', assignment_id=group_assignment.id) }}" 
                                class="btn btn-action btn-action-grade"
                                title="Grade Groups">
                                 <i class="bi bi-check-circle"></i><span class="btn-text">Grade</span>
@@ -1227,7 +1227,7 @@ document.addEventListener('DOMContentLoaded', function() {
             submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Granting Extensions...';
             submitBtn.disabled = true;
             
-            fetch('{{ url_for("teacher.grant_extensions") }}', {
+            fetch('{{ url_for("teacher.assignments.grant_extensions") }}', {
                 method: 'POST',
                 body: formData
             })

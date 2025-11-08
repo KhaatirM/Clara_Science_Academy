@@ -128,7 +128,7 @@
                   </td>
                   <td>
                     <div class="btn-group btn-group-sm" role="group">
-                      <a href="{{ url_for('management.admin_manage_group', group_id=data.group.id) if role_prefix else url_for('teacher.manage_group', group_id=data.group.id) }}" class="btn btn-outline-primary">
+                      <a href="{{ url_for('management.admin_manage_group', group_id=data.group.id) if role_prefix else url_for('teacher.assignments.manage_group', group_id=data.group.id) }}" class="btn btn-outline-primary">
                         <i class="bi bi-gear"></i>
                       </a>
                     </div>

@@ -14,7 +14,7 @@
           <i class="bi bi-arrow-left me-1"></i>Back to Assignments
         </a>
       {% endif %}
-      <a href="{{ url_for('teacher.grade_group_assignment', assignment_id=group_assignment.id) }}{% if admin_view %}?admin_view=true{% endif %}" class="btn btn-success btn-sm">
+      <a href="{{ url_for('teacher.grading.grade_group_assignment', assignment_id=group_assignment.id) }}{% if admin_view %}?admin_view=true{% endif %}" class="btn btn-success btn-sm">
         <i class="bi bi-check-circle me-1"></i>Grade Assignment
       </a>
       <a href="{{ url_for('management.grant_extensions', assignment_id=group_assignment.id) }}" class="btn btn-primary btn-sm">
@@ -178,7 +178,7 @@
                         <small class="text-muted">{{ group.description[:50] }}{% if group.description|length > 50 %}...{% endif %}</small>
                       {% endif %}
                     </div>
-                    <a href="{{ url_for('teacher.manage_group', group_id=group.id) }}{% if admin_view %}?admin_view=true{% endif %}" class="btn btn-outline-primary btn-sm">
+                    <a href="{{ url_for('teacher.assignments.manage_group', group_id=group.id) }}{% if admin_view %}?admin_view=true{% endif %}" class="btn btn-outline-primary btn-sm">
                       <i class="bi bi-gear"></i>
                     </a>
                   </div>

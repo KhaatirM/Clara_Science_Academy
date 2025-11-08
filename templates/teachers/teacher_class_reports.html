@@ -21,10 +21,10 @@
         <a href="{{ url_for('teacher.dashboard.view_class', class_id=class_obj.id) }}" class="btn-modern-secondary">
           <i class="bi bi-arrow-left me-2"></i>Back to Class
         </a>
-        <a href="{{ url_for('teacher.class_analytics', class_id=class_obj.id) }}" class="btn-modern-secondary">
+        <a href="{{ url_for('teacher.grading.class_analytics', class_id=class_obj.id) }}" class="btn-modern-secondary">
           <i class="bi bi-graph-up-arrow me-2"></i>Analytics
         </a>
-        <a href="{{ url_for('teacher.create_report', class_id=class_obj.id) }}" class="btn-modern-primary">
+        <a href="{{ url_for('teacher.grading.create_report', class_id=class_obj.id) }}" class="btn-modern-primary">
           <i class="bi bi-plus-circle me-2"></i>Create Report
         </a>
       </div>
@@ -138,7 +138,7 @@
                       </td>
                       <td class="text-end">
                         <div class="btn-group">
-                          <a href="{{ url_for('teacher.view_report', report_id=report.id) }}" 
+                          <a href="{{ url_for('teacher.grading.view_report', report_id=report.id) }}" 
                              class="btn btn-outline-primary btn-sm" title="View Report">
                             <i class="bi bi-eye"></i>
                           </a>
@@ -175,7 +175,7 @@
               <p class="modern-empty-description">
                 Create your first comprehensive report to track student performance and collaboration metrics.
               </p>
-              <a href="{{ url_for('teacher.create_report', class_id=class_obj.id) }}" 
+              <a href="{{ url_for('teacher.grading.create_report', class_id=class_obj.id) }}" 
                  class="btn-modern-primary">
                 <i class="bi bi-plus-circle me-2"></i>Create Your First Report
               </a>
@@ -196,19 +196,19 @@
         </div>
         <div class="modern-card-body">
           <div class="d-grid gap-2">
-            <a href="{{ url_for('teacher.create_report', class_id=class_obj.id) }}" 
+            <a href="{{ url_for('teacher.grading.create_report', class_id=class_obj.id) }}" 
                class="btn btn-primary">
               <i class="bi bi-plus-circle me-2"></i>Create New Report
             </a>
-            <a href="{{ url_for('teacher.class_analytics', class_id=class_obj.id) }}" 
+            <a href="{{ url_for('teacher.grading.class_analytics', class_id=class_obj.id) }}" 
                class="btn btn-info">
               <i class="bi bi-graph-up-arrow me-2"></i>Analytics Dashboard
             </a>
-            <a href="{{ url_for('teacher.class_contributions', class_id=class_obj.id) }}" 
+            <a href="{{ url_for('teacher.assignments.class_contributions', class_id=class_obj.id) }}" 
                class="btn btn-success">
               <i class="bi bi-hand-thumbs-up me-2"></i>View Contributions
             </a>
-            <a href="{{ url_for('teacher.class_time_tracking', class_id=class_obj.id) }}" 
+            <a href="{{ url_for('teacher.assignments.class_time_tracking', class_id=class_obj.id) }}" 
                class="btn btn-warning">
               <i class="bi bi-clock-history me-2"></i>Time Tracking
             </a>

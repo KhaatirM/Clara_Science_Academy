@@ -8,7 +8,7 @@
       <a href="{{ url_for('management.admin_class_groups', class_id=class_obj.id) if role_prefix else url_for('teacher.assignments.class_groups', class_id=class_obj.id) }}" class="btn btn-sm" style="border-color: #2E8B57; color: #2E8B57;">
         <i class="bi bi-arrow-left me-1"></i>Back to Groups
       </a>
-      <a href="{{ url_for('management.admin_create_group_template', class_id=class_obj.id) if role_prefix else url_for('teacher.create_group_template', class_id=class_obj.id) }}" class="btn btn-sm text-white" style="background: linear-gradient(135deg, #2E8B57 0%, #228B22 50%, #556B2F 100%);">
+      <a href="{{ url_for('management.admin_create_group_template', class_id=class_obj.id) if role_prefix else url_for('teacher.assignments.create_group_template', class_id=class_obj.id) }}" class="btn btn-sm text-white" style="background: linear-gradient(135deg, #2E8B57 0%, #228B22 50%, #556B2F 100%);">
         <i class="bi bi-plus-circle me-1"></i>Create Template
       </a>
     </div>
@@ -111,7 +111,7 @@
           <i class="bi bi-bookmark display-1 text-muted"></i>
           <h5 class="mt-3 text-muted">No Templates Found</h5>
           <p class="text-muted">Create your first group template to save time when creating groups.</p>
-          <a href="{{ url_for('management.admin_create_group_template', class_id=class_obj.id) if role_prefix else url_for('teacher.create_group_template', class_id=class_obj.id) }}" class="btn btn-primary">
+          <a href="{{ url_for('management.admin_create_group_template', class_id=class_obj.id) if role_prefix else url_for('teacher.assignments.create_group_template', class_id=class_obj.id) }}" class="btn btn-primary">
             <i class="bi bi-plus-circle me-1"></i>Create Your First Template
           </a>
         </div>
@@ -143,10 +143,10 @@
         </div>
         <div class="card-body">
           <div class="d-grid gap-2">
-            <a href="{{ url_for('management.admin_create_group_template', class_id=class_obj.id) if role_prefix else url_for('teacher.create_group_template', class_id=class_obj.id) }}" class="btn btn-primary btn-sm">
+            <a href="{{ url_for('management.admin_create_group_template', class_id=class_obj.id) if role_prefix else url_for('teacher.assignments.create_group_template', class_id=class_obj.id) }}" class="btn btn-primary btn-sm">
               <i class="bi bi-plus-circle me-1"></i>Create New Template
             </a>
-            <a href="{{ url_for('management.admin_auto_create_groups', class_id=class_obj.id) if role_prefix else url_for('teacher.auto_create_groups', class_id=class_obj.id) }}" class="btn btn-success btn-sm">
+            <a href="{{ url_for('management.admin_auto_create_groups', class_id=class_obj.id) if role_prefix else url_for('teacher.assignments.auto_create_groups', class_id=class_obj.id) }}" class="btn btn-success btn-sm">
               <i class="bi bi-shuffle me-1"></i>Auto Create Groups
             </a>
           </div>
@@ -160,7 +160,7 @@
 function useTemplate(templateId) {
   if (confirm('Use this template to create groups? This will create new groups based on the template settings.')) {
     // Redirect to auto create with template parameters
-    window.location.href = "{{ url_for('management.admin_auto_create_groups', class_id=class_obj.id) if role_prefix else url_for('teacher.auto_create_groups', class_id=class_obj.id) }}?template_id=" + templateId;
+    window.location.href = "{{ url_for('management.admin_auto_create_groups', class_id=class_obj.id) if role_prefix else url_for('teacher.assignments.auto_create_groups', class_id=class_obj.id) }}?template_id=" + templateId;
   }
 }
 

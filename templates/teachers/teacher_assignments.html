@@ -506,7 +506,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             
             // Submit via fetch
-            fetch('{{ url_for("teacher.grant_extensions") }}', {
+            fetch('{{ url_for("teacher.assignments.grant_extensions") }}', {
                 method: 'POST',
                 body: formData
             })

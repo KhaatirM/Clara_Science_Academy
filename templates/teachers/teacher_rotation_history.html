@@ -5,7 +5,7 @@
   <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
     <h3 class="mb-2 mb-md-0"><i class="bi bi-clock-history me-2"></i>Rotation History - {{ rotation.rotation_name }}</h3>
     <div class="d-flex gap-2">
-      <a href="{{ url_for('teacher.class_group_rotations', class_id=class_obj.id) }}" class="btn btn-outline-secondary btn-sm">
+      <a href="{{ url_for('teacher.assignments.class_group_rotations', class_id=class_obj.id) }}" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-arrow-left me-1"></i>Back to Rotations
       </a>
     </div>
@@ -171,7 +171,7 @@
           <i class="bi bi-clock-history display-1 text-muted"></i>
           <h5 class="mt-3 text-muted">No Rotation History</h5>
           <p class="text-muted">This rotation hasn't been executed yet.</p>
-          <a href="{{ url_for('teacher.class_group_rotations', class_id=class_obj.id) }}" class="btn btn-primary">
+          <a href="{{ url_for('teacher.assignments.class_group_rotations', class_id=class_obj.id) }}" class="btn btn-primary">
             <i class="bi bi-arrow-left me-1"></i>Back to Rotations
           </a>
         </div>

@@ -3,89 +3,236 @@
 {% block title %}Assignments & Grades{% endblock %}
 
 {% block dashboard_content %}
+<style>
+    .assignments-header {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        border-radius: 20px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(240, 147, 251, 0.3);
+        color: white;
+    }
+    
+    .assignments-header h2 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 0;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .stat-card-enhanced {
+        background: white;
+        border-radius: 20px;
+        padding: 1.5rem;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+        position: relative;
+        overflow: hidden;
+        height: 100%;
+    }
+    
+    .stat-card-enhanced::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        opacity: 0.1;
+        transform: translate(30px, -30px);
+    }
+    
+    .stat-card-enhanced:hover {
+        transform: translateY(-10px) scale(1.03);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+    }
+    
+    .stat-card-purple::before { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .stat-card-green::before { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+    .stat-card-orange::before { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+    .stat-card-blue::before { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+    
+    .stat-icon-enhanced {
+        width: 60px;
+        height: 60px;
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.8rem;
+        color: white;
+        margin-bottom: 1rem;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    }
+    
+    .stat-icon-purple { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .stat-icon-green { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+    .stat-icon-orange { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+    .stat-icon-blue { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+    
+    .stat-value-enhanced {
+        font-size: 2.5rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-label-enhanced {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .filter-card {
+        background: white;
+        border: none;
+        border-radius: 20px;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+    }
+    
+    .view-toggle-btn {
+        border: none;
+        border-radius: 12px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        background: #f8f9fa;
+        color: #6c757d;
+    }
+    
+    .view-toggle-btn.active {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+    
+    .view-toggle-btn:hover:not(.active) {
+        background: #e9ecef;
+    }
+    
+    .form-select-enhanced, .form-control-enhanced {
+        border: 2px solid #e9ecef;
+        border-radius: 12px;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .form-select-enhanced:focus, .form-control-enhanced:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    
+    .add-assignment-btn {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        border: none;
+        color: white;
+        padding: 0.75rem 2rem;
+        border-radius: 30px;
+        font-weight: 600;
+        box-shadow: 0 8px 20px rgba(67, 233, 123, 0.4);
+        transition: all 0.3s ease;
+    }
+    
+    .add-assignment-btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 30px rgba(67, 233, 123, 0.6);
+        color: white;
+    }
+    
+    .assignment-count-badge {
+        background: rgba(255,255,255,0.3);
+        backdrop-filter: blur(10px);
+        border: 2px solid rgba(255,255,255,0.5);
+        padding: 0.5rem 1.5rem;
+        border-radius: 30px;
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+</style>
+
 <div class="container-fluid px-2 px-md-4 py-4">
-    <!-- Header Section -->
-            <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2 class="mb-1">
-                <i class="bi bi-journal-check text-primary me-2"></i>
-                Assignments & Grades
-            </h2>
-            <p class="text-muted mb-0">Manage your assignments and track student progress</p>
-        </div>
-        <div class="d-flex gap-2">
-            <span class="badge bg-primary fs-6">{{ (assignments|length + group_assignments|length) }} Assignments</span>
-            <button type="button" class="btn btn-primary" onclick="createAssignment()">
-                <i class="bi bi-plus-circle me-1"></i>New Assignment
-                    </button>
+    <!-- Enhanced Header Section -->
+    <div class="assignments-header">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+            <div>
+                <h2><i class="bi bi-journal-check me-3"></i>Assignments & Grades</h2>
+                <p class="mb-0 opacity-90">Manage your assignments and track student progress</p>
+            </div>
+            <div class="d-flex gap-3 align-items-center">
+                <span class="assignment-count-badge">{{ (assignments|length + group_assignments|length) }} Total</span>
+                <button type="button" class="add-assignment-btn" onclick="createAssignment()">
+                    <i class="bi bi-plus-circle-fill me-2"></i>New Assignment
+                </button>
+            </div>
         </div>
     </div>
 
-    <!-- Assignment Stats -->
-    <div class="row g-3 mb-4">
+    <!-- Enhanced Stats Cards -->
+    <div class="row g-4 mb-4">
         <div class="col-6 col-md-3">
-            <div class="stat-card stat-card-primary">
-                <div class="stat-icon">
+            <div class="stat-card-enhanced stat-card-purple">
+                <div class="stat-icon-enhanced stat-icon-purple">
                     <i class="bi bi-journal-text"></i>
                 </div>
-                <div class="stat-content">
-                    <div class="stat-value">{{ assignments|length }}</div>
-                    <div class="stat-label">Individual</div>
-                </div>
+                <div class="stat-value-enhanced">{{ assignments|length }}</div>
+                <div class="stat-label-enhanced">Individual</div>
             </div>
         </div>
         <div class="col-6 col-md-3">
-            <div class="stat-card stat-card-success">
-                <div class="stat-icon">
+            <div class="stat-card-enhanced stat-card-green">
+                <div class="stat-icon-enhanced stat-icon-green">
                     <i class="bi bi-people-fill"></i>
                 </div>
-                <div class="stat-content">
-                    <div class="stat-value">{{ group_assignments|length }}</div>
-                    <div class="stat-label">Group</div>
-                </div>
+                <div class="stat-value-enhanced">{{ group_assignments|length }}</div>
+                <div class="stat-label-enhanced">Group</div>
             </div>
         </div>
         <div class="col-6 col-md-3">
-            <div class="stat-card stat-card-warning">
-                <div class="stat-icon">
+            <div class="stat-card-enhanced stat-card-orange">
+                <div class="stat-icon-enhanced stat-icon-orange">
                     <i class="bi bi-clock-fill"></i>
                 </div>
-                <div class="stat-content">
-                    <div class="stat-value">{{ assignments|length + group_assignments|length }}</div>
-                    <div class="stat-label">Active</div>
-                </div>
+                <div class="stat-value-enhanced">{{ assignments|length + group_assignments|length }}</div>
+                <div class="stat-label-enhanced">Active</div>
             </div>
         </div>
         <div class="col-6 col-md-3">
-            <div class="stat-card stat-card-info">
-                <div class="stat-icon">
+            <div class="stat-card-enhanced stat-card-blue">
+                <div class="stat-icon-enhanced stat-icon-blue">
                     <i class="bi bi-graph-up-arrow"></i>
                 </div>
-                <div class="stat-content">
-                    <div class="stat-value">{{ classes|length }}</div>
-                    <div class="stat-label">Classes</div>
-                </div>
+                <div class="stat-value-enhanced">{{ classes|length }}</div>
+                <div class="stat-label-enhanced">Classes</div>
             </div>
         </div>
     </div>
 
-    <!-- View Toggle and Filters -->
-    <div class="card border-0 shadow-sm mb-4">
-        <div class="card-body">
-            <div class="row g-3 align-items-end">
+    <!-- Enhanced View Toggle and Filters -->
+    <div class="filter-card">
+        <div class="card-body p-4">
+            <div class="row g-4 align-items-end">
                 <div class="col-12 col-md-3">
+                    <label class="form-label fw-bold text-muted">VIEW MODE</label>
                     <div class="btn-group w-100" role="group">
-                        <button type="button" class="btn {% if view_mode == 'assignments' %}btn-primary{% else %}btn-outline-primary{% endif %}" onclick="toggleView('assignments')" id="assignmentsBtn">
+                        <button type="button" class="view-toggle-btn {% if view_mode == 'assignments' %}active{% endif %}" onclick="toggleView('assignments')" id="assignmentsBtn">
                             <i class="bi bi-journal-text me-1"></i>Assignments
                         </button>
-                        <button type="button" class="btn {% if view_mode == 'grades' %}btn-primary{% else %}btn-outline-primary{% endif %}" onclick="toggleView('grades')" id="gradesBtn">
+                        <button type="button" class="view-toggle-btn {% if view_mode == 'grades' %}active{% endif %}" onclick="toggleView('grades')" id="gradesBtn">
                             <i class="bi bi-graph-up me-1"></i>Grades
                         </button>
                     </div>
                 </div>
                 <div class="col-12 col-md-3">
-            <label for="classFilter" class="form-label">Select Class</label>
-            <select class="form-select" id="classFilter" onchange="applyFilters()" required>
+            <label for="classFilter" class="form-label fw-bold text-muted">SELECT CLASS</label>
+            <select class="form-select form-select-enhanced" id="classFilter" onchange="applyFilters()" required>
                 {% if not class_filter %}
                 <option value="" disabled selected>Choose a class...</option>
                 {% endif %}
@@ -97,8 +244,8 @@
             </select>
         </div>
                 <div class="col-12 col-md-3">
-            <label for="sortBy" class="form-label">Sort By</label>
-            <select class="form-select" id="sortBy" onchange="applyFilters()">
+            <label for="sortBy" class="form-label fw-bold text-muted">SORT BY</label>
+            <select class="form-select form-select-enhanced" id="sortBy" onchange="applyFilters()">
                 <option value="due_date" {% if sort_by == 'due_date' %}selected{% endif %}>Due Date</option>
                 <option value="title" {% if sort_by == 'title' %}selected{% endif %}>Title</option>
             </select>
@@ -520,7 +667,7 @@ function applyFilters() {
 
 // Create assignment function
 function createAssignment() {
-    window.location.href = "{{ url_for('teacher.assignment_type_selector') }}";
+    window.location.href = "{{ url_for('teacher.assignments.assignment_type_selector') }}";
 }
 
 // Initialize active button based on current view

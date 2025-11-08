@@ -115,24 +115,48 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <input type="hidden" name="attendance_date" value="{{ attendance_date_str }}">
                 
-        <!-- Quick Actions Bar -->
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-                    <div>
-                        <h6 class="mb-0">Quick Actions</h6>
-                        <small class="text-muted">Mark all students at once</small>
+        <!-- Quick Actions & Bulk Upload Bar -->
+        <div class="row g-3 mb-4">
+            <!-- Quick Actions Card -->
+            <div class="col-12 col-md-6">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
+                        <h6 class="mb-2">
+                            <i class="bi bi-lightning-charge me-2 text-warning"></i>Quick Actions
+                        </h6>
+                        <small class="text-muted d-block mb-3">Mark all students at once</small>
+                        <div class="btn-group w-100" role="group">
+                            <button type="button" class="btn btn-outline-success" onclick="markAll('Present')">
+                                <i class="bi bi-check-all me-1"></i>All Present
+                            </button>
+                            <button type="button" class="btn btn-outline-danger" onclick="markAll('Unexcused Absence')">
+                                <i class="bi bi-x-lg me-1"></i>All Absent
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="clearAll()">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i>Clear
+                            </button>
+                        </div>
                     </div>
-                    <div class="btn-group" role="group">
-                        <button type="button" class="btn btn-outline-success" onclick="markAll('Present')">
-                            <i class="bi bi-check-all me-1"></i>All Present
-                        </button>
-                        <button type="button" class="btn btn-outline-danger" onclick="markAll('Unexcused Absence')">
-                            <i class="bi bi-x-lg me-1"></i>All Absent
-                        </button>
-                        <button type="button" class="btn btn-outline-secondary" onclick="clearAll()">
-                            <i class="bi bi-arrow-counterclockwise me-1"></i>Clear All
-                        </button>
+                </div>
+            </div>
+            
+            <!-- Bulk CSV Upload Card -->
+            <div class="col-12 col-md-6">
+                <div class="card border-0 shadow-sm h-100 bulk-upload-highlight">
+                    <div class="card-body">
+                        <h6 class="mb-2">
+                            <i class="bi bi-cloud-upload me-2 text-primary"></i>Bulk CSV Upload
+                        </h6>
+                        <small class="text-muted d-block mb-3">Upload historical attendance records</small>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <a href="{{ url_for('teacher.download_attendance_template', class_id=class_item.id) }}" 
+                               class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-download me-1"></i>Download Template
+                            </a>
+                            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#bulkUploadModal">
+                                <i class="bi bi-upload me-1"></i>Upload CSV
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -236,6 +260,87 @@
             </div>
         </div>
     </form>
+</div>
+
+<!-- Bulk Upload Modal -->
+<div class="modal fade" id="bulkUploadModal" tabindex="-1" aria-labelledby="bulkUploadModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="bulkUploadModalLabel">
+                    <i class="bi bi-cloud-upload-fill me-2"></i>Bulk Upload Attendance
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('teacher.upload_attendance_csv', class_id=class_item.id) }}" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-body">
+                    <div class="alert alert-info border-0 mb-4">
+                        <div class="d-flex align-items-start">
+                            <i class="bi bi-info-circle me-3 fs-4"></i>
+                            <div>
+                                <h6 class="alert-heading mb-2">How to use Bulk Upload:</h6>
+                                <ol class="mb-0 ps-3 small">
+                                    <li>Click <strong>"Download Template"</strong> to get a CSV file pre-filled with your class roster</li>
+                                    <li>Open the CSV in Excel, Google Sheets, or any spreadsheet program</li>
+                                    <li>Fill in attendance data for past dates (format: MM/DD/YYYY)</li>
+                                    <li>Delete the instruction rows (starting with #)</li>
+                                    <li>Save and upload the file here</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h6 class="fw-bold mb-3">
+                            <i class="bi bi-clipboard-check me-2 text-primary"></i>Valid Attendance Statuses:
+                        </h6>
+                        <div class="d-flex flex-wrap gap-2">
+                            <span class="badge bg-success">Present</span>
+                            <span class="badge bg-warning">Late</span>
+                            <span class="badge bg-danger">Unexcused Absence</span>
+                            <span class="badge bg-info">Excused Absence</span>
+                            <span class="badge bg-secondary">Suspended</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="attendance_file" class="form-label fw-semibold">
+                            <i class="bi bi-file-earmark-spreadsheet me-2"></i>Select CSV File
+                        </label>
+                        <input type="file" class="form-control form-control-lg" id="attendance_file" name="attendance_file" accept=".csv" required>
+                        <div class="form-text">
+                            <i class="bi bi-exclamation-circle me-1"></i>
+                            Only CSV files are accepted. Max file size: 5MB
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-warning border-0">
+                        <div class="d-flex align-items-start">
+                            <i class="bi bi-exclamation-triangle me-3 fs-5"></i>
+                            <div class="small">
+                                <strong>Important:</strong>
+                                <ul class="mb-0 ps-3 mt-2">
+                                    <li>This will add or <strong>update existing</strong> attendance records</li>
+                                    <li>Student IDs must match exactly</li>
+                                    <li>Cannot upload attendance for future dates</li>
+                                    <li>Only students currently enrolled in <strong>{{ class_item.name }}</strong> will be processed</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i>Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-upload me-1"></i>Upload Attendance Data
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 <style>
@@ -753,5 +858,92 @@ function setYesterday() {
     document.getElementById('date').value = yesterday.toISOString().split('T')[0];
 }
 </script>
+
+<!-- Bulk Upload Modal -->
+<div class="modal fade" id="bulkUploadModal" tabindex="-1" aria-labelledby="bulkUploadModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="bulkUploadModalLabel">
+                    <i class="bi bi-cloud-upload-fill me-2"></i>Bulk Upload Attendance
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('teacher.upload_attendance_csv', class_id=class_item.id) }}" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-body">
+                    <div class="alert alert-info border-0 mb-4">
+                        <div class="d-flex align-items-start">
+                            <i class="bi bi-info-circle me-3 fs-4"></i>
+                            <div>
+                                <h6 class="alert-heading mb-2">How to use Bulk Upload:</h6>
+                                <ol class="mb-0 ps-3 small">
+                                    <li>Click <strong>"Download Template"</strong> below to get a CSV file with your class roster</li>
+                                    <li>Open the CSV in Excel, Google Sheets, or any spreadsheet program</li>
+                                    <li>Fill in attendance data for past dates (format: MM/DD/YYYY)</li>
+                                    <li>Use valid status values (see below)</li>
+                                    <li>Delete the instruction rows (starting with #)</li>
+                                    <li>Save and upload the file here</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h6 class="fw-bold mb-3">
+                            <i class="bi bi-clipboard-check me-2 text-primary"></i>Valid Attendance Statuses:
+                        </h6>
+                        <div class="d-flex flex-wrap gap-2">
+                            <span class="badge bg-success fs-6 p-2">Present</span>
+                            <span class="badge bg-warning text-dark fs-6 p-2">Late</span>
+                            <span class="badge bg-danger fs-6 p-2">Unexcused Absence</span>
+                            <span class="badge bg-info fs-6 p-2">Excused Absence</span>
+                            <span class="badge bg-secondary fs-6 p-2">Suspended</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="attendance_file" class="form-label fw-semibold">
+                            <i class="bi bi-file-earmark-spreadsheet me-2"></i>Select CSV File
+                        </label>
+                        <input type="file" class="form-control form-control-lg" id="attendance_file" name="attendance_file" accept=".csv" required>
+                        <div class="form-text">
+                            <i class="bi bi-exclamation-circle me-1"></i>
+                            Only CSV files are accepted. Max file size: 5MB
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-warning border-0">
+                        <div class="d-flex align-items-start">
+                            <i class="bi bi-exclamation-triangle me-3 fs-5"></i>
+                            <div class="small">
+                                <strong>Important Notes:</strong>
+                                <ul class="mb-0 ps-3 mt-2">
+                                    <li>This will <strong>add new</strong> or <strong>update existing</strong> attendance records</li>
+                                    <li>Student IDs must match exactly (case-sensitive)</li>
+                                    <li>Cannot upload attendance for future dates</li>
+                                    <li>Only students currently enrolled in <strong>{{ class_item.name }}</strong> will be processed</li>
+                                    <li>First, download the template to see the correct format and enrolled students</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <a href="{{ url_for('teacher.download_attendance_template', class_id=class_item.id) }}" 
+                       class="btn btn-outline-primary me-auto">
+                        <i class="bi bi-download me-1"></i>Download Template
+                    </a>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i>Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="bi bi-upload me-1"></i>Upload Attendance Data
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 {% endblock %}

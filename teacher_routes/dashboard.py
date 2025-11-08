@@ -353,7 +353,7 @@ def my_classes():
         else:
             classes = Class.query.filter_by(teacher_id=teacher.id).all()
     
-    return render_template('role_classes.html', classes=classes, teacher=teacher)
+    return render_template('management/role_classes.html', classes=classes, teacher=teacher)
 
 @bp.route('/assignments')
 @login_required

@@ -137,13 +137,13 @@
                             </td>
                             <td data-label="Actions">
                                 <div class="d-flex flex-column flex-sm-row gap-1">
-                                    <a href="{{ url_for('teacher.view_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-secondary btn-sm">
+                                    <a href="{{ url_for('teacher.assignments.view_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-secondary btn-sm">
                                         <i class="bi bi-eye me-1"></i>View
                                     </a>
                                     <a href="{{ url_for('teacher.grade_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-primary btn-sm">
                                         <i class="bi bi-pencil me-1"></i>Grade
                                     </a>
-                                    <a href="{{ url_for('teacher.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-warning btn-sm">
+                                    <a href="{{ url_for('teacher.assignments.edit_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-warning btn-sm">
                                         <i class="bi bi-pencil-square me-1"></i>Edit
                                     </a>
                                     <button type="button" class="btn btn-outline-info btn-sm change-status-btn"

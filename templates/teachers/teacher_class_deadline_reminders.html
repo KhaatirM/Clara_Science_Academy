@@ -142,7 +142,7 @@
                   </td>
                   <td>
                     {% if reminder.assignment %}
-                      <a href="{{ url_for('teacher.view_assignment', assignment_id=reminder.assignment_id) }}">
+                      <a href="{{ url_for('teacher.assignments.view_assignment', assignment_id=reminder.assignment_id) }}">
                         {{ reminder.assignment.title }}
                       </a>
                     {% else %}

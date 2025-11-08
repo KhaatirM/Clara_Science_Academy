@@ -313,7 +313,7 @@
                     </div>
                     <div class="assignment-card-footer">
                         <div class="action-buttons-grid">
-                            <a href="{{ url_for('teacher.view_assignment', assignment_id=assignment.id) }}" 
+                            <a href="{{ url_for('teacher.assignments.view_assignment', assignment_id=assignment.id) }}" 
                                class="btn btn-action btn-action-view" 
                                title="View Details">
                                 <i class="bi bi-eye"></i><span class="btn-text">View</span>
@@ -323,7 +323,7 @@
                                title="Grade Students">
                                 <i class="bi bi-check-circle"></i><span class="btn-text">Grade</span>
                             </a>
-                            <a href="{{ url_for('teacher.edit_assignment', assignment_id=assignment.id) }}" 
+                            <a href="{{ url_for('teacher.assignments.edit_assignment', assignment_id=assignment.id) }}" 
                                class="btn btn-action btn-action-edit"
                                title="Edit Assignment">
                                 <i class="bi bi-pencil"></i><span class="btn-text">Edit</span>
@@ -385,7 +385,7 @@
                     </div>
                     <div class="assignment-card-footer">
                         <div class="action-buttons-grid">
-                            <a href="{{ url_for('teacher.view_group_assignment', assignment_id=group_assignment.id) }}" 
+                            <a href="{{ url_for('teacher.assignments.view_group_assignment', assignment_id=group_assignment.id) }}" 
                                class="btn btn-action btn-action-view"
                                title="View Details">
                                 <i class="bi bi-eye"></i><span class="btn-text">View</span>
@@ -580,7 +580,7 @@
                                         <a href="{{ url_for('teacher.grade_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-primary" title="Grade Assignment">
                                             <i class="bi bi-pencil-square"></i>
                                 </a>
-                                        <a href="{{ url_for('teacher.view_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-secondary" title="View Assignment">
+                                        <a href="{{ url_for('teacher.assignments.view_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-secondary" title="View Assignment">
                                             <i class="bi bi-eye"></i>
                                 </a>
                             </div>

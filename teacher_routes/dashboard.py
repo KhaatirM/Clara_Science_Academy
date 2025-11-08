@@ -326,7 +326,7 @@ def view_class(class_id):
     announcements = Announcement.query.filter_by(class_id=class_id).order_by(Announcement.timestamp.desc()).limit(5).all()
 
     return render_template(
-        'teacher_class_roster_view.html',
+        'teachers/teacher_class_roster_view.html',
         class_item=class_obj,
         enrolled_students=enrolled_students,
         assignments=assignments,

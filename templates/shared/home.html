@@ -675,66 +675,214 @@
             <div class="modal-body p-4">
                 <div class="update-intro mb-4">
                     <h6 class="text-primary mb-2">
-                        <i class="fas fa-calendar-alt me-2"></i>Latest System Update - November 3, 2025
+                        <i class="fas fa-calendar-alt me-2"></i>Latest System Update - November 8, 2025
                     </h6>
-                    <p class="text-muted mb-0">Major Phase 2 enhancements complete! We've added voiding systems, enhanced report cards, beautified all management pages, and created student submission capabilities. Here's everything that's new:</p>
+                    <p class="text-muted mb-0"><strong>Major Bug Fix Release!</strong> We've resolved critical issues with assignment workflows, voided grades, attendance statistics, report cards, and added powerful new features like bulk attendance uploads. Plus a stunning class roster redesign!</p>
                 </div>
                 
                 <div class="update-sections">
-                    <!-- Report Card System Enhancements -->
+                    <!-- November 8, 2025 - Critical Bug Fixes & New Features -->
                     <div class="update-section mb-4">
-                        <h6 class="text-success mb-3">
-                            <i class="fas fa-file-alt me-2"></i>📄 Report Card System - Major Upgrades
+                        <h6 class="text-danger mb-3">
+                            <i class="fas fa-bug-slash me-2"></i>🐛 Critical Bug Fixes - November 8, 2025
                         </h6>
                         <ul class="list-unstyled">
                             <li class="mb-2">
                                 <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Quarter Grades System:</strong> New QuarterGrade table with auto-refresh every 3 hours, accurate historical grade tracking for all quarters (Q1-Q4)
+                                <strong>Teacher Assignment Creation Flow:</strong> Teachers now go through the same question flow as administrators (assignment type → individual/group → in-class/homework) instead of jumping straight to PDF creation
                             </li>
                             <li class="mb-2">
                                 <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>PDF Generation Fixed:</strong> CSS styling now properly applies to PDFs, embedded fonts and images, tighter margins (75% reduction), restored header borders
+                                <strong>Assignments & Grades Grades Tab:</strong> Fixed blank Grades section when switching tabs and class filter now maintains the current view instead of redirecting back to Assignments
                             </li>
                             <li class="mb-2">
                                 <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Smart Form:</strong> Pre-selects student from category pages, auto-selects current school year, removed quarter dropdown (shows all 4 quarters)
+                                <strong>Void Assignment Logic:</strong> When assignments are voided after grading, ALL student grades are now properly nullified. Fixed inconsistency where some students kept 100% while others had 0.0%
                             </li>
                             <li class="mb-2">
                                 <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Report Card History:</strong> View all historical report cards for any student, grouped by school year
+                                <strong>Kindergarten Grade Display:</strong> Kindergarteners now display as "Grade K" instead of "Grade 0" or "Grade N/A" across all views
                             </li>
                             <li class="mb-2">
                                 <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Delete Capability:</strong> Administrators can now delete previously generated report cards
+                                <strong>Account Column Badge Visibility:</strong> Fixed text visibility issue in Students Tab where usernames weren't appearing in Account column badges
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Teacher Student Directory Filter:</strong> Teachers now only see students enrolled in their assigned classes instead of all students in the system
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Attendance Statistics Update Bug:</strong> Fixed statistics counters (Present, Late, Absent, Rate) to update in real-time when marking students instead of staying at 0
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Report Card Class Filter:</strong> Report cards now only show classes where students are actively enrolled, excluding classes they've been removed from
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Voided Assignment Averages:</strong> Fixed Average column in class grades table to exclude voided grades from calculations, showing "N/A" when no valid grades exist
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Student Grades View Voided Display:</strong> Voided assignments now show "Voided" badge instead of actual grade scores in the Student Grades View cards
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>GPA Calculation Accuracy:</strong> Updated GPA calculations across all views to properly exclude both voided assignments and voided individual grades
                             </li>
                         </ul>
                     </div>
 
-                    <!-- Assignment Voiding System -->
+                    <!-- New Features - November 8, 2025 -->
                     <div class="update-section mb-4">
-                        <h6 class="text-warning mb-3">
-                            <i class="fas fa-ban me-2"></i>🚫 Assignment Voiding System - NEW!
+                        <h6 class="text-success mb-3">
+                            <i class="fas fa-sparkles me-2"></i>✨ New Features - November 8, 2025
                         </h6>
                         <ul class="list-unstyled">
                             <li class="mb-2">
                                 <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Manual Voiding:</strong> Administrators and teachers can void assignments for all students or specific students
+                                <strong>Bulk Attendance CSV Upload:</strong> Teachers can now upload historical attendance records via CSV! Perfect for migrating data from Google Sheets, IXL, or paper records. Includes downloadable class-specific template with enrolled students and comprehensive validation
                             </li>
                             <li class="mb-2">
                                 <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Automatic Late Enrollment Voiding:</strong> Assignments auto-void for students enrolled within 2 weeks of quarter end or after quarter ended
+                                <strong>Class Roster Redesign:</strong> School Administrator class roster page completely redesigned with stunning purple gradient hero header, animated statistics cards, modern student card grid with avatars, integrated search functionality, and enhanced add students interface
                             </li>
                             <li class="mb-2">
                                 <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Voided Badge:</strong> "Voided" badges replace "Not Graded" for voided assignments in class grades view
+                                <strong>Attendance Template System:</strong> Download CSV templates pre-filled with your class roster including student IDs, names, and grade levels with detailed instructions and validation rules
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- November 6-7, 2025 - Major Features & Security -->
+                    <div class="update-section mb-4">
+                        <h6 class="text-info mb-3">
+                            <i class="fas fa-shield-alt me-2"></i>🔐 Google Workspace Integration - November 6-7, 2025
+                        </h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Google Sign-In for Teachers:</strong> Full OAuth integration allowing teachers/staff to sign in with their Google accounts. "Sign in with Google" button on login page
                             </li>
                             <li class="mb-2">
                                 <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Placeholder Grades:</strong> System creates placeholder voided grades for ungraded assignments to ensure proper UI display
+                                <strong>Dual Email System:</strong> Users now have both personal email and Google Workspace email (@clarascienceacademy.org). Auto-generates workspace emails in firstname.lastname format
                             </li>
                             <li class="mb-2">
                                 <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Quarter Grade Integration:</strong> Voided assignments automatically excluded from quarter grade calculations
+                                <strong>Secure Credential Storage:</strong> All OAuth credentials stored via environment variables with no hardcoded secrets. GitHub secret scanning protection enabled
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>OAuth Token Verification:</strong> Proper audience validation ensuring secure authentication
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- November 6-7, 2025 - Assignment Management -->
+                    <div class="update-section mb-4">
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-tasks me-2"></i>📚 Enhanced Assignment Management - November 6-7, 2025
+                        </h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Selective Student Voiding:</strong> Teachers can void assignments for specific students (not just all students). Includes student selection checkboxes with "Select All" / "Deselect All" buttons
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Assignment Extensions System:</strong> Grant deadline extensions to specific students with new due date/time and optional reason. Tracks who granted extension and when
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Multi-Step Assignment Creation:</strong> Wizard-style flow with assignment type selection → target selection (individual/group) → context (in-class/homework) → details
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Smart Due Date Defaults:</strong> In-class assignments auto-default to 4 PM EST same day. Homework assignments auto-default to 11:59 PM next day
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Accurate Grading Progress:</strong> Fixed assignment cards to show correct "X/Y Graded" counts instead of "0/0 Graded"
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- November 6-7, 2025 - Critical Bug Fixes -->
+                    <div class="update-section mb-4">
+                        <h6 class="text-danger mb-3">
+                            <i class="fas fa-wrench me-2"></i>🔧 Additional Bug Fixes - November 6-7, 2025
+                        </h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Report Card Display Fix:</strong> Fixed bunched-up student cards, sideways text, and narrow widths across all grade levels (K-2, 3rd-5th, 6th-8th)
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Teacher Assignments Page Crash:</strong> Fixed "Could not build url for endpoint 'teacher.edit_group_assignment'" error that crashed the entire page
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Modal Footer Visibility:</strong> Fixed void and extensions modals where footer buttons were pushed off-screen by adding max-height and scrolling
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Production Database Schema:</strong> Fixed "column user.email does not exist" error that caused 500 errors across entire site. Created production-safe migration scripts
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Google OAuth Token Errors:</strong> Fixed "Token has wrong audience" by properly extracting Client ID from environment variables
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Previous Updates Section -->
+                    <div class="update-section mb-4">
+                        <h6 class="text-muted mb-3">
+                            <i class="fas fa-history me-2"></i>📅 Previous Update - November 3, 2025
+                        </h6>
+                        <p class="small text-muted">Major Phase 2 enhancements - Voiding systems, enhanced report cards, beautified management pages, student submission capabilities</p>
+                    </div>
+                    <!-- [November 3, 2025 - Report Card System Enhancements] -->
+                    <div class="update-section mb-4">
+                        <h6 class="text-success mb-3">
+                            <i class="fas fa-file-alt me-2"></i>📄 Report Card System - Major Upgrades (Nov 3)
+                        </h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Quarter Grades System:</strong> New QuarterGrade table with auto-refresh every 3 hours
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>PDF Generation Fixed:</strong> CSS styling now properly applies, embedded fonts/images, tighter margins
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Report Card History:</strong> View all historical report cards for any student
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- [November 3, 2025 - Assignment Voiding System] -->
+                    <div class="update-section mb-4">
+                        <h6 class="text-warning mb-3">
+                            <i class="fas fa-ban me-2"></i>🚫 Assignment Voiding System (Nov 3)
+                        </h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Manual Voiding:</strong> Void assignments for all students or specific students
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Automatic Late Enrollment Voiding:</strong> Auto-void for students enrolled after quarter ended
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Quarter Grade Integration:</strong> Voided assignments excluded from calculations
                             </li>
                         </ul>
                     </div>
@@ -1357,4 +1505,5 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 
+{% endblock %}
 {% endblock %}

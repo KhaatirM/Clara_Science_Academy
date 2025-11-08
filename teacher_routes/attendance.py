@@ -30,7 +30,7 @@ def attendance_hub():
         else:
             classes = Class.query.filter_by(teacher_id=teacher.id).all()
     
-    return render_template('attendance_hub_simple.html', classes=classes, teacher=teacher)
+    return render_template('shared/attendance_hub.html', classes=classes, teacher=teacher)
 
 @bp.route('/attendance/take/<int:class_id>', methods=['GET', 'POST'])
 @login_required

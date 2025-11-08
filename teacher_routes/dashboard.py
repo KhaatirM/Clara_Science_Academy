@@ -136,7 +136,7 @@ def teacher_dashboard():
             'title': f'New assignment: {assignment.title}',
             'description': f'Created for {assignment.class_info.name} - Due: {assignment.due_date.strftime("%b %d, %Y")}',
             'timestamp': assignment.created_at,
-            'link': url_for('teacher.view_class', class_id=assignment.class_id)
+            'link': url_for('teacher.dashboard.view_class', class_id=assignment.class_id)
         })
     
     # Sort recent activity by timestamp

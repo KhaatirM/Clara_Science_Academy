@@ -407,7 +407,7 @@ def my_students():
             ).all()
             students = [enrollment.student for enrollment in enrollments if enrollment.student is not None]
     
-    return render_template('management/role_students.html', students=students, teacher=teacher)
+    return render_template('students/role_students.html', students=students, teacher=teacher)
 
 @bp.route('/teachers-staff')
 @login_required

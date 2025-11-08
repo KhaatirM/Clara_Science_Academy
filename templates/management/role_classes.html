@@ -234,8 +234,8 @@
     }
     
     .btn-assignment {
-        background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
-        color: #333;
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        color: white;
         font-weight: 700;
     }
     
@@ -385,18 +385,15 @@
                                 </a>
                             </div>
                         {% elif 'Teacher' in current_user.role and current_user.role not in ['Director', 'School Administrator'] %}
-                            <div class="d-flex gap-2">
+                            <div class="d-flex gap-2 mb-2">
                                 <a href="{{ url_for('teacher.dashboard.view_class', class_id=class.id) }}" class="action-btn btn-view flex-fill">
-                                    <i class="bi bi-eye-fill me-2"></i>View Class
+                                    <i class="bi bi-eye-fill me-1"></i>View Class
                                 </a>
                                 <a href="{{ url_for('teacher.attendance.take_attendance', class_id=class.id) }}" class="action-btn btn-attendance flex-fill">
-                                    <i class="bi bi-calendar-check me-2"></i>Take Attendance
+                                    <i class="bi bi-calendar-check me-1"></i>Attendance
                                 </a>
-                            </div>
-                            
-                            <div class="d-flex gap-2">
                                 <a href="{{ url_for('teacher.assignments.assignment_type_selector') }}" class="action-btn btn-assignment flex-fill">
-                                    <i class="bi bi-plus-circle-fill me-2"></i>Add Assignment
+                                    <i class="bi bi-plus-circle-fill me-1"></i>Assignment
                                 </a>
                             </div>
                             

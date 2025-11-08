@@ -142,7 +142,7 @@
                             </div>
                             <span>Grades</span>
                         </a>
-                        <a href="{{ url_for('teacher.attendance') }}" class="home-quick-action home-qa-attendance">
+                        <a href="{{ url_for('teacher.attendance.attendance_hub') }}" class="home-quick-action home-qa-attendance">
                             <div class="home-qa-icon">
                                 <i class="bi bi-calendar-check-fill"></i>
                             </div>
@@ -154,7 +154,7 @@
                             </div>
                             <span>Reports</span>
                         </a>
-                        <a href="{{ url_for('teacher.students_directory') }}" class="home-quick-action home-qa-students">
+                        <a href="{{ url_for('teacher.dashboard.my_students') }}" class="home-quick-action home-qa-students">
                             <div class="home-qa-icon">
                                 <i class="bi bi-people-fill"></i>
                             </div>
@@ -383,7 +383,7 @@
                                     <i class="bi bi-eye me-1"></i>View Class
                                 </a>
                                 <div class="btn-group" role="group">
-                                    <a href="{{ url_for('teacher.assignment_type_selector') }}" class="btn btn-outline-success btn-sm" title="Add Assignment">
+                                    <a href="{{ url_for('teacher.assignments.assignment_type_selector') }}" class="btn btn-outline-success btn-sm" title="Add Assignment">
                                         <i class="bi bi-plus-circle"></i>
                                     </a>
                                     <a href="{{ url_for('teacher.take_attendance', class_id=class.id) }}" class="btn btn-outline-warning btn-sm" title="Take Attendance">
@@ -689,7 +689,7 @@
                 Student Grades Overview
             </h2>
             <div class="d-flex gap-2">
-                <a href="{{ url_for('teacher.my_grades') }}" class="btn btn-outline-secondary btn-sm">
+                <a href="{{ url_for('teacher.grading.my_grades') }}" class="btn btn-outline-secondary btn-sm">
                     <i class="bi bi-arrow-left me-1"></i>Back to Grade Management
                 </a>
             </div>
@@ -698,7 +698,7 @@
         <!-- Class Filter -->
         <div class="card shadow-sm mb-4">
             <div class="card-body">
-                <form method="GET" action="{{ url_for('teacher.student_grades') }}" class="row g-3 align-items-end">
+                <form method="GET" action="{{ url_for('teacher.grading.student_grades') }}" class="row g-3 align-items-end">
                     <div class="col-md-4">
                         <label for="class_filter" class="form-label">Filter by Class:</label>
                         <select class="form-select" id="class_filter" name="class_id">
@@ -714,7 +714,7 @@
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-funnel me-1"></i>Apply Filter
                         </button>
-                        <a href="{{ url_for('teacher.student_grades') }}" class="btn btn-outline-secondary">
+                        <a href="{{ url_for('teacher.grading.student_grades') }}" class="btn btn-outline-secondary">
                             <i class="bi bi-x-circle me-1"></i>Clear
                         </a>
                     </div>
@@ -976,7 +976,7 @@
                         <button class="btn btn-outline-primary btn-sm" onclick="markAllPresent()">
                             <i class="bi bi-check-all me-1"></i>Mark All Present
                         </button>
-                        <a href="{{ url_for('teacher.attendance') }}" class="btn btn-primary btn-sm">
+                        <a href="{{ url_for('teacher.attendance.attendance_hub') }}" class="btn btn-primary btn-sm">
                             <i class="bi bi-calendar-plus me-1"></i>Take Attendance
                         </a>
                     </div>
@@ -1141,7 +1141,7 @@
                 <h5 class="mb-0"><i class="bi bi-funnel-fill me-2"></i>Search & Filter</h5>
             </div>
             <div class="card-body">
-                <form method="GET" action="{{ url_for('teacher.students_directory') }}" id="studentSearchForm" class="row g-3">
+                <form method="GET" action="{{ url_for('teacher.dashboard.my_students') }}" id="studentSearchForm" class="row g-3">
                     <!-- Search Query -->
                     <div class="col-md-4">
                         <label for="search" class="form-label fw-semibold">
@@ -1220,7 +1220,7 @@
                             <button type="submit" class="btn btn-primary">
                                 <i class="bi bi-search me-2"></i>Apply Filters
                             </button>
-                            <a href="{{ url_for('teacher.students_directory') }}" class="btn btn-outline-secondary">
+                            <a href="{{ url_for('teacher.dashboard.my_students') }}" class="btn btn-outline-secondary">
                                 <i class="bi bi-arrow-counterclockwise me-2"></i>Reset
                             </a>
                         </div>
@@ -1413,7 +1413,7 @@
                 <h5 class="mb-0"><i class="bi bi-search me-2"></i>Search Staff</h5>
             </div>
             <div class="card-body">
-                <form method="GET" action="{{ url_for('teacher.teachers_staff_directory') }}" class="row g-3 align-items-end">
+                <form method="GET" action="{{ url_for('teacher.dashboard.teachers_staff') }}" class="row g-3 align-items-end">
                     <div class="col-md-8">
                         <label for="search" class="form-label fw-semibold">
                             <i class="bi bi-search me-1"></i>Search
@@ -1432,7 +1432,7 @@
                         </button>
                     </div>
                     <div class="col-md-2">
-                        <a href="{{ url_for('teacher.teachers_staff_directory') }}" class="btn btn-outline-secondary w-100">
+                        <a href="{{ url_for('teacher.dashboard.teachers_staff') }}" class="btn btn-outline-secondary w-100">
                             <i class="bi bi-arrow-counterclockwise me-1"></i>Reset
                         </a>
                     </div>

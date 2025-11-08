@@ -46,7 +46,7 @@
                             </td>
                             <td>{{ grade.graded_at.strftime('%m/%d/%Y') }}</td>
                             <td>
-                                <a href="{{ url_for('teacher.grade_assignment', assignment_id=grade.assignment_id) }}" class="btn btn-outline-primary btn-sm">
+                                <a href="{{ url_for('teacher.grading.grade_assignment', assignment_id=grade.assignment_id) }}" class="btn btn-outline-primary btn-sm">
                                     <i class="bi bi-pencil me-1"></i>Edit Grade
                                 </a>
                             </td>
@@ -65,7 +65,7 @@
                     <div class="row">
                         {% for assignment in assignments %}
                             <div class="col-12 col-sm-6 col-md-4 mb-2">
-                                <a href="{{ url_for('teacher.grade_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-primary btn-sm w-100 text-truncate">
+                                <a href="{{ url_for('teacher.grading.grade_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-primary btn-sm w-100 text-truncate">
                                     <i class="bi bi-pencil me-1"></i>{{ assignment.title }}
                                 </a>
                             </div>

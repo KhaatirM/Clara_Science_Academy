@@ -318,7 +318,7 @@
                                title="View Details">
                                 <i class="bi bi-eye"></i><span class="btn-text">View</span>
                             </a>
-                            <a href="{{ url_for('teacher.grade_assignment', assignment_id=assignment.id) }}" 
+                            <a href="{{ url_for('teacher.grading.grade_assignment', assignment_id=assignment.id) }}" 
                                class="btn btn-action btn-action-grade"
                                title="Grade Students">
                                 <i class="bi bi-check-circle"></i><span class="btn-text">Grade</span>
@@ -577,7 +577,7 @@
                         </td>
                         <td>
                             <div class="btn-group" role="group">
-                                        <a href="{{ url_for('teacher.grade_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-primary" title="Grade Assignment">
+                                        <a href="{{ url_for('teacher.grading.grade_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-primary" title="Grade Assignment">
                                             <i class="bi bi-pencil-square"></i>
                                 </a>
                                         <a href="{{ url_for('teacher.assignments.view_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-secondary" title="View Assignment">

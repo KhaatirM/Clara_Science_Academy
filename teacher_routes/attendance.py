@@ -124,6 +124,9 @@ def take_attendance(class_id):
     existing_records = {a.student_id: a for a in today_attendance}
     school_day_records = {}  # Placeholder for school-wide attendance if needed
     
+    # Define attendance status options
+    statuses = ['Present', 'Late', 'Absent', 'Suspended']
+    
     return render_template('shared/take_attendance.html', 
                          class_item=class_obj,
                          students=students,
@@ -131,7 +134,8 @@ def take_attendance(class_id):
                          attendance_stats=attendance_stats,
                          attendance_date_str=today.strftime('%Y-%m-%d'),
                          existing_records=existing_records,
-                         school_day_records=school_day_records)
+                         school_day_records=school_day_records,
+                         statuses=statuses)
 
 @bp.route('/mark-all-present/<int:class_id>', methods=['POST'])
 @login_required

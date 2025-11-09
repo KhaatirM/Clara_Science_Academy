@@ -113,7 +113,7 @@
     <!-- Attendance Form -->
     <form method="POST" action="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.take_class_attendance', class_id=class_item.id) }}{% else %}{{ url_for('teacher.attendance.take_attendance', class_id=class_item.id) }}{% endif %}" id="attendanceForm">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                <input type="hidden" name="attendance_date" value="{{ attendance_date_str }}">
+                <input type="hidden" name="date" value="{{ attendance_date_str }}">
                 
         <!-- Quick Actions & Bulk Upload Bar -->
         <div class="row g-3 mb-4">
@@ -126,10 +126,10 @@
                         </h6>
                         <small class="text-muted d-block mb-3">Mark all students at once</small>
                         <div class="btn-group w-100" role="group">
-                            <button type="button" class="btn btn-outline-success" onclick="markAll('Present')">
+                            <button type="button" class="btn btn-outline-success" onclick="markAll('present')">
                                 <i class="bi bi-check-all me-1"></i>All Present
                             </button>
-                            <button type="button" class="btn btn-outline-danger" onclick="markAll('Unexcused Absence')">
+                            <button type="button" class="btn btn-outline-danger" onclick="markAll('absent')">
                                 <i class="bi bi-x-lg me-1"></i>All Absent
                             </button>
                             <button type="button" class="btn btn-outline-secondary" onclick="clearAll()">
@@ -203,13 +203,13 @@
                         <div class="student-card-body">
                             <div class="attendance-buttons">
                                 {% for status in statuses %}
-                                    <input type="radio" class="btn-check" name="status-{{ student.id }}" 
-                                           id="status-{{ student.id }}-{{ loop.index }}" 
-                                           value="{{ status }}" 
-                                           {% if record and record.status == status %}checked{% endif %} 
+                                    <input type="radio" class="btn-check" name="status_{{ student.id }}" 
+                                           id="status_{{ student.id }}_{{ loop.index }}" 
+                                           value="{{ status|lower }}" 
+                                           {% if record and record.status == status|lower %}checked{% endif %} 
                                            required>
                                     <label class="btn btn-attendance btn-attendance-{{ status|lower|replace(' ', '-') }}" 
-                                           for="status-{{ student.id }}-{{ loop.index }}">
+                                           for="status_{{ student.id }}_{{ loop.index }}">
                                         {% if status == 'Present' %}
                                             <i class="bi bi-check-circle-fill"></i>
                                         {% elif status == 'Late' %}
@@ -226,7 +226,7 @@
                             
                             <div class="notes-section mt-3">
                                 <input type="text" class="form-control form-control-sm notes-input" 
-                                       name="notes-{{ student.id }}" 
+                                       name="notes_{{ student.id }}" 
                                        placeholder="Add note (optional)" 
                                        value="{{ record.notes if record else '' }}">
                 </div>
@@ -681,12 +681,10 @@ function updateStats() {
     console.log('updateStats() called');
     
     // More specific selectors for attendance status radio buttons
-    const presentCount = document.querySelectorAll('input[name^="status-"][value="Present"]:checked').length;
-    const lateCount = document.querySelectorAll('input[name^="status-"][value="Late"]:checked').length;
-    const unexcusedCount = document.querySelectorAll('input[name^="status-"][value="Unexcused Absence"]:checked').length;
-    const excusedCount = document.querySelectorAll('input[name^="status-"][value="Excused Absence"]:checked').length;
-    const suspendedCount = document.querySelectorAll('input[name^="status-"][value="Suspended"]:checked').length;
-    const absentCount = unexcusedCount + excusedCount;
+    const presentCount = document.querySelectorAll('input[name^="status_"][value="present"]:checked').length;
+    const lateCount = document.querySelectorAll('input[name^="status_"][value="late"]:checked').length;
+    const absentCount = document.querySelectorAll('input[name^="status_"][value="absent"]:checked').length;
+    const suspendedCount = document.querySelectorAll('input[name^="status_"][value="suspended"]:checked').length;
     const markedCount = presentCount + lateCount + absentCount + suspendedCount;
     
     const attendanceRate = totalStudents > 0 ? Math.round((presentCount / totalStudents) * 100) : 0;

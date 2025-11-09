@@ -100,10 +100,32 @@ def take_attendance(class_id):
         Attendance.date >= datetime.now().date() - timedelta(days=7)
     ).order_by(Attendance.date.desc()).all()
     
+    # Calculate attendance statistics for today
+    today = datetime.now().date()
+    today_attendance = Attendance.query.filter_by(
+        class_id=class_id,
+        date=today
+    ).all()
+    
+    present_count = sum(1 for a in today_attendance if a.status == 'present')
+    late_count = sum(1 for a in today_attendance if a.status == 'late')
+    absent_count = sum(1 for a in today_attendance if a.status == 'absent')
+    total_students = len(students)
+    present_percentage = round((present_count / total_students * 100) if total_students > 0 else 0, 1)
+    
+    attendance_stats = {
+        'present': present_count,
+        'late': late_count,
+        'absent': absent_count,
+        'present_percentage': present_percentage
+    }
+    
     return render_template('shared/take_attendance.html', 
                          class_item=class_obj,
                          students=students,
-                         recent_attendance=recent_attendance)
+                         recent_attendance=recent_attendance,
+                         attendance_stats=attendance_stats,
+                         attendance_date_str=today.strftime('%Y-%m-%d'))
 
 @bp.route('/mark-all-present/<int:class_id>', methods=['POST'])
 @login_required

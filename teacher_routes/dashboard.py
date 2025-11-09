@@ -360,6 +360,68 @@ def my_classes():
     
     return render_template('management/role_classes.html', classes=classes, teacher=teacher)
 
+@bp.route('/deadline-reminders')
+@login_required
+@teacher_required
+def deadline_reminders():
+    """View deadline reminders for all assignments"""
+    from datetime import datetime, timedelta
+    
+    teacher = get_teacher_or_admin()
+    if is_admin():
+        classes = Class.query.all()
+    else:
+        if teacher is None:
+            classes = []
+        else:
+            classes = Class.query.filter_by(teacher_id=teacher.id).all()
+    
+    # Get all assignments for teacher's classes
+    class_ids = [c.id for c in classes]
+    all_assignments = Assignment.query.filter(Assignment.class_id.in_(class_ids)).order_by(Assignment.due_date.asc()).all()
+    
+    # Categorize assignments by deadline
+    now = datetime.now()
+    overdue = []
+    today = []
+    this_week = []
+    next_week = []
+    later = []
+    
+    for assignment in all_assignments:
+        if assignment.due_date:
+            days_until = (assignment.due_date - now).days
+            
+            # Get submission count
+            submission_count = Submission.query.filter_by(assignment_id=assignment.id).count()
+            
+            # Get enrolled student count
+            enrollments = Enrollment.query.filter_by(class_id=assignment.class_id, is_active=True).count()
+            
+            assignment.submission_count = submission_count
+            assignment.total_students = enrollments
+            assignment.completion_rate = (submission_count / enrollments * 100) if enrollments > 0 else 0
+            assignment.days_until = days_until
+            
+            if days_until < 0:
+                overdue.append(assignment)
+            elif days_until == 0:
+                today.append(assignment)
+            elif days_until <= 7:
+                this_week.append(assignment)
+            elif days_until <= 14:
+                next_week.append(assignment)
+            else:
+                later.append(assignment)
+    
+    return render_template('teachers/teacher_deadline_reminders.html',
+                         overdue=overdue,
+                         today=today,
+                         this_week=this_week,
+                         next_week=next_week,
+                         later=later,
+                         classes=classes)
+
 @bp.route('/assignments')
 @login_required
 @teacher_required

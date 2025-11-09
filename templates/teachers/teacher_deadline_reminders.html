@@ -1,0 +1,622 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block title %}Deadline Reminders{% endblock %}
+
+{% block dashboard_content %}
+<div class="container-fluid py-4">
+    <!-- Animated Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="header-card-deadline animated-fade-in">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <div class="header-icon-wrapper-deadline me-3">
+                            <i class="bi bi-bell-fill"></i>
+                        </div>
+                        <div>
+                            <h2 class="mb-1 fw-bold text-white">Deadline Reminders</h2>
+                            <p class="text-white mb-0 opacity-90"><i class="bi bi-clock-history me-2"></i>Stay on top of upcoming assignments and deadlines</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Overview -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="stat-card-deadline stat-danger animated-fade-in" style="animation-delay: 0.1s;">
+                <div class="stat-icon-deadline">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                </div>
+                <div>
+                    <div class="stat-value-deadline">{{ overdue|length }}</div>
+                    <div class="stat-label-deadline">Overdue</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card-deadline stat-warning animated-fade-in" style="animation-delay: 0.2s;">
+                <div class="stat-icon-deadline">
+                    <i class="bi bi-calendar-day-fill"></i>
+                </div>
+                <div>
+                    <div class="stat-value-deadline">{{ today|length }}</div>
+                    <div class="stat-label-deadline">Due Today</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card-deadline stat-info animated-fade-in" style="animation-delay: 0.3s;">
+                <div class="stat-icon-deadline">
+                    <i class="bi bi-calendar-week-fill"></i>
+                </div>
+                <div>
+                    <div class="stat-value-deadline">{{ this_week|length }}</div>
+                    <div class="stat-label-deadline">This Week</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card-deadline stat-success animated-fade-in" style="animation-delay: 0.4s;">
+                <div class="stat-icon-deadline">
+                    <i class="bi bi-check-circle-fill"></i>
+                </div>
+                <div>
+                    <div class="stat-value-deadline">{{ later|length }}</div>
+                    <div class="stat-label-deadline">Later</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Overdue Assignments -->
+    {% if overdue %}
+    <div class="deadline-section animated-fade-in" style="animation-delay: 0.5s;">
+        <div class="section-header section-danger">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <span>Overdue Assignments ({{ overdue|length }})</span>
+        </div>
+        <div class="assignments-list">
+            {% for assignment in overdue %}
+            <div class="assignment-card assignment-overdue">
+                <div class="assignment-status-bar danger"></div>
+                <div class="assignment-content">
+                    <div class="assignment-header-row">
+                        <div>
+                            <h5 class="assignment-title">{{ assignment.title }}</h5>
+                            <div class="assignment-meta">
+                                <span class="meta-item"><i class="bi bi-book me-1"></i>{{ assignment.class_info.class_name }}</span>
+                                <span class="meta-item"><i class="bi bi-calendar-x me-1"></i>{{ assignment.due_date.strftime('%b %d, %Y at %I:%M %p') }}</span>
+                                <span class="meta-item danger-text"><i class="bi bi-exclamation-circle me-1"></i>{{ -assignment.days_until }} days overdue</span>
+                            </div>
+                        </div>
+                        <div class="assignment-actions">
+                            <a href="{{ url_for('teacher.assignments.view_assignment', assignment_id=assignment.id) }}" class="btn-view-assignment">
+                                <i class="bi bi-eye me-1"></i>View
+                            </a>
+                        </div>
+                    </div>
+                    <div class="progress-section">
+                        <div class="progress-label">
+                            <span>Submissions: {{ assignment.submission_count }} / {{ assignment.total_students }}</span>
+                            <span class="progress-percentage">{{ assignment.completion_rate|round(1) }}%</span>
+                        </div>
+                        <div class="progress-bar-custom">
+                            <div class="progress-fill danger-fill" style="width: {{ assignment.completion_rate }}%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Due Today -->
+    {% if today %}
+    <div class="deadline-section animated-fade-in" style="animation-delay: 0.6s;">
+        <div class="section-header section-warning">
+            <i class="bi bi-calendar-day-fill me-2"></i>
+            <span>Due Today ({{ today|length }})</span>
+        </div>
+        <div class="assignments-list">
+            {% for assignment in today %}
+            <div class="assignment-card assignment-today">
+                <div class="assignment-status-bar warning"></div>
+                <div class="assignment-content">
+                    <div class="assignment-header-row">
+                        <div>
+                            <h5 class="assignment-title">{{ assignment.title }}</h5>
+                            <div class="assignment-meta">
+                                <span class="meta-item"><i class="bi bi-book me-1"></i>{{ assignment.class_info.class_name }}</span>
+                                <span class="meta-item"><i class="bi bi-clock me-1"></i>{{ assignment.due_date.strftime('%I:%M %p') }}</span>
+                                <span class="meta-item warning-text"><i class="bi bi-alarm me-1"></i>Due today!</span>
+                            </div>
+                        </div>
+                        <div class="assignment-actions">
+                            <a href="{{ url_for('teacher.assignments.view_assignment', assignment_id=assignment.id) }}" class="btn-view-assignment">
+                                <i class="bi bi-eye me-1"></i>View
+                            </a>
+                        </div>
+                    </div>
+                    <div class="progress-section">
+                        <div class="progress-label">
+                            <span>Submissions: {{ assignment.submission_count }} / {{ assignment.total_students }}</span>
+                            <span class="progress-percentage">{{ assignment.completion_rate|round(1) }}%</span>
+                        </div>
+                        <div class="progress-bar-custom">
+                            <div class="progress-fill warning-fill" style="width: {{ assignment.completion_rate }}%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- This Week -->
+    {% if this_week %}
+    <div class="deadline-section animated-fade-in" style="animation-delay: 0.7s;">
+        <div class="section-header section-info">
+            <i class="bi bi-calendar-week-fill me-2"></i>
+            <span>This Week ({{ this_week|length }})</span>
+        </div>
+        <div class="assignments-list">
+            {% for assignment in this_week %}
+            <div class="assignment-card assignment-week">
+                <div class="assignment-status-bar info"></div>
+                <div class="assignment-content">
+                    <div class="assignment-header-row">
+                        <div>
+                            <h5 class="assignment-title">{{ assignment.title }}</h5>
+                            <div class="assignment-meta">
+                                <span class="meta-item"><i class="bi bi-book me-1"></i>{{ assignment.class_info.class_name }}</span>
+                                <span class="meta-item"><i class="bi bi-calendar me-1"></i>{{ assignment.due_date.strftime('%b %d, %Y') }}</span>
+                                <span class="meta-item info-text"><i class="bi bi-hourglass-split me-1"></i>{{ assignment.days_until }} days left</span>
+                            </div>
+                        </div>
+                        <div class="assignment-actions">
+                            <a href="{{ url_for('teacher.assignments.view_assignment', assignment_id=assignment.id) }}" class="btn-view-assignment">
+                                <i class="bi bi-eye me-1"></i>View
+                            </a>
+                        </div>
+                    </div>
+                    <div class="progress-section">
+                        <div class="progress-label">
+                            <span>Submissions: {{ assignment.submission_count }} / {{ assignment.total_students }}</span>
+                            <span class="progress-percentage">{{ assignment.completion_rate|round(1) }}%</span>
+                        </div>
+                        <div class="progress-bar-custom">
+                            <div class="progress-fill info-fill" style="width: {{ assignment.completion_rate }}%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Next Week -->
+    {% if next_week %}
+    <div class="deadline-section animated-fade-in" style="animation-delay: 0.8s;">
+        <div class="section-header section-primary">
+            <i class="bi bi-calendar-range-fill me-2"></i>
+            <span>Next Week ({{ next_week|length }})</span>
+        </div>
+        <div class="assignments-list">
+            {% for assignment in next_week %}
+            <div class="assignment-card">
+                <div class="assignment-status-bar primary"></div>
+                <div class="assignment-content">
+                    <div class="assignment-header-row">
+                        <div>
+                            <h5 class="assignment-title">{{ assignment.title }}</h5>
+                            <div class="assignment-meta">
+                                <span class="meta-item"><i class="bi bi-book me-1"></i>{{ assignment.class_info.class_name }}</span>
+                                <span class="meta-item"><i class="bi bi-calendar me-1"></i>{{ assignment.due_date.strftime('%b %d, %Y') }}</span>
+                                <span class="meta-item"><i class="bi bi-clock me-1"></i>{{ assignment.days_until }} days left</span>
+                            </div>
+                        </div>
+                        <div class="assignment-actions">
+                            <a href="{{ url_for('teacher.assignments.view_assignment', assignment_id=assignment.id) }}" class="btn-view-assignment">
+                                <i class="bi bi-eye me-1"></i>View
+                            </a>
+                        </div>
+                    </div>
+                    <div class="progress-section">
+                        <div class="progress-label">
+                            <span>Submissions: {{ assignment.submission_count }} / {{ assignment.total_students }}</span>
+                            <span class="progress-percentage">{{ assignment.completion_rate|round(1) }}%</span>
+                        </div>
+                        <div class="progress-bar-custom">
+                            <div class="progress-fill primary-fill" style="width: {{ assignment.completion_rate }}%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Later -->
+    {% if later %}
+    <div class="deadline-section animated-fade-in" style="animation-delay: 0.9s;">
+        <div class="section-header section-success">
+            <i class="bi bi-calendar-check-fill me-2"></i>
+            <span>Later ({{ later|length }})</span>
+        </div>
+        <div class="assignments-list">
+            {% for assignment in later %}
+            <div class="assignment-card">
+                <div class="assignment-status-bar success"></div>
+                <div class="assignment-content">
+                    <div class="assignment-header-row">
+                        <div>
+                            <h5 class="assignment-title">{{ assignment.title }}</h5>
+                            <div class="assignment-meta">
+                                <span class="meta-item"><i class="bi bi-book me-1"></i>{{ assignment.class_info.class_name }}</span>
+                                <span class="meta-item"><i class="bi bi-calendar me-1"></i>{{ assignment.due_date.strftime('%b %d, %Y') }}</span>
+                                <span class="meta-item"><i class="bi bi-check-circle me-1"></i>{{ assignment.days_until }} days left</span>
+                            </div>
+                        </div>
+                        <div class="assignment-actions">
+                            <a href="{{ url_for('teacher.assignments.view_assignment', assignment_id=assignment.id) }}" class="btn-view-assignment">
+                                <i class="bi bi-eye me-1"></i>View
+                            </a>
+                        </div>
+                    </div>
+                    <div class="progress-section">
+                        <div class="progress-label">
+                            <span>Submissions: {{ assignment.submission_count }} / {{ assignment.total_students }}</span>
+                            <span class="progress-percentage">{{ assignment.completion_rate|round(1) }}%</span>
+                        </div>
+                        <div class="progress-bar-custom">
+                            <div class="progress-fill success-fill" style="width: {{ assignment.completion_rate }}%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Empty State -->
+    {% if not overdue and not today and not this_week and not next_week and not later %}
+    <div class="empty-state-large animated-fade-in">
+        <div class="empty-state-icon-deadline">
+            <i class="bi bi-calendar-check"></i>
+        </div>
+        <h4>No Upcoming Deadlines</h4>
+        <p class="text-muted">You're all caught up! No assignments with deadlines found.</p>
+        <a href="{{ url_for('teacher.assignments.assignment_type_selector') }}" class="btn btn-create-assignment">
+            <i class="bi bi-plus-circle me-2"></i>Create New Assignment
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animated-fade-in {
+    animation: fadeIn 0.6s ease-out forwards;
+    opacity: 0;
+}
+
+/* Header Card */
+.header-card-deadline {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    padding: 2rem;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(245, 87, 108, 0.3);
+}
+
+.header-icon-wrapper-deadline {
+    width: 60px;
+    height: 60px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    color: white;
+    backdrop-filter: blur(10px);
+}
+
+/* Stat Cards */
+.stat-card-deadline {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.stat-card-deadline:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+}
+
+.stat-danger { border-color: rgba(239, 68, 68, 0.3); }
+.stat-warning { border-color: rgba(251, 191, 36, 0.3); }
+.stat-info { border-color: rgba(59, 130, 246, 0.3); }
+.stat-success { border-color: rgba(34, 197, 94, 0.3); }
+
+.stat-icon-deadline {
+    width: 60px;
+    height: 60px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    flex-shrink: 0;
+}
+
+.stat-danger .stat-icon-deadline {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+}
+
+.stat-warning .stat-icon-deadline {
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    color: white;
+}
+
+.stat-info .stat-icon-deadline {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+}
+
+.stat-success .stat-icon-deadline {
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+    color: white;
+}
+
+.stat-value-deadline {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #2d3748;
+}
+
+.stat-label-deadline {
+    color: #718096;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+/* Deadline Sections */
+.deadline-section {
+    margin-bottom: 2rem;
+}
+
+.section-header {
+    padding: 1rem 1.5rem;
+    border-radius: 12px 12px 0 0;
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: white;
+}
+
+.section-danger { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
+.section-warning { background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); }
+.section-info { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
+.section-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+.section-success { background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); }
+
+/* Assignment Cards */
+.assignments-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.assignment-card {
+    background: white;
+    border-radius: 0 0 16px 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.assignment-card:first-child {
+    border-radius: 0 16px 16px 16px;
+}
+
+.assignment-card:hover {
+    transform: translateX(5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+}
+
+.assignment-status-bar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 6px;
+}
+
+.assignment-status-bar.danger { background: #ef4444; }
+.assignment-status-bar.warning { background: #fbbf24; }
+.assignment-status-bar.info { background: #3b82f6; }
+.assignment-status-bar.primary { background: #667eea; }
+.assignment-status-bar.success { background: #22c55e; }
+
+.assignment-content {
+    padding: 1.5rem;
+    padding-left: 2rem;
+}
+
+.assignment-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 1rem;
+}
+
+.assignment-title {
+    font-weight: 700;
+    color: #2d3748;
+    margin-bottom: 0.5rem;
+}
+
+.assignment-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    font-size: 0.9rem;
+}
+
+.meta-item {
+    color: #718096;
+    display: flex;
+    align-items: center;
+}
+
+.danger-text { color: #ef4444; font-weight: 600; }
+.warning-text { color: #f59e0b; font-weight: 600; }
+.info-text { color: #3b82f6; font-weight: 600; }
+
+/* Progress Section */
+.progress-section {
+    margin-top: 1rem;
+}
+
+.progress-label {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    color: #4a5568;
+}
+
+.progress-percentage {
+    font-weight: 600;
+}
+
+.progress-bar-custom {
+    height: 12px;
+    background: #e2e8f0;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    border-radius: 6px;
+    transition: width 0.3s ease;
+}
+
+.danger-fill { background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%); }
+.warning-fill { background: linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%); }
+.info-fill { background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%); }
+.primary-fill { background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); }
+.success-fill { background: linear-gradient(90deg, #22c55e 0%, #16a34a 100%); }
+
+/* Buttons */
+.btn-view-assignment {
+    padding: 0.5rem 1rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+}
+
+.btn-view-assignment:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+    color: white;
+}
+
+.btn-create-assignment {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 12px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+}
+
+.btn-create-assignment:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+    color: white;
+}
+
+/* Empty State */
+.empty-state-large {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.empty-state-icon-deadline {
+    width: 100px;
+    height: 100px;
+    margin: 0 auto 1.5rem;
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    color: white;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .assignment-header-row {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .assignment-actions {
+        width: 100%;
+    }
+    
+    .btn-view-assignment {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .stat-value-deadline {
+        font-size: 1.5rem;
+    }
+}
+</style>
+{% endblock %}
+

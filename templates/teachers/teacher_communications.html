@@ -29,13 +29,13 @@
                     <!-- Quick Actions -->
                     <div class="p-3 border-bottom">
                         <div class="d-grid gap-2">
-                            <a href="{{ url_for('teacher.communications.send_message') }}" class="btn btn-sm" style="border-color: #2E8B57; color: #2E8B57;">
+                            <a href="#" onclick="alert('Messaging feature coming soon!'); return false;" class="btn btn-sm" style="border-color: #2E8B57; color: #2E8B57;">
                                 <i class="bi bi-pencil-square me-1"></i>New Message
                             </a>
-                            <a href="{{ url_for('teacher.create_announcement') }}" class="btn btn-sm" style="border-color: #228B22; color: #228B22;">
+                            <a href="#" onclick="alert('Announcements feature coming soon!'); return false;" class="btn btn-sm" style="border-color: #228B22; color: #228B22;">
                                 <i class="bi bi-megaphone me-1"></i>New Announcement
                             </a>
-                            <a href="{{ url_for('teacher.create_message_group') }}" class="btn btn-sm" style="border-color: #556B2F; color: #556B2F;">
+                            <a href="#" onclick="alert('Groups feature coming soon!'); return false;" class="btn btn-sm" style="border-color: #556B2F; color: #556B2F;">
                                 <i class="bi bi-people me-1"></i>Create Group
                             </a>
                         </div>
@@ -45,7 +45,7 @@
                     <div class="list-group list-group-flush max-height-600">
                         {% if messages %}
                             {% for message in messages %}
-                                <a href="{{ url_for('teacher.communications.view_message', message_id=message.id) }}" 
+                                <a href="#" 
                                    class="list-group-item list-group-item-action {% if not message.is_read %}list-group-item-primary{% endif %}">
                                     <div class="d-flex justify-content-between align-items-start">
                                         <div class="flex-grow-1">
@@ -157,7 +157,7 @@
                         <div class="tab-pane fade show active" id="announcements" role="tabpanel">
                             <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-3 gap-2">
                                 <h5 class="mb-0">Recent Announcements</h5>
-                                <a href="{{ url_for('teacher.create_announcement') }}" class="btn btn-primary btn-sm">
+                                <a href="#" onclick="alert('Announcements feature coming soon!'); return false;" class="btn btn-primary btn-sm">
                                     <i class="bi bi-plus-circle me-1"></i>Create Announcement
                                 </a>
                             </div>
@@ -229,10 +229,7 @@
                                             </div>
                                             {% if not notification.is_read %}
                                                 <div class="mt-2">
-                                                    <form method="POST" action="{{ url_for('teacher.mark_notification_read', notification_id=notification.id) }}" class="display-inline">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                                        <button type="submit" class="btn btn-sm btn-outline-primary">Mark as Read</button>
-                                                    </form>
+                                                    <button type="button" onclick="alert('Coming soon!');" class="btn btn-sm btn-outline-primary">Mark as Read</button>
                                                 </div>
                                             {% endif %}
                                         </div>
@@ -251,7 +248,7 @@
                         <div class="tab-pane fade" id="groups" role="tabpanel">
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <h5 class="mb-0">Message Groups</h5>
-                                <a href="{{ url_for('teacher.create_message_group') }}" class="btn btn-primary btn-sm">
+                                <a href="#" onclick="alert('Groups feature coming soon!'); return false;" class="btn btn-primary btn-sm">
                                     <i class="bi bi-plus-circle me-1"></i>Create Group
                                 </a>
                             </div>
@@ -266,7 +263,7 @@
                                                     <p class="card-text text-muted">{{ group.description or 'No description' }}</p>
                                                     <div class="d-flex justify-content-between align-items-center">
                                                         <span class="badge bg-info">{{ group.group_type.title() }}</span>
-                                                        <a href="{{ url_for('teacher.view_group', group_id=group.id) }}" class="btn btn-outline-primary btn-sm">
+                                                        <a href="#" onclick="alert('Coming soon!'); return false;" class="btn btn-outline-primary btn-sm">
                                                             <i class="bi bi-chat me-1"></i>Open
                                                         </a>
                                                     </div>

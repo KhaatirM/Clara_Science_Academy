@@ -1,0 +1,50 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block title %}Reflection Journals - {{ class_item.class_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('teacher.communications.communications_hub') }}">Communications</a></li>
+                    <li class="breadcrumb-item active">Reflection Journals</li>
+                </ol>
+            </nav>
+            <h2 class="mb-1"><i class="bi bi-journal-text me-2"></i>Reflection Journals</h2>
+            <p class="text-muted mb-0">{{ class_item.class_name }}</p>
+        </div>
+    </div>
+
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle me-2"></i><strong>Reflection Journals</strong> help students document their learning experiences and group work reflections.
+    </div>
+
+    {% if not journals %}
+    <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle me-2"></i>No journal entries have been submitted yet. Student reflections will appear here once submitted.
+    </div>
+    {% else %}
+    <div class="row g-4">
+        {% for journal in journals %}
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <strong>{{ journal.student.first_name }} {{ journal.student.last_name }}</strong> - {{ journal.group_name }}
+                </div>
+                <div class="card-body">
+                    <p class="card-text">{{ journal.reflection_text[:200] }}{% if journal.reflection_text|length > 200 %}...{% endif %}</p>
+                    <div class="d-flex justify-content-between">
+                        <span><i class="bi bi-people me-1"></i>Collaboration: {{ journal.collaboration_rating }}/5</span>
+                        <span><i class="bi bi-book me-1"></i>Learning: {{ journal.learning_rating }}/5</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

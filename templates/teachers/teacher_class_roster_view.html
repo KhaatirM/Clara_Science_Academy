@@ -134,7 +134,7 @@
                 </a>
               </div>
               <div class="col-6 col-md-4">
-                <a href="javascript:void(0);" onclick="alert('Group Management feature coming soon! This will allow you to create and manage student groups for this class.');" class="btn-teacher-class-action">
+                <a href="{{ url_for('teacher.groups.class_groups', class_id=class_item.id) }}" class="btn-teacher-class-action">
                   <i class="bi bi-people me-1"></i>Manage Groups
                 </a>
               </div>
@@ -148,7 +148,7 @@
             </h6>
             <div class="row g-2">
               <div class="col-6 col-md-4">
-                <a href="javascript:void(0);" onclick="alert('Group Assignments feature coming soon! This will allow you to create assignments specifically for student groups.');" class="btn-teacher-class-action">
+                <a href="{{ url_for('teacher.groups.class_groups', class_id=class_item.id) }}" class="btn-teacher-class-action">
                   <i class="bi bi-journal-plus me-1"></i>Group Assignments
                 </a>
               </div>
@@ -158,7 +158,7 @@
                 </a>
               </div>
               <div class="col-6 col-md-4">
-                <a href="javascript:void(0);" onclick="alert('Reports & Analytics feature coming soon! This will provide detailed insights and statistics for this class.');" class="btn-teacher-class-action">
+                <a href="{{ url_for('teacher.analytics.class_analytics', class_id=class_item.id) }}" class="btn-teacher-class-action">
                   <i class="bi bi-graph-up me-1"></i>Reports & Analytics
                 </a>
               </div>
@@ -172,17 +172,17 @@
             </h6>
             <div class="row g-2">
               <div class="col-6 col-md-4">
-                <a href="javascript:void(0);" onclick="alert('360° Feedback feature coming soon! This will allow students to provide peer feedback and self-assessments.');" class="btn-teacher-class-action">
+                <a href="{{ url_for('teacher.communications.class_feedback360', class_id=class_item.id) }}" class="btn-teacher-class-action">
                   <i class="bi bi-arrow-repeat me-1"></i>360° Feedback
                 </a>
               </div>
               <div class="col-6 col-md-4">
-                <a href="javascript:void(0);" onclick="alert('Reflection Journals feature coming soon! This will allow students to maintain learning journals and reflections.');" class="btn-teacher-class-action">
+                <a href="{{ url_for('teacher.communications.class_journals', class_id=class_item.id) }}" class="btn-teacher-class-action">
                   <i class="bi bi-journal-text me-1"></i>Reflection Journals
                 </a>
               </div>
               <div class="col-6 col-md-4">
-                <a href="javascript:void(0);" onclick="alert('Conflict Resolution feature coming soon! This will help mediate and track student conflicts and resolutions.');" class="btn-teacher-class-action">
+                <a href="{{ url_for('teacher.communications.class_conflicts', class_id=class_item.id) }}" class="btn-teacher-class-action">
                   <i class="bi bi-exclamation-triangle me-1"></i>Conflict Resolution
                 </a>
               </div>

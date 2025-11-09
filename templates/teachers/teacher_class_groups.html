@@ -1,160 +1,176 @@
 {% extends "shared/dashboard_layout.html" %}
 
-{% block dashboard_content %}
-<!-- CSS now in /static/css/components.css -->
+{% block title %}Manage Groups - {{ class_item.class_name }}{% endblock %}
 
-<div class="container-fluid px-2 px-md-4">
-  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
-    <div>
-      <h2 class="mb-1"><i class="bi bi-people-fill me-2" style="color: #2E8B57;"></i>Student Groups</h2>
-      <p class="text-muted mb-0">{{ class_obj.name }} • Collaborative Learning</p>
-    </div>
-    <div class="d-flex gap-2 flex-wrap">
-      <a href="{{ url_for('management.view_class', class_id=class_obj.id) if role_prefix else url_for('teacher.dashboard.view_class', class_id=class_obj.id) }}" class="btn btn-sm" style="border-color: #2E8B57; color: #2E8B57;">
-        <i class="bi bi-arrow-left me-1"></i>Back to Class
-      </a>
-      <a href="{{ url_for('management.admin_create_student_group', class_id=class_obj.id) if role_prefix else url_for('teacher.create_student_group', class_id=class_obj.id) }}" class="btn btn-sm text-white" style="background: linear-gradient(135deg, #2E8B57 0%, #228B22 50%, #556B2F 100%);">
-        <i class="bi bi-plus-circle me-1"></i>Create Group
-      </a>
-      <a href="{{ url_for('management.admin_auto_create_groups', class_id=class_obj.id) if role_prefix else url_for('teacher.assignments.auto_create_groups', class_id=class_obj.id) }}" class="btn btn-sm text-white" style="background: linear-gradient(135deg, #228B22 0%, #2E8B57 50%, #556B2F 100%);">
-        <i class="bi bi-shuffle me-1"></i>Auto Create
-      </a>
-      <a href="{{ url_for('management.admin_class_group_templates', class_id=class_obj.id) if role_prefix else url_for('teacher.class_group_templates', class_id=class_obj.id) }}" class="btn btn-sm text-white" style="background: linear-gradient(135deg, #556B2F 0%, #2E8B57 50%, #228B22 100%);">
-        <i class="bi bi-bookmark me-1"></i>Templates
-      </a>
-                <a href="{{ url_for('management.admin_group_analytics', class_id=class_obj.id) if role_prefix else url_for('teacher.assignments.group_analytics', class_id=class_obj.id) }}" class="btn btn-sm text-white" style="background: linear-gradient(135deg, #2E8B57 0%, #228B22 50%, #556B2F 100%);">
-            <i class="bi bi-graph-up me-1"></i>Analytics
-          </a>
-          <a href="{{ url_for('management.admin_class_group_rotations', class_id=class_obj.id) if role_prefix else url_for('teacher.assignments.class_group_rotations', class_id=class_obj.id) }}" class="btn btn-sm" style="border-color: #556B2F; color: #556B2F;">
-            <i class="bi bi-arrow-repeat me-1"></i>Rotations
-          </a>
-    </div>
-  </div>
-
-  <!-- Enhanced Stats Cards -->
-  <div class="row g-3 mb-4">
-    <div class="col-12 col-md-4">
-      <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-        <div class="card-body text-white text-center py-4">
-          <i class="bi bi-people-fill display-4 mb-2 opacity-75"></i>
-          <h2 class="mb-0 fw-bold">{{ groups|length }}</h2>
-          <p class="mb-0 small text-white-50">Active Groups</p>
-        </div>
-      </div>
-    </div>
-    <div class="col-12 col-md-4">
-      <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);">
-        <div class="card-body text-white text-center py-4">
-          <i class="bi bi-person-fill display-4 mb-2 opacity-75"></i>
-          <h2 class="mb-0 fw-bold">{{ enrolled_students|length }}</h2>
-          <p class="mb-0 small text-white-50">Total Students</p>
-        </div>
-      </div>
-    </div>
-    <div class="col-12 col-md-4">
-      <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
-        <div class="card-body text-white text-center py-4">
-          <i class="bi bi-person-check-fill display-4 mb-2 opacity-75"></i>
-          <h2 class="mb-0 fw-bold">
-             {% set total_members = 0 %}
-             {% for group in groups %}
-               {% set total_members = total_members + group.members|length %}
-             {% endfor %}
-             {{ total_members }}
-          </h2>
-          <p class="mb-0 small text-white-50">Students in Groups</p>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Groups List -->
-  <div class="row g-3 g-md-4">
-    {% if groups %}
-      {% for group in groups %}
-        <div class="col-12 col-md-6 col-lg-4">
-          <div class="card group-card shadow h-100">
-            <div class="card-body d-flex flex-column text-center">
-              <!-- Group Icon -->
-              <div class="group-icon mx-auto" style="background: linear-gradient(135deg, {{ ['#667eea 0%, #764ba2 100%', '#30cfd0 0%, #330867 100%', '#fa709a 0%, #fee140 100%', '#f093fb 0%, #f5576c 100%', '#a8edea 0%, #fed6e3 100%']|random }});">
-                <i class="bi bi-people-fill text-white"></i>
-              </div>
-              
-              <!-- Group Name -->
-              <h5 class="mb-2" style="color: #667eea;">
-                {{ group.name }}
-              </h5>
-              {% if group.max_students %}
-                <small class="text-muted mb-2 d-block">Max: {{ group.max_students }} students</small>
-              {% endif %}
-              
-              <!-- Description -->
-              {% if group.description %}
-                <p class="card-text text-muted small mb-3" style="min-height: 40px;">
-                  {{ group.description[:80] }}{% if group.description|length > 80 %}...{% endif %}
-                </p>
-              {% endif %}
-              
-              <!-- Members Badge -->
-              <div class="mb-3">
-                <span class="member-badge">
-                  <i class="bi bi-person-fill me-1"></i>
-                  {{ group.members|length }} member{{ 's' if group.members|length != 1 else '' }}
-                </span>
-              </div>
-              
-              <!-- Member List -->
-              {% if group.members %}
-                <div class="mb-3 text-start">
-                  <small class="text-muted d-block mb-2">Members:</small>
-                  <div class="d-flex flex-wrap gap-1">
-                    {% for member in group.members %}
-                      <span class="badge bg-light text-dark border">
-                        {% if member.is_leader %}
-                          <i class="bi bi-star-fill text-warning me-1"></i>
-                        {% endif %}
-                        {{ member.student.first_name }} {{ member.student.last_name }}
-                      </span>
-                    {% endfor %}
-                  </div>
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('teacher.groups.groups_hub') }}">Groups</a></li>
+                    <li class="breadcrumb-item active">{{ class_item.class_name }}</li>
+                </ol>
+            </nav>
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-1"><i class="bi bi-people-fill me-2"></i>Manage Groups</h2>
+                    <p class="text-muted mb-0">{{ class_item.class_name }} - {{ class_item.subject }}</p>
                 </div>
-              {% else %}
-                <p class="text-muted small mb-3">No members yet</p>
-              {% endif %}
-              
-              <!-- Group Actions -->
-              <div class="mt-auto">
-                <div class="d-grid gap-2">
-                  <a href="{{ url_for('management.admin_manage_group', group_id=group.id) if role_prefix else url_for('teacher.assignments.manage_group', group_id=group.id) }}" class="btn btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 25px;">
-                    <i class="bi bi-gear me-1"></i>Manage Group
-                  </a>
-                  <form method="POST" action="{{ url_for('management.admin_delete_group', group_id=group.id) if role_prefix else url_for('teacher.assignments.delete_group', group_id=group.id) }}" class="d-inline" 
-                        onsubmit="return confirm('Are you sure you want to delete this group? This action cannot be undone.')">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                    <button type="submit" class="btn btn-outline-danger w-100" style="border-radius: 25px;">
-                      <i class="bi bi-trash me-1"></i>Delete Group
-                    </button>
-                  </form>
-                </div>
-              </div>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createGroupModal">
+                    <i class="bi bi-plus-circle me-2"></i>Create Group
+                </button>
             </div>
-          </div>
         </div>
-      {% endfor %}
-    {% else %}
-      <div class="col-12">
-        <div class="card shadow-sm">
-          <div class="card-body text-center py-5">
-            <i class="bi bi-people text-muted" style="font-size: 3rem;"></i>
-            <h4 class="text-muted mt-3">No Groups Yet</h4>
-            <p class="text-muted mb-4">Create your first group to organize students for collaborative work.</p>
-            <a href="{{ url_for('management.admin_create_student_group', class_id=class_obj.id) if role_prefix else url_for('teacher.create_student_group', class_id=class_obj.id) }}" class="btn btn-primary">
-              <i class="bi bi-plus-circle me-2"></i>Create Your First Group
-            </a>
-          </div>
+    </div>
+
+    <!-- Groups List -->
+    <div class="row g-4">
+        {% for group in groups %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-gradient-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="bi bi-people me-2"></i>{{ group.name }}</h5>
+                        <span class="badge bg-light text-dark">{{ group.member_count }} members</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if group.description %}
+                    <p class="text-muted small mb-3">{{ group.description }}</p>
+                    {% endif %}
+                    
+                    <!-- Members List -->
+                    <div class="mb-3">
+                        <h6 class="mb-2">Members:</h6>
+                        {% if group.members_list %}
+                        <ul class="list-unstyled mb-0">
+                            {% for member in group.members_list %}
+                            <li class="d-flex justify-content-between align-items-center mb-2">
+                                <span><i class="bi bi-person me-2"></i>{{ member.first_name }} {{ member.last_name }}</span>
+                                <form method="POST" action="{{ url_for('teacher.groups.remove_member', group_id=group.id, student_id=member.id) }}" 
+                                      style="display: inline;" 
+                                      onsubmit="return confirm('Remove this student from the group?');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="bi bi-x-circle"></i>
+                                    </button>
+                                </form>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <p class="text-muted small mb-0">No members yet</p>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Add Member Button -->
+                    <button class="btn btn-sm btn-outline-primary w-100 mb-2" 
+                            data-bs-toggle="modal" 
+                            data-bs-target="#addMemberModal{{ group.id }}">
+                        <i class="bi bi-person-plus me-2"></i>Add Member
+                    </button>
+                    
+                    <!-- Delete Group Button -->
+                    <form method="POST" action="{{ url_for('teacher.groups.delete_group', group_id=group.id) }}" 
+                          onsubmit="return confirm('Are you sure you want to delete this group?');">
+                        <button type="submit" class="btn btn-sm btn-outline-danger w-100">
+                            <i class="bi bi-trash me-2"></i>Delete Group
+                        </button>
+                    </form>
+                </div>
+            </div>
         </div>
-      </div>
+
+        <!-- Add Member Modal for this group -->
+        <div class="modal fade" id="addMemberModal{{ group.id }}" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Add Member to {{ group.name }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form method="POST" action="{{ url_for('teacher.groups.add_member', group_id=group.id) }}">
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label for="student_id{{ group.id }}" class="form-label">Select Student</label>
+                                <select class="form-select" id="student_id{{ group.id }}" name="student_id" required>
+                                    <option value="">Choose a student...</option>
+                                    {% for student in students %}
+                                    {% if student not in group.members_list %}
+                                    <option value="{{ student.id }}">{{ student.first_name }} {{ student.last_name }}</option>
+                                    {% endif %}
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="is_leader{{ group.id }}" name="is_leader">
+                                <label class="form-check-label" for="is_leader{{ group.id }}">
+                                    Make this student a group leader
+                                </label>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Add Member</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if not groups %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle me-2"></i>No groups created yet. Click "Create Group" to get started!
+    </div>
     {% endif %}
-  </div>
 </div>
+
+<!-- Create Group Modal -->
+<div class="modal fade" id="createGroupModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create New Group</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('teacher.groups.create_group', class_id=class_item.id) }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Group Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="name" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="max_students" class="form-label">Maximum Students (Optional)</label>
+                        <input type="number" class="form-control" id="max_students" name="max_students" min="1">
+                        <small class="text-muted">Leave empty for unlimited</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Group</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+.card {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15) !important;
+}
+</style>
 {% endblock %}

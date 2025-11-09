@@ -1,192 +1,210 @@
 {% extends "shared/dashboard_layout.html" %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/teacher_enhanced.css') }}">
-{% endblock %}
+{% block title %}Analytics - {{ class_item.class_name }}{% endblock %}
 
-{% block dashboard_content %}
-<div class="container-fluid px-2 px-md-4 py-4">
-  <!-- Modern Page Header -->
-  <div class="modern-page-header animate-fade-in-up">
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
-      <div>
-        <h1 class="modern-page-header-title">
-          <i class="bi bi-graph-up-arrow me-2"></i>Analytics Dashboard
-        </h1>
-        <p class="modern-page-header-subtitle">
-          {{ class_obj.name }} • Performance insights and metrics
-        </p>
-      </div>
-      <div class="modern-page-header-actions">
-        <a href="{{ url_for('teacher.grading.class_reports', class_id=class_obj.id) }}" class="btn-modern-primary">
-          <i class="bi bi-file-earmark-text me-2"></i>View Reports
-        </a>
-        <a href="{{ url_for('teacher.dashboard.view_class', class_id=class_obj.id) }}" class="btn-modern-secondary">
-          <i class="bi bi-arrow-left me-2"></i>Back to Class
-        </a>
-      </div>
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('teacher.analytics.analytics_hub') }}">Analytics</a></li>
+                    <li class="breadcrumb-item active">{{ class_item.class_name }}</li>
+                </ol>
+            </nav>
+            <h2 class="mb-1"><i class="bi bi-graph-up me-2"></i>Class Analytics</h2>
+            <p class="text-muted mb-0">{{ class_item.class_name }} - {{ class_item.subject }}</p>
+        </div>
     </div>
-  </div>
 
-  <!-- Modern Stats Overview -->
-  <div class="row g-4 mb-4">
-    <div class="col-12 col-sm-6 col-lg-3">
-      <div class="modern-stat-card stat-primary animate-fade-in-up animate-delay-1">
-        <div class="modern-stat-icon">
-          <i class="bi bi-people-fill"></i>
-        </div>
-        <div class="modern-stat-content">
-          <div class="modern-stat-value">{{ groups|length }}</div>
-          <div class="modern-stat-label">Active Groups</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-12 col-sm-6 col-lg-3">
-      <div class="modern-stat-card stat-success animate-fade-in-up animate-delay-2">
-        <div class="modern-stat-icon">
-          <i class="bi bi-journal-check"></i>
-        </div>
-        <div class="modern-stat-content">
-          <div class="modern-stat-value">{{ group_assignments|length }}</div>
-          <div class="modern-stat-label">Group Assignments</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-12 col-sm-6 col-lg-3">
-      <div class="modern-stat-card stat-info animate-fade-in-up animate-delay-3">
-        <div class="modern-stat-icon">
-          <i class="bi bi-diagram-3"></i>
-        </div>
-        <div class="modern-stat-content">
-          <div class="modern-stat-value">{{ collaboration_metrics|length }}</div>
-          <div class="modern-stat-label">Collab Metrics</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-12 col-sm-6 col-lg-3">
-      <div class="modern-stat-card stat-warning animate-fade-in-up animate-delay-4">
-        <div class="modern-stat-icon">
-          <i class="bi bi-trophy-fill"></i>
-        </div>
-        <div class="modern-stat-content">
-          <div class="modern-stat-value">{{ benchmarks|length }}</div>
-          <div class="modern-stat-label">Benchmarks</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Group Performance -->
-  <div class="modern-content-card mb-4">
-    <div class="modern-card-header">
-      <h2 class="modern-card-header-title">
-        <i class="bi bi-bar-chart-line"></i>Group Performance Overview
-      </h2>
-    </div>
-    <div class="modern-card-body">
-      {% if groups %}
-        <div class="modern-table-container">
-          <table class="modern-table table table-hover mb-0">
-            <thead>
-              <tr>
-                <th>Group</th>
-                <th>Members</th>
-                <th>Assignments</th>
-                <th>Avg Grade</th>
-                <th>Collaboration Score</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for group in groups %}
-                <tr>
-                  <td>
-                    <div class="fw-bold">{{ group.name }}</div>
-                    <small class="text-muted">{{ group.description[:50] }}{% if group.description|length > 50 %}...{% endif %}</small>
-                  </td>
-                  <td>
-                    <span class="modern-badge modern-badge-secondary">
-                      {{ group.members|length }} students
-                    </span>
-                  </td>
-                  <td>
-                    {% set group_assignments_count = group_assignments|selectattr('class_id', 'equalto', class_obj.id)|list|length %}
-                    <span class="modern-badge modern-badge-info">
-                      {{ group_assignments_count }}
-                    </span>
-                  </td>
-                  <td>
-                    <span class="modern-badge modern-badge-success">85%</span>
-                  </td>
-                  <td>
-                    {% set group_metrics = collaboration_metrics|selectattr('group_id', 'equalto', group.id)|list %}
-                    {% if group_metrics %}
-                      {% set avg_score = (group_metrics|sum(attribute='metric_value') / group_metrics|length)|round(1) %}
-                      <div class="modern-progress modern-progress-primary" style="width: 100px;">
-                        <div class="modern-progress-bar" style="width: {{ (avg_score / 5 * 100) }}%"></div>
-                      </div>
-                      <small class="text-muted">{{ avg_score }}/5</small>
-                    {% else %}
-                      <span class="text-muted">N/A</span>
-                    {% endif %}
-                  </td>
-                  <td>
-                    <span class="modern-badge modern-badge-success">
-                      <i class="bi bi-check-circle"></i> Active
-                    </span>
-                  </td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      {% else %}
-        <div class="modern-empty-state">
-          <div class="modern-empty-icon">
-            <i class="bi bi-people"></i>
-          </div>
-          <h2 class="modern-empty-title">No Groups to Analyze</h2>
-          <p class="modern-empty-description">
-            Create groups and assign group work to see performance analytics.
-          </p>
-        </div>
-      {% endif %}
-    </div>
-  </div>
-
-  <!-- Collaboration Metrics -->
-  {% if collaboration_metrics %}
-  <div class="modern-content-card">
-    <div class="modern-card-header">
-      <h2 class="modern-card-header-title">
-        <i class="bi bi-graph-up"></i>Collaboration Metrics
-      </h2>
-    </div>
-    <div class="modern-card-body">
-      <div class="row g-4">
-        {% for metric in collaboration_metrics[:8] %}
-          <div class="col-12 col-md-6 col-lg-3">
-            <div class="modern-item-card" style="--item-color: #667eea">
-              <div class="modern-item-title" style="font-size: 1rem;">
-                {{ metric.metric_name }}
-              </div>
-              <div class="d-flex align-items-center gap-3 mt-3">
-                <div class="modern-stat-value" style="font-size: 2rem;">
-                  {{ metric.metric_value }}
+    <!-- Key Metrics -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="rounded-circle bg-primary text-white p-3 me-3">
+                            <i class="bi bi-people fs-4"></i>
+                        </div>
+                        <div>
+                            <h3 class="mb-0">{{ total_students }}</h3>
+                            <p class="text-muted small mb-0">Students</p>
+                        </div>
+                    </div>
                 </div>
-                <div class="flex-grow-1">
-                  <div class="modern-progress modern-progress-primary">
-                    <div class="modern-progress-bar" style="width: {{ (metric.metric_value / 5 * 100) }}%"></div>
-                  </div>
-                  <small class="text-muted">out of 5</small>
-                </div>
-              </div>
             </div>
-          </div>
-        {% endfor %}
-      </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="rounded-circle bg-success text-white p-3 me-3">
+                            <i class="bi bi-file-text fs-4"></i>
+                        </div>
+                        <div>
+                            <h3 class="mb-0">{{ total_assignments }}</h3>
+                            <p class="text-muted small mb-0">Assignments</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="rounded-circle bg-warning text-white p-3 me-3">
+                            <i class="bi bi-check-circle fs-4"></i>
+                        </div>
+                        <div>
+                            <h3 class="mb-0">{{ completion_rate }}%</h3>
+                            <p class="text-muted small mb-0">Completion Rate</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="rounded-circle bg-info text-white p-3 me-3">
+                            <i class="bi bi-star fs-4"></i>
+                        </div>
+                        <div>
+                            <h3 class="mb-0">{{ avg_grade }}%</h3>
+                            <p class="text-muted small mb-0">Average Grade</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
-  {% endif %}
+
+    <div class="row g-4 mb-4">
+        <!-- Grade Distribution -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Grade Distribution</h5>
+                </div>
+                <div class="card-body">
+                    {% for grade_range, count in grade_distribution.items() %}
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>{{ grade_range }}</span>
+                            <span class="text-muted">{{ count }} students</span>
+                        </div>
+                        <div class="progress" style="height: 25px;">
+                            {% set percentage = (count / total_students * 100) if total_students > 0 else 0 %}
+                            <div class="progress-bar {% if 'A' in grade_range %}bg-success{% elif 'B' in grade_range %}bg-info{% elif 'C' in grade_range %}bg-warning{% else %}bg-danger{% endif %}" 
+                                 role="progressbar" 
+                                 style="width: {{ percentage }}%"
+                                 aria-valuenow="{{ percentage }}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100">
+                                {{ percentage|round(1) }}%
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Attendance Overview -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="bi bi-calendar-check me-2"></i>Attendance Overview (Last 30 Days)</h5>
+                </div>
+                <div class="card-body d-flex flex-column justify-content-center align-items-center">
+                    <div class="display-1 fw-bold text-primary mb-3">{{ attendance_rate }}%</div>
+                    <p class="text-muted mb-0">Average Attendance Rate</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Student Performance Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="bi bi-table me-2"></i>Student Performance</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>Student</th>
+                                    <th>Average Grade</th>
+                                    <th>Submissions</th>
+                                    <th>Completion %</th>
+                                    <th>Performance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for stat in student_stats %}
+                                <tr>
+                                    <td><strong>#{{ loop.index }}</strong></td>
+                                    <td>{{ stat.student.first_name }} {{ stat.student.last_name }}</td>
+                                    <td>
+                                        <span class="badge {% if stat.average >= 90 %}bg-success{% elif stat.average >= 80 %}bg-info{% elif stat.average >= 70 %}bg-warning{% else %}bg-danger{% endif %}">
+                                            {{ stat.average }}%
+                                        </span>
+                                    </td>
+                                    <td>{{ stat.submissions }} / {{ total_assignments }}</td>
+                                    <td>
+                                        <div class="progress" style="height: 20px; min-width: 100px;">
+                                            <div class="progress-bar" 
+                                                 role="progressbar" 
+                                                 style="width: {{ stat.completion }}%"
+                                                 aria-valuenow="{{ stat.completion }}" 
+                                                 aria-valuemin="0" 
+                                                 aria-valuemax="100">
+                                                {{ stat.completion }}%
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if stat.average >= 90 %}
+                                            <i class="bi bi-emoji-smile text-success fs-5"></i>
+                                        {% elif stat.average >= 70 %}
+                                            <i class="bi bi-emoji-neutral text-warning fs-5"></i>
+                                        {% else %}
+                                            <i class="bi bi-emoji-frown text-danger fs-5"></i>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {% if not student_stats %}
+                    <div class="alert alert-info mb-0">
+                        <i class="bi bi-info-circle me-2"></i>No student performance data available yet.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+<style>
+.card {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.progress {
+    border-radius: 10px;
+}
+.progress-bar {
+    border-radius: 10px;
+}
+</style>
 {% endblock %}

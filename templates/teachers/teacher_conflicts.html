@@ -1,0 +1,54 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block title %}Conflict Resolution - {{ class_item.class_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('teacher.communications.communications_hub') }}">Communications</a></li>
+                    <li class="breadcrumb-item active">Conflict Resolution</li>
+                </ol>
+            </nav>
+            <h2 class="mb-1"><i class="bi bi-exclamation-triangle me-2"></i>Conflict Resolution</h2>
+            <p class="text-muted mb-0">{{ class_item.class_name }}</p>
+        </div>
+    </div>
+
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle me-2"></i><strong>Conflict Resolution</strong> helps track and mediate conflicts within student groups.
+    </div>
+
+    {% if not conflicts %}
+    <div class="alert alert-success">
+        <i class="bi bi-check-circle me-2"></i>No conflicts reported! All groups are working harmoniously.
+    </div>
+    {% else %}
+    <div class="row g-4">
+        {% for conflict in conflicts %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card border-{% if conflict.severity_level == 'critical' %}danger{% elif conflict.severity_level == 'high' %}warning{% else %}secondary{% endif %}">
+                <div class="card-header">
+                    <strong>{{ conflict.group_name }}</strong>
+                    <span class="badge bg-{{ conflict.severity_level == 'critical' and 'danger' or (conflict.severity_level == 'high' and 'warning' or 'secondary') }} float-end">
+                        {{ conflict.severity_level|title }}
+                    </span>
+                </div>
+                <div class="card-body">
+                    <p><strong>Type:</strong> {{ conflict.conflict_type|title }}</p>
+                    <p class="card-text">{{ conflict.conflict_description[:150] }}{% if conflict.conflict_description|length > 150 %}...{% endif %}</p>
+                    <p class="text-muted small">Reported: {{ conflict.reported_at.strftime('%Y-%m-%d') }}</p>
+                    <span class="badge {% if conflict.is_resolved %}bg-success{% else %}bg-warning{% endif %}">
+                        {{ 'Resolved' if conflict.is_resolved else 'In Progress' }}
+                    </span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

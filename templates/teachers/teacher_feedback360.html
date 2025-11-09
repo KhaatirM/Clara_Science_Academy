@@ -1,0 +1,47 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block title %}360° Feedback - {{ class_item.class_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('teacher.communications.communications_hub') }}">Communications</a></li>
+                    <li class="breadcrumb-item active">360° Feedback</li>
+                </ol>
+            </nav>
+            <h2 class="mb-1"><i class="bi bi-arrow-repeat me-2"></i>360° Feedback</h2>
+            <p class="text-muted mb-0">{{ class_item.class_name }}</p>
+        </div>
+    </div>
+
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle me-2"></i><strong>360° Feedback</strong> allows students to provide comprehensive peer feedback and self-assessments. Sessions for {{ students|length }} students are available.
+    </div>
+
+    {% if not feedback_sessions %}
+    <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle me-2"></i>No feedback sessions have been created yet. Feedback sessions will appear here once created.
+    </div>
+    {% else %}
+    <div class="row g-4">
+        {% for session in feedback_sessions %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">{{ session.title }}</h5>
+                    <p class="card-text">{{ session.description }}</p>
+                    <span class="badge {% if session.is_active %}bg-success{% else %}bg-secondary{% endif %}">
+                        {{ 'Active' if session.is_active else 'Closed' }}
+                    </span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

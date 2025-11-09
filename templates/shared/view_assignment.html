@@ -252,50 +252,103 @@
     </div>
 </div>
 
+<!-- Extension Modal -->
+<div class="modal fade" id="extensionModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-white">
+                <h5 class="modal-title"><i class="bi bi-clock-history me-2"></i>Grant Extensions</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('teacher.assignments.grant_extensions') }}">
+                <div class="modal-body">
+                    <input type="hidden" name="assignment_id" value="{{ assignment.id }}">
+                    
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>Select students and set a new due date for this assignment.
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="extended_due_date" class="form-label">New Due Date <span class="text-danger">*</span></label>
+                        <input type="datetime-local" class="form-control" id="extended_due_date" name="extended_due_date" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Select Students</label>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="selectAllStudents" onclick="toggleAllStudents(this)">
+                            <label class="form-check-label fw-bold" for="selectAllStudents">
+                                Select All Students
+                            </label>
+                        </div>
+                        <hr>
+                        <div style="max-height: 300px; overflow-y: auto;">
+                            {% set enrollments = assignment.class_info.enrollments %}
+                            {% for enrollment in enrollments %}
+                            {% if enrollment.is_active and enrollment.student %}
+                            <div class="form-check mb-2">
+                                <input class="form-check-input student-checkbox" type="checkbox" name="student_ids" value="{{ enrollment.student.id }}" id="student{{ enrollment.student.id }}">
+                                <label class="form-check-label" for="student{{ enrollment.student.id }}">
+                                    {{ enrollment.student.first_name }} {{ enrollment.student.last_name }}
+                                </label>
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="extension_reason" class="form-label">Reason for Extension (Optional)</label>
+                        <textarea class="form-control" id="extension_reason" name="reason" rows="3" placeholder="Medical leave, family emergency, etc."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-check-circle me-2"></i>Grant Extensions
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleAllStudents(source) {
+    const checkboxes = document.querySelectorAll('.student-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = source.checked;
+    });
+}
+</script>
+
 <script>
 // Open extension modal
 function openExtensionModal() {
-    {% if current_user.role in ['Director', 'School Administrator'] %}
-        window.location.href = "{{ url_for('management.grant_extensions', assignment_id=assignment.id) }}";
-    {% else %}
-        // For teachers, redirect to assignments page and open modal via parameter
-        alert('Extension functionality: This will open the extensions modal. Assignment ID: {{ assignment.id }}');
-        // TODO: Implement inline extension modal or redirect
-        window.location.href = "{{ url_for('teacher.dashboard.my_assignments') }}";
-    {% endif %}
+    const modal = new bootstrap.Modal(document.getElementById('extensionModal'));
+    modal.show();
 }
 
 // Open void modal
 function openVoidModalView() {
     if (confirm('Are you sure you want to void this assignment? This will exclude it from GPA calculations for all students.')) {
-        const formData = new FormData();
-        formData.append('csrf_token', '{{ csrf_token() }}');
-        formData.append('status', 'Voided');
+        // Create form and submit
+        const form = document.createElement('form');
+        form.method = 'POST';
+        {% if current_user.role in ['Director', 'School Administrator'] %}
+            form.action = "{{ url_for('management.change_assignment_status', assignment_id=assignment.id) }}";
+        {% else %}
+            form.action = "{{ url_for('teacher.assignments.change_assignment_status', assignment_id=assignment.id) }}";
+        {% endif %}
         
-        fetch('/teacher/assignment/{{ assignment.id }}/change-status', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => {
-            if (response.redirected) {
-                window.location.href = response.url;
-            } else {
-                return response.json();
-            }
-        })
-        .then(data => {
-            if (data && data.success) {
-                showNotification('Assignment voided successfully!', 'success');
-                setTimeout(() => location.reload(), 1000);
-            } else if (data && data.error) {
-                showNotification('Error: ' + data.error, 'error');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            // If fetch failed, try redirect approach
-            window.location.href = "{{ url_for('teacher.dashboard.my_assignments') }}";
-        });
+        const statusInput = document.createElement('input');
+        statusInput.type = 'hidden';
+        statusInput.name = 'status';
+        statusInput.value = 'Voided';
+        form.appendChild(statusInput);
+        
+        document.body.appendChild(form);
+        form.submit();
     }
 }
 

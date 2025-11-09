@@ -9,6 +9,7 @@ from .utils import get_teacher_or_admin, is_admin, is_authorized_for_class
 from models import db, Class, Assignment, Student, Grade, Submission, Enrollment, Attendance
 from sqlalchemy import func
 from datetime import datetime, timedelta
+import json
 
 bp = Blueprint('analytics', __name__)
 
@@ -64,7 +65,15 @@ def class_analytics(class_id):
     # Calculate average grade
     grades = Grade.query.join(Assignment).filter(Assignment.class_id == class_id).all()
     if grades:
-        avg_grade = sum(g.score for g in grades if g.score) / len(grades)
+        valid_scores = []
+        for g in grades:
+            try:
+                grade_data = json.loads(g.grade_data) if g.grade_data else {}
+                if grade_data.get('score') is not None and not grade_data.get('is_voided'):
+                    valid_scores.append(float(grade_data['score']))
+            except:
+                pass
+        avg_grade = sum(valid_scores) / len(valid_scores) if valid_scores else 0
     else:
         avg_grade = 0
     
@@ -88,17 +97,22 @@ def class_analytics(class_id):
     }
     
     for grade in grades:
-        if grade.score:
-            if grade.score >= 90:
-                grade_ranges['A (90-100)'] += 1
-            elif grade.score >= 80:
-                grade_ranges['B (80-89)'] += 1
-            elif grade.score >= 70:
-                grade_ranges['C (70-79)'] += 1
-            elif grade.score >= 60:
-                grade_ranges['D (60-69)'] += 1
-            else:
-                grade_ranges['F (0-59)'] += 1
+        try:
+            grade_data = json.loads(grade.grade_data) if grade.grade_data else {}
+            if grade_data.get('score') is not None and not grade_data.get('is_voided'):
+                score = float(grade_data['score'])
+                if score >= 90:
+                    grade_ranges['A (90-100)'] += 1
+                elif score >= 80:
+                    grade_ranges['B (80-89)'] += 1
+                elif score >= 70:
+                    grade_ranges['C (70-79)'] += 1
+                elif score >= 60:
+                    grade_ranges['D (60-69)'] += 1
+                else:
+                    grade_ranges['F (0-59)'] += 1
+        except:
+            pass
     
     # Student performance
     student_stats = []
@@ -108,10 +122,17 @@ def class_analytics(class_id):
             Grade.student_id == student.id
         ).all()
         
+        valid_scores = []
         if student_grades:
-            avg = sum(g.score for g in student_grades if g.score) / len(student_grades)
-        else:
-            avg = 0
+            for g in student_grades:
+                try:
+                    grade_data = json.loads(g.grade_data) if g.grade_data else {}
+                    if grade_data.get('score') is not None and not grade_data.get('is_voided'):
+                        valid_scores.append(float(grade_data['score']))
+                except:
+                    pass
+        
+        avg = sum(valid_scores) / len(valid_scores) if valid_scores else 0
         
         submissions = Submission.query.join(Assignment).filter(
             Assignment.class_id == class_id,

@@ -366,7 +366,15 @@
                     </div>
                     <div>
                         <div class="text-muted small fw-semibold">TEACHERS</div>
-                        <div class="fs-4 fw-bold">{{ teachers_staff | selectattr('role', 'search', 'Teacher') | list | length }}</div>
+                        <div class="fs-4 fw-bold">
+                            {% set teacher_count = namespace(value=0) %}
+                            {% for staff in teachers_staff %}
+                                {% if (staff.assigned_role and 'Teacher' in staff.assigned_role) or (staff.user and staff.user.role and 'Teacher' in staff.user.role) %}
+                                    {% set teacher_count.value = teacher_count.value + 1 %}
+                                {% endif %}
+                            {% endfor %}
+                            {{ teacher_count.value }}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -379,7 +387,16 @@
                     </div>
                     <div>
                         <div class="text-muted small fw-semibold">ADMINISTRATORS</div>
-                        <div class="fs-4 fw-bold">{{ teachers_staff | selectattr('role', 'search', 'Administrator|Director') | list | length }}</div>
+                        <div class="fs-4 fw-bold">
+                            {% set admin_count = namespace(value=0) %}
+                            {% for staff in teachers_staff %}
+                                {% set role = staff.assigned_role if staff.assigned_role else (staff.user.role if staff.user else '') %}
+                                {% if 'Administrator' in role or 'Director' in role %}
+                                    {% set admin_count.value = admin_count.value + 1 %}
+                                {% endif %}
+                            {% endfor %}
+                            {{ admin_count.value }}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -392,12 +409,21 @@
                     </div>
                     <div>
                         <div class="text-muted small fw-semibold">SUPPORT STAFF</div>
-                        <div class="fs-4 fw-bold">{{ teachers_staff | selectattr('role', 'search', 'Support') | list | length }}</div>
+                        <div class="fs-4 fw-bold">
+                            {% set support_count = namespace(value=0) %}
+                            {% for staff in teachers_staff %}
+                                {% set role = staff.assigned_role if staff.assigned_role else (staff.user.role if staff.user else '') %}
+                                {% if 'Support' in role or 'IT' in role %}
+                                    {% set support_count.value = support_count.value + 1 %}
+                                {% endif %}
+                            {% endfor %}
+                            {{ support_count.value }}
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-      </div>
+    </div>
     
     <!-- Search Card -->
     <div class="search-card-staff">
@@ -442,10 +468,10 @@
     <!-- Staff Cards Grid -->
     <div class="row g-4">
         {% for staff in teachers_staff %}
-        {% set staff_role = staff.role if staff.role else 'Staff Member' %}
+        {% set staff_role = staff.assigned_role if staff.assigned_role else (staff.user.role if staff.user else 'Staff Member') %}
         {% set staff_id = staff.staff_id if staff.staff_id else 'N/A' %}
-        {% set staff_username = staff.username if staff.username else (staff.user.username if staff.user else 'N/A') %}
-        {% set staff_departments = staff.departments.split(', ') if staff.departments else [] %}
+        {% set staff_username = staff.user.username if staff.user else 'N/A' %}
+        {% set staff_department = staff.department if staff.department else 'N/A' %}
         {% set employment_type = staff.employment_type if staff.employment_type else 'N/A' %}
         
         <div class="col-12 col-md-6 col-xl-4">
@@ -488,21 +514,15 @@
                         </div>
                     </div>
                     
-                    <!-- Department(s) -->
+                    <!-- Department -->
                     <div class="staff-info-row">
                         <div class="staff-info-icon icon-dept">
                             <i class="bi bi-building"></i>
                         </div>
                         <div class="staff-info-content">
-                            <div class="staff-info-label">Dept.</div>
+                            <div class="staff-info-label">Department</div>
                             <div class="staff-info-value">
-                                {% if staff_departments %}
-                                    {% for dept in staff_departments %}
-                                        <span class="badge-dept">{{ dept.strip() }}</span>
-                                    {% endfor %}
-                                {% else %}
-                                    <span class="badge-dept">N/A</span>
-                                {% endif %}
+                                <span class="badge-dept">{{ staff_department }}</span>
                             </div>
                         </div>
                     </div>

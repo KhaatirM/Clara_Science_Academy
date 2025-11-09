@@ -372,7 +372,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 {% if current_user.role in ['Director', 'School Administrator'] %}
                     window.location.href = `{{ url_for('management.add_assignment') }}?context=${context}`;
                 {% else %}
-                    window.location.href = `{{ url_for('teacher.assignments.add_assignment_select_class') }}?context=${context}`;
+                    window.location.href = `{{ url_for('teacher.assignments.add_assignment') }}?context=${context}`;
                 {% endif %}
             });
         });

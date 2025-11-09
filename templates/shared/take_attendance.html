@@ -149,7 +149,7 @@
                         </h6>
                         <small class="text-muted d-block mb-3">Upload historical attendance records</small>
                         <div class="d-flex gap-2 flex-wrap">
-                            <a href="{{ url_for('teacher.download_attendance_template', class_id=class_item.id) }}" 
+                            <a href="{{ url_for('teacher.attendance.download_attendance_template', class_id=class_item.id) }}" 
                                class="btn btn-outline-primary btn-sm">
                                 <i class="bi bi-download me-1"></i>Download Template
                             </a>
@@ -272,7 +272,7 @@
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form method="POST" action="{{ url_for('teacher.upload_attendance_csv', class_id=class_item.id) }}" enctype="multipart/form-data">
+            <form method="POST" action="{{ url_for('teacher.attendance.upload_attendance_csv', class_id=class_item.id) }}" enctype="multipart/form-data">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <div class="modal-body">
                     <div class="alert alert-info border-0 mb-4">
@@ -869,7 +869,7 @@ function setYesterday() {
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form method="POST" action="{{ url_for('teacher.upload_attendance_csv', class_id=class_item.id) }}" enctype="multipart/form-data">
+            <form method="POST" action="{{ url_for('teacher.attendance.upload_attendance_csv', class_id=class_item.id) }}" enctype="multipart/form-data">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <div class="modal-body">
                     <div class="alert alert-info border-0 mb-4">

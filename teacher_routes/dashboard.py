@@ -414,8 +414,17 @@ def my_students():
 @teacher_required
 def teachers_staff():
     """Display all teachers and staff members."""
-    teachers = TeacherStaff.query.all()
-    return render_template('management/role_teachers_staff.html', teachers=teachers)
+    teachers_staff = TeacherStaff.query.all()
+    
+    # Debug logging
+    print(f"DEBUG: Teachers & Staff route - Found {len(teachers_staff)} staff members")
+    for staff in teachers_staff:
+        print(f"  - {staff.first_name} {staff.last_name} ({staff.role})")
+    
+    return render_template('management/role_teachers_staff.html', 
+                         teachers_staff=teachers_staff,
+                         search_query=None,
+                         total_teachers_staff=len(teachers_staff))
 
 @bp.route('/assignments-and-grades')
 @login_required

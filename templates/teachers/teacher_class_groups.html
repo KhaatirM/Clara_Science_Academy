@@ -9,8 +9,8 @@
         <div class="col-12">
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{{ url_for('teacher.groups.groups_hub') }}" class="text-decoration-none"><i class="bi bi-arrow-left me-1"></i>Groups</a></li>
-                    <li class="breadcrumb-item active">{{ class_item.class_name }}</li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('teacher.dashboard.view_class', class_id=class_item.id) }}" class="text-decoration-none"><i class="bi bi-arrow-left me-1"></i>Back to Class</a></li>
+                    <li class="breadcrumb-item active">Manage Groups</li>
                 </ol>
             </nav>
             <div class="header-card animated-fade-in">

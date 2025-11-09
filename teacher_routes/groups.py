@@ -16,33 +16,9 @@ bp = Blueprint('groups', __name__)
 @login_required
 @teacher_required
 def groups_hub():
-    """Main groups hub for teachers."""
-    # Get teacher object or None for administrators
-    teacher = get_teacher_or_admin()
-    
-    # Get classes for the current teacher/admin
-    if is_admin():
-        classes = Class.query.all()
-    else:
-        if teacher is None:
-            classes = []
-        else:
-            classes = Class.query.filter_by(teacher_id=teacher.id).all()
-    
-    # Get all groups for these classes
-    all_groups = []
-    for class_obj in classes:
-        groups = StudentGroup.query.filter_by(class_id=class_obj.id, is_active=True).all()
-        for group in groups:
-            # Count members
-            member_count = StudentGroupMember.query.filter_by(group_id=group.id).count()
-            group.member_count = member_count
-            group.class_name = class_obj.class_name
-            all_groups.append(group)
-    
-    return render_template('teachers/teacher_groups_hub.html',
-                         classes=classes,
-                         groups=all_groups)
+    """Redirect to My Classes - groups should be managed from class view."""
+    flash("Please select a class first to manage its groups.", "info")
+    return redirect(url_for('teacher.dashboard.my_classes'))
 
 @bp.route('/groups/class/<int:class_id>')
 @login_required

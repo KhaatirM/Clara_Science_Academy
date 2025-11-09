@@ -18,6 +18,8 @@ bp = Blueprint('attendance', __name__)
 @teacher_required
 def attendance_hub():
     """Main attendance hub for teachers."""
+    from datetime import date
+    
     # Get teacher object or None for administrators
     teacher = get_teacher_or_admin()
     
@@ -30,7 +32,31 @@ def attendance_hub():
         else:
             classes = Class.query.filter_by(teacher_id=teacher.id).all()
     
-    return render_template('shared/attendance_hub.html', classes=classes, teacher=teacher)
+    # Check attendance status for each class
+    today = date.today()
+    completed_today = 0
+    pending_count = 0
+    
+    for class_obj in classes:
+        # Check if attendance was taken today for this class
+        attendance_today = Attendance.query.filter_by(
+            class_id=class_obj.id,
+            date=today
+        ).first()
+        
+        class_obj.attendance_taken_today = attendance_today is not None
+        
+        if attendance_today:
+            completed_today += 1
+        else:
+            pending_count += 1
+    
+    return render_template('shared/attendance_hub.html', 
+                         classes=classes, 
+                         teacher=teacher,
+                         completed_today_count=completed_today,
+                         pending_classes_count=pending_count,
+                         total_classes_count=len(classes))
 
 @bp.route('/attendance/take/<int:class_id>', methods=['GET', 'POST'])
 @login_required

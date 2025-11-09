@@ -18,19 +18,8 @@ bp = Blueprint('communications', __name__)
 @teacher_required
 def communications_hub():
     """Main communications hub for teachers."""
-    # Get teacher object or None for administrators
-    teacher = get_teacher_or_admin()
-    
-    # Get classes for the current teacher/admin
-    if is_admin():
-        classes = Class.query.all()
-    else:
-        if teacher is None:
-            classes = []
-        else:
-            classes = Class.query.filter_by(teacher_id=teacher.id).all()
-    
-    return render_template('teachers/teacher_communications_hub.html', classes=classes)
+    flash("Communications features are currently under development. Check back soon!", "info")
+    return redirect(url_for('teacher.dashboard.teacher_dashboard'))
 
 @bp.route('/feedback360/class/<int:class_id>')
 @login_required

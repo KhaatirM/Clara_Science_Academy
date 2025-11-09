@@ -96,6 +96,12 @@
                             <a href="{{ url_for('teacher.assignments.view_assignment', assignment_id=assignment.id) }}" class="btn-view-assignment">
                                 <i class="bi bi-eye me-1"></i>View
                             </a>
+                            <button class="btn-send-reminder" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#reminderModal{{ assignment.id }}"
+                                    type="button">
+                                <i class="bi bi-send me-1"></i>Send Reminder
+                            </button>
                         </div>
                     </div>
                     <div class="progress-section">
@@ -139,6 +145,12 @@
                             <a href="{{ url_for('teacher.assignments.view_assignment', assignment_id=assignment.id) }}" class="btn-view-assignment">
                                 <i class="bi bi-eye me-1"></i>View
                             </a>
+                            <button class="btn-send-reminder" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#reminderModal{{ assignment.id }}"
+                                    type="button">
+                                <i class="bi bi-send me-1"></i>Send Reminder
+                            </button>
                         </div>
                     </div>
                     <div class="progress-section">
@@ -182,6 +194,12 @@
                             <a href="{{ url_for('teacher.assignments.view_assignment', assignment_id=assignment.id) }}" class="btn-view-assignment">
                                 <i class="bi bi-eye me-1"></i>View
                             </a>
+                            <button class="btn-send-reminder" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#reminderModal{{ assignment.id }}"
+                                    type="button">
+                                <i class="bi bi-send me-1"></i>Send Reminder
+                            </button>
                         </div>
                     </div>
                     <div class="progress-section">
@@ -225,6 +243,12 @@
                             <a href="{{ url_for('teacher.assignments.view_assignment', assignment_id=assignment.id) }}" class="btn-view-assignment">
                                 <i class="bi bi-eye me-1"></i>View
                             </a>
+                            <button class="btn-send-reminder" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#reminderModal{{ assignment.id }}"
+                                    type="button">
+                                <i class="bi bi-send me-1"></i>Send Reminder
+                            </button>
                         </div>
                     </div>
                     <div class="progress-section">
@@ -268,6 +292,12 @@
                             <a href="{{ url_for('teacher.assignments.view_assignment', assignment_id=assignment.id) }}" class="btn-view-assignment">
                                 <i class="bi bi-eye me-1"></i>View
                             </a>
+                            <button class="btn-send-reminder" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#reminderModal{{ assignment.id }}"
+                                    type="button">
+                                <i class="bi bi-send me-1"></i>Send Reminder
+                            </button>
                         </div>
                     </div>
                     <div class="progress-section">
@@ -300,6 +330,123 @@
     </div>
     {% endif %}
 </div>
+
+<!-- Reminder Modals -->
+{% for assignment in overdue + today + this_week + next_week + later %}
+<div class="modal fade" id="reminderModal{{ assignment.id }}" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content modal-modern">
+            <div class="modal-header-reminder">
+                <div class="modal-icon-reminder">
+                    <i class="bi bi-send-fill"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <h5 class="modal-title-reminder">Send Deadline Reminder</h5>
+                    <p class="modal-subtitle-reminder">{{ assignment.title }}</p>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('teacher.dashboard.send_reminder', assignment_id=assignment.id) }}">
+                <div class="modal-body modal-body-enhanced">
+                    <div class="alert-modern alert-reminder">
+                        <div class="alert-icon">
+                            <i class="bi bi-info-circle"></i>
+                        </div>
+                        <div>
+                            <div class="alert-title">Assignment Details</div>
+                            <p class="alert-text">
+                                <strong>Due:</strong> {{ assignment.due_date.strftime('%b %d, %Y at %I:%M %p') }}<br>
+                                <strong>Class:</strong> {{ assignment.class_info.class_name }}<br>
+                                <strong>Submissions:</strong> {{ assignment.submission_count }} / {{ assignment.total_students }}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="reminder-options-section">
+                        <label class="section-label">
+                            <i class="bi bi-people me-2"></i>Send Reminder To
+                        </label>
+                        
+                        <div class="option-card option-card-active" onclick="selectReminderOption('all', {{ assignment.id }})">
+                            <input class="form-check-input" type="radio" name="reminder_type" id="reminderAll{{ assignment.id }}" value="all" checked>
+                            <label class="option-card-label" for="reminderAll{{ assignment.id }}">
+                                <div class="option-icon bg-primary">
+                                    <i class="bi bi-people-fill"></i>
+                                </div>
+                                <div class="option-content">
+                                    <div class="option-title">All Students in Class</div>
+                                    <div class="option-description">Send reminder to all {{ assignment.total_students }} enrolled students</div>
+                                </div>
+                            </label>
+                        </div>
+                        
+                        <div class="option-card" onclick="selectReminderOption('selected', {{ assignment.id }})">
+                            <input class="form-check-input" type="radio" name="reminder_type" id="reminderSelect{{ assignment.id }}" value="selected">
+                            <label class="option-card-label" for="reminderSelect{{ assignment.id }}">
+                                <div class="option-icon bg-info">
+                                    <i class="bi bi-person-check-fill"></i>
+                                </div>
+                                <div class="option-content">
+                                    <div class="option-title">Selected Students Only</div>
+                                    <div class="option-description">Choose specific students who need a reminder</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div id="studentSelectionDiv{{ assignment.id }}" class="student-selection-section" style="display: none;">
+                        <div class="selection-header">
+                            <i class="bi bi-people me-2"></i>Select Students
+                        </div>
+                        
+                        <div class="select-all-card">
+                            <input class="form-check-input" type="checkbox" id="selectAllReminder{{ assignment.id }}" onclick="toggleAllReminderStudents({{ assignment.id }}, this)">
+                            <label class="select-all-label" for="selectAllReminder{{ assignment.id }}">
+                                <i class="bi bi-check-all me-2"></i>Select All Students
+                            </label>
+                        </div>
+                        
+                        <div class="students-grid">
+                            {% set enrollments = assignment.class_info.enrollments %}
+                            {% for enrollment in enrollments %}
+                            {% if enrollment.is_active and enrollment.student %}
+                            <div class="student-select-card">
+                                <input class="form-check-input reminder-student-checkbox-{{ assignment.id }}" type="checkbox" name="student_ids" value="{{ enrollment.student.id }}" id="reminderstudent{{ assignment.id }}_{{ enrollment.student.id }}">
+                                <label class="student-select-label" for="reminderstudent{{ assignment.id }}_{{ enrollment.student.id }}">
+                                    <div class="student-avatar-mini">
+                                        {{ enrollment.student.first_name[0] }}{{ enrollment.student.last_name[0] }}
+                                    </div>
+                                    <span>{{ enrollment.student.first_name }} {{ enrollment.student.last_name }}</span>
+                                </label>
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <div class="message-section">
+                        <label for="custom_message{{ assignment.id }}" class="section-label">
+                            <i class="bi bi-chat-text me-2"></i>Custom Message <span class="text-muted">(Optional)</span>
+                        </label>
+                        <textarea class="form-control form-control-modern" id="custom_message{{ assignment.id }}" name="custom_message" rows="3" placeholder="Add a personal message or leave blank for default reminder..."></textarea>
+                        <small class="text-muted">
+                            Default: "Don't forget! Assignment '{{ assignment.title }}' is due on {{ assignment.due_date.strftime('%b %d, %Y') }}."
+                        </small>
+                    </div>
+                </div>
+                <div class="modal-footer modal-footer-enhanced">
+                    <button type="button" class="btn btn-cancel" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-2"></i>Cancel
+                    </button>
+                    <button type="submit" class="btn btn-reminder">
+                        <i class="bi bi-send-fill me-2"></i>Send Reminder
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
 
 <style>
 /* Animations */
@@ -536,6 +683,12 @@
 .success-fill { background: linear-gradient(90deg, #22c55e 0%, #16a34a 100%); }
 
 /* Buttons */
+.assignment-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
 .btn-view-assignment {
     padding: 0.5rem 1rem;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -553,6 +706,26 @@
 .btn-view-assignment:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+    color: white;
+}
+
+.btn-send-reminder {
+    padding: 0.5rem 1rem;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.btn-send-reminder:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.3);
     color: white;
 }
 
@@ -597,6 +770,361 @@
     color: white;
 }
 
+/* ===== MODAL STYLING ===== */
+.modal-modern {
+    border: none;
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.modal-dialog-centered {
+    animation: slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(50px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.modal-header-reminder {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    padding: 2rem;
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.modal-icon-reminder {
+    width: 60px;
+    height: 60px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    color: white;
+    backdrop-filter: blur(10px);
+    flex-shrink: 0;
+}
+
+.modal-title-reminder {
+    color: white;
+    font-weight: 700;
+    font-size: 1.5rem;
+    margin: 0;
+}
+
+.modal-subtitle-reminder {
+    color: rgba(255, 255, 255, 0.9);
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.modal-body-enhanced {
+    padding: 2rem;
+    background: #f8f9fa;
+}
+
+.alert-modern {
+    display: flex;
+    gap: 1rem;
+    padding: 1.25rem;
+    border-radius: 16px;
+    margin-bottom: 1.5rem;
+    border: none;
+}
+
+.alert-reminder {
+    background: linear-gradient(135deg, #f0f9ff 0%, #dbeafe 100%);
+    border-left: 4px solid #3b82f6;
+}
+
+.alert-icon {
+    width: 40px;
+    height: 40px;
+    background: white;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+    color: #3b82f6;
+}
+
+.alert-title {
+    font-weight: 700;
+    color: #2d3748;
+    margin-bottom: 0.25rem;
+}
+
+.alert-text {
+    margin: 0;
+    color: #4a5568;
+    font-size: 0.9rem;
+}
+
+.reminder-options-section, .message-section {
+    margin-bottom: 1.5rem;
+}
+
+.option-card {
+    background: white;
+    border: 3px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative;
+}
+
+.option-card:hover {
+    border-color: #cbd5e0;
+    transform: translateX(5px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.option-card-active {
+    border-color: #3b82f6;
+    background: linear-gradient(135deg, #f0f9ff 0%, #dbeafe 100%);
+    box-shadow: 0 4px 20px rgba(59, 130, 246, 0.2);
+}
+
+.option-card .form-check-input {
+    position: absolute;
+    opacity: 0;
+}
+
+.option-card-label {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 0;
+    cursor: pointer;
+    width: 100%;
+}
+
+.option-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    color: white;
+    flex-shrink: 0;
+}
+
+.option-content {
+    flex-grow: 1;
+}
+
+.option-title {
+    font-weight: 700;
+    color: #2d3748;
+    font-size: 1.05rem;
+    margin-bottom: 0.25rem;
+}
+
+.option-description {
+    color: #718096;
+    font-size: 0.875rem;
+}
+
+.section-label {
+    font-weight: 700;
+    color: #2d3748;
+    font-size: 1.05rem;
+    margin-bottom: 1rem;
+    display: block;
+}
+
+.student-selection-section {
+    margin-bottom: 1.5rem;
+    animation: slideDown 0.4s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        max-height: 0;
+    }
+    to {
+        opacity: 1;
+        max-height: 1000px;
+    }
+}
+
+.selection-header {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    padding: 1rem 1.5rem;
+    border-radius: 12px 12px 0 0;
+    font-weight: 700;
+    font-size: 1.05rem;
+}
+
+.select-all-card {
+    background: #f0f9ff;
+    padding: 1rem 1.5rem;
+    border: 2px solid #e2e8f0;
+    border-top: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.select-all-label {
+    font-weight: 600;
+    color: #4a5568;
+    margin: 0;
+    cursor: pointer;
+    flex-grow: 1;
+}
+
+.students-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.75rem;
+    padding: 1rem;
+    background: white;
+    border: 2px solid #e2e8f0;
+    border-top: none;
+    border-radius: 0 0 12px 12px;
+    max-height: 350px;
+    overflow-y: auto;
+}
+
+.student-select-card {
+    background: #f8fafc;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 0.75rem;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.student-select-card:hover {
+    border-color: #3b82f6;
+    background: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.student-select-card:has(input:checked) {
+    border-color: #3b82f6;
+    background: linear-gradient(135deg, #f0f9ff 0%, #dbeafe 100%);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+.student-select-label {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0;
+    cursor: pointer;
+    font-weight: 500;
+    color: #2d3748;
+}
+
+.student-avatar-mini {
+    width: 35px;
+    height: 35px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+}
+
+.student-select-card input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+}
+
+.form-control-modern {
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.form-control-modern:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+.modal-footer-enhanced {
+    padding: 1.5rem 2rem;
+    background: white;
+    border: none;
+    gap: 1rem;
+}
+
+.btn-cancel {
+    background: #f1f5f9;
+    color: #475569;
+    border: 2px solid #e2e8f0;
+    padding: 0.75rem 1.5rem;
+    border-radius: 12px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-cancel:hover {
+    background: #e2e8f0;
+    border-color: #cbd5e0;
+    color: #334155;
+    transform: translateY(-2px);
+}
+
+.btn-reminder {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 12px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+}
+
+.btn-reminder:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+    color: white;
+}
+
+.students-grid::-webkit-scrollbar {
+    width: 8px;
+}
+
+.students-grid::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+}
+
+.students-grid::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    border-radius: 4px;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .assignment-header-row {
@@ -606,9 +1134,10 @@
     
     .assignment-actions {
         width: 100%;
+        flex-direction: column;
     }
     
-    .btn-view-assignment {
+    .btn-view-assignment, .btn-send-reminder {
         width: 100%;
         justify-content: center;
     }
@@ -616,7 +1145,50 @@
     .stat-value-deadline {
         font-size: 1.5rem;
     }
+    
+    .modal-dialog {
+        margin: 1rem;
+    }
+    
+    .modal-header-reminder {
+        padding: 1.5rem;
+    }
+    
+    .modal-body-enhanced {
+        padding: 1.5rem;
+    }
+    
+    .students-grid {
+        grid-template-columns: 1fr;
+    }
 }
 </style>
+
+<script>
+function selectReminderOption(type, assignmentId) {
+    const studentDiv = document.getElementById('studentSelectionDiv' + assignmentId);
+    
+    if (type === 'all') {
+        document.getElementById('reminderAll' + assignmentId).checked = true;
+        studentDiv.style.display = 'none';
+    } else {
+        document.getElementById('reminderSelect' + assignmentId).checked = true;
+        studentDiv.style.display = 'block';
+    }
+    
+    // Update visual active state
+    const parentCard = event.currentTarget;
+    const allCards = parentCard.parentElement.querySelectorAll('.option-card');
+    allCards.forEach(card => card.classList.remove('option-card-active'));
+    parentCard.classList.add('option-card-active');
+}
+
+function toggleAllReminderStudents(assignmentId, source) {
+    const checkboxes = document.querySelectorAll('.reminder-student-checkbox-' + assignmentId);
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = source.checked;
+    });
+}
+</script>
 {% endblock %}
 

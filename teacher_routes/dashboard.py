@@ -392,15 +392,40 @@ def deadline_reminders():
         if assignment.due_date:
             days_until = (assignment.due_date - now).days
             
-            # Get submission count
-            submission_count = Submission.query.filter_by(assignment_id=assignment.id).count()
+            # Get enrolled students
+            enrolled_students = Enrollment.query.filter_by(class_id=assignment.class_id, is_active=True).all()
+            enrolled_student_ids = [e.student_id for e in enrolled_students]
             
-            # Get enrolled student count
-            enrollments = Enrollment.query.filter_by(class_id=assignment.class_id, is_active=True).count()
+            # Count submissions (students who submitted OR were graded)
+            submissions = Submission.query.filter_by(assignment_id=assignment.id).all()
+            graded_students = Grade.query.filter_by(assignment_id=assignment.id).all()
             
-            assignment.submission_count = submission_count
-            assignment.total_students = enrollments
-            assignment.completion_rate = (submission_count / enrollments * 100) if enrollments > 0 else 0
+            # Get students who are voided for this assignment
+            voided_student_ids = set()
+            for grade in graded_students:
+                if grade.grade_data:
+                    try:
+                        grade_data = json.loads(grade.grade_data)
+                        if grade_data.get('is_voided'):
+                            voided_student_ids.add(grade.student_id)
+                    except:
+                        pass
+            
+            # Count: students with submissions OR grades (excluding voided)
+            submitted_student_ids = set()
+            for sub in submissions:
+                if sub.student_id not in voided_student_ids:
+                    submitted_student_ids.add(sub.student_id)
+            for grade in graded_students:
+                if grade.student_id not in voided_student_ids:
+                    submitted_student_ids.add(grade.student_id)
+            
+            # Total students minus voided students
+            total_counted = len([sid for sid in enrolled_student_ids if sid not in voided_student_ids])
+            
+            assignment.submission_count = len(submitted_student_ids)
+            assignment.total_students = total_counted
+            assignment.completion_rate = (len(submitted_student_ids) / total_counted * 100) if total_counted > 0 else 0
             assignment.days_until = days_until
             
             if days_until < 0:
@@ -421,6 +446,54 @@ def deadline_reminders():
                          next_week=next_week,
                          later=later,
                          classes=classes)
+
+@bp.route('/send-reminder/<int:assignment_id>', methods=['POST'])
+@login_required
+@teacher_required
+def send_reminder(assignment_id):
+    """Send deadline reminder notification to students"""
+    assignment = Assignment.query.get_or_404(assignment_id)
+    
+    # Check authorization
+    if not is_authorized_for_class(assignment.class_info):
+        flash("You are not authorized to send reminders for this assignment.", "danger")
+        return redirect(url_for('teacher.dashboard.deadline_reminders'))
+    
+    reminder_type = request.form.get('reminder_type')
+    student_ids = request.form.getlist('student_ids')
+    custom_message = request.form.get('custom_message', '').strip()
+    
+    try:
+        if reminder_type == 'all':
+            # Send to all enrolled students
+            enrollments = Enrollment.query.filter_by(class_id=assignment.class_id, is_active=True).all()
+            student_ids = [str(e.student_id) for e in enrollments if e.student_id]
+        
+        if not student_ids:
+            flash("No students selected to send reminder to.", "warning")
+            return redirect(url_for('teacher.dashboard.deadline_reminders'))
+        
+        # Create notifications for each student
+        for student_id in student_ids:
+            notification = Notification(
+                user_id=int(student_id),
+                title=f"Reminder: {assignment.title}",
+                message=custom_message or f"Don't forget! Assignment '{assignment.title}' is due on {assignment.due_date.strftime('%b %d, %Y at %I:%M %p')}.",
+                notification_type='deadline_reminder',
+                is_read=False,
+                created_at=datetime.now()
+            )
+            db.session.add(notification)
+        
+        db.session.commit()
+        flash(f"Reminder sent to {len(student_ids)} student(s) successfully!", "success")
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error sending reminder: {str(e)}")
+        flash(f"Error sending reminder: {str(e)}", "danger")
+    
+    return redirect(url_for('teacher.dashboard.deadline_reminders'))
 
 @bp.route('/assignments')
 @login_required

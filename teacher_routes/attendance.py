@@ -120,12 +120,18 @@ def take_attendance(class_id):
         'present_percentage': present_percentage
     }
     
+    # Create dictionaries for existing records
+    existing_records = {a.student_id: a for a in today_attendance}
+    school_day_records = {}  # Placeholder for school-wide attendance if needed
+    
     return render_template('shared/take_attendance.html', 
                          class_item=class_obj,
                          students=students,
                          recent_attendance=recent_attendance,
                          attendance_stats=attendance_stats,
-                         attendance_date_str=today.strftime('%Y-%m-%d'))
+                         attendance_date_str=today.strftime('%Y-%m-%d'),
+                         existing_records=existing_records,
+                         school_day_records=school_day_records)
 
 @bp.route('/mark-all-present/<int:class_id>', methods=['POST'])
 @login_required

@@ -39,7 +39,7 @@
                     <h6 class="card-subtitle mb-3 text-muted">
                         <i class="bi bi-calendar-date me-2"></i>Select Date
                     </h6>
-                    <form method="GET" action="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.take_class_attendance', class_id=class_item.id) }}{% else %}{{ url_for('teacher.take_attendance', class_id=class_item.id) }}{% endif %}">
+                    <form method="GET" action="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.take_class_attendance', class_id=class_item.id) }}{% else %}{{ url_for('teacher.attendance.take_attendance', class_id=class_item.id) }}{% endif %}">
                         <div class="input-group">
                             <input type="date" class="form-control" id="date" name="date" value="{{ attendance_date_str }}" required>
                             <button type="submit" class="btn btn-primary">
@@ -111,7 +111,7 @@
     </div>
 
     <!-- Attendance Form -->
-    <form method="POST" action="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.take_class_attendance', class_id=class_item.id) }}{% else %}{{ url_for('teacher.take_attendance', class_id=class_item.id) }}{% endif %}" id="attendanceForm">
+    <form method="POST" action="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.take_class_attendance', class_id=class_item.id) }}{% else %}{{ url_for('teacher.attendance.take_attendance', class_id=class_item.id) }}{% endif %}" id="attendanceForm">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <input type="hidden" name="attendance_date" value="{{ attendance_date_str }}">
                 

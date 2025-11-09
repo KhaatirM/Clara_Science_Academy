@@ -53,7 +53,7 @@ def take_attendance(class_id):
         date_str = request.form.get('date')
         if not date_str:
             flash("Please select a date.", "danger")
-            return redirect(url_for('teacher.take_attendance', class_id=class_id))
+            return redirect(url_for('teacher.attendance.take_attendance', class_id=class_id))
         
         try:
             date = datetime.strptime(date_str, '%Y-%m-%d').date()
@@ -79,19 +79,19 @@ def take_attendance(class_id):
                         student_id=student.id,
                         date=date,
                         status=status,
-                        taken_by=current_user.id
+                        teacher_id=current_user.teacher_staff_id
                     )
                     db.session.add(new_attendance)
             
             db.session.commit()
             flash('Attendance recorded successfully!', 'success')
-            return redirect(url_for('teacher.take_attendance', class_id=class_id))
+            return redirect(url_for('teacher.attendance.take_attendance', class_id=class_id))
             
         except Exception as e:
             db.session.rollback()
             print(f"Error recording attendance: {str(e)}")
             flash(f'Error recording attendance: {str(e)}', 'danger')
-            return redirect(url_for('teacher.take_attendance', class_id=class_id))
+            return redirect(url_for('teacher.attendance.take_attendance', class_id=class_id))
     
     # GET request - show attendance form
     # Get recent attendance records for context
@@ -152,7 +152,7 @@ def mark_all_present(class_id):
     date_str = request.form.get('date')
     if not date_str:
         flash("Please select a date.", "danger")
-        return redirect(url_for('teacher.take_attendance', class_id=class_id))
+        return redirect(url_for('teacher.attendance.take_attendance', class_id=class_id))
     
     try:
         date = datetime.strptime(date_str, '%Y-%m-%d').date()
@@ -180,19 +180,19 @@ def mark_all_present(class_id):
                     student_id=student.id,
                     date=date,
                     status='present',
-                    taken_by=current_user.id
+                    teacher_id=current_user.teacher_staff_id
                 )
                 db.session.add(new_attendance)
         
         db.session.commit()
         flash('All students marked as present!', 'success')
-        return redirect(url_for('teacher.take_attendance', class_id=class_id))
+        return redirect(url_for('teacher.attendance.take_attendance', class_id=class_id))
         
     except Exception as e:
         db.session.rollback()
         print(f"Error marking all present: {str(e)}")
         flash(f'Error marking all present: {str(e)}', 'danger')
-        return redirect(url_for('teacher.take_attendance', class_id=class_id))
+        return redirect(url_for('teacher.attendance.take_attendance', class_id=class_id))
 
 @bp.route('/quick-attendance/<int:class_id>', methods=['POST'])
 @login_required
@@ -209,7 +209,7 @@ def quick_attendance(class_id):
     date_str = request.form.get('date')
     if not date_str:
         flash("Please select a date.", "danger")
-        return redirect(url_for('teacher.take_attendance', class_id=class_id))
+        return redirect(url_for('teacher.attendance.take_attendance', class_id=class_id))
     
     try:
         date = datetime.strptime(date_str, '%Y-%m-%d').date()
@@ -239,19 +239,19 @@ def quick_attendance(class_id):
                     student_id=student.id,
                     date=date,
                     status=status,
-                    taken_by=current_user.id
+                    teacher_id=current_user.teacher_staff_id
                 )
                 db.session.add(new_attendance)
         
         db.session.commit()
         flash('Quick attendance recorded successfully!', 'success')
-        return redirect(url_for('teacher.take_attendance', class_id=class_id))
+        return redirect(url_for('teacher.attendance.take_attendance', class_id=class_id))
         
     except Exception as e:
         db.session.rollback()
         print(f"Error recording quick attendance: {str(e)}")
         flash(f'Error recording quick attendance: {str(e)}', 'danger')
-        return redirect(url_for('teacher.take_attendance', class_id=class_id))
+        return redirect(url_for('teacher.attendance.take_attendance', class_id=class_id))
 
 @bp.route('/attendance/download-template/<int:class_id>')
 @login_required
@@ -474,7 +474,7 @@ def upload_attendance_csv(class_id):
         elif errors:
             flash(f'{len(errors)} errors occurred during upload. First 10 shown above.', 'warning')
         
-        return redirect(url_for('teacher.take_attendance', class_id=class_id))
+        return redirect(url_for('teacher.attendance.take_attendance', class_id=class_id))
         
     except Exception as e:
         db.session.rollback()

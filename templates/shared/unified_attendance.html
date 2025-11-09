@@ -307,7 +307,7 @@
                                     </button>
                                 </div>
                             {% else %}
-                                <a href="{{ url_for('teacher.take_attendance', class_id=class_item.id) }}?date={{ today_date }}" 
+                                <a href="{{ url_for('teacher.attendance.take_attendance', class_id=class_item.id) }}?date={{ today_date }}" 
                                    class="btn btn-unified-class-action w-100 mb-2">
                                     <i class="bi bi-clipboard-check me-1"></i>Take Attendance
                                 </a>

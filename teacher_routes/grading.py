@@ -98,6 +98,7 @@ def grade_assignment(assignment_id):
     
     return render_template('teachers/teacher_grade_assignment.html', 
                          assignment=assignment,
+                         class_obj=assignment.class_info,
                          students=students,
                          grades=grades_dict,
                          submissions=submissions_dict)

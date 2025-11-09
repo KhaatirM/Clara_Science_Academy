@@ -330,26 +330,26 @@ def change_assignment_status(assignment_id):
     # Check authorization for this assignment's class
     if not is_authorized_for_class(assignment.class_info):
         flash("You are not authorized to change the status of this assignment.", "danger")
-        return redirect(url_for('teacher.my_assignments'))
+        return redirect(url_for('teacher.dashboard.my_assignments'))
     
     new_status = request.form.get('status')
     
     if new_status not in ['Active', 'Inactive', 'Voided']:
         flash("Invalid status.", "danger")
-        return redirect(url_for('teacher.my_assignments'))
+        return redirect(url_for('teacher.dashboard.my_assignments'))
     
     try:
         assignment.status = new_status
         db.session.commit()
         
         flash(f'Assignment status changed to {new_status}.', 'success')
-        return redirect(url_for('teacher.view_assignment', assignment_id=assignment_id))
+        return redirect(url_for('teacher.assignments.view_assignment', assignment_id=assignment_id))
         
     except Exception as e:
         db.session.rollback()
         print(f"Error changing assignment status: {str(e)}")
         flash(f'Error changing assignment status: {str(e)}', 'danger')
-        return redirect(url_for('teacher.my_assignments'))
+        return redirect(url_for('teacher.dashboard.my_assignments'))
 
 @bp.route('/grant-extensions', methods=['POST'])
 @login_required

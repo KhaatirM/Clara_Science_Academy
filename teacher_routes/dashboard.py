@@ -12,6 +12,7 @@ from models import (
 )
 from sqlalchemy import or_, and_
 import json
+import calendar as cal
 from datetime import datetime, timedelta
 from google_classroom_service import get_google_service
 from googleapiclient.errors import HttpError
@@ -451,6 +452,19 @@ def calendar():
     # Get teacher object or None for administrators
     teacher = get_teacher_or_admin()
     
+    # Get month and year from request or use current
+    month = request.args.get('month', datetime.now().month, type=int)
+    year = request.args.get('year', datetime.now().year, type=int)
+    
+    # Calculate previous and next month
+    current_date = datetime(year, month, 1)
+    prev_month = (current_date - timedelta(days=1)).replace(day=1)
+    next_month = (current_date + timedelta(days=32)).replace(day=1)
+    
+    # Create calendar data
+    cal_obj = cal.monthcalendar(year, month)
+    month_name = datetime(year, month, 1).strftime('%B')
+    
     # Get classes for the current teacher/admin
     if is_admin():
         classes = Class.query.all()
@@ -464,7 +478,41 @@ def calendar():
     class_ids = [c.id for c in classes]
     assignments = Assignment.query.filter(Assignment.class_id.in_(class_ids)).all()
     
+    # Simple calendar data structure
+    calendar_data = {
+        'month_name': month_name,
+        'year': year,
+        'weekdays': ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        'weeks': []
+    }
+    
+    # Convert calendar to our format
+    for week in cal_obj:
+        week_data = []
+        for day in week:
+            if day == 0:
+                week_data.append({'day_num': '', 'is_current_month': False, 'is_today': False, 'events': []})
+            else:
+                is_today = (day == datetime.now().day and month == datetime.now().month and year == datetime.now().year)
+                
+                # Get assignments for this day
+                day_events = []
+                for assignment in assignments:
+                    if assignment.due_date and assignment.due_date.day == day and assignment.due_date.month == month and assignment.due_date.year == year:
+                        day_events.append({
+                            'title': assignment.title,
+                            'class_name': assignment.class_obj.name if assignment.class_obj else 'Unknown'
+                        })
+                
+                week_data.append({'day_num': day, 'is_current_month': True, 'is_today': is_today, 'events': day_events})
+        calendar_data['weeks'].append(week_data)
+    
     return render_template('management/role_calendar.html', 
+                         calendar_data=calendar_data,
+                         prev_month=prev_month,
+                         next_month=next_month,
+                         month_name=month_name,
+                         year=year,
                          assignments=assignments, 
                          classes=classes, 
                          teacher=teacher)

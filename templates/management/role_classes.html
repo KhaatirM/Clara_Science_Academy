@@ -336,7 +336,7 @@
                             </div>
                             <div>
                                 <small class="text-muted d-block">Students</small>
-                                <strong>{{ class.students|length if class.students else 0 }} Students</strong>
+                                <strong>{{ class.active_student_count if class.active_student_count is defined else 0 }} Students</strong>
                             </div>
                         </div>
                         
@@ -392,7 +392,7 @@
                                 <a href="{{ url_for('teacher.attendance.take_attendance', class_id=class.id) }}" class="action-btn btn-attendance flex-fill">
                                     <i class="bi bi-calendar-check me-1"></i>Attendance
                                 </a>
-                                <a href="{{ url_for('teacher.assignments.assignment_type_selector') }}" class="action-btn btn-assignment flex-fill">
+                                <a href="{{ url_for('teacher.assignments.assignment_type_selector') }}?class_id={{ class.id }}" class="action-btn btn-assignment flex-fill">
                                     <i class="bi bi-plus-circle-fill me-1"></i>Assignment
                                 </a>
                             </div>

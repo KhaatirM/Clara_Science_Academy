@@ -354,6 +354,10 @@ def my_classes():
         else:
             classes = Class.query.filter_by(teacher_id=teacher.id).all()
     
+    # Calculate active enrollment count for each class
+    for class_obj in classes:
+        class_obj.active_student_count = len([e for e in class_obj.enrollments if e.is_active])
+    
     return render_template('management/role_classes.html', classes=classes, teacher=teacher)
 
 @bp.route('/assignments')

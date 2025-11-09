@@ -148,17 +148,17 @@
             </h6>
             <div class="row g-2">
               <div class="col-6 col-md-4">
-                <a href="{{ url_for('teacher.assignments.class_group_assignments', class_id=class_item.id) }}" class="btn-teacher-class-action">
+                <a href="{{ url_for('teacher.groups.groups_hub') }}" class="btn-teacher-class-action">
                   <i class="bi bi-journal-plus me-1"></i>Group Assignments
                 </a>
               </div>
               <div class="col-6 col-md-4">
-                <a href="{{ url_for('teacher.assignments.class_deadline_reminders', class_id=class_item.id) }}" class="btn-teacher-class-action">
+                <a href="{{ url_for('teacher.dashboard.my_assignments') }}" class="btn-teacher-class-action">
                   <i class="bi bi-bell me-1"></i>Deadline Reminders
                 </a>
               </div>
               <div class="col-6 col-md-4">
-                <a href="{{ url_for('teacher.grading.class_reports', class_id=class_item.id) }}" class="btn-teacher-class-action">
+                <a href="{{ url_for('teacher.analytics.analytics_hub') }}" class="btn-teacher-class-action">
                   <i class="bi bi-graph-up me-1"></i>Reports & Analytics
                 </a>
               </div>
@@ -172,17 +172,17 @@
             </h6>
             <div class="row g-2">
               <div class="col-6 col-md-4">
-                <a href="{{ url_for('teacher.assignments.class_360_feedback', class_id=class_item.id) }}" class="btn-teacher-class-action">
+                <a href="{{ url_for('teacher.communications.communications_hub') }}" class="btn-teacher-class-action">
                   <i class="bi bi-arrow-repeat me-1"></i>360° Feedback
                 </a>
               </div>
               <div class="col-6 col-md-4">
-                <a href="{{ url_for('teacher.assignments.class_reflection_journals', class_id=class_item.id) }}" class="btn-teacher-class-action">
+                <a href="{{ url_for('teacher.dashboard.my_assignments') }}" class="btn-teacher-class-action">
                   <i class="bi bi-journal-text me-1"></i>Reflection Journals
                 </a>
               </div>
               <div class="col-6 col-md-4">
-                <a href="{{ url_for('teacher.assignments.class_conflicts', class_id=class_item.id) }}" class="btn-teacher-class-action">
+                <a href="{{ url_for('teacher.communications.communications_hub') }}" class="btn-teacher-class-action">
                   <i class="bi bi-exclamation-triangle me-1"></i>Conflict Resolution
                 </a>
               </div>

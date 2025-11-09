@@ -270,7 +270,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         window.location.href = `{{ url_for('management.group_assignment_type_selector') }}`;
                     {% else %}
                         // For teachers, redirect to class selection for group assignments
-                        window.location.href = `{{ url_for('teacher.group_assignment_class_selector') }}`;
+                        window.location.href = `{{ url_for('teacher.assignments.group_assignment_class_selector') }}`;
                     {% endif %}
                 }
             });

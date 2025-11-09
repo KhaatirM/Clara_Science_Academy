@@ -214,6 +214,10 @@
                                             <i class="bi bi-check-circle-fill"></i>
                                         {% elif status == 'Late' %}
                                             <i class="bi bi-clock-fill"></i>
+                                        {% elif status == 'Excused Absence' %}
+                                            <i class="bi bi-file-medical-fill"></i>
+                                        {% elif status == 'Unexcused Absence' %}
+                                            <i class="bi bi-x-circle-fill"></i>
                                         {% elif status == 'Suspended' %}
                                             <i class="bi bi-ban"></i>
                                         {% else %}
@@ -683,8 +687,10 @@ function updateStats() {
     // More specific selectors for attendance status radio buttons
     const presentCount = document.querySelectorAll('input[name^="status_"][value="present"]:checked').length;
     const lateCount = document.querySelectorAll('input[name^="status_"][value="late"]:checked').length;
-    const absentCount = document.querySelectorAll('input[name^="status_"][value="absent"]:checked').length;
+    const excusedCount = document.querySelectorAll('input[name^="status_"][value="excused absence"]:checked').length;
+    const unexcusedCount = document.querySelectorAll('input[name^="status_"][value="unexcused absence"]:checked').length;
     const suspendedCount = document.querySelectorAll('input[name^="status_"][value="suspended"]:checked').length;
+    const absentCount = excusedCount + unexcusedCount;
     const markedCount = presentCount + lateCount + absentCount + suspendedCount;
     
     const attendanceRate = totalStudents > 0 ? Math.round((presentCount / totalStudents) * 100) : 0;

@@ -125,7 +125,7 @@ def take_attendance(class_id):
     school_day_records = {}  # Placeholder for school-wide attendance if needed
     
     # Define attendance status options
-    statuses = ['Present', 'Late', 'Absent', 'Suspended']
+    statuses = ['Present', 'Late', 'Excused Absence', 'Unexcused Absence', 'Suspended']
     
     return render_template('shared/take_attendance.html', 
                          class_item=class_obj,

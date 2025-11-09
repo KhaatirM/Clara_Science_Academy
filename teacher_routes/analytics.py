@@ -14,7 +14,8 @@ bp = Blueprint('analytics', __name__)
 @teacher_required
 def analytics_hub():
     """Main analytics hub for teachers."""
-    return render_template('teacher_analytics.html')
+    flash("Analytics page is being updated. Please check back later.", "info")
+    return redirect(url_for('teacher.dashboard.teacher_dashboard'))
 
 # Placeholder for analytics-related routes
 # This module will contain all analytics functionality

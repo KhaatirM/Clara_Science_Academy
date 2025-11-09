@@ -130,55 +130,13 @@ def my_grades():
             # Get grades for these assignments
             grades = Grade.query.filter(Grade.assignment_id.in_(assignment_ids)).order_by(Grade.graded_at.desc()).all()
     
-    return render_template('teacher_grades.html', grades=grades, teacher=teacher)
+    return render_template('teachers/teacher_grades.html', grades=grades, teacher=teacher)
 
 @bp.route('/student-grades')
 @login_required
 @teacher_required
 def student_grades():
     """Display student grades view for the current teacher's classes."""
-    # Get teacher object or None for administrators
-    teacher = get_teacher_or_admin()
-    
-    # Get classes for the current teacher/admin
-    if is_admin():
-        classes = Class.query.all()
-    else:
-        if teacher is None:
-            classes = []
-        else:
-            classes = Class.query.filter_by(teacher_id=teacher.id).all()
-    
-    # Get students for these classes
-    class_ids = [c.id for c in classes]
-    enrollments = Enrollment.query.filter(
-        Enrollment.class_id.in_(class_ids),
-        Enrollment.is_active == True
-    ).all()
-    
-    students = []
-    for enrollment in enrollments:
-        if enrollment.student not in students:
-            students.append(enrollment.student)
-    
-    # Get assignments for these classes
-    assignments = Assignment.query.filter(Assignment.class_id.in_(class_ids)).all()
-    
-    # Get grades for these assignments
-    assignment_ids = [a.id for a in assignments]
-    grades = Grade.query.filter(Grade.assignment_id.in_(assignment_ids)).all()
-    
-    # Organize grades by student and assignment
-    grades_by_student = {}
-    for grade in grades:
-        if grade.student_id not in grades_by_student:
-            grades_by_student[grade.student_id] = {}
-        grades_by_student[grade.student_id][grade.assignment_id] = grade
-    
-    return render_template('teacher_student_grades.html', 
-                         students=students,
-                         assignments=assignments,
-                         grades_by_student=grades_by_student,
-                         classes=classes,
-                         teacher=teacher)
+    flash("Student grades page is being updated. Please check back later.", "info")
+    return redirect(url_for('teacher.grading.grades'))
 

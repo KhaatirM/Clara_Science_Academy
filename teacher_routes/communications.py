@@ -15,7 +15,7 @@ bp = Blueprint('communications', __name__)
 @teacher_required
 def communications_hub():
     """Main communications hub for teachers."""
-    return render_template('teacher_communications.html')
+    return render_template('teachers/teacher_communications.html')
 
 # Placeholder for communication-related routes
 # This module will contain all communication functionality

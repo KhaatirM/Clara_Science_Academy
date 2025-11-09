@@ -20,7 +20,7 @@ def settings():
     # Check if teacher has connected their Google account
     user = User.query.get(current_user.id)
     google_connected = user.google_refresh_token is not None
-    return render_template('teacher_settings.html', google_connected=google_connected)
+    return render_template('teachers/teacher_settings.html', google_connected=google_connected)
 
 
 @bp.route('/google-account/connect')

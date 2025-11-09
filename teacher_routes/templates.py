@@ -14,7 +14,8 @@ bp = Blueprint('templates', __name__)
 @teacher_required
 def templates_hub():
     """Main templates hub for teachers."""
-    return render_template('teacher_templates.html')
+    flash("Templates page is being updated. Please check back later.", "info")
+    return redirect(url_for('teacher.dashboard.teacher_dashboard'))
 
 # Placeholder for template-related routes
 # This module will contain all template functionality

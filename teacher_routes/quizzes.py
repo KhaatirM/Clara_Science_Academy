@@ -155,7 +155,7 @@ def create_quiz_assignment():
         else:
             classes = Class.query.filter_by(teacher_id=teacher.id).all()
     
-    return render_template('create_quiz_assignment.html', classes=classes, teacher=teacher)
+    return render_template('shared/create_quiz_assignment.html', classes=classes, teacher=teacher)
 
 @bp.route('/assignment/create/discussion', methods=['GET', 'POST'])
 @login_required
@@ -227,5 +227,5 @@ def create_discussion_assignment():
         else:
             classes = Class.query.filter_by(teacher_id=teacher.id).all()
     
-    return render_template('create_discussion_assignment.html', classes=classes, teacher=teacher)
+    return render_template('shared/create_discussion_assignment.html', classes=classes, teacher=teacher)
 

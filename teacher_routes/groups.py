@@ -27,7 +27,8 @@ def groups_hub():
         else:
             classes = Class.query.filter_by(teacher_id=teacher.id).all()
     
-    return render_template('teacher_groups_hub.html', classes=classes, teacher=teacher)
+    flash("Groups page is being updated. Please check back later.", "info")
+    return redirect(url_for('teacher.dashboard.teacher_dashboard'))
 
 # Placeholder for group-related routes
 # This module will contain all group management functionality

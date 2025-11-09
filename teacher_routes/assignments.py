@@ -128,7 +128,7 @@ def add_assignment():
         else:
             classes = Class.query.filter_by(teacher_id=teacher.id).all()
     
-    return render_template('add_assignment.html', classes=classes, teacher=teacher)
+    return render_template('shared/add_assignment.html', classes=classes, teacher=teacher)
 
 @bp.route('/class/<int:class_id>/assignment/add', methods=['GET', 'POST'])
 @login_required
@@ -238,7 +238,7 @@ def view_assignment(assignment_id):
     # Get grades for this assignment
     grades = Grade.query.filter_by(assignment_id=assignment_id).all()
     
-    return render_template('view_assignment.html', 
+    return render_template('shared/view_assignment.html', 
                          assignment=assignment, 
                          submissions=submissions, 
                          grades=grades)
@@ -282,7 +282,7 @@ def edit_assignment(assignment_id):
             return redirect(url_for('teacher.edit_assignment', assignment_id=assignment_id))
     
     # GET request - show the edit form
-    return render_template('edit_assignment.html', assignment=assignment)
+    return render_template('shared/edit_assignment.html', assignment=assignment)
 
 @bp.route('/assignment/remove/<int:assignment_id>', methods=['POST'])
 @login_required

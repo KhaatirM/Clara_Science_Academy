@@ -424,7 +424,7 @@ function goBack() {
         {% if current_user.role in ['Director', 'School Administrator'] %}
             window.location.href = "{{ url_for('management.assignments_and_grades') }}";
         {% else %}
-            window.location.href = "{{ url_for('teacher.assignments_and_grades') }}";
+            window.location.href = "{{ url_for('teacher.dashboard.my_assignments') }}";
         {% endif %}
     }
 }

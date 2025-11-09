@@ -179,14 +179,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 {% if current_user.role in ['Director', 'School Administrator'] %}
                     window.location.href = `{{ url_for('management.create_quiz_assignment') }}`;
                 {% else %}
-                    window.location.href = `{{ url_for('teacher.create_quiz_assignment') }}`;
+                    window.location.href = `{{ url_for('teacher.quizzes.create_quiz_assignment') }}`;
                 {% endif %}
                 break;
             case 'discussion':
                 {% if current_user.role in ['Director', 'School Administrator'] %}
                     window.location.href = `{{ url_for('management.create_discussion_assignment') }}`;
                 {% else %}
-                    window.location.href = `{{ url_for('teacher.create_discussion_assignment') }}`;
+                    window.location.href = `{{ url_for('teacher.quizzes.create_discussion_assignment') }}`;
                 {% endif %}
                 break;
             default:

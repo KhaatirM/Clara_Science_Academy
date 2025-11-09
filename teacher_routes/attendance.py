@@ -101,7 +101,7 @@ def take_attendance(class_id):
     ).order_by(Attendance.date.desc()).all()
     
     return render_template('shared/take_attendance.html', 
-                         class_obj=class_obj,
+                         class_item=class_obj,
                          students=students,
                          recent_attendance=recent_attendance)
 

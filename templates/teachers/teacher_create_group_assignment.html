@@ -1,155 +1,171 @@
 {% extends "shared/dashboard_layout.html" %}
 
-{% block dashboard_content %}
-<div class="container-fluid px-2 px-md-4">
-  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
-    <h3 class="mb-2 mb-md-0"><i class="bi bi-plus-circle me-2"></i>Create Group Assignment</h3>
-    <a href="{{ url_for('management.admin_class_group_assignments', class_id=class_obj.id) if role_prefix else url_for('teacher.assignments.class_group_assignments', class_id=class_obj.id) }}" class="btn btn-outline-secondary btn-sm">
-      <i class="bi bi-arrow-left me-1"></i>Back to Group Assignments
-    </a>
-  </div>
+{% block title %}Create Group Assignment - {{ class_item.class_name }}{% endblock %}
 
-  <div class="row justify-content-center">
-    <div class="col-12 col-lg-8">
-      <div class="card shadow-sm">
-        <div class="card-header bg-primary text-white">
-          <h5 class="mb-0"><i class="bi bi-journal-plus me-2"></i>Assignment Details</h5>
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('teacher.dashboard.my_assignments') }}">Assignments</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('teacher.groups.group_assignment_select_class') }}">Select Class</a></li>
+                    <li class="breadcrumb-item active">Create Group Assignment</li>
+                </ol>
+            </nav>
+            <h2 class="mb-1"><i class="bi bi-journal-plus me-2"></i>Create Group Assignment</h2>
+            <p class="text-muted mb-0">{{ class_item.class_name }} - {{ class_item.subject }}</p>
         </div>
-        <div class="card-body">
-          <form method="POST" enctype="multipart/form-data">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-            <div class="row g-3">
-              <!-- Basic Information -->
-              <div class="col-12">
-                <h6 class="text-primary mb-3"><i class="bi bi-info-circle me-2"></i>Basic Information</h6>
-              </div>
-              
-              <div class="col-12">
-                <label for="title" class="form-label">Assignment Title <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" id="title" name="title" required 
-                       placeholder="Enter assignment title">
-              </div>
-
-              <div class="col-12">
-                <label for="description" class="form-label">Description</label>
-                <textarea class="form-control" id="description" name="description" rows="4" 
-                          placeholder="Provide detailed instructions for the assignment"></textarea>
-              </div>
-
-              <!-- Due Date and Academic Period -->
-              <div class="col-12">
-                <h6 class="text-primary mb-3 mt-4"><i class="bi bi-calendar me-2"></i>Due Date & Academic Period</h6>
-              </div>
-
-              <div class="col-12 col-md-6">
-                <label for="due_date" class="form-label">Due Date & Time <span class="text-danger">*</span></label>
-                <input type="datetime-local" class="form-control" id="due_date" name="due_date" required>
-              </div>
-
-              <div class="col-12 col-md-6">
-                <label for="quarter" class="form-label">Quarter <span class="text-danger">*</span></label>
-                <select class="form-select" id="quarter" name="quarter" required>
-                  <option value="">Select Quarter</option>
-                  <option value="Q1">Quarter 1</option>
-                  <option value="Q2">Quarter 2</option>
-                  <option value="Q3">Quarter 3</option>
-                  <option value="Q4">Quarter 4</option>
-                </select>
-              </div>
-
-              <div class="col-12 col-md-6">
-                <label for="semester" class="form-label">Semester</label>
-                <select class="form-select" id="semester" name="semester">
-                  <option value="">Select Semester (Optional)</option>
-                  <option value="S1">Semester 1</option>
-                  <option value="S2">Semester 2</option>
-                </select>
-              </div>
-
-              <div class="col-12 col-md-6">
-                <label for="academic_period_id" class="form-label">Academic Period</label>
-                <select class="form-select" id="academic_period_id" name="academic_period_id">
-                  <option value="">Select Academic Period (Optional)</option>
-                  {% for period in academic_periods %}
-                    <option value="{{ period.id }}">{{ period.name }} ({{ period.period_type }})</option>
-                  {% endfor %}
-                </select>
-              </div>
-
-              <!-- Group Settings -->
-              <div class="col-12">
-                <h6 class="text-primary mb-3 mt-4"><i class="bi bi-people me-2"></i>Group Settings</h6>
-              </div>
-
-              <div class="col-12 col-md-6">
-                <label for="group_size_min" class="form-label">Minimum Group Size</label>
-                <input type="number" class="form-control" id="group_size_min" name="group_size_min" 
-                       min="1" max="10" value="2">
-                <div class="form-text">Minimum number of students per group</div>
-              </div>
-
-              <div class="col-12 col-md-6">
-                <label for="group_size_max" class="form-label">Maximum Group Size</label>
-                <input type="number" class="form-control" id="group_size_max" name="group_size_max" 
-                       min="2" max="20" value="4">
-                <div class="form-text">Maximum number of students per group</div>
-              </div>
-
-              <div class="col-12">
-                <label for="collaboration_type" class="form-label">Collaboration Type</label>
-                <select class="form-select" id="collaboration_type" name="collaboration_type">
-                  <option value="group">Group Work Only</option>
-                  <option value="individual">Individual Work Only</option>
-                  <option value="both">Allow Both Group and Individual</option>
-                </select>
-                <div class="form-text">Choose whether students can work individually or must work in groups</div>
-              </div>
-
-              <div class="col-12">
-                <div class="form-check">
-                  <input class="form-check-input" type="checkbox" id="allow_individual" name="allow_individual">
-                  <label class="form-check-label" for="allow_individual">
-                    Allow individual submissions
-                  </label>
-                  <div class="form-text">Students can submit work individually even if working in groups</div>
-                </div>
-              </div>
-
-              <!-- File Attachment -->
-              <div class="col-12">
-                <h6 class="text-primary mb-3 mt-4"><i class="bi bi-paperclip me-2"></i>File Attachment</h6>
-              </div>
-
-              <div class="col-12">
-                <label for="attachment" class="form-label">Assignment File (Optional)</label>
-                <input type="file" class="form-control" id="attachment" name="attachment" 
-                       accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.xls,.xlsx,.ppt,.pptx">
-                <div class="form-text">Upload assignment instructions, rubric, or reference materials</div>
-              </div>
-            </div>
-
-            <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
-              <a href="{{ url_for('management.admin_class_group_assignments', class_id=class_obj.id) if role_prefix else url_for('teacher.assignments.class_group_assignments', class_id=class_obj.id) }}" class="btn btn-outline-secondary">
-                Cancel
-              </a>
-              <button type="submit" class="btn btn-primary">
-                <i class="bi bi-check-circle me-1"></i>Create Group Assignment
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
     </div>
-  </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-gradient-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-file-text me-2"></i>Assignment Details</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('teacher.groups.save_group_assignment', class_id=class_item.id) }}">
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Assignment Title <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="title" name="title" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="instructions" class="form-label">Instructions</label>
+                            <textarea class="form-control" id="instructions" name="instructions" rows="5"></textarea>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="due_date" class="form-label">Due Date & Time <span class="text-danger">*</span></label>
+                                <input type="datetime-local" class="form-control" id="due_date" name="due_date" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="total_points" class="form-label">Total Points</label>
+                                <input type="number" class="form-control" id="total_points" name="total_points" value="100" min="0">
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label">Select Groups <span class="text-danger">*</span></label>
+                            <p class="text-muted small">Choose which groups should receive this assignment</p>
+                            
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="select_all" onclick="toggleAll(this)">
+                                <label class="form-check-label fw-bold" for="select_all">
+                                    Select All Groups
+                                </label>
+                            </div>
+                            
+                            <hr class="my-3">
+                            
+                            <div class="row">
+                                {% for group in groups %}
+                                <div class="col-md-6 mb-2">
+                                    <div class="card group-select-card">
+                                        <div class="card-body p-3">
+                                            <div class="form-check">
+                                                <input class="form-check-input group-checkbox" 
+                                                       type="checkbox" 
+                                                       name="groups" 
+                                                       value="{{ group.id }}" 
+                                                       id="group{{ group.id }}">
+                                                <label class="form-check-label" for="group{{ group.id }}">
+                                                    <strong>{{ group.name }}</strong>
+                                                    <span class="badge bg-primary ms-2">{{ group.member_count }} members</span>
+                                                </label>
+                                            </div>
+                                            {% if group.description %}
+                                            <p class="text-muted small mb-0 mt-2">{{ group.description }}</p>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle me-2"></i>Create Assignment
+                            </button>
+                            <a href="{{ url_for('teacher.dashboard.my_assignments') }}" class="btn btn-secondary">
+                                <i class="bi bi-x-circle me-2"></i>Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card shadow-sm border-0 mb-3">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Tips</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0">
+                        <li class="mb-2">Group assignments allow collaborative work</li>
+                        <li class="mb-2">All selected groups will receive the same assignment</li>
+                        <li class="mb-2">Students will see their group's assignment</li>
+                        <li>You can grade each group's submission</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0"><i class="bi bi-people me-2"></i>Class Groups ({{ groups|length }})</h6>
+                </div>
+                <div class="card-body">
+                    {% for group in groups %}
+                    <div class="mb-2">
+                        <strong>{{ group.name }}</strong>
+                        <span class="badge bg-secondary">{{ group.member_count }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
+<style>
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+.group-select-card {
+    border: 2px solid #e9ecef;
+    transition: all 0.2s;
+}
+.group-select-card:hover {
+    border-color: #667eea;
+    box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
+}
+.form-check-input:checked ~ .form-check-label {
+    color: #667eea;
+}
+</style>
+
 <script>
-// Set default due date to tomorrow
+function toggleAll(source) {
+    const checkboxes = document.querySelectorAll('.group-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = source.checked;
+    });
+}
+
+// Set minimum datetime to now
 document.addEventListener('DOMContentLoaded', function() {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const dateTimeString = tomorrow.toISOString().slice(0, 16);
-    document.getElementById('due_date').value = dateTimeString;
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    document.getElementById('due_date').min = now.toISOString().slice(0, 16);
 });
 </script>
 {% endblock %}

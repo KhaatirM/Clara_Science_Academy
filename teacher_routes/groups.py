@@ -6,8 +6,9 @@ from flask import Blueprint, render_template, request, flash, redirect, url_for,
 from flask_login import login_required, current_user
 from decorators import teacher_required
 from .utils import get_teacher_or_admin, is_admin, is_authorized_for_class
-from models import db, Class, StudentGroup, StudentGroupMember, GroupAssignment, Enrollment, Student
+from models import db, Class, StudentGroup, StudentGroupMember, GroupAssignment, Enrollment, Student, SchoolYear
 from datetime import datetime
+import json
 
 bp = Blueprint('groups', __name__)
 
@@ -206,4 +207,120 @@ def delete_group(group_id):
         flash(f"Error deleting group: {str(e)}", "danger")
     
     return redirect(url_for('teacher.groups.class_groups', class_id=class_id))
+
+@bp.route('/group-assignment/select-class')
+@login_required
+@teacher_required
+def group_assignment_select_class():
+    """Select a class for group assignment creation."""
+    teacher = get_teacher_or_admin()
+    
+    # Get classes for the current teacher/admin
+    if is_admin():
+        classes = Class.query.all()
+    else:
+        if teacher is None:
+            classes = []
+        else:
+            classes = Class.query.filter_by(teacher_id=teacher.id).all()
+    
+    return render_template('teachers/teacher_group_assignment_select_class.html', classes=classes)
+
+@bp.route('/group-assignment/create/<int:class_id>')
+@login_required
+@teacher_required
+def create_group_assignment(class_id):
+    """Create a group assignment for a specific class."""
+    class_obj = Class.query.get_or_404(class_id)
+    
+    # Check authorization
+    if not is_authorized_for_class(class_obj):
+        flash("You are not authorized to create group assignments for this class.", "danger")
+        return redirect(url_for('teacher.groups.groups_hub'))
+    
+    # Get groups for this class
+    groups = StudentGroup.query.filter_by(class_id=class_id, is_active=True).all()
+    
+    # Add member info to each group
+    for group in groups:
+        members = StudentGroupMember.query.filter_by(group_id=group.id).all()
+        group.members_list = [m.student for m in members if m.student]
+        group.member_count = len(group.members_list)
+    
+    if not groups:
+        flash("No groups found for this class. Please create groups first.", "warning")
+        return redirect(url_for('teacher.groups.class_groups', class_id=class_id))
+    
+    return render_template('teachers/teacher_create_group_assignment.html',
+                         class_item=class_obj,
+                         groups=groups)
+
+@bp.route('/group-assignment/save/<int:class_id>', methods=['POST'])
+@login_required
+@teacher_required
+def save_group_assignment(class_id):
+    """Save a new group assignment."""
+    class_obj = Class.query.get_or_404(class_id)
+    
+    # Check authorization
+    if not is_authorized_for_class(class_obj):
+        flash("You are not authorized to create group assignments for this class.", "danger")
+        return redirect(url_for('teacher.groups.groups_hub'))
+    
+    try:
+        # Get form data
+        title = request.form.get('title', '').strip()
+        description = request.form.get('description', '').strip()
+        instructions = request.form.get('instructions', '').strip()
+        due_date_str = request.form.get('due_date', '').strip()
+        total_points = request.form.get('total_points', type=int)
+        selected_groups = request.form.getlist('groups')  # List of group IDs
+        
+        if not title or not due_date_str or not selected_groups:
+            flash("Title, due date, and at least one group are required.", "danger")
+            return redirect(url_for('teacher.groups.create_group_assignment', class_id=class_id))
+        
+        # Parse due date
+        due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
+        
+        # Get current school year
+        current_year = SchoolYear.query.filter_by(is_current=True).first()
+        if not current_year:
+            flash("No active school year found. Please contact administrator.", "danger")
+            return redirect(url_for('teacher.groups.create_group_assignment', class_id=class_id))
+        
+        # Determine current quarter based on due date
+        current_month = due_date.month
+        if current_month in [8, 9, 10]:
+            quarter = "Q1"
+        elif current_month in [11, 12, 1]:
+            quarter = "Q2"
+        elif current_month in [2, 3, 4]:
+            quarter = "Q3"
+        else:
+            quarter = "Q4"
+        
+        # Create group assignment
+        teacher = get_teacher_or_admin()
+        new_assignment = GroupAssignment(
+            title=title,
+            description=description,
+            class_id=class_id,
+            due_date=due_date,
+            quarter=quarter,
+            school_year_id=current_year.id,
+            assignment_type='pdf',
+            selected_group_ids=json.dumps(selected_groups),  # Store as JSON
+            status='Active'
+        )
+        db.session.add(new_assignment)
+        
+        db.session.commit()
+        flash(f"Group assignment '{title}' created successfully for {len(selected_groups)} group(s)!", "success")
+        return redirect(url_for('teacher.dashboard.my_assignments'))
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error creating group assignment: {str(e)}", "danger")
+        return redirect(url_for('teacher.groups.create_group_assignment', class_id=class_id))
 

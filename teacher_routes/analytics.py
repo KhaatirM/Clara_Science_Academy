@@ -57,9 +57,7 @@ def class_analytics(class_id):
     total_possible = total_students * total_assignments
     
     for assignment in assignments:
-        completed_count += Submission.query.filter_by(assignment_id=assignment.id).filter(
-            Submission.status.in_(['submitted', 'graded'])
-        ).count()
+        completed_count += Submission.query.filter_by(assignment_id=assignment.id).count()
     
     completion_rate = (completed_count / total_possible * 100) if total_possible > 0 else 0
     

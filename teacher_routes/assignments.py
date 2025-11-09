@@ -225,6 +225,8 @@ def add_assignment_for_class(class_id):
 @teacher_required
 def view_assignment(assignment_id):
     """View detailed information for a specific assignment"""
+    from datetime import datetime
+    
     assignment = Assignment.query.get_or_404(assignment_id)
     
     # Check authorization for this assignment's class
@@ -238,10 +240,14 @@ def view_assignment(assignment_id):
     # Get grades for this assignment
     grades = Grade.query.filter_by(assignment_id=assignment_id).all()
     
+    # Get today's date for deadline calculations
+    today = datetime.now()
+    
     return render_template('shared/view_assignment.html', 
                          assignment=assignment, 
                          submissions=submissions, 
-                         grades=grades)
+                         grades=grades,
+                         today=today)
 
 @bp.route('/assignment/edit/<int:assignment_id>', methods=['GET', 'POST'])
 @login_required

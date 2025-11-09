@@ -1,90 +1,634 @@
 {% extends "shared/dashboard_layout.html" %}
 
 {% block dashboard_content %}
-  <div class="container-fluid py-3">
-    <div class="row align-items-center mb-4">
-      <div class="col-12 col-md-8">
-        <h3 class="mb-0">Teachers & Staff Directory 
-          <span class="text-muted fs-6 fw-normal">
-            {% if current_user.role == 'Director' %}(Director View){% elif current_user.role == 'School Administrator' %}(Admin View){% endif %}
-          </span>
-        </h3>
+<style>
+    /* Staff Directory Styling - Like Staff Records Page */
+    .staff-directory-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 20px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        color: white;
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+    }
+    
+    .header-title-staff {
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0;
+    }
+    
+    .header-subtitle-staff {
+        font-size: 1rem;
+        opacity: 0.95;
+    }
+    
+    .btn-add-staff {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .btn-add-staff:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 30px rgba(67, 233, 123, 0.6);
+        color: white;
+    }
+    
+    .stat-card-staff {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        border-left: 4px solid;
+    }
+    
+    .stat-card-staff:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    
+    .stat-card-staff.teachers { border-left-color: #4facfe; }
+    .stat-card-staff.admins { border-left-color: #fa709a; }
+    .stat-card-staff.support { border-left-color: #43e97b; }
+    
+    .stat-icon-staff {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: white;
+    }
+    
+    .icon-teachers { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+    .icon-admins { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+    .icon-support { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+    
+    .search-card-staff {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+    }
+    
+    .form-control-modern {
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .form-control-modern:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.15);
+    }
+    
+    .btn-search-modern {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-search-modern:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+    
+    .btn-reset-modern {
+        background: white;
+        border: 2px solid #e9ecef;
+        color: #6c757d;
+        padding: 0.75rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-reset-modern:hover {
+        border-color: #667eea;
+        color: #667eea;
+        transform: translateY(-2px);
+    }
+    
+    /* Staff Full Cards - Like Staff Records */
+    .staff-full-card {
+        background: white;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .staff-full-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+    }
+    
+    .staff-full-card-header {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        padding: 1.5rem;
+        color: white;
+    }
+    
+    .staff-card-photo {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid white;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        background: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: #667eea;
+    }
+    
+    .staff-card-name {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: white;
+        margin: 0;
+    }
+    
+    .staff-card-id {
+        font-size: 0.85rem;
+        color: rgba(255,255,255,0.9);
+        margin: 0;
+    }
+    
+    .staff-full-card-body {
+        padding: 1.5rem;
+        flex-grow: 1;
+    }
+    
+    .staff-info-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        padding: 0.75rem;
+        margin-bottom: 0.75rem;
+        background: #f8f9fa;
+        border-radius: 10px;
+        transition: all 0.3s ease;
+    }
+    
+    .staff-info-row:hover {
+        background: #e9ecef;
+        transform: translateX(3px);
+    }
+    
+    .staff-info-icon {
+        width: 35px;
+        height: 35px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1rem;
+        flex-shrink: 0;
+    }
+    
+    .icon-role { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .icon-dept { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+    .icon-email { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+    .icon-username { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+    .icon-type { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+    
+    .staff-info-content {
+        flex-grow: 1;
+        min-width: 0;
+    }
+    
+    .staff-info-label {
+        font-size: 0.75rem;
+        color: #6c757d;
+        font-weight: 600;
+        text-transform: uppercase;
+        margin-bottom: 0.25rem;
+        letter-spacing: 0.5px;
+    }
+    
+    .staff-info-value {
+        font-size: 0.95rem;
+        color: #2d3748;
+        font-weight: 600;
+        word-break: break-word;
+    }
+    
+    .badge-role {
+        display: inline-block;
+        padding: 0.35rem 1rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-right: 0.25rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    .badge-role.admin { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); color: white; }
+    .badge-role.director { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; }
+    .badge-role.teacher { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; }
+    .badge-role.support { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white; }
+    .badge-role.default { background: #6c757d; color: white; }
+    
+    .badge-dept {
+        display: inline-block;
+        padding: 0.3rem 0.8rem;
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: white;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin-right: 0.25rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    .badge-username {
+        display: inline-block;
+        padding: 0.3rem 0.8rem;
+        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        color: white;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    
+    .badge-type {
+        display: inline-block;
+        padding: 0.3rem 0.8rem;
+        background: #6c757d;
+        color: white;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    
+    .staff-full-card-footer {
+        padding: 1rem 1.5rem;
+        background: #f8f9fa;
+        border-top: 1px solid #e9ecef;
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .btn-staff-action {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.25rem;
+        padding: 0.75rem 0.5rem;
+        border-radius: 10px;
+        border: none;
+        font-size: 0.85rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        color: white;
+    }
+    
+    .btn-staff-action:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        color: white;
+    }
+    
+    .btn-staff-action i {
+        font-size: 1.2rem;
+    }
+    
+    .btn-staff-view {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    }
+    
+    .btn-staff-edit {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+    
+    .btn-staff-remove {
+        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    }
+</style>
+
+<div class="container-fluid px-2 px-md-4 py-4">
+    <!-- Header Section -->
+    <div class="staff-directory-header">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                <h2 class="header-title-staff mb-1">
+                    <i class="bi bi-person-badge-fill me-2"></i>Teachers & Staff Directory
+                </h2>
+                <p class="header-subtitle-staff mb-0">
+                    <span class="badge bg-white text-primary me-2">{{ teachers_staff|length }} Members</span>
+                    <span class="text-white">Connect with colleagues and staff members</span>
+                </p>
       </div>
-      <div class="col-12 col-md-4 text-md-end mt-2 mt-md-0">
-        <div class="d-flex flex-wrap justify-content-md-end align-items-center">
           {% if current_user.role in ['Director', 'School Administrator'] %}
-            <a href="{{ url_for('management.add_teacher_staff') }}" class="btn btn-sm text-white me-2 mb-2 mb-md-0" style="background: linear-gradient(135deg, #2E8B57 0%, #228B22 50%, #556B2F 100%);">Add Teacher/Staff</a>
-            <form class="d-flex" method="GET" action="{{ url_for('management.teachers') }}">
+            <a href="{{ url_for('management.add_teacher_staff') }}" class="btn-add-staff">
+                <i class="bi bi-person-plus-fill"></i>Add Teacher/Staff
+            </a>
           {% endif %}
-            <input class="form-control form-control-sm me-1" type="search" name="search_query" placeholder="Search Name..." aria-label="Search" value="{{ search_query }}">
-            <button class="btn btn-sm btn-outline-secondary" type="submit">Search</button>
-          </form>
+        </div>
+    </div>
+    
+    <!-- Statistics Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="stat-card-staff teachers">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="stat-icon-staff icon-teachers">
+                        <i class="bi bi-person-workspace"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted small fw-semibold">TEACHERS</div>
+                        <div class="fs-4 fw-bold">{{ teachers_staff | selectattr('role', 'search', 'Teacher') | list | length }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card-staff admins">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="stat-icon-staff icon-admins">
+                        <i class="bi bi-shield-fill-check"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted small fw-semibold">ADMINISTRATORS</div>
+                        <div class="fs-4 fw-bold">{{ teachers_staff | selectattr('role', 'search', 'Administrator|Director') | list | length }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card-staff support">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="stat-icon-staff icon-support">
+                        <i class="bi bi-headset"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted small fw-semibold">SUPPORT STAFF</div>
+                        <div class="fs-4 fw-bold">{{ teachers_staff | selectattr('role', 'search', 'Support') | list | length }}</div>
+                    </div>
+                </div>
+            </div>
         </div>
       </div>
+    
+    <!-- Search Card -->
+    <div class="search-card-staff">
+        <form method="GET" action="{{ url_for('management.teachers') }}" class="row g-3 align-items-end">
+            <div class="col-md-8">
+                <label for="search_query" class="form-label fw-semibold">
+                    <i class="bi bi-search me-1"></i>Search Staff Directory
+                </label>
+                <input type="text" 
+                       class="form-control form-control-modern" 
+                       id="search_query" 
+                       name="search_query" 
+                       value="{{ search_query or '' }}" 
+                       placeholder="Search by name, email, role, or department..."
+                       autocomplete="off">
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-search-modern w-100">
+                    <i class="bi bi-search me-1"></i>Search
+                </button>
+            </div>
+            <div class="col-md-2">
+                <a href="{{ url_for('management.teachers') }}" class="btn btn-reset-modern w-100">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i>Reset
+                </a>
+            </div>
+        </form>
     </div>
-
-    <div class="row row-cols-1 g-3"> 
-      <div class="table-responsive">
-        <table class="table table-striped table-hover align-middle">
-          <!-- Table head and body go here -->
-          <thead class="table-dark">
-            <tr>
-              <th>Name</th>
-              <th>Role</th>
-              <th>Email</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for teacher in teachers_staff %}
-              <tr>
-                <td>{{ teacher.first_name + ' ' + teacher.last_name }}</td>
-                <td>{{ teacher.user.role if teacher.user else 'N/A' }}</td>
-                <td>{{ teacher.email }}</td>
-              </tr>
-            {% else %}
-              <tr>
-                <td colspan="3" class="text-center">
-                  {% if search_query %}
-                  <div class="alert alert-warning mb-0" role="alert">No teachers or staff found matching your search: "{{ search_query }}".</div>
-                  {% else %}
-                  <div class="alert alert-info mb-0" role="alert">No teachers or staff are currently listed.</div>
-                  {% endif %}
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
+    
+    <!-- Search Results Info -->
+    {% if search_query %}
+    <div class="alert alert-info border-0 shadow-sm mb-4" style="border-left: 4px solid #667eea !important;">
+        <div class="d-flex align-items-center">
+            <i class="bi bi-info-circle-fill fs-4 me-3"></i>
+            <div>
+                <strong>Search Results:</strong> Found {{ teachers_staff|length }} staff member(s) matching "{{ search_query }}"
+            </div>
+        </div>
     </div>
+    {% endif %}
 
-  {# Pagination #}
-  {% if total_pages and total_pages > 1 %}
-  <nav aria-label="Teacher Staff navigation" class="mt-4">
-    <ul class="pagination pagination-sm justify-content-center">
-      {% set pagination_params = {'section': 'teachers_staff'} %}
-      {% if search_query %}{% set _ = pagination_params.update({'search_query': search_query}) %}{% endif %}
-      
-      {% if current_user.role in ['Director', 'School Administrator'] %}
-        <li class="page-item {% if page <= 1 %}disabled{% endif %}"><a class="page-link" href="{{ url_for('management.teachers', page=page-1, **pagination_params) }}">Previous</a></li>
-        {% for p in range(1, total_pages + 1) %}<li class="page-item {% if p == page %}active{% endif %}"><a class="page-link" href="{{ url_for('management.teachers', page=p, **pagination_params) }}">{{ p }}</a></li>{% endfor %}
-        <li class="page-item {% if page >= total_pages %}disabled{% endif %}"><a class="page-link" href="{{ url_for('management.teachers', page=page+1, **pagination_params) }}">Next</a></li>
-      {% endif %}
-    </ul>
-  </nav>
-  {% endif %}
-  
-  {% if total_teachers_staff and (total_teachers_staff > 0 or search_query) %}
-    <p class="text-center text-muted small mt-2">
-        Showing {{ teachers_staff|length }} 
-        {% if search_query and teachers_staff|length != total_teachers_staff %}
-          of {{ total_teachers_staff }} matching teachers/staff.
-        {% elif teachers_staff|length == total_teachers_staff and total_teachers_staff > 0 %}
-          of {{ total_teachers_staff }} total teachers/staff.
+    <!-- Staff Cards Grid -->
+    <div class="row g-4">
+        {% for staff in teachers_staff %}
+        {% set staff_role = staff.role if staff.role else 'Staff Member' %}
+        {% set staff_id = staff.staff_id if staff.staff_id else 'N/A' %}
+        {% set staff_username = staff.username if staff.username else (staff.user.username if staff.user else 'N/A') %}
+        {% set staff_departments = staff.departments.split(', ') if staff.departments else [] %}
+        {% set employment_type = staff.employment_type if staff.employment_type else 'N/A' %}
+        
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="staff-full-card">
+                <!-- Card Header -->
+                <div class="staff-full-card-header">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="staff-card-photo">
+                            <i class="bi bi-person-circle"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h5 class="staff-card-name mb-1">{{ staff.first_name }} {{ staff.last_name }}</h5>
+                            <p class="staff-card-id mb-0">ID: {{ staff_id }}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Card Body -->
+                <div class="staff-full-card-body">
+                    <!-- Role -->
+                    <div class="staff-info-row">
+                        <div class="staff-info-icon icon-role">
+                            <i class="bi bi-award-fill"></i>
+                        </div>
+                        <div class="staff-info-content">
+                            <div class="staff-info-label">Role</div>
+                            <div class="staff-info-value">
+                                {% if 'Director' in staff_role %}
+                                    <span class="badge-role director">{{ staff_role }}</span>
+                                {% elif 'Administrator' in staff_role %}
+                                    <span class="badge-role admin">{{ staff_role }}</span>
+                                {% elif 'Teacher' in staff_role %}
+                                    <span class="badge-role teacher">{{ staff_role }}</span>
+                                {% elif 'Support' in staff_role or 'IT' in staff_role %}
+                                    <span class="badge-role support">{{ staff_role }}</span>
+                                {% else %}
+                                    <span class="badge-role default">{{ staff_role }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Department(s) -->
+                    <div class="staff-info-row">
+                        <div class="staff-info-icon icon-dept">
+                            <i class="bi bi-building"></i>
+                        </div>
+                        <div class="staff-info-content">
+                            <div class="staff-info-label">Dept.</div>
+                            <div class="staff-info-value">
+                                {% if staff_departments %}
+                                    {% for dept in staff_departments %}
+                                        <span class="badge-dept">{{ dept.strip() }}</span>
+                                    {% endfor %}
+                                {% else %}
+                                    <span class="badge-dept">N/A</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Email -->
+                    <div class="staff-info-row">
+                        <div class="staff-info-icon icon-email">
+                            <i class="bi bi-envelope-fill"></i>
+                        </div>
+                        <div class="staff-info-content">
+                            <div class="staff-info-label">Email</div>
+                            <div class="staff-info-value">{{ staff.email or 'N/A' }}</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Username -->
+                    <div class="staff-info-row">
+                        <div class="staff-info-icon icon-username">
+                            <i class="bi bi-person-badge"></i>
+                        </div>
+                        <div class="staff-info-content">
+                            <div class="staff-info-label">Username</div>
+                            <div class="staff-info-value">
+                                <span class="badge-username">{{ staff_username }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Employment Type -->
+                    <div class="staff-info-row">
+                        <div class="staff-info-icon icon-type">
+                            <i class="bi bi-calendar-check"></i>
+                        </div>
+                        <div class="staff-info-content">
+                            <div class="staff-info-label">Type</div>
+                            <div class="staff-info-value">
+                                <span class="badge-type">{{ employment_type }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Card Footer with Actions -->
+                <div class="staff-full-card-footer">
+                    <button class="btn-staff-action btn-staff-view" onclick="alert('View profile coming soon!')">
+                        <i class="bi bi-eye"></i><span>View</span>
+                    </button>
+                    {% if current_user.role in ['Director', 'School Administrator'] %}
+                    <a href="{{ url_for('management.edit_teacher_staff', staff_id=staff.id) }}" class="btn-staff-action btn-staff-edit">
+                        <i class="bi bi-pencil-square"></i><span>Edit</span>
+                    </a>
+                    <button class="btn-staff-action btn-staff-remove remove-staff-btn" 
+                            data-staff-id="{{ staff.id }}" 
+                            data-staff-name="{{ staff.first_name }} {{ staff.last_name }}">
+                        <i class="bi bi-trash"></i><span>Remove</span>
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
         {% else %}
-             matching teachers/staff.
+        <div class="col-12">
+            <div class="text-center py-5" style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); border-radius: 20px; padding: 4rem;">
+                <i class="bi bi-person-x" style="font-size: 5rem; color: #667eea; opacity: 0.7;"></i>
+                <h4 class="mt-4 mb-3 fw-bold">
+                    {% if search_query %}
+                        No Staff Members Found
+                    {% else %}
+                        No Staff Members Listed
+                    {% endif %}
+                </h4>
+                <p class="text-muted">
+                    {% if search_query %}
+                        No teachers or staff found matching your search: "{{ search_query }}"
+                    {% else %}
+                        No teachers or staff are currently listed in the system.
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if total_pages and total_pages > 1 %}
+    <nav aria-label="Teacher Staff navigation" class="mt-5">
+        <ul class="pagination justify-content-center">
+            {% set pagination_params = {'section': 'teachers_staff'} %}
+            {% if search_query %}{% set _ = pagination_params.update({'search_query': search_query}) %}{% endif %}
+            
+            {% if current_user.role in ['Director', 'School Administrator'] %}
+                <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+                    <a class="page-link rounded-start" href="{{ url_for('management.teachers', page=page-1, **pagination_params) }}">
+                        <i class="bi bi-chevron-left"></i> Previous
+                    </a>
+                </li>
+                {% for p in range(1, total_pages + 1) %}
+                    <li class="page-item {% if p == page %}active{% endif %}">
+                        <a class="page-link" href="{{ url_for('management.teachers', page=p, **pagination_params) }}">{{ p }}</a>
+                    </li>
+                {% endfor %}
+                <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+                    <a class="page-link rounded-end" href="{{ url_for('management.teachers', page=page+1, **pagination_params) }}">
+                        Next <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+    
+    <!-- Results Summary -->
+    {% if total_teachers_staff and (total_teachers_staff > 0 or search_query) %}
+    <p class="text-center text-muted mt-3">
+        <i class="bi bi-info-circle me-1"></i>
+        Showing <strong>{{ teachers_staff|length }}</strong> 
+        {% if search_query and teachers_staff|length != total_teachers_staff %}
+            of <strong>{{ total_teachers_staff }}</strong> matching teachers/staff
+        {% elif teachers_staff|length == total_teachers_staff and total_teachers_staff > 0 %}
+            of <strong>{{ total_teachers_staff }}</strong> total teachers/staff
+        {% else %}
+            matching teachers/staff
         {% endif %}
     </p>
-  {% endif %}
+    {% endif %}
+</div>
 
   {# Bootstrap Modal for Staff Credentials #}
   <div class="modal fade" id="staffCredentialsModal" tabindex="-1" aria-labelledby="staffCredentialsModalLabel" aria-hidden="true">

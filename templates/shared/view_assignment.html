@@ -341,6 +341,15 @@ function openVoidModalView() {
             form.action = "{{ url_for('teacher.assignments.change_assignment_status', assignment_id=assignment.id) }}";
         {% endif %}
         
+        // Add CSRF token
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrf_token';
+        csrfInput.value = csrfToken;
+        form.appendChild(csrfInput);
+        
+        // Add status input
         const statusInput = document.createElement('input');
         statusInput.type = 'hidden';
         statusInput.name = 'status';

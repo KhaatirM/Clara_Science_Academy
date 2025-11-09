@@ -351,6 +351,82 @@ def change_assignment_status(assignment_id):
         flash(f'Error changing assignment status: {str(e)}', 'danger')
         return redirect(url_for('teacher.dashboard.my_assignments'))
 
+@bp.route('/assignment/<int:assignment_id>/void', methods=['POST'])
+@login_required
+@teacher_required
+def void_assignment(assignment_id):
+    """Void an assignment for all students or selected students"""
+    assignment = Assignment.query.get_or_404(assignment_id)
+    
+    # Check authorization for this assignment's class
+    if not is_authorized_for_class(assignment.class_info):
+        flash("You are not authorized to void this assignment.", "danger")
+        return redirect(url_for('teacher.dashboard.my_assignments'))
+    
+    void_type = request.form.get('void_type')
+    reason = request.form.get('reason', '').strip()
+    
+    try:
+        if void_type == 'all':
+            # Void for entire class
+            assignment.status = 'Voided'
+            db.session.commit()
+            flash(f'Assignment "{assignment.title}" has been voided for the entire class.', 'success')
+        else:
+            # Void for selected students only
+            student_ids = request.form.getlist('student_ids')
+            
+            if not student_ids:
+                flash("Please select at least one student to void the assignment for.", "danger")
+                return redirect(url_for('teacher.assignments.view_assignment', assignment_id=assignment_id))
+            
+            # Create special grade records marking assignment as voided for these students
+            for student_id in student_ids:
+                # Check if grade already exists
+                existing_grade = Grade.query.filter_by(
+                    assignment_id=assignment_id,
+                    student_id=int(student_id)
+                ).first()
+                
+                # Create void grade data
+                void_grade_data = {
+                    'score': 0,
+                    'max_score': 0,
+                    'percentage': 0,
+                    'feedback': reason or 'Assignment voided by teacher',
+                    'is_voided': True,
+                    'voided_at': datetime.now().isoformat()
+                }
+                
+                if existing_grade:
+                    # Update existing grade to voided
+                    existing_grade.score = 0
+                    existing_grade.grade_data = json.dumps(void_grade_data)
+                    existing_grade.graded_at = datetime.now()
+                    existing_grade.graded_by = current_user.id
+                else:
+                    # Create new voided grade
+                    new_grade = Grade(
+                        assignment_id=assignment_id,
+                        student_id=int(student_id),
+                        score=0,
+                        grade_data=json.dumps(void_grade_data),
+                        graded_at=datetime.now(),
+                        graded_by=current_user.id
+                    )
+                    db.session.add(new_grade)
+            
+            db.session.commit()
+            flash(f'Assignment voided for {len(student_ids)} student(s). They will see 0/0 (no GPA impact).', 'success')
+        
+        return redirect(url_for('teacher.assignments.view_assignment', assignment_id=assignment_id))
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error voiding assignment: {str(e)}")
+        flash(f'Error voiding assignment: {str(e)}', 'danger')
+        return redirect(url_for('teacher.assignments.view_assignment', assignment_id=assignment_id))
+
 @bp.route('/grant-extensions', methods=['POST'])
 @login_required
 @teacher_required

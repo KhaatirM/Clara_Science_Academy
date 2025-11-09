@@ -203,6 +203,16 @@
         color: white;
     }
     
+    .meta-badge-status.inactive {
+        background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+        color: white;
+    }
+    
+    .meta-badge-status.voided {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        color: white;
+    }
+    
     .assignment-card-body-modern {
         padding: 1.5rem;
     }
@@ -425,9 +435,9 @@
                         <i class="bi bi-house-door"></i>
                         {{ assignment.class_info.name }}
                     </span>
-                    <span class="meta-badge meta-badge-status {% if assignment.is_active %}active{% endif %}">
-                        <i class="bi bi-{{ 'check-circle' if assignment.is_active else 'x-circle' }}"></i>
-                        {{ 'Active' if assignment.is_active else 'Inactive' }}
+                    <span class="meta-badge meta-badge-status {% if assignment.status == 'Active' %}active{% elif assignment.status == 'Voided' %}voided{% else %}inactive{% endif %}">
+                        <i class="bi bi-{% if assignment.status == 'Active' %}check-circle{% elif assignment.status == 'Voided' %}slash-circle{% else %}x-circle{% endif %}"></i>
+                        {{ assignment.status if assignment.status else 'Active' }}
                     </span>
                 </div>
             </div>

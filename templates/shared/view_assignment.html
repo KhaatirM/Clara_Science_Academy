@@ -124,7 +124,8 @@
                             <span>Extensions</span>
                         </button>
                         <button class="btn btn-compact btn-compact-void" 
-                                onclick="openVoidModalView()">
+                                data-bs-toggle="modal" 
+                                data-bs-target="#voidModal">
                             <i class="bi bi-slash-circle"></i>
                             <span>Void</span>
                         </button>
@@ -252,6 +253,81 @@
     </div>
 </div>
 
+<!-- Void Assignment Modal -->
+<div class="modal fade" id="voidModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="bi bi-slash-circle me-2"></i>Void Assignment</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('teacher.assignments.void_assignment', assignment_id=assignment.id) }}">
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle me-2"></i><strong>Important:</strong> Voiding an assignment excludes it from grade calculations. Students will see 0/0 points (does not affect GPA).
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Void Options</label>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="void_type" id="voidAll" value="all" checked onchange="toggleStudentSelection()">
+                            <label class="form-check-label" for="voidAll">
+                                <strong>Void for entire class</strong>
+                                <br><small class="text-muted">All students will have this assignment voided</small>
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="void_type" id="voidSelect" value="selected" onchange="toggleStudentSelection()">
+                            <label class="form-check-label" for="voidSelect">
+                                <strong>Void for selected students only</strong>
+                                <br><small class="text-muted">Only chosen students will have this assignment voided</small>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div id="studentSelectionDiv" style="display: none;">
+                        <hr>
+                        <div class="mb-3">
+                            <label class="form-label">Select Students to Void</label>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="selectAllVoid" onclick="toggleAllVoidStudents(this)">
+                                <label class="form-check-label fw-bold" for="selectAllVoid">
+                                    Select All Students
+                                </label>
+                            </div>
+                            <hr>
+                            <div style="max-height: 300px; overflow-y: auto;">
+                                {% set enrollments = assignment.class_info.enrollments %}
+                                {% for enrollment in enrollments %}
+                                {% if enrollment.is_active and enrollment.student %}
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input void-student-checkbox" type="checkbox" name="student_ids" value="{{ enrollment.student.id }}" id="voidstudent{{ enrollment.student.id }}">
+                                    <label class="form-check-label" for="voidstudent{{ enrollment.student.id }}">
+                                        {{ enrollment.student.first_name }} {{ enrollment.student.last_name }}
+                                    </label>
+                                </div>
+                                {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="void_reason" class="form-label">Reason for Voiding (Optional)</label>
+                        <textarea class="form-control" id="void_reason" name="reason" rows="3" placeholder="Snow day, technical issues, curriculum change, etc."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-slash-circle me-2"></i>Void Assignment
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- Extension Modal -->
 <div class="modal fade" id="extensionModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
@@ -320,6 +396,24 @@ function toggleAllStudents(source) {
         checkbox.checked = source.checked;
     });
 }
+
+function toggleAllVoidStudents(source) {
+    const checkboxes = document.querySelectorAll('.void-student-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = source.checked;
+    });
+}
+
+function toggleStudentSelection() {
+    const voidSelect = document.getElementById('voidSelect');
+    const studentSelectionDiv = document.getElementById('studentSelectionDiv');
+    
+    if (voidSelect.checked) {
+        studentSelectionDiv.style.display = 'block';
+    } else {
+        studentSelectionDiv.style.display = 'none';
+    }
+}
 </script>
 
 <script>
@@ -327,38 +421,6 @@ function toggleAllStudents(source) {
 function openExtensionModal() {
     const modal = new bootstrap.Modal(document.getElementById('extensionModal'));
     modal.show();
-}
-
-// Open void modal
-function openVoidModalView() {
-    if (confirm('Are you sure you want to void this assignment? This will exclude it from GPA calculations for all students.')) {
-        // Create form and submit
-        const form = document.createElement('form');
-        form.method = 'POST';
-        {% if current_user.role in ['Director', 'School Administrator'] %}
-            form.action = "{{ url_for('management.change_assignment_status', assignment_id=assignment.id) }}";
-        {% else %}
-            form.action = "{{ url_for('teacher.assignments.change_assignment_status', assignment_id=assignment.id) }}";
-        {% endif %}
-        
-        // Add CSRF token
-        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-        const csrfInput = document.createElement('input');
-        csrfInput.type = 'hidden';
-        csrfInput.name = 'csrf_token';
-        csrfInput.value = csrfToken;
-        form.appendChild(csrfInput);
-        
-        // Add status input
-        const statusInput = document.createElement('input');
-        statusInput.type = 'hidden';
-        statusInput.name = 'status';
-        statusInput.value = 'Voided';
-        form.appendChild(statusInput);
-        
-        document.body.appendChild(form);
-        form.submit();
-    }
 }
 
 function confirmDelete(title, assignmentId) {

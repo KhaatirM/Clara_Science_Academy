@@ -174,6 +174,20 @@
                         <span><strong>{{ class.schedule }}</strong></span>
                     </div>
                     {% endif %}
+                    
+                    <!-- Google Classroom Status -->
+                    <div class="class-card-detail-modern google-status-badge-modern mt-2">
+                        <i class="bi bi-google me-2"></i>
+                        {% if class.google_classroom_id %}
+                            <span class="badge bg-success">
+                                <i class="bi bi-check-circle-fill me-1"></i>Google Classroom Linked
+                            </span>
+                        {% else %}
+                            <span class="badge bg-warning text-dark">
+                                <i class="bi bi-exclamation-circle-fill me-1"></i>Not Linked
+                            </span>
+                        {% endif %}
+                    </div>
                 </div>
 
                 <!-- Class Actions -->
@@ -199,6 +213,38 @@
                                 <i class="bi bi-clipboard-data me-1"></i>Grades
                             </button>
                         </div>
+                        
+                        <!-- Google Classroom Actions -->
+                        {% if class.google_classroom_id %}
+                            <div class="col-6">
+                                <a href="https://classroom.google.com/c/{{ class.google_classroom_id }}" 
+                                   target="_blank" 
+                                   class="btn btn-sm btn-google-open-modern w-100">
+                                    <i class="bi bi-google me-1"></i>Open
+                                </a>
+                            </div>
+                            <div class="col-6">
+                                <a href="{{ url_for('management.unlink_classroom', class_id=class.id) }}" 
+                                   class="btn btn-sm btn-google-unlink-modern w-100"
+                                   onclick="return confirm('Unlink this Google Classroom?');">
+                                    <i class="bi bi-link-45deg me-1"></i>Unlink
+                                </a>
+                            </div>
+                        {% else %}
+                            <div class="col-6">
+                                <a href="{{ url_for('management.link_existing_classroom', class_id=class.id) }}" 
+                                   class="btn btn-sm btn-google-link-modern w-100">
+                                    <i class="bi bi-link-45deg me-1"></i>Link
+                                </a>
+                            </div>
+                            <div class="col-6">
+                                <a href="{{ url_for('management.create_and_link_classroom', class_id=class.id) }}" 
+                                   class="btn btn-sm btn-google-create-modern w-100">
+                                    <i class="bi bi-plus-circle-fill me-1"></i>Create
+                                </a>
+                            </div>
+                        {% endif %}
+                        
                         {% if current_user.role in ['Director', 'School Administrator'] %}
                         <div class="col-12 mt-2">
                             <button class="btn btn-sm btn-class-action-delete w-100" onclick="removeClass({{ class.id }}, '{{ class.name }}')">
@@ -429,4 +475,110 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(error => console.error('Error loading teachers:', error));
 });
 </script>
+
+<style>
+/* Google Classroom Status Badge */
+.google-status-badge-modern {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+}
+
+.google-status-badge-modern .badge {
+    font-weight: 600;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.75rem;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+/* Google Classroom Action Buttons */
+.btn-google-open-modern {
+    background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+    color: white;
+    border: none;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-google-open-modern:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(66, 133, 244, 0.4);
+    color: white;
+}
+
+.btn-google-unlink-modern {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+    color: white;
+    border: none;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-google-unlink-modern:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
+    color: white;
+}
+
+.btn-google-link-modern {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    color: white;
+    border: none;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-google-link-modern:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(79, 172, 254, 0.4);
+    color: white;
+}
+
+.btn-google-create-modern {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    color: white;
+    border: none;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-google-create-modern:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(67, 233, 123, 0.4);
+    color: white;
+}
+</style>
+
 {% endblock %}

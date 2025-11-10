@@ -148,7 +148,7 @@
                             </div>
                             <span>Attendance</span>
                         </a>
-                        <a href="{{ url_for('teacher.analytics.analytics_hub') }}" class="home-quick-action home-qa-reports">
+                        <a href="{{ url_for('teacher.dashboard.my_classes') }}" class="home-quick-action home-qa-reports" onclick="sessionStorage.setItem('quickActionIntent', 'analytics'); return true;">
                             <div class="home-qa-icon">
                                 <i class="bi bi-graph-up"></i>
                             </div>

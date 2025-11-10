@@ -34,7 +34,7 @@ def grade_assignment(assignment_id):
         
         if not student_id or points_earned is None:
             flash("Missing required grading information.", "danger")
-            return redirect(url_for('teacher.grade_assignment', assignment_id=assignment_id))
+            return redirect(url_for('teacher.grading.grade_assignment', assignment_id=assignment_id))
         
         try:
             # Check if grade already exists
@@ -71,13 +71,13 @@ def grade_assignment(assignment_id):
             
             db.session.commit()
             flash('Grade saved successfully!', 'success')
-            return redirect(url_for('teacher.grade_assignment', assignment_id=assignment_id))
+            return redirect(url_for('teacher.grading.grade_assignment', assignment_id=assignment_id))
             
         except Exception as e:
             db.session.rollback()
             print(f"Error saving grade: {str(e)}")
             flash(f'Error saving grade: {str(e)}', 'danger')
-            return redirect(url_for('teacher.grade_assignment', assignment_id=assignment_id))
+            return redirect(url_for('teacher.grading.grade_assignment', assignment_id=assignment_id))
     
     # GET request - show grading interface
     # Get enrolled students for this class

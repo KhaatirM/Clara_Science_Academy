@@ -296,7 +296,7 @@ def remove_assignment(assignment_id):
     # Check authorization for this assignment's class
     if not is_authorized_for_class(assignment.class_info):
         flash("You are not authorized to remove this assignment.", "danger")
-        return redirect(url_for('teacher.my_assignments'))
+        return redirect(url_for('teacher.dashboard.my_assignments'))
     
     try:
         # Remove associated grades and submissions first
@@ -308,13 +308,13 @@ def remove_assignment(assignment_id):
         db.session.commit()
         
         flash('Assignment removed successfully!', 'success')
-        return redirect(url_for('teacher.my_assignments'))
+        return redirect(url_for('teacher.dashboard.my_assignments'))
         
     except Exception as e:
         db.session.rollback()
         print(f"Error removing assignment: {str(e)}")
         flash(f'Error removing assignment: {str(e)}', 'danger')
-        return redirect(url_for('teacher.my_assignments'))
+        return redirect(url_for('teacher.dashboard.my_assignments'))
 
 @bp.route('/assignment/<int:assignment_id>/change-status', methods=['POST'])
 @login_required

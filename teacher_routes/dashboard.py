@@ -859,9 +859,13 @@ def view_student_details_data(student_id):
         print(f"[Teacher Details] Found student: {student.first_name} {student.last_name}")
         
         # Verify teacher has access to this student (student must be in one of their classes)
-        teacher_staff = TeacherStaff.query.filter_by(user_id=current_user.id).first()
+        if not current_user.teacher_staff_id:
+            print(f"[Teacher Details] No teacher_staff_id for user {current_user.id}")
+            return jsonify({'success': False, 'error': 'Teacher profile not found'}), 403
+        
+        teacher_staff = TeacherStaff.query.get(current_user.teacher_staff_id)
         if not teacher_staff:
-            print(f"[Teacher Details] Teacher profile not found for user {current_user.id}")
+            print(f"[Teacher Details] Teacher profile not found for teacher_staff_id {current_user.teacher_staff_id}")
             return jsonify({'success': False, 'error': 'Teacher profile not found'}), 403
         
         print(f"[Teacher Details] Teacher found: {teacher_staff.first_name} {teacher_staff.last_name}")

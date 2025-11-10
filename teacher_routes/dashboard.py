@@ -838,3 +838,194 @@ def unlink_classroom(class_id):
     
     return redirect(url_for('teacher.dashboard.my_classes'))
 
+
+@bp.route('/student/<int:student_id>/details/data')
+@login_required
+@teacher_required
+def view_student_details_data(student_id):
+    """API endpoint to get detailed student information as JSON for academic alerts (Teacher Version)."""
+    from flask import jsonify
+    from copy import copy
+    
+    try:
+        student = Student.query.get_or_404(student_id)
+        
+        # Verify teacher has access to this student (student must be in one of their classes)
+        teacher_staff = TeacherStaff.query.filter_by(user_id=current_user.id).first()
+        if not teacher_staff:
+            return jsonify({'success': False, 'error': 'Teacher profile not found'}), 403
+        
+        # Get teacher's classes
+        teacher_classes = Class.query.filter_by(teacher_id=teacher_staff.id).all()
+        teacher_class_ids = [c.id for c in teacher_classes]
+        
+        # Check if student is enrolled in any of teacher's classes
+        student_enrollments = Enrollment.query.filter_by(student_id=student_id, is_active=True).all()
+        student_class_ids = [e.class_id for e in student_enrollments]
+        
+        # Check if there's overlap
+        if not any(class_id in teacher_class_ids for class_id in student_class_ids):
+            return jsonify({'success': False, 'error': 'You do not have access to this student'}), 403
+        
+        # --- GPA IMPACT ANALYSIS ---
+        current_gpa = None
+        hypothetical_gpa = None
+        at_risk_grades_list = []
+        missing_assignments_by_class = {}
+        class_gpa_breakdown = {}
+
+        # Get all non-voided grades for the student (only from teacher's classes)
+        all_grades = Grade.query.join(Assignment).filter(
+            Grade.student_id == student.id,
+            Assignment.class_id.in_(teacher_class_ids),
+            db.or_(Grade.is_voided.is_(False), Grade.is_voided.is_(None))
+        ).all()
+        
+        # Get student's classes (only teacher's classes)
+        enrollments = Enrollment.query.filter_by(student_id=student.id, is_active=True).filter(
+            Enrollment.class_id.in_(teacher_class_ids)
+        ).all()
+        student_classes = {enrollment.class_id: enrollment.class_info for enrollment in enrollments if enrollment.class_info}
+        
+        # Separate grades by class and find missing/at-risk assignments
+        grades_by_class = {}
+        
+        for g in all_grades:
+            try:
+                # Ensure assignment relationship is loaded
+                if not g.assignment:
+                    continue
+                
+                if not g.assignment.class_info:
+                    continue
+                
+                class_id = g.assignment.class_id
+                if class_id not in grades_by_class:
+                    grades_by_class[class_id] = []
+                grades_by_class[class_id].append(g)
+                
+                # Parse grade data
+                if not g.grade_data:
+                    score = None
+                else:
+                    try:
+                        grade_data = json.loads(g.grade_data)
+                        score = grade_data.get('score')
+                    except (json.JSONDecodeError, TypeError):
+                        score = None
+                
+                # Check if assignment is past due or failing
+                is_overdue = g.assignment.due_date and g.assignment.due_date < datetime.utcnow()
+                
+                # Determine if this is truly at-risk
+                is_at_risk = False
+                status = None
+                
+                if score is None:
+                    if is_overdue:
+                        is_at_risk = True
+                        status = 'missing'
+                elif score <= 69:
+                    is_at_risk = True
+                    status = 'failing'
+                    at_risk_grades_list.append(g)
+                
+                if is_at_risk:
+                    class_name = g.assignment.class_info.name
+                    
+                    if class_name not in missing_assignments_by_class:
+                        missing_assignments_by_class[class_name] = []
+                    
+                    missing_assignments_by_class[class_name].append({
+                        'title': g.assignment.title,
+                        'due_date': g.assignment.due_date.strftime('%Y-%m-%d') if g.assignment.due_date else 'No due date',
+                        'status': status,
+                        'score': score if score is not None else 'N/A'
+                    })
+                        
+            except Exception as e:
+                print(f"Error processing grade {g.id}: {e}")
+                continue
+
+        # Calculate Current Overall GPA
+        if all_grades:
+            from gpa_scheduler import calculate_student_gpa
+            current_gpa = calculate_student_gpa(all_grades)
+
+        # Calculate Hypothetical Overall GPA
+        hypothetical_grades = []
+        for g in all_grades:
+            if g in at_risk_grades_list:
+                hypothetical_grade = copy(g)
+                try:
+                    grade_data = json.loads(g.grade_data)
+                    grade_data['score'] = 70
+                    hypothetical_grade.grade_data = json.dumps(grade_data)
+                    hypothetical_grades.append(hypothetical_grade)
+                except (json.JSONDecodeError, TypeError):
+                    hypothetical_grades.append(g)
+            else:
+                hypothetical_grades.append(g)
+        
+        if hypothetical_grades:
+            from gpa_scheduler import calculate_student_gpa
+            hypothetical_gpa = calculate_student_gpa(hypothetical_grades)
+
+        # Calculate GPA per class
+        class_gpa_data = {}
+        for class_id, class_grades in grades_by_class.items():
+            if class_id in student_classes:
+                from gpa_scheduler import calculate_student_gpa
+                class_obj = student_classes[class_id]
+                class_name = class_obj.name
+                
+                class_current_gpa = calculate_student_gpa(class_grades) if class_grades else None
+                
+                # Calculate hypothetical GPA for this class
+                class_at_risk = [g for g in class_grades if g in at_risk_grades_list]
+                class_hypothetical_grades = []
+                for g in class_grades:
+                    if g in class_at_risk:
+                        hypothetical_grade = copy(g)
+                        try:
+                            grade_data = json.loads(g.grade_data)
+                            grade_data['score'] = 70
+                            hypothetical_grade.grade_data = json.dumps(grade_data)
+                            class_hypothetical_grades.append(hypothetical_grade)
+                        except (json.JSONDecodeError, TypeError):
+                            class_hypothetical_grades.append(g)
+                    else:
+                        class_hypothetical_grades.append(g)
+                
+                class_hypothetical_gpa = calculate_student_gpa(class_hypothetical_grades) if class_hypothetical_grades else None
+                
+                class_gpa_data[class_name] = {
+                    'current': class_current_gpa,
+                    'hypothetical': class_hypothetical_gpa
+                }
+
+        # Ensure we always return valid data
+        response_data = {
+            'success': True,
+            'student': {
+                'name': f"{student.first_name} {student.last_name}",
+                'student_id': student.id,
+                'current_gpa': current_gpa if current_gpa is not None else 0.0,
+                'hypothetical_gpa': hypothetical_gpa if hypothetical_gpa is not None else 0.0,
+                'missing_assignments': missing_assignments_by_class if missing_assignments_by_class else {},
+                'class_gpa': class_gpa_data if class_gpa_data else {}
+            }
+        }
+        
+        return jsonify(response_data)
+        
+    except Exception as e:
+        print(f"Error in teacher view_student_details_data: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'details': traceback.format_exc()
+        }), 500
+

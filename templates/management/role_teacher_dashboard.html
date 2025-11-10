@@ -3292,21 +3292,26 @@ function markAllPresent() {
   }
   
   function loadStudentAcademicDetails(studentId) {
-    // Fetch detailed student information via AJAX
-    fetch(`/management/student/${studentId}/details/data`)
-      .then(response => response.json())
+    // Fetch detailed student information via AJAX (Teacher Version)
+    fetch(`/teacher/student/${studentId}/details/data`)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
       .then(data => {
         const container = document.getElementById(`student-details-${studentId}`);
         if (data.success) {
           container.innerHTML = formatStudentDetails(data.student);
         } else {
-          container.innerHTML = '<div class="alert alert-danger">Error loading student details.</div>';
+          container.innerHTML = `<div class="alert alert-danger">Error: ${data.error || 'Unknown error'}</div>`;
         }
       })
       .catch(error => {
         console.error('Error loading student details:', error);
         const container = document.getElementById(`student-details-${studentId}`);
-        container.innerHTML = '<div class="alert alert-danger">Error loading student details.</div>';
+        container.innerHTML = `<div class="alert alert-danger">Error loading student details: ${error.message}</div>`;
       });
   }
   

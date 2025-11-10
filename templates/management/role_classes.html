@@ -350,33 +350,31 @@
                             </div>
                         </div>
                         
-                        {% if 'Teacher' in current_user.role and current_user.role not in ['Director', 'School Administrator'] %}
-                            <!-- Google Classroom Status -->
-                            <div class="google-classroom-status {% if class.google_classroom_id %}linked{% endif %}">
-                                <div class="d-flex align-items-center justify-content-between">
-                                    <div>
-                                        <small class="text-muted d-block mb-1">
-                                            <i class="bi bi-google"></i> Google Classroom
-                                        </small>
-                                        {% if class.google_classroom_id %}
-                                            <span class="status-badge linked">
-                                                <i class="bi bi-check-circle-fill"></i> Linked
-                                            </span>
-                                        {% else %}
-                                            <span class="status-badge not-linked">
-                                                <i class="bi bi-exclamation-circle-fill"></i> Not Linked
-                                            </span>
-                                        {% endif %}
-                                    </div>
+                        <!-- Google Classroom Status (for all users) -->
+                        <div class="google-classroom-status {% if class.google_classroom_id %}linked{% endif %}">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div>
+                                    <small class="text-muted d-block mb-1">
+                                        <i class="bi bi-google"></i> Google Classroom
+                                    </small>
+                                    {% if class.google_classroom_id %}
+                                        <span class="status-badge linked">
+                                            <i class="bi bi-check-circle-fill"></i> Linked
+                                        </span>
+                                    {% else %}
+                                        <span class="status-badge not-linked">
+                                            <i class="bi bi-exclamation-circle-fill"></i> Not Linked
+                                        </span>
+                                    {% endif %}
                                 </div>
                             </div>
-                        {% endif %}
+                        </div>
                     </div>
                     
                     <!-- Action Buttons -->
                     <div class="d-grid gap-2">
                         {% if current_user.role in ['Director', 'School Administrator'] %}
-                            <div class="d-flex gap-2">
+                            <div class="d-flex gap-2 mb-2">
                                 <a href="{{ url_for('management.manage_class_roster', class_id=class.id) }}" class="action-btn btn-manage flex-fill">
                                     <i class="bi bi-people-fill me-2"></i>Manage Roster
                                 </a>
@@ -384,6 +382,36 @@
                                     <i class="bi bi-journal-check me-2"></i>View Grades
                                 </a>
                             </div>
+                            
+                            <!-- Google Classroom Actions for Admins -->
+                            {% if class.google_classroom_id %}
+                                <div class="d-flex gap-2">
+                                    <a href="https://classroom.google.com/c/{{ class.google_classroom_id }}" 
+                                       target="_blank" 
+                                       class="action-btn btn-google-open flex-fill"
+                                       title="Open in Google Classroom">
+                                        <i class="bi bi-google me-2"></i>Open Classroom
+                                    </a>
+                                    <a href="{{ url_for('management.unlink_classroom', class_id=class.id) }}" 
+                                       class="action-btn btn-google-unlink flex-fill"
+                                       onclick="return confirm('Are you sure you want to unlink this Google Classroom? The classroom will still exist in Google.');">
+                                        <i class="bi bi-link-45deg me-2"></i>Unlink
+                                    </a>
+                                </div>
+                            {% else %}
+                                <div class="d-flex gap-2">
+                                    <a href="{{ url_for('management.link_existing_classroom', class_id=class.id) }}" 
+                                       class="action-btn btn-google-link flex-fill"
+                                       title="Link to an existing Google Classroom">
+                                        <i class="bi bi-link-45deg me-2"></i>Link Existing
+                                    </a>
+                                    <a href="{{ url_for('management.create_and_link_classroom', class_id=class.id) }}" 
+                                       class="action-btn btn-google-create flex-fill"
+                                       title="Create a new Google Classroom and link it">
+                                        <i class="bi bi-plus-circle-fill me-2"></i>Create New
+                                    </a>
+                                </div>
+                            {% endif %}
                         {% elif 'Teacher' in current_user.role and current_user.role not in ['Director', 'School Administrator'] %}
                             <div class="d-flex gap-2 mb-2">
                                 <a href="{{ url_for('teacher.dashboard.view_class', class_id=class.id) }}" class="action-btn btn-view flex-fill">

@@ -2384,6 +2384,139 @@ def class_roster(class_id):
 
 
 # ============================================================================
+# GOOGLE CLASSROOM INTEGRATION FOR MANAGEMENT
+# ============================================================================
+
+@management_blueprint.route('/class/<int:class_id>/create-google-classroom')
+@login_required
+@management_required
+def create_and_link_classroom(class_id):
+    """
+    CREATE A NEW GOOGLE CLASSROOM AND LINK IT (Management Version)
+    Creates a brand new Google Classroom and links it to the existing class in the system.
+    """
+    class_to_link = Class.query.get_or_404(class_id)
+    
+    # Check if admin has connected their Google account
+    if not current_user.google_refresh_token:
+        flash("You must connect your Google account first.", "warning")
+        return redirect(url_for('teacher.settings'))
+    
+    try:
+        from google_classroom_service import get_google_service
+        
+        service = get_google_service(current_user)
+        if not service:
+            flash("Could not connect to Google. Please try reconnecting your account.", "danger")
+            return redirect(url_for('management.classes'))
+        
+        # Create the course in Google Classroom
+        course = {
+            'name': class_to_link.name,
+            'section': class_to_link.subject or '',
+            'descriptionHeading': f'Class: {class_to_link.name}',
+            'description': class_to_link.description or f'Welcome to {class_to_link.name}',
+            'room': class_to_link.room_number or '',
+            'ownerId': 'me',
+            'courseState': 'ACTIVE'
+        }
+        
+        created_course = service.courses().create(body=course).execute()
+        
+        # Save the Google Classroom ID to our database
+        class_to_link.google_classroom_id = created_course.get('id')
+        db.session.commit()
+        
+        flash(f"Successfully created and linked Google Classroom for {class_to_link.name}!", "success")
+        return redirect(url_for('management.classes'))
+        
+    except Exception as e:
+        current_app.logger.error(f"Error creating Google Classroom: {e}")
+        flash(f"An error occurred while creating the Google Classroom: {str(e)}", "danger")
+        return redirect(url_for('management.classes'))
+
+
+@management_blueprint.route('/class/<int:class_id>/link-existing-google-classroom')
+@login_required
+@management_required
+def link_existing_classroom(class_id):
+    """
+    SHOW THE LIST OF EXISTING GOOGLE CLASSROOMS (Management Version)
+    Displays a list of the admin's existing Google Classrooms that can be linked.
+    """
+    class_to_link = Class.query.get_or_404(class_id)
+    
+    # Check if admin has connected their account
+    if not current_user.google_refresh_token:
+        flash("You must connect your Google account first to see your existing classes.", "warning")
+        return redirect(url_for('teacher.settings'))
+    
+    try:
+        from google_classroom_service import get_google_service
+        
+        service = get_google_service(current_user)
+        if not service:
+            flash("Could not connect to Google. Please try reconnecting your account.", "danger")
+            return redirect(url_for('management.classes'))
+        
+        # Fetch all courses that the current user (admin) teaches
+        results = service.courses().list(teacherId='me', courseStates=['ACTIVE']).execute()
+        google_classrooms = results.get('courses', [])
+        
+        if not google_classrooms:
+            flash("You don't have any active Google Classrooms to link. Try creating a new one instead.", "info")
+            return redirect(url_for('management.classes'))
+        
+        return render_template('management/link_existing_google_classroom.html',
+                             class_to_link=class_to_link,
+                             google_classrooms=google_classrooms)
+        
+    except Exception as e:
+        current_app.logger.error(f"Error fetching Google Classrooms: {e}")
+        flash(f"An error occurred while fetching Google Classrooms: {str(e)}", "danger")
+        return redirect(url_for('management.classes'))
+
+
+@management_blueprint.route('/class/<int:class_id>/confirm-link-classroom/<google_classroom_id>', methods=['POST'])
+@login_required
+@management_required
+def confirm_link_classroom(class_id, google_classroom_id):
+    """
+    LINK THE SELECTED GOOGLE CLASSROOM (Management Version)
+    Links a selected existing Google Classroom to the class in our system.
+    """
+    class_to_link = Class.query.get_or_404(class_id)
+    
+    # Save the Google Classroom ID
+    class_to_link.google_classroom_id = google_classroom_id
+    db.session.commit()
+    
+    flash(f"Successfully linked Google Classroom to {class_to_link.name}!", "success")
+    return redirect(url_for('management.classes'))
+
+
+@management_blueprint.route('/class/<int:class_id>/unlink-google-classroom')
+@login_required
+@management_required
+def unlink_classroom(class_id):
+    """
+    UNLINK ROUTE (Management Version): Remove the Google Classroom link from the class.
+    Note: This doesn't delete the Google Classroom, just removes the link in our system.
+    """
+    class_to_unlink = Class.query.get_or_404(class_id)
+    
+    if not class_to_unlink.google_classroom_id:
+        flash("This class is not linked to a Google Classroom.", "info")
+        return redirect(url_for('management.classes'))
+    
+    class_to_unlink.google_classroom_id = None
+    db.session.commit()
+    
+    flash("Successfully unlinked from Google Classroom. The course still exists in your Google account.", "info")
+    return redirect(url_for('management.classes'))
+
+
+# ============================================================================
 # CLASS MANAGEMENT FEATURES (Group Assignments, Deadline Reminders, etc.)
 # ============================================================================
 

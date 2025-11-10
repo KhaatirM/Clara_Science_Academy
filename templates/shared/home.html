@@ -675,9 +675,9 @@
             <div class="modal-body p-4">
                 <div class="update-intro mb-4">
                     <h6 class="text-primary mb-2">
-                        <i class="fas fa-calendar-alt me-2"></i>Latest System Update - November 8, 2025
+                        <i class="fas fa-calendar-alt me-2"></i>Latest System Update - November 10, 2025
                     </h6>
-                    <p class="text-muted mb-0"><strong>Major Bug Fix Release!</strong> We've resolved critical issues with assignment workflows, voided grades, attendance statistics, report cards, and added powerful new features like bulk attendance uploads. Plus a stunning class roster redesign!</p>
+                    <p class="text-muted mb-0"><strong>Major Enhancement Release!</strong> Beautiful redesigned settings pages, Google Classroom integration for administrators, deadline reminder notifications, fixed assignment creation bugs, enhanced grading with voided badge display, real-time dashboard data, and resolved student academic concerns popup errors. Plus improved navigation and batch grading capabilities!</p>
                 </div>
                 
                 <div class="update-sections">
@@ -1517,12 +1517,12 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // ===== SHOW UPDATE MODAL =====
-    if (!sessionStorage.getItem('updateModalShownNov3_2025')) {
+    if (!sessionStorage.getItem('updateModalShownNov10_2025')) {
         const updateModalElement = document.getElementById('updateModal');
         if (updateModalElement) {
             const updateModal = new bootstrap.Modal(updateModalElement);
             updateModal.show();
-            sessionStorage.setItem('updateModalShownNov3_2025', 'true');
+            sessionStorage.setItem('updateModalShownNov10_2025', 'true');
         }
     }
     

@@ -17,20 +17,9 @@ bp = Blueprint('analytics', __name__)
 @login_required
 @teacher_required
 def analytics_hub():
-    """Main analytics hub for teachers."""
-    # Get teacher object or None for administrators
-    teacher = get_teacher_or_admin()
-    
-    # Get classes for the current teacher/admin
-    if is_admin():
-        classes = Class.query.all()
-    else:
-        if teacher is None:
-            classes = []
-        else:
-            classes = Class.query.filter_by(teacher_id=teacher.id).all()
-    
-    return render_template('teachers/teacher_analytics_hub.html', classes=classes)
+    """Redirect to My Classes - analytics should be accessed from class view."""
+    flash("Please select a class first to view its analytics.", "info")
+    return redirect(url_for('teacher.dashboard.my_classes'))
 
 @bp.route('/analytics/class/<int:class_id>')
 @login_required

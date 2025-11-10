@@ -5149,11 +5149,147 @@ def record_payment():
 @login_required
 @management_required
 def settings():
-    return render_template('management/role_dashboard.html',
-                         section='settings',
-                         active_tab='settings')
+    """Management settings page."""
+    # Check if admin has connected their Google account
+    user = User.query.get(current_user.id)
+    google_connected = user.google_refresh_token is not None
+    return render_template('management/management_settings.html', google_connected=google_connected)
 
 
+# ============================================================================
+# GOOGLE OAUTH FOR MANAGEMENT USERS
+# ============================================================================
+
+@management_blueprint.route('/google-account/connect')
+@login_required
+@management_required
+def google_connect_account():
+    """
+    Route 1: Starts the OAuth flow for getting a REFRESH token (Management Version).
+    """
+    try:
+        from google_auth_oauthlib.flow import Flow
+        
+        # Build client config from environment variables
+        client_config = {
+            "web": {
+                "client_id": os.environ.get('GOOGLE_CLIENT_ID'),
+                "client_secret": os.environ.get('GOOGLE_CLIENT_SECRET'),
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                "redirect_uris": [url_for('management.google_connect_callback', _external=True)]
+            }
+        }
+        
+        # Check if credentials are available
+        if not client_config["web"]["client_id"] or not client_config["web"]["client_secret"]:
+            flash("Google OAuth credentials not configured. Please contact technical support.", "warning")
+            return redirect(url_for('management.settings'))
+        
+        flow = Flow.from_client_config(
+            client_config,
+            scopes=[
+                'https://www.googleapis.com/auth/userinfo.email',
+                'https://www.googleapis.com/auth/userinfo.profile',
+                'openid',
+                'https://www.googleapis.com/auth/classroom.courses',
+                'https://www.googleapis.com/auth/classroom.rosters'
+            ],
+            redirect_uri=url_for('management.google_connect_callback', _external=True)
+        )
+        
+        # 'access_type=offline' is what gives us the refresh_token
+        # 'prompt=consent' forces Google to show the consent screen
+        authorization_url, state = flow.authorization_url(
+            access_type='offline',
+            prompt='consent',
+            include_granted_scopes='true'
+        )
+        
+        from flask import session
+        session['oauth_state'] = state
+        return redirect(authorization_url)
+    except Exception as e:
+        current_app.logger.error(f"Error starting Google OAuth flow: {e}")
+        flash(f"An error occurred while connecting to Google: {e}", "danger")
+        return redirect(url_for('management.settings'))
+
+
+@management_blueprint.route('/google-account/callback')
+@login_required
+@management_required
+def google_connect_callback():
+    """
+    Route 2: Google redirects here. We grab the refresh token and save it (Management Version).
+    """
+    from flask import session
+    from google_auth_oauthlib.flow import Flow
+    
+    if 'oauth_state' not in session or session['oauth_state'] != request.args.get('state'):
+        flash('State mismatch. Please try linking again.', 'danger')
+        return redirect(url_for('management.settings'))
+
+    try:
+        # Build client config from environment variables
+        client_config = {
+            "web": {
+                "client_id": os.environ.get('GOOGLE_CLIENT_ID'),
+                "client_secret": os.environ.get('GOOGLE_CLIENT_SECRET'),
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                "redirect_uris": [url_for('management.google_connect_callback', _external=True)]
+            }
+        }
+        
+        flow = Flow.from_client_config(
+            client_config,
+            scopes=None,
+            state=session.pop('oauth_state'),
+            redirect_uri=url_for('management.google_connect_callback', _external=True)
+        )
+        
+        flow.fetch_token(authorization_response=request.url)
+        
+        # This is the magic token!
+        refresh_token = flow.credentials.refresh_token
+
+        if not refresh_token:
+            flash("Failed to get a refresh token. Please ensure you are fully granting permission.", "warning")
+            return redirect(url_for('management.settings'))
+        
+        # Securely save the encrypted token to the logged-in user
+        user = User.query.get(current_user.id)
+        user.google_refresh_token = refresh_token
+        db.session.commit()
+
+        flash("Your Google Account has been securely connected!", "success")
+
+    except Exception as e:
+        current_app.logger.error(f"Error in Google connect callback: {e}")
+        flash(f"An error occurred: {e}", "danger")
+
+    return redirect(url_for('management.settings'))
+
+
+@management_blueprint.route('/google-account/disconnect', methods=['POST'])
+@login_required
+@management_required
+def google_disconnect_account():
+    """
+    Disconnect the admin's Google account by removing the refresh token (Management Version).
+    """
+    try:
+        user = User.query.get(current_user.id)
+        user.google_refresh_token = None
+        db.session.commit()
+        flash("Your Google Account has been disconnected.", "info")
+    except Exception as e:
+        current_app.logger.error(f"Error disconnecting Google account: {e}")
+        flash(f"An error occurred while disconnecting: {e}", "danger")
+    
+    return redirect(url_for('management.settings'))
 
 
 

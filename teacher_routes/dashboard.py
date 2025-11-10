@@ -846,14 +846,25 @@ def view_student_details_data(student_id):
     """API endpoint to get detailed student information as JSON for academic alerts (Teacher Version)."""
     from flask import jsonify
     from copy import copy
+    from gpa_scheduler import calculate_student_gpa
     
     try:
-        student = Student.query.get_or_404(student_id)
+        print(f"[Teacher Details] Fetching details for student ID: {student_id}")
+        
+        student = Student.query.get(student_id)
+        if not student:
+            print(f"[Teacher Details] Student {student_id} not found")
+            return jsonify({'success': False, 'error': 'Student not found'}), 404
+        
+        print(f"[Teacher Details] Found student: {student.first_name} {student.last_name}")
         
         # Verify teacher has access to this student (student must be in one of their classes)
         teacher_staff = TeacherStaff.query.filter_by(user_id=current_user.id).first()
         if not teacher_staff:
+            print(f"[Teacher Details] Teacher profile not found for user {current_user.id}")
             return jsonify({'success': False, 'error': 'Teacher profile not found'}), 403
+        
+        print(f"[Teacher Details] Teacher found: {teacher_staff.first_name} {teacher_staff.last_name}")
         
         # Get teacher's classes
         teacher_classes = Class.query.filter_by(teacher_id=teacher_staff.id).all()
@@ -949,8 +960,12 @@ def view_student_details_data(student_id):
 
         # Calculate Current Overall GPA
         if all_grades:
-            from gpa_scheduler import calculate_student_gpa
-            current_gpa = calculate_student_gpa(all_grades)
+            try:
+                current_gpa = calculate_student_gpa(all_grades)
+                print(f"[Teacher Details] Calculated current GPA: {current_gpa}")
+            except Exception as e:
+                print(f"[Teacher Details] Error calculating current GPA: {e}")
+                current_gpa = None
 
         # Calculate Hypothetical Overall GPA
         hypothetical_grades = []
@@ -968,18 +983,25 @@ def view_student_details_data(student_id):
                 hypothetical_grades.append(g)
         
         if hypothetical_grades:
-            from gpa_scheduler import calculate_student_gpa
-            hypothetical_gpa = calculate_student_gpa(hypothetical_grades)
+            try:
+                hypothetical_gpa = calculate_student_gpa(hypothetical_grades)
+                print(f"[Teacher Details] Calculated hypothetical GPA: {hypothetical_gpa}")
+            except Exception as e:
+                print(f"[Teacher Details] Error calculating hypothetical GPA: {e}")
+                hypothetical_gpa = None
 
         # Calculate GPA per class
         class_gpa_data = {}
         for class_id, class_grades in grades_by_class.items():
             if class_id in student_classes:
-                from gpa_scheduler import calculate_student_gpa
                 class_obj = student_classes[class_id]
                 class_name = class_obj.name
                 
-                class_current_gpa = calculate_student_gpa(class_grades) if class_grades else None
+                try:
+                    class_current_gpa = calculate_student_gpa(class_grades) if class_grades else None
+                except Exception as e:
+                    print(f"[Teacher Details] Error calculating GPA for class {class_name}: {e}")
+                    class_current_gpa = None
                 
                 # Calculate hypothetical GPA for this class
                 class_at_risk = [g for g in class_grades if g in at_risk_grades_list]
@@ -997,7 +1019,11 @@ def view_student_details_data(student_id):
                     else:
                         class_hypothetical_grades.append(g)
                 
-                class_hypothetical_gpa = calculate_student_gpa(class_hypothetical_grades) if class_hypothetical_grades else None
+                try:
+                    class_hypothetical_gpa = calculate_student_gpa(class_hypothetical_grades) if class_hypothetical_grades else None
+                except Exception as e:
+                    print(f"[Teacher Details] Error calculating hypothetical GPA for class {class_name}: {e}")
+                    class_hypothetical_gpa = None
                 
                 class_gpa_data[class_name] = {
                     'current': class_current_gpa,
@@ -1016,6 +1042,10 @@ def view_student_details_data(student_id):
                 'class_gpa': class_gpa_data if class_gpa_data else {}
             }
         }
+        
+        print(f"[Teacher Details] Returning success response for {student.first_name} {student.last_name}")
+        print(f"[Teacher Details] Missing assignments: {len(missing_assignments_by_class)} classes")
+        print(f"[Teacher Details] Current GPA: {current_gpa}, Hypothetical: {hypothetical_gpa}")
         
         return jsonify(response_data)
         

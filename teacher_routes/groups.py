@@ -252,9 +252,12 @@ def save_group_assignment(class_id):
         total_points = request.form.get('total_points', type=int)
         selected_groups = request.form.getlist('groups')  # List of group IDs
         
+        # Check if this is admin view
+        admin_view = request.args.get('admin_view') == 'true'
+        
         if not title or not due_date_str or not selected_groups:
             flash("Title, due date, and at least one group are required.", "danger")
-            return redirect(url_for('teacher.groups.create_group_assignment', class_id=class_id))
+            return redirect(url_for('teacher.groups.create_group_assignment', class_id=class_id, admin_view=admin_view))
         
         # Parse due date
         due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
@@ -263,7 +266,7 @@ def save_group_assignment(class_id):
         current_year = SchoolYear.query.filter_by(is_current=True).first()
         if not current_year:
             flash("No active school year found. Please contact administrator.", "danger")
-            return redirect(url_for('teacher.groups.create_group_assignment', class_id=class_id))
+            return redirect(url_for('teacher.groups.create_group_assignment', class_id=class_id, admin_view=admin_view))
         
         # Determine current quarter based on due date
         current_month = due_date.month
@@ -293,10 +296,16 @@ def save_group_assignment(class_id):
         
         db.session.commit()
         flash(f"Group assignment '{title}' created successfully for {len(selected_groups)} group(s)!", "success")
-        return redirect(url_for('teacher.dashboard.my_assignments'))
+        
+        # Redirect to appropriate page based on user role
+        if admin_view:
+            return redirect(url_for('management.admin_class_group_assignments', class_id=class_id))
+        else:
+            return redirect(url_for('teacher.dashboard.my_assignments'))
         
     except Exception as e:
         db.session.rollback()
         flash(f"Error creating group assignment: {str(e)}", "danger")
-        return redirect(url_for('teacher.groups.create_group_assignment', class_id=class_id))
+        admin_view = request.args.get('admin_view') == 'true'
+        return redirect(url_for('teacher.groups.create_group_assignment', class_id=class_id, admin_view=admin_view))
 

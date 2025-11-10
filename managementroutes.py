@@ -8626,11 +8626,16 @@ def admin_group_assignment_type_selector(class_id):
                          class_obj=class_obj,
                          admin_view=True)
 
-@management_blueprint.route('/class/<int:class_id>/group-assignment/create/pdf')
+@management_blueprint.route('/class/<int:class_id>/group-assignment/create/pdf', methods=['GET', 'POST'])
 @login_required
 @management_required
 def admin_create_group_pdf_assignment(class_id):
     """Create a new PDF group assignment - Management view."""
+    from werkzeug.utils import secure_filename
+    import time
+    import os
+    import json
+    
     class_obj = Class.query.get_or_404(class_id)
     
     # Get current school year and academic periods
@@ -8639,31 +8644,341 @@ def admin_create_group_pdf_assignment(class_id):
     if current_school_year:
         academic_periods = AcademicPeriod.query.filter_by(school_year_id=current_school_year.id, is_active=True).all()
     
+    if request.method == 'POST':
+        title = request.form.get('title', '').strip()
+        description = request.form.get('description', '').strip()
+        due_date_str = request.form.get('due_date')
+        quarter = request.form.get('quarter', '')
+        semester = request.form.get('semester', '')
+        academic_period_id = request.form.get('academic_period_id')
+        group_size_min = request.form.get('group_size_min', 2)
+        group_size_max = request.form.get('group_size_max', 4)
+        allow_individual = 'allow_individual' in request.form
+        collaboration_type = request.form.get('collaboration_type', 'group')
+        
+        if not title or not due_date_str or not quarter:
+            flash('Title, due date, and quarter are required.', 'danger')
+            return render_template('shared/create_group_pdf_assignment.html', 
+                                 class_obj=class_obj, 
+                                 academic_periods=academic_periods,
+                                 admin_view=True)
+        
+        try:
+            due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
+        except ValueError:
+            flash('Invalid due date format.', 'danger')
+            return render_template('shared/create_group_pdf_assignment.html', 
+                                 class_obj=class_obj, 
+                                 academic_periods=academic_periods,
+                                 admin_view=True)
+        
+        # Handle file upload
+        attachment_filename = None
+        attachment_original_filename = None
+        attachment_file_path = None
+        attachment_file_size = None
+        attachment_mime_type = None
+        
+        if 'attachment' in request.files:
+            file = request.files['attachment']
+            if file and file.filename and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                timestamp = str(int(time.time()))
+                attachment_filename = f"group_assignment_{class_id}_{timestamp}_{filename}"
+                attachment_original_filename = file.filename
+                
+                # Create uploads directory if it doesn't exist
+                upload_dir = os.path.join(current_app.static_folder, 'uploads')
+                os.makedirs(upload_dir, exist_ok=True)
+                
+                attachment_file_path = os.path.join(upload_dir, attachment_filename)
+                file.save(attachment_file_path)
+                attachment_file_size = os.path.getsize(attachment_file_path)
+                attachment_mime_type = file.content_type
+        
+        # Handle group selection
+        group_selection = request.form.get('group_selection', 'all')
+        selected_groups = request.form.getlist('selected_groups')
+        selected_group_ids = None
+        
+        if group_selection == 'specific' and selected_groups:
+            selected_group_ids = json.dumps([int(group_id) for group_id in selected_groups])
+        
+        # Create the group assignment
+        group_assignment = GroupAssignment(
+            title=title,
+            description=description,
+            class_id=class_id,
+            due_date=due_date,
+            quarter=quarter,
+            semester=semester if semester else None,
+            academic_period_id=int(academic_period_id) if academic_period_id else None,
+            school_year_id=current_school_year.id if current_school_year else None,
+            assignment_type='pdf',
+            group_size_min=int(group_size_min),
+            group_size_max=int(group_size_max),
+            allow_individual=allow_individual,
+            collaboration_type=collaboration_type,
+            selected_group_ids=selected_group_ids,
+            attachment_filename=attachment_filename,
+            attachment_original_filename=attachment_original_filename,
+            attachment_file_path=attachment_file_path,
+            attachment_file_size=attachment_file_size,
+            attachment_mime_type=attachment_mime_type,
+            status='Active'
+        )
+        
+        db.session.add(group_assignment)
+        db.session.commit()
+        
+        flash(f'Group PDF assignment "{title}" created successfully!', 'success')
+        return redirect(url_for('management.admin_class_group_assignments', class_id=class_id))
+    
     return render_template('shared/create_group_pdf_assignment.html',
                          class_obj=class_obj,
                          academic_periods=academic_periods,
                          admin_view=True)
 
-@management_blueprint.route('/class/<int:class_id>/group-assignment/create/quiz')
+@management_blueprint.route('/class/<int:class_id>/group-assignment/create/quiz', methods=['GET', 'POST'])
 @login_required
 @management_required
 def admin_create_group_quiz_assignment(class_id):
     """Create a new quiz group assignment - Management view."""
+    import json
+    
     class_obj = Class.query.get_or_404(class_id)
+    
+    # Get current school year and academic periods
+    current_school_year = SchoolYear.query.filter_by(is_active=True).first()
+    academic_periods = []
+    if current_school_year:
+        academic_periods = AcademicPeriod.query.filter_by(school_year_id=current_school_year.id, is_active=True).all()
+    
+    if request.method == 'POST':
+        title = request.form.get('title', '').strip()
+        description = request.form.get('description', '').strip()
+        due_date_str = request.form.get('due_date')
+        quarter = request.form.get('quarter', '')
+        semester = request.form.get('semester', '')
+        academic_period_id = request.form.get('academic_period_id')
+        group_size_min = request.form.get('group_size_min', 2)
+        group_size_max = request.form.get('group_size_max', 4)
+        allow_individual = 'allow_individual' in request.form
+        collaboration_type = request.form.get('collaboration_type', 'group')
+        
+        # Quiz-specific settings
+        time_limit = int(request.form.get('time_limit', 30))
+        passing_score = float(request.form.get('passing_score', 70))
+        shuffle_questions = 'shuffle_questions' in request.form
+        show_correct_answers = 'show_correct_answers' in request.form
+        allow_save_and_continue = 'allow_save_and_continue' in request.form
+        
+        # Handle group selection
+        group_selection = request.form.get('group_selection', 'all')
+        selected_groups = request.form.getlist('selected_groups')
+        selected_group_ids = None
+        
+        if group_selection == 'specific' and selected_groups:
+            selected_group_ids = json.dumps([int(group_id) for group_id in selected_groups])
+        
+        if not title or not due_date_str or not quarter:
+            flash('Title, due date, and quarter are required.', 'danger')
+            return render_template('shared/create_group_quiz_assignment.html', 
+                                 class_obj=class_obj, 
+                                 academic_periods=academic_periods,
+                                 admin_view=True)
+        
+        try:
+            due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
+        except ValueError:
+            flash('Invalid due date format.', 'danger')
+            return render_template('shared/create_group_quiz_assignment.html', 
+                                 class_obj=class_obj, 
+                                 academic_periods=academic_periods,
+                                 admin_view=True)
+        
+        # Create the group assignment
+        group_assignment = GroupAssignment(
+            title=title,
+            description=description,
+            class_id=class_id,
+            due_date=due_date,
+            quarter=quarter,
+            semester=semester if semester else None,
+            academic_period_id=int(academic_period_id) if academic_period_id else None,
+            school_year_id=current_school_year.id if current_school_year else None,
+            assignment_type='quiz',
+            group_size_min=int(group_size_min),
+            group_size_max=int(group_size_max),
+            allow_individual=allow_individual,
+            collaboration_type=collaboration_type,
+            selected_group_ids=selected_group_ids,
+            allow_save_and_continue=allow_save_and_continue,
+            max_save_attempts=10,
+            save_timeout_minutes=30,
+            status='Active'
+        )
+        
+        db.session.add(group_assignment)
+        db.session.flush()  # Get the assignment ID
+        
+        # Save quiz questions
+        question_count = 0
+        for key, value in request.form.items():
+            if key.startswith('question_text_'):
+                question_id = key.split('_')[2]
+                question_text = value
+                question_type = request.form.get(f'question_type_{question_id}')
+                points = float(request.form.get(f'question_points_{question_id}', 1.0))
+                
+                # Create the question
+                question = GroupQuizQuestion(
+                    group_assignment_id=group_assignment.id,
+                    question_text=question_text,
+                    question_type=question_type,
+                    points=points,
+                    order=question_count
+                )
+                db.session.add(question)
+                db.session.flush()  # Get the question ID
+                
+                # Save options for multiple choice and true/false
+                if question_type in ['multiple_choice', 'true_false']:
+                    option_count = 0
+                    # Iterate through all form items to find options for the current question
+                    for option_key, option_value in request.form.items():
+                        if option_key.startswith(f'option_text_{question_id}[]'):
+                            option_text = option_value
+                            # Find the correct answer for this question
+                            correct_answer = request.form.get(f'correct_answer_{question_id}')
+                            # Compare option_count as string with correct_answer
+                            is_correct = str(option_count) == correct_answer
+                            
+                            option = GroupQuizOption(
+                                question_id=question.id,
+                                option_text=option_text,
+                                is_correct=is_correct,
+                                order=option_count
+                            )
+                            db.session.add(option)
+                            option_count += 1
+                
+                question_count += 1
+        
+        db.session.commit()
+        flash(f'Group quiz assignment "{title}" created successfully!', 'success')
+        return redirect(url_for('management.admin_class_group_assignments', class_id=class_id))
     
     return render_template('shared/create_group_quiz_assignment.html',
                          class_obj=class_obj,
+                         academic_periods=academic_periods,
                          admin_view=True)
 
-@management_blueprint.route('/class/<int:class_id>/group-assignment/create/discussion')
+@management_blueprint.route('/class/<int:class_id>/group-assignment/create/discussion', methods=['GET', 'POST'])
 @login_required
 @management_required
 def admin_create_group_discussion_assignment(class_id):
     """Create a new discussion group assignment - Management view."""
+    import json
+    
     class_obj = Class.query.get_or_404(class_id)
+    
+    # Get current school year and academic periods
+    current_school_year = SchoolYear.query.filter_by(is_active=True).first()
+    academic_periods = []
+    if current_school_year:
+        academic_periods = AcademicPeriod.query.filter_by(school_year_id=current_school_year.id, is_active=True).all()
+    
+    if request.method == 'POST':
+        title = request.form.get('title', '').strip()
+        description = request.form.get('description', '').strip()
+        due_date_str = request.form.get('due_date')
+        quarter = request.form.get('quarter', '')
+        semester = request.form.get('semester', '')
+        academic_period_id = request.form.get('academic_period_id')
+        group_size_min = request.form.get('group_size_min', 2)
+        group_size_max = request.form.get('group_size_max', 4)
+        allow_individual = 'allow_individual' in request.form
+        collaboration_type = request.form.get('collaboration_type', 'group')
+        
+        # Discussion-specific settings
+        min_posts = int(request.form.get('min_posts', 2))
+        min_words = int(request.form.get('min_words', 100))
+        max_posts = int(request.form.get('max_posts', 10))
+        allow_replies = 'allow_replies' in request.form
+        require_citations = 'require_citations' in request.form
+        anonymous_posts = 'anonymous_posts' in request.form
+        moderate_posts = 'moderate_posts' in request.form
+        
+        # Handle group selection
+        group_selection = request.form.get('group_selection', 'all')
+        selected_groups = request.form.getlist('selected_groups')
+        selected_group_ids = None
+        
+        if group_selection == 'specific' and selected_groups:
+            selected_group_ids = json.dumps([int(group_id) for group_id in selected_groups])
+        
+        if not title or not due_date_str or not quarter:
+            flash('Title, due date, and quarter are required.', 'danger')
+            return render_template('shared/create_group_discussion_assignment.html', 
+                                 class_obj=class_obj, 
+                                 academic_periods=academic_periods,
+                                 admin_view=True)
+        
+        try:
+            due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
+        except ValueError:
+            flash('Invalid due date format.', 'danger')
+            return render_template('shared/create_group_discussion_assignment.html', 
+                                 class_obj=class_obj, 
+                                 academic_periods=academic_periods,
+                                 admin_view=True)
+        
+        # Create the group assignment
+        group_assignment = GroupAssignment(
+            title=title,
+            description=description,
+            class_id=class_id,
+            due_date=due_date,
+            quarter=quarter,
+            semester=semester if semester else None,
+            academic_period_id=int(academic_period_id) if academic_period_id else None,
+            school_year_id=current_school_year.id if current_school_year else None,
+            assignment_type='discussion',
+            group_size_min=int(group_size_min),
+            group_size_max=int(group_size_max),
+            allow_individual=allow_individual,
+            collaboration_type=collaboration_type,
+            selected_group_ids=selected_group_ids,
+            status='Active'
+        )
+        
+        db.session.add(group_assignment)
+        db.session.flush()  # Get the assignment ID
+        
+        # Save discussion prompts
+        prompt_count = 0
+        for key, value in request.form.items():
+            if key.startswith('prompt_text_'):
+                prompt_id = key.split('_')[2]
+                prompt_text = value
+                prompt_type = request.form.get(f'prompt_type_{prompt_id}')
+                response_length = request.form.get(f'response_length_{prompt_id}')
+                
+                # For now, we'll store prompts in the description or create a separate table later
+                # This is a simplified implementation
+                if prompt_count == 0:
+                    group_assignment.description += f"\n\nDiscussion Prompts:\n"
+                group_assignment.description += f"\n{prompt_count + 1}. {prompt_text} (Type: {prompt_type}, Length: {response_length})"
+                prompt_count += 1
+        
+        db.session.commit()
+        flash(f'Group discussion assignment "{title}" created successfully!', 'success')
+        return redirect(url_for('management.admin_class_group_assignments', class_id=class_id))
     
     return render_template('shared/create_group_discussion_assignment.html',
                          class_obj=class_obj,
+                         academic_periods=academic_periods,
                          admin_view=True)
 
 

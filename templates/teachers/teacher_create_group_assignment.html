@@ -8,8 +8,13 @@
         <div class="col-12">
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
+                    {% if request.args.get('admin_view') == 'true' %}
+                    <li class="breadcrumb-item"><a href="{{ url_for('management.management_dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('management.admin_class_group_assignments', class_id=class_item.id) }}">Group Assignments</a></li>
+                    {% else %}
                     <li class="breadcrumb-item"><a href="{{ url_for('teacher.dashboard.my_assignments') }}">Assignments</a></li>
                     <li class="breadcrumb-item"><a href="{{ url_for('teacher.groups.group_assignment_select_class') }}">Select Class</a></li>
+                    {% endif %}
                     <li class="breadcrumb-item active">Create Group Assignment</li>
                 </ol>
             </nav>
@@ -25,7 +30,7 @@
                     <h5 class="mb-0"><i class="bi bi-file-text me-2"></i>Assignment Details</h5>
                 </div>
                 <div class="card-body">
-                    <form method="POST" action="{{ url_for('teacher.groups.save_group_assignment', class_id=class_item.id) }}">
+                    <form method="POST" action="{{ url_for('teacher.groups.save_group_assignment', class_id=class_item.id, admin_view=request.args.get('admin_view')) }}">
                         <div class="mb-3">
                             <label for="title" class="form-label">Assignment Title <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="title" name="title" required>
@@ -95,9 +100,15 @@
                             <button type="submit" class="btn btn-primary">
                                 <i class="bi bi-check-circle me-2"></i>Create Assignment
                             </button>
+                            {% if request.args.get('admin_view') == 'true' %}
+                            <a href="{{ url_for('management.admin_class_group_assignments', class_id=class_item.id) }}" class="btn btn-secondary">
+                                <i class="bi bi-x-circle me-2"></i>Cancel
+                            </a>
+                            {% else %}
                             <a href="{{ url_for('teacher.dashboard.my_assignments') }}" class="btn btn-secondary">
                                 <i class="bi bi-x-circle me-2"></i>Cancel
                             </a>
+                            {% endif %}
                         </div>
                     </form>
                 </div>

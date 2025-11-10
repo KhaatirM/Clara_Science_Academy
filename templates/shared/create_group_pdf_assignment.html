@@ -33,11 +33,7 @@
 
     <div class="row">
         <div class="col-12 col-lg-8">
-            {% if admin_view %}
-                <form method="POST" enctype="multipart/form-data" id="assignmentForm" action="{{ url_for('teacher.groups.create_group_assignment', class_id=class_obj.id, admin_view='true') }}">
-            {% else %}
-                <form method="POST" enctype="multipart/form-data" id="assignmentForm">
-            {% endif %}
+            <form method="POST" enctype="multipart/form-data" id="assignmentForm">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 
                 <!-- Assignment Information -->

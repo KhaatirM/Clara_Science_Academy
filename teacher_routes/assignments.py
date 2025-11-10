@@ -5,7 +5,7 @@ Assignment management routes for teachers.
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, jsonify
 from flask_login import login_required, current_user
 from decorators import teacher_required
-from .utils import get_teacher_or_admin, is_admin, is_authorized_for_class, allowed_file
+from .utils import get_teacher_or_admin, is_admin, is_authorized_for_class, allowed_file, get_current_quarter
 from models import (
     db, Class, Assignment, Student, Grade, Submission, 
     SchoolYear, QuizQuestion, QuizOption, QuizAnswer,
@@ -37,11 +37,10 @@ def add_assignment():
         description = request.form.get('description', '')
         due_date_str = request.form.get('due_date')
         quarter = request.form.get('quarter')
-        points = request.form.get('points', type=float, default=100)
         
         if not all([title, class_id, due_date_str, quarter]):
             flash("Please fill in all required fields.", "danger")
-            return redirect(url_for('teacher.add_assignment'))
+            return redirect(url_for('teacher.assignments.add_assignment'))
         
         try:
             due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
@@ -50,26 +49,24 @@ def add_assignment():
             current_school_year = SchoolYear.query.filter_by(is_active=True).first()
             if not current_school_year:
                 flash("Cannot create assignment: No active school year.", "danger")
-                return redirect(url_for('teacher.add_assignment'))
+                return redirect(url_for('teacher.assignments.add_assignment'))
             
             # Check if user is authorized for this class
             class_obj = Class.query.get(class_id)
             if not is_authorized_for_class(class_obj):
                 flash("You are not authorized to create assignments for this class.", "danger")
-                return redirect(url_for('teacher.add_assignment'))
+                return redirect(url_for('teacher.assignments.add_assignment'))
             
-            # Create the assignment
+            # Create the assignment (removed 'points' field - doesn't exist in model)
             new_assignment = Assignment(
                 title=title,
                 description=description,
                 due_date=due_date,
-                points=points,
                 quarter=quarter,
                 class_id=class_id,
                 school_year_id=current_school_year.id,
                 assignment_type='pdf_paper',
-                status='Active',
-                created_by=current_user.id
+                status='Active'
             )
             
             db.session.add(new_assignment)
@@ -107,7 +104,7 @@ def add_assignment():
             
             db.session.commit()
             flash('Assignment created successfully!', 'success')
-            return redirect(url_for('teacher.my_assignments'))
+            return redirect(url_for('teacher.dashboard.my_assignments'))
             
         except Exception as e:
             db.session.rollback()
@@ -128,7 +125,9 @@ def add_assignment():
         else:
             classes = Class.query.filter_by(teacher_id=teacher.id).all()
     
-    return render_template('shared/add_assignment.html', classes=classes, teacher=teacher)
+    # Get current quarter for pre-selection
+    current_quarter = get_current_quarter()
+    return render_template('shared/add_assignment.html', classes=classes, teacher=teacher, current_quarter=current_quarter)
 
 @bp.route('/class/<int:class_id>/assignment/add', methods=['GET', 'POST'])
 @login_required
@@ -148,11 +147,10 @@ def add_assignment_for_class(class_id):
         description = request.form.get('description', '')
         due_date_str = request.form.get('due_date')
         quarter = request.form.get('quarter')
-        points = request.form.get('points', type=float, default=100)
         
         if not all([title, due_date_str, quarter]):
             flash("Please fill in all required fields.", "danger")
-            return redirect(url_for('teacher.add_assignment_for_class', class_id=class_id))
+            return redirect(url_for('teacher.assignments.add_assignment_for_class', class_id=class_id))
         
         try:
             due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
@@ -161,20 +159,18 @@ def add_assignment_for_class(class_id):
             current_school_year = SchoolYear.query.filter_by(is_active=True).first()
             if not current_school_year:
                 flash("Cannot create assignment: No active school year.", "danger")
-                return redirect(url_for('teacher.add_assignment_for_class', class_id=class_id))
+                return redirect(url_for('teacher.assignments.add_assignment_for_class', class_id=class_id))
             
-            # Create the assignment
+            # Create the assignment (removed 'points' and 'created_by' - don't exist in model)
             new_assignment = Assignment(
                 title=title,
                 description=description,
                 due_date=due_date,
-                points=points,
                 quarter=quarter,
                 class_id=class_id,
                 school_year_id=current_school_year.id,
                 assignment_type='pdf_paper',
-                status='Active',
-                created_by=current_user.id
+                status='Active'
             )
             
             db.session.add(new_assignment)
@@ -218,7 +214,8 @@ def add_assignment_for_class(class_id):
             return redirect(url_for('teacher.add_assignment_for_class', class_id=class_id))
     
     # GET request - show the form
-    return render_template('add_assignment.html', classes=[class_obj], teacher=get_teacher_or_admin(), selected_class=class_obj)
+    current_quarter = get_current_quarter()
+    return render_template('shared/add_assignment.html', classes=[class_obj], teacher=get_teacher_or_admin(), selected_class=class_obj, current_quarter=current_quarter)
 
 @bp.route('/assignment/view/<int:assignment_id>')
 @login_required
@@ -265,7 +262,6 @@ def edit_assignment(assignment_id):
         # Handle assignment update
         assignment.title = request.form.get('title')
         assignment.description = request.form.get('description', '')
-        assignment.points = request.form.get('points', type=float, default=100)
         assignment.quarter = request.form.get('quarter')
         
         due_date_str = request.form.get('due_date')
@@ -274,18 +270,18 @@ def edit_assignment(assignment_id):
                 assignment.due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
             except ValueError:
                 flash("Invalid date format.", "danger")
-                return redirect(url_for('teacher.edit_assignment', assignment_id=assignment_id))
+                return redirect(url_for('teacher.assignments.edit_assignment', assignment_id=assignment_id))
         
         try:
             db.session.commit()
             flash('Assignment updated successfully!', 'success')
-            return redirect(url_for('teacher.view_assignment', assignment_id=assignment_id))
+            return redirect(url_for('teacher.assignments.view_assignment', assignment_id=assignment_id))
             
         except Exception as e:
             db.session.rollback()
             print(f"Error updating assignment: {str(e)}")
             flash(f'Error updating assignment: {str(e)}', 'danger')
-            return redirect(url_for('teacher.edit_assignment', assignment_id=assignment_id))
+            return redirect(url_for('teacher.assignments.edit_assignment', assignment_id=assignment_id))
     
     # GET request - show the edit form
     return render_template('shared/edit_assignment.html', assignment=assignment)

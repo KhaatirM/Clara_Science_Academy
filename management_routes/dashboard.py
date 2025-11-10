@@ -138,11 +138,20 @@ def management_dashboard():
                     score = grade_data.get('score')
                     if score is None or score <= 69:
                         if grade.student.id not in seen_student_ids:
+                            # Determine alert reason
+                            if score is None:
+                                alert_reason = 'Missing'
+                            elif score <= 69:
+                                alert_reason = 'Overdue And Failing'
+                            else:
+                                alert_reason = 'At Risk'
+                            
                             at_risk_alerts.append({
                                 'student_name': f"{grade.student.first_name} {grade.student.last_name}",
-                                'student_user_id': grade.student.id,  # Use student ID instead of user_id
+                                'student_user_id': grade.student.id,  # This is the student ID
                                 'class_name': grade.assignment.class_info.name,
-                                'assignment_name': grade.assignment.title
+                                'assignment_name': grade.assignment.title,
+                                'alert_reason': alert_reason
                             })
                             seen_student_ids.add(grade.student.id)
                 except (json.JSONDecodeError, TypeError) as e:
@@ -156,29 +165,12 @@ def management_dashboard():
         # --- Debugging Print Statements ---
         print(f"--- Debug Dashboard Alerts ---")
         print(f"Checking alerts for user: {current_user.username}, Role: {current_user.role}")
-        # print(f"Students being checked IDs: {[s.id for s in students_to_check]}") # Optional: If you need to see specific IDs
         print(f"Raw at-risk grades query result count: {len(at_risk_grades)}")
-        print(f"Formatted alerts list being sent to template: {at_risk_alerts}")
+        print(f"Number of at-risk alerts created: {len(at_risk_alerts)}")
+        if at_risk_alerts:
+            print(f"First alert sample: {at_risk_alerts[0]}")
         print(f"--- End Debug ---")
         # --- End Debugging ---
-        
-        # TEMPORARY: Force test alerts to verify template is working
-        if not at_risk_alerts:
-            print("FORCING TEST ALERTS FOR DEBUGGING")
-            at_risk_alerts = [
-                {
-                    'student_name': 'Test Student 1',
-                    'student_user_id': 1,
-                    'class_name': 'Test Class',
-                    'assignment_name': 'Test Assignment'
-                },
-                {
-                    'student_name': 'Test Student 2', 
-                    'student_user_id': 2,
-                    'class_name': 'Test Class 2',
-                    'assignment_name': 'Test Assignment 2'
-                }
-            ]
         
         return render_template('management/role_dashboard.html', 
                              classes=classes,

@@ -202,7 +202,7 @@ def group_assignment_select_class():
     
     return render_template('teachers/teacher_group_assignment_select_class.html', classes=classes)
 
-@bp.route('/group-assignment/create/<int:class_id>')
+@bp.route('/group-assignment/create/<int:class_id>', methods=['GET', 'POST'])
 @login_required
 @teacher_required
 def create_group_assignment(class_id):

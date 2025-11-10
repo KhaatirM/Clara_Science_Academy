@@ -8,6 +8,7 @@ from decorators import teacher_required
 from .utils import get_teacher_or_admin, is_admin
 from models import db, User
 from google_auth_oauthlib.flow import Flow
+import os
 
 # Import the main teacher blueprint instead of creating a new one
 from . import teacher_blueprint as bp
@@ -31,8 +32,25 @@ def google_connect_account():
     Route 1: Starts the OAuth flow for getting a REFRESH token.
     """
     try:
-        flow = Flow.from_client_secrets_file(
-            current_app.config.get('GOOGLE_CLIENT_SECRETS_FILE', 'client_secret.json'),
+        # Build client config from environment variables
+        client_config = {
+            "web": {
+                "client_id": os.environ.get('GOOGLE_CLIENT_ID'),
+                "client_secret": os.environ.get('GOOGLE_CLIENT_SECRET'),
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                "redirect_uris": [url_for('teacher.google_connect_callback', _external=True)]
+            }
+        }
+        
+        # Check if credentials are available
+        if not client_config["web"]["client_id"] or not client_config["web"]["client_secret"]:
+            flash("Google OAuth credentials not configured. Please contact administrator.", "warning")
+            return redirect(url_for('teacher.settings'))
+        
+        flow = Flow.from_client_config(
+            client_config,
             scopes=[
                 'https://www.googleapis.com/auth/userinfo.email',
                 'https://www.googleapis.com/auth/userinfo.profile',
@@ -71,8 +89,20 @@ def google_connect_callback():
         return redirect(url_for('teacher.settings'))
 
     try:
-        flow = Flow.from_client_secrets_file(
-            current_app.config.get('GOOGLE_CLIENT_SECRETS_FILE', 'client_secret.json'),
+        # Build client config from environment variables
+        client_config = {
+            "web": {
+                "client_id": os.environ.get('GOOGLE_CLIENT_ID'),
+                "client_secret": os.environ.get('GOOGLE_CLIENT_SECRET'),
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                "redirect_uris": [url_for('teacher.google_connect_callback', _external=True)]
+            }
+        }
+        
+        flow = Flow.from_client_config(
+            client_config,
             scopes=None,
             state=session.pop('oauth_state'),
             redirect_uri=url_for('teacher.google_connect_callback', _external=True)
@@ -98,7 +128,7 @@ def google_connect_callback():
         current_app.logger.error(f"Error in Google connect callback: {e}")
         flash(f"An error occurred: {e}", "danger")
 
-    return redirect(url_for('teacher.settings.settings'))
+    return redirect(url_for('teacher.settings'))
 
 
 @bp.route('/google-account/disconnect', methods=['POST'])
@@ -117,7 +147,7 @@ def google_disconnect_account():
         current_app.logger.error(f"Error disconnecting Google account: {e}")
         flash(f"An error occurred while disconnecting: {e}", "danger")
     
-    return redirect(url_for('teacher.settings.settings'))
+    return redirect(url_for('teacher.settings'))
 
 # Placeholder for settings-related routes
 # This module will contain all settings functionality

@@ -70,8 +70,8 @@ def grade_assignment(assignment_id):
                 
                 grade_data = {
                     'score': points_earned,
-                    'max_score': assignment.points if assignment.points else 100,
-                    'percentage': (points_earned / assignment.points * 100) if assignment.points and assignment.points > 0 else points_earned,
+                    'max_score': 100,
+                    'percentage': points_earned,  # Since we're using 100 as max
                     'feedback': comments,
                     'graded_at': datetime.now().isoformat()
                 }

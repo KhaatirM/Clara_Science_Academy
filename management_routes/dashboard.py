@@ -180,7 +180,7 @@ def management_dashboard():
                 }
             ]
         
-        return render_template('role_dashboard.html', 
+        return render_template('management/role_dashboard.html', 
                              classes=classes,
                              students=students,
                              teachers=teachers,
@@ -195,7 +195,7 @@ def management_dashboard():
     except Exception as e:
         print(f"Error in management dashboard: {e}")
         flash("An error occurred while loading the dashboard.", "danger")
-        return render_template('role_dashboard.html', 
+        return render_template('management/role_dashboard.html', 
                              classes=[], 
                              students=[],
                              teachers=[], 

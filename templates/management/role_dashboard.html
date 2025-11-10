@@ -172,38 +172,44 @@
                     <div class="admin-notifications">
                         <h5 class="admin-section-title">
                             <i class="bi bi-bell-fill me-2"></i>Notifications
+                            {% if notifications %}
+                                <span class="badge bg-danger rounded-pill ms-2">{{ notifications|length }}</span>
+                            {% endif %}
                         </h5>
                         <div class="admin-notification-list">
-                            <div class="admin-notification-item">
-                                <div class="admin-notification-icon">
-                                    <i class="bi bi-exclamation-triangle-fill text-warning"></i>
+                            {% if notifications %}
+                                {% for notification in notifications %}
+                                <div class="admin-notification-item">
+                                    <div class="admin-notification-icon">
+                                        {% if notification.notification_type == 'grade' %}
+                                            <i class="bi bi-clipboard-check-fill text-success"></i>
+                                        {% elif notification.notification_type == 'assignment' %}
+                                            <i class="bi bi-journal-plus-fill text-primary"></i>
+                                        {% elif notification.notification_type == 'attendance' %}
+                                            <i class="bi bi-calendar-check-fill text-info"></i>
+                                        {% elif notification.notification_type == 'submission' %}
+                                            <i class="bi bi-file-earmark-check-fill text-warning"></i>
+                                        {% elif notification.notification_type == 'alert' or notification.notification_type == 'warning' %}
+                                            <i class="bi bi-exclamation-triangle-fill text-warning"></i>
+                                        {% else %}
+                                            <i class="bi bi-bell-fill text-secondary"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div class="admin-notification-content">
+                                        <h6 class="admin-notification-title">{{ notification.title }}</h6>
+                                        <p class="admin-notification-text">{{ notification.message }}</p>
+                                        <small class="admin-notification-time">
+                                            {{ notification.timestamp.strftime('%b %d, %I:%M %p') if notification.timestamp else 'Recently' }}
+                                        </small>
+                                    </div>
                                 </div>
-                                <div class="admin-notification-content">
-                                    <h6 class="admin-notification-title">Assignment Due Soon</h6>
-                                    <p class="admin-notification-text">5 assignments are due this week</p>
-                                    <small class="admin-notification-time">2 hours ago</small>
+                                {% endfor %}
+                            {% else %}
+                                <div class="admin-notification-item text-center py-4">
+                                    <i class="bi bi-bell-slash text-muted" style="font-size: 2rem;"></i>
+                                    <p class="text-muted mt-2 mb-0">No new notifications</p>
                                 </div>
-                            </div>
-                            <div class="admin-notification-item">
-                                <div class="admin-notification-icon">
-                                    <i class="bi bi-person-plus-fill text-success"></i>
-                                </div>
-                                <div class="admin-notification-content">
-                                    <h6 class="admin-notification-title">New Student Enrolled</h6>
-                                    <p class="admin-notification-text">John Smith has been enrolled in Grade 5</p>
-                                    <small class="admin-notification-time">4 hours ago</small>
-                                </div>
-                            </div>
-                            <div class="admin-notification-item">
-                                <div class="admin-notification-icon">
-                                    <i class="bi bi-calendar-check-fill text-info"></i>
-                                </div>
-                                <div class="admin-notification-content">
-                                    <h6 class="admin-notification-title">Attendance Reminder</h6>
-                                    <p class="admin-notification-text">Morning attendance needs to be taken</p>
-                                    <small class="admin-notification-time">6 hours ago</small>
-                                </div>
-                            </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -213,30 +219,36 @@
                             <i class="bi bi-clock-history me-2"></i>Recent Activity
                         </h5>
                         <div class="admin-activity-timeline">
-                            <div class="admin-activity-item">
-                                <div class="admin-activity-dot"></div>
-                                <div class="admin-activity-content">
-                                    <h6 class="admin-activity-title">Grade Updated</h6>
-                                    <p class="admin-activity-text">Math assignment graded for Class 5A</p>
-                                    <small class="admin-activity-time">1 hour ago</small>
+                            {% if recent_activity %}
+                                {% for activity in recent_activity %}
+                                <div class="admin-activity-item">
+                                    <div class="admin-activity-dot"></div>
+                                    <div class="admin-activity-content">
+                                        <h6 class="admin-activity-title">
+                                            {% if activity.type == 'grade' %}
+                                                <i class="bi bi-clipboard-check text-success me-1"></i>
+                                            {% elif activity.type == 'assignment' %}
+                                                <i class="bi bi-journal-plus text-primary me-1"></i>
+                                            {% elif activity.type == 'submission' %}
+                                                <i class="bi bi-file-earmark-check text-warning me-1"></i>
+                                            {% else %}
+                                                <i class="bi bi-circle-fill text-secondary me-1"></i>
+                                            {% endif %}
+                                            {{ activity.title }}
+                                        </h6>
+                                        <p class="admin-activity-text">{{ activity.description }}</p>
+                                        <small class="admin-activity-time">
+                                            {{ activity.timestamp.strftime('%b %d, %I:%M %p') if activity.timestamp else 'Recently' }}
+                                        </small>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="admin-activity-item">
-                                <div class="admin-activity-dot"></div>
-                                <div class="admin-activity-content">
-                                    <h6 class="admin-activity-title">Class Created</h6>
-                                    <p class="admin-activity-text">New Science class added to schedule</p>
-                                    <small class="admin-activity-time">3 hours ago</small>
+                                {% endfor %}
+                            {% else %}
+                                <div class="admin-activity-item text-center py-4">
+                                    <i class="bi bi-activity text-muted" style="font-size: 2rem;"></i>
+                                    <p class="text-muted mt-2 mb-0">No recent activity</p>
                                 </div>
-                            </div>
-                            <div class="admin-activity-item">
-                                <div class="admin-activity-dot"></div>
-                                <div class="admin-activity-content">
-                                    <h6 class="admin-activity-title">Student Added</h6>
-                                    <p class="admin-activity-text">New student enrolled in the system</p>
-                                    <small class="admin-activity-time">5 hours ago</small>
-                                </div>
-                            </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>

@@ -9105,7 +9105,9 @@ def view_student_details_data(student_id):
         class_gpa_breakdown = {}
 
         # Get all non-voided grades for the student
-        all_grades = Grade.query.filter_by(student_id=student.id).filter(Grade.is_voided == False).all()
+        all_grades = Grade.query.filter_by(student_id=student.id).filter(
+            db.or_(Grade.is_voided.is_(False), Grade.is_voided.is_(None))
+        ).all()
         
         # Get all classes this student is enrolled in
         enrollments = Enrollment.query.filter_by(student_id=student.id, is_active=True).all()
@@ -9116,18 +9118,37 @@ def view_student_details_data(student_id):
         missing_assignments_by_class = {}
         
         for g in all_grades:
-            class_id = g.assignment.class_id
-            if class_id not in grades_by_class:
-                grades_by_class[class_id] = []
-            grades_by_class[class_id].append(g)
-            
             try:
-                grade_data = json.loads(g.grade_data)
-                score = grade_data.get('score')
+                # Ensure assignment relationship is loaded
+                if not g.assignment:
+                    print(f"Grade {g.id} has no assignment, skipping")
+                    continue
+                
+                if not g.assignment.class_info:
+                    print(f"Assignment {g.assignment_id} has no class info, skipping")
+                    continue
+                
+                class_id = g.assignment.class_id
+                if class_id not in grades_by_class:
+                    grades_by_class[class_id] = []
+                grades_by_class[class_id].append(g)
+                
+                # Parse grade data
+                if not g.grade_data:
+                    print(f"Grade {g.id} has no grade_data, treating as missing")
+                    score = None
+                else:
+                    try:
+                        grade_data = json.loads(g.grade_data)
+                        score = grade_data.get('score')
+                    except (json.JSONDecodeError, TypeError) as e:
+                        print(f"Error parsing grade_data for grade {g.id}: {e}")
+                        score = None
+                
                 g.display_score = score
                 
                 # Check if assignment is past due or failing
-                is_overdue = g.assignment.due_date < datetime.utcnow()
+                is_overdue = g.assignment.due_date and g.assignment.due_date < datetime.utcnow()
                 
                 # Determine if this is truly at-risk (missing OR failing, not passing overdue assignments)
                 is_at_risk = False
@@ -9153,12 +9174,15 @@ def view_student_details_data(student_id):
                     
                     missing_assignments_by_class[class_name].append({
                         'title': g.assignment.title,
-                        'due_date': g.assignment.due_date.strftime('%Y-%m-%d'),
+                        'due_date': g.assignment.due_date.strftime('%Y-%m-%d') if g.assignment.due_date else 'No due date',
                         'status': status,
-                        'score': score
+                        'score': score if score is not None else 'N/A'
                     })
                         
-            except (json.JSONDecodeError, TypeError):
+            except Exception as e:
+                print(f"Error processing grade {g.id}: {e}")
+                import traceback
+                traceback.print_exc()
                 continue
 
         # Calculate Current Overall GPA
@@ -9215,17 +9239,24 @@ def view_student_details_data(student_id):
                     'hypothetical': class_hypothetical_gpa
                 }
 
-        return jsonify({
+        # Ensure we always return valid data
+        response_data = {
             'success': True,
             'student': {
                 'name': f"{student.first_name} {student.last_name}",
                 'student_id': student.id,
-                'current_gpa': current_gpa,
-                'hypothetical_gpa': hypothetical_gpa,
-                'missing_assignments': missing_assignments_by_class,
-                'class_gpa': class_gpa_data
+                'current_gpa': current_gpa if current_gpa is not None else 0.0,
+                'hypothetical_gpa': hypothetical_gpa if hypothetical_gpa is not None else 0.0,
+                'missing_assignments': missing_assignments_by_class if missing_assignments_by_class else {},
+                'class_gpa': class_gpa_data if class_gpa_data else {}
             }
-        })
+        }
+        
+        print(f"Returning student details for {student.first_name} {student.last_name}")
+        print(f"Missing assignments: {len(missing_assignments_by_class)} classes with issues")
+        print(f"Current GPA: {current_gpa}, Hypothetical GPA: {hypothetical_gpa}")
+        
+        return jsonify(response_data)
         
     except Exception as e:
         print(f"Error in view_student_details_data: {e}")
@@ -9233,5 +9264,6 @@ def view_student_details_data(student_id):
         traceback.print_exc()
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': str(e),
+            'details': traceback.format_exc()
         }), 500

@@ -118,15 +118,17 @@
                 {% for student in students %}
                     {% set submission = submissions.get(student.id) %}
                     {% set grade = grades.get(student.id) %}
+                    {% set is_voided = false %}
                     {% if grade and grade.grade_data %}
                         {% set parsed_grade_data = grade.grade_data|from_json %}
+                        {% set is_voided = parsed_grade_data.is_voided|default(false) %}
                         {% set score_value = parsed_grade_data.score|float if parsed_grade_data.score else (grade.points_earned|float if grade.points_earned else 0) %}
                         {% set comment_data = parsed_grade_data.feedback or '' %}
                     {% else %}
                         {% set score_value = 0 %}
                         {% set comment_data = '' %}
                     {% endif %}
-                    {% set performance_class = 'excellent' if score_value >= 90 else ('good' if score_value >= 80 else ('warning' if score_value >= 70 else ('failing' if score_value > 0 else 'ungraded'))) %}
+                    {% set performance_class = 'voided' if is_voided else ('excellent' if score_value >= 90 else ('good' if score_value >= 80 else ('warning' if score_value >= 70 else ('failing' if score_value > 0 else 'ungraded')))) %}
                     
                     <div class="student-grade-card {{ performance_class }}" data-student-id="{{ student.id }}">
                         <div class="student-grade-header">
@@ -138,7 +140,12 @@
                                 <div class="student-grade-email">{{ student.email or 'No email' }}</div>
                             </div>
                             <div class="student-grade-badges">
-                                {% if submission %}
+                                {% if is_voided %}
+                                    <span class="submission-badge badge-voided">
+                                        <i class="bi bi-slash-circle-fill"></i> Voided
+                                    </span>
+                                    <small class="submission-time text-muted">Assignment voided for this student</small>
+                                {% elif submission %}
                                     <span class="submission-badge badge-submitted">
                                         <i class="bi bi-check-circle-fill"></i> Submitted
                                     </span>

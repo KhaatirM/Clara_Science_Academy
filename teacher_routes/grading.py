@@ -27,56 +27,86 @@ def grade_assignment(assignment_id):
         return redirect(url_for('teacher.my_assignments'))
     
     if request.method == 'POST':
-        # Handle grading submission
-        student_id = request.form.get('student_id', type=int)
-        points_earned = request.form.get('points_earned', type=float)
-        feedback = request.form.get('feedback', '')
-        
-        if not student_id or points_earned is None:
-            flash("Missing required grading information.", "danger")
-            return redirect(url_for('teacher.grading.grade_assignment', assignment_id=assignment_id))
-        
+        # Handle batch grading submission
         try:
-            # Check if grade already exists
-            existing_grade = Grade.query.filter_by(
-                assignment_id=assignment_id,
-                student_id=student_id
-            ).first()
+            grades_saved = 0
             
-            grade_data = {
-                'score': points_earned,
-                'max_score': assignment.points,
-                'percentage': (points_earned / assignment.points) * 100 if assignment.points > 0 else 0,
-                'feedback': feedback,
-                'graded_at': datetime.now().isoformat()
-            }
+            # Get enrolled students for this class
+            enrollments = Enrollment.query.filter_by(class_id=assignment.class_id, is_active=True).all()
+            student_ids = [e.student_id for e in enrollments if e.student_id]
             
-            if existing_grade:
-                # Update existing grade
-                existing_grade.points_earned = points_earned
-                existing_grade.grade_data = json.dumps(grade_data)
-                existing_grade.graded_at = datetime.now()
-                existing_grade.graded_by = current_user.id
-            else:
-                # Create new grade
-                new_grade = Grade(
+            # Process each student's grade
+            for student_id in student_ids:
+                score = request.form.get(f'score_{student_id}')
+                comments = request.form.get(f'comment_{student_id}', '').strip()
+                
+                # Skip if no score provided
+                if not score or score == '':
+                    continue
+                
+                try:
+                    points_earned = float(score)
+                except ValueError:
+                    continue
+                
+                # Check if grade already exists
+                existing_grade = Grade.query.filter_by(
                     assignment_id=assignment_id,
-                    student_id=student_id,
-                    points_earned=points_earned,
-                    grade_data=json.dumps(grade_data),
-                    graded_at=datetime.now(),
-                    graded_by=current_user.id
-                )
-                db.session.add(new_grade)
+                    student_id=student_id
+                ).first()
+                
+                # Check if this student has a voided grade
+                is_voided = False
+                if existing_grade and existing_grade.grade_data:
+                    try:
+                        existing_data = json.loads(existing_grade.grade_data)
+                        is_voided = existing_data.get('is_voided', False)
+                    except:
+                        pass
+                
+                # Don't update voided grades
+                if is_voided:
+                    continue
+                
+                grade_data = {
+                    'score': points_earned,
+                    'max_score': assignment.points if assignment.points else 100,
+                    'percentage': (points_earned / assignment.points * 100) if assignment.points and assignment.points > 0 else points_earned,
+                    'feedback': comments,
+                    'graded_at': datetime.now().isoformat()
+                }
+                
+                if existing_grade:
+                    # Update existing grade
+                    existing_grade.grade_data = json.dumps(grade_data)
+                    existing_grade.graded_at = datetime.now()
+                    existing_grade.graded_by = current_user.id
+                else:
+                    # Create new grade
+                    new_grade = Grade(
+                        assignment_id=assignment_id,
+                        student_id=student_id,
+                        grade_data=json.dumps(grade_data),
+                        graded_at=datetime.now(),
+                        graded_by=current_user.id
+                    )
+                    db.session.add(new_grade)
+                
+                grades_saved += 1
             
             db.session.commit()
-            flash('Grade saved successfully!', 'success')
+            
+            if grades_saved > 0:
+                flash(f'{grades_saved} grade(s) saved successfully!', 'success')
+            else:
+                flash('No grades were updated. Please enter scores to save.', 'warning')
+            
             return redirect(url_for('teacher.grading.grade_assignment', assignment_id=assignment_id))
             
         except Exception as e:
             db.session.rollback()
-            print(f"Error saving grade: {str(e)}")
-            flash(f'Error saving grade: {str(e)}', 'danger')
+            print(f"Error saving grades: {str(e)}")
+            flash(f'Error saving grades: {str(e)}', 'danger')
             return redirect(url_for('teacher.grading.grade_assignment', assignment_id=assignment_id))
     
     # GET request - show grading interface

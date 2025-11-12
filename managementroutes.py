@@ -9067,6 +9067,8 @@ def admin_grade_group_assignment(assignment_id):
                 if grade.grade_data:
                     try:
                         grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
+                        # Add comments from the separate field
+                        grade_data['comments'] = grade.comments or ''
                         grades_by_student[grade.student_id] = grade_data
                     except:
                         grades_by_student[grade.student_id] = {'score': '', 'comments': ''}

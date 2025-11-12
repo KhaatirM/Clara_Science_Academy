@@ -117,13 +117,12 @@
             <div class="student-grading-cards">
                 {% for student in students %}
                     {% set submission = submissions.get(student.id) %}
-                    {% set grade = grades.get(student.id) %}
+                    {% set grade_data = grades.get(student.id) %}
                     {% set is_voided = false %}
-                    {% if grade and grade.grade_data %}
-                        {% set parsed_grade_data = grade.grade_data|from_json %}
-                        {% set is_voided = parsed_grade_data.is_voided|default(false) %}
-                        {% set score_value = parsed_grade_data.score|float if parsed_grade_data.score else (grade.points_earned|float if grade.points_earned else 0) %}
-                        {% set comment_data = parsed_grade_data.feedback or '' %}
+                    {% if grade_data %}
+                        {% set is_voided = grade_data.is_voided|default(false) %}
+                        {% set score_value = grade_data.score|float if grade_data.score is defined else 0 %}
+                        {% set comment_data = grade_data.comment or grade_data.feedback or '' %}
                     {% else %}
                         {% set score_value = 0 %}
                         {% set comment_data = '' %}

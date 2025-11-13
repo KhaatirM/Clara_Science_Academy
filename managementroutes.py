@@ -12,7 +12,7 @@ from models import (
     # Academic structure
     Class, SchoolYear, AcademicPeriod, Enrollment,
     # Assignment system
-    Assignment, AssignmentExtension, Submission, Grade, ReportCard,
+    Assignment, AssignmentExtension, AssignmentRedo, Submission, Grade, ReportCard,
     # Quiz system
     QuizQuestion, QuizOption, QuizAnswer,
     # Communication system
@@ -5535,14 +5535,51 @@ def grade_assignment(assignment_id):
                         db.session.flush()
                         check_and_void_grade(grade)
                     
+                    # Check if this is a redo submission and calculate final grade
+                    redo = AssignmentRedo.query.filter_by(
+                        assignment_id=assignment_id,
+                        student_id=student.id,
+                        is_used=True
+                    ).first()
+                    
+                    if redo:
+                        # This is a redo - calculate final grade
+                        redo.redo_grade = score_val
+                        
+                        # Apply late penalty if redo was late
+                        effective_redo_grade = score_val
+                        if redo.was_redo_late:
+                            effective_redo_grade = max(0, score_val - 10)  # 10% penalty
+                        
+                        # Keep higher grade
+                        if redo.original_grade:
+                            redo.final_grade = max(redo.original_grade, effective_redo_grade)
+                        else:
+                            redo.final_grade = effective_redo_grade
+                        
+                        # Update the grade_data with final grade
+                        grade_data_dict = json.loads(grade_data)
+                        grade_data_dict['score'] = redo.final_grade
+                        grade_data_dict['is_redo_final'] = True
+                        if redo.was_redo_late:
+                            grade_data_dict['comment'] = f"{comment}\n[REDO: Late submission, 10% penalty applied. Original: {redo.original_grade}%, Redo: {score_val}% (-10%), Final: {redo.final_grade}%]"
+                        else:
+                            grade_data_dict['comment'] = f"{comment}\n[REDO: Higher grade kept. Original: {redo.original_grade}%, Redo: {score_val}%, Final: {redo.final_grade}%]"
+                        grade.grade_data = json.dumps(grade_data_dict)
+                    
                     # Create notification for the student
                     if student.user:
                         from app import create_notification
+                        if redo:
+                            message = f'Your redo for "{assignment.title}" has been graded. Final Score: {redo.final_grade}%'
+                        else:
+                            message = f'Your grade for "{assignment.title}" has been posted. Score: {score_val}%'
+                        
                         create_notification(
                             user_id=student.user.id,
                             notification_type='grade',
                             title=f'Grade posted for {assignment.title}',
-                            message=f'Your grade for "{assignment.title}" has been posted. Score: {score_val}%',
+                            message=message,
                             link=url_for('student.student_grades')
                         )
                         
@@ -5985,6 +6022,195 @@ def void_group_grade(grade_id):
         flash(f'Error voiding group grade: {str(e)}', 'danger')
     
     return redirect(request.referrer or url_for('management.assignments_and_grades'))
+
+
+# ============================================================================
+# ASSIGNMENT REDO SYSTEM
+# ============================================================================
+
+@management_blueprint.route('/grant-redo/<int:assignment_id>', methods=['POST'])
+@login_required
+@management_required
+def grant_assignment_redo(assignment_id):
+    """Grant redo permission for an assignment to selected students"""
+    assignment = Assignment.query.get_or_404(assignment_id)
+    
+    # Only allow redos for PDF/Paper assignments
+    if assignment.assignment_type not in ['PDF', 'Paper', 'pdf', 'paper']:
+        return jsonify({'success': False, 'message': 'Redos are only available for PDF/Paper assignments.'})
+    
+    # Authorization check
+    if current_user.role not in ['Director', 'School Administrator']:
+        return jsonify({'success': False, 'message': 'You are not authorized to grant redos.'})
+    
+    # Get form data
+    student_ids = request.form.getlist('student_ids[]')
+    redo_deadline_str = request.form.get('redo_deadline')
+    reason = request.form.get('reason', '').strip()
+    
+    if not student_ids:
+        return jsonify({'success': False, 'message': 'Please select at least one student.'})
+    
+    if not redo_deadline_str:
+        return jsonify({'success': False, 'message': 'Please provide a redo deadline.'})
+    
+    try:
+        # Parse redo deadline
+        redo_deadline = datetime.strptime(redo_deadline_str, '%Y-%m-%d')
+        
+        # Get teacher staff record
+        teacher = None
+        if current_user.teacher_staff_id:
+            teacher = TeacherStaff.query.get(current_user.teacher_staff_id)
+        
+        granted_count = 0
+        already_granted_count = 0
+        
+        for student_id in student_ids:
+            student_id = int(student_id)
+            
+            # Check if student is enrolled in this class
+            enrollment = Enrollment.query.filter_by(
+                student_id=student_id,
+                class_id=assignment.class_id,
+                is_active=True
+            ).first()
+            
+            if not enrollment:
+                continue
+            
+            # Check if redo already exists
+            existing_redo = AssignmentRedo.query.filter_by(
+                assignment_id=assignment_id,
+                student_id=student_id
+            ).first()
+            
+            if existing_redo:
+                # Update existing redo
+                existing_redo.redo_deadline = redo_deadline
+                existing_redo.reason = reason if reason else existing_redo.reason
+                existing_redo.granted_at = datetime.utcnow()
+                if teacher:
+                    existing_redo.granted_by = teacher.id
+                already_granted_count += 1
+            else:
+                # Get original grade if it exists
+                grade = Grade.query.filter_by(
+                    student_id=student_id,
+                    assignment_id=assignment_id
+                ).first()
+                
+                original_grade = None
+                if grade and grade.grade_data:
+                    try:
+                        grade_data = json.loads(grade.grade_data)
+                        original_grade = grade_data.get('score')
+                    except:
+                        pass
+                
+                # Create new redo permission
+                redo = AssignmentRedo(
+                    assignment_id=assignment_id,
+                    student_id=student_id,
+                    granted_by=teacher.id if teacher else None,
+                    redo_deadline=redo_deadline,
+                    reason=reason,
+                    original_grade=original_grade
+                )
+                db.session.add(redo)
+                granted_count += 1
+            
+            # Create notification for student
+            student = Student.query.get(student_id)
+            if student and student.user:
+                create_notification(
+                    user_id=student.user.id,
+                    notification_type='assignment',
+                    title=f'Redo Opportunity: {assignment.title}',
+                    message=f'You have been granted permission to redo "{assignment.title}". New deadline: {redo_deadline.strftime("%m/%d/%Y")}',
+                    link=url_for('student.student_assignments')
+                )
+        
+        db.session.commit()
+        
+        message = f'Redo permission granted to {granted_count} student(s).'
+        if already_granted_count > 0:
+            message += f' Updated {already_granted_count} existing redo(s).'
+        
+        return jsonify({'success': True, 'message': message})
+        
+    except ValueError:
+        return jsonify({'success': False, 'message': 'Invalid date format.'})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f'Error granting redo: {str(e)}')
+        return jsonify({'success': False, 'message': f'Error granting redo: {str(e)}'})
+
+
+@management_blueprint.route('/revoke-redo/<int:redo_id>', methods=['POST'])
+@login_required
+@management_required
+def revoke_assignment_redo(redo_id):
+    """Revoke a redo permission"""
+    redo = AssignmentRedo.query.get_or_404(redo_id)
+    
+    # Authorization check
+    if current_user.role not in ['Director', 'School Administrator']:
+        return jsonify({'success': False, 'message': 'You are not authorized to revoke redos.'})
+    
+    # Don't allow revoking if student has already used the redo
+    if redo.is_used:
+        return jsonify({'success': False, 'message': 'Cannot revoke a redo that has already been used.'})
+    
+    try:
+        # Notify student
+        if redo.student and redo.student.user:
+            create_notification(
+                user_id=redo.student.user.id,
+                notification_type='assignment',
+                title=f'Redo Revoked: {redo.assignment.title}',
+                message=f'Your redo permission for "{redo.assignment.title}" has been revoked.',
+                link=url_for('student.student_assignments')
+            )
+        
+        db.session.delete(redo)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Redo permission revoked successfully.'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Error revoking redo: {str(e)}'})
+
+
+@management_blueprint.route('/assignment/<int:assignment_id>/redos')
+@login_required
+@management_required
+def view_assignment_redos(assignment_id):
+    """View all redo permissions for an assignment"""
+    assignment = Assignment.query.get_or_404(assignment_id)
+    
+    # Get all redos for this assignment
+    redos = AssignmentRedo.query.filter_by(assignment_id=assignment_id).all()
+    
+    redo_data = []
+    for redo in redos:
+        redo_data.append({
+            'id': redo.id,
+            'student_name': f"{redo.student.first_name} {redo.student.last_name}",
+            'student_id': redo.student_id,
+            'granted_at': redo.granted_at.strftime('%m/%d/%Y %I:%M %p'),
+            'redo_deadline': redo.redo_deadline.strftime('%m/%d/%Y'),
+            'reason': redo.reason or 'No reason provided',
+            'is_used': redo.is_used,
+            'redo_submitted_at': redo.redo_submitted_at.strftime('%m/%d/%Y %I:%M %p') if redo.redo_submitted_at else None,
+            'original_grade': redo.original_grade,
+            'redo_grade': redo.redo_grade,
+            'final_grade': redo.final_grade,
+            'was_redo_late': redo.was_redo_late
+        })
+    
+    return jsonify({'success': True, 'redos': redo_data})
 
 
 @management_blueprint.route('/assignment/change-status/<int:assignment_id>', methods=['POST'])

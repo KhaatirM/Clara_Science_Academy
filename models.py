@@ -673,6 +673,44 @@ class Grade(db.Model):
         return f"Grade(Student: {self.student_id}, Assignment: {self.assignment_id})"
 
 
+class AssignmentRedo(db.Model):
+    """
+    Model for tracking assignment redo permissions and attempts.
+    Allows teachers/admins to grant students the opportunity to redo assignments.
+    """
+    __tablename__ = 'assignment_redo'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    assignment_id = db.Column(db.Integer, db.ForeignKey('assignment.id'), nullable=False)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
+    
+    # Redo permission details
+    granted_by = db.Column(db.Integer, db.ForeignKey('teacher_staff.id'), nullable=True)  # Teacher who granted the redo
+    granted_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    redo_deadline = db.Column(db.DateTime, nullable=False)  # New deadline for redo submission
+    reason = db.Column(db.Text, nullable=True)  # Why redo was granted (optional)
+    
+    # Redo attempt tracking
+    is_used = db.Column(db.Boolean, default=False, nullable=False)  # Has student submitted redo?
+    redo_submission_id = db.Column(db.Integer, db.ForeignKey('submission.id'), nullable=True)  # Links to redo submission
+    redo_submitted_at = db.Column(db.DateTime, nullable=True)
+    
+    # Grading information
+    original_grade = db.Column(db.Float, nullable=True)  # Original grade before redo
+    redo_grade = db.Column(db.Float, nullable=True)  # Grade from redo attempt
+    final_grade = db.Column(db.Float, nullable=True)  # Final grade (higher of the two, with late penalty if applicable)
+    was_redo_late = db.Column(db.Boolean, default=False, nullable=False)  # Was redo submitted after deadline?
+    
+    # Relationships
+    assignment = db.relationship('Assignment', backref='redos', lazy=True)
+    student = db.relationship('Student', backref='assignment_redos', lazy=True)
+    granted_by_teacher = db.relationship('TeacherStaff', backref='granted_redos', lazy=True)
+    redo_submission = db.relationship('Submission', foreign_keys=[redo_submission_id], backref='redo_for', lazy=True)
+    
+    def __repr__(self):
+        return f"AssignmentRedo(Assignment: {self.assignment_id}, Student: {self.student_id}, Used: {self.is_used})"
+
+
 class QuarterGrade(db.Model):
     """
     Model for storing calculated quarter grades that refresh automatically.

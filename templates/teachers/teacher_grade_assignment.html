@@ -227,6 +227,18 @@
                                     </div>
                                 </div>
                             </div>
+                            
+                            {% if assignment.assignment_type in ['PDF', 'Paper', 'pdf', 'paper'] and current_user.role in ['Director', 'School Administrator'] %}
+                            <!-- Redo Button (Only for PDF/Paper assignments) -->
+                            <div class="row g-3 mt-2">
+                                <div class="col-12">
+                                    <button type="button" class="btn btn-sm btn-outline-warning w-100" 
+                                            onclick="openRedoModal({{ student.id }}, '{{ student.first_name }} {{ student.last_name }}')">
+                                        <i class="bi bi-arrow-repeat me-1"></i>Grant Redo Opportunity
+                                    </button>
+                                </div>
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
                 {% else %}
@@ -434,5 +446,112 @@ function goBack() {
         {% endif %}
     }
 }
+
+// Redo Modal Functions
+let selectedStudentId = null;
+let selectedStudentName = '';
+
+function openRedoModal(studentId, studentName) {
+    selectedStudentId = studentId;
+    selectedStudentName = studentName;
+    
+    document.getElementById('redoStudentName').textContent = studentName;
+    document.getElementById('redoDeadline').value = '';
+    document.getElementById('redoReason').value = '';
+    
+    const modal = new bootstrap.Modal(document.getElementById('redoModal'));
+    modal.show();
+}
+
+function grantRedo() {
+    const deadline = document.getElementById('redoDeadline').value;
+    const reason = document.getElementById('redoReason').value;
+    
+    if (!deadline) {
+        alert('Please select a redo deadline.');
+        return;
+    }
+    
+    // Show loading state
+    const btn = document.getElementById('grantRedoBtn');
+    const originalHTML = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Granting...';
+    
+    // Prepare form data
+    const formData = new FormData();
+    formData.append('student_ids[]', selectedStudentId);
+    formData.append('redo_deadline', deadline);
+    formData.append('reason', reason);
+    formData.append('csrf_token', '{{ csrf_token() }}');
+    
+    // Send request
+    fetch('/management/grant-redo/{{ assignment.id }}', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            bootstrap.Modal.getInstance(document.getElementById('redoModal')).hide();
+            // Optionally reload the page to show redo badge
+            location.reload();
+        } else {
+            alert('Error: ' + data.message);
+            btn.disabled = false;
+            btn.innerHTML = originalHTML;
+        }
+    })
+    .catch(error => {
+        alert('Error granting redo: ' + error);
+        btn.disabled = false;
+        btn.innerHTML = originalHTML;
+    });
+}
 </script>
+
+<!-- Redo Modal -->
+<div class="modal fade" id="redoModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title">
+                    <i class="bi bi-arrow-repeat me-2"></i>Grant Redo Opportunity
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Grading Policy:</strong> The final grade will be the higher of the original and redo grades. If the redo is submitted late, a 10% penalty will be applied to the redo grade.
+                </div>
+                
+                <h6 class="fw-bold mb-3">Student: <span id="redoStudentName"></span></h6>
+                
+                <div class="mb-3">
+                    <label for="redoDeadline" class="form-label fw-bold">Redo Deadline<span class="text-danger">*</span></label>
+                    <input type="date" class="form-control" id="redoDeadline" required>
+                    <small class="text-muted">Set a new deadline for the redo submission</small>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="redoReason" class="form-label fw-bold">Reason (Optional)</label>
+                    <textarea class="form-control" id="redoReason" rows="3" 
+                              placeholder="e.g., Excused absence, Grade improvement opportunity, etc."></textarea>
+                    <small class="text-muted">This will be visible to the student</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-warning" id="grantRedoBtn" onclick="grantRedo()">
+                    <i class="bi bi-arrow-repeat me-1"></i>Grant Redo
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}

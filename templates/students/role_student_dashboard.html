@@ -1665,6 +1665,99 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
     transform: translateX(5px);
 }
 
+/* Redo Opportunities Card */
+.student-redo-card {
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    border: 2px solid #ffc107;
+}
+
+.student-redo-header {
+    background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+    padding: 1.25rem 1.5rem;
+    color: white;
+}
+
+.student-redo-header h5 {
+    margin: 0;
+    font-weight: 600;
+}
+
+.student-redo-body {
+    padding: 1.5rem;
+}
+
+.student-redo-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.25rem;
+    background: #fff8e1;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+    border-left: 4px solid #ffc107;
+}
+
+.student-redo-item:last-child {
+    margin-bottom: 0;
+}
+
+.student-redo-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.student-redo-info {
+    flex: 1;
+}
+
+.student-redo-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+    color: #2d3748;
+}
+
+.student-redo-class {
+    font-size: 0.9rem;
+    color: #718096;
+    font-weight: 500;
+}
+
+.student-redo-reason {
+    font-size: 0.85rem;
+    color: #f57c00;
+    margin: 0.5rem 0;
+    font-style: italic;
+}
+
+.student-redo-original-grade {
+    font-size: 0.85rem;
+    color: #dc3545;
+    margin: 0.5rem 0 0 0;
+}
+
+.student-redo-action {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.student-redo-deadline {
+    text-align: right;
+}
+
 .student-upcoming-card {
     background: white;
     border-radius: 15px;
@@ -2405,6 +2498,50 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
 
             <!-- Right Column -->
             <div class="col-12 col-lg-8">
+                <!-- Redo Opportunities Card -->
+                {% if redo_opportunities %}
+                <div class="student-redo-card mb-4">
+                    <div class="student-redo-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-arrow-repeat me-2"></i>Redo Opportunities
+                            <span class="badge bg-warning text-dark ms-2">{{ redo_opportunities|length }}</span>
+                        </h5>
+                    </div>
+                    <div class="student-redo-body">
+                        {% for redo in redo_opportunities %}
+                        <div class="student-redo-item">
+                            <div class="student-redo-icon">
+                                <i class="bi bi-arrow-clockwise"></i>
+                            </div>
+                            <div class="student-redo-info">
+                                <h6 class="student-redo-title">{{ redo.assignment.title }}</h6>
+                                <p class="student-redo-class mb-1">{{ redo.assignment.class_info.name if redo.assignment.class_info else 'N/A' }}</p>
+                                {% if redo.reason %}
+                                <p class="student-redo-reason"><i class="bi bi-info-circle me-1"></i>{{ redo.reason }}</p>
+                                {% endif %}
+                                {% if redo.original_grade %}
+                                <p class="student-redo-original-grade">
+                                    <i class="bi bi-graph-down me-1"></i>Original Grade: <strong>{{ redo.original_grade }}%</strong>
+                                </p>
+                                {% endif %}
+                            </div>
+                            <div class="student-redo-action">
+                                <div class="student-redo-deadline mb-2">
+                                    <span class="badge bg-warning text-dark">
+                                        <i class="bi bi-calendar-event me-1"></i>Due: {{ redo.redo_deadline.strftime('%m/%d/%Y') }}
+                                    </span>
+                                </div>
+                                <a href="{{ url_for('student.submit_assignment', assignment_id=redo.assignment_id, is_redo=1) }}" 
+                                   class="btn btn-sm btn-warning w-100">
+                                    <i class="bi bi-upload me-1"></i>Submit Redo
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                
                 <!-- Upcoming Assignments Card -->
                 <div class="student-upcoming-card mb-4">
                     <div class="student-upcoming-header">

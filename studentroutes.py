@@ -16,7 +16,7 @@ from models import (
     # Academic structure
     Class, SchoolYear, AcademicPeriod, Enrollment, ClassSchedule,
     # Assignment system
-    Assignment, Submission, Grade, StudentGoal,
+    Assignment, AssignmentRedo, Submission, Grade, StudentGoal,
     # Group assignment system
     GroupAssignment, GroupGrade, StudentGroup, GroupSubmission, StudentGroupMember,
     # Quiz system
@@ -596,6 +596,14 @@ def student_assignments():
     grades = Grade.query.filter_by(student_id=student.id).all()
     grades_dict = {g.assignment_id: g for g in grades}
     
+    # Get redo opportunities for this student
+    redo_opportunities = AssignmentRedo.query.filter_by(
+        student_id=student.id,
+        is_used=False
+    ).join(Assignment).filter(
+        Assignment.assignment_type.in_(['PDF', 'Paper', 'pdf', 'paper'])
+    ).all()
+    
     # Create assignments with status for template
     assignments_with_status = []
     past_due_assignments = []
@@ -628,7 +636,8 @@ def student_assignments():
                              today=today,
                              classes=classes,
                              past_due_assignments=past_due_assignments,
-                             upcoming_assignments=upcoming_assignments))
+                             upcoming_assignments=upcoming_assignments,
+                             redo_opportunities=redo_opportunities))
 
 @student_blueprint.route('/assignments/class/<int:class_id>')
 @login_required
@@ -1777,6 +1786,21 @@ def submit_assignment(assignment_id):
     student = Student.query.get_or_404(current_user.student_id)
     assignment = Assignment.query.get_or_404(assignment_id)
 
+    # Check if this is a redo submission
+    is_redo = request.args.get('is_redo', '0') == '1' or request.form.get('is_redo', '0') == '1'
+    redo_record = None
+    
+    if is_redo:
+        # Verify redo permission exists and is not used
+        redo_record = AssignmentRedo.query.filter_by(
+            assignment_id=assignment_id,
+            student_id=student.id,
+            is_used=False
+        ).first()
+        
+        if not redo_record:
+            return jsonify({'success': False, 'message': 'No redo permission found or redo already submitted'}), 403
+
     if 'submission_file' not in request.files:
         return jsonify({'success': False, 'message': 'No file selected'}), 400
     
@@ -1789,7 +1813,8 @@ def submit_assignment(assignment_id):
         assert file.filename is not None
         filename = secure_filename(file.filename)
         # Create a unique filename to avoid collisions
-        unique_filename = f"sub_{student.id}_{assignment.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{filename}"
+        redo_suffix = '_REDO' if is_redo else ''
+        unique_filename = f"sub_{student.id}_{assignment.id}{redo_suffix}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{filename}"
         filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], unique_filename)
         
         try:
@@ -1798,29 +1823,54 @@ def submit_assignment(assignment_id):
             # Get optional notes
             notes = request.form.get('submission_notes', '')
             
-            # Check for existing submission and update it, or create a new one
-            submission = Submission.query.filter_by(student_id=student.id, assignment_id=assignment_id).first()
-            if submission:
-                # Optionally, delete the old file
-                if submission.file_path and os.path.exists(os.path.join(current_app.config['UPLOAD_FOLDER'], submission.file_path)):
-                    os.remove(os.path.join(current_app.config['UPLOAD_FOLDER'], submission.file_path))
-                submission.file_path = unique_filename
-                submission.submitted_at = db.func.now()
-                if notes:
-                    submission.comments = notes
-            else:
-                # Create new submission
+            # Handle redo submission differently
+            if is_redo and redo_record:
+                # Create new submission for redo
                 submission = Submission(
                     student_id=student.id,
                     assignment_id=assignment_id,
                     file_path=unique_filename,
-                    comments=notes,
+                    comments=notes + ' [REDO ATTEMPT]',
                     submitted_at=datetime.utcnow()
                 )
                 db.session.add(submission)
+                db.session.flush()  # Get submission ID
+                
+                # Update redo record
+                redo_record.is_used = True
+                redo_record.redo_submission_id = submission.id
+                redo_record.redo_submitted_at = datetime.utcnow()
+                
+                # Check if redo was submitted late
+                if datetime.utcnow() > redo_record.redo_deadline:
+                    redo_record.was_redo_late = True
+                
+                db.session.commit()
+                return jsonify({'success': True, 'message': 'Redo submitted successfully! Your teacher will grade it soon.'}), 200
+            else:
+                # Regular submission
+                submission = Submission.query.filter_by(student_id=student.id, assignment_id=assignment_id).first()
+                if submission:
+                    # Optionally, delete the old file
+                    if submission.file_path and os.path.exists(os.path.join(current_app.config['UPLOAD_FOLDER'], submission.file_path)):
+                        os.remove(os.path.join(current_app.config['UPLOAD_FOLDER'], submission.file_path))
+                    submission.file_path = unique_filename
+                    submission.submitted_at = db.func.now()
+                    if notes:
+                        submission.comments = notes
+                else:
+                    # Create new submission
+                    submission = Submission(
+                        student_id=student.id,
+                        assignment_id=assignment_id,
+                        file_path=unique_filename,
+                        comments=notes,
+                        submitted_at=datetime.utcnow()
+                    )
+                    db.session.add(submission)
             
-            db.session.commit()
-            return jsonify({'success': True, 'message': 'Assignment submitted successfully!'}), 200
+                db.session.commit()
+                return jsonify({'success': True, 'message': 'Assignment submitted successfully!'}), 200
             
         except Exception as e:
             db.session.rollback()

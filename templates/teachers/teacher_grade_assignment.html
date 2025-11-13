@@ -137,8 +137,8 @@
                     {% set is_voided = false %}
                     {% if grade_data %}
                         {% set is_voided = grade_data.is_voided|default(false) %}
-                        {% set score_value = grade_data.score|float if grade_data.score is defined else 0 %}
-                        {% set comment_data = grade_data.comment or grade_data.feedback or '' %}
+                        {% set score_value = grade_data.get('score', 0)|float %}
+                        {% set comment_data = grade_data.get('comment', '') or grade_data.get('feedback', '') %}
                     {% else %}
                         {% set score_value = 0 %}
                         {% set comment_data = '' %}
@@ -224,7 +224,7 @@
                                             <input type="number" 
                                                    class="score-input" 
                                                    name="score_{{ student.id }}" 
-                                                   value="{{ score_value if score_value > 0 else '' }}"
+                                                   value="{{ score_value if score_value else '' }}"
                                                    min="0" 
                                                    max="100" 
                                                    step="0.1"

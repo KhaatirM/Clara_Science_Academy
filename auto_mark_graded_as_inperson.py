@@ -33,40 +33,65 @@ def auto_mark_graded_as_inperson():
             updated_count = 0
             already_inperson_count = 0
             no_grade_count = 0
+            low_grade_count = 0
             
-            for submission in all_submissions:
-                # Skip if already marked as in_person
-                if submission.submission_type == 'in_person':
-                    already_inperson_count += 1
+            # Get all grades
+            all_grades = Grade.query.all()
+            print(f"📊 Found {len(all_grades)} total grades")
+            
+            # Process all grades and mark corresponding submissions as in_person
+            for grade in all_grades:
+                # Parse grade data to get score
+                try:
+                    import json
+                    grade_data = json.loads(grade.grade_data) if grade.grade_data else {}
+                    score = grade_data.get('score', 0)
+                    
+                    # Only process if score > 2%
+                    if score <= 2:
+                        low_grade_count += 1
+                        continue
+                    
+                    # Find or create submission for this grade
+                    submission = Submission.query.filter_by(
+                        student_id=grade.student_id,
+                        assignment_id=grade.assignment_id
+                    ).first()
+                    
+                    if submission:
+                        # Update existing submission
+                        if submission.submission_type != 'in_person':
+                            submission.submission_type = 'in_person'
+                            if not submission.submission_notes:
+                                submission.submission_notes = 'Auto-marked as in-person (graded assignment)'
+                            updated_count += 1
+                        else:
+                            already_inperson_count += 1
+                    else:
+                        # Create new submission record for graded assignment
+                        new_submission = Submission(
+                            student_id=grade.student_id,
+                            assignment_id=grade.assignment_id,
+                            submission_type='in_person',
+                            submission_notes='Auto-created for graded assignment (physical paper)',
+                            submitted_at=grade.graded_at if grade.graded_at else datetime.utcnow(),
+                            file_path=None
+                        )
+                        db.session.add(new_submission)
+                        updated_count += 1
+                        
+                except Exception as e:
+                    print(f"⚠️  Error processing grade {grade.id}: {e}")
                     continue
-                
-                # Check if there's a grade for this submission
-                grade = Grade.query.filter_by(
-                    student_id=submission.student_id,
-                    assignment_id=submission.assignment_id
-                ).first()
-                
-                if grade:
-                    # Has a grade, so mark as in_person
-                    submission.submission_type = 'in_person'
-                    
-                    # Add note if it doesn't have one already
-                    if not submission.submission_notes:
-                        submission.submission_notes = 'Auto-marked as in-person (graded assignment)'
-                    
-                    updated_count += 1
-                else:
-                    # No grade yet
-                    no_grade_count += 1
             
             # Show summary before committing
             print("\n" + "=" * 70)
             print("SUMMARY OF CHANGES")
             print("=" * 70)
-            print(f"\n📝 Will update: {updated_count} submission(s)")
+            print(f"\n📝 Will update/create: {updated_count} submission(s)")
             print(f"✅ Already marked as in-person: {already_inperson_count}")
-            print(f"⏸️  No grade (will skip): {no_grade_count}")
-            print(f"📊 Total checked: {total_submissions}")
+            print(f"⏸️  Low grade (≤2%, skipped): {low_grade_count}")
+            print(f"📊 Total grades processed: {len(all_grades)}")
             
             if updated_count > 0:
                 print("\n" + "=" * 70)

@@ -665,13 +665,7 @@
                                     </td>
                                     <td>
                                         <span class="badge bg-secondary bg-opacity-20 text-dark border">
-                                            {% if student.grade_level == 0 %}
-                                                Grade K
-                                            {% elif student.grade_level %}
-                                                Grade {{ student.grade_level }}
-                                            {% else %}
-                                                Grade N/A
-                                            {% endif %}
+                                            Grade {{ student.grade_level | display_grade }}
                                         </span>
                                     </td>
                                     <td>

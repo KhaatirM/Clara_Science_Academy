@@ -203,13 +203,13 @@
                         <div class="student-card-body">
                             <div class="attendance-buttons">
                                 {% for status in statuses %}
-                                    <input type="radio" class="btn-check" name="status_{{ student.id }}" 
-                                           id="status_{{ student.id }}_{{ loop.index }}" 
+                                    <input type="radio" class="btn-check" name="status-{{ student.id }}" 
+                                           id="status-{{ student.id }}-{{ loop.index }}" 
                                            value="{{ status|lower }}" 
                                            {% if record and record.status == status|lower %}checked{% endif %} 
                                            required>
                                     <label class="btn btn-attendance btn-attendance-{{ status|lower|replace(' ', '-') }}" 
-                                           for="status_{{ student.id }}_{{ loop.index }}">
+                                           for="status-{{ student.id }}-{{ loop.index }}">
                                         {% if status == 'Present' %}
                                             <i class="bi bi-check-circle-fill"></i>
                                         {% elif status == 'Late' %}
@@ -230,7 +230,7 @@
                             
                             <div class="notes-section mt-3">
                                 <input type="text" class="form-control form-control-sm notes-input" 
-                                       name="notes_{{ student.id }}" 
+                                       name="notes-{{ student.id }}" 
                                        placeholder="Add note (optional)" 
                                        value="{{ record.notes if record else '' }}">
                 </div>

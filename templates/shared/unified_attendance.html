@@ -120,11 +120,27 @@
 
             <!-- School Day Attendance Form -->
             <div class="unified-form-card">
-                <div class="unified-form-header">
+                <div class="unified-form-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <h5 class="mb-0"><i class="bi bi-people me-2"></i>Mark School Day Attendance</h5>
+                    <!-- Quick Bulk Actions -->
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-outline-success" onclick="markAllSchoolDay('Present')">
+                            <i class="bi bi-check-all me-1"></i>All Present
+                        </button>
+                        <button type="button" class="btn btn-outline-danger" onclick="markAllSchoolDay('Absent')">
+                            <i class="bi bi-x-lg me-1"></i>All Absent
+                        </button>
+                        <button type="button" class="btn btn-outline-warning" onclick="markAllSchoolDay('Late')">
+                            <i class="bi bi-clock me-1"></i>All Late
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="clearAllSchoolDay()">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i>Clear All
+                        </button>
+                    </div>
                 </div>
                 <div class="unified-form-body">
-                    <form method="POST">
+                    <form method="POST" id="schoolDayForm">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <input type="hidden" name="attendance_date" value="{{ selected_date_str }}">
                         <div class="table-responsive">
                             <table class="table table-hover">
@@ -140,7 +156,7 @@
                                     {% for student in students %}
                                     <tr>
                                         <td>{{ student.first_name }} {{ student.last_name }}</td>
-                                        <td>{{ student.grade_level }}</td>
+                                        <td>{{ student.grade_level | display_grade }}</td>
                                         <td>
                                             {% set existing_record = existing_records.get(student.id) %}
                                             <div class="btn-group" role="group">
@@ -558,6 +574,23 @@ document.getElementById('attendanceTabs').addEventListener('shown.bs.tab', funct
     // You can add specific logic here for each tab when it's shown
     console.log('Switched to tab:', target);
 });
+
+// Bulk Actions for School Day Attendance
+function markAllSchoolDay(status) {
+    const radios = document.querySelectorAll(`#schoolDayForm input[type="radio"][value="${status}"]`);
+    radios.forEach(radio => {
+        radio.checked = true;
+    });
+}
+
+function clearAllSchoolDay() {
+    if (confirm('Are you sure you want to clear all attendance selections?')) {
+        const radios = document.querySelectorAll('#schoolDayForm input[type="radio"]:checked');
+        radios.forEach(radio => {
+            radio.checked = false;
+        });
+    }
+}
 </script>
 
 <style>

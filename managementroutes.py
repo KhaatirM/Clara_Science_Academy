@@ -5630,7 +5630,16 @@ def grade_assignment(assignment_id):
         return redirect(url_for('management.grade_assignment', assignment_id=assignment_id))
 
     # Get existing grades for this assignment
-    grades = {g.student_id: json.loads(g.grade_data) for g in Grade.query.filter_by(assignment_id=assignment_id).all()}
+    grades = {}
+    for g in Grade.query.filter_by(assignment_id=assignment_id).all():
+        try:
+            if g.grade_data:
+                grades[g.student_id] = json.loads(g.grade_data)
+            else:
+                grades[g.student_id] = {'score': 0, 'comment': ''}
+        except (json.JSONDecodeError, TypeError):
+            grades[g.student_id] = {'score': 0, 'comment': ''}
+    
     submissions = {s.student_id: s for s in Submission.query.filter_by(assignment_id=assignment_id).all()}
     
     return render_template('teachers/teacher_grade_assignment.html', 

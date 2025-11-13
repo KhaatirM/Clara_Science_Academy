@@ -135,13 +135,16 @@
                     {% set submission = submissions.get(student.id) %}
                     {% set grade_data = grades.get(student.id) %}
                     {% set is_voided = false %}
+                    {% set score_value = 0 %}
+                    {% set comment_data = '' %}
                     {% if grade_data %}
                         {% set is_voided = grade_data.is_voided|default(false) %}
-                        {% set score_value = grade_data.get('score', 0)|float %}
-                        {% set comment_data = grade_data.get('comment', '') or grade_data.get('feedback', '') %}
-                    {% else %}
-                        {% set score_value = 0 %}
-                        {% set comment_data = '' %}
+                        {% if grade_data.score is defined and grade_data.score is not none %}
+                            {% set score_value = grade_data.score|float %}
+                        {% elif grade_data['score'] is defined and grade_data['score'] is not none %}
+                            {% set score_value = grade_data['score']|float %}
+                        {% endif %}
+                        {% set comment_data = grade_data.comment|default('') or grade_data.feedback|default('') %}
                     {% endif %}
                     {% set performance_class = 'voided' if is_voided else ('excellent' if score_value >= 90 else ('good' if score_value >= 80 else ('warning' if score_value >= 70 else ('failing' if score_value > 0 else 'ungraded')))) %}
                     

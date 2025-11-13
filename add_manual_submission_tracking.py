@@ -37,32 +37,39 @@ def add_manual_submission_tracking():
                 columns_to_add.append("marked_by INTEGER")
             
             if 'marked_at' not in existing_columns:
-                columns_to_add.append("marked_at DATETIME")
+                # Use TIMESTAMP for PostgreSQL compatibility
+                columns_to_add.append("marked_at TIMESTAMP")
             
             if not columns_to_add:
                 print("✅ All columns already exist! No migration needed.")
                 return
             
-            # Add columns one by one
+            # Add columns one by one with proper error handling
             for column_def in columns_to_add:
                 column_name = column_def.split()[0]
                 try:
                     db.session.execute(text(f"ALTER TABLE submission ADD COLUMN {column_def}"))
+                    db.session.commit()  # Commit each column separately
                     print(f"✅ Added column: {column_name}")
                 except Exception as e:
+                    db.session.rollback()  # Rollback the failed column
                     print(f"⚠️  Column {column_name} may already exist or error: {e}")
             
             # Update existing submissions to have submission_type = 'online' if they have a file_path
-            db.session.execute(text("""
-                UPDATE submission 
-                SET submission_type = CASE 
-                    WHEN file_path IS NOT NULL AND file_path != '' THEN 'online'
-                    ELSE 'not_submitted'
-                END
-                WHERE submission_type IS NULL OR submission_type = ''
-            """))
-            
-            db.session.commit()
+            try:
+                db.session.execute(text("""
+                    UPDATE submission 
+                    SET submission_type = CASE 
+                        WHEN file_path IS NOT NULL AND file_path != '' THEN 'online'
+                        ELSE 'not_submitted'
+                    END
+                    WHERE submission_type IS NULL OR submission_type = ''
+                """))
+                db.session.commit()
+                print("✅ Updated existing submissions with default types")
+            except Exception as e:
+                db.session.rollback()
+                print(f"⚠️  Error updating existing submissions: {e}")
             
             print("\n✨ Manual Submission Tracking is ready!")
             print("\nNew Features Available:")

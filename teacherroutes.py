@@ -1397,14 +1397,51 @@ def grade_assignment(assignment_id):
                         db.session.flush()
                         check_and_void_grade(grade)
                     
+                    # Check if this is a redo submission and calculate final grade
+                    redo = AssignmentRedo.query.filter_by(
+                        assignment_id=assignment_id,
+                        student_id=student.id,
+                        is_used=True
+                    ).first()
+                    
+                    if redo:
+                        # This is a redo - calculate final grade
+                        redo.redo_grade = score_val
+                        
+                        # Apply late penalty if redo was late
+                        effective_redo_grade = score_val
+                        if redo.was_redo_late:
+                            effective_redo_grade = max(0, score_val - 10)  # 10% penalty
+                        
+                        # Keep higher grade
+                        if redo.original_grade:
+                            redo.final_grade = max(redo.original_grade, effective_redo_grade)
+                        else:
+                            redo.final_grade = effective_redo_grade
+                        
+                        # Update the grade_data with final grade
+                        grade_data_dict = json.loads(grade_data)
+                        grade_data_dict['score'] = redo.final_grade
+                        grade_data_dict['is_redo_final'] = True
+                        if redo.was_redo_late:
+                            grade_data_dict['comment'] = f"{comment}\n[REDO: Late submission, 10% penalty applied. Original: {redo.original_grade}%, Redo: {score_val}% (-10%), Final: {redo.final_grade}%]"
+                        else:
+                            grade_data_dict['comment'] = f"{comment}\n[REDO: Higher grade kept. Original: {redo.original_grade}%, Redo: {score_val}%, Final: {redo.final_grade}%]"
+                        grade.grade_data = json.dumps(grade_data_dict)
+                    
                     # Create notification for the student
                     if student.user:
                         from app import create_notification
+                        if redo:
+                            message = f'Your redo for "{assignment.title}" has been graded. Final Score: {redo.final_grade}%'
+                        else:
+                            message = f'Your grade for "{assignment.title}" has been posted. Score: {score_val}%'
+                        
                         create_notification(
                             user_id=student.user.id,
                             notification_type='grade',
                             title=f'Grade posted for {assignment.title}',
-                            message=f'Your grade for "{assignment.title}" has been posted. Score: {score_val}%',
+                            message=message,
                             link=url_for('student.student_grades')
                         )
                         

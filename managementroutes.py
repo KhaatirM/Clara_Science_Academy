@@ -3730,6 +3730,97 @@ def take_class_attendance(class_id):
         attendance_stats=attendance_stats
     )
 
+@management_blueprint.route('/attendance-analytics')
+@login_required
+@management_required
+def attendance_analytics():
+    """Attendance analytics and pattern tracking"""
+    from datetime import datetime, timedelta
+    from collections import defaultdict
+    
+    # Get date range from request or default to last 30 days
+    end_date_str = request.args.get('end_date')
+    start_date_str = request.args.get('start_date')
+    
+    if end_date_str and start_date_str:
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+    else:
+        end_date = datetime.now().date()
+        start_date = end_date - timedelta(days=30)
+    
+    # Get all attendance records in date range
+    attendance_records = Attendance.query.filter(
+        Attendance.date >= start_date,
+        Attendance.date <= end_date
+    ).all()
+    
+    # Analyze patterns per student
+    student_patterns = defaultdict(lambda: {
+        'total_days': 0,
+        'present': 0,
+        'absent': 0,
+        'late': 0,
+        'excused': 0,
+        'consecutive_absences': 0,
+        'max_consecutive_absences': 0,
+        'current_streak': 0
+    })
+    
+    # Group records by student and analyze
+    for record in attendance_records:
+        student_id = record.student_id
+        pattern = student_patterns[student_id]
+        pattern['total_days'] += 1
+        
+        if record.status == 'Present':
+            pattern['present'] += 1
+            pattern['consecutive_absences'] = 0
+        elif record.status == 'Late':
+            pattern['late'] += 1
+            pattern['consecutive_absences'] = 0
+        elif record.status == 'Excused Absence':
+            pattern['excused'] += 1
+            pattern['consecutive_absences'] += 1
+        elif record.status in ['Unexcused Absence', 'Suspended']:
+            pattern['absent'] += 1
+            pattern['consecutive_absences'] += 1
+        
+        # Track max consecutive absences
+        if pattern['consecutive_absences'] > pattern['max_consecutive_absences']:
+            pattern['max_consecutive_absences'] = pattern['consecutive_absences']
+    
+    # Get students with concerns (3+ absences or 5+ late arrivals)
+    at_risk_students = []
+    for student_id, pattern in student_patterns.items():
+        if pattern['absent'] >= 3 or pattern['late'] >= 5 or pattern['max_consecutive_absences'] >= 3:
+            student = Student.query.get(student_id)
+            if student:
+                attendance_rate = (pattern['present'] / pattern['total_days'] * 100) if pattern['total_days'] > 0 else 0
+                at_risk_students.append({
+                    'student': student,
+                    'pattern': pattern,
+                    'attendance_rate': round(attendance_rate, 1),
+                    'risk_level': 'high' if pattern['absent'] >= 5 else 'medium'
+                })
+    
+    # Sort by risk level
+    at_risk_students.sort(key=lambda x: (x['risk_level'] == 'high', x['pattern']['absent']), reverse=True)
+    
+    # Overall statistics
+    total_records = len(attendance_records)
+    present_count = len([r for r in attendance_records if r.status == 'Present'])
+    overall_rate = round((present_count / total_records * 100), 1) if total_records > 0 else 0
+    
+    return render_template('management/attendance_analytics.html',
+                         start_date=start_date,
+                         end_date=end_date,
+                         at_risk_students=at_risk_students,
+                         overall_rate=overall_rate,
+                         total_records=total_records,
+                         present_count=present_count)
+
+
 @management_blueprint.route('/unified-attendance', methods=['GET', 'POST'])
 @login_required
 @management_required
@@ -6242,6 +6333,54 @@ def revoke_assignment_redo(redo_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': f'Error revoking redo: {str(e)}'})
+
+
+@management_blueprint.route('/redo-dashboard')
+@login_required
+def redo_dashboard():
+    """Dashboard showing all active redo opportunities"""
+    from datetime import datetime
+    
+    # Authorization check
+    if current_user.role == 'Teacher':
+        if not current_user.teacher_staff_id:
+            flash('Teacher record not found.', 'danger')
+            return redirect(url_for('teacher.teacher_dashboard'))
+        teacher = TeacherStaff.query.get(current_user.teacher_staff_id)
+        # Get redos for teacher's classes only
+        redos = AssignmentRedo.query.join(Assignment).join(Class).filter(
+            Class.teacher_id == teacher.id
+        ).order_by(AssignmentRedo.redo_deadline.asc()).all()
+        classes = Class.query.filter_by(teacher_id=teacher.id).all()
+    else:
+        # Directors and School Administrators see all redos
+        redos = AssignmentRedo.query.order_by(AssignmentRedo.redo_deadline.asc()).all()
+        classes = Class.query.all()
+    
+    # Calculate statistics
+    active_redos = len([r for r in redos if not r.is_used and not r.final_grade])
+    completed_redos = len([r for r in redos if r.final_grade])
+    now = datetime.utcnow()
+    overdue_redos = len([r for r in redos if not r.is_used and r.redo_deadline < now])
+    
+    # Calculate average improvement
+    improvements = []
+    for redo in redos:
+        if redo.original_grade and redo.final_grade:
+            improvement = redo.final_grade - redo.original_grade
+            if improvement > 0:
+                improvements.append(improvement)
+    
+    improvement_rate = round(sum(improvements) / len(improvements), 1) if improvements else 0
+    
+    return render_template('management/redo_dashboard.html',
+                         redos=redos,
+                         classes=classes,
+                         active_redos=active_redos,
+                         completed_redos=completed_redos,
+                         improvement_rate=improvement_rate,
+                         overdue_redos=overdue_redos,
+                         now=now)
 
 
 @management_blueprint.route('/assignment/<int:assignment_id>/redos')

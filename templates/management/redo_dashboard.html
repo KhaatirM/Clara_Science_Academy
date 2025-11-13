@@ -1,0 +1,319 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block title %}Redo Dashboard{% endblock %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+    <!-- Header -->
+    <div class="redo-dashboard-header mb-4">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                <h2 class="mb-1">
+                    <i class="bi bi-arrow-repeat me-2"></i>Assignment Redo Dashboard
+                </h2>
+                <p class="text-muted mb-0">Monitor and manage all active redo opportunities</p>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-primary" onclick="refreshDashboard()">
+                    <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="stat-icon bg-warning bg-opacity-10 text-warning p-3 rounded-circle">
+                                <i class="bi bi-arrow-repeat fs-3"></i>
+                            </div>
+                        </div>
+                        <div class="ms-3">
+                            <h3 class="mb-0">{{ active_redos }}</h3>
+                            <p class="text-muted mb-0 small">Active Redos</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="stat-icon bg-success bg-opacity-10 text-success p-3 rounded-circle">
+                                <i class="bi bi-check-circle fs-3"></i>
+                            </div>
+                        </div>
+                        <div class="ms-3">
+                            <h3 class="mb-0">{{ completed_redos }}</h3>
+                            <p class="text-muted mb-0 small">Completed</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="stat-icon bg-info bg-opacity-10 text-info p-3 rounded-circle">
+                                <i class="bi bi-graph-up fs-3"></i>
+                            </div>
+                        </div>
+                        <div class="ms-3">
+                            <h3 class="mb-0">{{ improvement_rate }}%</h3>
+                            <p class="text-muted mb-0 small">Avg Improvement</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="stat-icon bg-danger bg-opacity-10 text-danger p-3 rounded-circle">
+                                <i class="bi bi-clock-history fs-3"></i>
+                            </div>
+                        </div>
+                        <div class="ms-3">
+                            <h3 class="mb-0">{{ overdue_redos }}</h3>
+                            <p class="text-muted mb-0 small">Overdue</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4 border-0 shadow-sm">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Filter by Class</label>
+                    <select class="form-select" id="classFilter" onchange="filterRedos()">
+                        <option value="">All Classes</option>
+                        {% for class in classes %}
+                        <option value="{{ class.id }}">{{ class.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Filter by Status</label>
+                    <select class="form-select" id="statusFilter" onchange="filterRedos()">
+                        <option value="">All Statuses</option>
+                        <option value="pending">Pending</option>
+                        <option value="submitted">Submitted</option>
+                        <option value="graded">Graded</option>
+                        <option value="overdue">Overdue</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold">Search Student</label>
+                    <input type="text" class="form-control" id="searchInput" placeholder="Search by name..." oninput="filterRedos()">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button class="btn btn-outline-secondary w-100" onclick="clearFilters()">
+                        <i class="bi bi-x-circle me-1"></i>Clear
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Redo List -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="bi bi-list-check me-2"></i>Active Redo Opportunities</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Student</th>
+                            <th>Assignment</th>
+                            <th>Class</th>
+                            <th>Original Grade</th>
+                            <th>Redo Status</th>
+                            <th>Deadline</th>
+                            <th>Final Grade</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="redoTableBody">
+                        {% for redo in redos %}
+                        <tr class="redo-row" data-class-id="{{ redo.assignment.class_id }}" 
+                            data-student-name="{{ redo.student.first_name }} {{ redo.student.last_name }}"
+                            data-status="{{ 'graded' if redo.final_grade else ('submitted' if redo.is_used else ('overdue' if redo.redo_deadline < now else 'pending')) }}">
+                            <td>
+                                <strong>{{ redo.student.first_name }} {{ redo.student.last_name }}</strong>
+                                <br><small class="text-muted">Grade {{ redo.student.grade_level | display_grade }}</small>
+                            </td>
+                            <td>
+                                {{ redo.assignment.title }}
+                                <br><small class="text-muted">{{ redo.reason or 'No reason' }}</small>
+                            </td>
+                            <td>{{ redo.assignment.class_info.name }}</td>
+                            <td>
+                                {% if redo.original_grade %}
+                                    <span class="badge bg-danger">{{ redo.original_grade }}%</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">N/A</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if redo.final_grade %}
+                                    <span class="badge bg-success"><i class="bi bi-check-circle"></i> Graded</span>
+                                {% elif redo.is_used %}
+                                    <span class="badge bg-info"><i class="bi bi-hourglass-split"></i> Submitted</span>
+                                {% elif redo.redo_deadline < now %}
+                                    <span class="badge bg-danger"><i class="bi bi-exclamation-triangle"></i> Overdue</span>
+                                {% else %}
+                                    <span class="badge bg-warning"><i class="bi bi-clock"></i> Pending</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {{ redo.redo_deadline.strftime('%m/%d/%Y') }}
+                                {% if redo.redo_deadline < now and not redo.is_used %}
+                                    <br><small class="text-danger fw-bold">Overdue!</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if redo.final_grade %}
+                                    <span class="badge bg-success fs-6">{{ redo.final_grade }}%</span>
+                                    {% if redo.was_redo_late %}
+                                        <br><small class="text-warning"><i class="bi bi-exclamation-circle"></i> Late penalty</small>
+                                    {% endif %}
+                                {% elif redo.redo_grade %}
+                                    <span class="badge bg-info">{{ redo.redo_grade }}%</span>
+                                    <br><small class="text-muted">Awaiting calculation</small>
+                                {% else %}
+                                    <span class="text-muted">--</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ url_for('management.grade_assignment', assignment_id=redo.assignment_id) }}" 
+                                       class="btn btn-outline-primary" title="Grade">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    {% if not redo.is_used %}
+                                    <button class="btn btn-outline-danger" onclick="revokeRedo({{ redo.id }})" title="Revoke">
+                                        <i class="bi bi-x-circle"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            {% if not redos %}
+            <div class="p-5 text-center">
+                <i class="bi bi-inbox fs-1 text-muted"></i>
+                <p class="text-muted mt-3">No active redo opportunities at this time.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.redo-dashboard-header {
+    background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+    padding: 2rem;
+    border-radius: 15px;
+    color: white;
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.redo-row {
+    transition: all 0.2s ease;
+}
+
+.redo-row:hover {
+    background-color: #f8f9fa;
+}
+</style>
+
+<script>
+function refreshDashboard() {
+    location.reload();
+}
+
+function filterRedos() {
+    const classFilter = document.getElementById('classFilter').value;
+    const statusFilter = document.getElementById('statusFilter').value;
+    const searchInput = document.getElementById('searchInput').value.toLowerCase();
+    
+    const rows = document.querySelectorAll('.redo-row');
+    
+    rows.forEach(row => {
+        const classId = row.getAttribute('data-class-id');
+        const studentName = row.getAttribute('data-student-name').toLowerCase();
+        const status = row.getAttribute('data-status');
+        
+        let show = true;
+        
+        if (classFilter && classId !== classFilter) show = false;
+        if (statusFilter && status !== statusFilter) show = false;
+        if (searchInput && !studentName.includes(searchInput)) show = false;
+        
+        row.style.display = show ? '' : 'none';
+    });
+}
+
+function clearFilters() {
+    document.getElementById('classFilter').value = '';
+    document.getElementById('statusFilter').value = '';
+    document.getElementById('searchInput').value = '';
+    filterRedos();
+}
+
+function revokeRedo(redoId) {
+    if (!confirm('Are you sure you want to revoke this redo opportunity?')) {
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('csrf_token', '{{ csrf_token() }}');
+    
+    fetch(`/management/revoke-redo/${redoId}`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            location.reload();
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        alert('Error revoking redo: ' + error);
+    });
+}
+</script>
+
+{% endblock %}
+

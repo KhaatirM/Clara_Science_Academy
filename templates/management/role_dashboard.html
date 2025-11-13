@@ -6937,20 +6937,28 @@
           const isMissing = assignment.status === 'missing';
           const assignmentId = `assignment-${student.student_id || 'unknown'}-${className.replace(/\s+/g, '-')}-${idx}`;
           
-          html += `<div class="assignment-concern-card ${isFailing ? 'card-failing' : 'card-warning'}" id="${assignmentId}">`;
-          html += '<div class="assignment-concern-header">';
-          html += `<div class="assignment-concern-icon ${isFailing ? 'icon-danger' : 'icon-warning'}">`;
-          html += `<i class="bi bi-${isFailing ? 'x-circle' : 'exclamation-circle'}-fill"></i>`;
-          html += '</div>';
-          html += '<div class="assignment-concern-info">';
-          html += `<div class="assignment-concern-title">${assignment.title}</div>`;
-          html += `<div class="assignment-concern-due">`;
-          html += `<i class="bi bi-calendar-event"></i> Due: ${assignment.due_date}`;
-          html += '</div></div>';
-          html += `<button class="btn-dismiss-assignment" onclick="dismissAssignment('${assignmentId}')" title="Dismiss this assignment">`;
-          html += '<i class="bi bi-x-lg"></i>';
-          html += '</button>';
-          html += '</div>';
+                          html += `<div class="assignment-concern-card ${isFailing ? 'card-failing' : 'card-warning'}" id="${assignmentId}">`;
+                          html += '<div class="assignment-concern-header">';
+                          html += `<div class="assignment-concern-icon ${isFailing ? 'icon-danger' : 'icon-warning'}">`;
+                          html += `<i class="bi bi-${isFailing ? 'x-circle' : 'exclamation-circle'}-fill"></i>`;
+                          html += '</div>';
+                          html += '<div class="assignment-concern-info">';
+                          html += `<div class="assignment-concern-title">${assignment.title}</div>`;
+                          html += `<div class="assignment-concern-due">`;
+                          html += `<i class="bi bi-calendar-event"></i> Due: ${assignment.due_date}`;
+                          html += '</div></div>';
+                          html += '<div class="d-flex gap-1">';
+                          // Add Quick Redo button for PDF/Paper assignments
+                          if (assignment.assignment_type && (assignment.assignment_type.toLowerCase() === 'pdf' || assignment.assignment_type.toLowerCase() === 'paper')) {
+                            html += `<button class="btn btn-sm btn-warning" onclick="quickGrantRedo(${student.student_id}, ${assignment.assignment_id}, '${assignment.title}')" title="Grant Redo Opportunity">`;
+                            html += '<i class="bi bi-arrow-repeat"></i>';
+                            html += '</button>';
+                          }
+                          html += `<button class="btn-dismiss-assignment" onclick="dismissAssignment('${assignmentId}')" title="Dismiss this assignment">`;
+                          html += '<i class="bi bi-x-lg"></i>';
+                          html += '</button>';
+                          html += '</div>';
+                          html += '</div>';
           
           html += '<div class="assignment-concern-footer">';
           if (assignment.status) {
@@ -6992,6 +7000,50 @@
         checkEmptyAssignments();
       }, 500);
     }
+  }
+  
+  // Quick Grant Redo from Academic Concerns
+  function quickGrantRedo(studentId, assignmentId, assignmentTitle) {
+    const deadline = prompt(`Grant redo for "${assignmentTitle}"?\n\nEnter redo deadline (YYYY-MM-DD):`);
+    
+    if (!deadline) return;
+    
+    // Validate date format
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(deadline)) {
+      alert('Invalid date format. Please use YYYY-MM-DD (e.g., 2025-11-20)');
+      return;
+    }
+    
+    const reason = prompt('Reason for redo (optional):') || 'Redo granted from Academic Concerns';
+    
+    // Prepare form data
+    const formData = new FormData();
+    formData.append('student_ids[]', studentId);
+    formData.append('redo_deadline', deadline);
+    formData.append('reason', reason);
+    formData.append('csrf_token', '{{ csrf_token() }}');
+    
+    // Send request
+    fetch(`/management/grant-redo/${assignmentId}`, {
+      method: 'POST',
+      body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert('✅ ' + data.message + '\n\nStudent will be notified of this redo opportunity.');
+        // Optionally dismiss the assignment from concerns
+        const assignmentCard = document.querySelector(`[id*="assignment-${studentId}"]`);
+        if (assignmentCard && confirm('Dismiss this assignment from concerns list?')) {
+          assignmentCard.remove();
+        }
+      } else {
+        alert('❌ Error: ' + data.message);
+      }
+    })
+    .catch(error => {
+      alert('❌ Error granting redo: ' + error);
+    });
   }
   
   // Dismiss entire student concern

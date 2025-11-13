@@ -13,12 +13,20 @@
                 <p class="grading-header-subtitle">{{ class_obj.name }} • {{ assignment.quarter }}</p>
             </div>
         </div>
-        <button onclick="goBack()" class="btn-grading-back">
-            <i class="bi bi-arrow-left me-2"></i>Back
-        </button>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-sm btn-outline-primary" onclick="exportGradesCSV()">
+                <i class="bi bi-download me-1"></i>Export CSV
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-info" onclick="printGradebook()">
+                <i class="bi bi-printer me-1"></i>Print
+            </button>
+            <button onclick="goBack()" class="btn-grading-back">
+                <i class="bi bi-arrow-left me-2"></i>Back
+            </button>
+        </div>
     </div>
 
-    <!-- Assignment Stats Bar -->
+    <!-- Assignment Stats Bar with Enhanced Statistics -->
     <div class="grading-stats-bar mb-4">
         <div class="grading-stat-card stat-total">
             <div class="stat-icon"><i class="bi bi-people-fill"></i></div>
@@ -37,15 +45,69 @@
         <div class="grading-stat-card stat-graded">
             <div class="stat-icon"><i class="bi bi-star-fill"></i></div>
             <div class="stat-content">
-                <div class="stat-value">{{ grades|length }}</div>
+                <div class="stat-value" id="gradedStatCount">{{ grades|length }}</div>
                 <div class="stat-label">Graded</div>
             </div>
         </div>
         <div class="grading-stat-card stat-pending">
             <div class="stat-icon"><i class="bi bi-hourglass-split"></i></div>
             <div class="stat-content">
-                <div class="stat-value">{{ students|length - grades|length }}</div>
+                <div class="stat-value" id="pendingStatCount">{{ students|length - grades|length }}</div>
                 <div class="stat-label">Pending</div>
+            </div>
+        </div>
+        <div class="grading-stat-card stat-average">
+            <div class="stat-icon"><i class="bi bi-graph-up"></i></div>
+            <div class="stat-content">
+                <div class="stat-value" id="averageStatValue">
+                    {% set total_score = 0 %}
+                    {% set count = 0 %}
+                    {% for student_id, grade_data in grades.items() %}
+                        {% if grade_data.score %}
+                            {% set total_score = total_score + grade_data.score %}
+                            {% set count = count + 1 %}
+                        {% endif %}
+                    {% endfor %}
+                    {{ (total_score / count)|round(1) if count > 0 else '--' }}%
+                </div>
+                <div class="stat-label">Average</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Grade Distribution Chart -->
+    <div class="card mb-4 border-0 shadow-sm">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="mb-0"><i class="bi bi-bar-chart-fill me-2"></i>Grade Distribution</h6>
+                <div class="btn-group btn-group-sm">
+                    <button type="button" class="btn btn-outline-primary" onclick="filterByGrade('all')">All</button>
+                    <button type="button" class="btn btn-outline-success" onclick="filterByGrade('passing')">Passing</button>
+                    <button type="button" class="btn btn-outline-danger" onclick="filterByGrade('failing')">Failing</button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="filterByGrade('ungraded')">Ungraded</button>
+                </div>
+            </div>
+            <div class="grade-distribution">
+                <div class="distribution-bar">
+                    <div class="dist-segment dist-a" id="distA" style="width: 0%" title="A grades">
+                        <span class="dist-label">A: <span id="countA">0</span></span>
+                    </div>
+                    <div class="dist-segment dist-b" id="distB" style="width: 0%" title="B grades">
+                        <span class="dist-label">B: <span id="countB">0</span></span>
+                    </div>
+                    <div class="dist-segment dist-c" id="distC" style="width: 0%" title="C grades">
+                        <span class="dist-label">C: <span id="countC">0</span></span>
+                    </div>
+                    <div class="dist-segment dist-d" id="distD" style="width: 0%" title="D grades">
+                        <span class="dist-label">D: <span id="countD">0</span></span>
+                    </div>
+                    <div class="dist-segment dist-f" id="distF" style="width: 0%" title="F grades">
+                        <span class="dist-label">F: <span id="countF">0</span></span>
+                    </div>
+                    <div class="dist-segment dist-ungraded" id="distUngraded" style="width: 100%" title="Ungraded">
+                        <span class="dist-label">Ungraded: <span id="countUngraded">{{ students|length }}</span></span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -123,6 +185,11 @@
                         <button type="button" class="btn btn-sm btn-outline-danger" onclick="bulkMarkNotSubmitted()">
                             <i class="bi bi-x-lg me-1"></i>Mark All as Not Submitted
                         </button>
+                        {% if assignment.assignment_type in ['PDF', 'Paper', 'pdf', 'paper'] %}
+                        <button type="button" class="btn btn-sm btn-outline-warning" onclick="bulkGrantRedo()">
+                            <i class="bi bi-arrow-repeat me-1"></i>Bulk Grant Redos
+                        </button>
+                        {% endif %}
                         <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleSelectAll()">
                             <i class="bi bi-ui-checks me-1"></i>Select/Deselect All
                         </button>
@@ -223,17 +290,37 @@
                                         <label class="grade-label">
                                             <i class="bi bi-percent"></i> Score
                                         </label>
+                                        
+                                        <!-- Quick Letter Grade Buttons -->
+                                        <div class="letter-grade-buttons mb-2">
+                                            <button type="button" class="btn-letter-grade btn-grade-a" onclick="setLetterGrade({{ student.id }}, 95)" title="A (95%)">A</button>
+                                            <button type="button" class="btn-letter-grade btn-grade-b" onclick="setLetterGrade({{ student.id }}, 85)" title="B (85%)">B</button>
+                                            <button type="button" class="btn-letter-grade btn-grade-c" onclick="setLetterGrade({{ student.id }}, 75)" title="C (75%)">C</button>
+                                            <button type="button" class="btn-letter-grade btn-grade-d" onclick="setLetterGrade({{ student.id }}, 65)" title="D (65%)">D</button>
+                                            <button type="button" class="btn-letter-grade btn-grade-f" onclick="setLetterGrade({{ student.id }}, 50)" title="F (50%)">F</button>
+                                        </div>
+                                        
+                                        <!-- Common Grade Presets -->
+                                        <div class="grade-presets mb-2">
+                                            <button type="button" class="btn-preset" onclick="setGrade({{ student.id }}, 100)">💯</button>
+                                            <button type="button" class="btn-preset" onclick="setGrade({{ student.id }}, 90)">90</button>
+                                            <button type="button" class="btn-preset" onclick="setGrade({{ student.id }}, 80)">80</button>
+                                            <button type="button" class="btn-preset" onclick="setGrade({{ student.id }}, 70)">70</button>
+                                            <button type="button" class="btn-preset" onclick="setGrade({{ student.id }}, 0)">0</button>
+                                        </div>
+                                        
                                         <div class="score-input-wrapper">
                                             <input type="number" 
                                                    class="score-input" 
                                                    name="score_{{ student.id }}" 
+                                                   id="score_{{ student.id }}"
                                                    value="{{ score_value if score_value else '' }}"
                                                    min="0" 
                                                    max="100" 
                                                    step="0.1"
                                                    placeholder="0-100"
                                                    data-student-id="{{ student.id }}"
-                                                   oninput="updateScoreVisual(this)">
+                                                   oninput="updateScoreVisual(this); autoSaveGrade({{ student.id }})">
                                             <div class="score-visual-bar">
                                                 <div class="score-visual-fill" style="width: {{ score_value }}%"></div>
                                             </div>
@@ -328,8 +415,144 @@
         </div>
     </form>
 </div>
-<!-- Styles for Manual Submission Tracking -->
+<!-- Styles for Manual Submission Tracking and Quick Grading -->
 <style>
+/* Letter Grade Buttons */
+.letter-grade-buttons {
+    display: flex;
+    gap: 0.25rem;
+    justify-content: space-between;
+}
+
+.btn-letter-grade {
+    flex: 1;
+    border: 2px solid #e5e7eb;
+    background: white;
+    padding: 0.375rem 0.5rem;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-letter-grade:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.btn-grade-a { color: #10b981; border-color: #10b981; }
+.btn-grade-a:hover { background: #10b981; color: white; }
+
+.btn-grade-b { color: #3b82f6; border-color: #3b82f6; }
+.btn-grade-b:hover { background: #3b82f6; color: white; }
+
+.btn-grade-c { color: #f59e0b; border-color: #f59e0b; }
+.btn-grade-c:hover { background: #f59e0b; color: white; }
+
+.btn-grade-d { color: #ef4444; border-color: #ef4444; }
+.btn-grade-d:hover { background: #ef4444; color: white; }
+
+.btn-grade-f { color: #7f1d1d; border-color: #7f1d1d; }
+.btn-grade-f:hover { background: #7f1d1d; color: white; }
+
+/* Grade Presets */
+.grade-presets {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.btn-preset {
+    flex: 1;
+    border: 2px solid #e5e7eb;
+    background: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #6b7280;
+}
+
+.btn-preset:hover {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+}
+
+/* Grade Distribution Chart */
+.grade-distribution {
+    margin-top: 1rem;
+}
+
+.distribution-bar {
+    display: flex;
+    height: 50px;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.dist-segment {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    color: white;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.dist-label {
+    padding: 0 0.5rem;
+    white-space: nowrap;
+}
+
+.dist-a { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+.dist-b { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
+.dist-c { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+.dist-d { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
+.dist-f { background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%); }
+.dist-ungraded { background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%); }
+
+/* Auto-save Indicator */
+.auto-save-indicator {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: white;
+    padding: 0.75rem 1.25rem;
+    border-radius: 25px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+}
+
+.auto-save-indicator.saving {
+    display: flex;
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.auto-save-indicator.saved {
+    display: flex;
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.auto-save-indicator i {
+    font-size: 1.2rem;
+}
+
+/* Enhanced Stats */
+.stat-average .stat-icon {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+}
+
 /* Bulk Select Checkbox */
 .bulk-select-checkbox {
     margin-right: 0.75rem;
@@ -402,6 +625,73 @@
 @keyframes pulse {
     0%, 100% { transform: scale(1); }
     50% { transform: scale(1.02); }
+}
+
+/* Performance Animations */
+.grade-set-animation {
+    animation: successPulse 0.5s ease;
+}
+
+@keyframes successPulse {
+    0% { transform: scale(1); background-color: inherit; }
+    50% { transform: scale(1.05); background-color: #d1fae5; }
+    100% { transform: scale(1); background-color: inherit; }
+}
+
+.card-enter {
+    animation: slideInUp 0.3s ease forwards;
+    opacity: 0;
+}
+
+@keyframes slideInUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Loading Spinner */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.loading-overlay.active {
+    display: flex;
+}
+
+.loading-content {
+    background: white;
+    padding: 2rem 3rem;
+    border-radius: 15px;
+    text-align: center;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+}
+
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
 /* Grading Container Header Adjustments */
@@ -543,6 +833,22 @@ document.addEventListener('DOMContentLoaded', function() {
         updateCharCount(textarea);
     });
     
+    // Initialize distribution chart
+    updateDistributionChart();
+    
+    // Add keyboard navigation
+    document.querySelectorAll('.score-input').forEach((input, index, inputs) => {
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                // Move to next student's score input
+                if (index < inputs.length - 1) {
+                    inputs[index + 1].focus();
+                }
+            }
+        });
+    });
+    
     // Form submission
     form.addEventListener('submit', function(e) {
         const scoreInputs = form.querySelectorAll('.score-input');
@@ -575,6 +881,145 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
+// Export Functions
+function exportGradesCSV() {
+    let csv = 'Student Name,Student ID,Email,Submission Status,Score,Grade,Feedback,Submission Notes\n';
+    
+    const cards = document.querySelectorAll('.student-grade-card');
+    cards.forEach(card => {
+        const nameElement = card.querySelector('.student-grade-name');
+        const emailElement = card.querySelector('.student-grade-email');
+        const scoreInput = card.querySelector('.score-input');
+        const commentInput = card.querySelector('.comment-input');
+        const submissionSelect = card.querySelector('.submission-type-select');
+        const notesInput = card.querySelector(`input[name^="submission_notes_"]`);
+        
+        const name = nameElement?.textContent?.trim() || '';
+        const email = emailElement?.textContent?.trim() || '';
+        const score = scoreInput?.value || '0';
+        const scoreNum = parseFloat(score);
+        const letter = scoreNum >= 90 ? 'A' : scoreNum >= 80 ? 'B' : scoreNum >= 70 ? 'C' : scoreNum >= 60 ? 'D' : scoreNum > 0 ? 'F' : 'N/A';
+        const comment = (commentInput?.value || '').replace(/"/g, '""');
+        const submissionStatus = submissionSelect?.options[submissionSelect.selectedIndex]?.text || 'Not Submitted';
+        const notes = (notesInput?.value || '').replace(/"/g, '""');
+        
+        csv += `"${name}","","${email}","${submissionStatus}","${score}","${letter}","${comment}","${notes}"\n`;
+    });
+    
+    // Create download
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '{{ assignment.title|replace(" ", "_") }}_grades_{{ class_obj.name|replace(" ", "_") }}.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+    
+    // Show success message
+    const indicator = document.createElement('div');
+    indicator.className = 'auto-save-indicator saved';
+    indicator.innerHTML = '<i class="bi bi-download"></i><span>CSV Downloaded!</span>';
+    indicator.style.display = 'flex';
+    document.body.appendChild(indicator);
+    setTimeout(() => indicator.remove(), 2000);
+}
+
+function printGradebook() {
+    // Create a printable version
+    const printWindow = window.open('', '', 'width=800,height=600');
+    const printContent = generatePrintableGradebook();
+    
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+    }, 250);
+}
+
+function generatePrintableGradebook() {
+    let html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>{{ assignment.title }} - Gradebook</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 20px; }
+                h1 { color: #333; border-bottom: 2px solid #667eea; padding-bottom: 10px; }
+                .header-info { margin-bottom: 20px; color: #666; }
+                table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                th { background: #667eea; color: white; padding: 10px; text-align: left; }
+                td { padding: 8px; border-bottom: 1px solid #ddd; }
+                tr:hover { background: #f5f5f5; }
+                .grade-a { color: #10b981; font-weight: bold; }
+                .grade-b { color: #3b82f6; font-weight: bold; }
+                .grade-c { color: #f59e0b; font-weight: bold; }
+                .grade-d { color: #ef4444; font-weight: bold; }
+                .grade-f { color: #7f1d1d; font-weight: bold; }
+                @media print {
+                    button { display: none; }
+                }
+            </style>
+        </head>
+        <body>
+            <h1>{{ assignment.title }}</h1>
+            <div class="header-info">
+                <p><strong>Class:</strong> {{ class_obj.name }}</p>
+                <p><strong>Quarter:</strong> {{ assignment.quarter }}</p>
+                <p><strong>Due Date:</strong> {{ assignment.due_date.strftime('%B %d, %Y') if assignment.due_date else 'N/A' }}</p>
+                <p><strong>Total Students:</strong> {{ students|length }}</p>
+                <p><strong>Printed:</strong> ${new Date().toLocaleString()}</p>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Student Name</th>
+                        <th>Submission Status</th>
+                        <th>Score</th>
+                        <th>Grade</th>
+                        <th>Feedback</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    const cards = document.querySelectorAll('.student-grade-card');
+    cards.forEach(card => {
+        const nameElement = card.querySelector('.student-grade-name');
+        const scoreInput = card.querySelector('.score-input');
+        const commentInput = card.querySelector('.comment-input');
+        const submissionSelect = card.querySelector('.submission-type-select');
+        
+        const name = nameElement?.textContent?.trim() || '';
+        const score = scoreInput?.value || '0';
+        const scoreNum = parseFloat(score);
+        const letter = scoreNum >= 90 ? 'A' : scoreNum >= 80 ? 'B' : scoreNum >= 70 ? 'C' : scoreNum >= 60 ? 'D' : scoreNum > 0 ? 'F' : 'N/A';
+        const gradeClass = scoreNum >= 90 ? 'grade-a' : scoreNum >= 80 ? 'grade-b' : scoreNum >= 70 ? 'grade-c' : scoreNum >= 60 ? 'grade-d' : 'grade-f';
+        const comment = (commentInput?.value || '').substring(0, 100);
+        const submissionStatus = submissionSelect?.options[submissionSelect.selectedIndex]?.text || 'Not Submitted';
+        
+        html += `
+                    <tr>
+                        <td>${name}</td>
+                        <td>${submissionStatus}</td>
+                        <td>${score}%</td>
+                        <td class="${gradeClass}">${letter}</td>
+                        <td>${comment}</td>
+                    </tr>
+        `;
+    });
+    
+    html += `
+                </tbody>
+            </table>
+        </body>
+        </html>
+    `;
+    
+    return html;
+}
+
 // Back navigation function
 function goBack() {
     if (window.history.length > 1) {
@@ -586,6 +1031,169 @@ function goBack() {
             window.location.href = "{{ url_for('teacher.dashboard.my_assignments') }}";
         {% endif %}
     }
+}
+
+// Quick Grade Entry Functions
+function setLetterGrade(studentId, score) {
+    const input = document.getElementById(`score_${studentId}`);
+    if (input) {
+        input.value = score;
+        updateScoreVisual(input);
+        autoSaveGrade(studentId);
+        
+        // Visual feedback
+        input.classList.add('grade-set-animation');
+        setTimeout(() => input.classList.remove('grade-set-animation'), 500);
+    }
+}
+
+function setGrade(studentId, score) {
+    const input = document.getElementById(`score_${studentId}`);
+    if (input) {
+        input.value = score;
+        updateScoreVisual(input);
+        autoSaveGrade(studentId);
+        
+        // Visual feedback
+        input.classList.add('grade-set-animation');
+        setTimeout(() => input.classList.remove('grade-set-animation'), 500);
+    }
+}
+
+// Auto-save functionality
+let autoSaveTimeout;
+let autoSaveIndicator;
+
+function autoSaveGrade(studentId) {
+    // Clear existing timeout
+    clearTimeout(autoSaveTimeout);
+    
+    // Show saving indicator
+    if (!autoSaveIndicator) {
+        autoSaveIndicator = document.createElement('div');
+        autoSaveIndicator.className = 'auto-save-indicator';
+        autoSaveIndicator.innerHTML = '<i class="bi bi-cloud"></i><span>Auto-saving...</span>';
+        document.body.appendChild(autoSaveIndicator);
+    }
+    
+    autoSaveIndicator.className = 'auto-save-indicator saving';
+    
+    // Set timeout to save after 2 seconds of inactivity
+    autoSaveTimeout = setTimeout(() => {
+        saveGradeAjax(studentId);
+    }, 2000);
+}
+
+function saveGradeAjax(studentId) {
+    const scoreInput = document.getElementById(`score_${studentId}`);
+    const commentInput = document.querySelector(`textarea[name="comment_${studentId}"]`);
+    const submissionType = document.querySelector(`select[name="submission_type_${studentId}"]`);
+    const submissionNotes = document.querySelector(`input[name="submission_notes_${studentId}"]`);
+    
+    const formData = new FormData();
+    formData.append('csrf_token', '{{ csrf_token() }}');
+    formData.append('student_id', studentId);
+    formData.append('score', scoreInput?.value || '');
+    formData.append('comment', commentInput?.value || '');
+    formData.append('submission_type', submissionType?.value || '');
+    formData.append('submission_notes', submissionNotes?.value || '');
+    
+    // Show saved indicator
+    autoSaveIndicator.className = 'auto-save-indicator saved';
+    autoSaveIndicator.innerHTML = '<i class="bi bi-check-circle-fill"></i><span>Saved!</span>';
+    
+    // Hide after 2 seconds
+    setTimeout(() => {
+        autoSaveIndicator.style.display = 'none';
+    }, 2000);
+    
+    // Note: For now, this shows the UI feedback. 
+    // Actual AJAX save can be added if desired, or keep the form submit method
+    updateDistributionChart();
+}
+
+// Grade Distribution Chart
+function updateDistributionChart() {
+    const scoreInputs = document.querySelectorAll('.score-input');
+    let counts = { a: 0, b: 0, c: 0, d: 0, f: 0, ungraded: 0 };
+    let total = scoreInputs.length;
+    
+    scoreInputs.forEach(input => {
+        const score = parseFloat(input.value);
+        if (isNaN(score) || score === 0) {
+            counts.ungraded++;
+        } else if (score >= 90) {
+            counts.a++;
+        } else if (score >= 80) {
+            counts.b++;
+        } else if (score >= 70) {
+            counts.c++;
+        } else if (score >= 60) {
+            counts.d++;
+        } else {
+            counts.f++;
+        }
+    });
+    
+    // Update counts
+    document.getElementById('countA').textContent = counts.a;
+    document.getElementById('countB').textContent = counts.b;
+    document.getElementById('countC').textContent = counts.c;
+    document.getElementById('countD').textContent = counts.d;
+    document.getElementById('countF').textContent = counts.f;
+    document.getElementById('countUngraded').textContent = counts.ungraded;
+    
+    // Update widths (percentage of total)
+    const graded = total - counts.ungraded;
+    if (graded > 0) {
+        document.getElementById('distA').style.width = ((counts.a / total) * 100) + '%';
+        document.getElementById('distB').style.width = ((counts.b / total) * 100) + '%';
+        document.getElementById('distC').style.width = ((counts.c / total) * 100) + '%';
+        document.getElementById('distD').style.width = ((counts.d / total) * 100) + '%';
+        document.getElementById('distF').style.width = ((counts.f / total) * 100) + '%';
+        document.getElementById('distUngraded').style.width = ((counts.ungraded / total) * 100) + '%';
+    }
+    
+    // Update average
+    let totalScore = 0;
+    let countScored = 0;
+    scoreInputs.forEach(input => {
+        const score = parseFloat(input.value);
+        if (!isNaN(score) && score > 0) {
+            totalScore += score;
+            countScored++;
+        }
+    });
+    
+    if (countScored > 0) {
+        const average = (totalScore / countScored).toFixed(1);
+        document.getElementById('averageStatValue').textContent = average + '%';
+    }
+    
+    // Update graded count
+    document.getElementById('gradedStatCount').textContent = graded;
+    document.getElementById('pendingStatCount').textContent = counts.ungraded;
+}
+
+// Filter by grade function
+function filterByGrade(filter) {
+    const cards = document.querySelectorAll('.student-grade-card');
+    
+    cards.forEach(card => {
+        const scoreInput = card.querySelector('.score-input');
+        const score = parseFloat(scoreInput?.value);
+        let show = true;
+        
+        if (filter === 'passing' && (isNaN(score) || score < 70)) {
+            show = false;
+        } else if (filter === 'failing' && (isNaN(score) || score >= 70 || score === 0)) {
+            show = false;
+        } else if (filter === 'ungraded' && (!isNaN(score) && score > 0)) {
+            show = false;
+        }
+        
+        card.style.display = show ? 'block' : 'none';
+    });
 }
 
 // Bulk Selection Functions
@@ -618,6 +1226,83 @@ function bulkMarkSubmitted(submissionType) {
             }
         });
     }
+}
+
+// Bulk Redo Granting
+function bulkGrantRedo() {
+    const selectedCheckboxes = document.querySelectorAll('.student-select-checkbox:checked');
+    
+    if (selectedCheckboxes.length === 0) {
+        alert('Please select at least one student first using the checkboxes.');
+        return;
+    }
+    
+    // Open bulk redo modal
+    const studentNames = [];
+    selectedCheckboxes.forEach(checkbox => {
+        const card = checkbox.closest('.student-grade-card');
+        const nameElement = card.querySelector('.student-grade-name');
+        if (nameElement) {
+            studentNames.push(nameElement.textContent.trim());
+        }
+    });
+    
+    document.getElementById('bulkRedoStudentList').innerHTML = studentNames.map(name => 
+        `<li class="list-group-item">${name}</li>`
+    ).join('');
+    document.getElementById('bulkRedoCount').textContent = selectedCheckboxes.length;
+    
+    const modal = new bootstrap.Modal(document.getElementById('bulkRedoModal'));
+    modal.show();
+}
+
+function grantBulkRedo() {
+    const deadline = document.getElementById('bulkRedoDeadline').value;
+    const reason = document.getElementById('bulkRedoReason').value;
+    
+    if (!deadline) {
+        alert('Please select a redo deadline.');
+        return;
+    }
+    
+    const selectedCheckboxes = document.querySelectorAll('.student-select-checkbox:checked');
+    const studentIds = Array.from(selectedCheckboxes).map(cb => cb.value);
+    
+    // Show loading state
+    const btn = document.getElementById('grantBulkRedoBtn');
+    const originalHTML = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Granting...';
+    
+    // Prepare form data
+    const formData = new FormData();
+    studentIds.forEach(id => formData.append('student_ids[]', id));
+    formData.append('redo_deadline', deadline);
+    formData.append('reason', reason);
+    formData.append('csrf_token', '{{ csrf_token() }}');
+    
+    // Send request
+    fetch('/management/grant-redo/{{ assignment.id }}', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            bootstrap.Modal.getInstance(document.getElementById('bulkRedoModal')).hide();
+            location.reload();
+        } else {
+            alert('Error: ' + data.message);
+            btn.disabled = false;
+            btn.innerHTML = originalHTML;
+        }
+    })
+    .catch(error => {
+        alert('Error granting bulk redo: ' + error);
+        btn.disabled = false;
+        btn.innerHTML = originalHTML;
+    });
 }
 
 function bulkMarkNotSubmitted() {
@@ -769,6 +1454,54 @@ function grantRedo() {
                 </button>
                 <button type="button" class="btn btn-warning" id="grantRedoBtn" onclick="grantRedo()">
                     <i class="bi bi-arrow-repeat me-1"></i>Grant Redo
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Redo Modal -->
+<div class="modal fade" id="bulkRedoModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title">
+                    <i class="bi bi-arrow-repeat me-2"></i>Bulk Grant Redo Opportunities
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Grading Policy:</strong> The final grade will be the higher of the original and redo grades. If any redo is submitted late, a 10% penalty will be applied.
+                </div>
+                
+                <h6 class="fw-bold mb-2">Granting redo to <span id="bulkRedoCount">0</span> student(s):</h6>
+                <div class="mb-3" style="max-height: 200px; overflow-y: auto;">
+                    <ul class="list-group" id="bulkRedoStudentList">
+                        <!-- Student names will be populated here -->
+                    </ul>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="bulkRedoDeadline" class="form-label fw-bold">Redo Deadline<span class="text-danger">*</span></label>
+                    <input type="date" class="form-control" id="bulkRedoDeadline" required>
+                    <small class="text-muted">Set a new deadline for all redo submissions</small>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="bulkRedoReason" class="form-label fw-bold">Reason (Optional)</label>
+                    <textarea class="form-control" id="bulkRedoReason" rows="3" 
+                              placeholder="e.g., Multiple students need improvement, Excused absences, etc."></textarea>
+                    <small class="text-muted">This will be visible to all selected students</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-warning" id="grantBulkRedoBtn" onclick="grantBulkRedo()">
+                    <i class="bi bi-arrow-repeat me-1"></i>Grant Bulk Redos
                 </button>
             </div>
         </div>

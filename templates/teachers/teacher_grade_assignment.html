@@ -108,9 +108,25 @@
         
         <div class="grading-container">
             <div class="grading-container-header">
-                <h5 class="mb-0"><i class="bi bi-people-fill me-2"></i>Student Grading</h5>
-                <div class="grading-progress">
-                    <span id="gradedCount">{{ grades|length }}</span> / {{ students|length }} Graded
+                <div class="d-flex justify-content-between align-items-center w-100 flex-wrap gap-3">
+                    <div>
+                        <h5 class="mb-0"><i class="bi bi-people-fill me-2"></i>Student Grading</h5>
+                        <div class="grading-progress">
+                            <span id="gradedCount">{{ grades|length }}</span> / {{ students|length }} Graded
+                        </div>
+                    </div>
+                    <!-- Bulk Actions for Manual Submissions -->
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-sm btn-outline-success" onclick="bulkMarkSubmitted('in_person')">
+                            <i class="bi bi-check-all me-1"></i>Mark All as Submitted (Paper)
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="bulkMarkNotSubmitted()">
+                            <i class="bi bi-x-lg me-1"></i>Mark All as Not Submitted
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleSelectAll()">
+                            <i class="bi bi-ui-checks me-1"></i>Select/Deselect All
+                        </button>
+                    </div>
                 </div>
             </div>
             
@@ -131,6 +147,12 @@
                     
                     <div class="student-grade-card {{ performance_class }}" data-student-id="{{ student.id }}">
                         <div class="student-grade-header">
+                            <!-- Bulk Select Checkbox -->
+                            <div class="bulk-select-checkbox">
+                                <input type="checkbox" class="form-check-input student-select-checkbox" 
+                                       id="select_{{ student.id }}" value="{{ student.id }}">
+                            </div>
+                            
                             <div class="student-grade-avatar">
                                 {{ student.first_name[0] if student.first_name else '?' }}{{ student.last_name[0] if student.last_name else '?' }}
                             </div>
@@ -145,9 +167,16 @@
                                     </span>
                                     <small class="submission-time text-muted">Assignment voided for this student</small>
                                 {% elif submission %}
-                                    <span class="submission-badge badge-submitted">
-                                        <i class="bi bi-check-circle-fill"></i> Submitted
-                                    </span>
+                                    {% set sub_type = submission.submission_type|default('online') %}
+                                    {% if sub_type == 'in_person' %}
+                                        <span class="submission-badge badge-in-person">
+                                            <i class="bi bi-file-earmark-text-fill"></i> Submitted (Paper)
+                                        </span>
+                                    {% else %}
+                                        <span class="submission-badge badge-submitted">
+                                            <i class="bi bi-cloud-upload-fill"></i> Submitted (Online)
+                                        </span>
+                                    {% endif %}
                                     <small class="submission-time">{{ submission.submitted_at.strftime('%m/%d %I:%M %p') }}</small>
                                 {% else %}
                                     <span class="submission-badge badge-not-submitted">
@@ -158,6 +187,33 @@
                         </div>
                         
                         <div class="student-grade-body">
+                            <!-- Submission Status Section -->
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label class="grade-label">
+                                        <i class="bi bi-clipboard-check"></i> Submission Status
+                                    </label>
+                                    <select class="form-select submission-type-select" 
+                                            name="submission_type_{{ student.id }}" 
+                                            data-student-id="{{ student.id }}"
+                                            onchange="updateSubmissionStatus(this)">
+                                        <option value="not_submitted" {% if not submission %}selected{% endif %}>❌ Not Submitted</option>
+                                        <option value="in_person" {% if submission and submission.submission_type == 'in_person' %}selected{% endif %}>📝 Submitted (Paper/In-Person)</option>
+                                        <option value="online" {% if submission and submission.submission_type == 'online' %}selected{% endif %}>📤 Submitted (Online)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="grade-label">
+                                        <i class="bi bi-sticky"></i> Submission Notes
+                                    </label>
+                                    <input type="text" 
+                                           class="form-control form-control-sm" 
+                                           name="submission_notes_{{ student.id }}" 
+                                           placeholder="e.g., Turned in late, Resubmitted..."
+                                           value="{{ submission.submission_notes if submission and submission.submission_notes else '' }}">
+                                </div>
+                            </div>
+                            
                             <div class="row g-3">
                                 <div class="col-md-3">
                                     <div class="grade-input-group">
@@ -228,7 +284,7 @@
                                 </div>
                             </div>
                             
-                            {% if assignment.assignment_type in ['PDF', 'Paper', 'pdf', 'paper'] and current_user.role in ['Director', 'School Administrator'] %}
+                            {% if assignment.assignment_type in ['PDF', 'Paper', 'pdf', 'paper'] %}
                             <!-- Redo Button (Only for PDF/Paper assignments) -->
                             <div class="row g-3 mt-2">
                                 <div class="col-12">
@@ -269,6 +325,88 @@
         </div>
     </form>
 </div>
+<!-- Styles for Manual Submission Tracking -->
+<style>
+/* Bulk Select Checkbox */
+.bulk-select-checkbox {
+    margin-right: 0.75rem;
+    display: flex;
+    align-items: center;
+}
+
+.student-select-checkbox {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+}
+
+/* Submission Type Badge Styles */
+.badge-in-person {
+    background: linear-gradient(135deg, #ff9800 0%, #ff5722 100%);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);
+}
+
+.badge-submitted {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.badge-not-submitted {
+    background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(107, 114, 128, 0.3);
+}
+
+.badge-voided {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+/* Submission Type Select */
+.submission-type-select {
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 0.5rem;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.submission-type-select:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Input Changed Animation */
+.input-changed {
+    animation: pulse 0.3s ease;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+}
+
+/* Grading Container Header Adjustments */
+.grading-container-header {
+    padding: 1.5rem;
+}
+</style>
+
 {% endblock %}
 
 {% block scripts %}
@@ -444,6 +582,86 @@ function goBack() {
         {% else %}
             window.location.href = "{{ url_for('teacher.dashboard.my_assignments') }}";
         {% endif %}
+    }
+}
+
+// Bulk Selection Functions
+function toggleSelectAll() {
+    const checkboxes = document.querySelectorAll('.student-select-checkbox');
+    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+    
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = !allChecked;
+    });
+}
+
+function bulkMarkSubmitted(submissionType) {
+    const selectedCheckboxes = document.querySelectorAll('.student-select-checkbox:checked');
+    
+    if (selectedCheckboxes.length === 0) {
+        alert('Please select at least one student first using the checkboxes.');
+        return;
+    }
+    
+    const confirmMsg = `Mark ${selectedCheckboxes.length} selected student(s) as submitted (${submissionType === 'in_person' ? 'Paper/In-Person' : 'Online'})?`;
+    
+    if (confirm(confirmMsg)) {
+        selectedCheckboxes.forEach(checkbox => {
+            const studentId = checkbox.value;
+            const select = document.querySelector(`select[name="submission_type_${studentId}"]`);
+            if (select) {
+                select.value = submissionType;
+                updateSubmissionStatus(select);
+            }
+        });
+    }
+}
+
+function bulkMarkNotSubmitted() {
+    const selectedCheckboxes = document.querySelectorAll('.student-select-checkbox:checked');
+    
+    if (selectedCheckboxes.length === 0) {
+        alert('Please select at least one student first using the checkboxes.');
+        return;
+    }
+    
+    if (confirm(`Mark ${selectedCheckboxes.length} selected student(s) as NOT submitted?`)) {
+        selectedCheckboxes.forEach(checkbox => {
+            const studentId = checkbox.value;
+            const select = document.querySelector(`select[name="submission_type_${studentId}"]`);
+            if (select) {
+                select.value = 'not_submitted';
+                updateSubmissionStatus(select);
+            }
+        });
+    }
+}
+
+function updateSubmissionStatus(selectElement) {
+    const studentId = selectElement.getAttribute('data-student-id');
+    const card = selectElement.closest('.student-grade-card');
+    const badgeContainer = card.querySelector('.student-grade-badges');
+    const status = selectElement.value;
+    
+    // Update visual feedback
+    selectElement.classList.add('input-changed');
+    setTimeout(() => selectElement.classList.remove('input-changed'), 300);
+    
+    // Update the badge in the header
+    let badgeHTML = '';
+    if (status === 'in_person') {
+        badgeHTML = '<span class="submission-badge badge-in-person"><i class="bi bi-file-earmark-text-fill"></i> Submitted (Paper)</span>';
+        badgeHTML += '<small class="submission-time">Just marked</small>';
+    } else if (status === 'online') {
+        badgeHTML = '<span class="submission-badge badge-submitted"><i class="bi bi-cloud-upload-fill"></i> Submitted (Online)</span>';
+        badgeHTML += '<small class="submission-time">Just marked</small>';
+    } else {
+        badgeHTML = '<span class="submission-badge badge-not-submitted"><i class="bi bi-clock-history"></i> Not Submitted</span>';
+    }
+    
+    // Only update if not voided
+    if (!badgeContainer.querySelector('.badge-voided')) {
+        badgeContainer.innerHTML = badgeHTML;
     }
 }
 

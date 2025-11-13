@@ -5507,9 +5507,47 @@ def grade_assignment(assignment_id):
     students = enrolled_students
     
     if request.method == 'POST':
+        # Get teacher staff record
+        teacher = None
+        if current_user.teacher_staff_id:
+            teacher = TeacherStaff.query.get(current_user.teacher_staff_id)
+        
         for student in students:
             score = request.form.get(f'score_{student.id}')
             comment = request.form.get(f'comment_{student.id}')
+            submission_type = request.form.get(f'submission_type_{student.id}')
+            submission_notes = request.form.get(f'submission_notes_{student.id}')
+            
+            # Handle manual submission tracking
+            if submission_type:
+                submission = Submission.query.filter_by(
+                    student_id=student.id,
+                    assignment_id=assignment_id
+                ).first()
+                
+                if submission_type in ['in_person', 'online']:
+                    # Create or update submission
+                    if submission:
+                        submission.submission_type = submission_type
+                        submission.submission_notes = submission_notes
+                        submission.marked_by = teacher.id if teacher else None
+                        submission.marked_at = datetime.utcnow()
+                    else:
+                        # Create new manual submission
+                        submission = Submission(
+                            student_id=student.id,
+                            assignment_id=assignment_id,
+                            submission_type=submission_type,
+                            submission_notes=submission_notes,
+                            marked_by=teacher.id if teacher else None,
+                            marked_at=datetime.utcnow(),
+                            submitted_at=datetime.utcnow(),
+                            file_path=None  # No file for in-person submissions
+                        )
+                        db.session.add(submission)
+                elif submission_type == 'not_submitted' and submission:
+                    # Remove submission if marked as not submitted
+                    db.session.delete(submission)
             
             if score is not None:
                 try:
@@ -6030,7 +6068,6 @@ def void_group_grade(grade_id):
 
 @management_blueprint.route('/grant-redo/<int:assignment_id>', methods=['POST'])
 @login_required
-@management_required
 def grant_assignment_redo(assignment_id):
     """Grant redo permission for an assignment to selected students"""
     assignment = Assignment.query.get_or_404(assignment_id)
@@ -6039,8 +6076,16 @@ def grant_assignment_redo(assignment_id):
     if assignment.assignment_type not in ['PDF', 'Paper', 'pdf', 'paper']:
         return jsonify({'success': False, 'message': 'Redos are only available for PDF/Paper assignments.'})
     
-    # Authorization check
-    if current_user.role not in ['Director', 'School Administrator']:
+    # Authorization check - Teachers, School Admins, and Directors
+    if current_user.role == 'Teacher':
+        # Teachers can only grant redos for their own classes
+        if current_user.teacher_staff_id:
+            teacher = TeacherStaff.query.get(current_user.teacher_staff_id)
+            if assignment.class_info.teacher_id != teacher.id:
+                return jsonify({'success': False, 'message': 'You can only grant redos for your own classes.'})
+        else:
+            return jsonify({'success': False, 'message': 'Teacher record not found.'})
+    elif current_user.role not in ['Director', 'School Administrator']:
         return jsonify({'success': False, 'message': 'You are not authorized to grant redos.'})
     
     # Get form data
@@ -6149,13 +6194,20 @@ def grant_assignment_redo(assignment_id):
 
 @management_blueprint.route('/revoke-redo/<int:redo_id>', methods=['POST'])
 @login_required
-@management_required
 def revoke_assignment_redo(redo_id):
     """Revoke a redo permission"""
     redo = AssignmentRedo.query.get_or_404(redo_id)
     
-    # Authorization check
-    if current_user.role not in ['Director', 'School Administrator']:
+    # Authorization check - Teachers, School Admins, and Directors
+    if current_user.role == 'Teacher':
+        # Teachers can only revoke redos for their own classes
+        if current_user.teacher_staff_id:
+            teacher = TeacherStaff.query.get(current_user.teacher_staff_id)
+            if redo.assignment.class_info.teacher_id != teacher.id:
+                return jsonify({'success': False, 'message': 'You can only revoke redos for your own classes.'})
+        else:
+            return jsonify({'success': False, 'message': 'Teacher record not found.'})
+    elif current_user.role not in ['Director', 'School Administrator']:
         return jsonify({'success': False, 'message': 'You are not authorized to revoke redos.'})
     
     # Don't allow revoking if student has already used the redo
@@ -6185,10 +6237,20 @@ def revoke_assignment_redo(redo_id):
 
 @management_blueprint.route('/assignment/<int:assignment_id>/redos')
 @login_required
-@management_required
 def view_assignment_redos(assignment_id):
     """View all redo permissions for an assignment"""
     assignment = Assignment.query.get_or_404(assignment_id)
+    
+    # Authorization check - Teachers can only view redos for their own classes
+    if current_user.role == 'Teacher':
+        if current_user.teacher_staff_id:
+            teacher = TeacherStaff.query.get(current_user.teacher_staff_id)
+            if assignment.class_info.teacher_id != teacher.id:
+                return jsonify({'success': False, 'message': 'You can only view redos for your own classes.'}), 403
+        else:
+            return jsonify({'success': False, 'message': 'Teacher record not found.'}), 403
+    elif current_user.role not in ['Director', 'School Administrator']:
+        return jsonify({'success': False, 'message': 'You are not authorized to view redos.'}), 403
     
     # Get all redos for this assignment
     redos = AssignmentRedo.query.filter_by(assignment_id=assignment_id).all()

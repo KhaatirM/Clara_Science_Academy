@@ -11,7 +11,7 @@ from models import (
     # Academic structure
     Class, SchoolYear, AcademicPeriod, Enrollment,
     # Assignment system
-    Assignment, AssignmentTemplate, AssignmentRubric, AssignmentExtension,
+    Assignment, AssignmentTemplate, AssignmentRubric, AssignmentExtension, AssignmentRedo,
     Submission, Grade, 
     # Quiz system
     QuizQuestion, QuizOption, QuizAnswer,
@@ -1333,9 +1333,45 @@ def grade_assignment(assignment_id):
     students = enrolled_students
     
     if request.method == 'POST':
+        # Get teacher staff record
+        teacher = get_teacher_or_admin()
+        
         for student in students:
             score = request.form.get(f'score_{student.id}')
             comment = request.form.get(f'comment_{student.id}')
+            submission_type = request.form.get(f'submission_type_{student.id}')
+            submission_notes = request.form.get(f'submission_notes_{student.id}')
+            
+            # Handle manual submission tracking
+            if submission_type:
+                submission = Submission.query.filter_by(
+                    student_id=student.id,
+                    assignment_id=assignment_id
+                ).first()
+                
+                if submission_type in ['in_person', 'online']:
+                    # Create or update submission
+                    if submission:
+                        submission.submission_type = submission_type
+                        submission.submission_notes = submission_notes
+                        submission.marked_by = teacher.id if teacher else None
+                        submission.marked_at = datetime.utcnow()
+                    else:
+                        # Create new manual submission
+                        submission = Submission(
+                            student_id=student.id,
+                            assignment_id=assignment_id,
+                            submission_type=submission_type,
+                            submission_notes=submission_notes,
+                            marked_by=teacher.id if teacher else None,
+                            marked_at=datetime.utcnow(),
+                            submitted_at=datetime.utcnow(),
+                            file_path=None  # No file for in-person submissions
+                        )
+                        db.session.add(submission)
+                elif submission_type == 'not_submitted' and submission:
+                    # Remove submission if marked as not submitted
+                    db.session.delete(submission)
             
             if score is not None:
                 try:

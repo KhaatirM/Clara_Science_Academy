@@ -516,6 +516,7 @@ class Assignment(db.Model):
 class Submission(db.Model):
     """
     Model for storing student assignment submissions.
+    Supports both online (file upload) and in-person (physical paper) submissions.
     """
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
@@ -523,12 +524,19 @@ class Submission(db.Model):
     submitted_at = db.Column(db.DateTime, default=datetime.utcnow)
     file_path = db.Column(db.String(500), nullable=True)
     comments = db.Column(db.Text, nullable=True)
+    
+    # Manual submission tracking
+    submission_type = db.Column(db.String(20), default='online', nullable=False)  # 'online', 'in_person', 'not_submitted'
+    submission_notes = db.Column(db.Text, nullable=True)  # Notes like "Turned in late", "Resubmitted", etc.
+    marked_by = db.Column(db.Integer, db.ForeignKey('teacher_staff.id'), nullable=True)  # Teacher who marked it manually
+    marked_at = db.Column(db.DateTime, nullable=True)  # When it was manually marked
 
     student = db.relationship('Student', backref='submissions', lazy=True)
     assignment = db.relationship('Assignment', backref='submissions', lazy=True)
+    marked_by_teacher = db.relationship('TeacherStaff', backref='marked_submissions', lazy=True)
 
     def __repr__(self):
-        return f"Submission(Student: {self.student_id}, Assignment: {self.assignment_id})"
+        return f"Submission(Student: {self.student_id}, Assignment: {self.assignment_id}, Type: {self.submission_type})"
 
 
 class QuizQuestion(db.Model):

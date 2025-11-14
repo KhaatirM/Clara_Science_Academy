@@ -35,7 +35,7 @@
                         <i class="bi bi-arrow-left me-2"></i>Back
                     </a>
                 {% endif %}
-                <a href="{{ url_for('management.redo_dashboard') }}" class="btn btn-outline-warning">
+                <a href="{{ url_for('management.redo_dashboard') }}" class="btn btn-redo-dashboard">
                     <i class="bi bi-arrow-repeat me-2"></i>Redo Dashboard
                 </a>
                 <button onclick="createAssignment()" class="btn btn-assignments-add">
@@ -888,6 +888,29 @@ function submitVoidAssignment() {
         </div>
     </div>
 </div>
+
+<style>
+/* Redo Dashboard Button - High Visibility */
+.btn-redo-dashboard {
+    background: white;
+    color: #6c757d;
+    border: 2px solid white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.btn-redo-dashboard:hover {
+    background: #f8f9fa;
+    color: #495057;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+    border-color: white;
+}
+</style>
 
 <script>
 // Toggle student selection visibility

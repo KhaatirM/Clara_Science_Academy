@@ -421,6 +421,9 @@
             </div>
             <div class="d-flex gap-3 align-items-center">
                 <span class="assignment-count-badge">{{ (assignments|length + group_assignments|length) }} Total</span>
+                <a href="{{ url_for('management.redo_dashboard') }}" class="btn btn-outline-warning">
+                    <i class="bi bi-arrow-repeat me-2"></i>Redo Dashboard
+                </a>
                 <button type="button" class="add-assignment-btn" onclick="createAssignment()">
                     <i class="bi bi-plus-circle-fill me-2"></i>New Assignment
                 </button>

@@ -35,6 +35,9 @@
                         <i class="bi bi-arrow-left me-2"></i>Back
                     </a>
                 {% endif %}
+                <a href="{{ url_for('management.redo_dashboard') }}" class="btn btn-outline-warning">
+                    <i class="bi bi-arrow-repeat me-2"></i>Redo Dashboard
+                </a>
                 <button onclick="createAssignment()" class="btn btn-assignments-add">
                     <i class="bi bi-plus-circle me-2"></i>New Assignment
                 </button>

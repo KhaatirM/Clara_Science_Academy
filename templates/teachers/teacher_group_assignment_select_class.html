@@ -1,5 +1,9 @@
 {% extends "shared/dashboard_layout.html" %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/teachers_teacher_group_assignment_select_class.css') }}">
+{% endblock %}
+
 {% block title %}Select Class - Group Assignment{% endblock %}
 
 {% block dashboard_content %}
@@ -46,14 +50,6 @@
     {% endif %}
 </div>
 
-<style>
-.card {
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-.card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15) !important;
-}
-</style>
+
 {% endblock %}
 

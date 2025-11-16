@@ -1,5 +1,9 @@
 {% extends "shared/dashboard_layout.html" %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/management_resources.css') }}">
+{% endblock %}
+
 {% block title %}
     Resources - Clara Science Academy
 {% endblock %}
@@ -388,77 +392,7 @@
     </div>
 </div>
 
-<style>
-.resource-card {
-    transition: transform 0.2s ease-in-out;
-}
 
-.resource-card:hover {
-    transform: translateY(-5px);
-}
-
-.resource-link-card {
-    transition: all 0.3s ease-in-out;
-    cursor: pointer;
-}
-
-.resource-link-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
-    background-color: #ffffff !important;
-}
-
-.grade-badge {
-    font-size: 0.8rem;
-}
-
-.study-guide-features {
-    background-color: #f8f9fa;
-    padding: 1rem;
-    border-radius: 0.5rem;
-    border-left: 4px solid #28a745;
-}
-
-.info-item {
-    font-size: 0.9rem;
-}
-
-.stat-number {
-    font-weight: 700;
-    color: white;
-}
-
-.stat-label {
-    color: rgba(255, 255, 255, 0.8);
-}
-
-.bg-gradient-primary {
-    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
-}
-
-.bg-gradient-success {
-    background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
-}
-
-.bg-gradient-info {
-    background: linear-gradient(135deg, #17a2b8 0%, #117a8b 100%);
-}
-
-.nav-pills .nav-link {
-    border-radius: 0.5rem;
-    margin: 0 0.25rem;
-}
-
-.nav-pills .nav-link.active {
-    background-color: #007bff;
-    color: white;
-}
-
-.nav-pills .nav-link:hover {
-    background-color: #e9ecef;
-    color: #007bff;
-}
-</style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {

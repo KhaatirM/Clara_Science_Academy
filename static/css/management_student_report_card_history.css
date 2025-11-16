@@ -1,0 +1,16 @@
+/* ===== STUDENT_REPORT_CARD_HISTORY STYLES ===== */
+/* Extracted from: templates\management\student_report_card_history.html */
+
+.student-avatar {
+  font-size: 3rem;
+  color: #0d6efd;
+}
+
+.btn-group .btn {
+  border-radius: 0.25rem !important;
+  margin: 0 2px;
+}
+
+.table td {
+  vertical-align: middle;
+}

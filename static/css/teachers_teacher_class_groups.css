@@ -1,0 +1,361 @@
+/* ===== TEACHER_CLASS_GROUPS STYLES ===== */
+/* Extracted from: templates\teachers\teacher_class_groups.html */
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animated-fade-in {
+    animation: fadeIn 0.6s ease-out forwards;
+    opacity: 0;
+}
+
+/* Header Card */
+.header-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 2rem;
+    border-radius: 20px;
+    color: white;
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+}
+
+.header-icon-wrapper {
+    width: 60px;
+    height: 60px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    backdrop-filter: blur(10px);
+}
+
+.btn-create-group {
+    background: white;
+    color: #667eea;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 12px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.btn-create-group:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    background: #f8f9fa;
+    color: #667eea;
+}
+
+/* Stat Cards */
+.stat-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+}
+
+.stat-card-primary { border-color: rgba(102, 126, 234, 0.3); }
+.stat-card-success { border-color: rgba(40, 199, 111, 0.3); }
+.stat-card-info { border-color: rgba(52, 172, 224, 0.3); }
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    flex-shrink: 0;
+}
+
+.stat-card-primary .stat-icon {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.stat-card-success .stat-icon {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    color: white;
+}
+
+.stat-card-info .stat-icon {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    color: white;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #2d3748;
+}
+
+.stat-label {
+    color: #718096;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+/* Group Cards */
+.group-card {
+    background: white;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.group-card:hover {
+    transform: translateY(-10px) scale(1.02);
+    box-shadow: 0 15px 40px rgba(102, 126, 234, 0.2);
+}
+
+.group-card-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 1.5rem;
+    color: white;
+}
+
+.group-icon-badge {
+    width: 50px;
+    height: 50px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    backdrop-filter: blur(10px);
+}
+
+.member-count-badge {
+    background: rgba(255, 255, 255, 0.25);
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    backdrop-filter: blur(10px);
+}
+
+.group-title {
+    font-weight: 700;
+    font-size: 1.3rem;
+    margin: 0;
+}
+
+.group-description {
+    font-size: 0.9rem;
+    opacity: 0.95;
+    margin: 0;
+}
+
+.group-card-body {
+    padding: 1.5rem;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Members Section */
+.members-section {
+    flex-grow: 1;
+}
+
+.members-header {
+    color: #4a5568;
+    font-size: 0.9rem;
+}
+
+.members-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.member-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: #f7fafc;
+    border-radius: 12px;
+    transition: all 0.2s ease;
+}
+
+.member-item:hover {
+    background: #edf2f7;
+    transform: translateX(5px);
+}
+
+.member-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+}
+
+.member-name {
+    flex-grow: 1;
+    font-weight: 500;
+    color: #2d3748;
+}
+
+.btn-remove-member {
+    background: transparent;
+    border: none;
+    color: #e53e3e;
+    font-size: 0.9rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.btn-remove-member:hover {
+    background: #fed7d7;
+    transform: scale(1.1);
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: #a0aec0;
+}
+
+.empty-state i {
+    font-size: 3rem;
+    margin-bottom: 0.5rem;
+    opacity: 0.5;
+}
+
+.empty-state p {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.empty-state-large {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.empty-state-icon {
+    width: 100px;
+    height: 100px;
+    margin: 0 auto 1.5rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    color: white;
+}
+
+/* Action Buttons */
+.group-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: auto;
+}
+
+.btn-action {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.btn-action-add {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-action-add:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+}
+
+.btn-action-delete {
+    background: #fff5f5;
+    color: #e53e3e;
+    border: 2px solid #feb2b2;
+}
+
+.btn-action-delete:hover {
+    background: #e53e3e;
+    color: white;
+    border-color: #e53e3e;
+    transform: translateY(-2px);
+}
+
+/* Modal Improvements */
+.modal-content {
+    border-radius: 20px;
+    border: none;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 20px 20px 0 0;
+    padding: 1.5rem;
+}
+
+.modal-header .btn-close {
+    filter: brightness(0) invert(1);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .header-card {
+        padding: 1.5rem;
+    }
+    
+    .group-actions {
+        flex-direction: column;
+    }
+    
+    .stat-value {
+        font-size: 1.5rem;
+    }
+}

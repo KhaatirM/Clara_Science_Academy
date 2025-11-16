@@ -1,0 +1,100 @@
+/* ===== REPORT_CARD_DETAIL STYLES ===== */
+/* Extracted from: templates\management\report_card_detail.html */
+
+/* Card Header Gradient */
+.bg-gradient-primary {
+  background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+}
+
+/* Info Icon */
+.info-icon {
+  width: 45px;
+  height: 45px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #e7f1ff 0%, #cfe2ff 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  color: #0d6efd;
+}
+
+/* Stat Cards */
+.stat-card {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  background: white;
+  border-radius: 12px;
+  border: 2px solid #e9ecef;
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  border-color: #0d6efd;
+  box-shadow: 0 4px 15px rgba(13, 110, 253, 0.1);
+  transform: translateY(-2px);
+}
+
+.stat-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: white;
+  margin-right: 15px;
+}
+
+.stat-content {
+  flex: 1;
+}
+
+.stat-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #212529;
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: #6c757d;
+  margin-top: 4px;
+  font-weight: 600;
+}
+
+/* Table Enhancements */
+.table th {
+  border-top: none;
+  font-size: 0.875rem;
+  letter-spacing: 0.5px;
+}
+
+.table td {
+  vertical-align: middle;
+  padding: 1rem;
+}
+
+.table-hover tbody tr:hover {
+  background-color: #f8f9ff;
+}
+
+/* Badge Styles */
+.badge {
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .card-header {
+    padding: 1rem !important;
+  }
+  
+  .stat-card {
+    margin-bottom: 15px;
+  }
+}

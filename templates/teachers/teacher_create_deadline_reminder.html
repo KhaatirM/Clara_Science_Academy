@@ -92,6 +92,47 @@
               </div>
             </div>
 
+            <!-- Student Selection Section -->
+            <div class="row g-3 mb-4" id="studentSelectionSection" style="display: none;">
+              <div class="col-12">
+                <h6 class="text-primary border-bottom pb-2 mb-3">
+                  <i class="bi bi-people-fill me-2"></i>Student Selection
+                </h6>
+                <div class="alert alert-info mb-3">
+                  <i class="bi bi-info-circle me-2"></i>
+                  <strong>Smart Filtering:</strong> Select specific students or use smart filtering to automatically include only students who need reminders (not submitted or not graded yet).
+                </div>
+              </div>
+              <div class="col-12">
+                <div class="d-flex gap-2 mb-3 flex-wrap">
+                  <button type="button" class="btn btn-sm btn-outline-primary" onclick="selectAllStudents()">
+                    <i class="bi bi-check-all me-1"></i>Select All
+                  </button>
+                  <button type="button" class="btn btn-sm btn-outline-secondary" onclick="deselectAllStudents()">
+                    <i class="bi bi-x me-1"></i>Deselect All
+                  </button>
+                  <button type="button" class="btn btn-sm btn-success" id="smartFilterBtn" onclick="applySmartFilter()" style="display: none;">
+                    <i class="bi bi-funnel-fill me-1"></i>Smart Filter (Only Students Needing Reminder)
+                  </button>
+                  <button type="button" class="btn btn-sm btn-outline-info" onclick="showStudentPreview()">
+                    <i class="bi bi-eye me-1"></i>Preview Selected (<span id="selectedCount">0</span>)
+                  </button>
+                </div>
+                <div class="card border">
+                  <div class="card-body" style="max-height: 300px; overflow-y: auto;">
+                    <div id="studentsList">
+                      <div class="text-center text-muted py-3">
+                        <i class="bi bi-info-circle me-2"></i>Select an assignment first to see students
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <small class="text-muted">
+                  <i class="bi bi-lightbulb me-1"></i>Leave all unchecked to send reminder to all students in the class
+                </small>
+              </div>
+            </div>
+
             <div class="row g-3 mb-4">
               <div class="col-12">
                 <h6 class="text-primary border-bottom pb-2 mb-3">
@@ -187,19 +228,209 @@ document.getElementById('reminder_type').addEventListener('change', function() {
     const regularAssignmentDiv = document.getElementById('regularAssignmentDiv');
     const groupAssignmentDiv = document.getElementById('groupAssignmentDiv');
     const assignmentSection = document.getElementById('assignmentSection');
+    const studentSelectionSection = document.getElementById('studentSelectionSection');
     
     if (reminderType === 'assignment') {
         regularAssignmentDiv.style.display = 'block';
         groupAssignmentDiv.style.display = 'none';
         assignmentSection.style.display = 'block';
+        studentSelectionSection.style.display = 'block';
     } else if (reminderType === 'group_assignment') {
         regularAssignmentDiv.style.display = 'none';
         groupAssignmentDiv.style.display = 'block';
         assignmentSection.style.display = 'block';
+        studentSelectionSection.style.display = 'none'; // Group assignments handled differently
     } else {
         assignmentSection.style.display = 'none';
+        studentSelectionSection.style.display = 'block'; // General reminders can target specific students
+        loadAllStudents(); // Load all students for general reminders
+    }
+    
+    // Load students when assignment type changes
+    if (reminderType === 'assignment') {
+        const assignmentId = document.getElementById('assignment_id').value;
+        if (assignmentId) {
+            loadStudentsForAssignment(assignmentId);
+        }
     }
 });
+
+// Load all students for general reminders
+function loadAllStudents() {
+    const studentsList = document.getElementById('studentsList');
+    studentsList.innerHTML = '<div class="text-center py-3"><span class="spinner-border spinner-border-sm me-2"></span>Loading students...</div>';
+    
+    // Get all students from the class (passed from backend)
+    const students = {{ students|tojson|safe }};
+    
+    if (students.length === 0) {
+        studentsList.innerHTML = '<div class="alert alert-warning">No students enrolled in this class</div>';
+        return;
+    }
+    
+    renderAllStudentsList(students);
+    document.getElementById('smartFilterBtn').style.display = 'none'; // No smart filter for general reminders
+}
+
+// Render all students list (for general reminders)
+function renderAllStudentsList(students) {
+    const studentsList = document.getElementById('studentsList');
+    
+    let html = '<div class="row g-2">';
+    
+    students.forEach(student => {
+        html += `
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="card border student-checkbox-card">
+                    <div class="card-body p-2">
+                        <div class="form-check">
+                            <input class="form-check-input student-checkbox" type="checkbox" 
+                                   name="selected_student_ids" 
+                                   value="${student.id}" 
+                                   id="student_${student.id}"
+                                   onchange="updateSelectedCount()">
+                            <label class="form-check-label w-100" for="student_${student.id}">
+                                <div>
+                                    <strong>${student.first_name} ${student.last_name}</strong>
+                                    ${student.student_id ? `<br><small class="text-muted">ID: ${student.student_id}</small>` : ''}
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    studentsList.innerHTML = html;
+    updateSelectedCount();
+}
+
+// Load students when assignment is selected
+document.getElementById('assignment_id').addEventListener('change', function() {
+    const assignmentId = this.value;
+    if (assignmentId) {
+        loadStudentsForAssignment(assignmentId);
+    } else {
+        document.getElementById('studentsList').innerHTML = '<div class="text-center text-muted py-3"><i class="bi bi-info-circle me-2"></i>Select an assignment first</div>';
+        document.getElementById('smartFilterBtn').style.display = 'none';
+        updateSelectedCount();
+    }
+});
+
+// Load students for an assignment
+function loadStudentsForAssignment(assignmentId) {
+    const studentsList = document.getElementById('studentsList');
+    studentsList.innerHTML = '<div class="text-center py-3"><span class="spinner-border spinner-border-sm me-2"></span>Loading students...</div>';
+    
+    fetch(`/teacher/api/assignment/${assignmentId}/students-needing-reminder`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                renderStudentsList(data.students);
+                document.getElementById('smartFilterBtn').style.display = 'inline-block';
+            } else {
+                studentsList.innerHTML = '<div class="alert alert-danger">Error loading students</div>';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            studentsList.innerHTML = '<div class="alert alert-danger">Error loading students</div>';
+        });
+}
+
+// Render students list with checkboxes
+function renderStudentsList(students) {
+    const studentsList = document.getElementById('studentsList');
+    
+    if (students.length === 0) {
+        studentsList.innerHTML = '<div class="alert alert-success"><i class="bi bi-check-circle me-2"></i>All students have submitted and been graded! No reminders needed.</div>';
+        return;
+    }
+    
+    let html = '<div class="row g-2">';
+    
+    students.forEach(student => {
+        const statusBadge = student.status === 'not_submitted' 
+            ? '<span class="badge bg-danger">Not Submitted</span>'
+            : '<span class="badge bg-warning">Submitted, Not Graded</span>';
+        
+        html += `
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="card border student-checkbox-card">
+                    <div class="card-body p-2">
+                        <div class="form-check">
+                            <input class="form-check-input student-checkbox" type="checkbox" 
+                                   name="selected_student_ids" 
+                                   value="${student.id}" 
+                                   id="student_${student.id}"
+                                   onchange="updateSelectedCount()">
+                            <label class="form-check-label w-100" for="student_${student.id}">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>${student.first_name} ${student.last_name}</strong>
+                                        ${student.student_id ? `<br><small class="text-muted">ID: ${student.student_id}</small>` : ''}
+                                    </div>
+                                    <div>${statusBadge}</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    studentsList.innerHTML = html;
+    updateSelectedCount();
+}
+
+// Select all students
+function selectAllStudents() {
+    document.querySelectorAll('.student-checkbox').forEach(cb => {
+        cb.checked = true;
+    });
+    updateSelectedCount();
+}
+
+// Deselect all students
+function deselectAllStudents() {
+    document.querySelectorAll('.student-checkbox').forEach(cb => {
+        cb.checked = false;
+    });
+    updateSelectedCount();
+}
+
+// Apply smart filter - select only students who need reminders
+function applySmartFilter() {
+    // Smart filter is already applied when loading students from API
+    // This just selects all visible students (they're already filtered)
+    selectAllStudents();
+}
+
+// Update selected count
+function updateSelectedCount() {
+    const count = document.querySelectorAll('.student-checkbox:checked').length;
+    document.getElementById('selectedCount').textContent = count;
+}
+
+// Show preview of selected students
+function showStudentPreview() {
+    const selected = Array.from(document.querySelectorAll('.student-checkbox:checked'))
+        .map(cb => {
+            const label = cb.closest('label');
+            return label.querySelector('strong').textContent;
+        });
+    
+    if (selected.length === 0) {
+        alert('No students selected. Reminder will be sent to all students in the class.');
+    } else {
+        const message = `Selected ${selected.length} student(s):\n\n${selected.join('\n')}`;
+        alert(message);
+    }
+}
 
 // Set reminder templates
 function setReminderTemplate(type) {
@@ -230,6 +461,26 @@ function setReminderTemplate(type) {
     // Trigger the change event to show/hide appropriate sections
     document.getElementById('reminder_type').dispatchEvent(new Event('change'));
 }
+
+// Add CSS for student selection cards
+const style = document.createElement('style');
+style.textContent = `
+    .student-checkbox-card {
+        transition: all 0.2s ease;
+    }
+    .student-checkbox-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .student-checkbox-card:has(input:checked) {
+        border-color: #0d6efd;
+        background-color: #f0f7ff;
+    }
+    #studentsList {
+        scrollbar-width: thin;
+    }
+`;
+document.head.appendChild(style);
 
 // Set default date to tomorrow
 document.addEventListener('DOMContentLoaded', function() {

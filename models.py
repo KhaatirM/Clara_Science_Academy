@@ -1628,6 +1628,7 @@ class DeadlineReminder(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_sent = db.Column(db.DateTime, nullable=True)
     next_send = db.Column(db.DateTime, nullable=True)
+    selected_student_ids = db.Column(db.Text, nullable=True)  # JSON array of student IDs for targeted reminders
     
     # Relationships
     assignment = db.relationship('Assignment', backref='deadline_reminders')

@@ -1,0 +1,329 @@
+/* ===== TAKE_ATTENDANCE STYLES ===== */
+/* Extracted from: templates\shared\take_attendance.html */
+
+/* Header Styling */
+.attendance-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 15px;
+    padding: 2rem;
+    color: white;
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+}
+
+.attendance-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.attendance-subtitle {
+    font-size: 1.1rem;
+    opacity: 0.95;
+}
+
+/* Stat Cards */
+.stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+    border-left: 4px solid transparent;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+}
+
+.stat-card-present {
+    border-left-color: #10b981;
+}
+
+.stat-card-late {
+    border-left-color: #f59e0b;
+}
+
+.stat-card-absent {
+    border-left-color: #ef4444;
+}
+
+.stat-card-rate {
+    border-left-color: #3b82f6;
+}
+
+.stat-icon {
+    font-size: 2rem;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+}
+
+.stat-card-present .stat-icon {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+}
+
+.stat-card-late .stat-icon {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+}
+
+.stat-card-absent .stat-icon {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+}
+
+.stat-card-rate .stat-icon {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+}
+
+.stat-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1;
+    color: #1f2937;
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    color: #6b7280;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Student Attendance Cards */
+.student-attendance-card {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.student-attendance-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+    border-color: #667eea;
+}
+
+.student-card-header {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    position: relative;
+}
+
+.student-avatar {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.student-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.student-name {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #1f2937;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.student-id {
+    color: #6b7280;
+    font-size: 0.75rem;
+}
+
+.school-day-badge {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+}
+
+.student-card-body {
+    padding: 1rem;
+}
+
+/* Attendance Buttons */
+.attendance-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+}
+
+.btn-attendance {
+    padding: 0.625rem;
+    font-size: 0.8rem;
+    border-radius: 8px;
+    border: 2px solid #e5e7eb;
+    background: white;
+    color: #6b7280;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    font-weight: 500;
+}
+
+.btn-attendance i {
+    font-size: 1.25rem;
+}
+
+.btn-attendance:hover {
+    border-color: #667eea;
+    background: #f8f9fa;
+    transform: scale(1.02);
+}
+
+.btn-check:checked + .btn-attendance-present {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border-color: #10b981;
+    color: white;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+}
+
+.btn-check:checked + .btn-attendance-late {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    border-color: #f59e0b;
+    color: white;
+    box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+}
+
+.btn-check:checked + .btn-attendance-unexcused-absence {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    border-color: #ef4444;
+    color: white;
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+}
+
+.btn-check:checked + .btn-attendance-excused-absence {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    border-color: #3b82f6;
+    color: white;
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+}
+
+.btn-check:checked + .btn-attendance-suspended {
+    background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+    border-color: #6b7280;
+    color: white;
+    box-shadow: 0 4px 15px rgba(107, 114, 128, 0.3);
+}
+
+/* Notes Input */
+.notes-input {
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+.notes-input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Sticky Bottom */
+.sticky-bottom {
+    position: sticky;
+    bottom: 1rem;
+    z-index: 100;
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .attendance-header {
+        padding: 1.5rem;
+    }
+    
+    .attendance-title {
+        font-size: 1.5rem;
+    }
+    
+    .stat-card {
+        padding: 1rem;
+    }
+    
+    .stat-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 1.5rem;
+    }
+    
+    .stat-value {
+        font-size: 1.5rem;
+    }
+    
+    .attendance-buttons {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 576px) {
+    .stat-card {
+        flex-direction: row;
+        gap: 0.75rem;
+    }
+}
+
+/* Loading State */
+.btn-loading {
+    position: relative;
+    pointer-events: none;
+}
+
+.btn-loading::after {
+    content: "";
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: 50%;
+    left: 50%;
+    margin-left: -8px;
+    margin-top: -8px;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spinner 0.6s linear infinite;
+}
+
+@keyframes spinner {
+    to {transform: rotate(360deg);}
+}

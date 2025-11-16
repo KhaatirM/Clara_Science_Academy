@@ -1,0 +1,105 @@
+/* ===== ENHANCED_CLASSES STYLES ===== */
+/* Extracted from: templates\management\enhanced_classes.html */
+
+/* Google Classroom Status Badge */
+.google-status-badge-modern {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+}
+
+.google-status-badge-modern .badge {
+    font-weight: 600;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.75rem;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+/* Google Classroom Action Buttons */
+.btn-google-open-modern {
+    background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+    color: white;
+    border: none;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-google-open-modern:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(66, 133, 244, 0.4);
+    color: white;
+}
+
+.btn-google-unlink-modern {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+    color: white;
+    border: none;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-google-unlink-modern:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
+    color: white;
+}
+
+.btn-google-link-modern {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    color: white;
+    border: none;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-google-link-modern:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(79, 172, 254, 0.4);
+    color: white;
+}
+
+.btn-google-create-modern {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    color: white;
+    border: none;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-google-create-modern:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(67, 233, 123, 0.4);
+    color: white;
+}

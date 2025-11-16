@@ -5705,6 +5705,10 @@ def create_deadline_reminder(class_id):
     assignments = Assignment.query.filter_by(class_id=class_id).all()
     group_assignments = GroupAssignment.query.filter_by(class_id=class_id).all()
     
+    # Get enrolled students for this class
+    enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
+    students = [e.student for e in enrollments if e.student]
+    
     if request.method == 'POST':
         try:
             reminder_type = request.form.get('reminder_type')
@@ -5714,6 +5718,7 @@ def create_deadline_reminder(class_id):
             reminder_message = request.form.get('reminder_message')
             reminder_date = request.form.get('reminder_date')
             reminder_frequency = request.form.get('reminder_frequency', 'once')
+            selected_student_ids = request.form.getlist('selected_student_ids')  # Get list of selected student IDs
             
             if not all([reminder_title, reminder_message, reminder_date]):
                 flash('All fields are required.', 'danger')
@@ -5732,6 +5737,12 @@ def create_deadline_reminder(class_id):
                                      assignments=assignments,
                                      group_assignments=group_assignments)
             
+            # Store selected student IDs as JSON (or None if all students)
+            selected_students_json = None
+            if selected_student_ids:
+                import json
+                selected_students_json = json.dumps([int(sid) for sid in selected_student_ids])
+            
             # Create reminder
             reminder = DeadlineReminder(
                 assignment_id=assignment_id if assignment_id else None,
@@ -5742,7 +5753,8 @@ def create_deadline_reminder(class_id):
                 reminder_message=reminder_message,
                 reminder_date=reminder_datetime,
                 reminder_frequency=reminder_frequency,
-                created_by=teacher.id
+                created_by=teacher.id,
+                selected_student_ids=selected_students_json
             )
             
             db.session.add(reminder)
@@ -5755,10 +5767,95 @@ def create_deadline_reminder(class_id):
             db.session.rollback()
             flash(f'Error creating reminder: {str(e)}', 'danger')
     
+    # Convert students to dict format for JSON serialization
+    students_data = [{
+        'id': s.id,
+        'first_name': s.first_name,
+        'last_name': s.last_name,
+        'student_id': s.student_id
+    } for s in students]
+    
     return render_template('teachers/teacher_create_deadline_reminder.html',
                          class_obj=class_obj,
                          assignments=assignments,
-                         group_assignments=group_assignments)
+                         group_assignments=group_assignments,
+                         students=students_data)
+
+
+@teacher_blueprint.route('/api/assignment/<int:assignment_id>/students-needing-reminder')
+@login_required
+@teacher_required
+def get_students_needing_reminder(assignment_id):
+    """API endpoint to get students who need a reminder for an assignment."""
+    import json
+    from datetime import datetime
+    
+    assignment = Assignment.query.get_or_404(assignment_id)
+    teacher = get_teacher_or_admin()
+    
+    # Authorization check
+    if not is_admin() and assignment.class_info.teacher_id != teacher.id:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+    
+    # Get all enrolled students
+    enrollments = Enrollment.query.filter_by(
+        class_id=assignment.class_id,
+        is_active=True
+    ).all()
+    
+    students_needing_reminder = []
+    
+    for enrollment in enrollments:
+        student = enrollment.student
+        if not student:
+            continue
+        
+        # Check if assignment is voided for this student
+        student_grade = Grade.query.filter_by(
+            assignment_id=assignment_id,
+            student_id=student.id
+        ).first()
+        
+        if student_grade and student_grade.is_voided:
+            continue  # Skip voided assignments
+        
+        # Check if student has submitted
+        submission = Submission.query.filter_by(
+            assignment_id=assignment_id,
+            student_id=student.id
+        ).first()
+        
+        # Check if assignment has been graded
+        has_grade = False
+        if student_grade:
+            try:
+                grade_data = json.loads(student_grade.grade_data) if student_grade.grade_data else {}
+                if grade_data.get('score') is not None:
+                    has_grade = True
+            except:
+                pass
+        
+        # Student needs reminder if:
+        # - Not already graded (if graded, teacher already handled it, no reminder needed)
+        # This includes: students who haven't submitted OR students who submitted but aren't graded yet
+        needs_reminder = not has_grade
+        
+        if needs_reminder:
+            students_needing_reminder.append({
+                'id': student.id,
+                'first_name': student.first_name,
+                'last_name': student.last_name,
+                'student_id': student.student_id,
+                'has_submission': submission is not None,
+                'has_grade': has_grade,
+                'status': 'submitted_not_graded' if submission and not has_grade else 'not_submitted'
+            })
+    
+    return jsonify({
+        'success': True,
+        'students': students_needing_reminder,
+        'total': len(students_needing_reminder)
+    })
 
 
 @teacher_blueprint.route('/deadline-reminder/<int:reminder_id>/edit', methods=['GET', 'POST'])
@@ -5778,6 +5875,10 @@ def edit_deadline_reminder(reminder_id):
     assignments = Assignment.query.filter_by(class_id=reminder.class_id).all()
     group_assignments = GroupAssignment.query.filter_by(class_id=reminder.class_id).all()
     
+    # Get enrolled students for this class
+    enrollments = Enrollment.query.filter_by(class_id=reminder.class_id, is_active=True).all()
+    students = [e.student for e in enrollments if e.student]
+    
     if request.method == 'POST':
         try:
             reminder.reminder_type = request.form.get('reminder_type')
@@ -5786,6 +5887,14 @@ def edit_deadline_reminder(reminder_id):
             reminder.reminder_title = request.form.get('reminder_title')
             reminder.reminder_message = request.form.get('reminder_message')
             reminder.reminder_frequency = request.form.get('reminder_frequency', 'once')
+            
+            # Update selected student IDs
+            selected_student_ids = request.form.getlist('selected_student_ids')
+            if selected_student_ids:
+                import json
+                reminder.selected_student_ids = json.dumps([int(sid) for sid in selected_student_ids])
+            else:
+                reminder.selected_student_ids = None
             
             reminder_date = request.form.get('reminder_date')
             if reminder_date:
@@ -5807,11 +5916,22 @@ def edit_deadline_reminder(reminder_id):
             db.session.rollback()
             flash(f'Error updating reminder: {str(e)}', 'danger')
     
+    # Parse selected student IDs for display
+    selected_student_ids_list = []
+    if reminder.selected_student_ids:
+        import json
+        try:
+            selected_student_ids_list = json.loads(reminder.selected_student_ids)
+        except:
+            pass
+    
     return render_template('teachers/teacher_edit_deadline_reminder.html',
                          reminder=reminder,
                          class_obj=class_obj,
                          assignments=assignments,
-                         group_assignments=group_assignments)
+                         group_assignments=group_assignments,
+                         students=students,
+                         selected_student_ids=selected_student_ids_list)
 
 
 @teacher_blueprint.route('/deadline-reminder/<int:reminder_id>/delete', methods=['POST'])

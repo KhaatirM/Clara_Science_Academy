@@ -1,0 +1,9 @@
+/* ===== TEACHER_SEND_MESSAGE STYLES ===== */
+/* Extracted from: templates\teachers\teacher_send_message.html */
+
+.draft-item:hover {
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    padding: 8px;
+    margin: -8px;
+}

@@ -1,5 +1,9 @@
 {% extends "shared/dashboard_layout.html" %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/management_report_card_generate_form.css') }}">
+{% endblock %}
+
 {% block dashboard_content %}
 <div class="container-fluid py-4">
   <!-- Header Section -->
@@ -249,161 +253,7 @@
   </div>
 </div>
 
-<style>
-/* Student Icon */
-.student-icon {
-  font-size: 3rem;
-  color: #0d6efd;
-}
 
-/* Section Header */
-.section-header {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-
-.section-icon {
-  width: 60px;
-  height: 60px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #e7f1ff 0%, #cfe2ff 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.75rem;
-  color: #0d6efd;
-  flex-shrink: 0;
-}
-
-.form-section {
-  position: relative;
-}
-
-.form-section::before {
-  content: '';
-  position: absolute;
-  left: 30px;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: linear-gradient(180deg, #0d6efd 0%, #e9ecef 100%);
-  opacity: 0.3;
-}
-
-.form-section:last-child::before {
-  display: none;
-}
-
-/* Class Selection Cards */
-.class-card {
-  border: 2px solid #dee2e6;
-  border-radius: 12px;
-  padding: 20px;
-  margin-bottom: 15px;
-  transition: all 0.3s ease;
-  cursor: pointer;
-  background: white;
-}
-
-.class-card:hover {
-  border-color: #0d6efd;
-  background: linear-gradient(135deg, #f8f9ff 0%, #e7f1ff 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(13, 110, 253, 0.1);
-}
-
-.class-card.selected {
-  border-color: #0d6efd;
-  background: linear-gradient(135deg, #e7f1ff 0%, #cfe2ff 100%);
-  box-shadow: 0 4px 20px rgba(13, 110, 253, 0.2);
-}
-
-.class-card input[type="checkbox"] {
-  width: 20px;
-  height: 20px;
-  margin-right: 15px;
-  cursor: pointer;
-}
-
-.class-card-content h6 {
-  font-weight: 700;
-  color: #212529;
-  margin-bottom: 5px;
-}
-
-.class-card-content small {
-  color: #6c757d;
-}
-
-/* Option Cards */
-.option-card {
-  background: white;
-  border-radius: 12px;
-  padding: 20px;
-  height: 100%;
-  border: 2px solid #e9ecef;
-  transition: all 0.3s ease;
-}
-
-.option-card:hover {
-  border-color: #0d6efd;
-  box-shadow: 0 4px 15px rgba(13, 110, 253, 0.1);
-}
-
-.option-icon {
-  width: 50px;
-  height: 50px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #e7f1ff 0%, #cfe2ff 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.5rem;
-  color: #0d6efd;
-}
-
-/* Form Switch Large */
-.form-switch-lg .form-check-input {
-  width: 3rem;
-  height: 1.5rem;
-  margin-right: 15px;
-}
-
-/* Generate Button */
-#generateBtn {
-  font-size: 1.1rem;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  box-shadow: 0 4px 15px rgba(25, 135, 84, 0.3);
-  transition: all 0.3s ease;
-}
-
-#generateBtn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(25, 135, 84, 0.4);
-}
-
-#generateBtn:active {
-  transform: translateY(0);
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .section-header {
-    flex-direction: column;
-    text-align: center;
-  }
-  
-  .section-icon {
-    margin: 0 auto;
-  }
-  
-  .form-section::before {
-    display: none;
-  }
-}
-</style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {

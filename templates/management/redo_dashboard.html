@@ -1,5 +1,9 @@
 {% extends "shared/dashboard_layout.html" %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/redo_dashboard.css') }}">
+{% endblock %}
+
 {% block title %}Redo Dashboard{% endblock %}
 
 {% block dashboard_content %}
@@ -232,73 +236,6 @@
     </div>
 </div>
 
-<style>
-.redo-dashboard-header {
-    background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
-    padding: 2rem;
-    border-radius: 15px;
-    color: white;
-}
-
-/* Back and Refresh Buttons - High Visibility */
-.btn-redo-back {
-    background: white;
-    color: #6c757d;
-    border: 2px solid white;
-    padding: 0.75rem 1.5rem;
-    border-radius: 10px;
-    font-weight: 700;
-    font-size: 1rem;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-    text-decoration: none;
-}
-
-.btn-redo-back:hover {
-    background: #f8f9fa;
-    color: #495057;
-    transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-    border-color: white;
-    text-decoration: none;
-}
-
-.btn-redo-refresh {
-    background: white;
-    color: #ff9800;
-    border: 2px solid white;
-    padding: 0.75rem 1.5rem;
-    border-radius: 10px;
-    font-weight: 700;
-    font-size: 1rem;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-}
-
-.btn-redo-refresh:hover {
-    background: #f8f9fa;
-    color: #ff9800;
-    transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-    border-color: white;
-}
-
-.stat-icon {
-    width: 60px;
-    height: 60px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.redo-row {
-    transition: all 0.2s ease;
-}
-
-.redo-row:hover {
-    background-color: #f8f9fa;
-}
-</style>
 
 <script>
 function refreshDashboard() {

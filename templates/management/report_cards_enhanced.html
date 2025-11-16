@@ -1,5 +1,9 @@
 {% extends "shared/dashboard_layout.html" %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/management_report_cards_enhanced.css') }}">
+{% endblock %}
+
 {% block dashboard_content %}
 <div class="container-fluid py-4">
   <!-- Header Section -->
@@ -244,19 +248,6 @@
   </div>
 </div>
 
-<style>
-.hover-lift:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 1rem 3rem rgba(0,0,0,.175) !important;
-}
 
-.card {
-  transition: all 0.3s ease;
-}
-
-.table-hover tbody tr:hover {
-  background-color: rgba(13, 110, 253, 0.05);
-}
-</style>
 {% endblock %}
 

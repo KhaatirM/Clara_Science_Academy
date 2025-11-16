@@ -1,5 +1,9 @@
 {% extends "shared/dashboard_layout.html" %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/teachers_group_assignment_class_selector.css') }}">
+{% endblock %}
+
 {% block title %}Select Class for Group Assignment{% endblock %}
 
 {% block dashboard_content %}
@@ -97,22 +101,5 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<style>
-.class-selection-card {
-    transition: all 0.3s ease;
-    border: 2px solid transparent;
-}
 
-.class-selection-card:hover {
-    border-color: var(--bs-primary);
-}
-
-.class-icon i {
-    transition: transform 0.3s ease;
-}
-
-.class-selection-card:hover .class-icon i {
-    transform: scale(1.1);
-}
-</style>
 {% endblock %}

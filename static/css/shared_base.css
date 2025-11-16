@@ -1,0 +1,15 @@
+/* ===== BASE STYLES ===== */
+/* Extracted from: templates\shared\base.html */
+
+/* Hide any visible CSRF tokens */
+        input[name="csrf_token"] {
+            display: none !important;
+            visibility: hidden !important;
+            position: absolute !important;
+            left: -9999px !important;
+        }
+        
+        /* Hide any text that looks like a CSRF token */
+        body *:not(input):not(script):not(style):not(meta) {
+            font-family: inherit;
+        }

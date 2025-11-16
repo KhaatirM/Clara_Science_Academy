@@ -11,23 +11,12 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='modal-styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/shared_base.css') }}">
+    {% block extra_css %}{% endblock %}
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <!-- Global CSS to hide CSRF tokens -->
-    <style>
-        /* Hide any visible CSRF tokens */
-        input[name="csrf_token"] {
-            display: none !important;
-            visibility: hidden !important;
-            position: absolute !important;
-            left: -9999px !important;
-        }
-        
-        /* Hide any text that looks like a CSRF token */
-        body *:not(input):not(script):not(style):not(meta) {
-            font-family: inherit;
-        }
-    </style>
+    
 </head>
 <!-- ADDED: A block to allow child templates to add attributes to the body tag -->
 <body {% block body_attributes %}{% endblock %}>

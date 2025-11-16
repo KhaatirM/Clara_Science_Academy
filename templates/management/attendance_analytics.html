@@ -1,5 +1,9 @@
 {% extends "shared/dashboard_layout.html" %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/attendance_analytics.css') }}">
+{% endblock %}
+
 {% block title %}Attendance Analytics{% endblock %}
 
 {% block dashboard_content %}
@@ -202,22 +206,6 @@
     </div>
 </div>
 
-<style>
-.attendance-analytics-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    padding: 2rem;
-    border-radius: 15px;
-    color: white;
-}
-
-.stat-icon {
-    width: 60px;
-    height: 60px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-</style>
 
 <script>
 function setDateRange(days) {

@@ -1,5 +1,9 @@
 {% extends "shared/dashboard_layout.html" %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/management_report_cards_category_students.css') }}">
+{% endblock %}
+
 {% block dashboard_content %}
 <div class="container-fluid py-4">
   <!-- Header Section -->
@@ -186,102 +190,7 @@
   {% endif %}
 </div>
 
-<style>
-.hover-lift {
-  transition: all 0.3s ease;
-}
 
-.hover-lift:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 1rem 3rem rgba(0,0,0,.175) !important;
-}
-
-/* Fix for jumbled cards - ensure proper text display */
-.student-card {
-  min-width: 300px;
-  max-width: 350px;
-}
-
-.student-card .card {
-  min-height: 420px;
-  width: 100%;
-  overflow: hidden;
-}
-
-/* Force all text to display horizontally */
-.student-card * {
-  writing-mode: horizontal-tb !important;
-  text-orientation: mixed !important;
-}
-
-.student-card h5 {
-  line-height: 1.4 !important;
-  font-size: 1.1rem !important;
-  display: block !important;
-}
-
-.student-card p,
-.student-card small,
-.student-card strong {
-  display: inline-block !important;
-  vertical-align: baseline !important;
-}
-
-.student-card .card-body {
-  display: flex !important;
-  flex-direction: column !important;
-  padding: 1.25rem !important;
-  width: 100%;
-}
-
-.student-card .d-grid {
-  margin-top: auto;
-  width: 100%;
-}
-
-.student-card .btn {
-  white-space: nowrap !important;
-  text-align: center !important;
-}
-
-/* Ensure proper grid spacing */
-#studentsGrid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1.5rem;
-  justify-content: flex-start;
-}
-
-#studentsGrid > div {
-  flex: 0 0 auto;
-  width: auto;
-}
-
-/* Prevent text from stacking vertically */
-.student-card .d-flex {
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: flex-start !important;
-}
-
-.student-card .flex-grow-1 {
-  flex-grow: 1 !important;
-  flex-shrink: 1 !important;
-  min-width: 0 !important;
-}
-
-.student-card .row {
-  display: flex !important;
-  flex-direction: row !important;
-  margin: 0 -0.25rem !important;
-}
-
-.student-card .col-6 {
-  flex: 0 0 50% !important;
-  max-width: 50% !important;
-  padding: 0 0.25rem !important;
-}
-</style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {

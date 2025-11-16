@@ -1,0 +1,19 @@
+/* ===== GROUP_ASSIGNMENT_CLASS_SELECTOR STYLES ===== */
+/* Extracted from: templates\management\group_assignment_class_selector.html */
+
+.class-selection-card {
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.class-selection-card:hover {
+    border-color: var(--bs-primary);
+}
+
+.class-icon i {
+    transition: transform 0.3s ease;
+}
+
+.class-selection-card:hover .class-icon i {
+    transform: scale(1.1);
+}

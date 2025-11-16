@@ -1,0 +1,17 @@
+/* ===== TEACHER_CREATE_GROUP_ASSIGNMENT STYLES ===== */
+/* Extracted from: templates\teachers\teacher_create_group_assignment.html */
+
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+.group-select-card {
+    border: 2px solid #e9ecef;
+    transition: all 0.2s;
+}
+.group-select-card:hover {
+    border-color: #667eea;
+    box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
+}
+.form-check-input:checked ~ .form-check-label {
+    color: #667eea;
+}

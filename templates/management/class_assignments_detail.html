@@ -1,5 +1,9 @@
 {% extends "shared/dashboard_layout.html" %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/management_class_assignments_detail.css') }}">
+{% endblock %}
+
 {% block title %}Assignments - {{ class_obj.name }}{% endblock %}
 
 {% block dashboard_content %}
@@ -260,73 +264,7 @@
 </div>
 
 <!-- Enhanced Visual Styling -->
-<style>
-.bg-gradient-primary {
-    background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
-}
 
-.bg-gradient-success {
-    background: linear-gradient(135deg, #198754 0%, #146c43 100%);
-}
-
-.bg-gradient-info {
-    background: linear-gradient(135deg, #0dcaf0 0%, #0aa2c0 100%);
-}
-
-.card {
-    transition: all 0.3s ease;
-}
-
-.card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
-}
-
-.btn {
-    transition: all 0.3s ease;
-}
-
-.btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-}
-
-.badge {
-    font-size: 0.75rem;
-    padding: 0.5rem 0.75rem;
-    border-radius: 0.5rem;
-}
-
-.border-start {
-    border-width: 4px !important;
-}
-
-.class-metadata {
-    font-size: 0.9rem;
-}
-
-.metadata-item {
-    display: flex;
-    align-items: center;
-    color: #6c757d;
-}
-
-/* Custom animations */
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.card {
-    animation: fadeInUp 0.6s ease-out;
-}
-</style>
 
 <script>
 function sortAssignments(sortBy) {

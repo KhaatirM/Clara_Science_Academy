@@ -1,5 +1,9 @@
 {% extends "shared/dashboard_layout.html" %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/teachers_teacher_create_group_assignment.css') }}">
+{% endblock %}
+
 {% block title %}Create Group Assignment - {{ class_item.class_name }}{% endblock %}
 
 {% block dashboard_content %}
@@ -147,22 +151,7 @@
     </div>
 </div>
 
-<style>
-.bg-gradient-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-.group-select-card {
-    border: 2px solid #e9ecef;
-    transition: all 0.2s;
-}
-.group-select-card:hover {
-    border-color: #667eea;
-    box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
-}
-.form-check-input:checked ~ .form-check-label {
-    color: #667eea;
-}
-</style>
+
 
 <script>
 function toggleAll(source) {

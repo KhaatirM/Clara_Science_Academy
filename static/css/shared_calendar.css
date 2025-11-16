@@ -1,0 +1,162 @@
+/* ===== CALENDAR STYLES ===== */
+/* Extracted from: templates\shared\calendar.html */
+
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+}
+
+.calendar-container {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.calendar-day {
+    border-right: 1px solid #dee2e6;
+    position: relative;
+}
+
+.calendar-day:last-child {
+    border-right: none;
+}
+
+.calendar-day-header {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    color: #495057;
+}
+
+.calendar-day-today {
+    background-color: #e3f2fd !important;
+}
+
+.calendar-day-other-month {
+    background-color: #f8f9fa;
+    color: #6c757d;
+}
+
+.day-number {
+    font-size: 1.1rem;
+}
+
+.calendar-event {
+    margin-bottom: 2px;
+    border-radius: 3px;
+    font-size: 0.75rem;
+    line-height: 1.2;
+    max-height: 20px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.calendar-event:hover {
+    opacity: 0.8;
+    cursor: pointer;
+}
+
+/* Event color schemes - comprehensive system for all event types */
+/* Quarter Events */
+.calendar-event.event-quarter_start,
+.calendar-legend-item.event-quarter_start {
+    background-color: #28a745; /* Green */
+}
+
+.calendar-event.event-quarter_end,
+.calendar-legend-item.event-quarter_end {
+    background-color: #dc3545; /* Red */
+}
+
+/* Semester Events */
+.calendar-event.event-semester_start,
+.calendar-legend-item.event-semester_start {
+    background-color: #17a2b8; /* Teal */
+}
+
+.calendar-event.event-semester_end,
+.calendar-legend-item.event-semester_end {
+    background-color: #6f42c1; /* Purple */
+}
+
+/* Teacher Work Days */
+.calendar-event.event-teacher_work_day,
+.calendar-legend-item.event-teacher_work_day {
+    background-color: #fd7e14; /* Orange */
+}
+
+/* School Break Events */
+.calendar-event.event-school_break_start,
+.calendar-legend-item.event-school_break_start {
+    background-color: #e83e8c; /* Pink */
+}
+
+.calendar-event.event-school_break_end,
+.calendar-legend-item.event-school_break_end {
+    background-color: #6f42c1; /* Purple */
+}
+
+/* Holiday Events */
+.calendar-event.event-holiday,
+.calendar-legend-item.event-holiday {
+    background-color: #dc3545; /* Red */
+}
+
+/* Professional Development */
+.calendar-event.event-professional_development,
+.calendar-legend-item.event-professional_development {
+    background-color: #20c997; /* Mint Green */
+}
+
+/* Other Calendar Events */
+.calendar-event.event-other_event,
+.calendar-legend-item.event-other_event {
+    background-color: #6c757d; /* Gray */
+}
+
+/* Fallback for any unhandled event types */
+.calendar-event.event-default,
+.calendar-legend-item.event-default {
+    background-color: #007bff; /* Blue */
+}
+
+.calendar-legend-item {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    margin-right: 8px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .calendar-day {
+        min-height: 80px;
+    }
+    
+    .calendar-event {
+        font-size: 0.7rem;
+        max-height: 18px;
+    }
+    
+    .day-number {
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .calendar-day {
+        min-height: 60px;
+    }
+    
+    .calendar-event {
+        font-size: 0.65rem;
+        max-height: 16px;
+    }
+    
+    .day-number {
+        font-size: 0.8rem;
+    }
+    
+    .calendar-legend-item {
+        width: 14px;
+        height: 14px;
+    }
+}

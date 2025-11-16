@@ -42,23 +42,43 @@ def class_analytics(class_id):
     assignments = Assignment.query.filter_by(class_id=class_id).all()
     total_assignments = len(assignments)
     
-    # Calculate assignment completion rates
+    # Calculate assignment completion rates (excluding voided assignments)
     completed_count = 0
-    total_possible = total_students * total_assignments
+    total_possible = 0
     
     for assignment in assignments:
-        completed_count += Submission.query.filter_by(assignment_id=assignment.id).count()
+        # Count students who should have this assignment (not voided for them)
+        assignment_grades = Grade.query.filter_by(assignment_id=assignment.id).all()
+        voided_student_ids = set()
+        for grade in assignment_grades:
+            if grade.is_voided:
+                voided_student_ids.add(grade.student_id)
+        
+        # Count non-voided students for this assignment
+        non_voided_students = [s for s in students if s.id not in voided_student_ids]
+        total_possible += len(non_voided_students)
+        
+        # Count submissions from non-voided students only
+        for student in non_voided_students:
+            if Submission.query.filter_by(
+                assignment_id=assignment.id,
+                student_id=student.id
+            ).first():
+                completed_count += 1
     
     completion_rate = (completed_count / total_possible * 100) if total_possible > 0 else 0
     
-    # Calculate average grade
+    # Calculate average grade (excluding voided assignments)
     grades = Grade.query.join(Assignment).filter(Assignment.class_id == class_id).all()
     if grades:
         valid_scores = []
         for g in grades:
+            # Check if grade is voided using the model field
+            if g.is_voided:
+                continue
             try:
                 grade_data = json.loads(g.grade_data) if g.grade_data else {}
-                if grade_data.get('score') is not None and not grade_data.get('is_voided'):
+                if grade_data.get('score') is not None:
                     valid_scores.append(float(grade_data['score']))
             except:
                 pass
@@ -86,9 +106,12 @@ def class_analytics(class_id):
     }
     
     for grade in grades:
+        # Skip voided grades
+        if grade.is_voided:
+            continue
         try:
             grade_data = json.loads(grade.grade_data) if grade.grade_data else {}
-            if grade_data.get('score') is not None and not grade_data.get('is_voided'):
+            if grade_data.get('score') is not None:
                 score = float(grade_data['score'])
                 if score >= 90:
                     grade_ranges['A (90-100)'] += 1
@@ -114,25 +137,43 @@ def class_analytics(class_id):
         valid_scores = []
         if student_grades:
             for g in student_grades:
+                # Skip voided grades
+                if g.is_voided:
+                    continue
                 try:
                     grade_data = json.loads(g.grade_data) if g.grade_data else {}
-                    if grade_data.get('score') is not None and not grade_data.get('is_voided'):
+                    if grade_data.get('score') is not None:
                         valid_scores.append(float(grade_data['score']))
                 except:
                     pass
         
         avg = sum(valid_scores) / len(valid_scores) if valid_scores else 0
         
-        submissions = Submission.query.join(Assignment).filter(
-            Assignment.class_id == class_id,
-            Submission.student_id == student.id
-        ).count()
+        # Count submissions for non-voided assignments only
+        submissions = 0
+        non_voided_assignment_count = 0
+        for assignment in assignments:
+            # Check if this assignment is voided for this student
+            student_grade = Grade.query.filter_by(
+                assignment_id=assignment.id,
+                student_id=student.id
+            ).first()
+            
+            if student_grade and student_grade.is_voided:
+                continue  # Skip voided assignments
+            
+            non_voided_assignment_count += 1
+            if Submission.query.filter_by(
+                assignment_id=assignment.id,
+                student_id=student.id
+            ).first():
+                submissions += 1
         
         student_stats.append({
             'student': student,
             'average': round(avg, 1),
             'submissions': submissions,
-            'completion': round((submissions / total_assignments * 100) if total_assignments > 0 else 0, 1)
+            'completion': round((submissions / non_voided_assignment_count * 100) if non_voided_assignment_count > 0 else 0, 1)
         })
     
     # Sort by average grade

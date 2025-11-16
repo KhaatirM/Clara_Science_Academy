@@ -8,10 +8,10 @@
       <a href="{{ url_for('teacher.create_360_feedback_criteria', session_id=feedback_session.id) }}" class="btn btn-success btn-sm">
         <i class="bi bi-plus-circle me-1"></i>Add Criteria
       </a>
-      <a href="{{ url_for('teacher.class_360_feedback', class_id=class_obj.id) }}" class="btn btn-outline-secondary btn-sm">
+      <a href="{{ url_for('teacher.feedback360.class_feedback360', class_id=class_obj.id) }}" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-arrow-left me-1"></i>Back to Sessions
       </a>
-      <a href="{{ url_for('teacher.feedback360_hub') }}" class="btn btn-outline-primary btn-sm">
+      <a href="{{ url_for('teacher.feedback360.feedback360_hub') }}" class="btn btn-outline-primary btn-sm">
         <i class="bi bi-house-door me-1"></i>Hub
       </a>
     </div>

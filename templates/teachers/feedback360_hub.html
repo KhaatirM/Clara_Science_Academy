@@ -129,7 +129,7 @@
                             {{ item.student_count }} Student{{ 's' if item.student_count != 1 else '' }}
                         </span>
                     </div>
-                    <a href="{{ url_for('teacher.class_360_feedback', class_id=item.class.id) }}" 
+                    <a href="{{ url_for('teacher.feedback360.class_feedback360', class_id=item.class.id) }}" 
                        class="btn btn-primary w-100">
                         <i class="bi bi-arrow-right-circle me-2"></i>View Sessions
                     </a>

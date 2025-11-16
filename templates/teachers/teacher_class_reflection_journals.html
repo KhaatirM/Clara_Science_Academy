@@ -14,7 +14,7 @@
           <i class="bi bi-journal-richtext me-2"></i>Reflection Journals
         </h1>
         <p class="modern-page-header-subtitle">
-          {{ class_obj.name }} • Student learning reflections and insights
+          {{ class_obj.class_name }} • Student learning reflections and insights
         </p>
       </div>
       <div class="modern-page-header-actions">
@@ -33,7 +33,7 @@
           <i class="bi bi-journal-richtext"></i>
         </div>
         <div class="modern-stat-content">
-          <div class="modern-stat-value">{{ reflection_journals|length }}</div>
+          <div class="modern-stat-value">{{ total_journals|default(reflection_journals|length) }}</div>
           <div class="modern-stat-label">Total Journals</div>
         </div>
       </div>
@@ -44,7 +44,7 @@
           <i class="bi bi-people-fill"></i>
         </div>
         <div class="modern-stat-content">
-          <div class="modern-stat-value">{{ unique_students|length }}</div>
+          <div class="modern-stat-value">{{ unique_students_count|default(unique_students|length) }}</div>
           <div class="modern-stat-label">Active Students</div>
         </div>
       </div>
@@ -55,8 +55,7 @@
           <i class="bi bi-star-fill"></i>
         </div>
         <div class="modern-stat-content">
-          {% set avg_collab = (reflection_journals|sum(attribute='collaboration_rating') / reflection_journals|length)|round(1) if reflection_journals else 0 %}
-          <div class="modern-stat-value">{{ avg_collab }}</div>
+          <div class="modern-stat-value">{{ avg_collaboration|default((reflection_journals|sum(attribute='collaboration_rating') / reflection_journals|length)|round(1) if reflection_journals else 0) }}</div>
           <div class="modern-stat-label">Avg Collab Rating</div>
         </div>
       </div>
@@ -67,8 +66,7 @@
           <i class="bi bi-lightbulb-fill"></i>
         </div>
         <div class="modern-stat-content">
-          {% set avg_learning = (reflection_journals|sum(attribute='learning_rating') / reflection_journals|length)|round(1) if reflection_journals else 0 %}
-          <div class="modern-stat-value">{{ avg_learning }}</div>
+          <div class="modern-stat-value">{{ avg_learning|default((reflection_journals|sum(attribute='learning_rating') / reflection_journals|length)|round(1) if reflection_journals else 0) }}</div>
           <div class="modern-stat-label">Avg Learning Rating</div>
         </div>
       </div>
@@ -90,7 +88,7 @@
                 <div class="modern-item-meta">
                   <span class="modern-item-meta-item">
                     <i class="bi bi-calendar3"></i>
-                    {{ journal.created_at.strftime('%b %d, %Y') }}
+                    {{ journal.submitted_at.strftime('%b %d, %Y') }}
                   </span>
                   {% if journal.group_assignment %}
                   <span class="modern-item-meta-item">
@@ -116,7 +114,7 @@
             </div>
 
             <div class="modern-item-actions">
-              <a href="{{ url_for('teacher.assignments.view_reflection_journal', journal_id=journal.id) }}" 
+              <a href="{{ url_for('teacher.reflection_journals.view_reflection_journal', journal_id=journal.id) }}" 
                  class="btn btn-primary btn-sm">
                 <i class="bi bi-eye me-1"></i>View Full Journal
               </a>

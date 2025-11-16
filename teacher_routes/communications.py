@@ -7,7 +7,7 @@ from flask_login import login_required, current_user
 from decorators import teacher_required
 from .utils import get_teacher_or_admin, is_admin, is_authorized_for_class
 from models import (db, Message, Announcement, Notification, Class, Student, Enrollment,
-                    Feedback360, Feedback360Response, ReflectionJournal, GroupConflict, 
+                    Feedback360, Feedback360Response, GroupConflict, 
                     ConflictResolution, StudentGroup)
 from datetime import datetime
 
@@ -24,32 +24,8 @@ def communications_hub():
 # 360° Feedback routes have been moved to teacher_routes/feedback360.py
 # The route is now handled by teacher.feedback360.class_feedback360
 
-@bp.route('/journals/class/<int:class_id>')
-@login_required
-@teacher_required
-def class_journals(class_id):
-    """View reflection journals for a class."""
-    class_obj = Class.query.get_or_404(class_id)
-    
-    # Check authorization
-    if not is_authorized_for_class(class_obj):
-        flash("You are not authorized to view journals for this class.", "danger")
-        return redirect(url_for('teacher.communications.communications_hub'))
-    
-    # Get student groups for this class
-    groups = StudentGroup.query.filter_by(class_id=class_id, is_active=True).all()
-    
-    # Get journals
-    all_journals = []
-    for group in groups:
-        journals = ReflectionJournal.query.filter_by(group_id=group.id).all()
-        for journal in journals:
-            journal.group_name = group.name
-            all_journals.append(journal)
-    
-    return render_template('teachers/teacher_journals.html',
-                         class_item=class_obj,
-                         journals=all_journals)
+# Reflection Journals routes have been moved to teacher_routes/reflection_journals.py
+# The route is now handled by teacher.reflection_journals.class_reflection_journals
 
 @bp.route('/conflicts/class/<int:class_id>')
 @login_required

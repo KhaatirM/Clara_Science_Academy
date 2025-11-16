@@ -420,6 +420,22 @@ def deadline_reminders():
                 if grade.student_id not in voided_student_ids:
                     submitted_student_ids.add(grade.student_id)
             
+            # Check if all students have been graded (have a grade with a score)
+            graded_student_ids = set()
+            for grade in graded_students:
+                if grade.student_id not in voided_student_ids and not grade.is_voided:
+                    # Check if grade has a score (not just a placeholder)
+                    if grade.grade_data:
+                        try:
+                            grade_data = json.loads(grade.grade_data)
+                            score = grade_data.get('score')
+                            # Only count as graded if score is not None (could be 0, which is valid)
+                            if score is not None:
+                                graded_student_ids.add(grade.student_id)
+                        except:
+                            # If parsing fails, check if grade record exists (might be manually marked)
+                            pass
+            
             # Total students minus voided students
             total_counted = len([sid for sid in enrolled_student_ids if sid not in voided_student_ids])
             
@@ -427,9 +443,15 @@ def deadline_reminders():
             assignment.total_students = total_counted
             assignment.completion_rate = (len(submitted_student_ids) / total_counted * 100) if total_counted > 0 else 0
             assignment.days_until = days_until
+            assignment.all_graded = len(graded_student_ids) >= total_counted and total_counted > 0
             
+            # Only show as overdue if not all students have been graded
+            # If all students are graded, the assignment is complete and shouldn't be in overdue
             if days_until < 0:
-                overdue.append(assignment)
+                # Past due - only add to overdue if not all students are graded
+                if not assignment.all_graded:
+                    overdue.append(assignment)
+                # If all_graded is True, skip adding to overdue (assignment is complete)
             elif days_until == 0:
                 today.append(assignment)
             elif days_until <= 7:

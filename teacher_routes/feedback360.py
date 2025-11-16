@@ -13,6 +13,14 @@ import json
 
 bp = Blueprint('feedback360', __name__)
 
+# Redirect old URL pattern to new one for backwards compatibility
+@bp.route('/feedback360/class/<int:class_id>')
+@login_required
+@teacher_required
+def redirect_old_feedback360(class_id):
+    """Redirect old URL pattern to new one."""
+    return redirect(url_for('teacher.feedback360.class_feedback360', class_id=class_id))
+
 @bp.route('/class/<int:class_id>/360-feedback')
 @login_required
 @teacher_required

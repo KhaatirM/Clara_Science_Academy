@@ -24,7 +24,12 @@
                     {% set today_date = today.date() if today.__class__.__name__ == 'datetime' else today %}
                     {% set days_remaining = (due_date - today_date).days %}
                     {% if days_remaining < 0 %}
-                        <span class="view-status-badge badge-overdue">{{ -days_remaining }} DAYS OVERDUE</span>
+                        <span class="view-status-badge badge-overdue" title="This assignment was due {{ -days_remaining }} day{% if -days_remaining != 1 %}s{% endif %} ago">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i>PAST DUE
+                            {% if -days_remaining > 0 %}
+                                <small class="d-block" style="font-size: 0.7rem; opacity: 0.9;">{{ -days_remaining }} day{% if -days_remaining != 1 %}s{% endif %} ago</small>
+                            {% endif %}
+                        </span>
                     {% elif days_remaining == 0 %}
                         <span class="view-status-badge badge-due-today">DUE TODAY</span>
                     {% else %}
@@ -128,6 +133,16 @@
                                 data-bs-target="#voidModal">
                             <i class="bi bi-slash-circle"></i>
                             <span>Void</span>
+                        </button>
+                        <button class="btn btn-compact btn-compact-status" 
+                                onclick="changeStatus({{ assignment.id }}, '{{ assignment.status }}')">
+                            <i class="bi bi-gear"></i>
+                            <span>Status</span>
+                        </button>
+                        <button class="btn btn-compact btn-compact-remove" 
+                                onclick="confirmDelete('{{ assignment.title }}', {{ assignment.id }})">
+                            <i class="bi bi-trash"></i>
+                            <span>Remove</span>
                         </button>
                         <button onclick="goBack()" class="btn btn-compact btn-compact-back">
                             <i class="bi bi-arrow-left-circle"></i>
@@ -491,7 +506,7 @@ function confirmDelete(title, assignmentId) {
     {% if current_user.role in ['Director', 'School Administrator'] %}
         document.getElementById('deleteForm').action = `/management/remove-assignment/${assignmentId}`;
     {% else %}
-        document.getElementById('deleteForm').action = `/teacher/remove-assignment/${assignmentId}`;
+        document.getElementById('deleteForm').action = `/teacher/assignment/remove/${assignmentId}`;
     {% endif %}
     new bootstrap.Modal(document.getElementById('deleteModal')).show();
 }
@@ -510,7 +525,7 @@ function submitStatusChange() {
     formData.append('status', newStatus);
     formData.append('csrf_token', '{{ csrf_token() }}');
     
-    fetch(`/teacher/change-assignment-status/${assignmentId}`, {
+    fetch(`/teacher/assignment/${assignmentId}/change-status`, {
         method: 'POST',
         body: formData
     })
@@ -522,7 +537,7 @@ function submitStatusChange() {
                 location.reload();
             }, 1000);
         } else {
-            showNotification('Error updating status: ' + data.error, 'error');
+            showNotification('Error updating status: ' + (data.error || 'Unknown error'), 'error');
         }
     })
     .catch(error => {

@@ -335,6 +335,11 @@
         color: white;
     }
     
+    .btn-action-view-class {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: white;
+    }
+    
     .view-content {
         animation: fadeIn 0.5s ease;
     }
@@ -574,28 +579,11 @@
                                title="View Details">
                                 <i class="bi bi-eye"></i><span class="btn-text">View</span>
                             </a>
-                            <a href="{{ url_for('teacher.grading.grade_assignment', assignment_id=assignment.id) }}" 
-                               class="btn btn-action btn-action-grade"
-                               title="Grade Students">
-                                <i class="bi bi-check-circle"></i><span class="btn-text">Grade</span>
+                            <a href="{{ url_for('teacher.view_class', class_id=assignment.class_id) }}" 
+                               class="btn btn-action btn-action-view-class" 
+                               title="View Class">
+                                <i class="bi bi-house-door"></i><span class="btn-text">View Class</span>
                             </a>
-                            <a href="{{ url_for('teacher.assignments.edit_assignment', assignment_id=assignment.id) }}" 
-                               class="btn btn-action btn-action-edit"
-                               title="Edit Assignment">
-                                <i class="bi bi-pencil"></i><span class="btn-text">Edit</span>
-                            </a>
-                            <button type="button" 
-                                    class="btn btn-action btn-action-extension" 
-                                    onclick="openExtensionsModal({{ assignment.id }}, '{{ assignment.title }}', {{ assignment.class_id }})"
-                                    title="Grant Extensions">
-                                <i class="bi bi-clock-history"></i><span class="btn-text">Extend</span>
-                            </button>
-                            <button type="button" 
-                                    class="btn btn-action btn-action-void" 
-                                    onclick="openVoidModal({{ assignment.id }}, '{{ assignment.title }}', 'individual', {{ assignment.class_id }})"
-                                    title="Void Assignment">
-                                <i class="bi bi-slash-circle"></i><span class="btn-text">Void</span>
-                            </button>
                         </div>
                     </div>
                     </div>
@@ -646,23 +634,11 @@
                                title="View Details">
                                 <i class="bi bi-eye"></i><span class="btn-text">View</span>
                             </a>
-                            <a href="{{ url_for('teacher.grading.grade_group_assignment', assignment_id=group_assignment.id) }}" 
-                               class="btn btn-action btn-action-grade"
-                               title="Grade Groups">
-                                <i class="bi bi-check-circle"></i><span class="btn-text">Grade</span>
+                            <a href="{{ url_for('teacher.view_class', class_id=group_assignment.class_id) }}" 
+                               class="btn btn-action btn-action-view-class" 
+                               title="View Class">
+                                <i class="bi bi-house-door"></i><span class="btn-text">View Class</span>
                             </a>
-                            <button type="button" 
-                                    class="btn btn-action btn-action-extension" 
-                                    onclick="openExtensionsModal({{ group_assignment.id }}, '{{ group_assignment.title }}', {{ group_assignment.class_id }})"
-                                    title="Grant Extensions">
-                                <i class="bi bi-clock-history"></i><span class="btn-text">Extend</span>
-                            </button>
-                            <button type="button" 
-                                    class="btn btn-action btn-action-void" 
-                                    onclick="openVoidModal({{ group_assignment.id }}, '{{ group_assignment.title }}', 'group', {{ group_assignment.class_id }})"
-                                    title="Void Assignment">
-                                <i class="bi bi-slash-circle"></i><span class="btn-text">Void</span>
-                            </button>
                         </div>
                     </div>
                     </div>

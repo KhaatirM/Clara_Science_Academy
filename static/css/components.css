@@ -5118,7 +5118,7 @@
 /* Compact Action Grid */
 .compact-action-grid {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
     gap: 0.75rem;
 }
 
@@ -5203,6 +5203,32 @@
     background: #6c757d;
     color: white;
     transform: translateY(-3px);
+}
+
+.btn-compact-status {
+    background: white;
+    border-color: #6f42c1;
+    color: #6f42c1;
+}
+
+.btn-compact-status:hover {
+    background: #6f42c1;
+    color: white;
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(111, 66, 193, 0.3);
+}
+
+.btn-compact-remove {
+    background: white;
+    border-color: #e83e8c;
+    color: #e83e8c;
+}
+
+.btn-compact-remove:hover {
+    background: #e83e8c;
+    color: white;
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(232, 62, 140, 0.3);
 }
 
 /* Compact Stats */

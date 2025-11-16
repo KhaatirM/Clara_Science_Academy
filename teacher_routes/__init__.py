@@ -34,8 +34,8 @@ teacher_blueprint.register_blueprint(quizzes.bp, url_prefix='')
 teacher_blueprint.register_blueprint(attendance.bp, url_prefix='')
 teacher_blueprint.register_blueprint(grading.bp, url_prefix='')
 teacher_blueprint.register_blueprint(groups.bp, url_prefix='')
+teacher_blueprint.register_blueprint(feedback360.bp, url_prefix='')  # Register before communications to avoid route conflicts
 teacher_blueprint.register_blueprint(communications.bp, url_prefix='')
 teacher_blueprint.register_blueprint(analytics.bp, url_prefix='')
 teacher_blueprint.register_blueprint(templates.bp, url_prefix='')
-teacher_blueprint.register_blueprint(feedback360.bp, url_prefix='')
 

@@ -11,8 +11,8 @@
       <a href="{{ url_for('teacher.feedback360.class_feedback360', class_id=class_obj.id) }}" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-arrow-left me-1"></i>Back to Sessions
       </a>
-      <a href="{{ url_for('teacher.feedback360.feedback360_hub') }}" class="btn btn-outline-primary btn-sm">
-        <i class="bi bi-house-door me-1"></i>Hub
+      <a href="{{ url_for('teacher.dashboard.view_class', class_id=class_obj.id) }}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-house-door me-1"></i>Back to Class
       </a>
     </div>
   </div>

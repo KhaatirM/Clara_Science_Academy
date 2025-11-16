@@ -8,7 +8,7 @@
         <div class="col-12">
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{{ url_for('teacher.feedback360.feedback360_hub') }}">360° Feedback</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('teacher.dashboard.view_class', class_id=class_item.id) }}">Class</a></li>
                     <li class="breadcrumb-item active">{{ class_item.class_name }}</li>
                 </ol>
             </nav>

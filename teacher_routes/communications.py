@@ -21,29 +21,8 @@ def communications_hub():
     flash("Communications features are currently under development. Check back soon!", "info")
     return redirect(url_for('teacher.dashboard.teacher_dashboard'))
 
-@bp.route('/feedback360/class/<int:class_id>')
-@login_required
-@teacher_required
-def class_feedback360(class_id):
-    """View 360° feedback sessions for a class."""
-    class_obj = Class.query.get_or_404(class_id)
-    
-    # Check authorization
-    if not is_authorized_for_class(class_obj):
-        flash("You are not authorized to view feedback for this class.", "danger")
-        return redirect(url_for('teacher.communications.communications_hub'))
-    
-    # Get feedback sessions for this class
-    feedback_sessions = Feedback360.query.filter_by(class_id=class_id).all()
-    
-    # Get enrolled students
-    enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
-    students = [e.student for e in enrollments if e.student]
-    
-    return render_template('teachers/teacher_feedback360.html',
-                         class_item=class_obj,
-                         feedback_sessions=feedback_sessions,
-                         students=students)
+# 360° Feedback routes have been moved to teacher_routes/feedback360.py
+# The route is now handled by teacher.feedback360.class_feedback360
 
 @bp.route('/journals/class/<int:class_id>')
 @login_required

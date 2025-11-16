@@ -21,7 +21,7 @@
         <a href="{{ url_for('teacher.dashboard.view_class', class_id=class_obj.id) }}" class="btn-modern-secondary">
           <i class="bi bi-arrow-left me-2"></i>Back to Class
         </a>
-        <a href="{{ url_for('teacher.create_360_feedback', class_id=class_obj.id) }}" class="btn-modern-primary">
+        <a href="{{ url_for('teacher.feedback360.create_360_feedback', class_id=class_obj.id) }}" class="btn-modern-primary">
           <i class="bi bi-plus-circle me-2"></i>Create Session
         </a>
       </div>
@@ -144,7 +144,7 @@
                   </td>
                   <td class="text-end">
                     <div class="btn-group">
-                      <a href="{{ url_for('teacher.view_360_feedback', session_id=session.id) }}" 
+                      <a href="{{ url_for('teacher.feedback360.view_360_feedback', session_id=session.id) }}" 
                          class="btn btn-outline-primary btn-sm" title="View">
                         <i class="bi bi-eye"></i>
                       </a>
@@ -169,7 +169,7 @@
           <p class="modern-empty-description">
             Create comprehensive feedback sessions to gather peer, self, and teacher evaluations for holistic student assessment.
           </p>
-          <a href="{{ url_for('teacher.create_360_feedback', class_id=class_obj.id) }}" 
+          <a href="{{ url_for('teacher.feedback360.create_360_feedback', class_id=class_obj.id) }}" 
              class="btn-modern-primary">
             <i class="bi bi-plus-circle me-2"></i>Create Your First Session
           </a>
@@ -188,7 +188,7 @@
 function confirmDeleteSession(sessionId, sessionTitle) {
     if (confirm(`Are you sure you want to delete the feedback session "${sessionTitle}"?\n\nThis action cannot be undone and will delete all responses.`)) {
         const form = document.getElementById('deleteSessionForm');
-        form.action = "{{ url_for('teacher.delete_360_feedback', session_id=0) }}".replace('0', sessionId);
+        form.action = "{{ url_for('teacher.feedback360.delete_360_feedback', session_id=0) }}".replace('0', sessionId);
         form.submit();
     }
 }

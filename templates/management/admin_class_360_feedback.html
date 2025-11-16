@@ -8,7 +8,7 @@
       <p class="text-muted mb-0">{{ class_obj.name }} • Comprehensive Assessment</p>
     </div>
     <div class="d-flex gap-2">
-      <a href="{{ url_for('teacher.create_360_feedback', class_id=class_obj.id) }}" class="btn btn-primary btn-sm">
+      <a href="{{ url_for('teacher.feedback360.create_360_feedback', class_id=class_obj.id) }}" class="btn btn-primary btn-sm">
         <i class="bi bi-plus-circle me-1"></i>Create Session
       </a>
       <a href="{{ url_for('management.view_class', class_id=class_obj.id) }}" class="btn btn-outline-secondary btn-sm">
@@ -135,18 +135,18 @@
                   
                   <!-- Actions -->
                   <div class="d-grid gap-2">
-                    <a href="{{ url_for('teacher.view_360_feedback', session_id=session.id) }}" 
+                    <a href="{{ url_for('teacher.feedback360.view_360_feedback', session_id=session.id) }}" 
                        class="btn btn-primary" style="background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); border: none; border-radius: 25px;">
                       <i class="bi bi-eye me-1"></i>View Session
                     </a>
                     <div class="d-flex gap-2">
-                      <form method="POST" action="{{ url_for('teacher.toggle_360_feedback', session_id=session.id) }}" class="flex-grow-1">
+                      <form method="POST" action="{{ url_for('teacher.feedback360.toggle_360_feedback', session_id=session.id) }}" class="flex-grow-1">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <button type="submit" class="btn btn-{% if session.is_active %}warning{% else %}success{% endif %} w-100" style="border-radius: 25px;">
                           <i class="bi bi-{% if session.is_active %}pause{% else %}play{% endif %} me-1"></i>{% if session.is_active %}Pause{% else %}Activate{% endif %}
                         </button>
                       </form>
-                      <form method="POST" action="{{ url_for('teacher.delete_360_feedback', session_id=session.id) }}" class="flex-grow-1" onsubmit="return confirm('Are you sure you want to delete this feedback session?')">
+                      <form method="POST" action="{{ url_for('teacher.feedback360.delete_360_feedback', session_id=session.id) }}" class="flex-grow-1" onsubmit="return confirm('Are you sure you want to delete this feedback session?')">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <button type="submit" class="btn btn-outline-danger w-100" style="border-radius: 25px;">
                           <i class="bi bi-trash"></i>
@@ -166,7 +166,7 @@
           </div>
           <h4 class="text-muted mb-3">No 360° Feedback Sessions Found</h4>
           <p class="text-muted mb-4">Create your first session to gather comprehensive feedback from multiple perspectives.</p>
-          <a href="{{ url_for('teacher.create_360_feedback', class_id=class_obj.id) }}" class="btn btn-lg text-white" style="background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); border-radius: 25px;">
+          <a href="{{ url_for('teacher.feedback360.create_360_feedback', class_id=class_obj.id) }}" class="btn btn-lg text-white" style="background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); border-radius: 25px;">
             <i class="bi bi-plus-circle me-2"></i>Create First Session
           </a>
         </div>
@@ -200,7 +200,7 @@
         </div>
         <div class="card-body">
           <div class="d-grid gap-2">
-            <a href="{{ url_for('teacher.create_360_feedback', class_id=class_obj.id) }}" class="btn btn-primary btn-sm">
+            <a href="{{ url_for('teacher.feedback360.create_360_feedback', class_id=class_obj.id) }}" class="btn btn-primary btn-sm">
               <i class="bi bi-plus-circle me-1"></i>Create New Session
             </a>
             <a href="{{ url_for('management.view_class', class_id=class_obj.id) }}" class="btn btn-outline-secondary btn-sm">

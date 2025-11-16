@@ -381,8 +381,10 @@ def deadline_reminders():
     all_assignments = Assignment.query.filter(Assignment.class_id.in_(class_ids)).order_by(Assignment.due_date.asc()).all()
     
     # Categorize assignments by deadline
+    # New logic: Only show assignments that are due today, this week, or later
+    # AND assignments where students haven't turned them in
     now = datetime.now()
-    overdue = []
+    overdue = []  # Keep for backwards compatibility but will be empty or filtered
     today = []
     this_week = []
     next_week = []
@@ -396,14 +398,16 @@ def deadline_reminders():
             enrolled_students = Enrollment.query.filter_by(class_id=assignment.class_id, is_active=True).all()
             enrolled_student_ids = [e.student_id for e in enrolled_students]
             
-            # Count submissions (students who submitted OR were graded)
+            # Get all submissions and grades
             submissions = Submission.query.filter_by(assignment_id=assignment.id).all()
             graded_students = Grade.query.filter_by(assignment_id=assignment.id).all()
             
             # Get students who are voided for this assignment
             voided_student_ids = set()
             for grade in graded_students:
-                if grade.grade_data:
+                if grade.is_voided:
+                    voided_student_ids.add(grade.student_id)
+                elif grade.grade_data:
                     try:
                         grade_data = json.loads(grade.grade_data)
                         if grade_data.get('is_voided'):
@@ -411,61 +415,96 @@ def deadline_reminders():
                     except:
                         pass
             
-            # Count: students with submissions OR grades (excluding voided)
-            submitted_student_ids = set()
+            # Track students who have actually submitted (not marked as "not_submitted")
+            actually_submitted_student_ids = set()
             for sub in submissions:
                 if sub.student_id not in voided_student_ids:
-                    submitted_student_ids.add(sub.student_id)
-            for grade in graded_students:
-                if grade.student_id not in voided_student_ids:
-                    submitted_student_ids.add(grade.student_id)
+                    # Only count as submitted if submission_type is NOT 'not_submitted'
+                    if sub.submission_type and sub.submission_type != 'not_submitted':
+                        actually_submitted_student_ids.add(sub.student_id)
             
-            # Check if all students have been graded (have a grade with a score)
+            # Track students who have been graded with a score > 5
+            # (exclude "not_submitted" grades with score <= 5)
             graded_student_ids = set()
+            not_submitted_low_score_students = set()  # Students with score <= 5 marked as not_submitted
+            
             for grade in graded_students:
                 if grade.student_id not in voided_student_ids and not grade.is_voided:
-                    # Check if grade has a score (not just a placeholder)
                     if grade.grade_data:
                         try:
                             grade_data = json.loads(grade.grade_data)
                             score = grade_data.get('score')
-                            # Only count as graded if score is not None (could be 0, which is valid)
+                            
                             if score is not None:
-                                graded_student_ids.add(grade.student_id)
+                                # Check if this grade is for a "not_submitted" submission
+                                submission = Submission.query.filter_by(
+                                    assignment_id=assignment.id,
+                                    student_id=grade.student_id
+                                ).first()
+                                
+                                if submission and submission.submission_type == 'not_submitted':
+                                    # This is marked as "not_submitted" by teacher
+                                    if score <= 5:
+                                        # Score 5 or below marked as not submitted - needs reminder
+                                        not_submitted_low_score_students.add(grade.student_id)
+                                    else:
+                                        # Score > 5, count as graded
+                                        graded_student_ids.add(grade.student_id)
+                                else:
+                                    # Normal grade, count as graded
+                                    graded_student_ids.add(grade.student_id)
                         except:
-                            # If parsing fails, check if grade record exists (might be manually marked)
                             pass
+            
+            # Students who haven't submitted (excluding voided)
+            students_not_submitted = set()
+            for student_id in enrolled_student_ids:
+                if student_id not in voided_student_ids:
+                    # Check if student has actually submitted
+                    if student_id not in actually_submitted_student_ids:
+                        students_not_submitted.add(student_id)
             
             # Total students minus voided students
             total_counted = len([sid for sid in enrolled_student_ids if sid not in voided_student_ids])
             
-            assignment.submission_count = len(submitted_student_ids)
+            # Count submissions for display (actual submissions, not "not_submitted")
+            assignment.submission_count = len(actually_submitted_student_ids)
             assignment.total_students = total_counted
-            assignment.completion_rate = (len(submitted_student_ids) / total_counted * 100) if total_counted > 0 else 0
+            assignment.completion_rate = (len(actually_submitted_student_ids) / total_counted * 100) if total_counted > 0 else 0
             assignment.days_until = days_until
-            assignment.all_graded = len(graded_student_ids) >= total_counted and total_counted > 0
+            assignment.students_not_submitted = students_not_submitted
+            assignment.not_submitted_low_score_students = not_submitted_low_score_students
+            assignment.has_students_needing_reminder = len(students_not_submitted) > 0 or len(not_submitted_low_score_students) > 0
             
-            # Only show as overdue if not all students have been graded
-            # If all students are graded, the assignment is complete and shouldn't be in overdue
+            # Only show assignments that:
+            # 1. Are due today, this week, or later (not past due unless students haven't submitted)
+            # 2. Have students who haven't submitted
+            # 3. OR have "not_submitted" grades with score <= 5
+            
+            should_show = assignment.has_students_needing_reminder
+            
             if days_until < 0:
-                # Past due - only add to overdue if not all students are graded
-                if not assignment.all_graded:
+                # Past due - only show if students haven't submitted
+                if should_show:
                     overdue.append(assignment)
-                # If all_graded is True, skip adding to overdue (assignment is complete)
             elif days_until == 0:
-                today.append(assignment)
-            elif days_until <= 7:
-                this_week.append(assignment)
+                # Due today - show if students haven't submitted
+                if should_show:
+                    today.append(assignment)
             elif days_until <= 14:
-                next_week.append(assignment)
+                # Due this week or next week - show if students haven't submitted
+                if should_show:
+                    this_week.append(assignment)
             else:
-                later.append(assignment)
+                # Due later - show if students haven't submitted
+                if should_show:
+                    later.append(assignment)
     
     return render_template('teachers/teacher_deadline_reminders.html',
                          overdue=overdue,
                          today=today,
                          this_week=this_week,
-                         next_week=next_week,
+                         next_week=[],  # Empty for backwards compatibility
                          later=later,
                          classes=classes)
 

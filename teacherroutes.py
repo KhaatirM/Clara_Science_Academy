@@ -5819,26 +5819,52 @@ def get_students_needing_reminder(assignment_id):
         if student_grade and student_grade.is_voided:
             continue  # Skip voided assignments
         
-        # Check if student has submitted
+        # Check if student has submitted (actually submitted, not marked as "not_submitted")
         submission = Submission.query.filter_by(
             assignment_id=assignment_id,
             student_id=student.id
         ).first()
         
+        # Check if student has actually submitted (not marked as "not_submitted")
+        has_actual_submission = False
+        if submission:
+            if submission.submission_type and submission.submission_type != 'not_submitted':
+                has_actual_submission = True
+        
         # Check if assignment has been graded
         has_grade = False
+        score = None
         if student_grade:
             try:
                 grade_data = json.loads(student_grade.grade_data) if student_grade.grade_data else {}
-                if grade_data.get('score') is not None:
+                score = grade_data.get('score')
+                if score is not None:
                     has_grade = True
             except:
                 pass
         
         # Student needs reminder if:
-        # - Not already graded (if graded, teacher already handled it, no reminder needed)
-        # This includes: students who haven't submitted OR students who submitted but aren't graded yet
-        needs_reminder = not has_grade
+        # 1. Hasn't actually submitted (no submission OR submission_type is 'not_submitted')
+        # 2. OR has a grade with score <= 5 marked as "not_submitted"
+        needs_reminder = False
+        status = 'not_submitted'
+        
+        if not has_actual_submission:
+            # Student hasn't submitted - needs reminder
+            needs_reminder = True
+            if submission and submission.submission_type == 'not_submitted':
+                # Marked as not submitted by teacher
+                if has_grade and score is not None and score <= 5:
+                    status = 'not_submitted_low_score'
+                else:
+                    status = 'not_submitted'
+            else:
+                status = 'not_submitted'
+        elif has_grade and score is not None and score <= 5:
+            # Check if this is a "not_submitted" grade
+            if submission and submission.submission_type == 'not_submitted':
+                needs_reminder = True
+                status = 'not_submitted_low_score'
         
         if needs_reminder:
             students_needing_reminder.append({
@@ -5846,9 +5872,10 @@ def get_students_needing_reminder(assignment_id):
                 'first_name': student.first_name,
                 'last_name': student.last_name,
                 'student_id': student.student_id,
-                'has_submission': submission is not None,
+                'has_submission': has_actual_submission,
                 'has_grade': has_grade,
-                'status': 'submitted_not_graded' if submission and not has_grade else 'not_submitted'
+                'score': score,
+                'status': status
             })
     
     return jsonify({
@@ -6027,6 +6054,41 @@ def send_deadline_reminder_now(reminder_id):
 
 
 # 360-Degree Feedback Routes
+@teacher_blueprint.route('/feedback360')
+@login_required
+@teacher_required
+def feedback360_hub():
+    """Main 360° Feedback hub for teachers - shows all classes with feedback sessions."""
+    teacher = get_teacher_or_admin()
+    
+    # Get all classes for this teacher
+    if is_admin():
+        classes = Class.query.all()
+    else:
+        if teacher is None:
+            classes = []
+        else:
+            classes = Class.query.filter_by(teacher_id=teacher.id).all()
+    
+    # Get feedback session counts for each class
+    class_data = []
+    for class_obj in classes:
+        session_count = Feedback360.query.filter_by(class_id=class_obj.id).count()
+        active_count = Feedback360.query.filter_by(class_id=class_obj.id, is_active=True).count()
+        
+        # Get enrolled students count
+        student_count = Enrollment.query.filter_by(class_id=class_obj.id, is_active=True).count()
+        
+        class_data.append({
+            'class': class_obj,
+            'session_count': session_count,
+            'active_count': active_count,
+            'student_count': student_count
+        })
+    
+    return render_template('teachers/feedback360_hub.html',
+                         classes=class_data)
+
 @teacher_blueprint.route('/class/<int:class_id>/360-feedback')
 @login_required
 @teacher_required

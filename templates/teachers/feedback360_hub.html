@@ -1,0 +1,150 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/teacher_enhanced.css') }}">
+<style>
+.feedback360-hub-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 12px;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.feedback360-hub-header h1 {
+    margin: 0;
+    font-size: 2.5rem;
+    font-weight: 700;
+}
+
+.feedback360-hub-header p {
+    margin: 0.5rem 0 0 0;
+    opacity: 0.95;
+    font-size: 1.1rem;
+}
+
+.class-card-feedback360 {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    overflow: hidden;
+    height: 100%;
+}
+
+.class-card-feedback360:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+.class-card-feedback360 .card-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 1.5rem;
+}
+
+.class-card-feedback360 .card-body {
+    padding: 1.5rem;
+}
+
+.stat-badge-feedback360 {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin: 0.25rem;
+}
+
+.stat-badge-feedback360.primary {
+    background: #e3f2fd;
+    color: #1976d2;
+}
+
+.stat-badge-feedback360.success {
+    background: #e8f5e9;
+    color: #388e3c;
+}
+
+.stat-badge-feedback360.info {
+    background: #e0f2f1;
+    color: #00796b;
+}
+
+.empty-state-feedback360 {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #6c757d;
+}
+
+.empty-state-feedback360 i {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+</style>
+{% endblock %}
+
+{% block title %}360° Feedback Hub{% endblock %}
+
+{% block dashboard_content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="feedback360-hub-header">
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <div>
+                <h1><i class="bi bi-arrow-repeat me-3"></i>360° Feedback Hub</h1>
+                <p>Comprehensive peer, self, and teacher evaluations for holistic student assessment</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Classes Grid -->
+    {% if classes %}
+    <div class="row g-4">
+        {% for item in classes %}
+        <div class="col-12 col-md-6 col-lg-4">
+            <div class="class-card-feedback360 card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-house-door-fill me-2"></i>{{ item.class.class_name }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <span class="stat-badge-feedback360 primary">
+                            <i class="bi bi-list-ul"></i>
+                            {{ item.session_count }} Session{{ 's' if item.session_count != 1 else '' }}
+                        </span>
+                        <span class="stat-badge-feedback360 success">
+                            <i class="bi bi-check-circle"></i>
+                            {{ item.active_count }} Active
+                        </span>
+                        <span class="stat-badge-feedback360 info">
+                            <i class="bi bi-people-fill"></i>
+                            {{ item.student_count }} Student{{ 's' if item.student_count != 1 else '' }}
+                        </span>
+                    </div>
+                    <a href="{{ url_for('teacher.class_360_feedback', class_id=item.class.id) }}" 
+                       class="btn btn-primary w-100">
+                        <i class="bi bi-arrow-right-circle me-2"></i>View Sessions
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state-feedback360">
+        <i class="bi bi-arrow-repeat"></i>
+        <h3>No Classes Available</h3>
+        <p>You don't have access to any classes yet. Contact an administrator to get assigned to classes.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

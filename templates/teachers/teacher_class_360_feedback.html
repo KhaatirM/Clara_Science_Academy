@@ -14,12 +14,12 @@
           <i class="bi bi-arrow-repeat me-2"></i>360° Feedback
         </h1>
         <p class="modern-page-header-subtitle">
-          {{ class_obj.name }} • Comprehensive peer and self evaluation
+          {{ class_obj.class_name }} • Comprehensive peer and self evaluation
         </p>
       </div>
       <div class="modern-page-header-actions">
-        <a href="{{ url_for('teacher.dashboard.view_class', class_id=class_obj.id) }}" class="btn-modern-secondary">
-          <i class="bi bi-arrow-left me-2"></i>Back to Class
+        <a href="{{ url_for('teacher.feedback360_hub') }}" class="btn-modern-secondary">
+          <i class="bi bi-arrow-left me-2"></i>Back to Hub
         </a>
         <a href="{{ url_for('teacher.create_360_feedback', class_id=class_obj.id) }}" class="btn-modern-primary">
           <i class="bi bi-plus-circle me-2"></i>Create Session
@@ -36,7 +36,7 @@
           <i class="bi bi-arrow-repeat"></i>
         </div>
         <div class="modern-stat-content">
-          <div class="modern-stat-value">{{ feedback_sessions|length }}</div>
+          <div class="modern-stat-value">{{ total_sessions|default(feedback_sessions|length) }}</div>
           <div class="modern-stat-label">Total Sessions</div>
         </div>
       </div>
@@ -47,8 +47,7 @@
           <i class="bi bi-check-circle-fill"></i>
         </div>
         <div class="modern-stat-content">
-          {% set active_sessions = feedback_sessions|selectattr('is_active')|list|length %}
-          <div class="modern-stat-value">{{ active_sessions }}</div>
+          <div class="modern-stat-value">{{ active_sessions|default(feedback_sessions|selectattr('is_active')|list|length) }}</div>
           <div class="modern-stat-label">Active Sessions</div>
         </div>
       </div>
@@ -56,12 +55,11 @@
     <div class="col-12 col-sm-6 col-lg-3">
       <div class="modern-stat-card stat-info animate-fade-in-up animate-delay-3">
         <div class="modern-stat-icon">
-          <i class="bi bi-diagram-3-fill"></i>
+          <i class="bi bi-chat-dots-fill"></i>
         </div>
         <div class="modern-stat-content">
-          {% set comprehensive_sessions = feedback_sessions|selectattr('feedback_type', 'equalto', 'comprehensive')|list|length %}
-          <div class="modern-stat-value">{{ comprehensive_sessions }}</div>
-          <div class="modern-stat-label">Comprehensive</div>
+          <div class="modern-stat-value">{{ total_responses|default(0) }}</div>
+          <div class="modern-stat-label">Total Responses</div>
         </div>
       </div>
     </div>
@@ -71,9 +69,8 @@
           <i class="bi bi-people-fill"></i>
         </div>
         <div class="modern-stat-content">
-          {% set peer_sessions = feedback_sessions|selectattr('feedback_type', 'equalto', 'peer_only')|list|length %}
-          <div class="modern-stat-value">{{ peer_sessions }}</div>
-          <div class="modern-stat-label">Peer Only</div>
+          <div class="modern-stat-value">{{ students|length }}</div>
+          <div class="modern-stat-label">Students</div>
         </div>
       </div>
     </div>
@@ -147,7 +144,7 @@
                   </td>
                   <td class="text-end">
                     <div class="btn-group">
-                      <a href="{{ url_for('teacher.view_360_feedback', feedback_id=session.id) }}" 
+                      <a href="{{ url_for('teacher.view_360_feedback', session_id=session.id) }}" 
                          class="btn btn-outline-primary btn-sm" title="View">
                         <i class="bi bi-eye"></i>
                       </a>

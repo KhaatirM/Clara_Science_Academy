@@ -261,6 +261,13 @@
                             </div>
                             <div class="card-body">
                                 <div class="mb-2">
+                                    {% if assignment.assignment_context == 'in-class' %}
+                                        <span class="badge bg-primary"><i class="bi bi-building me-1"></i>IN-Class</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary"><i class="bi bi-house me-1"></i>Homework</span>
+                                    {% endif %}
+                                </div>
+                                <div class="mb-2">
                                     <small class="text-muted">
                                         <i class="fas fa-calendar me-1"></i>
                                         Due: {{ assignment.due_date.strftime('%m/%d/%Y') }}
@@ -335,6 +342,13 @@
                                     <span class="badge bg-light text-dark">Group</span>
                                 </div>
                                 <div class="card-body">
+                                    <div class="mb-2">
+                                        {% if group_assignment.assignment_context == 'in-class' %}
+                                            <span class="badge bg-primary"><i class="bi bi-building me-1"></i>IN-Class</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary"><i class="bi bi-house me-1"></i>Homework</span>
+                                        {% endif %}
+                                    </div>
                                     <div class="mb-2">
                                         <small class="text-muted">
                                             <i class="fas fa-calendar me-1"></i>

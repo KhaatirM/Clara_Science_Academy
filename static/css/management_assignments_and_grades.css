@@ -20,28 +20,54 @@
     border-color: white;
 }
 
-/* Assignment Context Badges */
-.assignment-card .badge.bg-primary,
-.assignment-card .badge.bg-secondary {
-    font-size: 0.85rem;
-    padding: 0.4rem 0.75rem;
-    font-weight: 600;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
+/* Assignment Context Badges - Enhanced with higher specificity */
+.card.assignment-card .card-body .badge.bg-primary,
+.card.assignment-card .card-body .badge.bg-secondary,
+.assignment-card .card-body .badge.bg-primary,
+.assignment-card .card-body .badge.bg-secondary,
+.card-body .badge.bg-primary,
+.card-body .badge.bg-secondary {
+    font-size: 0.85rem !important;
+    padding: 0.4rem 0.75rem !important;
+    font-weight: 600 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.25rem !important;
+    margin-bottom: 0.5rem !important;
 }
 
-.assignment-card .badge.bg-primary {
+.card.assignment-card .card-body .badge.bg-primary,
+.assignment-card .card-body .badge.bg-primary,
+.card-body .badge.bg-primary {
     background-color: #0d6efd !important;
-    color: white;
+    color: white !important;
+    border: none !important;
 }
 
-.assignment-card .badge.bg-secondary {
+.card.assignment-card .card-body .badge.bg-secondary,
+.assignment-card .card-body .badge.bg-secondary,
+.card-body .badge.bg-secondary {
     background-color: #6c757d !important;
-    color: white;
+    color: white !important;
+    border: none !important;
 }
 
-.assignment-card .badge i {
-    font-size: 0.9rem;
+.card.assignment-card .card-body .badge i,
+.assignment-card .card-body .badge i,
+.card-body .badge i {
+    font-size: 0.9rem !important;
+    margin-right: 0.25rem;
+}
+
+/* Group Assignment Badges */
+.card.border-info .card-body .badge.bg-primary,
+.card.border-info .card-body .badge.bg-secondary {
+    font-size: 0.85rem !important;
+    padding: 0.4rem 0.75rem !important;
+    font-weight: 600 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.25rem !important;
+    margin-bottom: 0.5rem !important;
 }
 

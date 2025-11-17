@@ -551,7 +551,7 @@ def create_quiz_assignment():
             print(f"DEBUG: Successfully processed {question_count} questions")
             db.session.commit()
             flash('Quiz assignment created successfully!', 'success')
-            return redirect(url_for('teacher.my_assignments'))
+            return redirect(url_for('teacher.dashboard.my_assignments'))
             
         except Exception as e:
             db.session.rollback()
@@ -619,7 +619,7 @@ def create_discussion_assignment():
             # This would require additional models for discussion settings, rubric criteria, etc.
             
             flash('Discussion assignment created successfully!', 'success')
-            return redirect(url_for('teacher.my_assignments'))
+            return redirect(url_for('teacher.dashboard.my_assignments'))
             
         except Exception as e:
             db.session.rollback()
@@ -1108,12 +1108,12 @@ def remove_assignment(assignment_id):
         
         flash('Assignment removed successfully.', 'success')
         # Redirect back to assignments page instead of class page
-        return redirect(url_for('teacher.my_assignments'))
+        return redirect(url_for('teacher.dashboard.my_assignments'))
         
     except Exception as e:
         db.session.rollback()
         flash(f'Error removing assignment: {str(e)}', 'danger')
-        return redirect(url_for('teacher.my_assignments'))
+        return redirect(url_for('teacher.dashboard.my_assignments'))
 
 
 @teacher_blueprint.route('/assignment/<int:assignment_id>/change-status', methods=['POST'])
@@ -1143,12 +1143,12 @@ def change_assignment_status(assignment_id):
         db.session.commit()
         
         flash(f'Assignment status changed to {new_status} successfully.', 'success')
-        return redirect(url_for('teacher.my_assignments'))
+        return redirect(url_for('teacher.dashboard.my_assignments'))
         
     except Exception as e:
         db.session.rollback()
         flash(f'Error changing assignment status: {str(e)}', 'danger')
-        return redirect(url_for('teacher.my_assignments'))
+        return redirect(url_for('teacher.dashboard.my_assignments'))
 
 
 @teacher_blueprint.route('/group-assignment/<int:assignment_id>/change-status', methods=['POST'])

@@ -133,7 +133,7 @@ def create_quiz_assignment():
             print(f"DEBUG: Successfully processed {question_count} questions")
             db.session.commit()
             flash('Quiz assignment created successfully!', 'success')
-            return redirect(url_for('teacher.my_assignments'))
+            return redirect(url_for('teacher.dashboard.my_assignments'))
             
         except Exception as e:
             db.session.rollback()
@@ -207,7 +207,7 @@ def create_discussion_assignment():
             db.session.commit()
             
             flash('Discussion assignment created successfully!', 'success')
-            return redirect(url_for('teacher.my_assignments'))
+            return redirect(url_for('teacher.dashboard.my_assignments'))
             
         except Exception as e:
             db.session.rollback()

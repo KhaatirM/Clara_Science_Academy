@@ -237,7 +237,7 @@ def view_assignment(assignment_id):
     # Check authorization for this assignment's class
     if not is_authorized_for_class(assignment.class_info):
         flash("You are not authorized to view this assignment.", "danger")
-        return redirect(url_for('teacher.my_assignments'))
+        return redirect(url_for('teacher.dashboard.my_assignments'))
     
     # Get submissions for this assignment
     submissions = Submission.query.filter_by(assignment_id=assignment_id).all()
@@ -264,7 +264,7 @@ def edit_assignment(assignment_id):
     # Check authorization for this assignment's class
     if not is_authorized_for_class(assignment.class_info):
         flash("You are not authorized to edit this assignment.", "danger")
-        return redirect(url_for('teacher.my_assignments'))
+        return redirect(url_for('teacher.dashboard.my_assignments'))
     
     if request.method == 'POST':
         # Handle assignment update

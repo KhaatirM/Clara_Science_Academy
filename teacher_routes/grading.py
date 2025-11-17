@@ -24,7 +24,7 @@ def grade_assignment(assignment_id):
     # Check authorization for this assignment's class
     if not is_authorized_for_class(assignment.class_info):
         flash("You are not authorized to grade this assignment.", "danger")
-        return redirect(url_for('teacher.my_assignments'))
+        return redirect(url_for('teacher.dashboard.my_assignments'))
     
     if request.method == 'POST':
         # Handle batch grading submission

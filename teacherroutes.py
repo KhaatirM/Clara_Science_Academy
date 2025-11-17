@@ -474,7 +474,8 @@ def create_quiz_assignment():
                 assignment_context=assignment_context,
                 allow_save_and_continue=allow_save_and_continue,
                 max_save_attempts=max_save_attempts,
-                save_timeout_minutes=save_timeout_minutes
+                save_timeout_minutes=save_timeout_minutes,
+                created_by=current_user.id
             )
             
             db.session.add(new_assignment)
@@ -609,7 +610,8 @@ def create_discussion_assignment():
                 class_id=class_id,
                 school_year_id=current_school_year.id,
                 status='Active',
-                assignment_type='discussion'
+                assignment_type='discussion',
+                created_by=current_user.id
             )
             
             db.session.add(new_assignment)
@@ -720,6 +722,7 @@ def add_assignment(class_id):
         new_assignment.quarter = str(quarter)  # Store as string to match model definition
         new_assignment.status = status
         new_assignment.assignment_context = assignment_context
+        new_assignment.created_by = current_user.id
         
         # Handle file upload
         if 'assignment_file' in request.files:

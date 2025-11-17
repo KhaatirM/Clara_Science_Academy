@@ -262,7 +262,7 @@
                             </div>
                             <div class="card-body">
                                 <div class="mb-2">
-                                    {% if assignment.assignment_context == 'in-class' %}
+                                    {% if assignment.assignment_context and (assignment.assignment_context.lower() == 'in-class' or assignment.assignment_context.lower() == 'in_class') %}
                                         <span class="badge bg-primary"><i class="bi bi-building me-1"></i>IN-Class</span>
                                     {% else %}
                                         <span class="badge bg-secondary"><i class="bi bi-house me-1"></i>Homework</span>
@@ -280,7 +280,13 @@
                                 <div class="mb-2">
                                     <small class="text-muted">
                                         <i class="bi bi-person me-1"></i>
-                                        {{ assignment.class_info.teacher.first_name }} {{ assignment.class_info.teacher.last_name }}
+                                        {% if assignment.creator %}
+                                            {{ assignment.creator.first_name }} {{ assignment.creator.last_name }}
+                                        {% elif assignment.class_info.teacher %}
+                                            {{ assignment.class_info.teacher.first_name }} {{ assignment.class_info.teacher.last_name }}
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
                                     </small>
                                 </div>
                                 <div class="mb-2">
@@ -300,34 +306,9 @@
                                     <button class="btn btn-primary" onclick="viewAssignment({{ assignment.id }})">
                                         <i class="fas fa-eye me-2"></i>View Assignment
                                     </button>
-                                    {% if assignment.status == 'Active' %}
-                                    <button class="btn btn-success" onclick="gradeAssignment({{ assignment.id }})">
-                                        <i class="fas fa-edit me-2"></i>Grade Students
-                                    </button>
-                                    {% endif %}
-                                    <div class="d-grid gap-2">
-                                        <button class="btn btn-outline-secondary btn-sm" onclick="editAssignment({{ assignment.id }})" title="Edit Assignment">
-                                            <i class="fas fa-edit me-1"></i>Edit
-                                        </button>
-                                        <button class="btn btn-outline-info btn-sm" onclick="grantExtensions({{ assignment.id }})" title="Grant Extensions">
-                                            <i class="fas fa-clock me-1"></i>Extensions
-                                        </button>
-                                        <button class="btn btn-outline-danger btn-sm" onclick="openVoidModal({{ assignment.id }}, '{{ assignment.title|replace("'", "\\'") }}', 'individual', {{ assignment.class_id }})" title="Void Assignment">
-                                            <i class="bi bi-slash-circle me-1"></i>Void
-                                        </button>
-                                        {% if assignment.status == 'Active' %}
-                                        <button class="btn btn-outline-warning btn-sm" onclick="changeAssignmentStatus({{ assignment.id }}, 'Inactive')" title="Deactivate Assignment">
-                                            <i class="fas fa-pause me-1"></i>Deactivate
-                                        </button>
-                                        {% elif assignment.status == 'Inactive' %}
-                                        <button class="btn btn-outline-success btn-sm" onclick="changeAssignmentStatus({{ assignment.id }}, 'Active')" title="Activate Assignment">
-                                            <i class="fas fa-play me-1"></i>Activate
-                                        </button>
-                                        {% endif %}
-                                        <button class="btn btn-outline-danger btn-sm" onclick="removeAssignment({{ assignment.id }})" title="Remove Assignment">
-                                            <i class="fas fa-trash me-1"></i>Remove
-                                        </button>
-                                    </div>
+                                    <a href="{{ url_for('management.view_class', class_id=assignment.class_id) }}" class="btn btn-outline-primary">
+                                        <i class="fas fa-users me-2"></i>View Class
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -344,7 +325,7 @@
                                 </div>
                                 <div class="card-body">
                                     <div class="mb-2">
-                                        {% if group_assignment.assignment_context == 'in-class' %}
+                                        {% if group_assignment.assignment_context and (group_assignment.assignment_context.lower() == 'in-class' or group_assignment.assignment_context.lower() == 'in_class') %}
                                             <span class="badge bg-primary"><i class="bi bi-building me-1"></i>IN-Class</span>
                                         {% else %}
                                             <span class="badge bg-secondary"><i class="bi bi-house me-1"></i>Homework</span>
@@ -372,16 +353,10 @@
                                 <div class="card-footer bg-light">
                                     <div class="d-grid gap-2">
                                         <a href="{{ url_for('management.admin_view_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-primary btn-sm">
-                                            <i class="fas fa-eye me-2"></i>View Details
+                                            <i class="fas fa-eye me-2"></i>View Assignment
                                         </a>
-                                        <a href="{{ url_for('management.admin_grade_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-success btn-sm">
-                                            <i class="fas fa-edit me-2"></i>Grade Submissions
-                                        </a>
-                                        <a href="{{ url_for('management.admin_edit_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-warning btn-sm">
-                                            <i class="fas fa-pencil me-2"></i>Edit
-                                        </a>
-                                        <a href="{{ url_for('management.admin_grant_extensions', assignment_id=group_assignment.id) }}" class="btn btn-info btn-sm">
-                                            <i class="fas fa-clock me-2"></i>Extensions
+                                        <a href="{{ url_for('management.view_class', class_id=group_assignment.class_id) }}" class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-users me-2"></i>View Class
                                         </a>
                                     </div>
                                 </div>
@@ -457,32 +432,14 @@
                                             <td>
                                                 <div class="d-flex flex-wrap gap-1">
                                                     <button class="btn btn-outline-primary btn-sm" onclick="viewAssignment({{ assignment.id }})" title="View Assignment Details">
-                                                        <i class="fas fa-eye me-1"></i>View
+                                                        <i class="fas fa-eye me-1"></i>View Assignment
                                                     </button>
                                                     <button class="btn btn-outline-success btn-sm" onclick="gradeAssignment({{ assignment.id }})" title="Grade Student Submissions">
                                                         <i class="fas fa-edit me-1"></i>Grade
                                                     </button>
-                                                    <button class="btn btn-outline-secondary btn-sm" onclick="editAssignment({{ assignment.id }})" title="Edit Assignment Details">
-                                                        <i class="fas fa-cog me-1"></i>Edit
-                                                    </button>
-                                                    <button class="btn btn-outline-info btn-sm" onclick="grantExtensions({{ assignment.id }})" title="Grant Student Extensions">
-                                                        <i class="fas fa-clock me-1"></i>Extensions
-                                                    </button>
-                                                    <button class="btn btn-outline-danger btn-sm" onclick="openVoidModal({{ assignment.id }}, '{{ assignment.title|replace("'", "\\'") }}', 'individual')" title="Void Assignment for Students">
-                                                        <i class="bi bi-slash-circle me-1"></i>Void
-                                                    </button>
-                                                    {% if assignment.status == 'Active' %}
-                                                    <button class="btn btn-outline-warning btn-sm" onclick="changeAssignmentStatus({{ assignment.id }}, 'Inactive')" title="Deactivate Assignment">
-                                                        <i class="fas fa-pause me-1"></i>Deactivate
-                                                    </button>
-                                                    {% elif assignment.status == 'Inactive' %}
-                                                    <button class="btn btn-outline-success btn-sm" onclick="changeAssignmentStatus({{ assignment.id }}, 'Active')" title="Activate Assignment">
-                                                        <i class="fas fa-play me-1"></i>Activate
-                                                    </button>
-                                                    {% endif %}
-                                                    <button class="btn btn-outline-danger btn-sm" onclick="removeAssignment({{ assignment.id }})" title="Remove Assignment">
-                                                        <i class="fas fa-trash me-1"></i>Remove
-                                                    </button>
+                                                    <a href="{{ url_for('management.view_class', class_id=assignment.class_id) }}" class="btn btn-outline-primary btn-sm" title="View Class">
+                                                        <i class="fas fa-users me-1"></i>View Class
+                                                    </a>
                                                 </div>
                                             </td>
                                         </tr>
@@ -517,21 +474,15 @@
                                             </td>
                                             <td>
                                                 <div class="d-flex flex-wrap gap-1">
-                                                    <button class="btn btn-outline-primary btn-sm" onclick="viewGroupAssignment({{ group_assignment.id }})" title="View Group Assignment Details">
-                                                        <i class="fas fa-eye me-1"></i>View
-                                                    </button>
-                                                    <button class="btn btn-outline-success btn-sm" onclick="gradeGroupAssignment({{ group_assignment.id }})" title="Grade Group Submissions">
+                                                    <a href="{{ url_for('management.admin_view_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-outline-primary btn-sm" title="View Group Assignment Details">
+                                                        <i class="fas fa-eye me-1"></i>View Assignment
+                                                    </a>
+                                                    <a href="{{ url_for('management.admin_grade_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-outline-success btn-sm" title="Grade Group Submissions">
                                                         <i class="fas fa-edit me-1"></i>Grade
-                                                    </button>
-                                                    <button class="btn btn-outline-secondary btn-sm" onclick="editGroupAssignment({{ group_assignment.id }})" title="Edit Group Assignment Details">
-                                                        <i class="fas fa-cog me-1"></i>Edit
-                                                    </button>
-                                                    <button class="btn btn-outline-danger btn-sm" onclick="openVoidModal({{ group_assignment.id }}, '{{ group_assignment.title|replace("'", "\\'") }}', 'group')" title="Void Group Assignment">
-                                                        <i class="bi bi-slash-circle me-1"></i>Void
-                                                    </button>
-                                                    <button class="btn btn-outline-danger btn-sm" onclick="removeGroupAssignment({{ group_assignment.id }})" title="Remove Group Assignment">
-                                                        <i class="fas fa-trash me-1"></i>Remove
-                                                    </button>
+                                                    </a>
+                                                    <a href="{{ url_for('management.view_class', class_id=group_assignment.class_id) }}" class="btn btn-outline-primary btn-sm" title="View Class">
+                                                        <i class="fas fa-users me-1"></i>View Class
+                                                    </a>
                                                 </div>
                                             </td>
                                         </tr>

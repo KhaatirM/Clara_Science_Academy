@@ -486,6 +486,7 @@ class Assignment(db.Model):
     school_year_id = db.Column(db.Integer, db.ForeignKey('school_year.id'), nullable=False)
     is_locked = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     
     # Assignment status: Active, Inactive, Voided
     status = db.Column(db.String(20), default='Active', nullable=False)
@@ -511,6 +512,7 @@ class Assignment(db.Model):
     class_info = db.relationship('Class', backref='assignments', lazy=True)
     school_year = db.relationship('SchoolYear', backref='assignments', lazy=True)
     academic_period = db.relationship('AcademicPeriod', backref='assignments', lazy=True)
+    creator = db.relationship('User', backref='created_assignments', lazy=True)
 
     def __repr__(self):
         return f"Assignment('{self.title}', Class: {self.class_id})"

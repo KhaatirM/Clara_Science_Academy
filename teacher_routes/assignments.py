@@ -70,7 +70,8 @@ def add_assignment():
                 school_year_id=current_school_year.id,
                 assignment_type='pdf_paper',
                 status='Active',
-                assignment_context=assignment_context
+                assignment_context=assignment_context,
+                created_by=current_user.id
             )
             
             db.session.add(new_assignment)
@@ -168,7 +169,7 @@ def add_assignment_for_class(class_id):
             # Get assignment context from form or query parameter
             assignment_context = request.form.get('assignment_context', 'homework')
             
-            # Create the assignment (removed 'points' and 'created_by' - don't exist in model)
+            # Create the assignment
             new_assignment = Assignment(
                 title=title,
                 description=description,
@@ -178,7 +179,8 @@ def add_assignment_for_class(class_id):
                 school_year_id=current_school_year.id,
                 assignment_type='pdf_paper',
                 status='Active',
-                assignment_context=assignment_context
+                assignment_context=assignment_context,
+                created_by=current_user.id
             )
             
             db.session.add(new_assignment)

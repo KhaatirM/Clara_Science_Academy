@@ -14,7 +14,7 @@
           <i class="bi bi-exclamation-triangle-fill me-2"></i>Conflict Resolution
         </h1>
         <p class="modern-page-header-subtitle">
-          {{ class_obj.name }} • Mediate and resolve group conflicts
+          {{ class_obj.class_name }} • Mediate and resolve group conflicts
         </p>
       </div>
       <div class="modern-page-header-actions">
@@ -44,8 +44,7 @@
           <i class="bi bi-clock-history"></i>
         </div>
         <div class="modern-stat-content">
-          {% set pending = conflicts|selectattr('status', 'equalto', 'open')|list|length %}
-          <div class="modern-stat-value">{{ pending }}</div>
+          <div class="modern-stat-value">{{ pending|default(conflicts|selectattr('status', 'equalto', 'open')|list|length) }}</div>
           <div class="modern-stat-label">Pending</div>
         </div>
       </div>
@@ -56,8 +55,7 @@
           <i class="bi bi-arrow-repeat"></i>
         </div>
         <div class="modern-stat-content">
-          {% set in_progress = conflicts|selectattr('status', 'equalto', 'in_progress')|list|length %}
-          <div class="modern-stat-value">{{ in_progress }}</div>
+          <div class="modern-stat-value">{{ in_progress|default(conflicts|selectattr('status', 'equalto', 'in_progress')|list|length) }}</div>
           <div class="modern-stat-label">In Progress</div>
         </div>
       </div>
@@ -68,8 +66,7 @@
           <i class="bi bi-check-circle-fill"></i>
         </div>
         <div class="modern-stat-content">
-          {% set resolved = conflicts|selectattr('status', 'equalto', 'resolved')|list|length %}
-          <div class="modern-stat-value">{{ resolved }}</div>
+          <div class="modern-stat-value">{{ resolved|default(conflicts|selectattr('status', 'equalto', 'resolved')|list|length) }}</div>
           <div class="modern-stat-label">Resolved</div>
         </div>
       </div>
@@ -91,7 +88,7 @@
                 <div class="modern-item-meta">
                   <span class="modern-item-meta-item">
                     <i class="bi bi-calendar3"></i>
-                    {{ conflict.reported_date.strftime('%b %d, %Y') }}
+                    {{ conflict.reported_at.strftime('%b %d, %Y') }}
                   </span>
                   <span class="modern-item-meta-item">
                     <i class="bi bi-people"></i>
@@ -135,12 +132,12 @@
             </div>
 
             <div class="modern-item-actions">
-              <a href="{{ url_for('teacher.assignments.view_conflict', conflict_id=conflict.id) }}" 
+              <a href="{{ url_for('teacher.conflict_resolution.view_conflict', conflict_id=conflict.id) }}" 
                  class="btn btn-primary btn-sm">
                 <i class="bi bi-eye me-1"></i>View Details
               </a>
               {% if conflict.status != 'resolved' %}
-              <a href="{{ url_for('teacher.assignments.resolve_conflict', conflict_id=conflict.id) }}" 
+              <a href="{{ url_for('teacher.conflict_resolution.resolve_conflict', conflict_id=conflict.id) }}" 
                  class="btn btn-success btn-sm">
                 <i class="bi bi-check-circle me-1"></i>Resolve
               </a>

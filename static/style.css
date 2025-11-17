@@ -403,24 +403,31 @@ body {
 #sidebar {
     display: flex;
     flex-direction: column;
+    max-height: 100vh;
     height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .sidebar-nav {
     flex: 1 1 auto;
+    min-height: 0; /* Allow flex item to shrink below content size */
 }
 
 .logout-btn-container {
-    position: static;
+    position: sticky;
+    bottom: 0;
     margin-top: auto;
     padding-bottom: 20px;
+    background-color: #212529;
+    z-index: 1001;
 }
 
 .sidebar {
     display: flex;
     flex-direction: column;
+    max-height: 100vh;
     height: 100vh;
-    min-height: 100%;
     position: fixed;
     top: 0;
     left: 0;
@@ -431,6 +438,31 @@ body {
     border-right: 1px solid #343a40;
     transition: width 0.3s ease;
     z-index: 1000;
+    overflow-y: auto;
+    overflow-x: hidden;
+    /* Custom scrollbar styling */
+    scrollbar-width: thin;
+    scrollbar-color: #6c757d #343a40;
+}
+
+/* Webkit scrollbar styling for Chrome/Safari/Edge */
+.sidebar::-webkit-scrollbar {
+    width: 8px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+    background: #343a40;
+    border-radius: 4px;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background: #6c757d;
+    border-radius: 4px;
+    transition: background 0.2s ease;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+    background: #0d6efd;
 }
 
 .sidebar-toggle {
@@ -570,32 +602,10 @@ body {
 
 .sidebar .nav {
     flex: 1 1 auto;
-    overflow-y: auto;
+    overflow-y: visible; /* Let parent sidebar handle scrolling */
     overflow-x: hidden; /* Prevent horizontal scrolling */
     margin-bottom: 0;
-    /* Custom scrollbar styling */
-    scrollbar-width: thin;
-    scrollbar-color: #6c757d #343a40;
-}
-
-/* Webkit scrollbar styling for Chrome/Safari/Edge */
-.sidebar .nav::-webkit-scrollbar {
-    width: 6px;
-}
-
-.sidebar .nav::-webkit-scrollbar-track {
-    background: #343a40;
-    border-radius: 3px;
-}
-
-.sidebar .nav::-webkit-scrollbar-thumb {
-    background: #6c757d;
-    border-radius: 3px;
-    transition: background 0.2s ease;
-}
-
-.sidebar .nav::-webkit-scrollbar-thumb:hover {
-    background: #0d6efd;
+    min-height: 0; /* Allow flex item to shrink below content size */
 }
 
 .sidebar .nav-link {
@@ -645,6 +655,9 @@ body {
 /* --- Collapsed Sidebar Styles --- */
 .sidebar.collapsed {
     width: 80px;
+    max-height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .sidebar.collapsed .sidebar-heading,
@@ -660,12 +673,12 @@ body {
 }
 
 .sidebar.collapsed .nav {
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: #6c757d #343a40;
+    overflow-y: visible; /* Let parent handle scrolling */
+    min-height: 0; /* Allow flex item to shrink */
 }
 
-.sidebar.collapsed .nav::-webkit-scrollbar {
+/* Collapsed sidebar scrollbar */
+.sidebar.collapsed::-webkit-scrollbar {
     width: 4px;
 }
 .sidebar.collapsed .nav-link .bi {
@@ -694,10 +707,13 @@ body {
     width: calc(100% - 80px);
 }
 
-/* --- Mobile Responsiveness --- */
-@media (max-width: 1200px) {
+/* --- Tablet/Small Desktop Responsiveness --- */
+@media (max-width: 1200px) and (min-width: 769px) {
     .sidebar {
         width: 80px;
+        max-height: 100vh;
+        overflow-y: auto;
+        overflow-x: hidden;
     }
     .main-content {
         margin-left: 80px;
@@ -715,6 +731,12 @@ body {
         margin-right: 0;
         font-size: 1.5rem;
     }
+    /* Ensure scrollbar works in collapsed state */
+    .sidebar.collapsed {
+        max-height: 100vh;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
 }
 
 @media (max-width: 768px) {
@@ -723,6 +745,7 @@ body {
         position: fixed;
         left: -250px; /* Hide sidebar by default on mobile */
         width: 250px;
+        max-height: 100vh;
         height: 100vh;
         z-index: 1050;
         transition: left 0.3s ease;
@@ -759,9 +782,9 @@ body {
     }
     
     .sidebar .nav {
-        overflow-y: auto !important;
+        overflow-y: visible !important; /* Let parent handle scrolling */
         overflow-x: hidden !important;
-        max-height: calc(100vh - 120px); /* Leave space for header and logout */
+        min-height: 0; /* Allow flex item to shrink */
     }
     
     .sidebar .nav-link {

@@ -114,6 +114,20 @@
                                     <strong>Voided:</strong> Assignment doesn't affect grades (0/0 for all students)
                                 </div>
                             </div>
+                            
+                            <div class="col-12 col-md-6">
+                                <label for="assignment_context" class="form-label fw-semibold">
+                                    <i class="bi bi-bookmark me-1 text-primary"></i>Assignment Context <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select form-select-lg" id="assignment_context" name="assignment_context" required>
+                                    <option value="homework" {% if context != 'in-class' %}selected{% endif %}>Homework</option>
+                                    <option value="in-class" {% if context == 'in-class' %}selected{% endif %}>IN-Class</option>
+                                </select>
+                                <div class="form-text">
+                                    <strong>Homework:</strong> Assignment to be completed outside of class<br>
+                                    <strong>IN-Class:</strong> Assignment to be completed during class time
+                                </div>
+                            </div>
                         </div>
                                 </div>
                             </div>

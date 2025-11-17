@@ -281,6 +281,9 @@ def save_group_assignment(class_id):
         
         # Create group assignment
         teacher = get_teacher_or_admin()
+        # Get assignment context from form or query parameter
+        assignment_context = request.form.get('assignment_context', 'homework')
+        
         new_assignment = GroupAssignment(
             title=title,
             description=description,
@@ -289,6 +292,7 @@ def save_group_assignment(class_id):
             quarter=quarter,
             school_year_id=current_year.id,
             assignment_type='pdf',
+            assignment_context=assignment_context,
             selected_group_ids=json.dumps(selected_groups),  # Store as JSON
             status='Active'
         )

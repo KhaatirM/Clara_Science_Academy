@@ -57,6 +57,9 @@ def add_assignment():
                 flash("You are not authorized to create assignments for this class.", "danger")
                 return redirect(url_for('teacher.assignments.add_assignment'))
             
+            # Get assignment context from form or query parameter
+            assignment_context = request.form.get('assignment_context', 'homework')
+            
             # Create the assignment (removed 'points' field - doesn't exist in model)
             new_assignment = Assignment(
                 title=title,
@@ -66,7 +69,8 @@ def add_assignment():
                 class_id=class_id,
                 school_year_id=current_school_year.id,
                 assignment_type='pdf_paper',
-                status='Active'
+                status='Active',
+                assignment_context=assignment_context
             )
             
             db.session.add(new_assignment)
@@ -161,6 +165,9 @@ def add_assignment_for_class(class_id):
                 flash("Cannot create assignment: No active school year.", "danger")
                 return redirect(url_for('teacher.assignments.add_assignment_for_class', class_id=class_id))
             
+            # Get assignment context from form or query parameter
+            assignment_context = request.form.get('assignment_context', 'homework')
+            
             # Create the assignment (removed 'points' and 'created_by' - don't exist in model)
             new_assignment = Assignment(
                 title=title,
@@ -170,7 +177,8 @@ def add_assignment_for_class(class_id):
                 class_id=class_id,
                 school_year_id=current_school_year.id,
                 assignment_type='pdf_paper',
-                status='Active'
+                status='Active',
+                assignment_context=assignment_context
             )
             
             db.session.add(new_assignment)

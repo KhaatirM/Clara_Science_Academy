@@ -458,6 +458,9 @@ def create_quiz_assignment():
             max_save_attempts = int(request.form.get('max_save_attempts', 10))
             save_timeout_minutes = int(request.form.get('save_timeout_minutes', 30))
             
+            # Get assignment context from form or query parameter
+            assignment_context = request.form.get('assignment_context', request.args.get('context', 'homework'))
+            
             # Create the assignment
             new_assignment = Assignment(
                 title=title,
@@ -468,6 +471,7 @@ def create_quiz_assignment():
                 school_year_id=current_school_year.id,
                 status='Active',
                 assignment_type='quiz',
+                assignment_context=assignment_context,
                 allow_save_and_continue=allow_save_and_continue,
                 max_save_attempts=max_save_attempts,
                 save_timeout_minutes=save_timeout_minutes
@@ -703,6 +707,9 @@ def add_assignment(class_id):
         # Type assertion for quarter
         assert quarter is not None
         
+        # Get assignment context from form or query parameter
+        assignment_context = request.form.get('assignment_context', request.args.get('context', 'homework'))
+        
         # Create assignment using attribute assignment
         new_assignment = Assignment()
         new_assignment.title = title
@@ -712,6 +719,7 @@ def add_assignment(class_id):
         new_assignment.school_year_id = current_school_year.id
         new_assignment.quarter = str(quarter)  # Store as string to match model definition
         new_assignment.status = status
+        new_assignment.assignment_context = assignment_context
         
         # Handle file upload
         if 'assignment_file' in request.files:
@@ -830,6 +838,7 @@ def add_assignment_enhanced(class_id):
                 new_assignment.quarter = str(quarter)
                 new_assignment.status = status
                 new_assignment.assignment_type = 'pdf_paper'
+                new_assignment.assignment_context = assignment_context
                 new_assignment.collaboration_type = request.form.get('collaboration_type', 'group')
                 new_assignment.group_size_min = int(request.form.get('group_size_min', 2))
                 

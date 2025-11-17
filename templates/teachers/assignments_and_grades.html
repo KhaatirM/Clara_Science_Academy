@@ -136,6 +136,13 @@
                     </div>
                     <div class="assignment-card-body">
                         <h6 class="assignment-title">{{ assignment.title }}</h6>
+                        <div class="mb-2">
+                            {% if assignment.assignment_context == 'in-class' %}
+                                <span class="badge bg-primary"><i class="bi bi-building me-1"></i>IN-Class</span>
+                            {% else %}
+                                <span class="badge bg-secondary"><i class="bi bi-house me-1"></i>Homework</span>
+                            {% endif %}
+                        </div>
                         <p class="assignment-description">{{ assignment.description[:100] if assignment.description else 'No description' }}{% if assignment.description and assignment.description|length > 100 %}...{% endif %}</p>
                         <div class="assignment-details">
                             <div class="detail-item">
@@ -196,6 +203,13 @@
                     </div>
                     <div class="assignment-card-body">
                         <h6 class="assignment-title">{{ group_assignment.title }}</h6>
+                        <div class="mb-2">
+                            {% if group_assignment.assignment_context == 'in-class' %}
+                                <span class="badge bg-primary"><i class="bi bi-building me-1"></i>IN-Class</span>
+                            {% else %}
+                                <span class="badge bg-secondary"><i class="bi bi-house me-1"></i>Homework</span>
+                            {% endif %}
+                        </div>
                         <p class="assignment-description">{{ group_assignment.description[:100] if group_assignment.description else 'No description' }}{% if group_assignment.description and group_assignment.description|length > 100 %}...{% endif %}</p>
                         <div class="assignment-details">
                             <div class="detail-item">

@@ -493,6 +493,9 @@ class Assignment(db.Model):
     # Assignment type: pdf, quiz, discussion
     assignment_type = db.Column(db.String(20), default='pdf', nullable=False)
     
+    # Assignment context: homework, in-class
+    assignment_context = db.Column(db.String(20), default='homework', nullable=False)
+    
     # Quiz save and continue settings
     allow_save_and_continue = db.Column(db.Boolean, default=False, nullable=False)
     max_save_attempts = db.Column(db.Integer, default=10, nullable=False)
@@ -1198,6 +1201,9 @@ class GroupAssignment(db.Model):
     
     # Assignment type: pdf, quiz, discussion
     assignment_type = db.Column(db.String(20), default='pdf', nullable=False)
+    
+    # Assignment context: homework, in-class
+    assignment_context = db.Column(db.String(20), default='homework', nullable=False)
     
     # Quiz save and continue settings (for quiz type)
     allow_save_and_continue = db.Column(db.Boolean, default=False, nullable=False)

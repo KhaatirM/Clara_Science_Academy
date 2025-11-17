@@ -173,7 +173,9 @@ def class_analytics(class_id):
             'student': student,
             'average': round(avg, 1),
             'submissions': submissions,
-            'completion': round((submissions / non_voided_assignment_count * 100) if non_voided_assignment_count > 0 else 0, 1)
+            'total_assignments': non_voided_assignment_count,  # Total non-voided assignments for this student
+            'completion': round((submissions / non_voided_assignment_count * 100) if non_voided_assignment_count > 0 else 0, 1),
+            'has_voided_all': non_voided_assignment_count == 0  # Flag to show N/A
         })
     
     # Sort by average grade

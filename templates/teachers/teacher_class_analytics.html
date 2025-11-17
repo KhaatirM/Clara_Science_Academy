@@ -209,10 +209,18 @@
                                 </div>
                             </div>
                             <div class="perf-submissions">
-                                <span class="submission-text">{{ stat.submissions }}/{{ total_assignments }}</span>
+                                <span class="submission-text">{{ stat.submissions }}/{{ stat.total_assignments }}</span>
                                 <small class="text-muted">submissions</small>
                             </div>
                             <div class="perf-completion">
+                                {% if stat.has_voided_all %}
+                                <div class="completion-circle completion-na">
+                                    <svg width="60" height="60">
+                                        <circle class="completion-bg" cx="30" cy="30" r="25"></circle>
+                                    </svg>
+                                    <div class="completion-text">N/A</div>
+                                </div>
+                                {% else %}
                                 <div class="completion-circle" style="--completion: {{ stat.completion }}">
                                     <svg width="60" height="60">
                                         <circle class="completion-bg" cx="30" cy="30" r="25"></circle>
@@ -221,6 +229,7 @@
                                     </svg>
                                     <div class="completion-text">{{ stat.completion|round }}%</div>
                                 </div>
+                                {% endif %}
                             </div>
                             <div class="perf-indicator">
                                 {% if stat.average >= 90 %}

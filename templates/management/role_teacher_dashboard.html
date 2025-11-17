@@ -134,7 +134,7 @@
                             </div>
                             <span>My Classes</span>
                         </a>
-                        <a href="{{ url_for('teacher.dashboard.my_assignments') }}" class="home-quick-action home-qa-assignments">
+                        <a href="{{ url_for('teacher.dashboard.assignments_and_grades') }}" class="home-quick-action home-qa-assignments">
                             <div class="home-qa-icon">
                                 <i class="bi bi-journal-check"></i>
                             </div>
@@ -152,7 +152,7 @@
                             </div>
                             <span>Attendance</span>
                         </a>
-                        <a href="{{ url_for('teacher.dashboard.my_classes') }}" class="home-quick-action home-qa-reports" onclick="sessionStorage.setItem('quickActionIntent', 'analytics'); return true;">
+                        <a href="{{ url_for('teacher.dashboard.my_classes') }}" class="home-quick-action home-qa-reports">
                             <div class="home-qa-icon">
                                 <i class="bi bi-graph-up"></i>
                             </div>

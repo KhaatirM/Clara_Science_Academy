@@ -515,9 +515,27 @@
     font-weight: 700;
     color: #2d3748;
     font-size: 0.85rem;
-    padding: 0.25rem;
-    min-width: 45px;
+    padding: 0.5rem;
+    min-width: 50px;
     text-align: center;
+    background: white;
+    border-radius: 50%;
+    z-index: 10;
+    line-height: 1.2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.completion-circle.completion-na .completion-text {
+    color: #718096;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.completion-circle.completion-na .completion-bg {
+    stroke: #e2e8f0;
+    opacity: 0.5;
 }
 
 .perf-indicator {

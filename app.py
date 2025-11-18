@@ -364,7 +364,7 @@ def run_production_database_fix():
             SELECT column_name 
             FROM information_schema.columns 
             WHERE table_name = 'assignment' 
-            AND column_name IN ('allow_save_and_continue', 'max_save_attempts', 'save_timeout_minutes')
+            AND column_name IN ('allow_save_and_continue', 'max_save_attempts', 'save_timeout_minutes', 'created_by')
         """)
         
         existing_columns = [row[0] for row in cursor.fetchall()]
@@ -380,6 +380,9 @@ def run_production_database_fix():
             
         if 'save_timeout_minutes' not in existing_columns:
             columns_to_add.append("save_timeout_minutes INTEGER DEFAULT 30")
+            
+        if 'created_by' not in existing_columns:
+            columns_to_add.append("created_by INTEGER")
         
         if not columns_to_add:
             print("All required columns already exist")

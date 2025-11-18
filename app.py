@@ -359,7 +359,7 @@ def run_production_database_fix():
         conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cursor = conn.cursor()
         
-        # Check if columns already exist
+        # Check if columns already exist for assignment table
         cursor.execute("""
             SELECT column_name 
             FROM information_schema.columns 
@@ -369,7 +369,7 @@ def run_production_database_fix():
         
         existing_columns = [row[0] for row in cursor.fetchall()]
         
-        # Add missing columns
+        # Add missing columns to assignment table
         columns_to_add = []
         
         if 'allow_save_and_continue' not in existing_columns:
@@ -384,18 +384,27 @@ def run_production_database_fix():
         if 'created_by' not in existing_columns:
             columns_to_add.append("created_by INTEGER")
         
-        if not columns_to_add:
-            print("All required columns already exist")
-            cursor.close()
-            conn.close()
-            return
-        
-        # Add missing columns
+        # Add missing columns to assignment table
         for column_def in columns_to_add:
             column_name = column_def.split()[0]
-            print(f"Adding column: {column_name}")
+            print(f"Adding column to assignment table: {column_name}")
             cursor.execute(f"ALTER TABLE assignment ADD COLUMN {column_def}")
             print(f"Added column: {column_name}")
+        
+        # Check if created_by column exists for group_assignment table
+        cursor.execute("""
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'group_assignment' 
+            AND column_name = 'created_by'
+        """)
+        
+        group_existing = [row[0] for row in cursor.fetchall()]
+        
+        if 'created_by' not in group_existing:
+            print("Adding column to group_assignment table: created_by")
+            cursor.execute("ALTER TABLE group_assignment ADD COLUMN created_by INTEGER")
+            print("Added column: created_by")
         
         cursor.close()
         conn.close()

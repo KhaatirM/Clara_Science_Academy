@@ -262,7 +262,8 @@
                             </div>
                             <div class="card-body">
                                 <div class="mb-2">
-                                    {% if assignment.assignment_context and (assignment.assignment_context.lower() == 'in-class' or assignment.assignment_context.lower() == 'in_class') %}
+                                    {% set context_lower = assignment.assignment_context.lower() if assignment.assignment_context else '' %}
+                                    {% if context_lower and ('in-class' in context_lower or 'in_class' in context_lower or 'inclass' in context_lower) %}
                                         <span class="badge bg-primary"><i class="bi bi-building me-1"></i>IN-Class</span>
                                     {% else %}
                                         <span class="badge bg-secondary"><i class="bi bi-house me-1"></i>Homework</span>
@@ -282,10 +283,8 @@
                                         <i class="bi bi-person me-1"></i>
                                         {% if assignment.creator %}
                                             {{ assignment.creator.first_name }} {{ assignment.creator.last_name }}
-                                        {% elif assignment.class_info.teacher %}
-                                            {{ assignment.class_info.teacher.first_name }} {{ assignment.class_info.teacher.last_name }}
                                         {% else %}
-                                            N/A
+                                            Unknown
                                         {% endif %}
                                     </small>
                                 </div>
@@ -325,7 +324,8 @@
                                 </div>
                                 <div class="card-body">
                                     <div class="mb-2">
-                                        {% if group_assignment.assignment_context and (group_assignment.assignment_context.lower() == 'in-class' or group_assignment.assignment_context.lower() == 'in_class') %}
+                                        {% set context_lower = group_assignment.assignment_context.lower() if group_assignment.assignment_context else '' %}
+                                        {% if context_lower and ('in-class' in context_lower or 'in_class' in context_lower or 'inclass' in context_lower) %}
                                             <span class="badge bg-primary"><i class="bi bi-building me-1"></i>IN-Class</span>
                                         {% else %}
                                             <span class="badge bg-secondary"><i class="bi bi-house me-1"></i>Homework</span>
@@ -347,6 +347,16 @@
                                         <small class="text-muted">
                                             <i class="bi bi-people me-1"></i>
                                             Group Size: {{ group_assignment.group_size_min }}-{{ group_assignment.group_size_max }}
+                                        </small>
+                                    </div>
+                                    <div class="mb-2">
+                                        <small class="text-muted">
+                                            <i class="bi bi-person me-1"></i>
+                                            {% if group_assignment.creator %}
+                                                {{ group_assignment.creator.first_name }} {{ group_assignment.creator.last_name }}
+                                            {% else %}
+                                                Unknown
+                                            {% endif %}
                                         </small>
                                     </div>
                                 </div>

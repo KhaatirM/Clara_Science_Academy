@@ -294,6 +294,7 @@ def save_group_assignment(class_id):
             assignment_type='pdf',
             assignment_context=assignment_context,
             selected_group_ids=json.dumps(selected_groups),  # Store as JSON
+            created_by=current_user.id,
             status='Active'
         )
         db.session.add(new_assignment)

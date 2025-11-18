@@ -9159,6 +9159,7 @@ def admin_create_group_pdf_assignment(class_id):
             allow_individual=allow_individual,
             collaboration_type=collaboration_type,
             selected_group_ids=selected_group_ids,
+            created_by=current_user.id,
             attachment_filename=attachment_filename,
             attachment_original_filename=attachment_original_filename,
             attachment_file_path=attachment_file_path,
@@ -9252,6 +9253,7 @@ def admin_create_group_quiz_assignment(class_id):
             allow_individual=allow_individual,
             collaboration_type=collaboration_type,
             selected_group_ids=selected_group_ids,
+            created_by=current_user.id,
             allow_save_and_continue=allow_save_and_continue,
             max_save_attempts=10,
             save_timeout_minutes=30,
@@ -9389,6 +9391,7 @@ def admin_create_group_discussion_assignment(class_id):
             allow_individual=allow_individual,
             collaboration_type=collaboration_type,
             selected_group_ids=selected_group_ids,
+            created_by=current_user.id,
             status='Active'
         )
         

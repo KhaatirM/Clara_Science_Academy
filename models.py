@@ -1197,6 +1197,7 @@ class GroupAssignment(db.Model):
     school_year_id = db.Column(db.Integer, db.ForeignKey('school_year.id'), nullable=False)
     is_locked = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     
     # Assignment status: Active, Inactive, Voided
     status = db.Column(db.String(20), default='Active', nullable=False)
@@ -1231,6 +1232,7 @@ class GroupAssignment(db.Model):
     school_year = db.relationship('SchoolYear', backref='group_assignments')
     academic_period = db.relationship('AcademicPeriod', backref='group_assignments')
     quiz_questions = db.relationship('GroupQuizQuestion', backref='group_assignment', lazy=True, cascade='all, delete-orphan')
+    creator = db.relationship('User', backref='created_group_assignments', lazy=True)
     
     def __repr__(self):
         return f"GroupAssignment('{self.title}', Class: {self.class_id})"

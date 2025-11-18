@@ -842,6 +842,7 @@ def add_assignment_enhanced(class_id):
                 new_assignment.status = status
                 new_assignment.assignment_type = 'pdf_paper'
                 new_assignment.assignment_context = assignment_context
+                new_assignment.created_by = current_user.id
                 new_assignment.collaboration_type = request.form.get('collaboration_type', 'group')
                 new_assignment.group_size_min = int(request.form.get('group_size_min', 2))
                 
@@ -3913,6 +3914,7 @@ def create_group_assignment(class_id):
             allow_individual=allow_individual,
             collaboration_type=collaboration_type,
             selected_group_ids=selected_group_ids,
+            created_by=current_user.id,
             attachment_filename=attachment_filename,
             attachment_original_filename=attachment_original_filename,
             attachment_file_path=attachment_file_path,
@@ -4042,6 +4044,7 @@ def create_group_pdf_assignment(class_id):
             group_size_max=int(group_size_max),
             allow_individual=allow_individual,
             collaboration_type=collaboration_type,
+            created_by=current_user.id,
             attachment_filename=attachment_filename,
             attachment_original_filename=attachment_original_filename,
             attachment_file_path=attachment_file_path,
@@ -4137,6 +4140,7 @@ def create_group_quiz_assignment(class_id):
             allow_individual=allow_individual,
             collaboration_type=collaboration_type,
             selected_group_ids=selected_group_ids,
+            created_by=current_user.id,
             allow_save_and_continue=allow_save_and_continue,
             max_save_attempts=10,
             save_timeout_minutes=30
@@ -4275,7 +4279,8 @@ def create_group_discussion_assignment(class_id):
             group_size_max=int(group_size_max),
             allow_individual=allow_individual,
             collaboration_type=collaboration_type,
-            selected_group_ids=selected_group_ids
+            selected_group_ids=selected_group_ids,
+            created_by=current_user.id
         )
         
         db.session.add(group_assignment)

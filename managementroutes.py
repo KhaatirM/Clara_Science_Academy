@@ -6546,8 +6546,19 @@ def grant_extensions():
         if current_user.role not in ['Director', 'School Administrator']:
             return jsonify({'success': False, 'message': 'You are not authorized to grant extensions.'})
         
-        # Get the current user (who is granting the extensions)
-        granter_id = current_user.id
+        # Get the teacher_staff_id for granted_by field
+        # Try to get from current_user, otherwise use class teacher
+        granter_id = None
+        if current_user.teacher_staff_id:
+            granter_id = current_user.teacher_staff_id
+        else:
+            # Use the class teacher as fallback for admin granting
+            class_obj = assignment.class_info
+            if class_obj and class_obj.teacher_id:
+                granter_id = class_obj.teacher_id
+        
+        if not granter_id:
+            return jsonify({'success': False, 'message': 'Cannot grant extensions: No teacher found for assignment.'})
         
         granted_count = 0
         

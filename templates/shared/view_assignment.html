@@ -408,9 +408,11 @@
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" action="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.grant_extensions') }}{% else %}{{ url_for('teacher.assignments.grant_extensions') }}{% endif %}">
+            <form method="POST" id="extensionForm" onsubmit="handleExtensionSubmit(event)">
                 <div class="modal-body modal-body-enhanced">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     <input type="hidden" name="assignment_id" value="{{ assignment.id }}">
+                    <input type="hidden" name="class_id" value="{{ assignment.class_id }}">
                     
                     <div class="alert-modern alert-extension">
                         <div class="alert-icon">
@@ -476,7 +478,7 @@
                     <button type="button" class="btn btn-cancel" data-bs-dismiss="modal">
                         <i class="bi bi-x-circle me-2"></i>Cancel
                     </button>
-                    <button type="submit" class="btn btn-extension">
+                    <button type="submit" class="btn btn-extension" id="grantExtensionsBtn">
                         <i class="bi bi-check-circle me-2"></i>Grant Extensions
                     </button>
                 </div>
@@ -486,6 +488,75 @@
 </div>
 
 <script>
+function handleExtensionSubmit(event) {
+    event.preventDefault();
+    const form = event.target;
+    const formData = new FormData(form);
+    
+    // Get selected students
+    const selectedStudents = Array.from(document.querySelectorAll('.student-checkbox:checked')).map(cb => cb.value);
+    
+    if (selectedStudents.length === 0) {
+        alert('Please select at least one student.');
+        return;
+    }
+    
+    // Add selected students to form data
+    selectedStudents.forEach(studentId => {
+        formData.append('student_ids', studentId);
+    });
+    
+    // Show loading state
+    const grantBtn = document.getElementById('grantExtensionsBtn');
+    const originalBtnText = grantBtn.innerHTML;
+    grantBtn.disabled = true;
+    grantBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Granting...';
+    
+    // Determine the URL based on user role
+    {% if current_user.role in ['Director', 'School Administrator'] %}
+        const extensionUrl = '{{ url_for("management.grant_extensions") }}';
+    {% else %}
+        const extensionUrl = '{{ url_for("teacher.assignments.grant_extensions") }}';
+    {% endif %}
+    
+    fetch(extensionUrl, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+    })
+    .then(response => {
+        if (response.ok) {
+            return response.json();
+        }
+        throw new Error('Network response was not ok');
+    })
+    .then(data => {
+        if (data.success) {
+            alert(data.message || `Successfully granted extensions to ${data.granted_count || selectedStudents.length} student(s).`);
+            // Close the modal
+            bootstrap.Modal.getInstance(document.getElementById('extensionModal')).hide();
+            // Reload the page to show updated extension info
+            setTimeout(() => {
+                location.reload();
+            }, 500);
+        } else {
+            alert('Error granting extensions: ' + (data.message || 'Unknown error'));
+            // Reset button state
+            grantBtn.disabled = false;
+            grantBtn.innerHTML = originalBtnText;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error granting extensions. Please try again.');
+        // Reset button state
+        grantBtn.disabled = false;
+        grantBtn.innerHTML = originalBtnText;
+    });
+}
+
 function toggleAllStudents(source) {
     const checkboxes = document.querySelectorAll('.student-checkbox');
     checkboxes.forEach(checkbox => {

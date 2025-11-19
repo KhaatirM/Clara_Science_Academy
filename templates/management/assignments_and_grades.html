@@ -256,9 +256,22 @@
                         <div class="card h-100 shadow-sm assignment-card">
                             <div class="card-header d-flex justify-content-between align-items-center">
                                 <h6 class="mb-0">{{ assignment.title }}</h6>
-                                <span class="badge bg-{% if assignment.status == 'Active' %}success{% elif assignment.status == 'Inactive' %}warning{% else %}danger{% endif %}">
-                                    {{ assignment.status }}
-                                </span>
+                                {% set grade_info = assignment_grades.get(assignment.id, {}) %}
+                                {% set has_grades = grade_info.get('graded_count', 0) > 0 %}
+                                {% set is_past_due = assignment.due_date.date() < today %}
+                                {% if has_grades %}
+                                    <span class="badge bg-info">
+                                        <i class="bi bi-check-circle me-1"></i>Graded
+                                    </span>
+                                {% elif assignment.status == 'Active' or (assignment.status != 'Inactive' and not is_past_due) %}
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-check-circle me-1"></i>Active
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-warning">
+                                        <i class="bi bi-pause-circle me-1"></i>Inactive
+                                    </span>
+                                {% endif %}
                             </div>
                             <div class="card-body">
                                 <div class="mb-2">
@@ -286,7 +299,16 @@
                                     <small class="text-muted">
                                         <i class="bi bi-person me-1"></i>
                                         {% if assignment.creator %}
-                                            {{ assignment.creator.first_name }} {{ assignment.creator.last_name }}
+                                            {% if assignment.creator.teacher_staff_id %}
+                                                {% set teacher_staff = assignment.creator.teacher_staff_profile %}
+                                                {% if teacher_staff %}
+                                                    {{ teacher_staff.first_name }} {{ teacher_staff.last_name }}
+                                                {% else %}
+                                                    {{ assignment.creator.username }}
+                                                {% endif %}
+                                            {% else %}
+                                                {{ assignment.creator.username }}
+                                            {% endif %}
                                         {% elif assignment.class_info and assignment.class_info.teacher %}
                                             {{ assignment.class_info.teacher.first_name }} {{ assignment.class_info.teacher.last_name }}
                                         {% else %}

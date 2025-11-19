@@ -3012,6 +3012,9 @@ def create_quiz_assignment():
             max_save_attempts = int(request.form.get('max_save_attempts', 10))
             save_timeout_minutes = int(request.form.get('save_timeout_minutes', 30))
             
+            # Get assignment context from form or query parameter
+            assignment_context = request.form.get('assignment_context', 'homework')
+            
             # Create the assignment
             new_assignment = Assignment(
                 title=title,
@@ -3025,6 +3028,7 @@ def create_quiz_assignment():
                 allow_save_and_continue=allow_save_and_continue,
                 max_save_attempts=max_save_attempts,
                 save_timeout_minutes=save_timeout_minutes,
+                assignment_context=assignment_context,
                 created_by=current_user.id
             )
             
@@ -3111,6 +3115,9 @@ def create_discussion_assignment():
                 flash("Cannot create assignment: No active school year.", "danger")
                 return redirect(url_for('management.create_discussion_assignment'))
             
+            # Get assignment context from form or query parameter
+            assignment_context = request.form.get('assignment_context', 'homework')
+            
             # Create the assignment
             new_assignment = Assignment(
                 title=title,
@@ -3121,6 +3128,7 @@ def create_discussion_assignment():
                 school_year_id=current_school_year.id,
                 status='Active',
                 assignment_type='discussion',
+                assignment_context=assignment_context,
                 created_by=current_user.id
             )
             
@@ -3409,6 +3417,7 @@ def assignments_and_grades():
         except:
             group_assignments = []
         
+        from datetime import date
         return render_template('management/assignments_and_grades.html',
                              accessible_classes=accessible_classes,
                              class_data=class_data,
@@ -3421,7 +3430,8 @@ def assignments_and_grades():
                              sort_order=sort_order,
                              view_mode=view_mode,
                              user_role=user_role,
-                             show_class_selection=False)
+                             show_class_selection=False,
+                             today=date.today())
     
     except Exception as e:
         print(f"Error in assignments_and_grades: {e}")
@@ -9143,6 +9153,9 @@ def admin_create_group_pdf_assignment(class_id):
         if group_selection == 'specific' and selected_groups:
             selected_group_ids = json.dumps([int(group_id) for group_id in selected_groups])
         
+        # Get assignment context from form or query parameter
+        assignment_context = request.form.get('assignment_context', 'homework')
+        
         # Create the group assignment
         group_assignment = GroupAssignment(
             title=title,
@@ -9159,6 +9172,7 @@ def admin_create_group_pdf_assignment(class_id):
             allow_individual=allow_individual,
             collaboration_type=collaboration_type,
             selected_group_ids=selected_group_ids,
+            assignment_context=assignment_context,
             created_by=current_user.id,
             attachment_filename=attachment_filename,
             attachment_original_filename=attachment_original_filename,
@@ -9237,6 +9251,9 @@ def admin_create_group_quiz_assignment(class_id):
                                  academic_periods=academic_periods,
                                  admin_view=True)
         
+        # Get assignment context from form or query parameter
+        assignment_context = request.form.get('assignment_context', 'homework')
+        
         # Create the group assignment
         group_assignment = GroupAssignment(
             title=title,
@@ -9253,6 +9270,7 @@ def admin_create_group_quiz_assignment(class_id):
             allow_individual=allow_individual,
             collaboration_type=collaboration_type,
             selected_group_ids=selected_group_ids,
+            assignment_context=assignment_context,
             created_by=current_user.id,
             allow_save_and_continue=allow_save_and_continue,
             max_save_attempts=10,
@@ -9375,6 +9393,9 @@ def admin_create_group_discussion_assignment(class_id):
                                  academic_periods=academic_periods,
                                  admin_view=True)
         
+        # Get assignment context from form or query parameter
+        assignment_context = request.form.get('assignment_context', 'homework')
+        
         # Create the group assignment
         group_assignment = GroupAssignment(
             title=title,
@@ -9391,6 +9412,7 @@ def admin_create_group_discussion_assignment(class_id):
             allow_individual=allow_individual,
             collaboration_type=collaboration_type,
             selected_group_ids=selected_group_ids,
+            assignment_context=assignment_context,
             created_by=current_user.id,
             status='Active'
         )

@@ -9680,9 +9680,8 @@ def admin_grade_group_assignment(assignment_id):
                                             db.session.add(new_grade)
                                         
                                         saved_count += 1
-                                        
-                                    except ValueError:
-                                        flash(f'Invalid score for {member.student.first_name} {member.student.last_name}', 'warning')
+                                except ValueError:
+                                    flash(f'Invalid score for {member.student.first_name} {member.student.last_name}', 'warning')
                 
                 db.session.commit()
                 

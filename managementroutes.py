@@ -5900,7 +5900,27 @@ def remove_assignment_alt(assignment_id):
 @management_required
 def remove_assignment(assignment_id):
     """Remove an assignment"""
-    assignment = Assignment.query.get_or_404(assignment_id)
+    assignment = Assignment.query.get(assignment_id)
+    
+    # If assignment doesn't exist, it's already been deleted - return success
+    if not assignment:
+        # Check if this is an AJAX/fetch request
+        wants_json = request.accept_mimetypes.accept_json or \
+                    request.headers.get('X-Requested-With') == 'XMLHttpRequest' or \
+                    'application/json' in request.headers.get('Accept', '')
+        
+        if wants_json:
+            return jsonify({
+                'success': True,
+                'message': 'Assignment already removed.'
+            })
+        
+        flash('Assignment already removed.', 'info')
+        class_id_param = request.args.get('class_id')
+        if class_id_param:
+            return redirect(url_for('management.assignments_and_grades', class_id=class_id_param))
+        else:
+            return redirect(url_for('management.assignments_and_grades'))
     
     # Authorization check - Directors and School Administrators can remove any assignment
     if current_user.role not in ['Director', 'School Administrator']:

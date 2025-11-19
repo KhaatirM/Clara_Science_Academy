@@ -5497,8 +5497,9 @@ def add_assignment():
         due_date_str = request.form.get('due_date')
         quarter = request.form.get('quarter')
         status = request.form.get('status', 'Active')
+        assignment_context = request.form.get('assignment_context', 'homework')
         
-        print(f"DEBUG: Parsed - title={title}, class_id={class_id}, due_date={due_date_str}, quarter={quarter}, status={status}")
+        print(f"DEBUG: Parsed - title={title}, class_id={class_id}, due_date={due_date_str}, quarter={quarter}, status={status}, assignment_context={assignment_context}")
         
         if not all([title, class_id, due_date_str, quarter]):
             print(f"DEBUG: Validation failed - title={title!r}, class_id={class_id!r}, due_date_str={due_date_str!r}, quarter={quarter!r}")
@@ -5534,6 +5535,8 @@ def add_assignment():
         new_assignment.school_year_id = current_school_year.id
         new_assignment.quarter = str(quarter)
         new_assignment.status = status
+        new_assignment.assignment_context = assignment_context
+        new_assignment.assignment_type = 'pdf_paper'  # Set assignment type for PDF/Paper assignments
         new_assignment.created_by = current_user.id
         
         # Handle file upload
@@ -5582,7 +5585,9 @@ def add_assignment():
     # For GET request, get all classes for the dropdown and current quarter
     classes = Class.query.all()
     current_quarter = get_current_quarter()
-    return render_template('shared/add_assignment.html', classes=classes, current_quarter=current_quarter)
+    # Get assignment context from query parameter (in-class or homework)
+    context = request.args.get('context', 'homework')
+    return render_template('shared/add_assignment.html', classes=classes, current_quarter=current_quarter, context=context)
 
 
 @management_blueprint.route('/grade/assignment/<int:assignment_id>', methods=['GET', 'POST'])

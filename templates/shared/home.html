@@ -687,13 +687,58 @@
                     </div>
                     <div>
                         <h6 class="updates-intro-title mb-2">
-                            <i class="fas fa-calendar-alt me-2"></i>Latest System Update - November 16, 2025
+                            <i class="fas fa-calendar-alt me-2"></i>Latest System Update - November 18, 2025
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>Major Enhancement Release!</strong> Enhanced analytics with voided assignment handling, new assignment context badges (IN-Class/Homework), improved percentage displays, and comprehensive system improvements!</p>
+                        <p class="updates-intro-text mb-0"><strong>Major Enhancement Release!</strong> Redesigned grading interfaces, improved assignment management, extension reminders, creator tracking, and comprehensive UI/UX improvements across the platform!</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- November 18, 2025 - Grading & Assignment Management Updates -->
+                    <div class="update-section mb-4">
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-graduation-cap me-2"></i>🎓 Grading & Assignment Management - November 18, 2025
+                        </h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Group Assignment Grading Redesign:</strong> Completely redesigned group assignment grading page to match individual assignment grading style. Added statistics bar, extension reminders, grade distribution, letter grade quick buttons, and modern student cards organized by group
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Extension Reminders on Grading Page:</strong> Added visible notification banner on both individual and group assignment grading pages showing which students have been granted extensions, including extended due dates and reasons
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Assignment Creator Tracking:</strong> Assignments now display the name of the person who created them (School Administrators, Directors, or Teachers) instead of always showing the class teacher. Added creator tracking for all new assignments
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Streamlined Assignment Card Actions:</strong> Removed unnecessary buttons from assignment cards in Assignments & Grades tab. Now only shows "View Assignment" and "View Class" buttons for cleaner interface
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>In-Class/Homework Badge Fixes:</strong> Fixed badge display logic to correctly identify and display "IN-Class" vs "Homework" badges for all assignments. Badges now appear on both teacher and administrator assignment views
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Assignment Status Badge Logic:</strong> Updated status badges to show only "Graded", "Active", or "Inactive" based on actual assignment state. "Graded" appears when any grades have been entered, regardless of completion status
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Assignment Deletion Improvements:</strong> Fixed 404 errors when deleting assignments. Now handles already-deleted assignments gracefully and provides proper feedback via AJAX
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Extension Granting Fixes:</strong> Fixed "Missing required fields" error when granting extensions. Added proper AJAX form submission, class_id field, and improved error handling
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Grading Statistics Updates:</strong> Fixed statistics (Submitted, Graded, Pending, Average) to update in real-time on grading pages after saving grades
+                            </li>
+                        </ul>
+                    </div>
+
                     <!-- November 8, 2025 - Critical Bug Fixes & New Features -->
                     <div class="update-section mb-4">
                         <h6 class="text-danger mb-3">

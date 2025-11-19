@@ -9567,6 +9567,15 @@ def admin_grade_group_assignment(assignment_id):
             # If no specific groups selected, get all groups
             groups = StudentGroup.query.filter_by(class_id=group_assignment.class_id, is_active=True).all()
         
+        # Collect all students from all groups
+        all_students = []
+        students_by_id = {}
+        for group in groups:
+            for member in group.members:
+                if member.student and member.student.id not in students_by_id:
+                    all_students.append(member.student)
+                    students_by_id[member.student.id] = member.student
+        
         # Get existing grades
         grades_by_student = {}
         try:
@@ -9576,15 +9585,30 @@ def admin_grade_group_assignment(assignment_id):
                     try:
                         grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
                         # Add comments from the separate field
+                        grade_data['comment'] = grade.comments or ''
                         grade_data['comments'] = grade.comments or ''
                         grades_by_student[grade.student_id] = grade_data
                     except:
-                        grades_by_student[grade.student_id] = {'score': '', 'comments': ''}
+                        grades_by_student[grade.student_id] = {'score': 0, 'comments': '', 'comment': ''}
         except:
             pass
         
+        # Get active extensions for this assignment
+        extensions = AssignmentExtension.query.filter_by(
+            assignment_id=assignment_id,
+            is_active=True
+        ).all()
+        extensions_dict = {ext.student_id: ext for ext in extensions}
+        
+        # Calculate statistics
+        total_students = len(all_students)
+        graded_count = len([g for g in grades_by_student.values() if g.get('score', 0) > 0])
+        total_score = sum([g.get('score', 0) for g in grades_by_student.values() if g.get('score', 0) > 0])
+        average_score = (total_score / graded_count) if graded_count > 0 else 0
+        
         if request.method == 'POST':
             try:
+                saved_count = 0
                 for group in groups:
                     for member in group.members:
                         student_id = member.student.id
@@ -9655,13 +9679,27 @@ def admin_grade_group_assignment(assignment_id):
                                             )
                                             db.session.add(new_grade)
                                         
-                                        db.session.commit()
+                                        saved_count += 1
                                         
-                                except ValueError:
-                                    flash(f'Invalid score for {member.student.first_name} {member.student.last_name}', 'warning')
+                                    except ValueError:
+                                        flash(f'Invalid score for {member.student.first_name} {member.student.last_name}', 'warning')
+                
+                db.session.commit()
+                
+                # Check if this is an AJAX request
+                wants_json = request.accept_mimetypes.accept_json or \
+                            request.headers.get('X-Requested-With') == 'XMLHttpRequest' or \
+                            'application/json' in request.headers.get('Accept', '')
+                
+                if wants_json:
+                    return jsonify({
+                        'success': True,
+                        'message': 'Grades saved successfully!',
+                        'graded_count': saved_count
+                    })
                 
                 flash('Grades saved successfully!', 'success')
-                return redirect(url_for('management.admin_class_group_assignments', class_id=group_assignment.class_id))
+                return redirect(url_for('management.admin_grade_group_assignment', assignment_id=assignment_id))
                 
             except Exception as e:
                 db.session.rollback()
@@ -9670,8 +9708,15 @@ def admin_grade_group_assignment(assignment_id):
         
         return render_template('management/admin_grade_group_assignment.html',
                              group_assignment=group_assignment,
+                             class_obj=group_assignment.class_info,
                              groups=groups,
-                             grades_by_student=grades_by_student)
+                             students=all_students,
+                             grades=grades_by_student,
+                             extensions=extensions_dict,
+                             total_students=total_students,
+                             graded_count=graded_count,
+                             average_score=average_score,
+                             today=datetime.now().date())
     except Exception as e:
         print(f"Error grading group assignment: {e}")
         flash('Error accessing group assignment grading.', 'error')

@@ -249,7 +249,8 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form id="deleteForm" method="POST" style="display: inline;">
+                <form id="deleteForm" method="POST" style="display: inline;" onsubmit="handleDeleteSubmit(event)">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     <button type="submit" class="btn btn-danger">Delete Assignment</button>
                 </form>
             </div>
@@ -525,7 +526,54 @@ function confirmDelete(title, assignmentId) {
     {% else %}
         document.getElementById('deleteForm').action = `/teacher/assignment/remove/${assignmentId}`;
     {% endif %}
+    window.currentAssignmentId = assignmentId;
     new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+
+function handleDeleteSubmit(event) {
+    event.preventDefault();
+    const form = event.target;
+    const formData = new FormData(form);
+    const assignmentId = window.currentAssignmentId;
+    
+    {% if current_user.role in ['Director', 'School Administrator'] %}
+        const deleteUrl = `/management/remove-assignment/${assignmentId}`;
+        const redirectUrl = `{{ url_for('management.assignments_and_grades') }}`;
+    {% else %}
+        const deleteUrl = `/teacher/assignment/remove/${assignmentId}`;
+        const redirectUrl = `{{ url_for('teacher.dashboard.my_assignments') }}`;
+    {% endif %}
+    
+    fetch(deleteUrl, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+    })
+    .then(response => {
+        if (response.ok) {
+            return response.json();
+        }
+        throw new Error('Network response was not ok');
+    })
+    .then(data => {
+        if (data.success) {
+            showNotification(data.message || 'Assignment removed successfully!', 'success');
+            // Close the modal
+            bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+            // Redirect after a short delay
+            setTimeout(() => {
+                window.location.href = redirectUrl;
+            }, 1000);
+        } else {
+            showNotification('Error: ' + (data.message || 'Unknown error'), 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Error removing assignment: ' + error.message, 'error');
+    });
 }
 
 function changeStatus(assignmentId, currentStatus) {

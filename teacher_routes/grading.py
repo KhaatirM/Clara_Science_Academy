@@ -7,7 +7,7 @@ from flask_login import login_required, current_user
 from decorators import teacher_required
 from .utils import get_teacher_or_admin, is_admin, is_authorized_for_class
 from models import (
-    db, Class, Assignment, Student, Grade, Submission, Enrollment
+    db, Class, Assignment, Student, Grade, Submission, Enrollment, AssignmentExtension
 )
 import json
 from datetime import datetime
@@ -148,12 +148,20 @@ def grade_assignment(assignment_id):
     submissions = Submission.query.filter_by(assignment_id=assignment_id).all()
     submissions_dict = {submission.student_id: submission for submission in submissions}
     
+    # Get active extensions for this assignment
+    extensions = AssignmentExtension.query.filter_by(
+        assignment_id=assignment_id,
+        is_active=True
+    ).all()
+    extensions_dict = {ext.student_id: ext for ext in extensions}
+    
     return render_template('teachers/teacher_grade_assignment.html', 
                          assignment=assignment,
                          class_obj=assignment.class_info,
                          students=students,
                          grades=grades_dict,
-                         submissions=submissions_dict)
+                         submissions=submissions_dict,
+                         extensions=extensions_dict)
 
 @bp.route('/grades')
 @login_required

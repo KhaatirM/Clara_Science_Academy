@@ -107,7 +107,7 @@
             <div class="assignment-card-body-modern">
                 <h3 class="assignment-title-modern">{{ assignment.title }}</h3>
                 
-                <!-- Assignment Types -->
+                <!-- Assignment Types and Context -->
                 <div class="assignment-types-modern">
                     {% if assignment.assignment_type == 'quiz' %}
                         <span class="type-badge type-badge-quiz">
@@ -124,6 +124,24 @@
                     {% else %}
                         <span class="type-badge type-badge-pdf">
                             <i class="bi bi-file-earmark-pdf me-1"></i>PDF/Paper
+                        </span>
+                    {% endif %}
+                    
+                    <!-- Assignment Context Badge (In-Class or Homework) -->
+                    {% if assignment.assignment_context %}
+                        {% set context_lower = assignment.assignment_context.lower() %}
+                        {% if 'in-class' in context_lower or 'in_class' in context_lower or 'inclass' in context_lower or context_lower.startswith('in-') or context_lower.startswith('in_') %}
+                            <span class="type-badge type-badge-context" style="background-color: #0d6efd; color: white;">
+                                <i class="bi bi-building me-1"></i>IN-Class
+                            </span>
+                        {% else %}
+                            <span class="type-badge type-badge-context" style="background-color: #6c757d; color: white;">
+                                <i class="bi bi-house me-1"></i>Homework
+                            </span>
+                        {% endif %}
+                    {% else %}
+                        <span class="type-badge type-badge-context" style="background-color: #6c757d; color: white;">
+                            <i class="bi bi-house me-1"></i>Homework
                         </span>
                     {% endif %}
                 </div>

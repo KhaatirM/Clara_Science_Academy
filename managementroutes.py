@@ -5751,12 +5751,20 @@ def grade_assignment(assignment_id):
     
     submissions = {s.student_id: s for s in Submission.query.filter_by(assignment_id=assignment_id).all()}
     
+    # Get active extensions for this assignment
+    extensions = AssignmentExtension.query.filter_by(
+        assignment_id=assignment_id,
+        is_active=True
+    ).all()
+    extensions_dict = {ext.student_id: ext for ext in extensions}
+    
     return render_template('teachers/teacher_grade_assignment.html', 
                          assignment=assignment, 
                          class_obj=class_obj,
                          students=students, 
                          grades=grades, 
                          submissions=submissions,
+                         extensions=extensions_dict,
                          role_prefix=None)
 
 

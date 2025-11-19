@@ -137,8 +137,13 @@
                     <div class="assignment-card-body">
                         <h6 class="assignment-title">{{ assignment.title }}</h6>
                         <div class="mb-2">
-                            {% if assignment.assignment_context == 'in-class' %}
-                                <span class="badge bg-primary"><i class="bi bi-building me-1"></i>IN-Class</span>
+                            {% if assignment.assignment_context %}
+                                {% set context_lower = assignment.assignment_context.lower() %}
+                                {% if 'in-class' in context_lower or 'in_class' in context_lower or 'inclass' in context_lower or context_lower.startswith('in-') or context_lower.startswith('in_') %}
+                                    <span class="badge bg-primary"><i class="bi bi-building me-1"></i>IN-Class</span>
+                                {% else %}
+                                    <span class="badge bg-secondary"><i class="bi bi-house me-1"></i>Homework</span>
+                                {% endif %}
                             {% else %}
                                 <span class="badge bg-secondary"><i class="bi bi-house me-1"></i>Homework</span>
                             {% endif %}
@@ -204,8 +209,13 @@
                     <div class="assignment-card-body">
                         <h6 class="assignment-title">{{ group_assignment.title }}</h6>
                         <div class="mb-2">
-                            {% if group_assignment.assignment_context == 'in-class' %}
-                                <span class="badge bg-primary"><i class="bi bi-building me-1"></i>IN-Class</span>
+                            {% if group_assignment.assignment_context %}
+                                {% set context_lower = group_assignment.assignment_context.lower() %}
+                                {% if 'in-class' in context_lower or 'in_class' in context_lower or 'inclass' in context_lower or context_lower.startswith('in-') or context_lower.startswith('in_') %}
+                                    <span class="badge bg-primary"><i class="bi bi-building me-1"></i>IN-Class</span>
+                                {% else %}
+                                    <span class="badge bg-secondary"><i class="bi bi-house me-1"></i>Homework</span>
+                                {% endif %}
                             {% else %}
                                 <span class="badge bg-secondary"><i class="bi bi-house me-1"></i>Homework</span>
                             {% endif %}

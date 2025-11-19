@@ -80,6 +80,53 @@
         </div>
     </div>
     
+    <!-- Extension Reminder Notification -->
+    {% if extensions and extensions|length > 0 %}
+    <div class="alert alert-info alert-dismissible fade show mb-4" role="alert" style="border-left: 4px solid #0dcaf0;">
+        <div class="d-flex align-items-start">
+            <div class="flex-shrink-0 me-3">
+                <i class="bi bi-clock-history" style="font-size: 1.5rem;"></i>
+            </div>
+            <div class="flex-grow-1">
+                <h6 class="alert-heading mb-2">
+                    <i class="bi bi-info-circle me-2"></i>Extension Reminder
+                </h6>
+                <p class="mb-2">
+                    <strong>The following students have been granted extensions for this assignment:</strong>
+                </p>
+                <div class="extension-student-list">
+                    {% for student in students %}
+                        {% if student.id in extensions %}
+                            {% set extension = extensions[student.id] %}
+                            <div class="extension-item mb-2 p-2 bg-light rounded">
+                                <div class="d-flex justify-content-between align-items-center flex-wrap">
+                                    <div class="mb-2 mb-md-0">
+                                        <strong>{{ student.first_name }} {{ student.last_name }}</strong>
+                                        <span class="text-muted ms-2">({{ student.email }})</span>
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="small">
+                                            <i class="bi bi-calendar-event me-1"></i>
+                                            <strong>Extended Due Date:</strong> {{ extension.extended_due_date.strftime('%B %d, %Y at %I:%M %p') }}
+                                        </div>
+                                        {% if extension.reason %}
+                                        <div class="small text-muted mt-1">
+                                            <i class="bi bi-chat-left-text me-1"></i>
+                                            <em>Reason: {{ extension.reason }}</em>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    </div>
+    {% endif %}
+    
     <!-- Grade Distribution Chart -->
     <div class="card mb-4 border-0 shadow-sm">
         <div class="card-body">

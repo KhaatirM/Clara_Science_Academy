@@ -53,14 +53,14 @@ def backfill_creators():
             class_obj = assignment.class_info
             if class_obj and class_obj.teacher_id:
                 # Get the teacher's user account
-                teacher = TeacherStaff.query.get(class_obj.teacher_id)
+                teacher = db.session.get(TeacherStaff, class_obj.teacher_id)
                 if teacher:
                     # Find the user account associated with this teacher
                     user = User.query.filter_by(teacher_staff_id=teacher.id).first()
                     if user:
                         assignment.created_by = user.id
                         updated_count += 1
-                        print(f"  Updated assignment {assignment.id} ({assignment.title[:50]}): Set creator to {user.first_name} {user.last_name}")
+                        print(f"  Updated assignment {assignment.id} ({assignment.title[:50]}): Set creator to {teacher.first_name} {teacher.last_name}")
                     else:
                         skipped_count += 1
                         print(f"  Skipped assignment {assignment.id}: Teacher {teacher.first_name} {teacher.last_name} has no user account")
@@ -92,14 +92,14 @@ def backfill_creators():
             class_obj = assignment.class_info
             if class_obj and class_obj.teacher_id:
                 # Get the teacher's user account
-                teacher = TeacherStaff.query.get(class_obj.teacher_id)
+                teacher = db.session.get(TeacherStaff, class_obj.teacher_id)
                 if teacher:
                     # Find the user account associated with this teacher
                     user = User.query.filter_by(teacher_staff_id=teacher.id).first()
                     if user:
                         assignment.created_by = user.id
                         group_updated_count += 1
-                        print(f"  Updated group assignment {assignment.id} ({assignment.title[:50]}): Set creator to {user.first_name} {user.last_name}")
+                        print(f"  Updated group assignment {assignment.id} ({assignment.title[:50]}): Set creator to {teacher.first_name} {teacher.last_name}")
                     else:
                         group_skipped_count += 1
                         print(f"  Skipped group assignment {assignment.id}: Teacher {teacher.first_name} {teacher.last_name} has no user account")

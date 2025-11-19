@@ -116,9 +116,33 @@ def grade_assignment(assignment_id):
     
     students = [enrollment.student for enrollment in enrollments if enrollment.student is not None]
     
-    # Get existing grades for this assignment
+    # Get existing grades for this assignment and parse the JSON grade_data
     grades = Grade.query.filter_by(assignment_id=assignment_id).all()
-    grades_dict = {grade.student_id: grade for grade in grades}
+    grades_dict = {}
+    for grade in grades:
+        try:
+            # Parse the JSON grade_data
+            grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
+            # Create a dict with the parsed data plus the grade object attributes
+            grades_dict[grade.student_id] = {
+                'score': grade_data.get('score', 0),
+                'comment': grade_data.get('comment', '') or grade_data.get('feedback', ''),
+                'percentage': grade_data.get('percentage', 0),
+                'max_score': grade_data.get('max_score', 100),
+                'is_voided': grade.is_voided or grade_data.get('is_voided', False),
+                'graded_at': grade.graded_at
+            }
+        except (json.JSONDecodeError, AttributeError, TypeError) as e:
+            # If parsing fails, create a default structure
+            print(f"Error parsing grade_data for grade {grade.id}: {e}")
+            grades_dict[grade.student_id] = {
+                'score': 0,
+                'comment': '',
+                'percentage': 0,
+                'max_score': 100,
+                'is_voided': grade.is_voided,
+                'graded_at': grade.graded_at
+            }
     
     # Get submissions for this assignment
     submissions = Submission.query.filter_by(assignment_id=assignment_id).all()

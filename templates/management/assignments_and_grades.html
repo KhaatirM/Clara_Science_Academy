@@ -262,9 +262,13 @@
                             </div>
                             <div class="card-body">
                                 <div class="mb-2">
-                                    {% set context_lower = assignment.assignment_context.lower() if assignment.assignment_context else '' %}
-                                    {% if context_lower and ('in-class' in context_lower or 'in_class' in context_lower or 'inclass' in context_lower) %}
-                                        <span class="badge bg-primary"><i class="bi bi-building me-1"></i>IN-Class</span>
+                                    {% if assignment.assignment_context %}
+                                        {% set context_lower = assignment.assignment_context.lower() %}
+                                        {% if 'in-class' in context_lower or 'in_class' in context_lower or 'inclass' in context_lower or context_lower.startswith('in-') or context_lower.startswith('in_') %}
+                                            <span class="badge bg-primary"><i class="bi bi-building me-1"></i>IN-Class</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary"><i class="bi bi-house me-1"></i>Homework</span>
+                                        {% endif %}
                                     {% else %}
                                         <span class="badge bg-secondary"><i class="bi bi-house me-1"></i>Homework</span>
                                     {% endif %}
@@ -283,6 +287,8 @@
                                         <i class="bi bi-person me-1"></i>
                                         {% if assignment.creator %}
                                             {{ assignment.creator.first_name }} {{ assignment.creator.last_name }}
+                                        {% elif assignment.class_info and assignment.class_info.teacher %}
+                                            {{ assignment.class_info.teacher.first_name }} {{ assignment.class_info.teacher.last_name }}
                                         {% else %}
                                             Unknown
                                         {% endif %}
@@ -324,9 +330,13 @@
                                 </div>
                                 <div class="card-body">
                                     <div class="mb-2">
-                                        {% set context_lower = group_assignment.assignment_context.lower() if group_assignment.assignment_context else '' %}
-                                        {% if context_lower and ('in-class' in context_lower or 'in_class' in context_lower or 'inclass' in context_lower) %}
-                                            <span class="badge bg-primary"><i class="bi bi-building me-1"></i>IN-Class</span>
+                                        {% if group_assignment.assignment_context %}
+                                            {% set context_lower = group_assignment.assignment_context.lower() %}
+                                            {% if 'in-class' in context_lower or 'in_class' in context_lower or 'inclass' in context_lower or context_lower.startswith('in-') or context_lower.startswith('in_') %}
+                                                <span class="badge bg-primary"><i class="bi bi-building me-1"></i>IN-Class</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary"><i class="bi bi-house me-1"></i>Homework</span>
+                                            {% endif %}
                                         {% else %}
                                             <span class="badge bg-secondary"><i class="bi bi-house me-1"></i>Homework</span>
                                         {% endif %}
@@ -354,6 +364,8 @@
                                             <i class="bi bi-person me-1"></i>
                                             {% if group_assignment.creator %}
                                                 {{ group_assignment.creator.first_name }} {{ group_assignment.creator.last_name }}
+                                            {% elif group_assignment.class_info and group_assignment.class_info.teacher %}
+                                                {{ group_assignment.class_info.teacher.first_name }} {{ group_assignment.class_info.teacher.last_name }}
                                             {% else %}
                                                 Unknown
                                             {% endif %}

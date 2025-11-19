@@ -26,21 +26,42 @@ def fix_assignment_context():
         
         for assignment in assignments:
             context = assignment.assignment_context
-            if context:
-                context_lower = context.lower()
+            
+            # Handle NULL/empty values - default to homework
+            if not context or context.strip() == '':
+                print(f"  Setting NULL/empty context for assignment {assignment.id} ({assignment.title[:50]}): -> 'homework'")
+                assignment.assignment_context = 'homework'
+                fixed_count += 1
+                context_counts['(was NULL/empty)'] = context_counts.get('(was NULL/empty)', 0) + 1
+            else:
+                context_lower = context.lower().strip()
                 context_counts[context] = context_counts.get(context, 0) + 1
                 
-                # Fix variations of in-class
-                if context_lower in ['in_class', 'inclass', 'in-class']:
+                # Fix variations of in-class - check if it contains any in-class indicators
+                is_inclass = (
+                    'in-class' in context_lower or 
+                    'in_class' in context_lower or 
+                    'inclass' in context_lower or
+                    context_lower.startswith('in-') or
+                    context_lower.startswith('in_')
+                )
+                
+                if is_inclass:
                     if context != 'in-class':
                         print(f"  Fixing assignment {assignment.id} ({assignment.title[:50]}): '{context}' -> 'in-class'")
                         assignment.assignment_context = 'in-class'
                         fixed_count += 1
                 # Ensure homework is consistent
-                elif context_lower in ['homework', 'hw']:
+                elif context_lower in ['homework', 'hw', 'home work']:
                     if context != 'homework':
+                        print(f"  Normalizing assignment {assignment.id} ({assignment.title[:50]}): '{context}' -> 'homework'")
                         assignment.assignment_context = 'homework'
                         fixed_count += 1
+                # If it's something else, default to homework
+                else:
+                    print(f"  Warning: Unknown context '{context}' for assignment {assignment.id}, defaulting to 'homework'")
+                    assignment.assignment_context = 'homework'
+                    fixed_count += 1
         
         if fixed_count > 0:
             db.session.commit()
@@ -61,21 +82,42 @@ def fix_assignment_context():
         
         for assignment in group_assignments:
             context = assignment.assignment_context
-            if context:
-                context_lower = context.lower()
+            
+            # Handle NULL/empty values - default to homework
+            if not context or context.strip() == '':
+                print(f"  Setting NULL/empty context for group assignment {assignment.id} ({assignment.title[:50]}): -> 'homework'")
+                assignment.assignment_context = 'homework'
+                group_fixed_count += 1
+                group_context_counts['(was NULL/empty)'] = group_context_counts.get('(was NULL/empty)', 0) + 1
+            else:
+                context_lower = context.lower().strip()
                 group_context_counts[context] = group_context_counts.get(context, 0) + 1
                 
-                # Fix variations of in-class
-                if context_lower in ['in_class', 'inclass', 'in-class']:
+                # Fix variations of in-class - check if it contains any in-class indicators
+                is_inclass = (
+                    'in-class' in context_lower or 
+                    'in_class' in context_lower or 
+                    'inclass' in context_lower or
+                    context_lower.startswith('in-') or
+                    context_lower.startswith('in_')
+                )
+                
+                if is_inclass:
                     if context != 'in-class':
                         print(f"  Fixing group assignment {assignment.id} ({assignment.title[:50]}): '{context}' -> 'in-class'")
                         assignment.assignment_context = 'in-class'
                         group_fixed_count += 1
                 # Ensure homework is consistent
-                elif context_lower in ['homework', 'hw']:
+                elif context_lower in ['homework', 'hw', 'home work']:
                     if context != 'homework':
+                        print(f"  Normalizing group assignment {assignment.id} ({assignment.title[:50]}): '{context}' -> 'homework'")
                         assignment.assignment_context = 'homework'
                         group_fixed_count += 1
+                # If it's something else, default to homework
+                else:
+                    print(f"  Warning: Unknown context '{context}' for group assignment {assignment.id}, defaulting to 'homework'")
+                    assignment.assignment_context = 'homework'
+                    group_fixed_count += 1
         
         if group_fixed_count > 0:
             db.session.commit()

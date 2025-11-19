@@ -80,15 +80,13 @@ def grade_assignment(assignment_id):
                     # Update existing grade
                     existing_grade.grade_data = json.dumps(grade_data)
                     existing_grade.graded_at = datetime.now()
-                    existing_grade.graded_by = current_user.id
                 else:
                     # Create new grade
                     new_grade = Grade(
                         assignment_id=assignment_id,
                         student_id=student_id,
                         grade_data=json.dumps(grade_data),
-                        graded_at=datetime.now(),
-                        graded_by=current_user.id
+                        graded_at=datetime.now()
                     )
                     db.session.add(new_grade)
                 

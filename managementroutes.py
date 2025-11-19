@@ -9551,6 +9551,17 @@ def admin_grade_group_assignment(assignment_id):
                                             'letter_grade': letter_grade
                                         }
                                         
+                                        # Get teacher_staff_id for graded_by field
+                                        # Try to get from current_user, otherwise use class teacher
+                                        graded_by_id = None
+                                        if current_user.teacher_staff_id:
+                                            graded_by_id = current_user.teacher_staff_id
+                                        else:
+                                            # Use the class teacher as fallback for admin grading
+                                            class_obj = group_assignment.class_info
+                                            if class_obj and class_obj.teacher_id:
+                                                graded_by_id = class_obj.teacher_id
+                                        
                                         # Update or create grade
                                         existing_grade = GroupGrade.query.filter_by(
                                             group_assignment_id=assignment_id,
@@ -9561,14 +9572,19 @@ def admin_grade_group_assignment(assignment_id):
                                         if existing_grade:
                                             existing_grade.grade_data = json.dumps(grade_data)
                                             existing_grade.comments = comments
-                                            existing_grade.graded_by = None  # Admin grading
+                                            if graded_by_id:
+                                                existing_grade.graded_by = graded_by_id
                                         else:
+                                            if not graded_by_id:
+                                                # If we still don't have a teacher_staff_id, we can't create the grade
+                                                flash(f'Cannot create grade: No teacher found for assignment.', 'danger')
+                                                continue
                                             new_grade = GroupGrade(
                                                 group_assignment_id=assignment_id,
                                                 group_id=group.id,
                                                 student_id=student_id,
                                                 grade_data=json.dumps(grade_data),
-                                                graded_by=None,  # Admin grading
+                                                graded_by=graded_by_id,
                                                 comments=comments
                                             )
                                             db.session.add(new_grade)

@@ -406,19 +406,15 @@ def void_assignment(assignment_id):
                 
                 if existing_grade:
                     # Update existing grade to voided
-                    existing_grade.score = 0
                     existing_grade.grade_data = json.dumps(void_grade_data)
                     existing_grade.graded_at = datetime.now()
-                    existing_grade.graded_by = current_user.id
                 else:
                     # Create new voided grade
                     new_grade = Grade(
                         assignment_id=assignment_id,
                         student_id=int(student_id),
-                        score=0,
                         grade_data=json.dumps(void_grade_data),
-                        graded_at=datetime.now(),
-                        graded_by=current_user.id
+                        graded_at=datetime.now()
                     )
                     db.session.add(new_grade)
             

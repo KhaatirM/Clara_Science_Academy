@@ -6,7 +6,27 @@ This provides a reasonable default for historical assignments.
 
 from app import create_app, db
 from models import Assignment, GroupAssignment, Class, TeacherStaff, User
-from sqlalchemy import text
+from sqlalchemy import text, inspect
+
+def check_and_add_created_by_column():
+    """Check if created_by column exists and add it if missing."""
+    inspector = inspect(db.engine)
+    
+    # Check assignment table
+    assignment_columns = [col['name'] for col in inspector.get_columns('assignment')]
+    if 'created_by' not in assignment_columns:
+        print("Adding 'created_by' column to assignment table...")
+        db.session.execute(text("ALTER TABLE assignment ADD COLUMN created_by INTEGER"))
+        db.session.commit()
+        print("✓ Added 'created_by' column to assignment table")
+    
+    # Check group_assignment table
+    group_assignment_columns = [col['name'] for col in inspector.get_columns('group_assignment')]
+    if 'created_by' not in group_assignment_columns:
+        print("Adding 'created_by' column to group_assignment table...")
+        db.session.execute(text("ALTER TABLE group_assignment ADD COLUMN created_by INTEGER"))
+        db.session.commit()
+        print("✓ Added 'created_by' column to group_assignment table")
 
 def backfill_creators():
     app = create_app()
@@ -14,6 +34,12 @@ def backfill_creators():
         print("=" * 70)
         print("BACKFILLING ASSIGNMENT CREATORS")
         print("=" * 70)
+        
+        # First, ensure the created_by column exists
+        try:
+            check_and_add_created_by_column()
+        except Exception as e:
+            print(f"Note: Could not check/add created_by column (may already exist): {e}")
         
         # Process regular assignments
         print("\n[1] Processing regular assignments...")

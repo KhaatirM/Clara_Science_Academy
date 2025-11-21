@@ -497,6 +497,9 @@ class Assignment(db.Model):
     # Assignment context: homework, in-class
     assignment_context = db.Column(db.String(20), default='homework', nullable=False)
     
+    # Grading settings - total points for the assignment (defaults to 100 for percentage-based)
+    total_points = db.Column(db.Float, default=100.0, nullable=False)
+    
     # Quiz save and continue settings
     allow_save_and_continue = db.Column(db.Boolean, default=False, nullable=False)
     max_save_attempts = db.Column(db.Integer, default=10, nullable=False)
@@ -678,12 +681,49 @@ class Grade(db.Model):
     voided_by = db.Column(db.Integer, nullable=True)
     voided_at = db.Column(db.DateTime, nullable=True)
     voided_reason = db.Column(db.Text, nullable=True)
+    
+    # Extra credit points earned (separate from regular points)
+    extra_credit_points = db.Column(db.Float, default=0.0, nullable=False)
+    
+    # Late penalty applied
+    late_penalty_applied = db.Column(db.Float, default=0.0, nullable=False)  # Points deducted
+    days_late = db.Column(db.Integer, default=0, nullable=False)
 
     student = db.relationship('Student', backref='grades', lazy=True)
     assignment = db.relationship('Assignment', backref='grades', lazy=True)
 
     def __repr__(self):
         return f"Grade(Student: {self.student_id}, Assignment: {self.assignment_id})"
+
+
+class GradeHistory(db.Model):
+    """
+    Model for tracking grade changes (audit trail).
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    grade_id = db.Column(db.Integer, db.ForeignKey('grade.id'), nullable=False)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
+    assignment_id = db.Column(db.Integer, db.ForeignKey('assignment.id'), nullable=False)
+    
+    # Previous and new values
+    previous_grade_data = db.Column(db.Text, nullable=True)  # JSON string
+    new_grade_data = db.Column(db.Text, nullable=False)  # JSON string
+    
+    # Who made the change
+    changed_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    changed_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    
+    # Reason for change (optional)
+    change_reason = db.Column(db.Text, nullable=True)
+    
+    # Relationships
+    grade = db.relationship('Grade', backref='history')
+    student = db.relationship('Student', backref='grade_history')
+    assignment = db.relationship('Assignment', backref='grade_history')
+    changer = db.relationship('User', backref='grade_changes')
+    
+    def __repr__(self):
+        return f"GradeHistory(Grade: {self.grade_id}, Changed: {self.changed_at})"
 
 
 class AssignmentRedo(db.Model):
@@ -1207,6 +1247,25 @@ class GroupAssignment(db.Model):
     
     # Assignment context: homework, in-class
     assignment_context = db.Column(db.String(20), default='homework', nullable=False)
+    
+    # Grading settings - total points for the assignment (defaults to 100 for percentage-based)
+    total_points = db.Column(db.Float, default=100.0, nullable=False)
+    
+    # Extra credit support
+    allow_extra_credit = db.Column(db.Boolean, default=False, nullable=False)
+    max_extra_credit_points = db.Column(db.Float, default=0.0, nullable=False)
+    
+    # Late penalty settings
+    late_penalty_enabled = db.Column(db.Boolean, default=False, nullable=False)
+    late_penalty_per_day = db.Column(db.Float, default=0.0, nullable=False)  # Percentage per day (e.g., 10.0 = 10% per day)
+    late_penalty_max_days = db.Column(db.Integer, default=0, nullable=False)  # 0 = unlimited
+    
+    # Grade scale settings (JSON string: {"A": 90, "B": 80, "C": 70, "D": 60, "F": 0, "use_plus_minus": true})
+    grade_scale = db.Column(db.Text, nullable=True)
+    
+    # Assignment category for weighted grading
+    assignment_category = db.Column(db.String(50), nullable=True)  # e.g., "Homework", "Tests", "Projects"
+    category_weight = db.Column(db.Float, default=0.0, nullable=False)  # Weight percentage (e.g., 20.0 = 20%)
     
     # Quiz save and continue settings (for quiz type)
     allow_save_and_continue = db.Column(db.Boolean, default=False, nullable=False)

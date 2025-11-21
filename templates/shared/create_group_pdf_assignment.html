@@ -247,6 +247,18 @@
                                 </select>
                                 <div class="form-text">Optional specific academic period</div>
                             </div>
+                            
+                            <div class="col-md-6">
+                                <label for="total_points" class="form-label fw-semibold">
+                                    <i class="bi bi-star me-1 text-info"></i>Total Points <span class="text-danger">*</span>
+                                </label>
+                                <input type="number" class="form-control" id="total_points" name="total_points" 
+                                       value="100" min="0.1" step="0.1" required>
+                                <div class="form-text">
+                                    Set the maximum points for this assignment (e.g., 50, 100, 150). 
+                                    Students will be graded out of this total. Default is 100 points.
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

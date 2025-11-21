@@ -1,0 +1,206 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/teacher_grade_assignment.css') }}">
+<style>
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 1.5rem;
+    }
+    .stat-value {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: #2c3e50;
+    }
+    .stat-label {
+        color: #7f8c8d;
+        font-size: 0.9rem;
+        margin-top: 0.5rem;
+    }
+    .chart-container {
+        position: relative;
+        height: 300px;
+        margin: 1rem 0;
+    }
+</style>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+    <!-- Header -->
+    <div class="grading-header mb-4">
+        <div class="grading-header-content">
+            <div class="grading-header-icon">
+                <i class="bi bi-bar-chart-fill"></i>
+            </div>
+            <div class="grading-header-info">
+                <h2 class="grading-header-title">Grade Statistics</h2>
+                <p class="grading-header-subtitle">{{ assignment.title }} • {{ assignment.class_info.name }}</p>
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('teacher.grading.grade_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-arrow-left me-1"></i>Back to Grading
+            </a>
+        </div>
+    </div>
+
+    <!-- Key Statistics Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-value text-primary">{{ stats.average_score }} / {{ total_points }}</div>
+                <div class="stat-label">Average Score</div>
+                <div class="text-muted small mt-2">{{ stats.average_percentage }}%</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-value text-success">{{ stats.median_score }} / {{ total_points }}</div>
+                <div class="stat-label">Median Score</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-value text-info">{{ stats.highest_score }} / {{ total_points }}</div>
+                <div class="stat-label">Highest Score</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-value text-warning">{{ stats.lowest_score }} / {{ total_points }}</div>
+                <div class="stat-label">Lowest Score</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Additional Stats -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="stat-card">
+                <div class="stat-value text-success">{{ stats.graded_count }}</div>
+                <div class="stat-label">Graded</div>
+                <div class="text-muted small mt-2">out of {{ stats.total_students }} students</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card">
+                <div class="stat-value text-success">{{ stats.passing_count }}</div>
+                <div class="stat-label">Passing (≥70%)</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card">
+                <div class="stat-value text-danger">{{ stats.failing_count }}</div>
+                <div class="stat-label">Failing (<70%)</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row g-4">
+        <!-- Letter Grade Distribution -->
+        <div class="col-md-6">
+            <div class="stat-card">
+                <h5 class="mb-3"><i class="bi bi-pie-chart me-2"></i>Letter Grade Distribution</h5>
+                <div class="chart-container">
+                    <canvas id="letterGradeChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grade Range Distribution -->
+        <div class="col-md-6">
+            <div class="stat-card">
+                <h5 class="mb-3"><i class="bi bi-bar-chart me-2"></i>Grade Range Distribution</h5>
+                <div class="chart-container">
+                    <canvas id="gradeRangeChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Letter Grade Pie Chart
+const letterGradeCtx = document.getElementById('letterGradeChart').getContext('2d');
+new Chart(letterGradeCtx, {
+    type: 'pie',
+    data: {
+        labels: ['A (90-100%)', 'B (80-89%)', 'C (70-79%)', 'D (60-69%)', 'F (0-59%)'],
+        datasets: [{
+            data: [
+                {{ letter_grades.A }},
+                {{ letter_grades.B }},
+                {{ letter_grades.C }},
+                {{ letter_grades.D }},
+                {{ letter_grades.F }}
+            ],
+            backgroundColor: [
+                '#28a745', // Green for A
+                '#17a2b8', // Blue for B
+                '#ffc107', // Yellow for C
+                '#fd7e14', // Orange for D
+                '#dc3545'  // Red for F
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Grade Range Bar Chart
+const gradeRangeCtx = document.getElementById('gradeRangeChart').getContext('2d');
+new Chart(gradeRangeCtx, {
+    type: 'bar',
+    data: {
+        labels: ['90-100%', '80-89%', '70-79%', '60-69%', '0-59%'],
+        datasets: [{
+            label: 'Number of Students',
+            data: [
+                {{ grade_distribution['90-100'] }},
+                {{ grade_distribution['80-89'] }},
+                {{ grade_distribution['70-79'] }},
+                {{ grade_distribution['60-69'] }},
+                {{ grade_distribution['0-59'] }}
+            ],
+            backgroundColor: [
+                '#28a745',
+                '#17a2b8',
+                '#ffc107',
+                '#fd7e14',
+                '#dc3545'
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: false
+            }
+        }
+    }
+});
+</script>
+{% endblock %}
+

@@ -60,7 +60,23 @@ def add_assignment():
             # Get assignment context from form or query parameter
             assignment_context = request.form.get('assignment_context', 'homework')
             
-            # Create the assignment (removed 'points' field - doesn't exist in model)
+            # Get total points from form (default to 100 if not provided)
+            total_points = request.form.get('total_points', type=float)
+            if total_points is None or total_points <= 0:
+                total_points = 100.0
+            
+            # Get advanced grading options
+            allow_extra_credit = 'allow_extra_credit' in request.form
+            max_extra_credit_points = request.form.get('max_extra_credit_points', type=float) or 0.0
+            
+            late_penalty_enabled = 'late_penalty_enabled' in request.form
+            late_penalty_per_day = request.form.get('late_penalty_per_day', type=float) or 0.0
+            late_penalty_max_days = request.form.get('late_penalty_max_days', type=int) or 0
+            
+            assignment_category = request.form.get('assignment_category', '').strip() or None
+            category_weight = request.form.get('category_weight', type=float) or 0.0
+            
+            # Create the assignment
             new_assignment = Assignment(
                 title=title,
                 description=description,
@@ -71,6 +87,14 @@ def add_assignment():
                 assignment_type='pdf_paper',
                 status='Active',
                 assignment_context=assignment_context,
+                total_points=total_points,
+                allow_extra_credit=allow_extra_credit,
+                max_extra_credit_points=max_extra_credit_points if allow_extra_credit else 0.0,
+                late_penalty_enabled=late_penalty_enabled,
+                late_penalty_per_day=late_penalty_per_day if late_penalty_enabled else 0.0,
+                late_penalty_max_days=late_penalty_max_days if late_penalty_enabled else 0,
+                assignment_category=assignment_category,
+                category_weight=category_weight,
                 created_by=current_user.id
             )
             
@@ -234,27 +258,76 @@ def view_assignment(assignment_id):
     """View detailed information for a specific assignment"""
     from datetime import datetime
     
-    assignment = Assignment.query.get_or_404(assignment_id)
-    
-    # Check authorization for this assignment's class
-    if not is_authorized_for_class(assignment.class_info):
-        flash("You are not authorized to view this assignment.", "danger")
+    try:
+        assignment = Assignment.query.get_or_404(assignment_id)
+        
+        # Check if assignment has class_info relationship
+        if not assignment.class_info:
+            flash("Assignment class information not found.", "danger")
+            return redirect(url_for('teacher.dashboard.my_assignments'))
+        
+        # Check authorization for this assignment's class
+        if not is_authorized_for_class(assignment.class_info):
+            flash("You are not authorized to view this assignment.", "danger")
+            return redirect(url_for('teacher.dashboard.my_assignments'))
+        
+        # Get submissions for this assignment - safely handle missing columns
+        try:
+            submissions = Submission.query.filter_by(assignment_id=assignment_id).all()
+        except Exception as e:
+            print(f"Error getting submissions: {e}")
+            submissions = []
+        
+        # Get grades for this assignment
+        try:
+            grades = Grade.query.filter_by(assignment_id=assignment_id).all()
+        except Exception as e:
+            print(f"Error getting grades: {e}")
+            grades = []
+        
+        # Get today's date for deadline calculations
+        today = datetime.now()
+        
+        # Get class information safely
+        class_info = assignment.class_info
+        teacher = None
+        if class_info:
+            # Try to get teacher through relationship
+            try:
+                if hasattr(class_info, 'teacher') and class_info.teacher:
+                    teacher = class_info.teacher
+                elif class_info.teacher_id:
+                    from models import TeacherStaff
+                    teacher = TeacherStaff.query.get(class_info.teacher_id)
+            except Exception as e:
+                print(f"Error getting teacher: {e}")
+                teacher = None
+        
+        # Get submission count
+        submissions_count = len(submissions) if submissions else 0
+        
+        # Get assignment points safely
+        assignment_points = 0
+        if hasattr(assignment, 'total_points') and assignment.total_points:
+            assignment_points = assignment.total_points
+        elif hasattr(assignment, 'points') and assignment.points:
+            assignment_points = assignment.points
+        
+        return render_template('shared/view_assignment.html', 
+                             assignment=assignment, 
+                             submissions=submissions, 
+                             grades=grades,
+                             class_info=class_info,
+                             teacher=teacher,
+                             submissions_count=submissions_count,
+                             assignment_points=assignment_points,
+                             today=today)
+    except Exception as e:
+        current_app.logger.error(f"Error in view_assignment route: {e}")
+        import traceback
+        traceback.print_exc()
+        flash(f'Error loading assignment: {str(e)}', 'danger')
         return redirect(url_for('teacher.dashboard.my_assignments'))
-    
-    # Get submissions for this assignment
-    submissions = Submission.query.filter_by(assignment_id=assignment_id).all()
-    
-    # Get grades for this assignment
-    grades = Grade.query.filter_by(assignment_id=assignment_id).all()
-    
-    # Get today's date for deadline calculations
-    today = datetime.now()
-    
-    return render_template('shared/view_assignment.html', 
-                         assignment=assignment, 
-                         submissions=submissions, 
-                         grades=grades,
-                         today=today)
 
 @bp.route('/assignment/edit/<int:assignment_id>', methods=['GET', 'POST'])
 @login_required

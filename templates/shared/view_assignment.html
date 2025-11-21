@@ -40,7 +40,7 @@
                         <span class="view-status-badge badge-due-soon">{{ days_remaining }} DAYS LEFT</span>
                     {% endif %}
                 {% endif %}
-                <span class="view-status-badge badge-{{ assignment.status.lower() }}">{{ assignment.status.upper() }}</span>
+                <span class="view-status-badge badge-{{ assignment.status.lower() if assignment.status else 'active' }}">{{ assignment.status.upper() if assignment.status else 'ACTIVE' }}</span>
             </div>
         </div>
     </div>
@@ -93,7 +93,7 @@
                                 <i class="bi bi-file-earmark text-warning"></i>
                                 <div>
                                     <label>Type</label>
-                                    <span class="type-badge-compact">{{ assignment.assignment_type.title() }}</span>
+                                    <span class="type-badge-compact">{{ assignment.assignment_type.title() if assignment.assignment_type else 'N/A' }}</span>
                                 </div>
                             </div>
                         </div>

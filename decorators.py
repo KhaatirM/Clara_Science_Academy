@@ -57,8 +57,27 @@ def teacher_required(f):
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
             abort(401)  # Unauthorized - not logged in
-        if not (is_teacher_role(current_user.role) or current_user.role in ['School Administrator', 'Director']):
+        
+        # Get role and normalize it (strip whitespace)
+        role = str(current_user.role).strip() if current_user.role else None
+        
+        # Debug output (will show in console)
+        print(f"[DEBUG teacher_required] User: {current_user.username}, Role: '{role}'")
+        
+        # Check if role is a teacher role or admin role
+        is_teacher = is_teacher_role(role)
+        is_admin_role = role in ['School Administrator', 'Director']
+        
+        print(f"[DEBUG teacher_required] is_teacher_role: {is_teacher}, is_admin: {is_admin_role}")
+        
+        if not (is_teacher or is_admin_role):
+            # Debug output
+            print(f"[ERROR] Teacher required check FAILED for user {current_user.username}")
+            print(f"[ERROR] Role: '{role}' (type: {type(role)})")
+            print(f"[ERROR] TEACHER_ROLES list: {TEACHER_ROLES}")
+            print(f"[ERROR] 'Teacher' in role: {'Teacher' in str(role) if role else False}")
             abort(403)  # Forbidden - wrong role
+        
         return f(*args, **kwargs)
     return decorated_function
 

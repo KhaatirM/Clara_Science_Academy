@@ -256,145 +256,179 @@ def management_dashboard():
     from datetime import datetime, timedelta
     from sqlalchemy import or_, and_
     import json
+    from flask import current_app, flash
     
-    # Basic stats
-    stats = {
-        'students': Student.query.count(),
-        'teachers': TeacherStaff.query.count(),
-        'classes': Class.query.count(),
-        'assignments': Assignment.query.count()
-    }
-    
-    # Calculate monthly stats
-    now = datetime.now()
-    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    
-    # New students this month (using ID as proxy since no created_at field)
-    # This is a simplified approach - in a real system, you'd want a created_at field
-    total_students = Student.query.count()
-    # For now, we'll use a placeholder since we can't track creation dates
-    # In a real implementation, you'd add a created_at field to the Student model
-    new_students = 0
-    
-    # Alternative: Track new enrollments this month
     try:
-        new_enrollments = Enrollment.query.filter(Enrollment.enrolled_at >= month_start).count()
-    except AttributeError:
-        new_enrollments = 0
-    
-    # Assignments due this week
-    week_start = now - timedelta(days=now.weekday())
-    week_end = week_start + timedelta(days=7)
-    due_assignments = Assignment.query.filter(
-        Assignment.due_date >= week_start,
-        Assignment.due_date < week_end
-    ).count()
-    
-    # Calculate attendance rate (simplified)
-    total_attendance_records = Attendance.query.count()
-    present_records = Attendance.query.filter_by(status='Present').count()
-    attendance_rate = round((present_records / total_attendance_records * 100), 1) if total_attendance_records > 0 else 0
-    
-    # Calculate average grade (simplified)
-    grades = Grade.query.all()
-    if grades:
-        total_score = 0
-        valid_grades = 0
-        for grade in grades:
-            try:
-                grade_data = json.loads(grade.grade_data)
-                if 'score' in grade_data and isinstance(grade_data['score'], (int, float)):
-                    total_score += grade_data['score']
-                    valid_grades += 1
-            except (json.JSONDecodeError, TypeError, KeyError):
-                continue
+        # Basic stats
+        stats = {
+            'students': Student.query.count(),
+            'teachers': TeacherStaff.query.count(),
+            'classes': Class.query.count(),
+            'assignments': Assignment.query.count()
+        }
         
-        average_grade = round(total_score / valid_grades, 1) if valid_grades > 0 else 0
-    else:
-        average_grade = 0
+        # Calculate monthly stats
+        now = datetime.now()
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        
+        # New students this month (using ID as proxy since no created_at field)
+        # This is a simplified approach - in a real system, you'd want a created_at field
+        total_students = Student.query.count()
+        # For now, we'll use a placeholder since we can't track creation dates
+        # In a real implementation, you'd add a created_at field to the Student model
+        new_students = 0
+        
+        # Alternative: Track new enrollments this month
+        try:
+            new_enrollments = Enrollment.query.filter(Enrollment.enrolled_at >= month_start).count()
+        except (AttributeError, Exception) as e:
+            current_app.logger.warning(f"Error getting new enrollments: {e}")
+            new_enrollments = 0
     
-    monthly_stats = {
-        'new_students': new_enrollments,  # Using new enrollments as proxy for new students
-        'attendance_rate': attendance_rate,
-        'average_grade': average_grade
-    }
-    
-    weekly_stats = {
-        'due_assignments': due_assignments
-    }
-    
-    # --- AT-RISK STUDENT ALERTS ---
-    at_risk_alerts = []  # Initialize here to ensure it's always defined
-    at_risk_grades = []  # Initialize here to ensure it's always defined
-    try:
-        students_to_check = Student.query.all() # Management sees all students
-        student_ids = [s.id for s in students_to_check]
+        # Assignments due this week
+        week_start = now - timedelta(days=now.weekday())
+        week_end = week_start + timedelta(days=7)
+        due_assignments = Assignment.query.filter(
+            Assignment.due_date >= week_start,
+            Assignment.due_date < week_end
+        ).count()
+        
+        # Calculate attendance rate (simplified)
+        try:
+            total_attendance_records = Attendance.query.count()
+            present_records = Attendance.query.filter_by(status='Present').count()
+            attendance_rate = round((present_records / total_attendance_records * 100), 1) if total_attendance_records > 0 else 0
+        except Exception as e:
+            current_app.logger.warning(f"Error calculating attendance rate: {e}")
+            attendance_rate = 0
+        
+        # Calculate average grade (simplified)
+        grades = Grade.query.all()
+        if grades:
+            total_score = 0
+            valid_grades = 0
+            for grade in grades:
+                try:
+                    grade_data = json.loads(grade.grade_data)
+                    if 'score' in grade_data and isinstance(grade_data['score'], (int, float)):
+                        total_score += grade_data['score']
+                        valid_grades += 1
+                except (json.JSONDecodeError, TypeError, KeyError):
+                    continue
+            
+            average_grade = round(total_score / valid_grades, 1) if valid_grades > 0 else 0
+        else:
+            average_grade = 0
+        
+        monthly_stats = {
+            'new_students': new_enrollments,  # Using new enrollments as proxy for new students
+            'attendance_rate': attendance_rate,
+            'average_grade': average_grade
+        }
+        
+        weekly_stats = {
+            'due_assignments': due_assignments
+        }
+        
+        # --- AT-RISK STUDENT ALERTS ---
+        at_risk_alerts = []  # Initialize here to ensure it's always defined
+        at_risk_grades = []  # Initialize here to ensure it's always defined
+        try:
+            students_to_check = Student.query.all() # Management sees all students
+            student_ids = [s.id for s in students_to_check]
 
-        # Get ALL non-voided grades for our students (not just overdue ones)
-        at_risk_grades = db.session.query(Grade).join(Assignment).join(Student)\
-            .filter(Student.id.in_(student_ids))\
-            .filter(Grade.is_voided == False)\
-            .all()
+            # Get ALL non-voided grades for our students (not just overdue ones)
+            at_risk_grades = db.session.query(Grade).join(Assignment).join(Student)\
+                .filter(Student.id.in_(student_ids))\
+                .filter(Grade.is_voided == False)\
+                .all()
 
-        seen_student_ids = set()
-        for grade in at_risk_grades:
-            try:
-                grade_data = json.loads(grade.grade_data)
-                score = grade_data.get('score')
-                is_overdue = grade.assignment.due_date < datetime.utcnow()
-                
-                # Only alert for truly at-risk: missing (overdue with no score) OR failing (score <= 69)
-                # Don't include passing overdue assignments (70+) - they're not at-risk
-                is_at_risk = False
-                alert_reason = None
-                
-                if score is None and is_overdue:
-                    # Missing assignment that's overdue
-                    is_at_risk = True
-                    alert_reason = "overdue"
-                elif score is not None and score <= 69:
-                    # Failing assignment
-                    is_at_risk = True
-                    if is_overdue:
-                        alert_reason = "overdue and failing"
-                    else:
-                        alert_reason = "failing"
-                
-                if is_at_risk:
-                    if grade.student.id not in seen_student_ids:
-                        at_risk_alerts.append({
-                            'student_name': f"{grade.student.first_name} {grade.student.last_name}",
-                            'student_user_id': grade.student.id,  # Use student ID instead of user_id
-                            'class_name': grade.assignment.class_info.name,
-                            'assignment_name': grade.assignment.title,
-                            'alert_reason': alert_reason,
-                            'score': score,
-                            'due_date': grade.assignment.due_date
-                        })
-                        seen_student_ids.add(grade.student.id)
-            except (json.JSONDecodeError, TypeError) as e:
-                print(f"Error processing grade {grade.id}: {e}")
-                continue
+            seen_student_ids = set()
+            for grade in at_risk_grades:
+                try:
+                    grade_data = json.loads(grade.grade_data)
+                    score = grade_data.get('score')
+                    is_overdue = grade.assignment.due_date < datetime.utcnow()
+                    
+                    # Only alert for truly at-risk: missing (overdue with no score) OR failing (score <= 69)
+                    # Don't include passing overdue assignments (70+) - they're not at-risk
+                    is_at_risk = False
+                    alert_reason = None
+                    
+                    if score is None and is_overdue:
+                        # Missing assignment that's overdue
+                        is_at_risk = True
+                        alert_reason = "overdue"
+                    elif score is not None and score <= 69:
+                        # Failing assignment
+                        is_at_risk = True
+                        if is_overdue:
+                            alert_reason = "overdue and failing"
+                        else:
+                            alert_reason = "failing"
+                    
+                    if is_at_risk:
+                        if grade.student.id not in seen_student_ids:
+                            at_risk_alerts.append({
+                                'student_name': f"{grade.student.first_name} {grade.student.last_name}",
+                                'student_user_id': grade.student.id,  # Use student ID instead of user_id
+                                'class_name': grade.assignment.class_info.name,
+                                'assignment_name': grade.assignment.title,
+                                'alert_reason': alert_reason,
+                                'score': score,
+                                'due_date': grade.assignment.due_date
+                            })
+                            seen_student_ids.add(grade.student.id)
+                except (json.JSONDecodeError, TypeError) as e:
+                    current_app.logger.warning(f"Error processing grade {grade.id}: {e}")
+                    continue
+        except Exception as e:
+            current_app.logger.warning(f"Error in alert processing: {e}")
+            at_risk_alerts = []  # Ensure it's still a list even if there's an error
+        # --- END ALERTS ---
+        
+        # --- Debugging Print Statements ---
+        print(f"--- Debug Dashboard Alerts ---")
+        print(f"Checking alerts for user: {current_user.username}, Role: {current_user.role}")
+        print(f"Raw at-risk grades query result count: {len(at_risk_grades)}")
+        print(f"Formatted alerts list being sent to template: {at_risk_alerts}")
+        print(f"--- End Debug ---")
+        # --- End Debugging ---
+        
+        return render_template('management/role_dashboard.html', 
+                             stats=stats,
+                             monthly_stats=monthly_stats,
+                             weekly_stats=weekly_stats,
+                             section='home',
+                             active_tab='home',
+                             at_risk_alerts=at_risk_alerts)
     except Exception as e:
-        print(f"Error in alert processing: {e}")
-        at_risk_alerts = []  # Ensure it's still a list even if there's an error
-    # --- END ALERTS ---
-    
-    # --- Debugging Print Statements ---
-    print(f"--- Debug Dashboard Alerts ---")
-    print(f"Checking alerts for user: {current_user.username}, Role: {current_user.role}")
-    print(f"Raw at-risk grades query result count: {len(at_risk_grades)}")
-    print(f"Formatted alerts list being sent to template: {at_risk_alerts}")
-    print(f"--- End Debug ---")
-    # --- End Debugging ---
-    
-    return render_template('management/role_dashboard.html', 
-                         stats=stats,
-                         monthly_stats=monthly_stats,
-                         weekly_stats=weekly_stats,
-                         section='home',
-                         active_tab='home',
-                         at_risk_alerts=at_risk_alerts)
+        current_app.logger.error(f"Error in management_dashboard: {e}")
+        import traceback
+        error_trace = traceback.format_exc()
+        current_app.logger.error(error_trace)
+        flash(f"Error loading dashboard: {str(e)}", 'danger')
+        # Return minimal dashboard with error
+        return render_template('management/role_dashboard.html', 
+                             stats={'students': 0, 'teachers': 0, 'classes': 0, 'assignments': 0},
+                             monthly_stats={},
+                             weekly_stats={},
+                             section='home',
+                             active_tab='home',
+                             at_risk_alerts=[])
+        current_app.logger.error(f"Error in management_dashboard: {e}")
+        import traceback
+        error_trace = traceback.format_exc()
+        current_app.logger.error(error_trace)
+        flash(f"Error loading dashboard: {str(e)}", 'danger')
+        # Return minimal dashboard with error
+        return render_template('management/role_dashboard.html', 
+                             stats={'students': 0, 'teachers': 0, 'classes': 0, 'assignments': 0},
+                             monthly_stats={},
+                             weekly_stats={},
+                             section='home',
+                             active_tab='home',
+                             at_risk_alerts=[])
 
 # Routes for managing students, teachers, classes etc.
 # Example: Add Student
@@ -2577,7 +2611,11 @@ def admin_class_analytics(class_id):
     # Get analytics data
     try:
         groups = StudentGroup.query.filter_by(class_id=class_id).all()
-        group_assignments = GroupAssignment.query.filter_by(class_id=class_id).all()
+        try:
+            group_assignments = GroupAssignment.query.filter_by(class_id=class_id).all()
+        except Exception as e:
+            current_app.logger.error(f"Error loading group assignments: {str(e)}")
+            group_assignments = []
         collaboration_metrics = []
         benchmarks = []
     except Exception as e:
@@ -3208,7 +3246,11 @@ def assignments_and_grades():
                 if class_obj and hasattr(class_obj, 'id') and class_obj.id is not None:
                     regular_count = Assignment.query.filter_by(class_id=class_obj.id).count()
                     try:
-                        group_count = GroupAssignment.query.filter_by(class_id=class_obj.id).count()
+                        try:
+                            group_count = GroupAssignment.query.filter_by(class_id=class_obj.id).count()
+                        except Exception as e:
+                            current_app.logger.error(f"Error counting group assignments: {str(e)}")
+                            group_count = 0
                     except:
                         group_count = 0
                     class_assignments[class_obj.id] = regular_count + group_count
@@ -3322,7 +3364,11 @@ def assignments_and_grades():
                     
                     # Get group assignments for the selected class
                     try:
-                        group_assignments_query = GroupAssignment.query.filter_by(class_id=selected_class_id)
+                        try:
+                            group_assignments_query = GroupAssignment.query.filter_by(class_id=selected_class_id)
+                        except Exception as e:
+                            current_app.logger.error(f"Error querying group assignments: {str(e)}")
+                            group_assignments_query = GroupAssignment.query.filter_by(class_id=0)  # Empty query
                         
                         # Apply sorting for group assignments
                         if sort_by == 'title':
@@ -3591,156 +3637,174 @@ def assignments_legacy():
 @management_required
 def take_class_attendance(class_id):
     """Take attendance for a specific class (management view)"""
-    from datetime import datetime
-    
-    class_obj = Class.query.get_or_404(class_id)
-    
-    # Check if class is active (has an active school year)
-    if not hasattr(class_obj, 'school_year_id') or not class_obj.school_year_id:
-        flash("This class is not associated with an active school year.", "warning")
-        return redirect(url_for('management.classes'))
-    
-    # Check if class is archived or inactive
-    if hasattr(class_obj, 'is_active') and not class_obj.is_active:
-        flash("This class is archived or inactive. Cannot take attendance.", "warning")
-        return redirect(url_for('management.classes'))
-
-    # Get only students enrolled in this specific class
-    enrolled_students = db.session.query(Student).join(Enrollment).filter(
-        Enrollment.class_id == class_id,
-        Enrollment.is_active == True
-    ).order_by(Student.last_name, Student.first_name).all()
-    
-    if not enrolled_students:
-        flash("No students are currently enrolled in this class.", "warning")
-        return redirect(url_for('management.view_class', class_id=class_id))
-    
-    students = enrolled_students
-    
-    statuses = [
-        "Present",
-        "Late",
-        "Unexcused Absence",
-        "Excused Absence",
-        "Suspended"
-    ]
-
-    attendance_date_str = request.args.get('date') or request.form.get('attendance_date')
-    if not attendance_date_str:
-        attendance_date_str = datetime.now().strftime('%Y-%m-%d')
-    
     try:
-        attendance_date = datetime.strptime(attendance_date_str, '%Y-%m-%d').date()
-    except ValueError:
-        flash("Invalid date format. Please use YYYY-MM-DD format.", "danger")
-        return redirect(url_for('management.take_class_attendance', class_id=class_id))
-    
-    # Check if date is not in the future
-    if attendance_date > datetime.now().date():
-        flash("Cannot take attendance for future dates.", "warning")
-        attendance_date_str = datetime.now().strftime('%Y-%m-%d')
-        attendance_date = datetime.now().date()
-
-    # Load existing records for this class/date
-    existing_records = {rec.student_id: rec for rec in Attendance.query.filter_by(class_id=class_id, date=attendance_date).all()}
-    
-    # Load school-day attendance records for the same date
-    school_day_records = {}
-    if attendance_date:
-        school_day_attendance = SchoolDayAttendance.query.filter_by(date=attendance_date).all()
-        school_day_records = {record.student_id: record for record in school_day_attendance}
-    
-    # Calculate attendance statistics
-    total_students = len(students)
-    present_count = sum(1 for record in existing_records.values() if record.status == "Present")
-    late_count = sum(1 for record in existing_records.values() if record.status == "Late")
-    absent_count = sum(1 for record in existing_records.values() if record.status in ["Unexcused Absence", "Excused Absence"])
-    suspended_count = sum(1 for record in existing_records.values() if record.status == "Suspended")
-    
-    attendance_stats = {
-        'total': total_students,
-        'present': present_count,
-        'late': late_count,
-        'absent': absent_count,
-        'suspended': suspended_count,
-        'present_percentage': round((present_count / total_students * 100) if total_students > 0 else 0, 1)
-    }
-
-    if request.method == 'POST':
-        attendance_saved = False
-        valid_statuses = ["Present", "Late", "Unexcused Absence", "Excused Absence", "Suspended"]
+        from datetime import datetime
         
-        # Get current user's teacher staff record if they are management
-        teacher = None
-        if current_user.role in ['Director', 'School Administrator']:
-            if current_user.teacher_staff_id:
-                teacher = TeacherStaff.query.get(current_user.teacher_staff_id)
+        class_obj = Class.query.get_or_404(class_id)
         
-        for student in students:
-            status = request.form.get(f'status-{student.id}')
-            notes = request.form.get(f'notes-{student.id}')
+        # Check if class is active (has an active school year)
+        if not hasattr(class_obj, 'school_year_id') or not class_obj.school_year_id:
+            flash("This class is not associated with an active school year.", "warning")
+            return redirect(url_for('management.classes'))
+        
+        # Check if class is archived or inactive
+        if hasattr(class_obj, 'is_active') and not class_obj.is_active:
+            flash("This class is archived or inactive. Cannot take attendance.", "warning")
+            return redirect(url_for('management.classes'))
+
+        # Get only students enrolled in this specific class
+        enrolled_students = db.session.query(Student).join(Enrollment).filter(
+            Enrollment.class_id == class_id,
+            Enrollment.is_active == True
+        ).order_by(Student.last_name, Student.first_name).all()
+        
+        if not enrolled_students:
+            flash("No students are currently enrolled in this class.", "warning")
+            return redirect(url_for('management.view_class', class_id=class_id))
+        
+        students = enrolled_students
+        
+        statuses = [
+            "Present",
+            "Late",
+            "Unexcused Absence",
+            "Excused Absence",
+            "Suspended"
+        ]
+
+        attendance_date_str = request.args.get('date') or request.form.get('attendance_date')
+        if not attendance_date_str:
+            attendance_date_str = datetime.now().strftime('%Y-%m-%d')
+        
+        try:
+            attendance_date = datetime.strptime(attendance_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            flash("Invalid date format. Please use YYYY-MM-DD format.", "danger")
+            return redirect(url_for('management.take_class_attendance', class_id=class_id))
+        
+        # Check if date is not in the future
+        if attendance_date > datetime.now().date():
+            flash("Cannot take attendance for future dates.", "warning")
+            attendance_date_str = datetime.now().strftime('%Y-%m-%d')
+            attendance_date = datetime.now().date()
+
+        # Load existing records for this class/date
+        existing_records = {rec.student_id: rec for rec in Attendance.query.filter_by(class_id=class_id, date=attendance_date).all()}
+        
+        # Load school-day attendance records for the same date
+        school_day_records = {}
+        if attendance_date:
+            school_day_attendance = SchoolDayAttendance.query.filter_by(date=attendance_date).all()
+            school_day_records = {record.student_id: record for record in school_day_attendance}
+        
+        # Calculate attendance statistics
+        total_students = len(students)
+        present_count = sum(1 for record in existing_records.values() if record.status == "Present")
+        late_count = sum(1 for record in existing_records.values() if record.status == "Late")
+        absent_count = sum(1 for record in existing_records.values() if record.status in ["Unexcused Absence", "Excused Absence"])
+        suspended_count = sum(1 for record in existing_records.values() if record.status == "Suspended")
+        
+        attendance_stats = {
+            'total': total_students,
+            'present': present_count,
+            'late': late_count,
+            'absent': absent_count,
+            'suspended': suspended_count,
+            'present_percentage': round((present_count / total_students * 100) if total_students > 0 else 0, 1)
+        }
+
+        if request.method == 'POST':
+            attendance_saved = False
+            valid_statuses = ["Present", "Late", "Unexcused Absence", "Excused Absence", "Suspended"]
             
-            if not status:
-                continue
+            # Get current user's teacher staff record if they are management
+            teacher = None
+            if current_user.role in ['Director', 'School Administrator']:
+                if current_user.teacher_staff_id:
+                    teacher = TeacherStaff.query.get(current_user.teacher_staff_id)
+            
+            for student in students:
+                status = request.form.get(f'status-{student.id}')
+                notes = request.form.get(f'notes-{student.id}')
                 
-            # Validate status
-            if status not in valid_statuses:
-                flash(f"Invalid attendance status for {student.first_name} {student.last_name}.", "warning")
-                continue
+                if not status:
+                    continue
+                
+                # Convert lowercase status to proper format (template sends lowercase)
+                status_map = {
+                    'present': 'Present',
+                    'late': 'Late',
+                    'unexcused absence': 'Unexcused Absence',
+                    'excused absence': 'Excused Absence',
+                    'suspended': 'Suspended'
+                }
+                status = status_map.get(status.lower(), status)
+                    
+                # Validate status
+                if status not in valid_statuses:
+                    flash(f"Invalid attendance status for {student.first_name} {student.last_name}.", "warning")
+                    continue
+                
+                # Validate that the student is still enrolled in this class
+                enrollment = Enrollment.query.filter_by(
+                    student_id=student.id, 
+                    class_id=class_id, 
+                    is_active=True
+                ).first()
+                
+                if not enrollment:
+                    flash(f'Student {student.first_name} {student.last_name} is no longer enrolled in this class.', 'warning')
+                    continue
+                
+                # Check if record exists
+                record = Attendance.query.filter_by(student_id=student.id, class_id=class_id, date=attendance_date).first()
+                if record:
+                    record.status = status
+                    record.notes = notes
+                    record.teacher_id = teacher.id if teacher else None
+                else:
+                    record = Attendance(
+                        student_id=student.id,
+                        class_id=class_id,
+                        date=attendance_date,
+                        status=status,
+                        notes=notes,
+                        teacher_id=teacher.id if teacher else None
+                    )
+                    db.session.add(record)
+                attendance_saved = True
             
-            # Validate that the student is still enrolled in this class
-            enrollment = Enrollment.query.filter_by(
-                student_id=student.id, 
-                class_id=class_id, 
-                is_active=True
-            ).first()
-            
-            if not enrollment:
-                flash(f'Student {student.first_name} {student.last_name} is no longer enrolled in this class.', 'warning')
-                continue
-            
-            # Check if record exists
-            record = Attendance.query.filter_by(student_id=student.id, class_id=class_id, date=attendance_date).first()
-            if record:
-                record.status = status
-                record.notes = notes
-                record.teacher_id = teacher.id if teacher else None
+            if attendance_saved:
+                try:
+                    db.session.commit()
+                    flash('Attendance recorded successfully.', 'success')
+                except Exception as e:
+                    db.session.rollback()
+                    flash('Error saving attendance. Please try again.', 'danger')
+                    current_app.logger.error(f"Error saving attendance: {e}")
             else:
-                record = Attendance(
-                    student_id=student.id,
-                    class_id=class_id,
-                    date=attendance_date,
-                    status=status,
-                    notes=notes,
-                    teacher_id=teacher.id if teacher else None
-                )
-                db.session.add(record)
-            attendance_saved = True
-        
-        if attendance_saved:
-            try:
-                db.session.commit()
-                flash('Attendance recorded successfully.', 'success')
-            except Exception as e:
-                db.session.rollback()
-                flash('Error saving attendance. Please try again.', 'danger')
-                current_app.logger.error(f"Error saving attendance: {e}")
-        else:
-            flash('No attendance data was submitted.', 'warning')
-        
-        # Redirect back to management view
-        return redirect(url_for('management.view_class', class_id=class_id))
+                flash('No attendance data was submitted.', 'warning')
+            
+            # Redirect back to management view
+            return redirect(url_for('management.view_class', class_id=class_id))
 
-    return render_template(
-        'shared/take_attendance.html',
-        class_item=class_obj,
-        students=students,
-        attendance_date_str=attendance_date_str,
-        statuses=statuses,
-        existing_records=existing_records,
-        school_day_records=school_day_records,
-        attendance_stats=attendance_stats
-    )
+        return render_template(
+            'shared/take_attendance.html',
+            class_item=class_obj,
+            students=students,
+            attendance_date_str=attendance_date_str,
+            statuses=statuses,
+            existing_records=existing_records,
+            school_day_records=school_day_records,
+            attendance_stats=attendance_stats
+        )
+    
+    except Exception as e:
+        current_app.logger.error(f"Error in take_class_attendance route: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        flash(f"Error loading attendance page: {str(e)}", "danger")
+        return redirect(url_for('management.classes'))
 
 @management_blueprint.route('/attendance-analytics')
 @login_required
@@ -5421,7 +5485,11 @@ def debug_grades(class_id):
     students = [enrollment.student for enrollment in enrollments if enrollment.student]
     
     # Get group assignments
-    group_assignments = GroupAssignment.query.filter_by(class_id=class_id).all()
+    try:
+        group_assignments = GroupAssignment.query.filter_by(class_id=class_id).all()
+    except Exception as e:
+        current_app.logger.error(f"Error loading group assignments: {str(e)}")
+        group_assignments = []
     
     # Get all group grades for this class
     group_grades = GroupGrade.query.join(GroupAssignment).filter(
@@ -5499,7 +5567,23 @@ def add_assignment():
         status = request.form.get('status', 'Active')
         assignment_context = request.form.get('assignment_context', 'homework')
         
-        print(f"DEBUG: Parsed - title={title}, class_id={class_id}, due_date={due_date_str}, quarter={quarter}, status={status}, assignment_context={assignment_context}")
+        # Get total points from form (default to 100 if not provided)
+        total_points = request.form.get('total_points', type=float)
+        if total_points is None or total_points <= 0:
+            total_points = 100.0
+        
+        # Get advanced grading options
+        allow_extra_credit = 'allow_extra_credit' in request.form
+        max_extra_credit_points = request.form.get('max_extra_credit_points', type=float) or 0.0
+        
+        late_penalty_enabled = 'late_penalty_enabled' in request.form
+        late_penalty_per_day = request.form.get('late_penalty_per_day', type=float) or 0.0
+        late_penalty_max_days = request.form.get('late_penalty_max_days', type=int) or 0
+        
+        assignment_category = request.form.get('assignment_category', '').strip() or None
+        category_weight = request.form.get('category_weight', type=float) or 0.0
+        
+        print(f"DEBUG: Parsed - title={title}, class_id={class_id}, due_date={due_date_str}, quarter={quarter}, status={status}, assignment_context={assignment_context}, total_points={total_points}")
         
         if not all([title, class_id, due_date_str, quarter]):
             print(f"DEBUG: Validation failed - title={title!r}, class_id={class_id!r}, due_date_str={due_date_str!r}, quarter={quarter!r}")
@@ -5537,6 +5621,14 @@ def add_assignment():
         new_assignment.status = status
         new_assignment.assignment_context = assignment_context
         new_assignment.assignment_type = 'pdf_paper'  # Set assignment type for PDF/Paper assignments
+        new_assignment.total_points = total_points
+        new_assignment.allow_extra_credit = allow_extra_credit
+        new_assignment.max_extra_credit_points = max_extra_credit_points if allow_extra_credit else 0.0
+        new_assignment.late_penalty_enabled = late_penalty_enabled
+        new_assignment.late_penalty_per_day = late_penalty_per_day if late_penalty_enabled else 0.0
+        new_assignment.late_penalty_max_days = late_penalty_max_days if late_penalty_enabled else 0
+        new_assignment.assignment_category = assignment_category
+        new_assignment.category_weight = category_weight
         new_assignment.created_by = current_user.id
         
         # Handle file upload
@@ -5595,177 +5687,276 @@ def add_assignment():
 @management_required
 def grade_assignment(assignment_id):
     """Grade an assignment - Directors and School Administrators can grade assignments for classes they teach"""
-    assignment = Assignment.query.get_or_404(assignment_id)
-    class_obj = assignment.class_info
-    
-    # Authorization check - Directors and School Administrators can grade any assignment
-    if current_user.role not in ['Director', 'School Administrator']:
-        flash("You are not authorized to grade assignments.", "danger")
-        return redirect(url_for('management.assignments_and_grades'))
-    
-    # Get only students enrolled in this specific class
-    enrolled_students = db.session.query(Student).join(Enrollment).filter(
-        Enrollment.class_id == class_obj.id,
-        Enrollment.is_active == True
-    ).order_by(Student.last_name, Student.first_name).all()
-    
-    if not enrolled_students:
-        flash("No students are currently enrolled in this class.", "warning")
-        return redirect(url_for('management.assignments_and_grades'))
-    
-    students = enrolled_students
-    
-    if request.method == 'POST':
-        # Get teacher staff record
-        teacher = None
-        if current_user.teacher_staff_id:
-            teacher = TeacherStaff.query.get(current_user.teacher_staff_id)
+    try:
+        assignment = Assignment.query.get_or_404(assignment_id)
         
-        for student in students:
-            score = request.form.get(f'score_{student.id}')
-            comment = request.form.get(f'comment_{student.id}')
-            submission_type = request.form.get(f'submission_type_{student.id}')
-            submission_notes = request.form.get(f'submission_notes_{student.id}')
-            
-            # Handle manual submission tracking
-            if submission_type:
-                submission = Submission.query.filter_by(
-                    student_id=student.id,
-                    assignment_id=assignment_id
-                ).first()
-                
-                if submission_type in ['in_person', 'online']:
-                    # Create or update submission
-                    if submission:
-                        submission.submission_type = submission_type
-                        submission.submission_notes = submission_notes
-                        submission.marked_by = teacher.id if teacher else None
-                        submission.marked_at = datetime.utcnow()
-                    else:
-                        # Create new manual submission
-                        submission = Submission(
-                            student_id=student.id,
-                            assignment_id=assignment_id,
-                            submission_type=submission_type,
-                            submission_notes=submission_notes,
-                            marked_by=teacher.id if teacher else None,
-                            marked_at=datetime.utcnow(),
-                            submitted_at=datetime.utcnow(),
-                            file_path=None  # No file for in-person submissions
-                        )
-                        db.session.add(submission)
-                elif submission_type == 'not_submitted' and submission:
-                    # Remove submission if marked as not submitted
-                    db.session.delete(submission)
-            
-            if score is not None:
-                try:
-                    score_val = float(score) if score else 0.0
-                    grade_data = json.dumps({'score': score_val, 'comment': comment})
-                    
-                    grade = Grade.query.filter_by(student_id=student.id, assignment_id=assignment_id).first()
-                    if grade:
-                        grade.grade_data = grade_data
-                        # Check if grade should be voided (even if updating)
-                        from management_routes.late_enrollment_utils import check_and_void_grade
-                        check_and_void_grade(grade)
-                    else:
-                        # Create grade using attribute assignment
-                        grade = Grade()
-                        grade.student_id = student.id
-                        grade.assignment_id = assignment_id
-                        grade.grade_data = grade_data
-                        db.session.add(grade)
-                        # Check if grade should be voided due to late enrollment
-                        from management_routes.late_enrollment_utils import check_and_void_grade
-                        # Flush to get the grade ID, then check void status
-                        db.session.flush()
-                        check_and_void_grade(grade)
-                    
-                    # Check if this is a redo submission and calculate final grade
-                    redo = AssignmentRedo.query.filter_by(
-                        assignment_id=assignment_id,
-                        student_id=student.id,
-                        is_used=True
-                    ).first()
-                    
-                    if redo:
-                        # This is a redo - calculate final grade
-                        redo.redo_grade = score_val
-                        
-                        # Apply late penalty if redo was late
-                        effective_redo_grade = score_val
-                        if redo.was_redo_late:
-                            effective_redo_grade = max(0, score_val - 10)  # 10% penalty
-                        
-                        # Keep higher grade
-                        if redo.original_grade:
-                            redo.final_grade = max(redo.original_grade, effective_redo_grade)
-                        else:
-                            redo.final_grade = effective_redo_grade
-                        
-                        # Update the grade_data with final grade
-                        grade_data_dict = json.loads(grade_data)
-                        grade_data_dict['score'] = redo.final_grade
-                        grade_data_dict['is_redo_final'] = True
-                        if redo.was_redo_late:
-                            grade_data_dict['comment'] = f"{comment}\n[REDO: Late submission, 10% penalty applied. Original: {redo.original_grade}%, Redo: {score_val}% (-10%), Final: {redo.final_grade}%]"
-                        else:
-                            grade_data_dict['comment'] = f"{comment}\n[REDO: Higher grade kept. Original: {redo.original_grade}%, Redo: {score_val}%, Final: {redo.final_grade}%]"
-                        grade.grade_data = json.dumps(grade_data_dict)
-                    
-                    # Create notification for the student
-                    if student.user:
-                        from app import create_notification
-                        if redo:
-                            message = f'Your redo for "{assignment.title}" has been graded. Final Score: {redo.final_grade}%'
-                        else:
-                            message = f'Your grade for "{assignment.title}" has been posted. Score: {score_val}%'
-                        
-                        create_notification(
-                            user_id=student.user.id,
-                            notification_type='grade',
-                            title=f'Grade posted for {assignment.title}',
-                            message=message,
-                            link=url_for('student.student_grades')
-                        )
-                        
-                except ValueError:
-                    flash(f"Invalid score format for student {student.id}.", "warning")
-                    continue # Skip this student and continue with others
+        # Check if assignment has class_info
+        if not assignment.class_info:
+            flash("This assignment is not associated with a class.", "danger")
+            return redirect(url_for('management.assignments_and_grades'))
         
-        db.session.commit()
-        flash('Grades updated successfully.', 'success')
-        return redirect(url_for('management.grade_assignment', assignment_id=assignment_id))
-
-    # Get existing grades for this assignment
-    grades = {}
-    for g in Grade.query.filter_by(assignment_id=assignment_id).all():
+        class_obj = assignment.class_info
+        
+        # Authorization check - Directors and School Administrators can grade any assignment
+        if current_user.role not in ['Director', 'School Administrator']:
+            flash("You are not authorized to grade assignments.", "danger")
+            return redirect(url_for('management.assignments_and_grades'))
+        
+        # Get only students enrolled in this specific class
         try:
-            if g.grade_data:
-                grades[g.student_id] = json.loads(g.grade_data)
-            else:
-                grades[g.student_id] = {'score': 0, 'comment': ''}
-        except (json.JSONDecodeError, TypeError):
-            grades[g.student_id] = {'score': 0, 'comment': ''}
+            enrolled_students = db.session.query(Student).join(Enrollment).filter(
+                Enrollment.class_id == class_obj.id,
+                Enrollment.is_active == True
+            ).order_by(Student.last_name, Student.first_name).all()
+        except Exception as e:
+            current_app.logger.error(f"Error fetching enrolled students: {str(e)}")
+            enrolled_students = []
+        
+        if not enrolled_students:
+            flash("No students are currently enrolled in this class.", "warning")
+            return redirect(url_for('management.assignments_and_grades'))
+        
+        students = enrolled_students
+        
+        if request.method == 'POST':
+            try:
+                # Get teacher staff record
+                teacher = None
+                if current_user.teacher_staff_id:
+                    teacher = TeacherStaff.query.get(current_user.teacher_staff_id)
+                
+                for student in students:
+                    score = request.form.get(f'score_{student.id}')
+                    comment = request.form.get(f'comment_{student.id}')
+                    submission_type = request.form.get(f'submission_type_{student.id}')
+                    submission_notes = request.form.get(f'submission_notes_{student.id}')
+                    
+                    # Handle manual submission tracking
+                    if submission_type:
+                        submission = Submission.query.filter_by(
+                            student_id=student.id,
+                            assignment_id=assignment_id
+                        ).first()
+                        
+                        if submission_type in ['in_person', 'online']:
+                            # Create or update submission
+                            if submission:
+                                submission.submission_type = submission_type
+                                submission.submission_notes = submission_notes
+                                submission.marked_by = teacher.id if teacher else None
+                                submission.marked_at = datetime.utcnow()
+                            else:
+                                # Create new manual submission
+                                submission = Submission(
+                                    student_id=student.id,
+                                    assignment_id=assignment_id,
+                                    submission_type=submission_type,
+                                    submission_notes=submission_notes,
+                                    marked_by=teacher.id if teacher else None,
+                                    marked_at=datetime.utcnow(),
+                                    submitted_at=datetime.utcnow(),
+                                    file_path=None  # No file for in-person submissions
+                                )
+                                db.session.add(submission)
+                        elif submission_type == 'not_submitted' and submission:
+                            # Remove submission if marked as not submitted
+                            db.session.delete(submission)
+                    
+                    if score is not None:
+                        try:
+                            points_earned = float(score) if score else 0.0
+                            
+                            # Get total points from assignment (default to 100 if not set)
+                            total_points = assignment.total_points if hasattr(assignment, 'total_points') and assignment.total_points else 100.0
+                            
+                            # Calculate percentage based on points earned vs total points
+                            percentage = (points_earned / total_points * 100) if total_points > 0 else 0
+                            
+                            grade_data_dict = {
+                                'score': points_earned,
+                                'points_earned': points_earned,
+                                'total_points': total_points,
+                                'max_score': total_points,  # Keep for backward compatibility
+                                'percentage': round(percentage, 2),
+                                'comment': comment or '',
+                                'feedback': comment or '',  # Keep for backward compatibility
+                                'graded_at': datetime.utcnow().isoformat()
+                            }
+                            grade_data = json.dumps(grade_data_dict)
+                            
+                            grade = Grade.query.filter_by(student_id=student.id, assignment_id=assignment_id).first()
+                            if grade:
+                                grade.grade_data = grade_data
+                                grade.graded_at = datetime.utcnow()
+                                # Check if grade should be voided (even if updating)
+                                from management_routes.late_enrollment_utils import check_and_void_grade
+                                check_and_void_grade(grade)
+                            else:
+                                # Create grade using attribute assignment
+                                grade = Grade()
+                                grade.student_id = student.id
+                                grade.assignment_id = assignment_id
+                                grade.grade_data = grade_data
+                                grade.graded_at = datetime.utcnow()
+                                db.session.add(grade)
+                                # Check if grade should be voided due to late enrollment
+                                from management_routes.late_enrollment_utils import check_and_void_grade
+                                # Flush to get the grade ID, then check void status
+                                db.session.flush()
+                                check_and_void_grade(grade)
+                            
+                            # Check if this is a redo submission and calculate final grade
+                            redo = AssignmentRedo.query.filter_by(
+                                assignment_id=assignment_id,
+                                student_id=student.id,
+                                is_used=True
+                            ).first()
+                            
+                            if redo:
+                                # This is a redo - calculate final grade
+                                redo.redo_grade = points_earned
+                                
+                                # Apply late penalty if redo was late
+                                effective_redo_grade = points_earned
+                                if redo.was_redo_late:
+                                    effective_redo_grade = max(0, points_earned - 10)  # 10% penalty
+                                
+                                # Keep higher grade
+                                if redo.original_grade:
+                                    redo.final_grade = max(redo.original_grade, effective_redo_grade)
+                                else:
+                                    redo.final_grade = effective_redo_grade
+                                
+                                # Update the grade_data with final grade
+                                final_percentage = (redo.final_grade / total_points * 100) if total_points > 0 else 0
+                                grade_data_dict['score'] = redo.final_grade
+                                grade_data_dict['points_earned'] = redo.final_grade
+                                grade_data_dict['percentage'] = round(final_percentage, 2)
+                                grade_data_dict['is_redo_final'] = True
+                                if redo.was_redo_late:
+                                    grade_data_dict['comment'] = f"{comment or ''}\n[REDO: Late submission, 10% penalty applied. Original: {redo.original_grade}%, Redo: {points_earned}% (-10%), Final: {redo.final_grade}%]"
+                                else:
+                                    grade_data_dict['comment'] = f"{comment or ''}\n[REDO: Higher grade kept. Original: {redo.original_grade}%, Redo: {points_earned}%, Final: {redo.final_grade}%]"
+                                grade.grade_data = json.dumps(grade_data_dict)
+                            
+                            # Create notification for the student
+                            if student.user:
+                                from app import create_notification
+                                if redo:
+                                    message = f'Your redo for "{assignment.title}" has been graded. Final Score: {redo.final_grade}%'
+                                else:
+                                    message = f'Your grade for "{assignment.title}" has been posted. Score: {points_earned}%'
+                                
+                                create_notification(
+                                    user_id=student.user.id,
+                                    notification_type='grade',
+                                    title=f'Grade posted for {assignment.title}',
+                                    message=message,
+                                    link=url_for('student.student_grades')
+                                )
+                                
+                        except ValueError:
+                            flash(f"Invalid score format for student {student.id}.", "warning")
+                            continue # Skip this student and continue with others
+                
+                db.session.commit()
+                flash('Grades updated successfully.', 'success')
+                return redirect(url_for('management.grade_assignment', assignment_id=assignment_id))
+            
+            except Exception as e:
+                db.session.rollback()
+                current_app.logger.error(f"Error saving grades in grade_assignment: {str(e)}")
+                import traceback
+                traceback.print_exc()
+                flash(f'Error saving grades: {str(e)}', 'danger')
+                return redirect(url_for('management.grade_assignment', assignment_id=assignment_id))
+        
+        # GET request - show grading interface
+        # Get total points from assignment (default to 100 if not set)
+        assignment_total_points = assignment.total_points if hasattr(assignment, 'total_points') and assignment.total_points else 100.0
+        
+        # Get existing grades for this assignment
+        grades = {}
+        try:
+            grade_records = Grade.query.filter_by(assignment_id=assignment_id).all()
+            for g in grade_records:
+                try:
+                    if g.grade_data:
+                        grade_data = json.loads(g.grade_data)
+                        # Ensure grade_data has the expected structure
+                        points_earned = grade_data.get('points_earned') or grade_data.get('score', 0)
+                        total_points = grade_data.get('total_points') or grade_data.get('max_score', assignment_total_points)
+                        percentage = grade_data.get('percentage', 0)
+                        
+                        # Recalculate percentage if not present
+                        if not percentage or percentage == points_earned:
+                            percentage = (points_earned / total_points * 100) if total_points > 0 else 0
+                        
+                        grade_data['points_earned'] = points_earned
+                        grade_data['total_points'] = total_points
+                        grade_data['percentage'] = round(percentage, 2)
+                        grade_data['grade_id'] = g.id  # Add grade_id for history link
+                        grades[g.student_id] = grade_data
+                    else:
+                        grades[g.student_id] = {
+                            'score': 0, 
+                            'points_earned': 0,
+                            'total_points': assignment_total_points,
+                            'percentage': 0,
+                            'comment': '', 
+                            'grade_id': g.id
+                        }
+                except (json.JSONDecodeError, TypeError, AttributeError) as e:
+                    current_app.logger.error(f"Error parsing grade_data for grade {g.id}: {str(e)}")
+                    grades[g.student_id] = {
+                        'score': 0, 
+                        'points_earned': 0,
+                        'total_points': assignment_total_points,
+                        'percentage': 0,
+                        'comment': '', 
+                        'grade_id': g.id
+                    }
+        except Exception as e:
+            current_app.logger.error(f"Error fetching grades: {str(e)}")
+            grades = {}
+        
+        # Get submissions
+        submissions = {}
+        try:
+            submission_records = Submission.query.filter_by(assignment_id=assignment_id).all()
+            submissions = {s.student_id: s for s in submission_records}
+        except Exception as e:
+            current_app.logger.error(f"Error fetching submissions: {str(e)}")
+            submissions = {}
+        
+        # Get active extensions for this assignment
+        extensions_dict = {}
+        try:
+            extensions = AssignmentExtension.query.filter_by(
+                assignment_id=assignment_id,
+                is_active=True
+            ).all()
+            extensions_dict = {ext.student_id: ext for ext in extensions}
+        except Exception as e:
+            current_app.logger.error(f"Error fetching extensions: {str(e)}")
+            extensions_dict = {}
+        
+        return render_template('teachers/teacher_grade_assignment.html', 
+                             assignment=assignment, 
+                             class_obj=class_obj,
+                             students=students, 
+                             grades=grades, 
+                             submissions=submissions,
+                             extensions=extensions_dict,
+                             role_prefix='management',
+                             total_points=assignment_total_points)
     
-    submissions = {s.student_id: s for s in Submission.query.filter_by(assignment_id=assignment_id).all()}
-    
-    # Get active extensions for this assignment
-    extensions = AssignmentExtension.query.filter_by(
-        assignment_id=assignment_id,
-        is_active=True
-    ).all()
-    extensions_dict = {ext.student_id: ext for ext in extensions}
-    
-    return render_template('teachers/teacher_grade_assignment.html', 
-                         assignment=assignment, 
-                         class_obj=class_obj,
-                         students=students, 
-                         grades=grades, 
-                         submissions=submissions,
-                         extensions=extensions_dict,
-                         role_prefix=None)
+    except Exception as e:
+        current_app.logger.error(f"Error in grade_assignment route: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        flash(f"Error loading assignment: {str(e)}", "danger")
+        return redirect(url_for('management.assignments_and_grades'))
 
 
 @management_blueprint.route('/view-assignment/<int:assignment_id>')
@@ -5773,49 +5964,68 @@ def grade_assignment(assignment_id):
 @management_required
 def view_assignment(assignment_id):
     """View assignment details"""
-    assignment = Assignment.query.get_or_404(assignment_id)
-    
-    # Get class information
-    class_info = Class.query.get(assignment.class_id) if assignment.class_id else None
-    teacher = None
-    if class_info and class_info.teacher_id:
-        teacher = TeacherStaff.query.get(class_info.teacher_id)
-    
-    # Get submissions - check if it's a regular assignment or group assignment
-    from models import Submission, GroupSubmission, GroupAssignment
-    
-    if hasattr(assignment, 'id'):
-        # Try to get regular submissions
-        submissions = Submission.query.filter_by(assignment_id=assignment_id).all()
-        submissions_count = len(submissions)
-    else:
-        submissions_count = 0
-        submissions = []
-    
-    # Check if there's a group assignment with the same assignment
-    group_assignments = GroupAssignment.query.filter_by(class_id=assignment.class_id if assignment.class_id else 0).all()
-    group_submissions_count = 0
-    for ga in group_assignments:
-        # Try to match by title or other identifier
-        if ga.title == assignment.title or ga.id == assignment_id:
-            group_submissions = GroupSubmission.query.filter_by(group_assignment_id=ga.id).all()
-            group_submissions_count += len(group_submissions)
-    
-    total_submissions_count = submissions_count + group_submissions_count
-    
-    # Get points from assignment
-    assignment_points = assignment.total_points if hasattr(assignment, 'total_points') else assignment.points if hasattr(assignment, 'points') else 0
-    
-    # Get current date for status calculations
-    today = datetime.now().date()
-    
-    return render_template('shared/view_assignment.html', 
-                         assignment=assignment,
-                         class_info=class_info,
-                         teacher=teacher,
-                         submissions_count=total_submissions_count,
-                         assignment_points=assignment_points,
-                         today=today)
+    try:
+        assignment = Assignment.query.get_or_404(assignment_id)
+        
+        # Get class information
+        class_info = Class.query.get(assignment.class_id) if assignment.class_id else None
+        teacher = None
+        if class_info and class_info.teacher_id:
+            teacher = TeacherStaff.query.get(class_info.teacher_id)
+        
+        # Get submissions - check if it's a regular assignment or group assignment
+        from models import Submission, GroupSubmission, GroupAssignment
+        
+        try:
+            # Try to get regular submissions
+            submissions = Submission.query.filter_by(assignment_id=assignment_id).all()
+            submissions_count = len(submissions) if submissions else 0
+        except Exception as e:
+            print(f"Error getting submissions: {e}")
+            submissions_count = 0
+        
+        # Check if there's a group assignment with the same assignment
+        try:
+            try:
+                group_assignments = GroupAssignment.query.filter_by(class_id=assignment.class_id if assignment.class_id else 0).all()
+            except Exception as e:
+                current_app.logger.error(f"Error loading group assignments: {str(e)}")
+                group_assignments = []
+            group_submissions_count = 0
+            for ga in group_assignments:
+                # Try to match by title or other identifier
+                if ga.title == assignment.title or ga.id == assignment_id:
+                    group_submissions = GroupSubmission.query.filter_by(group_assignment_id=ga.id).all()
+                    group_submissions_count += len(group_submissions) if group_submissions else 0
+        except Exception as e:
+            print(f"Error getting group submissions: {e}")
+            group_submissions_count = 0
+        
+        total_submissions_count = submissions_count + group_submissions_count
+        
+        # Get points from assignment - safely handle missing attributes
+        assignment_points = 0
+        if hasattr(assignment, 'total_points') and assignment.total_points:
+            assignment_points = assignment.total_points
+        elif hasattr(assignment, 'points') and assignment.points:
+            assignment_points = assignment.points
+        
+        # Get current date for status calculations
+        today = datetime.now().date()
+        
+        return render_template('shared/view_assignment.html', 
+                             assignment=assignment,
+                             class_info=class_info,
+                             teacher=teacher,
+                             submissions_count=total_submissions_count,
+                             assignment_points=assignment_points,
+                             today=today)
+    except Exception as e:
+        current_app.logger.error(f"Error in view_assignment route: {e}")
+        import traceback
+        traceback.print_exc()
+        flash(f'Error loading assignment: {str(e)}', 'danger')
+        return redirect(url_for('management.assignments_and_grades'))
 
 
 @management_blueprint.route('/edit-assignment/<int:assignment_id>', methods=['GET', 'POST'])
@@ -6156,6 +6366,239 @@ def void_assignment_for_students(assignment_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
+
+@management_blueprint.route('/grades/statistics/<int:assignment_id>')
+@login_required
+@management_required
+def admin_grade_statistics(assignment_id):
+    """Display grade statistics dashboard for an assignment with charts - Management view."""
+    from models import Grade
+    
+    assignment = Assignment.query.get_or_404(assignment_id)
+    
+    # Get all grades for this assignment
+    grades = Grade.query.filter_by(assignment_id=assignment_id, is_voided=False).all()
+    
+    # Calculate statistics
+    stats = {
+        'total_students': len(grades),
+        'graded_count': 0,
+        'ungraded_count': 0,
+        'average_score': 0,
+        'median_score': 0,
+        'highest_score': 0,
+        'lowest_score': 100,
+        'passing_count': 0,
+        'failing_count': 0
+    }
+    
+    scores = []
+    letter_grades = {'A': 0, 'B': 0, 'C': 0, 'D': 0, 'F': 0}
+    grade_distribution = {'90-100': 0, '80-89': 0, '70-79': 0, '60-69': 0, '0-59': 0}
+    
+    total_points = assignment.total_points if assignment.total_points else 100.0
+    
+    for grade in grades:
+        try:
+            grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
+            score = grade_data.get('score') or grade_data.get('points_earned')
+            
+            if score is not None:
+                stats['graded_count'] += 1
+                score_float = float(score)
+                scores.append(score_float)
+                
+                # Calculate percentage
+                percentage = (score_float / total_points * 100) if total_points > 0 else 0
+                
+                # Update min/max
+                if score_float > stats['highest_score']:
+                    stats['highest_score'] = score_float
+                if score_float < stats['lowest_score']:
+                    stats['lowest_score'] = score_float
+                
+                # Passing/failing (70% threshold)
+                if percentage >= 70:
+                    stats['passing_count'] += 1
+                else:
+                    stats['failing_count'] += 1
+                
+                # Letter grade distribution
+                if percentage >= 90:
+                    letter_grades['A'] += 1
+                    grade_distribution['90-100'] += 1
+                elif percentage >= 80:
+                    letter_grades['B'] += 1
+                    grade_distribution['80-89'] += 1
+                elif percentage >= 70:
+                    letter_grades['C'] += 1
+                    grade_distribution['70-79'] += 1
+                elif percentage >= 60:
+                    letter_grades['D'] += 1
+                    grade_distribution['60-69'] += 1
+                else:
+                    letter_grades['F'] += 1
+                    grade_distribution['0-59'] += 1
+        except (json.JSONDecodeError, TypeError, ValueError, KeyError):
+            continue
+    
+    # Calculate averages
+    if scores:
+        stats['average_score'] = round(sum(scores) / len(scores), 2)
+        sorted_scores = sorted(scores)
+        mid = len(sorted_scores) // 2
+        stats['median_score'] = round((sorted_scores[mid] + sorted_scores[~mid]) / 2, 2) if len(sorted_scores) > 1 else round(sorted_scores[0], 2)
+        stats['average_percentage'] = round((stats['average_score'] / total_points * 100) if total_points > 0 else 0, 2)
+    else:
+        stats['average_percentage'] = 0
+    
+    stats['ungraded_count'] = stats['total_students'] - stats['graded_count']
+    
+    return render_template('management/admin_grade_statistics.html',
+                         assignment=assignment,
+                         stats=stats,
+                         letter_grades=letter_grades,
+                         grade_distribution=grade_distribution,
+                         total_points=total_points)
+
+@management_blueprint.route('/group-assignment/<int:assignment_id>/statistics')
+@login_required
+@management_required
+def admin_group_grade_statistics(assignment_id):
+    """Display grade statistics dashboard for a group assignment with charts - Management view."""
+    from models import GroupGrade, GroupAssignment
+    
+    group_assignment = GroupAssignment.query.get_or_404(assignment_id)
+    
+    # Get all grades for this group assignment
+    grades = GroupGrade.query.filter_by(group_assignment_id=assignment_id, is_voided=False).all()
+    
+    # Calculate statistics
+    stats = {
+        'total_students': len(grades),
+        'graded_count': 0,
+        'ungraded_count': 0,
+        'average_score': 0,
+        'median_score': 0,
+        'highest_score': 0,
+        'lowest_score': 100,
+        'passing_count': 0,
+        'failing_count': 0
+    }
+    
+    scores = []
+    letter_grades = {'A': 0, 'B': 0, 'C': 0, 'D': 0, 'F': 0}
+    grade_distribution = {'90-100': 0, '80-89': 0, '70-79': 0, '60-69': 0, '0-59': 0}
+    
+    total_points = group_assignment.total_points if group_assignment.total_points else 100.0
+    
+    for grade in grades:
+        try:
+            grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
+            score = grade_data.get('score') or grade_data.get('points_earned')
+            
+            if score is not None:
+                stats['graded_count'] += 1
+                score_float = float(score)
+                scores.append(score_float)
+                
+                # Calculate percentage
+                percentage = (score_float / total_points * 100) if total_points > 0 else 0
+                
+                # Update min/max
+                if score_float > stats['highest_score']:
+                    stats['highest_score'] = score_float
+                if score_float < stats['lowest_score']:
+                    stats['lowest_score'] = score_float
+                
+                # Passing/failing (70% threshold)
+                if percentage >= 70:
+                    stats['passing_count'] += 1
+                else:
+                    stats['failing_count'] += 1
+                
+                # Letter grade distribution
+                if percentage >= 90:
+                    letter_grades['A'] += 1
+                    grade_distribution['90-100'] += 1
+                elif percentage >= 80:
+                    letter_grades['B'] += 1
+                    grade_distribution['80-89'] += 1
+                elif percentage >= 70:
+                    letter_grades['C'] += 1
+                    grade_distribution['70-79'] += 1
+                elif percentage >= 60:
+                    letter_grades['D'] += 1
+                    grade_distribution['60-69'] += 1
+                else:
+                    letter_grades['F'] += 1
+                    grade_distribution['0-59'] += 1
+        except (json.JSONDecodeError, TypeError, ValueError, KeyError):
+            continue
+    
+    # Calculate averages
+    if scores:
+        stats['average_score'] = round(sum(scores) / len(scores), 2)
+        sorted_scores = sorted(scores)
+        mid = len(sorted_scores) // 2
+        stats['median_score'] = round((sorted_scores[mid] + sorted_scores[~mid]) / 2, 2) if len(sorted_scores) > 1 else round(sorted_scores[0], 2)
+        stats['average_percentage'] = round((stats['average_score'] / total_points * 100) if total_points > 0 else 0, 2)
+    else:
+        stats['average_percentage'] = 0
+    
+    stats['ungraded_count'] = stats['total_students'] - stats['graded_count']
+    
+    return render_template('management/admin_grade_statistics.html',
+                         assignment=group_assignment,
+                         stats=stats,
+                         letter_grades=letter_grades,
+                         grade_distribution=grade_distribution,
+                         total_points=total_points,
+                         is_group_assignment=True)
+
+@management_blueprint.route('/grades/history/<int:grade_id>')
+@login_required
+@management_required
+def admin_grade_history(grade_id):
+    """View grade history/audit trail for a specific grade - Management view."""
+    from models import GradeHistory, User, Grade
+    
+    grade = Grade.query.get_or_404(grade_id)
+    assignment = grade.assignment
+    
+    # Get all history entries for this grade
+    history_entries = GradeHistory.query.filter_by(grade_id=grade_id).order_by(GradeHistory.changed_at.desc()).all()
+    
+    # Format history entries with user information
+    formatted_history = []
+    for entry in history_entries:
+        try:
+            changed_by_user = User.query.get(entry.changed_by)
+            previous_data = json.loads(entry.previous_grade_data) if entry.previous_grade_data else None
+            new_data = json.loads(entry.new_grade_data) if entry.new_grade_data else None
+            
+            formatted_history.append({
+                'entry': entry,
+                'changed_by': changed_by_user.username if changed_by_user else 'Unknown',
+                'changed_at': entry.changed_at,
+                'previous_data': previous_data,
+                'new_data': new_data,
+                'reason': entry.change_reason
+            })
+        except (json.JSONDecodeError, TypeError):
+            continue
+    
+    # Parse current grade data
+    try:
+        current_grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
+    except (json.JSONDecodeError, TypeError):
+        current_grade_data = {}
+    
+    return render_template('management/admin_grade_history.html',
+                         grade=grade,
+                         assignment=assignment,
+                         current_grade_data=current_grade_data,
+                         history=formatted_history)
 
 @management_blueprint.route('/void-grade/<int:grade_id>', methods=['POST'])
 @login_required
@@ -7750,7 +8193,11 @@ def view_class(class_id):
     
     # Get group assignments for this class
     from models import GroupAssignment
-    group_assignments = GroupAssignment.query.filter_by(class_id=class_id).order_by(GroupAssignment.due_date.desc()).all()
+    try:
+        group_assignments = GroupAssignment.query.filter_by(class_id=class_id).order_by(GroupAssignment.due_date.desc()).all()
+    except Exception as e:
+        current_app.logger.error(f"Error loading group assignments: {str(e)}")
+        group_assignments = []
     
     # Combine both types with type indicator
     all_assignments = []
@@ -9200,6 +9647,11 @@ def admin_create_group_pdf_assignment(class_id):
         # Get assignment context from form or query parameter
         assignment_context = request.form.get('assignment_context', 'homework')
         
+        # Get total points from form (default to 100 if not provided)
+        total_points = request.form.get('total_points', type=float)
+        if total_points is None or total_points <= 0:
+            total_points = 100.0
+        
         # Create the group assignment
         group_assignment = GroupAssignment(
             title=title,
@@ -9217,6 +9669,7 @@ def admin_create_group_pdf_assignment(class_id):
             collaboration_type=collaboration_type,
             selected_group_ids=selected_group_ids,
             assignment_context=assignment_context,
+            total_points=total_points,
             created_by=current_user.id,
             attachment_filename=attachment_filename,
             attachment_original_filename=attachment_original_filename,
@@ -9621,23 +10074,30 @@ def admin_grade_group_assignment(assignment_id):
                             
                             if score:
                                 try:
-                                    score = float(score)
-                                    if 0 <= score <= 100:
-                                        # Calculate letter grade
-                                        if score >= 90:
+                                    points_earned = float(score)
+                                    # Get total points from assignment (default to 100 if not set)
+                                    total_points = group_assignment.total_points if group_assignment.total_points else 100.0
+                                    
+                                    if 0 <= points_earned <= total_points:
+                                        # Calculate percentage and letter grade
+                                        percentage = (points_earned / total_points * 100) if total_points > 0 else 0
+                                        if percentage >= 90:
                                             letter_grade = 'A'
-                                        elif score >= 80:
+                                        elif percentage >= 80:
                                             letter_grade = 'B'
-                                        elif score >= 70:
+                                        elif percentage >= 70:
                                             letter_grade = 'C'
-                                        elif score >= 60:
+                                        elif percentage >= 60:
                                             letter_grade = 'D'
                                         else:
                                             letter_grade = 'F'
                                         
                                         grade_data = {
-                                            'score': score,
-                                            'max_score': 100,
+                                            'score': points_earned,
+                                            'points_earned': points_earned,
+                                            'total_points': total_points,
+                                            'max_score': total_points,  # Keep for backward compatibility
+                                            'percentage': round(percentage, 2),
                                             'letter_grade': letter_grade
                                         }
                                         
@@ -9705,6 +10165,9 @@ def admin_grade_group_assignment(assignment_id):
                 print(f"Error saving grades: {e}")
                 flash('Error saving grades. Please try again.', 'error')
         
+        # Get total points from assignment (default to 100 if not set)
+        assignment_total_points = group_assignment.total_points if group_assignment.total_points else 100.0
+        
         return render_template('management/admin_grade_group_assignment.html',
                              group_assignment=group_assignment,
                              class_obj=group_assignment.class_info,
@@ -9715,6 +10178,7 @@ def admin_grade_group_assignment(assignment_id):
                              total_students=total_students,
                              graded_count=graded_count,
                              average_score=average_score,
+                             total_points=assignment_total_points,
                              today=datetime.now().date())
     except Exception as e:
         print(f"Error grading group assignment: {e}")

@@ -68,10 +68,18 @@ def grade_assignment(assignment_id):
                 if is_voided:
                     continue
                 
+                # Get total points from assignment (default to 100 if not set)
+                total_points = assignment.total_points if assignment.total_points else 100.0
+                
+                # Calculate percentage based on points earned vs total points
+                percentage = (points_earned / total_points * 100) if total_points > 0 else 0
+                
                 grade_data = {
                     'score': points_earned,
-                    'max_score': 100,
-                    'percentage': points_earned,  # Since we're using 100 as max
+                    'points_earned': points_earned,
+                    'total_points': total_points,
+                    'max_score': total_points,  # Keep for backward compatibility
+                    'percentage': round(percentage, 2),
                     'feedback': comments,
                     'graded_at': datetime.now().isoformat()
                 }
@@ -116,6 +124,9 @@ def grade_assignment(assignment_id):
     
     students = [enrollment.student for enrollment in enrollments if enrollment.student is not None]
     
+    # Get total points from assignment (default to 100 if not set)
+    assignment_total_points = assignment.total_points if assignment.total_points else 100.0
+    
     # Get existing grades for this assignment and parse the JSON grade_data
     grades = Grade.query.filter_by(assignment_id=assignment_id).all()
     grades_dict = {}
@@ -123,23 +134,37 @@ def grade_assignment(assignment_id):
         try:
             # Parse the JSON grade_data
             grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
+            # Get points earned and total points from grade_data, fallback to assignment total_points
+            points_earned = grade_data.get('points_earned') or grade_data.get('score', 0)
+            total_points = grade_data.get('total_points') or grade_data.get('max_score', assignment_total_points)
+            percentage = grade_data.get('percentage', 0)
+            
+            # Recalculate percentage if not present or if using old format
+            if not percentage or percentage == points_earned:
+                percentage = (points_earned / total_points * 100) if total_points > 0 else 0
+            
             # Create a dict with the parsed data plus the grade object attributes
             grades_dict[grade.student_id] = {
-                'score': grade_data.get('score', 0),
+                'score': points_earned,
+                'points_earned': points_earned,
+                'total_points': total_points,
                 'comment': grade_data.get('comment', '') or grade_data.get('feedback', ''),
-                'percentage': grade_data.get('percentage', 0),
-                'max_score': grade_data.get('max_score', 100),
+                'percentage': round(percentage, 2),
+                'max_score': total_points,  # Keep for backward compatibility
                 'is_voided': grade.is_voided or grade_data.get('is_voided', False),
-                'graded_at': grade.graded_at
+                'graded_at': grade.graded_at,
+                'grade_id': grade.id  # Add grade_id for history link
             }
         except (json.JSONDecodeError, AttributeError, TypeError) as e:
             # If parsing fails, create a default structure
             print(f"Error parsing grade_data for grade {grade.id}: {e}")
             grades_dict[grade.student_id] = {
                 'score': 0,
+                'points_earned': 0,
+                'total_points': assignment_total_points,
                 'comment': '',
                 'percentage': 0,
-                'max_score': 100,
+                'max_score': assignment_total_points,
                 'is_voided': grade.is_voided,
                 'graded_at': grade.graded_at
             }
@@ -161,7 +186,105 @@ def grade_assignment(assignment_id):
                          students=students,
                          grades=grades_dict,
                          submissions=submissions_dict,
-                         extensions=extensions_dict)
+                         extensions=extensions_dict,
+                         total_points=assignment_total_points)
+
+@bp.route('/grades/statistics/<int:assignment_id>')
+@login_required
+@teacher_required
+def grade_statistics(assignment_id):
+    """Display grade statistics dashboard for an assignment with charts."""
+    assignment = Assignment.query.get_or_404(assignment_id)
+    
+    # Check authorization
+    if not is_authorized_for_class(assignment.class_info):
+        flash("You are not authorized to view statistics for this assignment.", "danger")
+        return redirect(url_for('teacher.dashboard.my_assignments'))
+    
+    # Get all grades for this assignment
+    grades = Grade.query.filter_by(assignment_id=assignment_id, is_voided=False).all()
+    
+    # Calculate statistics
+    stats = {
+        'total_students': len(grades),
+        'graded_count': 0,
+        'ungraded_count': 0,
+        'average_score': 0,
+        'median_score': 0,
+        'highest_score': 0,
+        'lowest_score': 100,
+        'passing_count': 0,
+        'failing_count': 0
+    }
+    
+    scores = []
+    letter_grades = {'A': 0, 'B': 0, 'C': 0, 'D': 0, 'F': 0}
+    grade_distribution = {'90-100': 0, '80-89': 0, '70-79': 0, '60-69': 0, '0-59': 0}
+    
+    total_points = assignment.total_points if assignment.total_points else 100.0
+    
+    for grade in grades:
+        try:
+            grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
+            score = grade_data.get('score') or grade_data.get('points_earned')
+            
+            if score is not None:
+                stats['graded_count'] += 1
+                score_float = float(score)
+                scores.append(score_float)
+                
+                # Calculate percentage
+                percentage = (score_float / total_points * 100) if total_points > 0 else 0
+                
+                # Update min/max
+                if score_float > stats['highest_score']:
+                    stats['highest_score'] = score_float
+                if score_float < stats['lowest_score']:
+                    stats['lowest_score'] = score_float
+                
+                # Passing/failing (70% threshold)
+                if percentage >= 70:
+                    stats['passing_count'] += 1
+                else:
+                    stats['failing_count'] += 1
+                
+                # Letter grade distribution
+                if percentage >= 90:
+                    letter_grades['A'] += 1
+                    grade_distribution['90-100'] += 1
+                elif percentage >= 80:
+                    letter_grades['B'] += 1
+                    grade_distribution['80-89'] += 1
+                elif percentage >= 70:
+                    letter_grades['C'] += 1
+                    grade_distribution['70-79'] += 1
+                elif percentage >= 60:
+                    letter_grades['D'] += 1
+                    grade_distribution['60-69'] += 1
+                else:
+                    letter_grades['F'] += 1
+                    grade_distribution['0-59'] += 1
+        except (json.JSONDecodeError, TypeError, ValueError, KeyError):
+            continue
+    
+    # Calculate averages
+    if scores:
+        stats['average_score'] = round(sum(scores) / len(scores), 2)
+        sorted_scores = sorted(scores)
+        mid = len(sorted_scores) // 2
+        stats['median_score'] = round((sorted_scores[mid] + sorted_scores[~mid]) / 2, 2) if len(sorted_scores) > 1 else round(sorted_scores[0], 2)
+        stats['average_percentage'] = round((stats['average_score'] / total_points * 100) if total_points > 0 else 0, 2)
+    else:
+        stats['average_percentage'] = 0
+    
+    stats['ungraded_count'] = stats['total_students'] - stats['graded_count']
+    
+    return render_template('teachers/teacher_grade_statistics.html',
+                         assignment=assignment,
+                         stats=stats,
+                         letter_grades=letter_grades,
+                         grade_distribution=grade_distribution,
+                         total_points=total_points)
 
 @bp.route('/grades')
 @login_required
@@ -192,6 +315,55 @@ def my_grades():
             grades = Grade.query.filter(Grade.assignment_id.in_(assignment_ids)).order_by(Grade.graded_at.desc()).all()
     
     return render_template('teachers/teacher_grades.html', grades=grades, teacher=teacher)
+
+@bp.route('/grades/history/<int:grade_id>')
+@login_required
+@teacher_required
+def grade_history(grade_id):
+    """View grade history/audit trail for a specific grade."""
+    from models import GradeHistory, User
+    
+    grade = Grade.query.get_or_404(grade_id)
+    assignment = grade.assignment
+    
+    # Check authorization
+    if not is_authorized_for_class(assignment.class_info):
+        flash("You are not authorized to view this grade history.", "danger")
+        return redirect(url_for('teacher.dashboard.my_assignments'))
+    
+    # Get all history entries for this grade
+    history_entries = GradeHistory.query.filter_by(grade_id=grade_id).order_by(GradeHistory.changed_at.desc()).all()
+    
+    # Format history entries with user information
+    formatted_history = []
+    for entry in history_entries:
+        try:
+            changed_by_user = User.query.get(entry.changed_by)
+            previous_data = json.loads(entry.previous_grade_data) if entry.previous_grade_data else None
+            new_data = json.loads(entry.new_grade_data) if entry.new_grade_data else None
+            
+            formatted_history.append({
+                'entry': entry,
+                'changed_by': changed_by_user.username if changed_by_user else 'Unknown',
+                'changed_at': entry.changed_at,
+                'previous_data': previous_data,
+                'new_data': new_data,
+                'reason': entry.change_reason
+            })
+        except (json.JSONDecodeError, TypeError):
+            continue
+    
+    # Parse current grade data
+    try:
+        current_grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
+    except (json.JSONDecodeError, TypeError):
+        current_grade_data = {}
+    
+    return render_template('teachers/teacher_grade_history.html',
+                         grade=grade,
+                         assignment=assignment,
+                         current_grade_data=current_grade_data,
+                         history=formatted_history)
 
 @bp.route('/student-grades')
 @login_required

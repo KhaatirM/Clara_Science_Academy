@@ -285,7 +285,8 @@
 
 /* High Visibility Buttons for Purple Gradient Header */
 .grading-header .btn-outline-primary,
-.grading-header .btn-outline-info {
+.grading-header .btn-outline-info,
+.grading-header .btn-outline-success {
     background: white !important;
     color: #667eea !important;
     border: 2px solid white !important;
@@ -298,7 +299,8 @@
 }
 
 .grading-header .btn-outline-primary:hover,
-.grading-header .btn-outline-info:hover {
+.grading-header .btn-outline-info:hover,
+.grading-header .btn-outline-success:hover {
     background: #f8f9fa !important;
     color: #5568d3 !important;
     transform: translateY(-3px) !important;

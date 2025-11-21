@@ -26,10 +26,19 @@ def update_assignment_statuses():
         today = datetime.now().date()
         
         for assignment in assignments:
-            if assignment.due_date.date() < today and assignment.status == 'Active':
-                assignment.status = 'Overdue'
-            elif assignment.due_date.date() >= today and assignment.status == 'Overdue':
-                assignment.status = 'Active'
+            # Check if due_date exists and is not None
+            if assignment.due_date:
+                try:
+                    # Handle both datetime and date objects
+                    due_date = assignment.due_date.date() if hasattr(assignment.due_date, 'date') else assignment.due_date
+                    if due_date < today and assignment.status == 'Active':
+                        assignment.status = 'Overdue'
+                    elif due_date >= today and assignment.status == 'Overdue':
+                        assignment.status = 'Active'
+                except (AttributeError, TypeError) as e:
+                    # Skip assignments with invalid due_date
+                    print(f"Error updating assignment {assignment.id}: {e}")
+                    continue
         
         db.session.commit()
     except Exception as e:
@@ -104,13 +113,21 @@ def teacher_dashboard():
     ).order_by(Submission.submitted_at.desc()).limit(5).all()
     
     for submission in recent_submissions:
-        recent_activity.append({
-            'type': 'submission',
-            'title': f'New submission for {submission.assignment.title}',
-            'description': f'{submission.student.first_name} {submission.student.last_name} submitted work',
-            'timestamp': submission.submitted_at,
-            'link': url_for('teacher.grading.grade_assignment', assignment_id=submission.assignment_id)
-        })
+        try:
+            # Check if submission has required relationships
+            if not submission.assignment or not submission.student:
+                continue
+                
+            recent_activity.append({
+                'type': 'submission',
+                'title': f'New submission for {submission.assignment.title}',
+                'description': f'{submission.student.first_name} {submission.student.last_name} submitted work',
+                'timestamp': submission.submitted_at or datetime.utcnow(),
+                'link': url_for('teacher.grading.grade_assignment', assignment_id=submission.assignment_id)
+            })
+        except (AttributeError, TypeError) as e:
+            print(f"Error processing submission {submission.id}: {e}")
+            continue
     
     # Recent grades entered
     recent_grades_entered = Grade.query.join(Assignment).filter(
@@ -119,26 +136,40 @@ def teacher_dashboard():
     
     for grade in recent_grades_entered:
         try:
-            grade_data = json.loads(grade.grade_data)
+            # Check if grade has required relationships
+            if not grade.assignment or not grade.student:
+                continue
+                
+            grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
             recent_activity.append({
                 'type': 'grade',
                 'title': f'Grade entered for {grade.assignment.title}',
-                'description': f'Graded {grade.student.first_name} {grade.student.last_name} - Score: {grade_data.get("score", "N/A")}',
-                'timestamp': grade.graded_at,
+                'description': f'Graded {grade.student.first_name} {grade.student.last_name} - Score: {grade_data.get("score", "N/A") if isinstance(grade_data, dict) else "N/A"}',
+                'timestamp': grade.graded_at or datetime.utcnow(),
                 'link': url_for('teacher.grading.grade_assignment', assignment_id=grade.assignment_id)
             })
-        except (json.JSONDecodeError, TypeError):
+        except (json.JSONDecodeError, TypeError, AttributeError) as e:
+            print(f"Error processing grade {grade.id}: {e}")
             continue
     
     # Recent assignments created
     for assignment in recent_assignments:
-        recent_activity.append({
-            'type': 'assignment',
-            'title': f'New assignment: {assignment.title}',
-            'description': f'Created for {assignment.class_info.name} - Due: {assignment.due_date.strftime("%b %d, %Y")}',
-            'timestamp': assignment.created_at,
-            'link': url_for('teacher.dashboard.view_class', class_id=assignment.class_id)
-        })
+        try:
+            # Check if assignment has required relationships
+            if not assignment.class_info:
+                continue
+                
+            due_date_str = assignment.due_date.strftime("%b %d, %Y") if assignment.due_date else "No due date"
+            recent_activity.append({
+                'type': 'assignment',
+                'title': f'New assignment: {assignment.title}',
+                'description': f'Created for {assignment.class_info.name} - Due: {due_date_str}',
+                'timestamp': assignment.created_at or datetime.utcnow(),
+                'link': url_for('teacher.dashboard.view_class', class_id=assignment.class_id)
+            })
+        except (AttributeError, TypeError) as e:
+            print(f"Error processing assignment {assignment.id}: {e}")
+            continue
     
     # Sort recent activity by timestamp
     recent_activity.sort(key=lambda x: x['timestamp'], reverse=True)
@@ -163,12 +194,17 @@ def teacher_dashboard():
     week_start = now - timedelta(days=now.weekday())
     week_end = week_start + timedelta(days=7)
     
-    # Assignments due this week
-    due_assignments = Assignment.query.filter(
-        Assignment.class_id.in_(class_ids),
-        Assignment.due_date >= week_start,
-        Assignment.due_date < week_end
-    ).count()
+    # Assignments due this week - safely handle None due_date
+    try:
+        due_assignments = Assignment.query.filter(
+            Assignment.class_id.in_(class_ids),
+            Assignment.due_date.isnot(None),
+            Assignment.due_date >= week_start,
+            Assignment.due_date < week_end
+        ).count()
+    except Exception as e:
+        print(f"Error counting due assignments: {e}")
+        due_assignments = 0
     
     # Grades entered this month
     grades_this_month = Grade.query.join(Assignment).filter(

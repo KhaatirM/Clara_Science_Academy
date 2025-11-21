@@ -19,6 +19,15 @@
             </div>
         </div>
         <div class="d-flex gap-2">
+            {% if role_prefix == 'management' or request.endpoint and 'management' in request.endpoint %}
+                <a href="{{ url_for('management.admin_grade_statistics', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-info">
+                    <i class="bi bi-bar-chart-fill me-1"></i>Statistics
+                </a>
+            {% else %}
+                <a href="{{ url_for('teacher.grading.grade_statistics', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-info">
+                    <i class="bi bi-bar-chart-fill me-1"></i>Statistics
+                </a>
+            {% endif %}
             <button type="button" class="btn btn-sm btn-outline-primary" onclick="exportGradesCSV()">
                 <i class="bi bi-download me-1"></i>Export CSV
             </button>
@@ -255,17 +264,31 @@
                     {% set grade_data = grades.get(student.id) %}
                     {% set is_voided = false %}
                     {% set score_value = 0 %}
+                    {% set points_earned = 0 %}
+                    {% set total_points = total_points|default(100.0)|float %}
+                    {% set percentage_value = 0 %}
                     {% set comment_data = '' %}
+                    {% set grade_id = None %}
                     {% if grade_data %}
                         {% set is_voided = grade_data.is_voided|default(false) %}
+                        {% set points_earned = grade_data.points_earned|default(grade_data.score|default(0))|float %}
+                        {% set total_points = grade_data.total_points|default(grade_data.max_score|default(total_points))|float %}
+                        {% set percentage_value = grade_data.percentage|default(0)|float %}
+                        {% set grade_id = grade_data.grade_id|default(None) %}
                         {% if grade_data.score is defined and grade_data.score is not none %}
                             {% set score_value = grade_data.score|float %}
                         {% elif grade_data['score'] is defined and grade_data['score'] is not none %}
                             {% set score_value = grade_data['score']|float %}
                         {% endif %}
+                        {% if not percentage_value and points_earned > 0 and total_points > 0 %}
+                            {% set percentage_value = (points_earned / total_points * 100)|round(2) %}
+                        {% endif %}
+                        {% if not score_value and percentage_value %}
+                            {% set score_value = percentage_value %}
+                        {% endif %}
                         {% set comment_data = grade_data.comment|default('') or grade_data.feedback|default('') %}
                     {% endif %}
-                    {% set performance_class = 'voided' if is_voided else ('excellent' if score_value >= 90 else ('good' if score_value >= 80 else ('warning' if score_value >= 70 else ('failing' if score_value > 0 else 'ungraded')))) %}
+                    {% set performance_class = 'voided' if is_voided else ('excellent' if percentage_value >= 90 else ('good' if percentage_value >= 80 else ('warning' if percentage_value >= 70 else ('failing' if percentage_value > 0 else 'ungraded')))) %}
                     
                     <div class="student-grade-card {{ performance_class }}" data-student-id="{{ student.id }}">
                         <div class="student-grade-header">
@@ -340,7 +363,7 @@
                                 <div class="col-md-3">
                                     <div class="grade-input-group">
                                         <label class="grade-label">
-                                            <i class="bi bi-percent"></i> Score
+                                            <i class="bi bi-star"></i> Points Earned
                                         </label>
                                         
                                         <!-- Quick Letter Grade Buttons -->
@@ -362,20 +385,27 @@
                                         </div>
                                         
                                         <div class="score-input-wrapper">
-                                            <input type="number" 
-                                                   class="score-input" 
-                                                   name="score_{{ student.id }}" 
-                                                   id="score_{{ student.id }}"
-                                                   value="{{ score_value if score_value else '' }}"
-                                                   min="0" 
-                                                   max="100" 
-                                                   step="0.1"
-                                                   placeholder="0-100"
-                                                   data-student-id="{{ student.id }}"
-                                                   oninput="updateScoreVisual(this); autoSaveGrade({{ student.id }})">
-                                            <div class="score-visual-bar">
-                                                <div class="score-visual-fill" style="width: {{ score_value }}%"></div>
+                                            <div class="input-group mb-2">
+                                                <input type="number" 
+                                                       class="score-input form-control" 
+                                                       name="score_{{ student.id }}" 
+                                                       id="score_{{ student.id }}"
+                                                       value="{{ points_earned if points_earned else '' }}"
+                                                       min="0" 
+                                                       max="{{ total_points }}" 
+                                                       step="0.1"
+                                                       placeholder="0-{{ total_points|int }}"
+                                                       data-student-id="{{ student.id }}"
+                                                       data-total-points="{{ total_points }}"
+                                                       oninput="updateScoreVisual(this); autoSaveGrade({{ student.id }})">
+                                                <span class="input-group-text">/ {{ total_points|int }} pts</span>
                                             </div>
+                                            <div class="score-visual-bar">
+                                                <div class="score-visual-fill" style="width: {{ percentage_value }}%"></div>
+                                            </div>
+                                            <small class="text-muted d-block mt-1">
+                                                <span id="percentageDisplay_{{ student.id }}">{{ percentage_value|round(2) if percentage_value else 0 }}%</span>
+                                            </small>
                                         </div>
                                     </div>
                                 </div>
@@ -403,18 +433,30 @@
                                             <i class="bi bi-trophy"></i> Current Grade
                                         </label>
                                         <div class="current-grade-display" id="gradeDisplay_{{ student.id }}">
-                                            {% if score_value > 0 %}
+                                            {% if points_earned > 0 %}
                                                 <div class="grade-value grade-{{ performance_class }}">
-                                                    {{ score_value }}%
+                                                    {{ points_earned|round(1) }} / {{ total_points|int }}
+                                                </div>
+                                                <div class="grade-percentage text-muted small mb-1">
+                                                    ({{ percentage_value|round(1) }}%)
                                                 </div>
                                                 <div class="grade-letter">
-                                                    {% if score_value >= 90 %}A
-                                                    {% elif score_value >= 80 %}B
-                                                    {% elif score_value >= 70 %}C
-                                                    {% elif score_value >= 60 %}D
+                                                    {% if percentage_value >= 90 %}A
+                                                    {% elif percentage_value >= 80 %}B
+                                                    {% elif percentage_value >= 70 %}C
+                                                    {% elif percentage_value >= 60 %}D
                                                     {% else %}F
                                                     {% endif %}
                                                 </div>
+                                                {% if grade_id %}
+                                                <div class="mt-2">
+                                                    <a href="{% if role_prefix == 'management' or (request.endpoint and 'management' in request.endpoint) %}{{ url_for('management.admin_grade_history', grade_id=grade_id) }}{% else %}{{ url_for('teacher.grading.grade_history', grade_id=grade_id) }}{% endif %}" 
+                                                       class="btn btn-sm btn-outline-secondary" 
+                                                       title="View grade history">
+                                                        <i class="bi bi-clock-history me-1"></i>History
+                                                    </a>
+                                                </div>
+                                                {% endif %}
                                             {% else %}
                                                 <div class="grade-value grade-ungraded">
                                                     --
@@ -476,35 +518,45 @@
 <script>
 // Update score visual feedback and grade display
 function updateScoreVisual(input) {
-    const score = parseFloat(input.value) || 0;
+    const pointsEarned = parseFloat(input.value) || 0;
+    const totalPoints = parseFloat(input.getAttribute('data-total-points')) || 100;
     const studentId = input.getAttribute('data-student-id');
     const card = input.closest('.student-grade-card');
     const visualFill = input.parentElement.querySelector('.score-visual-fill');
     const gradeDisplay = document.getElementById('gradeDisplay_' + studentId);
+    const percentageDisplay = document.getElementById('percentageDisplay_' + studentId);
     
-    // Update visual bar
-    visualFill.style.width = Math.min(score, 100) + '%';
+    // Calculate percentage
+    const percentage = totalPoints > 0 ? (pointsEarned / totalPoints * 100) : 0;
     
-    // Update visual bar color based on score
-    if (score >= 90) {
+    // Update visual bar (based on percentage)
+    visualFill.style.width = Math.min(percentage, 100) + '%';
+    
+    // Update visual bar color based on percentage
+    if (percentage >= 90) {
         visualFill.style.background = 'linear-gradient(90deg, #28a745 0%, #20c997 100%)';
-    } else if (score >= 80) {
+    } else if (percentage >= 80) {
         visualFill.style.background = 'linear-gradient(90deg, #20c997 0%, #17a2b8 100%)';
-    } else if (score >= 70) {
+    } else if (percentage >= 70) {
         visualFill.style.background = 'linear-gradient(90deg, #ffc107 0%, #fd7e14 100%)';
     } else {
         visualFill.style.background = 'linear-gradient(90deg, #dc3545 0%, #c82333 100%)';
     }
     
-    // Update card class
+    // Update percentage display
+    if (percentageDisplay) {
+        percentageDisplay.textContent = percentage.toFixed(2) + '%';
+    }
+    
+    // Update card class based on percentage
     card.classList.remove('excellent', 'good', 'warning', 'failing', 'ungraded');
-    if (score >= 90) {
+    if (percentage >= 90) {
         card.classList.add('excellent');
-    } else if (score >= 80) {
+    } else if (percentage >= 80) {
         card.classList.add('good');
-    } else if (score >= 70) {
+    } else if (percentage >= 70) {
         card.classList.add('warning');
-    } else if (score > 0) {
+    } else if (percentage > 0) {
         card.classList.add('failing');
     } else {
         card.classList.add('ungraded');
@@ -513,27 +565,30 @@ function updateScoreVisual(input) {
     // Update grade display
     let letter = '';
     let performanceClass = '';
-    if (score >= 90) {
+    if (percentage >= 90) {
         letter = 'A';
         performanceClass = 'excellent';
-    } else if (score >= 80) {
+    } else if (percentage >= 80) {
         letter = 'B';
         performanceClass = 'good';
-    } else if (score >= 70) {
+    } else if (percentage >= 70) {
         letter = 'C';
         performanceClass = 'warning';
-    } else if (score >= 60) {
+    } else if (percentage >= 60) {
         letter = 'D';
         performanceClass = 'failing';
-    } else if (score > 0) {
+    } else if (percentage > 0) {
         letter = 'F';
         performanceClass = 'failing';
     }
     
-    if (score > 0) {
+    if (pointsEarned > 0) {
         gradeDisplay.innerHTML = `
             <div class="grade-value grade-${performanceClass}">
-                ${score}%
+                ${pointsEarned.toFixed(1)} / ${Math.round(totalPoints)}
+            </div>
+            <div class="grade-percentage text-muted small mb-1">
+                (${percentage.toFixed(1)}%)
             </div>
             <div class="grade-letter">${letter}</div>
         `;
@@ -787,10 +842,13 @@ function goBack() {
 }
 
 // Quick Grade Entry Functions
-function setLetterGrade(studentId, score) {
+function setLetterGrade(studentId, percentage) {
     const input = document.getElementById(`score_${studentId}`);
     if (input) {
-        input.value = score;
+        const totalPoints = parseFloat(input.getAttribute('data-total-points')) || 100;
+        // Convert percentage to points
+        const points = (percentage / 100) * totalPoints;
+        input.value = points.toFixed(1);
         updateScoreVisual(input);
         autoSaveGrade(studentId);
         
@@ -800,10 +858,13 @@ function setLetterGrade(studentId, score) {
     }
 }
 
-function setGrade(studentId, score) {
+function setGrade(studentId, percentage) {
     const input = document.getElementById(`score_${studentId}`);
     if (input) {
-        input.value = score;
+        const totalPoints = parseFloat(input.getAttribute('data-total-points')) || 100;
+        // Convert percentage to points
+        const points = (percentage / 100) * totalPoints;
+        input.value = points.toFixed(1);
         updateScoreVisual(input);
         autoSaveGrade(studentId);
         

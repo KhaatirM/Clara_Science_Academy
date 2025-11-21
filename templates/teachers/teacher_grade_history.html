@@ -1,0 +1,143 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/teacher_grade_assignment.css') }}">
+<style>
+    .history-entry {
+        border-left: 4px solid #007bff;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        background: #f8f9fa;
+        border-radius: 4px;
+    }
+    .history-entry.oldest {
+        border-left-color: #6c757d;
+    }
+    .history-entry.latest {
+        border-left-color: #28a745;
+        background: #e8f5e9;
+    }
+    .change-diff {
+        display: flex;
+        gap: 2rem;
+        margin-top: 1rem;
+    }
+    .change-before, .change-after {
+        flex: 1;
+        padding: 0.75rem;
+        border-radius: 4px;
+    }
+    .change-before {
+        background: #fff3cd;
+        border: 1px solid #ffc107;
+    }
+    .change-after {
+        background: #d1ecf1;
+        border: 1px solid #17a2b8;
+    }
+    .change-label {
+        font-weight: bold;
+        font-size: 0.85rem;
+        margin-bottom: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+    <!-- Header -->
+    <div class="grading-header mb-4">
+        <div class="grading-header-content">
+            <div class="grading-header-icon">
+                <i class="bi bi-clock-history"></i>
+            </div>
+            <div class="grading-header-info">
+                <h2 class="grading-header-title">Grade History</h2>
+                <p class="grading-header-subtitle">{{ assignment.title }} • {{ grade.student.first_name }} {{ grade.student.last_name }}</p>
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('teacher.grading.grade_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-arrow-left me-1"></i>Back to Grading
+            </a>
+        </div>
+    </div>
+
+    <!-- Current Grade Info -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Current Grade</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <strong>Score:</strong> {{ current_grade_data.get('score', current_grade_data.get('points_earned', 'N/A')) }} / {{ assignment.total_points if assignment.total_points else 100 }}
+                </div>
+                <div class="col-md-3">
+                    <strong>Percentage:</strong> {{ current_grade_data.get('percentage', 'N/A') }}%
+                </div>
+                <div class="col-md-3">
+                    <strong>Letter Grade:</strong> {{ current_grade_data.get('letter_grade', 'N/A') }}
+                </div>
+                <div class="col-md-3">
+                    <strong>Graded At:</strong> {{ grade.graded_at.strftime('%Y-%m-%d %H:%M') if grade.graded_at else 'N/A' }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Timeline -->
+    <div class="card">
+        <div class="card-header bg-secondary text-white">
+            <h5 class="mb-0"><i class="bi bi-list-ul me-2"></i>Change History</h5>
+        </div>
+        <div class="card-body">
+            {% if history %}
+                {% for item in history %}
+                    <div class="history-entry {% if loop.first %}latest{% elif loop.last %}oldest{% endif %}">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <strong><i class="bi bi-person me-1"></i>{{ item.changed_by }}</strong>
+                                <span class="text-muted ms-2">{{ item.changed_at.strftime('%Y-%m-%d %H:%M:%S') }}</span>
+                            </div>
+                            {% if item.reason %}
+                                <span class="badge bg-info">{{ item.reason }}</span>
+                            {% endif %}
+                        </div>
+                        
+                        {% if item.previous_data and item.new_data %}
+                            <div class="change-diff">
+                                <div class="change-before">
+                                    <div class="change-label text-warning"><i class="bi bi-arrow-left me-1"></i>Before</div>
+                                    <div><strong>Score:</strong> {{ item.previous_data.get('score', item.previous_data.get('points_earned', 'N/A')) }}</div>
+                                    <div><strong>Percentage:</strong> {{ item.previous_data.get('percentage', 'N/A') }}%</div>
+                                    <div><strong>Letter:</strong> {{ item.previous_data.get('letter_grade', 'N/A') }}</div>
+                                </div>
+                                <div class="change-after">
+                                    <div class="change-label text-info"><i class="bi bi-arrow-right me-1"></i>After</div>
+                                    <div><strong>Score:</strong> {{ item.new_data.get('score', item.new_data.get('points_earned', 'N/A')) }}</div>
+                                    <div><strong>Percentage:</strong> {{ item.new_data.get('percentage', 'N/A') }}%</div>
+                                    <div><strong>Letter:</strong> {{ item.new_data.get('letter_grade', 'N/A') }}</div>
+                                </div>
+                            </div>
+                        {% elif item.new_data %}
+                            <div class="change-after">
+                                <div class="change-label text-info"><i class="bi bi-plus-circle me-1"></i>Initial Grade</div>
+                                <div><strong>Score:</strong> {{ item.new_data.get('score', item.new_data.get('points_earned', 'N/A')) }}</div>
+                                <div><strong>Percentage:</strong> {{ item.new_data.get('percentage', 'N/A') }}%</div>
+                                <div><strong>Letter:</strong> {{ item.new_data.get('letter_grade', 'N/A') }}</div>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                    <p class="mt-3">No history available for this grade.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+

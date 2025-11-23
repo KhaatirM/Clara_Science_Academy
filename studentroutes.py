@@ -923,7 +923,11 @@ def student_grades():
                     if grade:
                         grade_data = json.loads(grade.grade_data)
                         if 'score' in grade_data and grade_data['score'] is not None:
-                            quarter_grades_list.append(grade_data['score'])
+                            try:
+                                score = float(grade_data['score'])  # Convert to float
+                                quarter_grades_list.append(score)
+                            except (ValueError, TypeError):
+                                continue  # Skip invalid scores
                 
                 # Add group assignment grades
                 for group_assignment in quarter_group_assignments:
@@ -931,7 +935,11 @@ def student_grades():
                     if group_grade:
                         grade_data = json.loads(group_grade.grade_data) if isinstance(group_grade.grade_data, str) else group_grade.grade_data
                         if 'score' in grade_data and grade_data['score'] is not None:
-                            quarter_grades_list.append(grade_data['score'])
+                            try:
+                                score = float(grade_data['score'])  # Convert to float
+                                quarter_grades_list.append(score)
+                            except (ValueError, TypeError):
+                                continue  # Skip invalid scores
                 
                 if quarter_grades_list:
                     quarter_avg = round(sum(quarter_grades_list) / len(quarter_grades_list), 2)
@@ -996,7 +1004,11 @@ def student_grades():
                     if grade:
                         grade_data = json.loads(grade.grade_data)
                         if 'score' in grade_data and grade_data['score'] is not None:
-                            semester_grades_list.append(grade_data['score'])
+                            try:
+                                score = float(grade_data['score'])  # Convert to float
+                                semester_grades_list.append(score)
+                            except (ValueError, TypeError):
+                                continue  # Skip invalid scores
                 
                 # Add group assignment grades
                 for group_assignment in semester_group_assignments:
@@ -1004,7 +1016,11 @@ def student_grades():
                     if group_grade:
                         grade_data = json.loads(group_grade.grade_data) if isinstance(group_grade.grade_data, str) else group_grade.grade_data
                         if 'score' in grade_data and grade_data['score'] is not None:
-                            semester_grades_list.append(grade_data['score'])
+                            try:
+                                score = float(grade_data['score'])  # Convert to float
+                                semester_grades_list.append(score)
+                            except (ValueError, TypeError):
+                                continue  # Skip invalid scores
                 
                 if semester_grades_list:
                     semester_avg = round(sum(semester_grades_list) / len(semester_grades_list), 2)

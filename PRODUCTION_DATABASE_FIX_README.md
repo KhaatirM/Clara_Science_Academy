@@ -11,10 +11,14 @@ The production PostgreSQL database is missing several columns that are defined i
 2. **Assignment table missing columns:**
    - `total_points` (DOUBLE PRECISION)
 
+3. **GroupAssignment table missing columns:**
+   - `total_points` (DOUBLE PRECISION)
+
 ## Error Messages
 ```
 (psycopg2.errors.UndefinedColumn) column grade.extra_credit_points does not exist
 (psycopg2.errors.UndefinedColumn) column assignment.total_points does not exist
+(psycopg2.errors.UndefinedColumn) column group_assignment.total_points does not exist
 ```
 
 ## Solution
@@ -57,6 +61,9 @@ If you have direct PostgreSQL database access:
    
    -- Add missing column to assignment table
    ALTER TABLE assignment ADD COLUMN IF NOT EXISTS total_points DOUBLE PRECISION DEFAULT 100.0 NOT NULL;
+   
+   -- Add missing column to group_assignment table
+   ALTER TABLE group_assignment ADD COLUMN IF NOT EXISTS total_points DOUBLE PRECISION DEFAULT 100.0 NOT NULL;
    ```
 
 ### Option 3: Manual Column Addition
@@ -71,6 +78,9 @@ ALTER TABLE grade ADD COLUMN days_late INTEGER DEFAULT 0 NOT NULL;
 
 -- Assignment table column
 ALTER TABLE assignment ADD COLUMN total_points DOUBLE PRECISION DEFAULT 100.0 NOT NULL;
+
+-- GroupAssignment table column
+ALTER TABLE group_assignment ADD COLUMN total_points DOUBLE PRECISION DEFAULT 100.0 NOT NULL;
 ```
 
 ## Verification
@@ -90,6 +100,12 @@ After running any of the above solutions, verify the fix by:
    SELECT column_name, data_type, column_default
    FROM information_schema.columns 
    WHERE table_name = 'assignment' 
+   AND column_name = 'total_points';
+   
+   -- Check group_assignment table column
+   SELECT column_name, data_type, column_default
+   FROM information_schema.columns 
+   WHERE table_name = 'group_assignment' 
    AND column_name = 'total_points';
    ```
 

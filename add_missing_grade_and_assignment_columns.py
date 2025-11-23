@@ -1,5 +1,5 @@
 """
-Migration script to add missing columns to grade and assignment tables.
+Migration script to add missing columns to grade, assignment, and group_assignment tables.
 This fixes the production database schema mismatch errors.
 
 Columns to add:
@@ -7,6 +7,7 @@ Columns to add:
 - grade.late_penalty_applied
 - grade.days_late
 - assignment.total_points
+- group_assignment.total_points
 """
 
 from app import create_app
@@ -95,6 +96,27 @@ def add_missing_columns():
                 db.session.rollback()
         else:
             print("[OK] 'total_points' column already exists in 'assignment' table")
+        
+        # Check and add columns to group_assignment table
+        try:
+            group_assignment_columns = [col['name'] for col in inspector.get_columns('group_assignment')]
+            
+            if 'total_points' not in group_assignment_columns:
+                print("[INFO] Adding 'total_points' column to 'group_assignment' table...")
+                try:
+                    db.session.execute(text(f"""
+                        ALTER TABLE group_assignment 
+                        ADD COLUMN total_points {float_type} DEFAULT 100.0 NOT NULL
+                    """))
+                    db.session.commit()
+                    print("[OK] Successfully added 'total_points' column to 'group_assignment' table")
+                except Exception as e:
+                    print(f"[ERROR] Failed to add 'total_points' to 'group_assignment': {e}")
+                    db.session.rollback()
+            else:
+                print("[OK] 'total_points' column already exists in 'group_assignment' table")
+        except Exception as e:
+            print(f"[WARNING] Could not check 'group_assignment' table (may not exist): {e}")
         
         print("\n[SUCCESS] All missing columns have been added successfully!")
 

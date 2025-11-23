@@ -1,0 +1,482 @@
+/* ===== ASSIGNMENT TYPE SELECTOR STYLES ===== */
+/* Enhanced design for assignment type selection page */
+
+/* Header Section */
+.assignment-selector-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 20px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
+    color: white;
+}
+
+.assignment-selector-header h3 {
+    color: white;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.assignment-selector-header p {
+    color: rgba(255, 255, 255, 0.9);
+    margin: 0;
+}
+
+/* Assignment Type Cards */
+.assignment-type-card {
+    border: 2px solid #e2e8f0;
+    border-radius: 20px;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    overflow: hidden;
+    position: relative;
+    background: white;
+    cursor: pointer;
+}
+
+.assignment-type-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 5px;
+    background: linear-gradient(90deg, transparent, currentColor, transparent);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.assignment-type-card:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    border-color: transparent;
+}
+
+.assignment-type-card[data-type="pdf"]:hover::before {
+    opacity: 1;
+    background: linear-gradient(90deg, transparent, #dc3545, transparent);
+}
+
+.assignment-type-card[data-type="quiz"]:hover::before {
+    opacity: 1;
+    background: linear-gradient(90deg, transparent, #ffc107, transparent);
+}
+
+.assignment-type-card[data-type="discussion"]:hover::before {
+    opacity: 1;
+    background: linear-gradient(90deg, transparent, #0dcaf0, transparent);
+}
+
+.assignment-type-card.selected {
+    border-color: #667eea;
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+}
+
+/* Icon Styling */
+.assignment-type-icon {
+    position: relative;
+    display: inline-block;
+}
+
+.assignment-type-icon-large {
+    font-size: 4rem !important;
+    display: block;
+    margin: 0 auto;
+    transition: all 0.3s ease;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
+}
+
+.assignment-type-card:hover .assignment-type-icon-large {
+    transform: scale(1.1) rotate(5deg);
+    filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.2));
+}
+
+/* Development Badge */
+.development-badge {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 12px rgba(245, 87, 108, 0.4);
+    z-index: 10;
+    animation: pulse 2s infinite;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.development-badge i {
+    font-size: 0.9rem;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 4px 12px rgba(245, 87, 108, 0.4);
+    }
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 6px 20px rgba(245, 87, 108, 0.6);
+    }
+}
+
+/* Card Body Enhancements */
+.assignment-type-card .card-body {
+    padding: 2rem;
+    position: relative;
+}
+
+.assignment-type-card .card-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: #2d3748;
+}
+
+.assignment-type-card .card-text {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: #4a5568;
+    min-height: 60px;
+}
+
+/* Features List */
+.features-list {
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin: 1.5rem 0;
+    border-left: 4px solid;
+    transition: all 0.3s ease;
+}
+
+.assignment-type-card[data-type="pdf"] .features-list {
+    border-left-color: #dc3545;
+}
+
+.assignment-type-card[data-type="quiz"] .features-list {
+    border-left-color: #ffc107;
+}
+
+.assignment-type-card[data-type="discussion"] .features-list {
+    border-left-color: #0dcaf0;
+}
+
+.assignment-type-card:hover .features-list {
+    background: #edf2f7;
+    transform: translateX(5px);
+}
+
+.features-list h6 {
+    font-weight: 700;
+    font-size: 0.9rem;
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.features-list ul {
+    margin: 0;
+    padding: 0;
+}
+
+.features-list li {
+    padding: 0.5rem 0;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+}
+
+.features-list li i {
+    font-size: 1rem;
+    margin-right: 0.5rem;
+}
+
+/* Buttons */
+.select-assignment-type {
+    padding: 14px 24px;
+    font-weight: 600;
+    font-size: 1rem;
+    border-radius: 12px;
+    border-width: 2px;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    position: relative;
+    overflow: hidden;
+}
+
+.select-assignment-type::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.select-assignment-type:hover::before {
+    width: 300px;
+    height: 300px;
+}
+
+.select-assignment-type:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+.select-assignment-type[data-type="pdf"] {
+    border-color: #dc3545;
+    color: #dc3545;
+}
+
+.select-assignment-type[data-type="pdf"]:hover {
+    background: #dc3545;
+    color: white;
+}
+
+.select-assignment-type[data-type="quiz"] {
+    border-color: #ffc107;
+    color: #ffc107;
+}
+
+.select-assignment-type[data-type="quiz"]:hover {
+    background: #ffc107;
+    color: #212529;
+}
+
+.select-assignment-type[data-type="discussion"] {
+    border-color: #0dcaf0;
+    color: #0dcaf0;
+}
+
+.select-assignment-type[data-type="discussion"]:hover {
+    background: #0dcaf0;
+    color: white;
+}
+
+/* Guidelines Section */
+.guidelines-card {
+    background: linear-gradient(135deg, #f8fafc 0%, #edf2f7 100%);
+    border-radius: 20px;
+    border: 2px solid #e2e8f0;
+    padding: 2rem;
+    margin-top: 3rem;
+}
+
+.guidelines-card .card-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #2d3748;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+}
+
+.guidelines-card .card-title i {
+    font-size: 1.5rem;
+    margin-right: 0.75rem;
+    color: #667eea;
+}
+
+.guideline-item {
+    padding: 1.25rem;
+    background: white;
+    border-radius: 12px;
+    border-left: 4px solid;
+    transition: all 0.3s ease;
+    margin-bottom: 1rem;
+}
+
+.guideline-item:hover {
+    transform: translateX(5px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.guideline-item h6 {
+    font-weight: 700;
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.guideline-item p {
+    font-size: 0.9rem;
+    color: #4a5568;
+    margin: 0;
+    line-height: 1.6;
+}
+
+/* Modal Enhancements */
+.assignment-target-card,
+.assignment-context-card {
+    border: 2px solid #e2e8f0;
+    border-radius: 16px;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    background: white;
+    position: relative;
+    overflow: hidden;
+}
+
+.assignment-target-card::before,
+.assignment-context-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, transparent, currentColor, transparent);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.assignment-target-card:hover,
+.assignment-context-card:hover {
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+    border-color: transparent;
+}
+
+.assignment-target-card:hover::before,
+.assignment-context-card:hover::before {
+    opacity: 1;
+}
+
+.assignment-target-card[data-target="individual"]:hover::before {
+    background: linear-gradient(90deg, transparent, #0d6efd, transparent);
+}
+
+.assignment-target-card[data-target="group"]:hover::before {
+    background: linear-gradient(90deg, transparent, #198754, transparent);
+}
+
+.assignment-context-card[data-context="in-class"]:hover::before {
+    background: linear-gradient(90deg, transparent, #0dcaf0, transparent);
+}
+
+.assignment-context-card[data-context="homework"]:hover::before {
+    background: linear-gradient(90deg, transparent, #ffc107, transparent);
+}
+
+.assignment-target-card .card-body,
+.assignment-context-card .card-body {
+    padding: 2rem;
+}
+
+.assignment-target-card i,
+.assignment-context-card i {
+    transition: all 0.3s ease;
+}
+
+.assignment-target-card:hover i,
+.assignment-context-card:hover i {
+    transform: scale(1.15) rotate(5deg);
+}
+
+/* Modal Header Enhancements */
+.modal-header {
+    border-radius: 0;
+    padding: 1.5rem 2rem;
+}
+
+.modal-header.bg-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+}
+
+.modal-header.bg-info {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%) !important;
+}
+
+.modal-title {
+    font-weight: 700;
+    font-size: 1.25rem;
+}
+
+/* Disabled State for In Development */
+.assignment-type-card[data-type="quiz"] .select-assignment-type,
+.assignment-type-card[data-type="discussion"] .select-assignment-type {
+    position: relative;
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.assignment-type-card[data-type="quiz"]:hover,
+.assignment-type-card[data-type="discussion"]:hover {
+    cursor: not-allowed;
+    transform: none;
+}
+
+.assignment-type-card[data-type="quiz"]:hover .select-assignment-type,
+.assignment-type-card[data-type="discussion"]:hover .select-assignment-type {
+    transform: none;
+    box-shadow: none;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .assignment-selector-header {
+        padding: 1.5rem;
+    }
+    
+    .assignment-type-card .card-body {
+        padding: 1.5rem;
+    }
+    
+    .assignment-type-icon-large {
+        font-size: 3rem !important;
+    }
+    
+    .development-badge {
+        top: 10px;
+        right: 10px;
+        padding: 5px 12px;
+        font-size: 0.7rem;
+    }
+    
+    .guidelines-card {
+        padding: 1.5rem;
+    }
+}
+
+/* Animation for page load */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.assignment-type-card {
+    animation: fadeInUp 0.6s ease-out forwards;
+    opacity: 0;
+}
+
+.assignment-type-card:nth-child(1) {
+    animation-delay: 0.1s;
+}
+
+.assignment-type-card:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.assignment-type-card:nth-child(3) {
+    animation-delay: 0.3s;
+}
+

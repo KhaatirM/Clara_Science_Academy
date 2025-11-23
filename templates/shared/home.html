@@ -687,13 +687,54 @@
                     </div>
                     <div>
                         <h6 class="updates-intro-title mb-2">
-                            <i class="fas fa-calendar-alt me-2"></i>Latest System Update - November 18, 2025
+                            <i class="fas fa-calendar-alt me-2"></i>Latest System Update - November 23, 2025
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>Major Enhancement Release!</strong> Redesigned grading interfaces, improved assignment management, extension reminders, creator tracking, and comprehensive UI/UX improvements across the platform!</p>
+                        <p class="updates-intro-text mb-0"><strong>Major UI/UX Enhancement Release!</strong> Enhanced assignment creation experience, redesigned student settings, improved error handling, fixed critical bugs, and comprehensive design improvements across the platform!</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- November 23, 2025 - Major Updates & Enhancements -->
+                    <div class="update-section mb-4">
+                        <h6 class="text-primary mb-3" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+                            <i class="fas fa-star me-2"></i>⭐ Major Updates & Enhancements - November 23, 2025
+                        </h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Enhanced Assignment Type Selector:</strong> Completely redesigned assignment creation page with stunning gradient header, animated cards, smooth hover effects, and beautiful modal popups. Added "In Development" badges to Quiz and Discussion assignments with pulsing animations. Improved user experience with better visual feedback and modern design
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Assignment Creation Layout Fix:</strong> Fixed critical layout issue where "Live Preview" and "Assignment Tips" sidebar was appearing at the bottom instead of the right side. Restructured HTML to ensure proper Bootstrap grid layout with sidebar correctly positioned
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Enhanced Student Settings Page:</strong> Completely redesigned student settings with modern gradient header, animated cards, iOS-style toggle switches for notifications, beautiful data privacy controls, academic information display, and comprehensive system information. Matches the professional design of teacher/admin settings
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Improved Error Handling:</strong> Fixed 403 access denied errors to properly redirect users to their appropriate dashboards based on role (teachers → teacher dashboard, students → student dashboard, etc.) instead of showing generic error pages
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Student Grades Page Fix:</strong> Resolved 500 Internal Server Error that prevented students from accessing their grades. Added missing database columns (assignment_type, assignment_context, allow_save_and_continue, max_save_attempts, save_timeout_minutes) to group_assignment table
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Navigation Cleanup:</strong> Removed "Resources" tab from all user dashboards (Director, School Administrator, Teacher, Tech) for a cleaner navigation experience
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Enhanced PDF/Paper Assignment Modals:</strong> Improved popup modals for assignment target selection (Individual vs Group) and context selection (In-Class vs Homework) with larger layouts, better spacing, enhanced hover effects, and professional styling
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Database Schema Updates:</strong> Added comprehensive migration scripts for missing columns in group_assignment table, ensuring compatibility with all assignment features and preventing future errors
+                            </li>
+                        </ul>
+                    </div>
+
                     <!-- November 18, 2025 - Grading & Assignment Management Updates -->
                     <div class="update-section mb-4">
                         <h6 class="text-primary mb-3">
@@ -788,6 +829,47 @@
                             <li class="mb-2">
                                 <i class="fas fa-check-circle text-success me-2"></i>
                                 <strong>GPA Calculation Accuracy:</strong> Updated GPA calculations across all views to properly exclude both voided assignments and voided individual grades
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Latest Updates - November 23, 2025 -->
+                    <div class="update-section mb-4">
+                        <h6 class="text-primary mb-3" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+                            <i class="fas fa-star me-2"></i>⭐ Major Updates & Enhancements - November 23, 2025
+                        </h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Enhanced Assignment Type Selector:</strong> Completely redesigned assignment creation page with stunning gradient header, animated cards, smooth hover effects, and beautiful modal popups. Added "In Development" badges to Quiz and Discussion assignments with pulsing animations. Improved user experience with better visual feedback and modern design
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Assignment Creation Layout Fix:</strong> Fixed critical layout issue where "Live Preview" and "Assignment Tips" sidebar was appearing at the bottom instead of the right side. Restructured HTML to ensure proper Bootstrap grid layout with sidebar correctly positioned
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Enhanced Student Settings Page:</strong> Completely redesigned student settings with modern gradient header, animated cards, iOS-style toggle switches for notifications, beautiful data privacy controls, academic information display, and comprehensive system information. Matches the professional design of teacher/admin settings
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Improved Error Handling:</strong> Fixed 403 access denied errors to properly redirect users to their appropriate dashboards based on role (teachers → teacher dashboard, students → student dashboard, etc.) instead of showing generic error pages
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Student Grades Page Fix:</strong> Resolved 500 Internal Server Error that prevented students from accessing their grades. Added missing database columns (assignment_type, assignment_context, allow_save_and_continue, max_save_attempts, save_timeout_minutes) to group_assignment table
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Navigation Cleanup:</strong> Removed "Resources" tab from all user dashboards (Director, School Administrator, Teacher, Tech) for a cleaner navigation experience
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Enhanced PDF/Paper Assignment Modals:</strong> Improved popup modals for assignment target selection (Individual vs Group) and context selection (In-Class vs Homework) with larger layouts, better spacing, enhanced hover effects, and professional styling
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Database Schema Updates:</strong> Added comprehensive migration scripts for missing columns in group_assignment table, ensuring compatibility with all assignment features and preventing future errors
                             </li>
                         </ul>
                     </div>

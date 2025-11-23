@@ -2945,121 +2945,423 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
         </div>
 
     {% elif section == 'settings' %}
-        <!-- Settings Section -->
-        <h2 class="mb-4">Settings <span class="text-muted fs-6">(Student View)</span></h2>
-
-        <div class="row">
-            <div class="col-lg-8">
-                <!-- Account Information -->
-                <div class="card shadow-sm mb-4">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0"><i class="bi bi-person-fill me-2"></i>Account Information</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Username</label>
-                                    <input type="text" class="form-control" value="{{ current_user.username }}" readonly>
+        <!-- Enhanced Settings Section -->
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/students_settings.css') }}">
+        
+        <div class="container-fluid py-4 student-settings-container">
+            <!-- Animated Header -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="header-card-settings animated-fade-in">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <div class="header-icon-wrapper-settings me-3">
+                                    <i class="bi bi-gear-fill"></i>
+                                </div>
+                                <div>
+                                    <h2 class="mb-1 fw-bold text-white">Settings</h2>
+                                    <p class="text-white mb-0 opacity-90">
+                                        <i class="bi bi-person me-2"></i>{{ student.first_name }} {{ student.last_name }} - Grade {{ student.grade_level or 'N/A' }}
+                                    </p>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Student ID</label>
-                                    <input type="text" class="form-control" value="{{ student.state_id or 'N/A' }}" readonly>
-                                </div>
+                            <button class="btn-back-settings" onclick="window.history.back()">
+                                <i class="bi bi-arrow-left me-2"></i>Back
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <!-- Account Information -->
+                <div class="col-lg-6">
+                    <div class="settings-card animated-fade-in" style="animation-delay: 0.1s;">
+                        <div class="settings-card-header">
+                            <div class="card-icon-settings bg-primary">
+                                <i class="bi bi-person-circle"></i>
+                            </div>
+                            <div>
+                                <h5 class="card-title-settings">Account Information</h5>
+                                <p class="card-subtitle-settings">Your student account details</p>
                             </div>
                         </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Full Name</label>
-                                    <input type="text" class="form-control" value="{{ student.first_name }} {{ student.last_name }}" readonly>
-                                </div>
+                        <div class="settings-card-body">
+                            <div class="form-group-modern">
+                                <label for="username" class="label-modern">
+                                    <i class="bi bi-person me-2"></i>Username
+                                </label>
+                                <input type="text" class="input-modern" id="username" value="{{ current_user.username }}" readonly>
+                                <small class="text-muted">Username cannot be changed</small>
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Grade Level</label>
-                                    <input type="text" class="form-control" value="{{ student.grade_level or 'N/A' }}" readonly>
-                                </div>
+                            
+                            <div class="form-group-modern">
+                                <label for="student_id" class="label-modern">
+                                    <i class="bi bi-id-card me-2"></i>Student ID
+                                </label>
+                                <input type="text" class="input-modern" id="student_id" value="{{ student.state_id or 'N/A' }}" readonly>
+                            </div>
+                            
+                            <div class="form-group-modern">
+                                <label for="full_name" class="label-modern">
+                                    <i class="bi bi-person-badge me-2"></i>Full Name
+                                </label>
+                                <input type="text" class="input-modern" id="full_name" value="{{ student.first_name }} {{ student.last_name }}" readonly>
+                            </div>
+                            
+                            <div class="form-group-modern">
+                                <label for="grade_level" class="label-modern">
+                                    <i class="bi bi-mortarboard me-2"></i>Grade Level
+                                </label>
+                                <input type="text" class="input-modern" id="grade_level" value="{{ student.grade_level or 'N/A' }}" readonly>
+                            </div>
+                            
+                            <div class="form-group-modern">
+                                <label class="label-modern">
+                                    <i class="bi bi-shield-lock me-2"></i>Password Security
+                                </label>
+                                <a href="{{ url_for('auth.change_password') }}" class="btn-action-settings btn-warning-gradient">
+                                    <i class="bi bi-lock-fill me-2"></i>Change Password
+                                </a>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Preferences -->
-                <div class="card shadow-sm mb-4">
-                    <div class="card-header bg-info text-white">
-                        <h5 class="mb-0"><i class="bi bi-gear-fill me-2"></i>Preferences</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="notification_preferences" class="form-label">Notification Preferences</label>
-                                    <select class="form-select" id="notification_preferences">
-                                        <option value="all">All Notifications</option>
-                                        <option value="important">Important Only</option>
-                                        <option value="none">No Notifications</option>
-                                    </select>
-                                </div>
+                <div class="col-lg-6">
+                    <div class="settings-card animated-fade-in" style="animation-delay: 0.2s;">
+                        <div class="settings-card-header">
+                            <div class="card-icon-settings bg-success">
+                                <i class="bi bi-sliders"></i>
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="theme_preference" class="form-label">Theme</label>
-                                    <select class="form-select" id="theme_preference">
-                                        <option value="light">Light Theme</option>
-                                        <option value="dark">Dark Theme</option>
-                                        <option value="auto">Auto (System)</option>
-                                    </select>
-                                </div>
+                            <div>
+                                <h5 class="card-title-settings">Preferences</h5>
+                                <p class="card-subtitle-settings">Customize your experience</p>
                             </div>
                         </div>
-                        <button type="button" class="btn btn-info" onclick="savePreferences()">
-                            <i class="bi bi-check-circle me-2"></i>Save Preferences
-                        </button>
+                        <div class="settings-card-body">
+                            <div class="preference-section">
+                                <label class="label-modern">
+                                    <i class="bi bi-bell me-2"></i>Notification Preferences
+                                </label>
+                                <div class="toggle-list">
+                                    <div class="toggle-item">
+                                        <div class="toggle-info">
+                                            <span class="toggle-title">Assignment Reminders</span>
+                                            <small class="toggle-desc">Get notified about upcoming assignments</small>
+                                        </div>
+                                        <label class="switch-modern">
+                                            <input type="checkbox" id="notifAssignments" checked>
+                                            <span class="slider-modern"></span>
+                                        </label>
+                                    </div>
+                                    <div class="toggle-item">
+                                        <div class="toggle-info">
+                                            <span class="toggle-title">Grade Updates</span>
+                                            <small class="toggle-desc">Notifications when grades are posted</small>
+                                        </div>
+                                        <label class="switch-modern">
+                                            <input type="checkbox" id="notifGrades" checked>
+                                            <span class="slider-modern"></span>
+                                        </label>
+                                    </div>
+                                    <div class="toggle-item">
+                                        <div class="toggle-info">
+                                            <span class="toggle-title">Class Announcements</span>
+                                            <small class="toggle-desc">Important announcements from teachers</small>
+                                        </div>
+                                        <label class="switch-modern">
+                                            <input type="checkbox" id="notifAnnouncements" checked>
+                                            <span class="slider-modern"></span>
+                                        </label>
+                                    </div>
+                                    <div class="toggle-item">
+                                        <div class="toggle-info">
+                                            <span class="toggle-title">Due Date Reminders</span>
+                                            <small class="toggle-desc">Daily reminders for upcoming due dates</small>
+                                        </div>
+                                        <label class="switch-modern">
+                                            <input type="checkbox" id="notifDueDates">
+                                            <span class="slider-modern"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="preference-section">
+                                <label for="theme_preference" class="label-modern">
+                                    <i class="bi bi-palette me-2"></i>Theme
+                                </label>
+                                <select class="select-modern" id="theme_preference">
+                                    <option value="light">Light Theme</option>
+                                    <option value="dark">Dark Theme</option>
+                                    <option value="auto">Auto (System)</option>
+                                </select>
+                            </div>
+                            
+                            <div class="preference-section">
+                                <label for="language" class="label-modern">
+                                    <i class="bi bi-translate me-2"></i>Language
+                                </label>
+                                <select class="select-modern" id="language">
+                                    <option value="en">English</option>
+                                    <option value="es">Español</option>
+                                    <option value="fr">Français</option>
+                                </select>
+                            </div>
+                            
+                            <button type="button" class="btn-save-settings" onclick="saveStudentPreferences()">
+                                <i class="bi bi-check-circle me-2"></i>Save Preferences
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-
-            </div>
-
-            <div class="col-lg-4">
-                <!-- Quick Actions -->
-                <div class="card shadow-sm mb-4">
-                    <div class="card-header bg-success text-white">
-                        <h5 class="mb-0"><i class="bi bi-lightning-fill me-2"></i>Quick Actions</h5>
+                <!-- Data & Privacy -->
+                <div class="col-lg-6">
+                    <div class="settings-card animated-fade-in" style="animation-delay: 0.3s;">
+                        <div class="settings-card-header">
+                            <div class="card-icon-settings bg-info">
+                                <i class="bi bi-shield-check"></i>
+                            </div>
+                            <div>
+                                <h5 class="card-title-settings">Data & Privacy</h5>
+                                <p class="card-subtitle-settings">Manage your data and privacy</p>
+                            </div>
+                        </div>
+                        <div class="settings-card-body">
+                            <div class="data-actions">
+                                <button class="data-action-card" onclick="exportStudentData()">
+                                    <div class="action-icon bg-primary">
+                                        <i class="bi bi-download"></i>
+                                    </div>
+                                    <div class="action-content">
+                                        <div class="action-title">Export My Data</div>
+                                        <div class="action-desc">Download all your assignments, grades, and submissions</div>
+                                    </div>
+                                    <i class="bi bi-chevron-right action-arrow"></i>
+                                </button>
+                                
+                                <button class="data-action-card" onclick="viewActivityLog()">
+                                    <div class="action-icon bg-warning">
+                                        <i class="bi bi-clock-history"></i>
+                                    </div>
+                                    <div class="action-content">
+                                        <div class="action-title">Activity Log</div>
+                                        <div class="action-desc">View your account activity history</div>
+                                    </div>
+                                    <i class="bi bi-chevron-right action-arrow"></i>
+                                </button>
+                                
+                                <button class="data-action-card" onclick="viewPrivacySettings()">
+                                    <div class="action-icon bg-danger">
+                                        <i class="bi bi-eye-slash"></i>
+                                    </div>
+                                    <div class="action-content">
+                                        <div class="action-title">Privacy Settings</div>
+                                        <div class="action-desc">Control who sees your information</div>
+                                    </div>
+                                    <i class="bi bi-chevron-right action-arrow"></i>
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <div class="d-grid gap-2">
-                            <button class="btn btn-outline-primary" onclick="exportData()">
-                                <i class="bi bi-download me-2"></i>Export My Data
-                            </button>
-                            <button class="btn btn-outline-info" onclick="viewActivityLog()">
-                                <i class="bi bi-clock-history me-2"></i>View Activity Log
-                            </button>
-                            <a href="{{ url_for('auth.change_password') }}" class="btn btn-outline-warning">
-                                <i class="bi bi-key me-2"></i>Change Password
-                            </a>
+                </div>
+
+                <!-- Academic Information -->
+                <div class="col-lg-6">
+                    <div class="settings-card animated-fade-in" style="animation-delay: 0.4s;">
+                        <div class="settings-card-header">
+                            <div class="card-icon-settings bg-purple">
+                                <i class="bi bi-book"></i>
+                            </div>
+                            <div>
+                                <h5 class="card-title-settings">Academic Information</h5>
+                                <p class="card-subtitle-settings">Your academic profile</p>
+                            </div>
+                        </div>
+                        <div class="settings-card-body">
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <div class="info-label">
+                                        <i class="bi bi-calendar3 me-2"></i>Current School Year
+                                    </div>
+                                    <div class="info-value">
+                                        {% if school_year %}
+                                            {{ school_year.name }}
+                                        {% else %}
+                                            Not Available
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="info-item">
+                                    <div class="info-label">
+                                        <i class="bi bi-people me-2"></i>Enrolled Classes
+                                    </div>
+                                    <div class="info-value">
+                                        {% if enrollments %}
+                                            {{ enrollments|length }} Class{{ 'es' if enrollments|length != 1 else '' }}
+                                        {% else %}
+                                            No Classes
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="info-item">
+                                    <div class="info-label">
+                                        <i class="bi bi-graph-up me-2"></i>Overall GPA
+                                    </div>
+                                    <div class="info-value">
+                                        {% if gpa %}
+                                            {{ "%.2f"|format(gpa) }}
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="info-item">
+                                    <div class="info-label">
+                                        <i class="bi bi-check-circle me-2"></i>Account Status
+                                    </div>
+                                    <div class="info-value">
+                                        <span class="badge bg-success">Active</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- System Information -->
-                <div class="card shadow-sm">
-                    <div class="card-header bg-secondary text-white">
-                        <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>System Information</h5>
-                    </div>
-                    <div class="card-body">
-                        <small class="text-muted">
-                            <p><strong>Last Login:</strong> <span id="lastLogin">Loading...</span></p>
-                            <p><strong>Account Created:</strong> <span id="accountCreated">Loading...</span></p>
-                            <p><strong>Version:</strong> 1.0.0</p>
-                        </small>
+                <div class="col-12">
+                    <div class="settings-card animated-fade-in" style="animation-delay: 0.5s;">
+                        <div class="settings-card-header">
+                            <div class="card-icon-settings bg-secondary">
+                                <i class="bi bi-info-circle"></i>
+                            </div>
+                            <div>
+                                <h5 class="card-title-settings">System Information</h5>
+                                <p class="card-subtitle-settings">Account and system details</p>
+                            </div>
+                        </div>
+                        <div class="settings-card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="system-info-item">
+                                        <div class="system-info-label">
+                                            <i class="bi bi-clock-history me-2"></i>Last Login
+                                        </div>
+                                        <div class="system-info-value" id="lastLogin">Loading...</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="system-info-item">
+                                        <div class="system-info-label">
+                                            <i class="bi bi-calendar-plus me-2"></i>Account Created
+                                        </div>
+                                        <div class="system-info-value" id="accountCreated">Loading...</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="system-info-item">
+                                        <div class="system-info-label">
+                                            <i class="bi bi-code-slash me-2"></i>Version
+                                        </div>
+                                        <div class="system-info-value">1.0.0</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
+
+        <script>
+        // Student Settings Functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load last login and account created dates
+            // This would typically come from the backend
+            const now = new Date();
+            document.getElementById('lastLogin').textContent = now.toLocaleDateString() + ' ' + now.toLocaleTimeString();
+            document.getElementById('accountCreated').textContent = '{{ current_user.created_at.strftime("%B %d, %Y") if current_user.created_at else "N/A" }}';
+            
+            // Theme preference handler
+            const themeSelect = document.getElementById('theme_preference');
+            if (themeSelect) {
+                const savedTheme = localStorage.getItem('studentTheme') || 'light';
+                themeSelect.value = savedTheme;
+                
+                themeSelect.addEventListener('change', function() {
+                    localStorage.setItem('studentTheme', this.value);
+                    applyTheme(this.value);
+                });
+            }
+            
+            // Apply saved theme
+            function applyTheme(theme) {
+                if (theme === 'dark') {
+                    document.body.classList.add('dark-theme');
+                } else if (theme === 'auto') {
+                    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    if (prefersDark) {
+                        document.body.classList.add('dark-theme');
+                    } else {
+                        document.body.classList.remove('dark-theme');
+                    }
+                } else {
+                    document.body.classList.remove('dark-theme');
+                }
+            }
+            
+            applyTheme(localStorage.getItem('studentTheme') || 'light');
+        });
+        
+        function saveStudentPreferences() {
+            const btn = event.target;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Saving...';
+            btn.disabled = true;
+            
+            // Collect preferences
+            const preferences = {
+                notifications: {
+                    assignments: document.getElementById('notifAssignments').checked,
+                    grades: document.getElementById('notifGrades').checked,
+                    announcements: document.getElementById('notifAnnouncements').checked,
+                    dueDates: document.getElementById('notifDueDates').checked
+                },
+                theme: document.getElementById('theme_preference').value,
+                language: document.getElementById('language').value
+            };
+            
+            // Save to localStorage (in production, this would be sent to the server)
+            localStorage.setItem('studentPreferences', JSON.stringify(preferences));
+            
+            setTimeout(() => {
+                btn.innerHTML = '<i class="bi bi-check-circle me-2"></i>Preferences Saved!';
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }, 1500);
+            }, 1000);
+        }
+        
+        function exportStudentData() {
+            alert('Export feature will be available soon! This will download all your assignments, grades, and submissions.');
+        }
+        
+        function viewActivityLog() {
+            alert('Activity log feature will be available soon!');
+        }
+        
+        function viewPrivacySettings() {
+            alert('Privacy settings feature will be available soon!');
+        }
+        </script>
 
         <script>
         // Chat functionality for Discord-like interface

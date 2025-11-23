@@ -7,6 +7,7 @@ from werkzeug.security import check_password_hash
 from config import Config, ProductionConfig, DevelopmentConfig, TestingConfig
 from sqlalchemy import func, and_, text
 from datetime import datetime, timezone
+from decorators import is_teacher_role
 
 # Import extensions to avoid circular imports
 from extensions import db, login_manager, csrf
@@ -585,8 +586,26 @@ def create_app(config_class=None):
     
     @app.errorhandler(403)
     def forbidden_error(error):
-        """Handle 403 Forbidden errors by redirecting to login page."""
+        """Handle 403 Forbidden errors by redirecting to appropriate dashboard."""
         flash('You do not have permission to access this page.', 'danger')
+        
+        # If user is authenticated, redirect to their appropriate dashboard
+        if current_user.is_authenticated:
+            role = current_user.role
+            
+            # Determine the correct dashboard based on role
+            if role == 'Student':
+                return redirect(url_for('student.student_dashboard'))
+            elif is_teacher_role(role) or role in ['School Administrator', 'Director']:
+                # For teachers and admins, check if they should go to teacher or management dashboard
+                if role in ['School Administrator', 'Director']:
+                    return redirect(url_for('management.management_dashboard'))
+                else:
+                    return redirect(url_for('teacher.dashboard.teacher_dashboard'))
+            elif role in ['Tech', 'IT Support']:
+                return redirect(url_for('tech.tech_dashboard'))
+        
+        # If not authenticated, redirect to login
         return redirect(url_for('auth.login'))
 
     @app.errorhandler(404)
@@ -823,13 +842,7 @@ def create_app(config_class=None):
                              error_message="The page you're looking for doesn't exist.",
                              bug_report_id=None), 404
     
-    @app.errorhandler(403)
-    def forbidden_error(error):
-        """Handle 403 forbidden errors."""
-        return render_template('shared/error.html', 
-                             error_code=403,
-                             error_message="You don't have permission to access this resource.",
-                             bug_report_id=None), 403
+    # Removed duplicate 403 handler - using the one above that redirects appropriately
     
     @app.errorhandler(CSRFError)
     def csrf_error(error):

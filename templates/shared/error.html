@@ -54,9 +54,28 @@
                         </a>
                         
                         {% if current_user.is_authenticated %}
-                            <a href="{{ url_for('student.student_dashboard') if current_user.role == 'Student' else url_for('teacher.dashboard.teacher_dashboard') if current_user.role == 'Teacher' else url_for('management.management_dashboard') }}" class="btn btn-outline-primary btn-lg">
-                                <i class="fas fa-tachometer-alt"></i> Dashboard
-                            </a>
+                            {% set role = current_user.role %}
+                            {% if role == 'Student' %}
+                                <a href="{{ url_for('student.student_dashboard') }}" class="btn btn-outline-primary btn-lg">
+                                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                                </a>
+                            {% elif role in ['School Administrator', 'Director'] %}
+                                <a href="{{ url_for('management.management_dashboard') }}" class="btn btn-outline-primary btn-lg">
+                                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                                </a>
+                            {% elif 'Teacher' in role or role in ['History Teacher', 'Science Teacher', 'Physics Teacher', 'English Language Arts Teacher', 'Math Teacher', 'Substitute Teacher', 'School Counselor'] %}
+                                <a href="{{ url_for('teacher.dashboard.teacher_dashboard') }}" class="btn btn-outline-primary btn-lg">
+                                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                                </a>
+                            {% elif role in ['Tech', 'IT Support'] %}
+                                <a href="{{ url_for('tech.tech_dashboard') }}" class="btn btn-outline-primary btn-lg">
+                                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                                </a>
+                            {% else %}
+                                <a href="{{ url_for('auth.dashboard') }}" class="btn btn-outline-primary btn-lg">
+                                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                                </a>
+                            {% endif %}
                         {% endif %}
                     </div>
                     

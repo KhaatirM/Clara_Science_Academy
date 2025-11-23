@@ -1266,8 +1266,54 @@ def get_academic_dates_for_calendar(year, month):
 @student_required
 def student_settings():
     student = Student.query.get_or_404(current_user.student_id)
+    
+    # Get current school year
+    current_school_year = SchoolYear.query.filter_by(is_active=True).first()
+    
+    # Get student's enrolled classes
+    enrollments = []
+    gpa = 0.0
+    if current_school_year:
+        enrollments = Enrollment.query.filter_by(
+            student_id=student.id,
+            is_active=True
+        ).join(Class).filter(
+            Class.school_year_id == current_school_year.id
+        ).all()
+        
+        # Calculate GPA if we have enrollments
+        if enrollments:
+            class_ids = [e.class_id for e in enrollments]
+            all_grades = []
+            for class_id in class_ids:
+                class_grades = Grade.query.join(Assignment).filter(
+                    Grade.student_id == student.id,
+                    Assignment.class_id == class_id,
+                    Assignment.school_year_id == current_school_year.id
+                ).all()
+                
+                if class_grades:
+                    grade_percentages = []
+                    for g in class_grades:
+                        grade_data = json.loads(g.grade_data)
+                        if 'score' in grade_data and grade_data['score'] is not None:
+                            try:
+                                score = float(grade_data['score'])
+                                grade_percentages.append(score)
+                            except (ValueError, TypeError):
+                                continue
+                    
+                    if grade_percentages:
+                        all_grades.extend(grade_percentages)
+            
+            if all_grades:
+                gpa = calculate_gpa(all_grades)
+    
     return render_template('students/role_student_dashboard.html', 
-                         **create_template_context(student, 'settings', 'settings'))
+                         **create_template_context(student, 'settings', 'settings',
+                            school_year=current_school_year,
+                            enrollments=enrollments,
+                            gpa=gpa))
 
 @student_blueprint.route('/class/<int:class_id>')
 @login_required

@@ -13,6 +13,22 @@ The production PostgreSQL database is missing several columns that are defined i
 
 3. **GroupAssignment table missing columns:**
    - `total_points` (DOUBLE PRECISION)
+   - `allow_extra_credit` (BOOLEAN)
+   - `max_extra_credit_points` (DOUBLE PRECISION)
+   - `late_penalty_enabled` (BOOLEAN)
+   - `late_penalty_per_day` (DOUBLE PRECISION)
+   - `late_penalty_max_days` (INTEGER)
+   - `grade_scale` (TEXT, nullable)
+   - `assignment_category` (VARCHAR(50), nullable)
+   - `category_weight` (DOUBLE PRECISION)
+   - `allow_save_and_continue` (BOOLEAN)
+   - `max_save_attempts` (INTEGER)
+   - `save_timeout_minutes` (INTEGER)
+   - `group_size_min` (INTEGER)
+   - `group_size_max` (INTEGER)
+   - `allow_individual` (BOOLEAN)
+   - `collaboration_type` (VARCHAR(20))
+   - `selected_group_ids` (TEXT, nullable)
 
 ## Error Messages
 ```

@@ -51,6 +51,12 @@ def calculate_gpa(grades):
     
     # Convert percentage to 4.0 scale
     def percentage_to_gpa(percentage):
+        # Ensure percentage is a number
+        try:
+            percentage = float(percentage)
+        except (ValueError, TypeError):
+            return 0.0
+        
         if percentage >= 93: return 4.0
         elif percentage >= 90: return 3.7
         elif percentage >= 87: return 3.3
@@ -65,7 +71,7 @@ def calculate_gpa(grades):
         else: return 0.0
     
     gpa_points = [percentage_to_gpa(grade) for grade in grades]
-    return round(sum(gpa_points) / len(gpa_points), 2)
+    return round(sum(gpa_points) / len(gpa_points), 2) if gpa_points else 0.0
 
 def get_student_assignment_status(assignment, submission, grade, student_id=None):
     """Determine the student-facing status for an assignment."""
@@ -143,6 +149,12 @@ def get_grade_trends(student_id, class_id, limit=10):
 
 def get_letter_grade(percentage):
     """Convert percentage to letter grade."""
+    # Ensure percentage is a number
+    try:
+        percentage = float(percentage)
+    except (ValueError, TypeError):
+        return 'F'  # Return F for invalid percentages
+    
     if percentage >= 93:
         return 'A'
     elif percentage >= 90:
@@ -862,22 +874,30 @@ def student_grades():
             for grade in grades:
                 grade_data = json.loads(grade.grade_data)
                 if 'score' in grade_data and grade_data['score'] is not None:
-                    all_recent_grades.append({
-                        'title': grade.assignment.title,
-                        'score': grade_data['score'],
-                        'letter': get_letter_grade(grade_data['score']),
-                        'graded_at': grade.graded_at
-                    })
+                    try:
+                        score = float(grade_data['score'])  # Convert to float
+                        all_recent_grades.append({
+                            'title': grade.assignment.title,
+                            'score': score,
+                            'letter': get_letter_grade(score),
+                            'graded_at': grade.graded_at
+                        })
+                    except (ValueError, TypeError):
+                        continue  # Skip invalid scores
             
             for group_grade in group_grades:
                 grade_data = json.loads(group_grade.grade_data) if isinstance(group_grade.grade_data, str) else group_grade.grade_data
                 if 'score' in grade_data and grade_data['score'] is not None:
-                    all_recent_grades.append({
-                        'title': f"{group_grade.group_assignment.title} (Group)",
-                        'score': grade_data['score'],
-                        'letter': get_letter_grade(grade_data['score']),
-                        'graded_at': group_grade.graded_at
-                    })
+                    try:
+                        score = float(grade_data['score'])  # Convert to float
+                        all_recent_grades.append({
+                            'title': f"{group_grade.group_assignment.title} (Group)",
+                            'score': score,
+                            'letter': get_letter_grade(score),
+                            'graded_at': group_grade.graded_at
+                        })
+                    except (ValueError, TypeError):
+                        continue  # Skip invalid scores
             
             # Sort by graded_at and get last 3
             all_recent_grades.sort(key=lambda x: x['graded_at'], reverse=True)

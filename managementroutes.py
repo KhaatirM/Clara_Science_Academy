@@ -8612,11 +8612,19 @@ def student_jobs():
                 # Get the most recent inspection
                 latest_inspection = recent_inspections[0]
                 
-                # Make the inspection date timezone-aware (assume it's in EST)
-                if latest_inspection.inspection_date.tzinfo is None:
-                    inspection_datetime = est.localize(latest_inspection.inspection_date)
+                # Convert date to datetime (inspection_date is a date object, not datetime)
+                # Create a datetime at midnight EST for the inspection date
+                inspection_date = latest_inspection.inspection_date
+                if isinstance(inspection_date, datetime):
+                    # Already a datetime
+                    inspection_datetime = inspection_date
+                    if inspection_datetime.tzinfo is None:
+                        inspection_datetime = est.localize(inspection_datetime)
+                    else:
+                        inspection_datetime = inspection_datetime.astimezone(est)
                 else:
-                    inspection_datetime = latest_inspection.inspection_date.astimezone(est)
+                    # It's a date object, convert to datetime at midnight EST
+                    inspection_datetime = est.localize(datetime.combine(inspection_date, datetime.min.time()))
                 
                 # Check if the inspection was before this week's Monday at 12:00 AM
                 if inspection_datetime < current_week_start:

@@ -737,7 +737,7 @@ def calendar():
                     if assignment.due_date and assignment.due_date.day == day and assignment.due_date.month == month and assignment.due_date.year == year:
                         day_events.append({
                             'title': assignment.title,
-                            'class_name': assignment.class_obj.name if assignment.class_obj else 'Unknown'
+                            'class_name': assignment.class_info.name if assignment.class_info else 'Unknown'
                         })
                 
                 week_data.append({'day_num': day, 'is_current_month': True, 'is_today': is_today, 'events': day_events})

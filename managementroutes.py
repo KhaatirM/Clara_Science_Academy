@@ -6034,6 +6034,7 @@ def view_assignment(assignment_id):
 def edit_assignment(assignment_id):
     """Edit an assignment"""
     assignment = Assignment.query.get_or_404(assignment_id)
+    class_obj = assignment.class_info
     
     # Authorization check - Directors and School Administrators can edit any assignment
     if current_user.role not in ['Director', 'School Administrator']:
@@ -6047,10 +6048,15 @@ def edit_assignment(assignment_id):
         due_date_str = request.form.get('due_date')
         quarter = request.form.get('quarter')
         status = request.form.get('status', 'Active')
+        assignment_context = request.form.get('assignment_context', 'homework')
+        total_points = request.form.get('total_points', type=float)
         
         if not all([title, due_date_str, quarter]):
             flash('Title, Due Date, and Quarter are required.', 'danger')
             return redirect(request.url)
+        
+        if total_points is None or total_points <= 0:
+            total_points = 100.0
         
         # Validate status
         valid_statuses = ['Active', 'Inactive', 'Voided']
@@ -6065,10 +6071,12 @@ def edit_assignment(assignment_id):
             assignment.title = title
             assignment.description = description
             assignment.due_date = due_date
-            assignment.quarter = int(quarter)
+            assignment.quarter = str(quarter)  # Store as string to match model definition
             assignment.status = status
+            assignment.assignment_context = assignment_context
+            assignment.total_points = total_points
             
-            # Handle file upload
+            # Handle file upload (only if a new file is provided)
             if 'assignment_file' in request.files:
                 file = request.files['assignment_file']
                 if file and file.filename != '':
@@ -6083,27 +6091,50 @@ def edit_assignment(assignment_id):
                             # Update file information
                             assignment.attachment_filename = unique_filename
                             assignment.attachment_original_filename = filename
+                            assignment.attachment_file_path = filepath
+                            assignment.attachment_file_size = os.path.getsize(filepath)
+                            assignment.attachment_mime_type = file.content_type
+                            
                         except Exception as e:
                             flash(f'Error saving file: {str(e)}', 'danger')
+                            db.session.rollback()
                             return redirect(request.url)
+                    else:
+                        flash(f'File type not allowed.', 'danger')
+                        db.session.rollback()
+                        return redirect(request.url)
             
             db.session.commit()
             flash('Assignment updated successfully!', 'success')
-            return redirect(url_for('management.assignments_and_grades'))
+            return redirect(url_for('management.view_assignment', assignment_id=assignment_id))
             
+        except ValueError:
+            flash("Invalid date format.", "danger")
+            db.session.rollback()
+            return redirect(request.url)
         except Exception as e:
             db.session.rollback()
             flash(f'Error updating assignment: {str(e)}', 'danger')
             return redirect(request.url)
     
-    # For GET request, get all classes for the dropdown
+    # For GET request, get all classes for the dropdown (for reference, but class will be pre-selected)
     classes = Class.query.all()
-    school_years = SchoolYear.query.all()
+    school_years = SchoolYear.query.order_by(SchoolYear.name.desc()).all()
+    
+    # Get current quarter for reference
+    current_quarter = get_current_quarter()
+    
+    # Get context from assignment or default
+    context = assignment.assignment_context if assignment.assignment_context else 'homework'
     
     return render_template('shared/edit_assignment.html', 
                          assignment=assignment,
+                         class_obj=class_obj,
                          classes=classes,
-                         school_years=school_years)
+                         school_years=school_years,
+                         teacher=None,  # Not needed for management
+                         current_quarter=current_quarter,
+                         context=context)
 
 
 @management_blueprint.route('/assignment/remove/<int:assignment_id>', methods=['POST'])

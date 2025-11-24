@@ -60,21 +60,17 @@ def add_assignment():
             # Get assignment context from form or query parameter
             assignment_context = request.form.get('assignment_context', 'homework')
             
+            # Get status from form (default to 'Active')
+            status = request.form.get('status', 'Active')
+            
             # Get total points from form (default to 100 if not provided)
             total_points = request.form.get('total_points', type=float)
             if total_points is None or total_points <= 0:
                 total_points = 100.0
             
-            # Get advanced grading options
-            allow_extra_credit = 'allow_extra_credit' in request.form
-            max_extra_credit_points = request.form.get('max_extra_credit_points', type=float) or 0.0
-            
-            late_penalty_enabled = 'late_penalty_enabled' in request.form
-            late_penalty_per_day = request.form.get('late_penalty_per_day', type=float) or 0.0
-            late_penalty_max_days = request.form.get('late_penalty_max_days', type=int) or 0
-            
-            assignment_category = request.form.get('assignment_category', '').strip() or None
-            category_weight = request.form.get('category_weight', type=float) or 0.0
+            # Note: Extra credit and late penalty settings are not stored at the Assignment level
+            # They are handled at the Grade level when grading individual students
+            # The form fields are kept for UI consistency but values are not stored in Assignment model
             
             # Create the assignment
             new_assignment = Assignment(
@@ -84,52 +80,44 @@ def add_assignment():
                 quarter=quarter,
                 class_id=class_id,
                 school_year_id=current_school_year.id,
-                assignment_type='pdf_paper',
-                status='Active',
+                assignment_type='pdf',
+                status=status,
                 assignment_context=assignment_context,
                 total_points=total_points,
-                allow_extra_credit=allow_extra_credit,
-                max_extra_credit_points=max_extra_credit_points if allow_extra_credit else 0.0,
-                late_penalty_enabled=late_penalty_enabled,
-                late_penalty_per_day=late_penalty_per_day if late_penalty_enabled else 0.0,
-                late_penalty_max_days=late_penalty_max_days if late_penalty_enabled else 0,
-                assignment_category=assignment_category,
-                category_weight=category_weight,
                 created_by=current_user.id
             )
             
             db.session.add(new_assignment)
             db.session.flush()  # Get the assignment ID
             
-            # Handle file uploads
-            if 'files' in request.files:
-                files = request.files.getlist('files')
-                uploaded_files = []
-                
-                for file in files:
-                    if file and file.filename and allowed_file(file.filename):
+            # Handle file upload
+            if 'assignment_file' in request.files:
+                file = request.files['assignment_file']
+                if file and file.filename != '':
+                    if allowed_file(file.filename):
                         filename = secure_filename(file.filename)
-                        # Create unique filename to avoid conflicts
-                        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_')
-                        unique_filename = timestamp + filename
+                        # Create a unique filename to avoid collisions
+                        unique_filename = f"assignment_{class_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{filename}"
+                        filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], unique_filename)
                         
-                        # Create uploads directory if it doesn't exist
-                        upload_dir = os.path.join(current_app.static_folder, 'uploads', 'assignments')
-                        os.makedirs(upload_dir, exist_ok=True)
-                        
-                        file_path = os.path.join(upload_dir, unique_filename)
-                        file.save(file_path)
-                        
-                        uploaded_files.append({
-                            'original_name': filename,
-                            'saved_name': unique_filename,
-                            'path': f'uploads/assignments/{unique_filename}'
-                        })
-                
-                # Store file information in assignment description or create a separate field
-                if uploaded_files:
-                    file_info = json.dumps(uploaded_files)
-                    new_assignment.file_attachments = file_info
+                        try:
+                            file.save(filepath)
+                            
+                            # Save file information to assignment
+                            new_assignment.attachment_filename = unique_filename
+                            new_assignment.attachment_original_filename = filename
+                            new_assignment.attachment_file_path = filepath
+                            new_assignment.attachment_file_size = os.path.getsize(filepath)
+                            new_assignment.attachment_mime_type = file.content_type
+                            
+                        except Exception as e:
+                            flash(f'Error saving file: {str(e)}', 'danger')
+                            db.session.rollback()
+                            return redirect(url_for('teacher.assignments.add_assignment'))
+                    else:
+                        flash(f'File type not allowed.', 'danger')
+                        db.session.rollback()
+                        return redirect(url_for('teacher.assignments.add_assignment'))
             
             db.session.commit()
             flash('Assignment created successfully!', 'success')
@@ -139,7 +127,7 @@ def add_assignment():
             db.session.rollback()
             print(f"Error creating assignment: {str(e)}")
             flash(f'Error creating assignment: {str(e)}', 'danger')
-            return redirect(url_for('teacher.add_assignment'))
+            return redirect(url_for('teacher.assignments.add_assignment'))
     
     # GET request - show the form
     # Get teacher object or None for administrators
@@ -193,6 +181,14 @@ def add_assignment_for_class(class_id):
             # Get assignment context from form or query parameter
             assignment_context = request.form.get('assignment_context', 'homework')
             
+            # Get status from form (default to 'Active')
+            status = request.form.get('status', 'Active')
+            
+            # Get total points from form (default to 100 if not provided)
+            total_points = request.form.get('total_points', type=float)
+            if total_points is None or total_points <= 0:
+                total_points = 100.0
+            
             # Create the assignment
             new_assignment = Assignment(
                 title=title,
@@ -201,51 +197,54 @@ def add_assignment_for_class(class_id):
                 quarter=quarter,
                 class_id=class_id,
                 school_year_id=current_school_year.id,
-                assignment_type='pdf_paper',
-                status='Active',
+                assignment_type='pdf',
+                status=status,
                 assignment_context=assignment_context,
+                total_points=total_points,
                 created_by=current_user.id
             )
             
             db.session.add(new_assignment)
             db.session.flush()  # Get the assignment ID
             
-            # Handle file uploads (same logic as above)
-            if 'files' in request.files:
-                files = request.files.getlist('files')
-                uploaded_files = []
-                
-                for file in files:
-                    if file and file.filename and allowed_file(file.filename):
+            # Handle file upload
+            if 'assignment_file' in request.files:
+                file = request.files['assignment_file']
+                if file and file.filename != '':
+                    if allowed_file(file.filename):
                         filename = secure_filename(file.filename)
-                        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_')
-                        unique_filename = timestamp + filename
+                        # Create a unique filename to avoid collisions
+                        unique_filename = f"assignment_{class_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{filename}"
+                        filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], unique_filename)
                         
-                        upload_dir = os.path.join(current_app.static_folder, 'uploads', 'assignments')
-                        os.makedirs(upload_dir, exist_ok=True)
-                        
-                        file_path = os.path.join(upload_dir, unique_filename)
-                        file.save(file_path)
-                        
-                        uploaded_files.append({
-                            'original_name': filename,
-                            'saved_name': unique_filename,
-                            'path': f'uploads/assignments/{unique_filename}'
-                        })
-                
-                if uploaded_files:
-                    file_info = json.dumps(uploaded_files)
-                    new_assignment.file_attachments = file_info
+                        try:
+                            file.save(filepath)
+                            
+                            # Save file information to assignment
+                            new_assignment.attachment_filename = unique_filename
+                            new_assignment.attachment_original_filename = filename
+                            new_assignment.attachment_file_path = filepath
+                            new_assignment.attachment_file_size = os.path.getsize(filepath)
+                            new_assignment.attachment_mime_type = file.content_type
+                            
+                        except Exception as e:
+                            flash(f'Error saving file: {str(e)}', 'danger')
+                            db.session.rollback()
+                            return redirect(url_for('teacher.assignments.add_assignment_for_class', class_id=class_id))
+                    else:
+                        flash(f'File type not allowed.', 'danger')
+                        db.session.rollback()
+                        return redirect(url_for('teacher.assignments.add_assignment_for_class', class_id=class_id))
             
             db.session.commit()
             flash('Assignment created successfully!', 'success')
-            return redirect(url_for('teacher.view_class', class_id=class_id))
+            return redirect(url_for('teacher.dashboard.view_class', class_id=class_id))
             
         except Exception as e:
             db.session.rollback()
             print(f"Error creating assignment: {str(e)}")
             flash(f'Error creating assignment: {str(e)}', 'danger')
-            return redirect(url_for('teacher.add_assignment_for_class', class_id=class_id))
+            return redirect(url_for('teacher.assignments.add_assignment_for_class', class_id=class_id))
     
     # GET request - show the form
     current_quarter = get_current_quarter()
@@ -335,31 +334,84 @@ def view_assignment(assignment_id):
 def edit_assignment(assignment_id):
     """Edit an existing assignment"""
     assignment = Assignment.query.get_or_404(assignment_id)
+    class_obj = assignment.class_info
+    
+    # Check if class exists
+    if not class_obj:
+        flash("Assignment class information not found.", "danger")
+        return redirect(url_for('teacher.dashboard.my_assignments'))
     
     # Check authorization for this assignment's class
-    if not is_authorized_for_class(assignment.class_info):
+    if not is_authorized_for_class(class_obj):
         flash("You are not authorized to edit this assignment.", "danger")
         return redirect(url_for('teacher.dashboard.my_assignments'))
     
     if request.method == 'POST':
         # Handle assignment update
-        assignment.title = request.form.get('title')
-        assignment.description = request.form.get('description', '')
-        assignment.quarter = request.form.get('quarter')
-        
+        title = request.form.get('title', '').strip()
+        description = request.form.get('description', '').strip()
+        quarter = request.form.get('quarter')
         due_date_str = request.form.get('due_date')
-        if due_date_str:
-            try:
-                assignment.due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
-            except ValueError:
-                flash("Invalid date format.", "danger")
-                return redirect(url_for('teacher.assignments.edit_assignment', assignment_id=assignment_id))
+        status = request.form.get('status', 'Active')
+        assignment_context = request.form.get('assignment_context', 'homework')
+        total_points = request.form.get('total_points', type=float)
+        
+        if not all([title, due_date_str, quarter]):
+            flash("Please fill in all required fields.", "danger")
+            return redirect(url_for('teacher.assignments.edit_assignment', assignment_id=assignment_id))
+        
+        if total_points is None or total_points <= 0:
+            total_points = 100.0
         
         try:
+            due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
+            
+            # Update assignment fields
+            assignment.title = title
+            assignment.description = description
+            assignment.quarter = quarter
+            assignment.due_date = due_date
+            assignment.status = status
+            assignment.assignment_context = assignment_context
+            assignment.total_points = total_points
+            
+            # Handle file upload (only if a new file is provided)
+            if 'assignment_file' in request.files:
+                file = request.files['assignment_file']
+                if file and file.filename != '':
+                    if allowed_file(file.filename):
+                        filename = secure_filename(file.filename)
+                        # Create a unique filename to avoid collisions
+                        unique_filename = f"assignment_{assignment.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{filename}"
+                        filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], unique_filename)
+                        
+                        try:
+                            file.save(filepath)
+                            
+                            # Update file information
+                            assignment.attachment_filename = unique_filename
+                            assignment.attachment_original_filename = filename
+                            assignment.attachment_file_path = filepath
+                            assignment.attachment_file_size = os.path.getsize(filepath)
+                            assignment.attachment_mime_type = file.content_type
+                            
+                        except Exception as e:
+                            flash(f'Error saving file: {str(e)}', 'danger')
+                            db.session.rollback()
+                            return redirect(url_for('teacher.assignments.edit_assignment', assignment_id=assignment_id))
+                    else:
+                        flash(f'File type not allowed.', 'danger')
+                        db.session.rollback()
+                        return redirect(url_for('teacher.assignments.edit_assignment', assignment_id=assignment_id))
+            
             db.session.commit()
             flash('Assignment updated successfully!', 'success')
             return redirect(url_for('teacher.assignments.view_assignment', assignment_id=assignment_id))
             
+        except ValueError:
+            flash("Invalid date format.", "danger")
+            db.session.rollback()
+            return redirect(url_for('teacher.assignments.edit_assignment', assignment_id=assignment_id))
         except Exception as e:
             db.session.rollback()
             print(f"Error updating assignment: {str(e)}")
@@ -367,7 +419,39 @@ def edit_assignment(assignment_id):
             return redirect(url_for('teacher.assignments.edit_assignment', assignment_id=assignment_id))
     
     # GET request - show the edit form
-    return render_template('shared/edit_assignment.html', assignment=assignment)
+    # Get teacher object or None for administrators
+    teacher = get_teacher_or_admin()
+    
+    # Get classes for the current teacher/admin (for reference, but class will be pre-selected)
+    if is_admin():
+        classes = Class.query.all()
+    else:
+        if teacher is None:
+            classes = []
+        else:
+            classes = Class.query.filter_by(teacher_id=teacher.id).all()
+    
+    # Get school years
+    school_years = SchoolYear.query.order_by(SchoolYear.name.desc()).all()
+    
+    # Get current quarter for reference
+    current_quarter = get_current_quarter()
+    
+    # Get context from assignment or default
+    context = getattr(assignment, 'assignment_context', None) or 'homework'
+    
+    # Ensure total_points exists (for older assignments)
+    if not hasattr(assignment, 'total_points') or assignment.total_points is None:
+        assignment.total_points = 100.0
+    
+    return render_template('shared/edit_assignment.html', 
+                         assignment=assignment,
+                         class_obj=class_obj,
+                         classes=classes,
+                         school_years=school_years,
+                         teacher=teacher,
+                         current_quarter=current_quarter,
+                         context=context)
 
 @bp.route('/assignment/remove/<int:assignment_id>', methods=['POST'])
 @login_required

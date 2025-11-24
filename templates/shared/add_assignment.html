@@ -344,7 +344,7 @@
                     <div class="card action-buttons-card">
                         <div class="card-body p-4">
                             <div class="d-grid gap-3">
-                                <button type="submit" class="btn btn-create-assignment btn-lg fw-bold" id="createAssignmentBtn">
+                                <button type="button" class="btn btn-create-assignment btn-lg fw-bold" id="createAssignmentBtn">
                                     <i class="bi bi-check-circle me-2"></i>Create Assignment
                                 </button>
                                 {% if class_obj %}
@@ -579,6 +579,19 @@ document.addEventListener('DOMContentLoaded', function() {
         submitBtn.classList.add('loading');
         submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Creating Assignment...';
         submitBtn.disabled = true;
+    });
+    
+    // Handle Create Assignment button click (button is outside form, so we need to manually submit)
+    const createAssignmentBtn = document.getElementById('createAssignmentBtn');
+    createAssignmentBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        // Validate form before submission
+        if (form.checkValidity()) {
+            form.submit();
+        } else {
+            // If form is invalid, trigger browser validation messages
+            form.reportValidity();
+        }
     });
     
     // Set default due date based on assignment context

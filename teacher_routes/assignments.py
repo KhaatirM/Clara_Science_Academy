@@ -2,14 +2,13 @@
 Assignment management routes for teachers.
 """
 
-from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app
+from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, jsonify
 from flask_login import login_required, current_user
 from decorators import teacher_required
 from .utils import get_teacher_or_admin, is_admin, is_authorized_for_class, get_current_quarter
 from models import (
     db, Class, Assignment, SchoolYear, Enrollment, TeacherStaff, AssignmentExtension
 )
-from flask import jsonify
 from datetime import datetime
 from werkzeug.utils import secure_filename
 import os

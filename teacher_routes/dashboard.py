@@ -378,18 +378,18 @@ def view_class(class_id):
 def my_classes():
     """Display all classes for the current teacher."""
     try:
-    # Get teacher object or None for administrators
-    teacher = get_teacher_or_admin()
+        # Get teacher object or None for administrators
+        teacher = get_teacher_or_admin()
     
-    # Directors and School Administrators see all classes, teachers only see their assigned classes
-    if is_admin():
-        classes = Class.query.all()
-    else:
-        # Check if teacher object exists
-        if teacher is None:
-            # If user is a Teacher but has no teacher_staff_id, show empty classes list
-            classes = []
+        # Directors and School Administrators see all classes, teachers only see their assigned classes
+        if is_admin():
+            classes = Class.query.all()
         else:
+            # Check if teacher object exists
+            if teacher is None:
+                # If user is a Teacher but has no teacher_staff_id, show empty classes list
+                classes = []
+            else:
                 # Query classes where teacher is:
                 # 1. Primary teacher (teacher_id == teacher.id)
                 # 2. Additional teacher (in class_additional_teachers table)
@@ -408,9 +408,9 @@ def my_classes():
                     )
                 ).all()
     
-    # Calculate active enrollment count for each class
+        # Calculate active enrollment count for each class
         # Use a direct query to avoid lazy loading issues
-    for class_obj in classes:
+        for class_obj in classes:
             try:
                 # Query enrollments directly to avoid lazy loading issues
                 active_count = Enrollment.query.filter_by(
@@ -423,7 +423,7 @@ def my_classes():
                 current_app.logger.error(f"Error calculating enrollment count for class {class_obj.id}: {e}")
                 class_obj.active_student_count = 0
     
-    return render_template('management/role_classes.html', classes=classes, teacher=teacher)
+        return render_template('management/role_classes.html', classes=classes, teacher=teacher)
     
     except Exception as e:
         current_app.logger.error(f"Error in my_classes route: {e}")
@@ -707,7 +707,7 @@ def assignments_and_grades():
         # Get classes for the current teacher/admin
         if is_admin():
             accessible_classes = Class.query.all()
-    else:
+        else:
             if teacher is None:
                 accessible_classes = []
             else:

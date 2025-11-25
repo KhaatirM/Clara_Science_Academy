@@ -27,6 +27,9 @@ def get_teacher_or_admin():
 
 def is_authorized_for_class(class_obj):
     """Check if current user is authorized to access a specific class."""
+    # --- DEBUG PRINT: Check your server console when you click a class ---
+    print(f"DEBUG AUTH: User Role='{current_user.role}', Class ID={class_obj.id if class_obj else 'None'}")
+    
     # Directors and School Administrators have access to all classes
     if current_user.role in ['Director', 'School Administrator']:
         return True

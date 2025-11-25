@@ -128,22 +128,30 @@ def get_student_assignment_status(assignment, submission, grade, student_id=None
 
 def get_grade_trends(student_id, class_id, limit=10):
     """Get grade trends for a specific class."""
-    # Get grades directly from the Grade model, excluding Voided assignments
+    # Get grades directly from the Grade model, excluding Voided assignments and voided grades
     grades = Grade.query.join(Assignment).filter(
         Grade.student_id == student_id,
         Assignment.class_id == class_id,
-        Assignment.status != 'Voided'  # Exclude Voided assignments from grade trends
+        Assignment.status != 'Voided',  # Exclude Voided assignments from grade trends
+        Grade.is_voided == False  # Exclude voided grades
     ).order_by(Grade.graded_at.desc()).limit(limit).all()
     
     trends = []
     for grade in reversed(grades):  # Reverse to show chronological order
-        grade_data = json.loads(grade.grade_data)
-        if 'score' in grade_data:
-            trends.append({
-                'assignment': grade.assignment.title,
-                'grade': grade_data['score'],
-                'date': grade.graded_at.strftime('%Y-%m-%d')
-            })
+        # Skip voided grades (double check)
+        if grade.is_voided or grade.assignment.status == 'Voided':
+            continue
+            
+        try:
+            grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
+            if 'score' in grade_data and grade_data.get('score') is not None:
+                trends.append({
+                    'assignment': grade.assignment.title,
+                    'grade': grade_data['score'],
+                    'date': grade.graded_at.strftime('%Y-%m-%d')
+                })
+        except (json.JSONDecodeError, TypeError, AttributeError):
+            continue  # Skip invalid grade data
     
     return trends
 
@@ -529,9 +537,13 @@ def student_dashboard():
         Assignment.status != 'Voided'  # Exclude Voided assignments from recent grades
     ).order_by(Grade.graded_at.desc()).limit(5).all()
     
-    # Format recent grades for template
+    # Format recent grades for template (excluding voided grades and voided assignments)
     recent_grades = []
     for grade in recent_grades_raw:
+        # Skip voided grades and voided assignments
+        if grade.is_voided or grade.assignment.status == 'Voided':
+            continue
+            
         grade_data = json.loads(grade.grade_data)
         recent_grades.append({
             'assignment': grade.assignment,
@@ -737,14 +749,18 @@ def student_classes():
             # Calculate average grade for this class
             grade_percentages = []
             for g in class_grades:
-                grade_data = json.loads(g.grade_data)
-                if 'score' in grade_data and grade_data['score'] is not None:
-                    try:
+                # Skip voided grades and voided assignments
+                if g.is_voided or g.assignment.status == 'Voided':
+                    continue
+                    
+                try:
+                    grade_data = json.loads(g.grade_data) if isinstance(g.grade_data, str) else g.grade_data
+                    if 'score' in grade_data and grade_data['score'] is not None:
                         # Convert to float in case it's stored as string
                         score = float(grade_data['score'])
                         grade_percentages.append(score)
-                    except (ValueError, TypeError):
-                        continue  # Skip invalid scores
+                except (ValueError, TypeError, json.JSONDecodeError, AttributeError):
+                    continue  # Skip invalid scores
             
             if grade_percentages:
                 avg_grade = round(sum(grade_percentages) / len(grade_percentages), 2)
@@ -752,10 +768,10 @@ def student_classes():
                 all_grades.append(avg_grade)
     
     return render_template('students/role_student_dashboard.html',
-                         **create_template_context(student, 'classes', 'classes',
-                             classes=classes,
-                             my_classes=classes,
-                             grades=grades))
+                          **create_template_context(student, 'classes', 'classes',
+                              classes=classes,
+                              my_classes=classes,
+                              grades=grades))
 
 @student_blueprint.route('/grades')
 @login_required
@@ -837,6 +853,10 @@ def student_grades():
         
         # Process regular assignment grades
         for grade in grades:
+            # Skip voided grades and voided assignments
+            if grade.is_voided or grade.assignment.status == 'Voided':
+                continue
+                
             grade_data = json.loads(grade.grade_data)
             if 'score' in grade_data and grade_data['score'] is not None:
                 try:
@@ -849,6 +869,10 @@ def student_grades():
         
         # Process group assignment grades
         for group_grade in group_grades:
+            # Skip voided grades and voided assignments
+            if group_grade.is_voided or group_grade.group_assignment.status == 'Voided':
+                continue
+                
             grade_data = json.loads(group_grade.grade_data) if isinstance(group_grade.grade_data, str) else group_grade.grade_data
             if 'score' in grade_data and grade_data['score'] is not None:
                 try:
@@ -872,6 +896,10 @@ def student_grades():
             
             # Combine regular and group grades
             for grade in grades:
+                # Skip voided grades and voided assignments
+                if grade.is_voided or grade.assignment.status == 'Voided':
+                    continue
+                    
                 grade_data = json.loads(grade.grade_data)
                 if 'score' in grade_data and grade_data['score'] is not None:
                     try:
@@ -886,6 +914,10 @@ def student_grades():
                         continue  # Skip invalid scores
             
             for group_grade in group_grades:
+                # Skip voided grades and voided assignments
+                if group_grade.is_voided or group_grade.group_assignment.status == 'Voided':
+                    continue
+                    
                 grade_data = json.loads(group_grade.grade_data) if isinstance(group_grade.grade_data, str) else group_grade.grade_data
                 if 'score' in grade_data and grade_data['score'] is not None:
                     try:
@@ -939,8 +971,12 @@ def student_grades():
                 
                 # Add regular assignment grades
                 for assignment in quarter_assignments:
+                    # Skip voided assignments
+                    if assignment.status == 'Voided':
+                        continue
+                        
                     grade = next((g for g in grades if g.assignment_id == assignment.id), None)
-                    if grade:
+                    if grade and not grade.is_voided:
                         grade_data = json.loads(grade.grade_data)
                         if 'score' in grade_data and grade_data['score'] is not None:
                             try:
@@ -951,8 +987,12 @@ def student_grades():
                 
                 # Add group assignment grades
                 for group_assignment in quarter_group_assignments:
+                    # Skip voided assignments
+                    if group_assignment.status == 'Voided':
+                        continue
+                        
                     group_grade = next((g for g in group_grades if g.group_assignment_id == group_assignment.id), None)
-                    if group_grade:
+                    if group_grade and not group_grade.is_voided:
                         grade_data = json.loads(group_grade.grade_data) if isinstance(group_grade.grade_data, str) else group_grade.grade_data
                         if 'score' in grade_data and grade_data['score'] is not None:
                             try:
@@ -1020,8 +1060,12 @@ def student_grades():
                 
                 # Add regular assignment grades
                 for assignment in semester_assignments:
+                    # Skip voided assignments
+                    if assignment.status == 'Voided':
+                        continue
+                        
                     grade = next((g for g in grades if g.assignment_id == assignment.id), None)
-                    if grade:
+                    if grade and not grade.is_voided:
                         grade_data = json.loads(grade.grade_data)
                         if 'score' in grade_data and grade_data['score'] is not None:
                             try:
@@ -1032,8 +1076,12 @@ def student_grades():
                 
                 # Add group assignment grades
                 for group_assignment in semester_group_assignments:
+                    # Skip voided assignments
+                    if group_assignment.status == 'Voided':
+                        continue
+                        
                     group_grade = next((g for g in group_grades if g.group_assignment_id == group_assignment.id), None)
-                    if group_grade:
+                    if group_grade and not group_grade.is_voided:
                         grade_data = json.loads(group_grade.grade_data) if isinstance(group_grade.grade_data, str) else group_grade.grade_data
                         if 'score' in grade_data and grade_data['score'] is not None:
                             try:
@@ -1331,6 +1379,10 @@ def student_settings():
                 if class_grades:
                     grade_percentages = []
                     for g in class_grades:
+                        # Skip voided grades and voided assignments
+                        if g.is_voided or g.assignment.status == 'Voided':
+                            continue
+                            
                         grade_data = json.loads(g.grade_data)
                         if 'score' in grade_data and grade_data['score'] is not None:
                             try:
@@ -1377,8 +1429,14 @@ def view_class(class_id):
     # Get assignments for this class
     assignments = Assignment.query.filter_by(class_id=class_id).order_by(Assignment.due_date.desc()).all()
     
-    # Get submissions and grades for this student
-    student_grades = {g.assignment_id: json.loads(g.grade_data) for g in Grade.query.filter_by(student_id=student.id).all()}
+    # Get submissions and grades for this student (excluding voided grades and voided assignments)
+    all_grades = Grade.query.filter_by(student_id=student.id).all()
+    student_grades = {}
+    for g in all_grades:
+        # Skip voided grades and voided assignments
+        if not g.is_voided and g.assignment.status != 'Voided':
+            student_grades[g.assignment_id] = json.loads(g.grade_data)
+    
     student_submissions = {s.assignment_id: s for s in Submission.query.filter_by(student_id=student.id).all()}
     
     # Get announcements for this class
@@ -1389,6 +1447,10 @@ def view_class(class_id):
     if assignments:
         scores = []
         for assignment in assignments:
+            # Skip voided assignments
+            if assignment.status == 'Voided':
+                continue
+                
             if assignment.id in student_grades:
                 score = student_grades[assignment.id].get('score', 0)
                 if score is not None:
@@ -1443,8 +1505,14 @@ def view_class_assignments(class_id):
         Assignment.status.in_(['Active', 'Inactive'])
     ).order_by(Assignment.due_date.desc()).all()
     
-    # Get submissions and grades for this student
-    student_grades = {g.assignment_id: g for g in Grade.query.filter_by(student_id=student.id).all()}
+    # Get submissions and grades for this student (excluding voided grades and voided assignments)
+    all_grades = Grade.query.filter_by(student_id=student.id).all()
+    student_grades = {}
+    for g in all_grades:
+        # Skip voided grades and voided assignments
+        if not g.is_voided and g.assignment.status != 'Voided':
+            student_grades[g.assignment_id] = g
+    
     student_submissions = {s.assignment_id: s for s in Submission.query.filter_by(student_id=student.id).all()}
     
     # Create assignments with status for template

@@ -1,0 +1,303 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/shared_take_attendance.css') }}">
+<style>
+.attendance-records-container {
+    background-color: #f8f9fa;
+    min-height: 100vh;
+    padding-bottom: 2rem;
+}
+
+.records-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 15px;
+    padding: 2rem;
+    color: white;
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+    margin-bottom: 2rem;
+}
+
+.records-header .btn-outline-secondary {
+    background: rgba(255, 255, 255, 0.95) !important;
+    color: #667eea !important;
+    border: 2px solid rgba(255, 255, 255, 0.3) !important;
+    font-weight: 600 !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
+}
+
+.records-header .btn-outline-secondary:hover {
+    background: white !important;
+    color: #764ba2 !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3) !important;
+}
+
+.date-group-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+
+.date-header {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 1rem 1.5rem;
+    border-bottom: 2px solid #dee2e6;
+    font-weight: 600;
+    color: #495057;
+}
+
+.record-row {
+    padding: 0.75rem 1.5rem;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background-color 0.2s ease;
+}
+
+.record-row:hover {
+    background-color: #f8f9fa;
+}
+
+.record-row:last-child {
+    border-bottom: none;
+}
+
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-present {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.status-late {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+.status-absent {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.status-excused {
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+
+.status-suspended {
+    background-color: #e5e7eb;
+    color: #374151;
+}
+</style>
+{% endblock %}
+
+{% block title %}
+    Attendance Records - {{ class_item.name }}
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4 py-4 attendance-records-container">
+    <!-- Header Section -->
+    <div class="records-header mb-4">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                <h2 class="mb-1">
+                    <i class="bi bi-clock-history me-2"></i>Attendance Records
+                </h2>
+                <p class="mb-0 opacity-90">
+                    <span class="badge bg-light text-dark me-2">{{ class_item.name }}</span>
+                    <span class="badge bg-light text-dark">{{ class_item.subject }}</span>
+                </p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{{ url_for('teacher.attendance.take_attendance', class_id=class_item.id) }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-clipboard-check me-1"></i>Take Attendance
+                </a>
+                <a href="{{ url_for('teacher.dashboard.view_class', class_id=class_item.id) }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i>Back to Class
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters Section -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('teacher.attendance.view_attendance_records', class_id=class_item.id) }}" class="row g-3">
+                <div class="col-12 col-md-3">
+                    <label for="start_date" class="form-label fw-semibold">
+                        <i class="bi bi-calendar-event me-1"></i>Start Date
+                    </label>
+                    <input type="date" class="form-control" id="start_date" name="start_date" 
+                           value="{{ start_date.strftime('%Y-%m-%d') }}">
+                </div>
+                <div class="col-12 col-md-3">
+                    <label for="end_date" class="form-label fw-semibold">
+                        <i class="bi bi-calendar-event me-1"></i>End Date
+                    </label>
+                    <input type="date" class="form-control" id="end_date" name="end_date" 
+                           value="{{ end_date.strftime('%Y-%m-%d') }}">
+                </div>
+                <div class="col-12 col-md-3">
+                    <label for="student_id" class="form-label fw-semibold">
+                        <i class="bi bi-person me-1"></i>Student
+                    </label>
+                    <select class="form-select" id="student_id" name="student_id">
+                        <option value="">All Students</option>
+                        {% for student in students %}
+                            <option value="{{ student.id }}" {% if student_id_filter == student.id %}selected{% endif %}>
+                                {{ student.first_name }} {{ student.last_name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12 col-md-3">
+                    <label for="status" class="form-label fw-semibold">
+                        <i class="bi bi-filter me-1"></i>Status
+                    </label>
+                    <select class="form-select" id="status" name="status">
+                        <option value="">All Statuses</option>
+                        <option value="present" {% if status_filter == 'present' %}selected{% endif %}>Present</option>
+                        <option value="late" {% if status_filter == 'late' %}selected{% endif %}>Late</option>
+                        <option value="absent" {% if status_filter == 'absent' %}selected{% endif %}>Absent</option>
+                        <option value="excused" {% if status_filter == 'excused' %}selected{% endif %}>Excused</option>
+                        <option value="suspended" {% if status_filter == 'suspended' %}selected{% endif %}>Suspended</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search me-1"></i>Apply Filters
+                    </button>
+                    <a href="{{ url_for('teacher.attendance.view_attendance_records', class_id=class_item.id) }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i>Reset
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Summary Statistics -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="stat-card stat-card-present">
+                <div class="stat-icon">
+                    <i class="bi bi-check-circle-fill"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ summary_stats.present }}</div>
+                    <div class="stat-label">Present</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card stat-card-late">
+                <div class="stat-icon">
+                    <i class="bi bi-clock-fill"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ summary_stats.late }}</div>
+                    <div class="stat-label">Late</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card stat-card-absent">
+                <div class="stat-icon">
+                    <i class="bi bi-x-circle-fill"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ summary_stats.absent }}</div>
+                    <div class="stat-label">Absent</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card stat-card-rate">
+                <div class="stat-icon">
+                    <i class="bi bi-graph-up-arrow"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ summary_stats.attendance_rate }}%</div>
+                    <div class="stat-label">Rate</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Attendance Records -->
+    {% if records_by_date %}
+        {% for date_key, records in records_by_date.items() %}
+            {% set record_date = records[0].date %}
+            <div class="date-group-card">
+                <div class="date-header">
+                    <i class="bi bi-calendar3 me-2"></i>
+                    {{ record_date.strftime('%A, %B %d, %Y') }}
+                    <span class="badge bg-secondary ms-2">{{ records|length }} record(s)</span>
+                </div>
+                <div class="card-body p-0">
+                    {% for record in records %}
+                        <div class="record-row d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="student-avatar">
+                                    {{ record.student.first_name[0] }}{{ record.student.last_name[0] }}
+                                </div>
+                                <div>
+                                    <h6 class="mb-0">{{ record.student.first_name }} {{ record.student.last_name }}</h6>
+                                    <small class="text-muted">ID: {{ record.student.student_id }}</small>
+                                </div>
+                            </div>
+                            <div>
+                                {% if record.status.lower() == 'present' %}
+                                    <span class="status-badge status-present">
+                                        <i class="bi bi-check-circle me-1"></i>Present
+                                    </span>
+                                {% elif record.status.lower() == 'late' %}
+                                    <span class="status-badge status-late">
+                                        <i class="bi bi-clock me-1"></i>Late
+                                    </span>
+                                {% elif 'excused' in record.status.lower() %}
+                                    <span class="status-badge status-excused">
+                                        <i class="bi bi-file-medical me-1"></i>Excused Absence
+                                    </span>
+                                {% elif 'unexcused' in record.status.lower() or record.status.lower() == 'absent' %}
+                                    <span class="status-badge status-absent">
+                                        <i class="bi bi-x-circle me-1"></i>Absent
+                                    </span>
+                                {% elif record.status.lower() == 'suspended' %}
+                                    <span class="status-badge status-suspended">
+                                        <i class="bi bi-ban me-1"></i>Suspended
+                                    </span>
+                                {% else %}
+                                    <span class="status-badge status-absent">
+                                        {{ record.status }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-inbox fs-1 text-muted mb-3 d-block"></i>
+                <h5 class="text-muted">No attendance records found</h5>
+                <p class="text-muted">No attendance records match your filter criteria.</p>
+                <a href="{{ url_for('teacher.attendance.take_attendance', class_id=class_item.id) }}" class="btn btn-primary">
+                    <i class="bi bi-clipboard-check me-1"></i>Take Attendance
+                </a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+

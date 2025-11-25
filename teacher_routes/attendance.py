@@ -1,4 +1,4 @@
-"""
+﻿"""
 Attendance management routes for teachers.
 """
 
@@ -68,7 +68,7 @@ def take_attendance(class_id):
     # Check authorization for this specific class
     if not is_authorized_for_class(class_obj):
         flash("You are not authorized to take attendance for this class.", "danger")
-        return redirect(url_for('teacher.attendance_hub'))
+        return redirect(url_for('teacher.attendance.attendance_hub'))
     
     # Get enrolled students for this class
     enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
@@ -82,7 +82,7 @@ def take_attendance(class_id):
             return redirect(url_for('teacher.attendance.take_attendance', class_id=class_id))
         
         try:
-            date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            attendance_date = datetime.strptime(date_str, '%Y-%m-%d').date()
             
             # Process attendance for each student
             for student in students:
@@ -92,7 +92,7 @@ def take_attendance(class_id):
                 existing_attendance = Attendance.query.filter_by(
                     class_id=class_id,
                     student_id=student.id,
-                    date=date
+                    date=attendance_date
                 ).first()
                 
                 if existing_attendance:
@@ -103,7 +103,7 @@ def take_attendance(class_id):
                     new_attendance = Attendance(
                         class_id=class_id,
                         student_id=student.id,
-                        date=date,
+                        date=attendance_date,
                         status=status,
                         teacher_id=current_user.teacher_staff_id
                     )
@@ -111,7 +111,7 @@ def take_attendance(class_id):
             
             db.session.commit()
             flash('Attendance recorded successfully!', 'success')
-            return redirect(url_for('teacher.attendance.take_attendance', class_id=class_id))
+            return redirect(url_for('teacher.attendance.take_attendance', class_id=class_id, date=date_str))
             
         except Exception as e:
             db.session.rollback()
@@ -120,22 +120,31 @@ def take_attendance(class_id):
             return redirect(url_for('teacher.attendance.take_attendance', class_id=class_id))
     
     # GET request - show attendance form
+    # Get date from query parameter or default to today
+    date_str = request.args.get('date')
+    if date_str:
+        try:
+            selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            selected_date = datetime.now().date()
+    else:
+        selected_date = datetime.now().date()
+    
     # Get recent attendance records for context
     recent_attendance = Attendance.query.filter(
         Attendance.class_id == class_id,
         Attendance.date >= datetime.now().date() - timedelta(days=7)
     ).order_by(Attendance.date.desc()).all()
     
-    # Calculate attendance statistics for today
-    today = datetime.now().date()
-    today_attendance = Attendance.query.filter_by(
+    # Get attendance for the selected date
+    selected_date_attendance = Attendance.query.filter_by(
         class_id=class_id,
-        date=today
+        date=selected_date
     ).all()
     
-    present_count = sum(1 for a in today_attendance if a.status == 'present')
-    late_count = sum(1 for a in today_attendance if a.status == 'late')
-    absent_count = sum(1 for a in today_attendance if a.status == 'absent')
+    present_count = sum(1 for a in selected_date_attendance if a.status.lower() == 'present')
+    late_count = sum(1 for a in selected_date_attendance if a.status.lower() == 'late')
+    absent_count = sum(1 for a in selected_date_attendance if a.status.lower() in ['absent', 'unexcused absence', 'excused absence'])
     total_students = len(students)
     present_percentage = round((present_count / total_students * 100) if total_students > 0 else 0, 1)
     
@@ -147,7 +156,7 @@ def take_attendance(class_id):
     }
     
     # Create dictionaries for existing records
-    existing_records = {a.student_id: a for a in today_attendance}
+    existing_records = {a.student_id: a for a in selected_date_attendance}
     school_day_records = {}  # Placeholder for school-wide attendance if needed
     
     # Define attendance status options
@@ -158,10 +167,91 @@ def take_attendance(class_id):
                          students=students,
                          recent_attendance=recent_attendance,
                          attendance_stats=attendance_stats,
-                         attendance_date_str=today.strftime('%Y-%m-%d'),
+                         attendance_date_str=selected_date.strftime('%Y-%m-%d'),
                          existing_records=existing_records,
                          school_day_records=school_day_records,
                          statuses=statuses)
+
+@bp.route('/attendance/records/<int:class_id>')
+@login_required
+@teacher_required
+def view_attendance_records(class_id):
+    """View attendance records for a class with filtering options."""
+    class_obj = Class.query.get_or_404(class_id)
+    
+    # Check authorization
+    if not is_authorized_for_class(class_obj):
+        flash("You are not authorized to view attendance for this class.", "danger")
+        return redirect(url_for('teacher.attendance.attendance_hub'))
+    
+    # Get filter parameters
+    start_date_str = request.args.get('start_date')
+    end_date_str = request.args.get('end_date')
+    student_id_filter = request.args.get('student_id', type=int)
+    status_filter = request.args.get('status')
+    
+    # Default to last 30 days if no dates provided
+    if not start_date_str:
+        start_date = date.today() - timedelta(days=30)
+    else:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+    
+    if not end_date_str:
+        end_date = date.today()
+    else:
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+    
+    # Build query
+    query = Attendance.query.filter(
+        Attendance.class_id == class_id,
+        Attendance.date >= start_date,
+        Attendance.date <= end_date
+    )
+    
+    if student_id_filter:
+        query = query.filter(Attendance.student_id == student_id_filter)
+    
+    if status_filter:
+        query = query.filter(Attendance.status.ilike(f'%{status_filter}%'))
+    
+    # Get attendance records
+    attendance_records = query.order_by(Attendance.date.desc(), Student.last_name, Student.first_name).all()
+    
+    # Get enrolled students for filter dropdown
+    enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
+    students = [enrollment.student for enrollment in enrollments if enrollment.student is not None]
+    
+    # Group records by date
+    records_by_date = {}
+    for record in attendance_records:
+        date_key = record.date.isoformat()
+        if date_key not in records_by_date:
+            records_by_date[date_key] = []
+        records_by_date[date_key].append(record)
+    
+    # Calculate summary statistics
+    total_records = len(attendance_records)
+    present_count = sum(1 for r in attendance_records if r.status.lower() == 'present')
+    late_count = sum(1 for r in attendance_records if r.status.lower() == 'late')
+    absent_count = sum(1 for r in attendance_records if r.status.lower() in ['absent', 'unexcused absence', 'excused absence'])
+    
+    summary_stats = {
+        'total': total_records,
+        'present': present_count,
+        'late': late_count,
+        'absent': absent_count,
+        'rate': round((present_count / total_records * 100) if total_records > 0 else 0, 1)
+    }
+    
+    return render_template('shared/view_attendance_records.html',
+                         class_obj=class_obj,
+                         students=students,
+                         records_by_date=records_by_date,
+                         summary_stats=summary_stats,
+                         start_date=start_date,
+                         end_date=end_date,
+                         student_id_filter=student_id_filter,
+                         status_filter=status_filter)
 
 @bp.route('/mark-all-present/<int:class_id>', methods=['POST'])
 @login_required
@@ -170,10 +260,9 @@ def mark_all_present(class_id):
     """Mark all students as present for a class."""
     class_obj = Class.query.get_or_404(class_id)
     
-    # Check authorization for this specific class
     if not is_authorized_for_class(class_obj):
         flash("You are not authorized to take attendance for this class.", "danger")
-        return redirect(url_for('teacher.attendance_hub'))
+        return redirect(url_for('teacher.attendance.attendance_hub'))
     
     date_str = request.form.get('date')
     if not date_str:
@@ -181,30 +270,25 @@ def mark_all_present(class_id):
         return redirect(url_for('teacher.attendance.take_attendance', class_id=class_id))
     
     try:
-        date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        attendance_date = datetime.strptime(date_str, '%Y-%m-%d').date()
         
-        # Get enrolled students for this class
         enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
         students = [enrollment.student for enrollment in enrollments if enrollment.student is not None]
         
-        # Mark all students as present
         for student in students:
-            # Check if attendance already exists for this date and student
             existing_attendance = Attendance.query.filter_by(
                 class_id=class_id,
                 student_id=student.id,
-                date=date
+                date=attendance_date
             ).first()
             
             if existing_attendance:
-                # Update existing attendance
                 existing_attendance.status = 'present'
             else:
-                # Create new attendance record
                 new_attendance = Attendance(
                     class_id=class_id,
                     student_id=student.id,
-                    date=date,
+                    date=attendance_date,
                     status='present',
                     teacher_id=current_user.teacher_staff_id
                 )
@@ -212,71 +296,12 @@ def mark_all_present(class_id):
         
         db.session.commit()
         flash('All students marked as present!', 'success')
-        return redirect(url_for('teacher.attendance.take_attendance', class_id=class_id))
+        return redirect(url_for('teacher.attendance.take_attendance', class_id=class_id, date=date_str))
         
     except Exception as e:
         db.session.rollback()
         print(f"Error marking all present: {str(e)}")
         flash(f'Error marking all present: {str(e)}', 'danger')
-        return redirect(url_for('teacher.attendance.take_attendance', class_id=class_id))
-
-@bp.route('/quick-attendance/<int:class_id>', methods=['POST'])
-@login_required
-@teacher_required
-def quick_attendance(class_id):
-    """Quick attendance marking for a class."""
-    class_obj = Class.query.get_or_404(class_id)
-    
-    # Check authorization for this specific class
-    if not is_authorized_for_class(class_obj):
-        flash("You are not authorized to take attendance for this class.", "danger")
-        return redirect(url_for('teacher.attendance_hub'))
-    
-    date_str = request.form.get('date')
-    if not date_str:
-        flash("Please select a date.", "danger")
-        return redirect(url_for('teacher.attendance.take_attendance', class_id=class_id))
-    
-    try:
-        date = datetime.strptime(date_str, '%Y-%m-%d').date()
-        
-        # Get enrolled students for this class
-        enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
-        students = [enrollment.student for enrollment in enrollments if enrollment.student is not None]
-        
-        # Process attendance for each student
-        for student in students:
-            status = request.form.get(f'status_{student.id}', 'absent')
-            
-            # Check if attendance already exists for this date and student
-            existing_attendance = Attendance.query.filter_by(
-                class_id=class_id,
-                student_id=student.id,
-                date=date
-            ).first()
-            
-            if existing_attendance:
-                # Update existing attendance
-                existing_attendance.status = status
-            else:
-                # Create new attendance record
-                new_attendance = Attendance(
-                    class_id=class_id,
-                    student_id=student.id,
-                    date=date,
-                    status=status,
-                    teacher_id=current_user.teacher_staff_id
-                )
-                db.session.add(new_attendance)
-        
-        db.session.commit()
-        flash('Quick attendance recorded successfully!', 'success')
-        return redirect(url_for('teacher.attendance.take_attendance', class_id=class_id))
-        
-    except Exception as e:
-        db.session.rollback()
-        print(f"Error recording quick attendance: {str(e)}")
-        flash(f'Error recording quick attendance: {str(e)}', 'danger')
         return redirect(url_for('teacher.attendance.take_attendance', class_id=class_id))
 
 @bp.route('/attendance/download-template/<int:class_id>')
@@ -287,20 +312,16 @@ def download_attendance_template(class_id):
     try:
         class_obj = Class.query.get_or_404(class_id)
         
-        # Check authorization for this specific class
         if not is_authorized_for_class(class_obj):
             flash("You are not authorized to access this class.", "danger")
-            return redirect(url_for('teacher.attendance_hub'))
+            return redirect(url_for('teacher.attendance.attendance_hub'))
         
-        # Get enrolled students for this class
         enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
         students = [enrollment.student for enrollment in enrollments if enrollment.student is not None]
         
-        # Create CSV template in memory
         output = io.StringIO()
         writer = csv.writer(output)
         
-        # Write header
         writer.writerow([
             'Date (MM/DD/YYYY)',
             'Student ID',
@@ -309,38 +330,16 @@ def download_attendance_template(class_id):
             'Notes (Optional)'
         ])
         
-        # Write example rows with actual students from the class
         example_date = date.today().strftime('%m/%d/%Y')
-        for student in students[:3]:  # Show first 3 students as examples
+        for student in students[:3]:
             writer.writerow([
                 example_date,
                 student.student_id or 'N/A',
                 f'{student.first_name} {student.last_name}',
-                'Present',  # Example status
+                'Present',
                 'Example note - optional'
             ])
         
-        # Add instruction rows as comments
-        writer.writerow([])
-        writer.writerow(['# INSTRUCTIONS:'])
-        writer.writerow(['# 1. Date format must be MM/DD/YYYY (e.g., 11/08/2025)'])
-        writer.writerow(['# 2. Valid Status values: Present, Late, Unexcused Absence, Excused Absence, Suspended'])
-        writer.writerow(['# 3. Student ID must match exactly (case-sensitive)'])
-        writer.writerow(['# 4. Student Name is for reference only - matching is done by Student ID'])
-        writer.writerow(['# 5. Notes are optional'])
-        writer.writerow(['# 6. Delete these instruction rows before uploading'])
-        writer.writerow([])
-        writer.writerow(['# ENROLLED STUDENTS IN THIS CLASS:'])
-        writer.writerow(['# Student ID', '# Student Name', '# Grade'])
-        for student in students:
-            grade_display = 'K' if student.grade_level == 0 else (str(student.grade_level) if student.grade_level else 'N/A')
-            writer.writerow([
-                f'# {student.student_id or "N/A"}',
-                f'# {student.first_name} {student.last_name}',
-                f'# Grade {grade_display}'
-            ])
-        
-        # Create response
         output.seek(0)
         filename = f'attendance_template_{class_obj.name.replace(" ", "_")}_{datetime.now().strftime("%Y%m%d")}.csv'
         return Response(
@@ -352,7 +351,7 @@ def download_attendance_template(class_id):
     except Exception as e:
         current_app.logger.error(f"Error generating attendance template: {e}")
         flash('Error generating template. Please try again.', 'danger')
-        return redirect(url_for('teacher.attendance_hub'))
+        return redirect(url_for('teacher.attendance.attendance_hub'))
 
 @bp.route('/attendance/upload-csv/<int:class_id>', methods=['POST'])
 @login_required
@@ -362,51 +361,43 @@ def upload_attendance_csv(class_id):
     try:
         class_obj = Class.query.get_or_404(class_id)
         
-        # Check authorization for this specific class
         if not is_authorized_for_class(class_obj):
             flash("You are not authorized to upload attendance for this class.", "danger")
-            return redirect(url_for('teacher.attendance_hub'))
+            return redirect(url_for('teacher.attendance.attendance_hub'))
         
-        # Check if file was uploaded
         if 'attendance_file' not in request.files:
             flash('No file uploaded.', 'danger')
-            return redirect(url_for('teacher.attendance_hub'))
+            return redirect(url_for('teacher.attendance.attendance_hub'))
         
         file = request.files['attendance_file']
         
         if file.filename == '':
             flash('No file selected.', 'danger')
-            return redirect(url_for('teacher.attendance_hub'))
+            return redirect(url_for('teacher.attendance.attendance_hub'))
         
         if not file.filename.endswith('.csv'):
             flash('Please upload a CSV file.', 'danger')
-            return redirect(url_for('teacher.attendance_hub'))
+            return redirect(url_for('teacher.attendance.attendance_hub'))
         
-        # Read and parse CSV
         stream = io.StringIO(file.stream.read().decode("UTF-8"), newline=None)
         csv_reader = csv.DictReader(stream)
         
-        # Get enrolled students for validation
         enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
         student_id_map = {enrollment.student.student_id: enrollment.student.id 
                           for enrollment in enrollments if enrollment.student and enrollment.student.student_id}
         
-        # Valid attendance statuses
         valid_statuses = ['Present', 'Late', 'Unexcused Absence', 'Excused Absence', 'Suspended']
         
-        # Track statistics
         records_added = 0
         records_updated = 0
         records_skipped = 0
         errors = []
         
-        # Get teacher ID for tracking
         teacher = get_teacher_or_admin()
         teacher_id = teacher.id if teacher else None
         
-        for row_num, row in enumerate(csv_reader, start=2):  # Start at 2 (header is row 1)
+        for row_num, row in enumerate(csv_reader, start=2):
             try:
-                # Skip comment rows
                 date_str = row.get('Date (MM/DD/YYYY)', '').strip()
                 if date_str.startswith('#') or not date_str:
                     continue
@@ -415,13 +406,11 @@ def upload_attendance_csv(class_id):
                 status = row.get('Status', '').strip()
                 notes = row.get('Notes (Optional)', '').strip()
                 
-                # Validate required fields
                 if not date_str or not student_id_str or not status:
                     errors.append(f'Row {row_num}: Missing required fields (Date, Student ID, or Status)')
                     records_skipped += 1
                     continue
                 
-                # Parse date
                 try:
                     attendance_date = datetime.strptime(date_str, '%m/%d/%Y').date()
                 except ValueError:
@@ -432,19 +421,16 @@ def upload_attendance_csv(class_id):
                         records_skipped += 1
                         continue
                 
-                # Validate date is not in the future
                 if attendance_date > date.today():
                     errors.append(f'Row {row_num}: Cannot upload attendance for future date {date_str}')
                     records_skipped += 1
                     continue
                 
-                # Validate status
                 if status not in valid_statuses:
                     errors.append(f'Row {row_num}: Invalid status "{status}". Must be one of: {", ".join(valid_statuses)}')
                     records_skipped += 1
                     continue
                 
-                # Find student by ID
                 if student_id_str not in student_id_map:
                     errors.append(f'Row {row_num}: Student ID "{student_id_str}" not found in class roster')
                     records_skipped += 1
@@ -452,7 +438,6 @@ def upload_attendance_csv(class_id):
                 
                 student_db_id = student_id_map[student_id_str]
                 
-                # Check if attendance record already exists
                 existing_record = Attendance.query.filter_by(
                     class_id=class_id,
                     student_id=student_db_id,
@@ -460,13 +445,11 @@ def upload_attendance_csv(class_id):
                 ).first()
                 
                 if existing_record:
-                    # Update existing record
                     existing_record.status = status
                     existing_record.notes = notes if notes else existing_record.notes
                     existing_record.teacher_id = teacher_id
                     records_updated += 1
                 else:
-                    # Create new record
                     new_record = Attendance(
                         class_id=class_id,
                         student_id=student_db_id,
@@ -477,24 +460,21 @@ def upload_attendance_csv(class_id):
                     )
                     db.session.add(new_record)
                     records_added += 1
-                
+                    
             except Exception as e:
                 errors.append(f'Row {row_num}: Error processing - {str(e)}')
                 records_skipped += 1
                 continue
         
-        # Commit all changes
         db.session.commit()
         
-        # Generate summary message
         success_msg = f'Bulk attendance upload complete: {records_added} new records added, {records_updated} records updated'
         if records_skipped > 0:
             success_msg += f', {records_skipped} records skipped'
         
         flash(success_msg, 'success')
         
-        # Show errors if any
-        if errors and len(errors) <= 10:  # Only show first 10 errors
+        if errors and len(errors) <= 10:
             for error in errors[:10]:
                 flash(error, 'warning')
         elif errors:
@@ -506,5 +486,4 @@ def upload_attendance_csv(class_id):
         db.session.rollback()
         current_app.logger.error(f"Error uploading attendance CSV: {e}")
         flash(f'Error processing CSV file: {str(e)}', 'danger')
-        return redirect(url_for('teacher.attendance_hub'))
-
+        return redirect(url_for('teacher.attendance.attendance_hub'))

@@ -58,6 +58,11 @@
                                 <i class="bi bi-calendar-minus me-1"></i>Yesterday
                             </button>
                         </div>
+                        <div class="mt-3">
+                            <a href="{{ url_for('teacher.attendance.view_attendance_records', class_id=class_item.id) }}" class="btn btn-sm btn-outline-info w-100">
+                                <i class="bi bi-clock-history me-1"></i>View Attendance Records
+                            </a>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -531,13 +536,28 @@ function clearAll() {
 function setToday() {
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('date').value = today;
+    // Auto-submit the form
+    document.getElementById('date').closest('form').submit();
 }
 
 function setYesterday() {
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     document.getElementById('date').value = yesterday.toISOString().split('T')[0];
+    // Auto-submit the form
+    document.getElementById('date').closest('form').submit();
 }
+
+// Auto-submit when date changes
+document.addEventListener('DOMContentLoaded', function() {
+    const dateInput = document.getElementById('date');
+    if (dateInput) {
+        dateInput.addEventListener('change', function() {
+            // Auto-submit when date is manually changed
+            this.closest('form').submit();
+        });
+    }
+});
 </script>
 
 <!-- Bulk Upload Modal -->

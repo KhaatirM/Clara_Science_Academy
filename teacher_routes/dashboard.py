@@ -376,25 +376,44 @@ def view_class(class_id):
 @teacher_required
 def my_classes():
     """Display all classes for the current teacher."""
-    # Get teacher object or None for administrators
-    teacher = get_teacher_or_admin()
-    
-    # Directors and School Administrators see all classes, teachers only see their assigned classes
-    if is_admin():
-        classes = Class.query.all()
-    else:
-        # Check if teacher object exists
-        if teacher is None:
-            # If user is a Teacher but has no teacher_staff_id, show empty classes list
-            classes = []
+    try:
+        # Get teacher object or None for administrators
+        teacher = get_teacher_or_admin()
+        
+        # Directors and School Administrators see all classes, teachers only see their assigned classes
+        if is_admin():
+            classes = Class.query.all()
         else:
-            classes = Class.query.filter_by(teacher_id=teacher.id).all()
+            # Check if teacher object exists
+            if teacher is None:
+                # If user is a Teacher but has no teacher_staff_id, show empty classes list
+                classes = []
+            else:
+                classes = Class.query.filter_by(teacher_id=teacher.id).all()
+        
+        # Calculate active enrollment count for each class
+        # Use a direct query to avoid lazy loading issues
+        for class_obj in classes:
+            try:
+                # Query enrollments directly to avoid lazy loading issues
+                active_count = Enrollment.query.filter_by(
+                    class_id=class_obj.id,
+                    is_active=True
+                ).count()
+                class_obj.active_student_count = active_count
+            except Exception as e:
+                # If there's an error, set count to 0
+                current_app.logger.error(f"Error calculating enrollment count for class {class_obj.id}: {e}")
+                class_obj.active_student_count = 0
+        
+        return render_template('management/role_classes.html', classes=classes, teacher=teacher)
     
-    # Calculate active enrollment count for each class
-    for class_obj in classes:
-        class_obj.active_student_count = len([e for e in class_obj.enrollments if e.is_active])
-    
-    return render_template('management/role_classes.html', classes=classes, teacher=teacher)
+    except Exception as e:
+        current_app.logger.error(f"Error in my_classes route: {e}")
+        import traceback
+        current_app.logger.error(traceback.format_exc())
+        flash("An error occurred while loading your classes.", "danger")
+        return render_template('management/role_classes.html', classes=[], teacher=None)
 
 @bp.route('/deadline-reminders')
 @login_required
@@ -662,15 +681,241 @@ def teachers_staff():
 @login_required
 @teacher_required  
 def assignments_and_grades():
-    """Combined view of assignments and grades - redirect to appropriate page based on view parameter"""
-    view_mode = request.args.get('view', 'assignments')
+    """Combined view of assignments and grades for teachers"""
+    import json
+    try:
+        # Get teacher object or None for administrators
+        teacher = get_teacher_or_admin()
+        
+        # Get classes for the current teacher/admin
+        if is_admin():
+            accessible_classes = Class.query.all()
+        else:
+            if teacher is None:
+                accessible_classes = []
+            else:
+                accessible_classes = Class.query.filter_by(teacher_id=teacher.id).all()
+        
+        # Filter out any invalid class objects
+        accessible_classes = [c for c in accessible_classes if c and hasattr(c, 'id') and c.id is not None]
+        
+        # Get filter and sort parameters
+        class_filter = request.args.get('class_id', '') or ''
+        sort_by = request.args.get('sort', 'due_date') or 'due_date'
+        sort_order = request.args.get('order', 'desc') or 'desc'
+        view_mode = request.args.get('view', 'assignments') or 'assignments'
+        
+        # If no class is selected, show the class selection interface
+        if not class_filter or not class_filter.strip():
+            # Get assignment counts for each class
+            class_assignments = {}
+            for class_obj in accessible_classes:
+                if class_obj and hasattr(class_obj, 'id') and class_obj.id is not None:
+                    regular_count = Assignment.query.filter_by(class_id=class_obj.id).count()
+                    try:
+                        from models import GroupAssignment
+                        group_count = GroupAssignment.query.filter_by(class_id=class_obj.id).count()
+                    except:
+                        group_count = 0
+                    class_assignments[class_obj.id] = regular_count + group_count
+            
+            # Calculate unique student count
+            unique_student_ids = set()
+            for class_obj in accessible_classes:
+                if class_obj and hasattr(class_obj, 'id'):
+                    enrollments = Enrollment.query.filter_by(class_id=class_obj.id, is_active=True).all()
+                    for enrollment in enrollments:
+                        if enrollment.student_id:
+                            unique_student_ids.add(enrollment.student_id)
+            unique_student_count = len(unique_student_ids)
+            
+            return render_template('management/assignments_and_grades.html',
+                                 accessible_classes=accessible_classes,
+                                 class_assignments=class_assignments,
+                                 unique_student_count=unique_student_count,
+                                 selected_class=None,
+                                 class_assignments_data=None,
+                                 assignment_grades=None,
+                                 sort_by=sort_by,
+                                 sort_order=sort_order,
+                                 view_mode=view_mode,
+                                 user_role=current_user.role if hasattr(current_user, 'role') else 'Teacher',
+                                 show_class_selection=True)
+        
+        # Handle class filter
+        selected_class = None
+        class_assignments = []
+        group_assignments = []
+        assignment_grades = {}
+        
+        if class_filter and isinstance(class_filter, str) and class_filter.strip():
+            try:
+                clean_filter = class_filter.strip()
+                if clean_filter.isdigit():
+                    selected_class_id = int(clean_filter)
+                    selected_class = next((c for c in accessible_classes if hasattr(c, 'id') and c.id == selected_class_id), None)
+                else:
+                    selected_class = None
+                
+                if selected_class:
+                    # Get regular assignments for the selected class
+                    assignments_query = Assignment.query.filter_by(class_id=selected_class_id)
+                    
+                    # Apply sorting
+                    if sort_by == 'title':
+                        if sort_order == 'asc':
+                            assignments_query = assignments_query.order_by(Assignment.title.asc())
+                        else:
+                            assignments_query = assignments_query.order_by(Assignment.title.desc())
+                    else:  # due_date
+                        if sort_order == 'asc':
+                            assignments_query = assignments_query.order_by(Assignment.due_date.asc())
+                        else:
+                            assignments_query = assignments_query.order_by(Assignment.due_date.desc())
+                    
+                    class_assignments = assignments_query.all()
+                    
+                    # Get group assignments if available
+                    try:
+                        from models import GroupAssignment
+                        group_assignments_query = GroupAssignment.query.filter_by(class_id=selected_class_id)
+                        
+                        if sort_by == 'title':
+                            if sort_order == 'asc':
+                                group_assignments_query = group_assignments_query.order_by(GroupAssignment.title.asc())
+                            else:
+                                group_assignments_query = group_assignments_query.order_by(GroupAssignment.title.desc())
+                        else:  # due_date
+                            if sort_order == 'asc':
+                                group_assignments_query = group_assignments_query.order_by(GroupAssignment.due_date.asc())
+                            else:
+                                group_assignments_query = group_assignments_query.order_by(GroupAssignment.due_date.desc())
+                        
+                        group_assignments = group_assignments_query.all()
+                    except:
+                        group_assignments = []
+                    
+                    # Get grade data for each assignment
+                    for assignment in class_assignments:
+                        grades = Grade.query.filter_by(assignment_id=assignment.id).all()
+                        graded_count = sum(1 for g in grades if g.grade_data)
+                        
+                        # Calculate average
+                        total_score = 0
+                        graded_with_score = 0
+                        for grade in grades:
+                            if grade.grade_data:
+                                try:
+                                    if isinstance(grade.grade_data, dict):
+                                        grade_dict = grade.grade_data
+                                    else:
+                                        grade_dict = json.loads(grade.grade_data)
+                                    
+                                    if 'score' in grade_dict and grade_dict['score'] is not None:
+                                        total_score += grade_dict['score']
+                                        graded_with_score += 1
+                                except (json.JSONDecodeError, TypeError):
+                                    continue
+                        
+                        average_score = 0
+                        if graded_with_score > 0:
+                            average_score = round(total_score / graded_with_score, 1)
+                        
+                        assignment_grades[assignment.id] = {
+                            'total_submissions': len(grades),
+                            'graded_count': graded_count,
+                            'average_score': average_score
+                        }
+                    
+                    # Get grade data for group assignments
+                    for group_assignment in group_assignments:
+                        from models import GroupGrade
+                        group_grades = GroupGrade.query.filter_by(group_assignment_id=group_assignment.id).all()
+                        graded_count = sum(1 for g in group_grades if g.grade_data)
+                        
+                        # Calculate average for group assignments
+                        total_score = 0
+                        graded_with_score = 0
+                        for grade in group_grades:
+                            if grade.grade_data:
+                                try:
+                                    if isinstance(grade.grade_data, dict):
+                                        grade_dict = grade.grade_data
+                                    else:
+                                        grade_dict = json.loads(grade.grade_data)
+                                    
+                                    if 'score' in grade_dict and grade_dict['score'] is not None:
+                                        total_score += grade_dict['score']
+                                        graded_with_score += 1
+                                except (json.JSONDecodeError, TypeError):
+                                    continue
+                        
+                        average_score = 0
+                        if graded_with_score > 0:
+                            average_score = round(total_score / graded_with_score, 1)
+                        
+                        assignment_grades[f'group_{group_assignment.id}'] = {
+                            'total_submissions': len(group_grades),
+                            'graded_count': graded_count,
+                            'average_score': average_score
+                        }
+            
+            except Exception as e:
+                current_app.logger.error(f"Error processing class filter: {e}")
+                import traceback
+                current_app.logger.error(traceback.format_exc())
+                flash("Error loading class data.", "danger")
+                return redirect(url_for('teacher.dashboard.assignments_and_grades'))
+        
+        # Get assignment counts for all classes (for class selection view)
+        class_assignments_count = {}
+        for class_obj in accessible_classes:
+            if class_obj and hasattr(class_obj, 'id') and class_obj.id is not None:
+                regular_count = Assignment.query.filter_by(class_id=class_obj.id).count()
+                try:
+                    from models import GroupAssignment
+                    group_count = GroupAssignment.query.filter_by(class_id=class_obj.id).count()
+                except:
+                    group_count = 0
+                class_assignments_count[class_obj.id] = regular_count + group_count
+        
+        # Calculate unique student count
+        unique_student_ids = set()
+        for class_obj in accessible_classes:
+            if class_obj and hasattr(class_obj, 'id'):
+                enrollments = Enrollment.query.filter_by(class_id=class_obj.id, is_active=True).all()
+                for enrollment in enrollments:
+                    if enrollment.student_id:
+                        unique_student_ids.add(enrollment.student_id)
+        unique_student_count = len(unique_student_ids)
+        
+        # Get today's date for template
+        from datetime import date
+        today = date.today()
+        
+        return render_template('management/assignments_and_grades.html',
+                             accessible_classes=accessible_classes,
+                             classes=accessible_classes,  # For dropdown filter
+                             class_assignments=class_assignments_count if not selected_class else class_assignments,
+                             unique_student_count=unique_student_count,
+                             selected_class=selected_class,
+                             class_assignments_data=class_assignments if selected_class else None,
+                             group_assignments=group_assignments if selected_class else [],
+                             assignment_grades=assignment_grades if selected_class else {},
+                             sort_by=sort_by,
+                             sort_order=sort_order,
+                             view_mode=view_mode,
+                             user_role=current_user.role if hasattr(current_user, 'role') else 'Teacher',
+                             show_class_selection=not selected_class,
+                             class_filter=class_filter if selected_class else '',
+                             today=today)
     
-    if view_mode == 'grades':
-        # Redirect to grades page
-        return redirect(url_for('teacher.dashboard.my_assignments'))  # Or wherever grades are
-    else:
-        # Redirect to assignments page
-        return redirect(url_for('teacher.dashboard.my_assignments'))
+    except Exception as e:
+        current_app.logger.error(f"Error in assignments_and_grades route: {e}")
+        import traceback
+        current_app.logger.error(traceback.format_exc())
+        flash("An error occurred while loading assignments and grades.", "danger")
+        return redirect(url_for('teacher.dashboard.teacher_dashboard'))
 
 @bp.route('/resources')
 @login_required

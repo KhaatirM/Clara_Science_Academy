@@ -622,11 +622,22 @@ function handleDeleteSubmit(event) {
         },
         body: formData
     })
-    .then(response => {
-        if (response.ok) {
-            return response.json();
+    .then(async response => {
+        // Try to parse as JSON, but handle non-JSON responses
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            const data = await response.json();
+            if (response.ok) {
+                return data;
+            } else {
+                // Server returned JSON error
+                throw new Error(data.message || `Server error: ${response.status} ${response.statusText}`);
+            }
+        } else {
+            // Non-JSON response (likely HTML error page)
+            const text = await response.text();
+            throw new Error(`Server returned ${response.status} ${response.statusText}. Please check the server logs.`);
         }
-        throw new Error('Network response was not ok');
     })
     .then(data => {
         if (data.success) {
@@ -642,7 +653,11 @@ function handleDeleteSubmit(event) {
         }
     })
     .catch(error => {
-        console.error('Error:', error);
+        console.error('Delete assignment error:', error);
+        console.error('Error details:', {
+            message: error.message,
+            stack: error.stack
+        });
         showNotification('Error removing assignment: ' + error.message, 'error');
     });
 }

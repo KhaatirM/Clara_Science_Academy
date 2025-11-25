@@ -504,3 +504,95 @@ def change_assignment_status(assignment_id):
         flash(f'Error changing assignment status: {str(e)}', 'danger')
     
     return redirect(url_for('teacher.dashboard.my_assignments'))
+
+@bp.route('/assignment/remove/<int:assignment_id>', methods=['POST'])
+@login_required
+@teacher_required
+def remove_assignment(assignment_id):
+    """Remove an assignment"""
+    import os
+    import traceback
+    
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    
+    try:
+        assignment = Assignment.query.get_or_404(assignment_id)
+        class_obj = assignment.class_info
+        
+        if not class_obj:
+            error_msg = 'Assignment class information not found.'
+            current_app.logger.error(f"Remove assignment error: {error_msg}")
+            if is_ajax:
+                return jsonify({'success': False, 'message': error_msg}), 400
+            flash(error_msg, "danger")
+            return redirect(url_for('teacher.dashboard.my_assignments'))
+        
+        # Check authorization
+        if not is_authorized_for_class(class_obj):
+            error_msg = 'You are not authorized to remove this assignment.'
+            current_app.logger.warning(f"Unauthorized attempt to remove assignment {assignment_id} by user {current_user.id}")
+            if is_ajax:
+                return jsonify({'success': False, 'message': error_msg}), 403
+            flash(error_msg, "danger")
+            return redirect(url_for('teacher.dashboard.my_assignments'))
+        
+        # Delete associated extensions first
+        from models import AssignmentExtension
+        AssignmentExtension.query.filter_by(assignment_id=assignment_id).delete()
+        
+        # Delete associated deadline reminders (use direct query to avoid loading relationship)
+        from models import DeadlineReminder
+        try:
+            # Use raw SQL or direct query to avoid loading the relationship
+            DeadlineReminder.query.filter_by(assignment_id=assignment_id).delete(synchronize_session=False)
+        except Exception as e:
+            # If there's a schema mismatch, try to delete manually
+            current_app.logger.warning(f"Could not delete deadline reminders using ORM: {e}")
+            try:
+                # Use raw SQL as fallback
+                db.session.execute(
+                    db.text("DELETE FROM deadline_reminder WHERE assignment_id = :assignment_id"),
+                    {"assignment_id": assignment_id}
+                )
+            except Exception as e2:
+                current_app.logger.warning(f"Could not delete deadline reminders using raw SQL: {e2}")
+        
+        # Delete associated file if it exists
+        if assignment.attachment_filename:
+            # Check if it's in the assignments subfolder
+            filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], 'assignments', assignment.attachment_filename)
+            if not os.path.exists(filepath):
+                # Try the root upload folder
+                filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], assignment.attachment_filename)
+            if os.path.exists(filepath):
+                try:
+                    os.remove(filepath)
+                    current_app.logger.info(f"Deleted assignment file: {filepath}")
+                except Exception as e:
+                    current_app.logger.warning(f"Could not delete assignment file {filepath}: {e}")
+        
+        # Delete the assignment
+        db.session.delete(assignment)
+        db.session.commit()
+        
+        current_app.logger.info(f"Successfully removed assignment {assignment_id} by user {current_user.id}")
+        
+        # Return JSON for AJAX requests
+        if is_ajax:
+            return jsonify({'success': True, 'message': 'Assignment removed successfully.'})
+        
+        flash('Assignment removed successfully.', 'success')
+        return redirect(url_for('teacher.dashboard.my_assignments'))
+        
+    except Exception as e:
+        db.session.rollback()
+        error_message = f'Error removing assignment: {str(e)}'
+        error_traceback = traceback.format_exc()
+        current_app.logger.error(f"Remove assignment exception: {error_message}\n{error_traceback}")
+        
+        # Return JSON for AJAX requests
+        if is_ajax:
+            return jsonify({'success': False, 'message': error_message}), 500
+        
+        flash(error_message, 'danger')
+        return redirect(url_for('teacher.dashboard.my_assignments'))

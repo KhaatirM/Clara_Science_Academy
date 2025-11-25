@@ -177,81 +177,96 @@ def take_attendance(class_id):
 @teacher_required
 def view_attendance_records(class_id):
     """View attendance records for a class with filtering options."""
-    class_obj = Class.query.get_or_404(class_id)
+    try:
+        class_obj = Class.query.get_or_404(class_id)
+        
+        # Check authorization
+        if not is_authorized_for_class(class_obj):
+            flash("You are not authorized to view attendance for this class.", "danger")
+            return redirect(url_for('teacher.attendance.attendance_hub'))
+        
+        # Get filter parameters
+        start_date_str = request.args.get('start_date')
+        end_date_str = request.args.get('end_date')
+        student_id_filter = request.args.get('student_id', type=int)
+        status_filter = request.args.get('status')
+        
+        # Default to last 30 days if no dates provided
+        if not start_date_str:
+            start_date = date.today() - timedelta(days=30)
+        else:
+            try:
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                start_date = date.today() - timedelta(days=30)
+        
+        if not end_date_str:
+            end_date = date.today()
+        else:
+            try:
+                end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                end_date = date.today()
+        
+        # Build query with join to Student table for ordering
+        # Use joinedload to ensure student relationship is loaded
+        from sqlalchemy.orm import joinedload
+        query = Attendance.query.options(joinedload(Attendance.student)).join(Student).filter(
+            Attendance.class_id == class_id,
+            Attendance.date >= start_date,
+            Attendance.date <= end_date
+        )
+        
+        if student_id_filter:
+            query = query.filter(Attendance.student_id == student_id_filter)
+        
+        if status_filter:
+            query = query.filter(Attendance.status.ilike(f'%{status_filter}%'))
+        
+        # Get attendance records ordered by date (descending) and then by student name
+        attendance_records = query.order_by(Attendance.date.desc(), Student.last_name, Student.first_name).all()
+        
+        # Get enrolled students for filter dropdown
+        enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
+        students = [enrollment.student for enrollment in enrollments if enrollment.student is not None]
+        
+        # Group records by date
+        records_by_date = {}
+        for record in attendance_records:
+            if record.student:  # Safety check in case student relationship is None
+                date_key = record.date.isoformat()
+                if date_key not in records_by_date:
+                    records_by_date[date_key] = []
+                records_by_date[date_key].append(record)
+        
+        # Calculate summary statistics
+        total_records = len(attendance_records)
+        present_count = sum(1 for r in attendance_records if r.status and r.status.lower() == 'present')
+        late_count = sum(1 for r in attendance_records if r.status and r.status.lower() == 'late')
+        absent_count = sum(1 for r in attendance_records if r.status and r.status.lower() in ['absent', 'unexcused absence', 'excused absence'])
+        
+        summary_stats = {
+            'total': total_records,
+            'present': present_count,
+            'late': late_count,
+            'absent': absent_count,
+            'rate': round((present_count / total_records * 100) if total_records > 0 else 0, 1)
+        }
+        
+        return render_template('shared/view_attendance_records.html',
+                             class_obj=class_obj,
+                             students=students,
+                             records_by_date=records_by_date,
+                             summary_stats=summary_stats,
+                             start_date=start_date,
+                             end_date=end_date,
+                             student_id_filter=student_id_filter,
+                             status_filter=status_filter)
     
-    # Check authorization
-    if not is_authorized_for_class(class_obj):
-        flash("You are not authorized to view attendance for this class.", "danger")
+    except Exception as e:
+        current_app.logger.error(f"Error in view_attendance_records: {str(e)}", exc_info=True)
+        flash(f'Error loading attendance records: {str(e)}', 'danger')
         return redirect(url_for('teacher.attendance.attendance_hub'))
-    
-    # Get filter parameters
-    start_date_str = request.args.get('start_date')
-    end_date_str = request.args.get('end_date')
-    student_id_filter = request.args.get('student_id', type=int)
-    status_filter = request.args.get('status')
-    
-    # Default to last 30 days if no dates provided
-    if not start_date_str:
-        start_date = date.today() - timedelta(days=30)
-    else:
-        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
-    
-    if not end_date_str:
-        end_date = date.today()
-    else:
-        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
-    
-    # Build query
-    query = Attendance.query.filter(
-        Attendance.class_id == class_id,
-        Attendance.date >= start_date,
-        Attendance.date <= end_date
-    )
-    
-    if student_id_filter:
-        query = query.filter(Attendance.student_id == student_id_filter)
-    
-    if status_filter:
-        query = query.filter(Attendance.status.ilike(f'%{status_filter}%'))
-    
-    # Get attendance records
-    attendance_records = query.order_by(Attendance.date.desc(), Student.last_name, Student.first_name).all()
-    
-    # Get enrolled students for filter dropdown
-    enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
-    students = [enrollment.student for enrollment in enrollments if enrollment.student is not None]
-    
-    # Group records by date
-    records_by_date = {}
-    for record in attendance_records:
-        date_key = record.date.isoformat()
-        if date_key not in records_by_date:
-            records_by_date[date_key] = []
-        records_by_date[date_key].append(record)
-    
-    # Calculate summary statistics
-    total_records = len(attendance_records)
-    present_count = sum(1 for r in attendance_records if r.status.lower() == 'present')
-    late_count = sum(1 for r in attendance_records if r.status.lower() == 'late')
-    absent_count = sum(1 for r in attendance_records if r.status.lower() in ['absent', 'unexcused absence', 'excused absence'])
-    
-    summary_stats = {
-        'total': total_records,
-        'present': present_count,
-        'late': late_count,
-        'absent': absent_count,
-        'rate': round((present_count / total_records * 100) if total_records > 0 else 0, 1)
-    }
-    
-    return render_template('shared/view_attendance_records.html',
-                         class_obj=class_obj,
-                         students=students,
-                         records_by_date=records_by_date,
-                         summary_stats=summary_stats,
-                         start_date=start_date,
-                         end_date=end_date,
-                         student_id_filter=student_id_filter,
-                         status_filter=status_filter)
 
 @bp.route('/mark-all-present/<int:class_id>', methods=['POST'])
 @login_required

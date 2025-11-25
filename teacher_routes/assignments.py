@@ -269,3 +269,41 @@ def view_assignment(assignment_id):
                          assignment=assignment,
                          class_info=class_obj,
                          teacher=teacher)
+
+@bp.route('/assignment/<int:assignment_id>/change-status', methods=['POST'])
+@login_required
+@teacher_required
+def change_assignment_status(assignment_id):
+    """Change the status of an assignment"""
+    assignment = Assignment.query.get_or_404(assignment_id)
+    class_obj = assignment.class_info
+    
+    if not class_obj:
+        flash("Assignment class information not found.", "danger")
+        return redirect(url_for('teacher.dashboard.my_assignments'))
+    
+    if not is_authorized_for_class(class_obj):
+        flash("You are not authorized to change the status of this assignment.", "danger")
+        return redirect(url_for('teacher.dashboard.my_assignments'))
+    
+    new_status = request.form.get('status')
+    if not new_status:
+        flash("Status is required.", "danger")
+        return redirect(url_for('teacher.dashboard.my_assignments'))
+    
+    # Validate status value
+    valid_statuses = ['Active', 'Inactive', 'Voided', 'Overdue']
+    if new_status not in valid_statuses:
+        flash(f"Invalid status: {new_status}. Must be one of {', '.join(valid_statuses)}", "danger")
+        return redirect(url_for('teacher.dashboard.my_assignments'))
+    
+    try:
+        assignment.status = new_status
+        db.session.commit()
+        flash(f'Assignment status changed to {new_status} successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error changing assignment status: {str(e)}")
+        flash(f'Error changing assignment status: {str(e)}', 'danger')
+    
+    return redirect(url_for('teacher.dashboard.my_assignments'))

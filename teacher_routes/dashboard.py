@@ -8,7 +8,8 @@ from decorators import teacher_required
 from .utils import get_teacher_or_admin, is_admin, is_authorized_for_class
 from models import (
     db, Class, Assignment, Student, Grade, Submission, 
-    Notification, Announcement, Enrollment, Attendance, SchoolYear, User, TeacherStaff
+    Notification, Announcement, Enrollment, Attendance, SchoolYear, User, TeacherStaff,
+    class_additional_teachers, class_substitute_teachers
 )
 from sqlalchemy import or_, and_
 import json
@@ -389,7 +390,23 @@ def my_classes():
                 # If user is a Teacher but has no teacher_staff_id, show empty classes list
                 classes = []
             else:
-                classes = Class.query.filter_by(teacher_id=teacher.id).all()
+                # Query classes where teacher is:
+                # 1. Primary teacher (teacher_id == teacher.id)
+                # 2. Additional teacher (in class_additional_teachers table)
+                # 3. Substitute teacher (in class_substitute_teachers table)
+                classes = Class.query.filter(
+                    or_(
+                        Class.teacher_id == teacher.id,
+                        Class.id.in_(
+                            db.session.query(class_additional_teachers.c.class_id)
+                            .filter(class_additional_teachers.c.teacher_id == teacher.id)
+                        ),
+                        Class.id.in_(
+                            db.session.query(class_substitute_teachers.c.class_id)
+                            .filter(class_substitute_teachers.c.teacher_id == teacher.id)
+                        )
+                    )
+                ).all()
         
         # Calculate active enrollment count for each class
         # Use a direct query to avoid lazy loading issues

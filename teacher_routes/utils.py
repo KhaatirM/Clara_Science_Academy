@@ -4,7 +4,8 @@ Shared utilities and helper functions for teacher routes.
 
 from flask import current_app
 from flask_login import current_user
-from models import TeacherStaff, Class
+from models import TeacherStaff, Class, db, class_additional_teachers, class_substitute_teachers
+from sqlalchemy import or_
 from datetime import datetime
 
 # File upload configuration
@@ -33,11 +34,57 @@ def is_authorized_for_class(class_obj):
         teacher_staff = None
         if current_user.teacher_staff_id:
             teacher_staff = TeacherStaff.query.get(current_user.teacher_staff_id)
-        return teacher_staff and class_obj.teacher_id == teacher_staff.id
+        if not teacher_staff:
+            return False
+        
+        # Check if teacher is primary, additional, or substitute teacher
+        if class_obj.teacher_id == teacher_staff.id:
+            return True
+        
+        # Check additional teachers
+        additional_count = db.session.query(class_additional_teachers).filter(
+            class_additional_teachers.c.class_id == class_obj.id,
+            class_additional_teachers.c.teacher_id == teacher_staff.id
+        ).count()
+        if additional_count > 0:
+            return True
+        
+        # Check substitute teachers
+        substitute_count = db.session.query(class_substitute_teachers).filter(
+            class_substitute_teachers.c.class_id == class_obj.id,
+            class_substitute_teachers.c.teacher_id == teacher_staff.id
+        ).count()
+        if substitute_count > 0:
+            return True
+        
+        return False
     else:
-        # Regular teachers can only access their own classes
+        # Regular teachers can access classes where they are primary, additional, or substitute
         teacher = get_teacher_or_admin()
-        return teacher and class_obj.teacher_id == teacher.id
+        if not teacher:
+            return False
+        
+        # Check if teacher is primary teacher
+        if class_obj.teacher_id == teacher.id:
+            return True
+        
+        # Check additional teachers
+        additional_count = db.session.query(class_additional_teachers).filter(
+            class_additional_teachers.c.class_id == class_obj.id,
+            class_additional_teachers.c.teacher_id == teacher.id
+        ).count()
+        if additional_count > 0:
+            return True
+        
+        # Check substitute teachers
+        substitute_count = db.session.query(class_substitute_teachers).filter(
+            class_substitute_teachers.c.class_id == class_obj.id,
+            class_substitute_teachers.c.teacher_id == teacher.id
+        ).count()
+        if substitute_count > 0:
+            return True
+        
+        return False
 
 def is_admin():
     """Helper function to check if user is an administrator."""

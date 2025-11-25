@@ -20,6 +20,13 @@ def allowed_file(filename):
     ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'txt', 'jpg', 'jpeg', 'png', 'gif'}
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+@bp.route('/assignment/type-selector')
+@login_required
+@teacher_required
+def assignment_type_selector():
+    """Assignment type selection page"""
+    return render_template('shared/assignment_type_selector.html')
+
 @bp.route('/assignment/add', methods=['GET', 'POST'])
 @login_required
 @teacher_required

@@ -5,7 +5,9 @@ This package contains all teacher-related routes organized by functional area.
 Each module focuses on a specific aspect of teacher functionality.
 """
 
-from flask import Blueprint
+from flask import Blueprint, render_template, redirect, url_for, flash
+from flask_login import login_required
+from decorators import teacher_required
 
 # Create the main teacher blueprint
 teacher_blueprint = Blueprint('teacher', __name__)
@@ -27,6 +29,8 @@ from . import (
     reflection_journals,
     conflict_resolution
 )
+from .utils import get_teacher_or_admin, is_authorized_for_class
+from models import Class
 
 # Register sub-blueprints with the main teacher blueprint
 # (settings is already using teacher_blueprint directly, so it's not registered here)
@@ -42,4 +46,21 @@ teacher_blueprint.register_blueprint(conflict_resolution.bp, url_prefix='')  # R
 teacher_blueprint.register_blueprint(communications.bp, url_prefix='')
 teacher_blueprint.register_blueprint(analytics.bp, url_prefix='')
 teacher_blueprint.register_blueprint(templates.bp, url_prefix='')
+
+# Add route directly to main blueprint for backward compatibility with templates
+@teacher_blueprint.route('/group-assignment/type-selector/<int:class_id>')
+@login_required
+@teacher_required
+def group_assignment_type_selector(class_id):
+    """Group assignment type selector page."""
+    teacher = get_teacher_or_admin()
+    class_obj = Class.query.get_or_404(class_id)
+    
+    # Check authorization
+    if not is_authorized_for_class(class_obj):
+        flash('You do not have access to this class.', 'danger')
+        return redirect(url_for('teacher.dashboard.my_classes'))
+    
+    return render_template('shared/group_assignment_type_selector.html', 
+                         class_obj=class_obj)
 

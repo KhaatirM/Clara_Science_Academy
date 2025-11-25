@@ -27,64 +27,36 @@ def get_teacher_or_admin():
 
 def is_authorized_for_class(class_obj):
     """Check if current user is authorized to access a specific class."""
-    if current_user.role == 'Director':
-        return True  # Directors have access to all classes
-    elif current_user.role == 'School Administrator':
-        # School Administrators can access classes they are assigned to as teachers
-        teacher_staff = None
-        if current_user.teacher_staff_id:
-            teacher_staff = TeacherStaff.query.get(current_user.teacher_staff_id)
-        if not teacher_staff:
-            return False
-        
-        # Check if teacher is primary, additional, or substitute teacher
-        if class_obj.teacher_id == teacher_staff.id:
-            return True
-        
-        # Check additional teachers
-        additional_count = db.session.query(class_additional_teachers).filter(
-            class_additional_teachers.c.class_id == class_obj.id,
-            class_additional_teachers.c.teacher_id == teacher_staff.id
-        ).count()
-        if additional_count > 0:
-            return True
-        
-        # Check substitute teachers
-        substitute_count = db.session.query(class_substitute_teachers).filter(
-            class_substitute_teachers.c.class_id == class_obj.id,
-            class_substitute_teachers.c.teacher_id == teacher_staff.id
-        ).count()
-        if substitute_count > 0:
-            return True
-        
+    # Directors and School Administrators have access to all classes
+    if current_user.role in ['Director', 'School Administrator']:
+        return True
+    
+    # Regular teachers can access classes where they are primary, additional, or substitute
+    teacher = get_teacher_or_admin()
+    if not teacher:
         return False
-    else:
-        # Regular teachers can access classes where they are primary, additional, or substitute
-        teacher = get_teacher_or_admin()
-        if not teacher:
-            return False
-        
-        # Check if teacher is primary teacher
-        if class_obj.teacher_id == teacher.id:
-            return True
-        
-        # Check additional teachers
-        additional_count = db.session.query(class_additional_teachers).filter(
-            class_additional_teachers.c.class_id == class_obj.id,
-            class_additional_teachers.c.teacher_id == teacher.id
-        ).count()
-        if additional_count > 0:
-            return True
-        
-        # Check substitute teachers
-        substitute_count = db.session.query(class_substitute_teachers).filter(
-            class_substitute_teachers.c.class_id == class_obj.id,
-            class_substitute_teachers.c.teacher_id == teacher.id
-        ).count()
-        if substitute_count > 0:
-            return True
-        
-        return False
+    
+    # Check if teacher is primary teacher
+    if class_obj.teacher_id == teacher.id:
+        return True
+    
+    # Check additional teachers
+    additional_count = db.session.query(class_additional_teachers).filter(
+        class_additional_teachers.c.class_id == class_obj.id,
+        class_additional_teachers.c.teacher_id == teacher.id
+    ).count()
+    if additional_count > 0:
+        return True
+    
+    # Check substitute teachers
+    substitute_count = db.session.query(class_substitute_teachers).filter(
+        class_substitute_teachers.c.class_id == class_obj.id,
+        class_substitute_teachers.c.teacher_id == teacher.id
+    ).count()
+    if substitute_count > 0:
+        return True
+    
+    return False
 
 def is_admin():
     """Helper function to check if user is an administrator."""

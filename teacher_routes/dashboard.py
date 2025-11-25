@@ -784,25 +784,46 @@ def assignments_and_grades():
         if class_filter and isinstance(class_filter, str) and class_filter.strip():
             try:
                 clean_filter = class_filter.strip()
+                current_app.logger.info(f"[DEBUG assignments_and_grades] Class filter: '{clean_filter}'")
+                current_app.logger.info(f"[DEBUG assignments_and_grades] Current user: {current_user.username if hasattr(current_user, 'username') else 'Unknown'}, Role: '{current_user.role}'")
+                current_app.logger.info(f"[DEBUG assignments_and_grades] Accessible classes count: {len(accessible_classes)}")
+                current_app.logger.info(f"[DEBUG assignments_and_grades] Accessible class IDs: {[c.id for c in accessible_classes if hasattr(c, 'id')]}")
+                
                 if clean_filter.isdigit():
                     selected_class_id = int(clean_filter)
+                    current_app.logger.info(f"[DEBUG assignments_and_grades] Looking for class ID: {selected_class_id}")
                     # First try to find in accessible_classes
                     selected_class = next((c for c in accessible_classes if hasattr(c, 'id') and c.id == selected_class_id), None)
                     
-                    # If not found, query directly and check authorization
-                    if not selected_class:
+                    if selected_class:
+                        current_app.logger.info(f"[DEBUG assignments_and_grades] Found class in accessible_classes: {selected_class.name}")
+                    else:
+                        current_app.logger.info(f"[DEBUG assignments_and_grades] Class not in accessible_classes, querying directly...")
+                        # If not found, query directly and check authorization
                         selected_class = Class.query.get(selected_class_id)
-                        if selected_class and not is_authorized_for_class(selected_class):
-                            flash("You do not have permission to access this page.", "danger")
-                            return redirect(url_for('teacher.dashboard.assignments_and_grades'))
+                        if selected_class:
+                            current_app.logger.info(f"[DEBUG assignments_and_grades] Queried class: {selected_class.name}, checking authorization...")
+                            if not is_authorized_for_class(selected_class):
+                                current_app.logger.error(f"[DEBUG assignments_and_grades] ✗ Authorization FAILED for class {selected_class_id}")
+                                flash("You do not have permission to access this page.", "danger")
+                                return redirect(url_for('teacher.dashboard.assignments_and_grades'))
+                            else:
+                                current_app.logger.info(f"[DEBUG assignments_and_grades] ✓ Authorization PASSED for class {selected_class_id}")
+                        else:
+                            current_app.logger.error(f"[DEBUG assignments_and_grades] Class {selected_class_id} not found in database")
                 else:
                     selected_class = None
+                    current_app.logger.warning(f"[DEBUG assignments_and_grades] Invalid class filter (not a digit): '{clean_filter}'")
                 
                 if selected_class:
                     # Double-check authorization
+                    current_app.logger.info(f"[DEBUG assignments_and_grades] Double-checking authorization for class {selected_class.id}...")
                     if not is_authorized_for_class(selected_class):
+                        current_app.logger.error(f"[DEBUG assignments_and_grades] ✗ Double-check authorization FAILED for class {selected_class.id}")
                         flash("You do not have permission to access this page.", "danger")
                         return redirect(url_for('teacher.dashboard.assignments_and_grades'))
+                    else:
+                        current_app.logger.info(f"[DEBUG assignments_and_grades] ✓ Double-check authorization PASSED for class {selected_class.id}")
                     # Get regular assignments for the selected class
                     selected_class_id = selected_class.id  # Ensure we have the ID
                     assignments_query = Assignment.query.filter_by(class_id=selected_class_id)

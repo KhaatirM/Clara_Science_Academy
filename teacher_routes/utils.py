@@ -28,19 +28,32 @@ def get_teacher_or_admin():
 def is_authorized_for_class(class_obj):
     """Check if current user is authorized to access a specific class."""
     # --- DEBUG PRINT: Check your server console when you click a class ---
-    print(f"DEBUG AUTH: User Role='{current_user.role}', Class ID={class_obj.id if class_obj else 'None'}")
+    user_role = str(current_user.role) if current_user.role else 'None'
+    class_id = class_obj.id if class_obj else 'None'
+    username = current_user.username if hasattr(current_user, 'username') else 'Unknown'
+    
+    print(f"[DEBUG AUTH] User: {username}, Role: '{user_role}', Class ID: {class_id}")
+    print(f"[DEBUG AUTH] Role type: {type(current_user.role)}, Role repr: {repr(current_user.role)}")
+    print(f"[DEBUG AUTH] Checking if role in ['Director', 'School Administrator']: {user_role in ['Director', 'School Administrator']}")
     
     # Directors and School Administrators have access to all classes
     if current_user.role in ['Director', 'School Administrator']:
+        print(f"[DEBUG AUTH] ✓ Authorized: User is Director or School Administrator")
         return True
+    else:
+        print(f"[DEBUG AUTH] ✗ Not Director/Admin, checking teacher assignments...")
     
     # Regular teachers can access classes where they are primary, additional, or substitute
     teacher = get_teacher_or_admin()
     if not teacher:
+        print(f"[DEBUG AUTH] ✗ Not authorized: No teacher object found")
         return False
+    
+    print(f"[DEBUG AUTH] Teacher ID: {teacher.id}, Class teacher_id: {class_obj.teacher_id}")
     
     # Check if teacher is primary teacher
     if class_obj.teacher_id == teacher.id:
+        print(f"[DEBUG AUTH] ✓ Authorized: Teacher is primary teacher")
         return True
     
     # Check additional teachers
@@ -48,7 +61,9 @@ def is_authorized_for_class(class_obj):
         class_additional_teachers.c.class_id == class_obj.id,
         class_additional_teachers.c.teacher_id == teacher.id
     ).count()
+    print(f"[DEBUG AUTH] Additional teachers count: {additional_count}")
     if additional_count > 0:
+        print(f"[DEBUG AUTH] ✓ Authorized: Teacher is additional teacher")
         return True
     
     # Check substitute teachers
@@ -56,9 +71,12 @@ def is_authorized_for_class(class_obj):
         class_substitute_teachers.c.class_id == class_obj.id,
         class_substitute_teachers.c.teacher_id == teacher.id
     ).count()
+    print(f"[DEBUG AUTH] Substitute teachers count: {substitute_count}")
     if substitute_count > 0:
+        print(f"[DEBUG AUTH] ✓ Authorized: Teacher is substitute teacher")
         return True
     
+    print(f"[DEBUG AUTH] ✗ Not authorized: Teacher has no relationship to this class")
     return False
 
 def is_admin():

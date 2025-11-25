@@ -378,18 +378,18 @@ def view_class(class_id):
 def my_classes():
     """Display all classes for the current teacher."""
     try:
-        # Get teacher object or None for administrators
-        teacher = get_teacher_or_admin()
-        
-        # Directors and School Administrators see all classes, teachers only see their assigned classes
-        if is_admin():
-            classes = Class.query.all()
+    # Get teacher object or None for administrators
+    teacher = get_teacher_or_admin()
+    
+    # Directors and School Administrators see all classes, teachers only see their assigned classes
+    if is_admin():
+        classes = Class.query.all()
+    else:
+        # Check if teacher object exists
+        if teacher is None:
+            # If user is a Teacher but has no teacher_staff_id, show empty classes list
+            classes = []
         else:
-            # Check if teacher object exists
-            if teacher is None:
-                # If user is a Teacher but has no teacher_staff_id, show empty classes list
-                classes = []
-            else:
                 # Query classes where teacher is:
                 # 1. Primary teacher (teacher_id == teacher.id)
                 # 2. Additional teacher (in class_additional_teachers table)
@@ -407,10 +407,10 @@ def my_classes():
                         )
                     )
                 ).all()
-        
-        # Calculate active enrollment count for each class
+    
+    # Calculate active enrollment count for each class
         # Use a direct query to avoid lazy loading issues
-        for class_obj in classes:
+    for class_obj in classes:
             try:
                 # Query enrollments directly to avoid lazy loading issues
                 active_count = Enrollment.query.filter_by(
@@ -422,8 +422,8 @@ def my_classes():
                 # If there's an error, set count to 0
                 current_app.logger.error(f"Error calculating enrollment count for class {class_obj.id}: {e}")
                 class_obj.active_student_count = 0
-        
-        return render_template('management/role_classes.html', classes=classes, teacher=teacher)
+    
+    return render_template('management/role_classes.html', classes=classes, teacher=teacher)
     
     except Exception as e:
         current_app.logger.error(f"Error in my_classes route: {e}")
@@ -707,7 +707,7 @@ def assignments_and_grades():
         # Get classes for the current teacher/admin
         if is_admin():
             accessible_classes = Class.query.all()
-        else:
+    else:
             if teacher is None:
                 accessible_classes = []
             else:
@@ -818,8 +818,13 @@ def assignments_and_grades():
                 if selected_class:
                     # Double-check authorization
                     current_app.logger.info(f"[DEBUG assignments_and_grades] Double-checking authorization for class {selected_class.id}...")
-                    if not is_authorized_for_class(selected_class):
+                    current_app.logger.info(f"[DEBUG assignments_and_grades] Current user role: '{current_user.role}'")
+                    current_app.logger.info(f"[DEBUG assignments_and_grades] Is admin check: {is_admin()}")
+                    auth_result = is_authorized_for_class(selected_class)
+                    current_app.logger.info(f"[DEBUG assignments_and_grades] Authorization result: {auth_result}")
+                    if not auth_result:
                         current_app.logger.error(f"[DEBUG assignments_and_grades] ✗ Double-check authorization FAILED for class {selected_class.id}")
+                        current_app.logger.error(f"[DEBUG assignments_and_grades] User role was: '{current_user.role}'")
                         flash("You do not have permission to access this page.", "danger")
                         return redirect(url_for('teacher.dashboard.assignments_and_grades'))
                     else:

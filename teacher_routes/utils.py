@@ -37,8 +37,10 @@ def is_authorized_for_class(class_obj):
     print(f"[DEBUG AUTH] Checking if role in ['Director', 'School Administrator']: {user_role in ['Director', 'School Administrator']}")
     
     # Directors and School Administrators have access to all classes
+    # IMPORTANT: This check MUST be first to grant global access to admins
     if current_user.role in ['Director', 'School Administrator']:
         print(f"[DEBUG AUTH] ✓ Authorized: User is Director or School Administrator")
+        print(f"[DEBUG AUTH] ===== ADMIN ACCESS GRANTED ===== Role: '{current_user.role}'")
         return True
     else:
         print(f"[DEBUG AUTH] ✗ Not Director/Admin, checking teacher assignments...")

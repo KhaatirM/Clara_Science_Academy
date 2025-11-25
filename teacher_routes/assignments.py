@@ -7,8 +7,9 @@ from flask_login import login_required, current_user
 from decorators import teacher_required
 from .utils import get_teacher_or_admin, is_admin, is_authorized_for_class, get_current_quarter
 from models import (
-    db, Class, Assignment, SchoolYear, Enrollment, TeacherStaff
+    db, Class, Assignment, SchoolYear, Enrollment, TeacherStaff, AssignmentExtension
 )
+from flask import jsonify
 from datetime import datetime
 from werkzeug.utils import secure_filename
 import os
@@ -269,6 +270,90 @@ def view_assignment(assignment_id):
                          assignment=assignment,
                          class_info=class_obj,
                          teacher=teacher)
+
+@bp.route('/assignment/grant-extensions', methods=['POST'])
+@login_required
+@teacher_required
+def grant_extensions():
+    """Grant extensions to students for an assignment"""
+    try:
+        assignment_id = request.form.get('assignment_id', type=int)
+        class_id = request.form.get('class_id', type=int)
+        extended_due_date_str = request.form.get('extended_due_date')
+        reason = request.form.get('reason', '')
+        student_ids = request.form.getlist('student_ids')
+        
+        if not all([assignment_id, class_id, extended_due_date_str, student_ids]):
+            return jsonify({'success': False, 'message': 'Missing required fields'})
+        
+        # Parse the extended due date
+        try:
+            extended_due_date = datetime.strptime(extended_due_date_str, '%Y-%m-%dT%H:%M')
+        except ValueError:
+            extended_due_date = datetime.strptime(extended_due_date_str, '%Y-%m-%d')
+        
+        # Get the assignment
+        assignment = Assignment.query.get_or_404(assignment_id)
+        class_obj = assignment.class_info
+        
+        if not class_obj:
+            return jsonify({'success': False, 'message': 'Assignment class information not found.'})
+        
+        # Authorization check - teachers can grant extensions for their own classes
+        if not is_authorized_for_class(class_obj):
+            return jsonify({'success': False, 'message': 'You are not authorized to grant extensions for this assignment.'})
+        
+        # Get the teacher_staff_id for granted_by field
+        teacher = get_teacher_or_admin()
+        granter_id = teacher.id if teacher else None
+        
+        if not granter_id:
+            return jsonify({'success': False, 'message': 'Cannot grant extensions: No teacher found.'})
+        
+        granted_count = 0
+        
+        for student_id in student_ids:
+            try:
+                student_id = int(student_id)
+                
+                # Deactivate any existing active extensions for this student and assignment
+                existing_extensions = AssignmentExtension.query.filter_by(
+                    assignment_id=assignment_id,
+                    student_id=student_id,
+                    is_active=True
+                ).all()
+                
+                for ext in existing_extensions:
+                    ext.is_active = False
+                
+                # Create new extension
+                extension = AssignmentExtension(
+                    assignment_id=assignment_id,
+                    student_id=student_id,
+                    extended_due_date=extended_due_date,
+                    reason=reason,
+                    granted_by=granter_id,
+                    is_active=True
+                )
+                
+                db.session.add(extension)
+                granted_count += 1
+                
+            except (ValueError, TypeError):
+                continue  # Skip invalid student IDs
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True, 
+            'message': f'Successfully granted extensions to {granted_count} student(s).',
+            'granted_count': granted_count
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error granting extensions: {str(e)}")
+        return jsonify({'success': False, 'message': f'Error granting extensions: {str(e)}'})
 
 @bp.route('/assignment/<int:assignment_id>/change-status', methods=['POST'])
 @login_required

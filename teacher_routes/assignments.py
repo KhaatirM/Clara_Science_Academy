@@ -7,9 +7,13 @@ from flask_login import login_required, current_user
 from decorators import teacher_required
 from .utils import get_teacher_or_admin, is_admin, is_authorized_for_class, get_current_quarter
 from models import (
-    db, Class, Assignment, SchoolYear, Enrollment, TeacherStaff, AssignmentExtension
+    db, Class, Assignment, SchoolYear, Enrollment, TeacherStaff, AssignmentExtension,
+    Grade,
+    class_additional_teachers, class_substitute_teachers
 )
+from sqlalchemy import or_
 from datetime import datetime
+from utils.quarter_grade_calculator import update_quarter_grade
 from werkzeug.utils import secure_filename
 import os
 
@@ -31,7 +35,7 @@ def assignment_type_selector():
 @login_required
 @teacher_required
 def add_assignment():
-    """Add a new assignment - class selection page"""
+    """Add a new assignment - class selection page (or auto-redirect if only 1 class)"""
     context = request.args.get('context', 'homework')
     
     if request.method == 'POST':
@@ -42,13 +46,38 @@ def add_assignment():
             flash("Please select a class.", "danger")
     
     teacher = get_teacher_or_admin()
+    
+    # Get accessible classes for the current teacher/admin
     if is_admin():
         classes = Class.query.all()
     elif teacher is not None:
-        classes = Class.query.filter_by(teacher_id=teacher.id).all()
+        # Query classes where teacher is:
+        # 1. Primary teacher (teacher_id == teacher.id)
+        # 2. Additional teacher (in class_additional_teachers table)
+        # 3. Substitute teacher (in class_substitute_teachers table)
+        classes = Class.query.filter(
+            or_(
+                Class.teacher_id == teacher.id,
+                Class.id.in_(
+                    db.session.query(class_additional_teachers.c.class_id)
+                    .filter(class_additional_teachers.c.teacher_id == teacher.id)
+                ),
+                Class.id.in_(
+                    db.session.query(class_substitute_teachers.c.class_id)
+                    .filter(class_substitute_teachers.c.teacher_id == teacher.id)
+                )
+            )
+        ).all()
     else:
         classes = []
     
+    # If teacher has only 1 class, automatically redirect to the assignment details page
+    if len(classes) == 1:
+        return redirect(url_for('teacher.assignments.add_assignment_for_class', 
+                              class_id=classes[0].id, 
+                              context=context))
+    
+    # If multiple classes or no classes, show the selection page
     return render_template('shared/add_assignment_select_class.html', classes=classes, context=context)
 
 @bp.route('/assignment/add/<int:class_id>', methods=['GET', 'POST'])
@@ -108,6 +137,9 @@ def add_assignment_for_class(class_id):
             
             db.session.add(new_assignment)
             db.session.flush()
+            
+            # NOTE: We do NOT automatically create Grade records for enrolled students.
+            # Grades are only created when a teacher explicitly enters scores via the grading interface.
             
             if 'assignment_file' in request.files:
                 file = request.files['assignment_file']
@@ -252,6 +284,8 @@ def edit_assignment(assignment_id):
 @teacher_required
 def view_assignment(assignment_id):
     """View an assignment"""
+    from datetime import date
+
     assignment = Assignment.query.get_or_404(assignment_id)
     class_obj = assignment.class_info
     
@@ -264,11 +298,90 @@ def view_assignment(assignment_id):
         return redirect(url_for('teacher.dashboard.my_assignments'))
     
     teacher = get_teacher_or_admin()
+    today = date.today()
     
     return render_template('shared/view_assignment.html', 
                          assignment=assignment,
                          class_info=class_obj,
-                         teacher=teacher)
+                         teacher=teacher,
+                         today=today)
+
+
+@bp.route('/assignment/<int:assignment_id>/void', methods=['POST'])
+@login_required
+@teacher_required
+def void_assignment(assignment_id):
+    """Void an assignment for all students or a selected subset."""
+    assignment = Assignment.query.get_or_404(assignment_id)
+    class_obj = assignment.class_info
+    
+    if not class_obj:
+        flash("Assignment class information not found.", "danger")
+        return redirect(url_for('teacher.assignments.view_assignment', assignment_id=assignment_id))
+    
+    if not is_authorized_for_class(class_obj):
+        flash("You are not authorized to void this assignment.", "danger")
+        return redirect(url_for('teacher.assignments.view_assignment', assignment_id=assignment_id))
+    
+    void_type = request.form.get('void_type', 'all')
+    reason = request.form.get('reason', 'Voided by teacher')
+    selected_student_ids = request.form.getlist('student_ids')
+    
+    # Determine which grades to void
+    try:
+        if void_type == 'selected' and selected_student_ids:
+            student_ids = [int(sid) for sid in selected_student_ids]
+            grades = Grade.query.filter(
+                Grade.assignment_id == assignment_id,
+                Grade.student_id.in_(student_ids),
+                Grade.is_voided == False
+            ).all()
+        else:
+            grades = Grade.query.filter_by(
+                assignment_id=assignment_id,
+                is_voided=False
+            ).all()
+        
+        if not grades:
+            flash("No grades found to void for this assignment.", "warning")
+            return redirect(url_for('teacher.assignments.view_assignment', assignment_id=assignment_id))
+        
+        now = datetime.utcnow()
+        voided_count = 0
+        affected_students = set()
+        
+        for grade in grades:
+            grade.is_voided = True
+            grade.voided_by = current_user.id
+            grade.voided_at = now
+            grade.voided_reason = reason
+            affected_students.add(grade.student_id)
+            voided_count += 1
+        
+        db.session.commit()
+        
+        # Update quarter grades for affected students
+        for student_id in affected_students:
+            if student_id:
+                try:
+                    update_quarter_grade(
+                        student_id=student_id,
+                        class_id=assignment.class_id,
+                        school_year_id=assignment.school_year_id,
+                        quarter=assignment.quarter,
+                        force=True
+                    )
+                except Exception as e:
+                    current_app.logger.warning(f"Failed to update quarter grade for student {student_id}: {e}")
+        
+        flash(f'Voided assignment for {voided_count} grade(s).', 'success')
+        return redirect(url_for('teacher.assignments.view_assignment', assignment_id=assignment_id))
+    
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error voiding assignment {assignment_id}: {e}")
+        flash(f"Error voiding assignment: {str(e)}", "danger")
+        return redirect(url_for('teacher.assignments.view_assignment', assignment_id=assignment_id))
 
 @bp.route('/assignment/grant-extensions', methods=['POST'])
 @login_required

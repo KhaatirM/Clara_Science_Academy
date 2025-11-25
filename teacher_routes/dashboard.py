@@ -711,7 +711,23 @@ def assignments_and_grades():
             if teacher is None:
                 accessible_classes = []
             else:
-                accessible_classes = Class.query.filter_by(teacher_id=teacher.id).all()
+                # Query classes where teacher is:
+                # 1. Primary teacher (teacher_id == teacher.id)
+                # 2. Additional teacher (in class_additional_teachers table)
+                # 3. Substitute teacher (in class_substitute_teachers table)
+                accessible_classes = Class.query.filter(
+                    or_(
+                        Class.teacher_id == teacher.id,
+                        Class.id.in_(
+                            db.session.query(class_additional_teachers.c.class_id)
+                            .filter(class_additional_teachers.c.teacher_id == teacher.id)
+                        ),
+                        Class.id.in_(
+                            db.session.query(class_substitute_teachers.c.class_id)
+                            .filter(class_substitute_teachers.c.teacher_id == teacher.id)
+                        )
+                    )
+                ).all()
         
         # Filter out any invalid class objects
         accessible_classes = [c for c in accessible_classes if c and hasattr(c, 'id') and c.id is not None]
@@ -770,12 +786,25 @@ def assignments_and_grades():
                 clean_filter = class_filter.strip()
                 if clean_filter.isdigit():
                     selected_class_id = int(clean_filter)
+                    # First try to find in accessible_classes
                     selected_class = next((c for c in accessible_classes if hasattr(c, 'id') and c.id == selected_class_id), None)
+                    
+                    # If not found, query directly and check authorization
+                    if not selected_class:
+                        selected_class = Class.query.get(selected_class_id)
+                        if selected_class and not is_authorized_for_class(selected_class):
+                            flash("You do not have permission to access this page.", "danger")
+                            return redirect(url_for('teacher.dashboard.assignments_and_grades'))
                 else:
                     selected_class = None
                 
                 if selected_class:
+                    # Double-check authorization
+                    if not is_authorized_for_class(selected_class):
+                        flash("You do not have permission to access this page.", "danger")
+                        return redirect(url_for('teacher.dashboard.assignments_and_grades'))
                     # Get regular assignments for the selected class
+                    selected_class_id = selected_class.id  # Ensure we have the ID
                     assignments_query = Assignment.query.filter_by(class_id=selected_class_id)
                     
                     # Apply sorting

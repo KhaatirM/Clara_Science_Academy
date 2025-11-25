@@ -577,7 +577,12 @@
 <script>
 function viewClassAssignmentsAndGrades(classId) {
     // Redirect to assignments and grades page with selected class
-    window.location.href = `/management/assignments-and-grades?class_id=${classId}`;
+    // Use the correct route based on user role
+    {% if current_user.role in ['Director', 'School Administrator'] %}
+    window.location.href = `{{ url_for('management.assignments_and_grades') }}?class_id=${classId}`;
+    {% else %}
+    window.location.href = `{{ url_for('teacher.dashboard.assignments_and_grades') }}?class_id=${classId}`;
+    {% endif %}
 }
 
 function toggleView(view) {

@@ -254,7 +254,7 @@ def view_attendance_records(class_id):
         }
         
         return render_template('shared/view_attendance_records.html',
-                             class_obj=class_obj,
+                             class_item=class_obj,
                              students=students,
                              records_by_date=records_by_date,
                              summary_stats=summary_stats,

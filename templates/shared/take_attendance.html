@@ -9,6 +9,19 @@
 {% endblock %}
 
 {% block dashboard_content %}
+    <!-- Success notification (shown after save) -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                {% if category == 'success' %}
+                    <div class="alert alert-success alert-dismissible fade show mb-3" role="alert" id="saveSuccessAlert">
+                        <i class="bi bi-check-circle-fill me-2"></i>{{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
 <div class="container-fluid px-2 px-md-4 py-4">
     <!-- Header Section -->
     <div class="attendance-header mb-4">
@@ -212,7 +225,7 @@
                         <div class="student-card-body">
                             <div class="attendance-buttons">
                                 {% for status in statuses %}
-                                    <input type="radio" class="btn-check" name="status-{{ student.id }}" 
+                                    <input type="radio" class="btn-check" name="status_{{ student.id }}" 
                                            id="status-{{ student.id }}-{{ loop.index }}" 
                                            value="{{ status|lower }}" 
                                            {% if record and record.status == status|lower %}checked{% endif %} 
@@ -239,7 +252,7 @@
                             
                             <div class="notes-section mt-3">
                                 <input type="text" class="form-control form-control-sm notes-input" 
-                                       name="notes-{{ student.id }}" 
+                                       name="notes_{{ student.id }}" 
                                        placeholder="Add note (optional)" 
                                        value="{{ record.notes if record else '' }}">
                 </div>
@@ -472,7 +485,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Real-time statistics update
-    const radioButtons = document.querySelectorAll('input[type="radio"][name^="status-"]');
+    const radioButtons = document.querySelectorAll('input[type="radio"][name^="status_"]');
     const attendanceLabels = document.querySelectorAll('.btn-attendance');
     
     console.log('Found radio buttons:', radioButtons.length);

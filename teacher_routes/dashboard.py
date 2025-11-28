@@ -311,10 +311,14 @@ def teacher_dashboard():
     print(f"--- End Debug ---")
     # --- End Debugging ---
     
+    # Convert classes to JSON-serializable format for JavaScript
+    classes_json = [{'id': c.id, 'name': c.name, 'subject': c.subject or 'N/A'} for c in classes]
+    
     return render_template('management/role_teacher_dashboard.html', 
                          teacher=teacher, 
                          teacher_data=teacher_data,
                          classes=classes,
+                         classes_json=classes_json,
                          recent_assignments=recent_assignments,
                          recent_grades=recent_grades,
                          recent_activity=recent_activity,

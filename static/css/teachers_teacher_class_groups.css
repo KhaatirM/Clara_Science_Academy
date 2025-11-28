@@ -314,6 +314,16 @@
     box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
 }
 
+.btn-action-edit {
+    background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+    color: white;
+}
+
+.btn-action-edit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(33, 150, 243, 0.4);
+}
+
 .btn-action-delete {
     background: #fff5f5;
     color: #e53e3e;

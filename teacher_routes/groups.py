@@ -35,10 +35,17 @@ def class_groups(class_id):
     # Get groups for this class
     groups = StudentGroup.query.filter_by(class_id=class_id, is_active=True).all()
     
-    # Add member info to each group
+    # Add member info to each group (including leader status)
     for group in groups:
         members = StudentGroupMember.query.filter_by(group_id=group.id).all()
-        group.members_list = [m.student for m in members if m.student]
+        group.members_list = []
+        for m in members:
+            if m.student:
+                member_data = {
+                    'student': m.student,
+                    'is_leader': m.is_leader
+                }
+                group.members_list.append(member_data)
         group.member_count = len(group.members_list)
     
     # Get enrolled students
@@ -94,7 +101,7 @@ def create_group(class_id):
 @login_required
 @teacher_required
 def add_member(group_id):
-    """Add a student to a group."""
+    """Add one or more students to a group."""
     group = StudentGroup.query.get_or_404(group_id)
     
     # Check authorization
@@ -102,32 +109,59 @@ def add_member(group_id):
         flash("You are not authorized to modify this group.", "danger")
         return redirect(url_for('teacher.groups.groups_hub'))
     
-    student_id = request.form.get('student_id', type=int)
-    is_leader = request.form.get('is_leader') == 'on'
+    # Get multiple student IDs (can be single or multiple)
+    student_ids = request.form.getlist('student_ids')
+    leader_id = request.form.get('leader_id', type=int)  # Single leader ID
     
-    if not student_id:
-        flash("Please select a student.", "danger")
+    if not student_ids:
+        flash("Please select at least one student.", "danger")
         return redirect(url_for('teacher.groups.class_groups', class_id=group.class_id))
     
-    # Check if already a member
-    existing = StudentGroupMember.query.filter_by(group_id=group_id, student_id=student_id).first()
-    if existing:
-        flash("Student is already in this group.", "warning")
-        return redirect(url_for('teacher.groups.class_groups', class_id=group.class_id))
+    added_count = 0
+    skipped_count = 0
     
     try:
-        new_member = StudentGroupMember(
-            group_id=group_id,
-            student_id=student_id,
-            is_leader=is_leader
-        )
-        db.session.add(new_member)
+        for student_id_str in student_ids:
+            student_id = int(student_id_str)
+            
+            # Check if already a member
+            existing = StudentGroupMember.query.filter_by(group_id=group_id, student_id=student_id).first()
+            if existing:
+                # Update leader status if this student is the selected leader
+                if leader_id == student_id and not existing.is_leader:
+                    existing.is_leader = True
+                    added_count += 1
+                else:
+                    skipped_count += 1
+                continue
+            
+            # Determine if this student should be leader
+            is_leader = (leader_id == student_id)
+            
+            new_member = StudentGroupMember(
+                group_id=group_id,
+                student_id=student_id,
+                is_leader=is_leader
+            )
+            db.session.add(new_member)
+            added_count += 1
+        
+        # If a leader was selected, ensure only one leader exists
+        if leader_id:
+            # Remove leader status from other members
+            StudentGroupMember.query.filter_by(group_id=group_id).filter(
+                StudentGroupMember.student_id != leader_id
+            ).update({'is_leader': False}, synchronize_session=False)
+        
         db.session.commit()
         
-        flash("Student added to group successfully!", "success")
+        if added_count > 0:
+            flash(f"{added_count} student(s) added to group successfully!", "success")
+        if skipped_count > 0:
+            flash(f"{skipped_count} student(s) were already in the group.", "info")
     except Exception as e:
         db.session.rollback()
-        flash(f"Error adding student: {str(e)}", "danger")
+        flash(f"Error adding students: {str(e)}", "danger")
     
     return redirect(url_for('teacher.groups.class_groups', class_id=group.class_id))
 
@@ -154,6 +188,81 @@ def remove_member(group_id, student_id):
     except Exception as e:
         db.session.rollback()
         flash(f"Error removing student: {str(e)}", "danger")
+    
+    return redirect(url_for('teacher.groups.class_groups', class_id=group.class_id))
+
+@bp.route('/groups/<int:group_id>/edit', methods=['POST'])
+@login_required
+@teacher_required
+def edit_group(group_id):
+    """Edit a group's name and description."""
+    group = StudentGroup.query.get_or_404(group_id)
+    
+    # Check authorization
+    if not is_authorized_for_class(group.class_info):
+        flash("You are not authorized to edit this group.", "danger")
+        return redirect(url_for('teacher.groups.groups_hub'))
+    
+    name = request.form.get('name', '').strip()
+    description = request.form.get('description', '').strip()
+    max_students = request.form.get('max_students', type=int)
+    
+    if not name:
+        flash("Group name is required.", "danger")
+        return redirect(url_for('teacher.groups.class_groups', class_id=group.class_id))
+    
+    try:
+        group.name = name
+        group.description = description
+        if max_students:
+            group.max_students = max_students
+        else:
+            group.max_students = None
+        db.session.commit()
+        
+        flash(f"Group '{name}' updated successfully!", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error updating group: {str(e)}", "danger")
+    
+    return redirect(url_for('teacher.groups.class_groups', class_id=group.class_id))
+
+@bp.route('/groups/<int:group_id>/set-leader', methods=['POST'])
+@login_required
+@teacher_required
+def set_leader(group_id):
+    """Set or change the group leader."""
+    group = StudentGroup.query.get_or_404(group_id)
+    
+    # Check authorization
+    if not is_authorized_for_class(group.class_info):
+        flash("You are not authorized to modify this group.", "danger")
+        return redirect(url_for('teacher.groups.groups_hub'))
+    
+    student_id = request.form.get('student_id', type=int)
+    
+    if not student_id:
+        flash("Student ID required.", "danger")
+        return redirect(url_for('teacher.groups.class_groups', class_id=group.class_id))
+    
+    # Verify student is a member
+    member = StudentGroupMember.query.filter_by(group_id=group_id, student_id=student_id).first()
+    if not member:
+        flash("Student is not a member of this group.", "warning")
+        return redirect(url_for('teacher.groups.class_groups', class_id=group.class_id))
+    
+    try:
+        # Remove leader status from all members
+        StudentGroupMember.query.filter_by(group_id=group_id).update({'is_leader': False}, synchronize_session=False)
+        
+        # Set new leader
+        member.is_leader = True
+        db.session.commit()
+        
+        flash("Group leader updated successfully!", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error updating group leader: {str(e)}", "danger")
     
     return redirect(url_for('teacher.groups.class_groups', class_id=group.class_id))
 

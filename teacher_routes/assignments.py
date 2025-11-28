@@ -285,6 +285,7 @@ def edit_assignment(assignment_id):
 def view_assignment(assignment_id):
     """View an assignment"""
     from datetime import date
+    from models import Submission, Grade, Enrollment
 
     assignment = Assignment.query.get_or_404(assignment_id)
     class_obj = assignment.class_info
@@ -300,11 +301,70 @@ def view_assignment(assignment_id):
     teacher = get_teacher_or_admin()
     today = date.today()
     
+    # Calculate statistics
+    # Get total enrolled students
+    total_students = Enrollment.query.filter_by(
+        class_id=class_obj.id,
+        is_active=True
+    ).count()
+    
+    # Get submission count
+    submissions_count = Submission.query.filter_by(
+        assignment_id=assignment_id
+    ).count()
+    
+    # Get graded count (grades that are not voided)
+    graded_count = Grade.query.filter_by(
+        assignment_id=assignment_id,
+        is_voided=False
+    ).count()
+    
+    # Get assignment points (use total_points if available, otherwise points)
+    assignment_points = assignment.total_points if hasattr(assignment, 'total_points') and assignment.total_points else (assignment.points if assignment.points else 0)
+    
+    # Calculate average score if there are grades
+    average_score = None
+    if graded_count > 0:
+        grades = Grade.query.filter_by(
+            assignment_id=assignment_id,
+            is_voided=False
+        ).all()
+        total_percentage = 0
+        count = 0
+        for grade in grades:
+            try:
+                if grade.grade_data:
+                    import json
+                    grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
+                    if isinstance(grade_data, dict) and 'score' in grade_data:
+                        score = grade_data['score']
+                        if isinstance(score, (int, float)):
+                            total_percentage += score
+                            count += 1
+            except (json.JSONDecodeError, TypeError, KeyError):
+                continue
+        
+        if count > 0:
+            average_score = round(total_percentage / count, 1)
+    
+    # Calculate submission rate
+    submission_rate = round((submissions_count / total_students * 100) if total_students > 0 else 0, 1)
+    
+    # Calculate grading completion rate
+    grading_rate = round((graded_count / total_students * 100) if total_students > 0 else 0, 1)
+    
     return render_template('shared/view_assignment.html', 
                          assignment=assignment,
                          class_info=class_obj,
                          teacher=teacher,
-                         today=today)
+                         today=today,
+                         submissions_count=submissions_count,
+                         assignment_points=assignment_points,
+                         total_students=total_students,
+                         graded_count=graded_count,
+                         average_score=average_score,
+                         submission_rate=submission_rate,
+                         grading_rate=grading_rate)
 
 
 @bp.route('/assignment/<int:assignment_id>/void', methods=['POST'])

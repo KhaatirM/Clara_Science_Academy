@@ -63,6 +63,97 @@
                         </div>
                         {% endif %}
                         
+                        <!-- PDF/Document Viewer (for assignments with attachments) -->
+                        {% if assignment.attachment_filename %}
+                        <div class="col-12">
+                            <div class="card border-0 shadow-sm mb-4" style="background: #ffffff;">
+                                <div class="card-header bg-white border-bottom" style="background: #ffffff !important;">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-0">
+                                                <i class="bi bi-file-earmark-pdf me-2 text-danger"></i>
+                                                Assignment Document
+                                            </h6>
+                                            <small class="text-muted">{{ assignment.attachment_original_filename or assignment.attachment_filename }}</small>
+                                        </div>
+                                        <div class="btn-group" role="group">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="downloadDocument()" title="Download">
+                                                <i class="bi bi-download"></i>
+                                            </button>
+                                            {% if assignment.attachment_mime_type and 'pdf' in assignment.attachment_mime_type.lower() %}
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="printDocument()" title="Print">
+                                                <i class="bi bi-printer"></i>
+                                            </button>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-body p-0">
+                                    {% if assignment.attachment_mime_type and 'pdf' in assignment.attachment_mime_type.lower() %}
+                                        <!-- Interactive PDF Viewer -->
+                                        <div class="document-viewer-wrapper">
+                                            <div class="pdf-toolbar">
+                                                <div class="pdf-controls-left">
+                                                    <button class="btn btn-sm btn-outline-secondary" onclick="zoomOut()" title="Zoom Out">
+                                                        <i class="bi bi-zoom-out"></i>
+                                                    </button>
+                                                    <span class="zoom-level" id="zoomLevel">100%</span>
+                                                    <button class="btn btn-sm btn-outline-secondary" onclick="zoomIn()" title="Zoom In">
+                                                        <i class="bi bi-zoom-in"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-outline-secondary" onclick="resetZoom()" title="Fit to Width">
+                                                        <i class="bi bi-arrows-angle-contract"></i>
+                                                    </button>
+                                                </div>
+                                                <div class="pdf-controls-center">
+                                                    <button class="btn btn-sm btn-outline-secondary" onclick="previousPage()" title="Previous Page">
+                                                        <i class="bi bi-chevron-left"></i>
+                                                    </button>
+                                                    <span class="page-info">
+                                                        Page <span id="currentPage">1</span> of <span id="totalPages">-</span>
+                                                    </span>
+                                                    <button class="btn btn-sm btn-outline-secondary" onclick="nextPage()" title="Next Page">
+                                                        <i class="bi bi-chevron-right"></i>
+                                                    </button>
+                                                </div>
+                                                <div class="pdf-controls-right">
+                                                    <button class="btn btn-sm btn-outline-secondary" onclick="toggleFullscreen()" title="Fullscreen">
+                                                        <i class="bi bi-fullscreen"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="document-viewer-container" id="pdfViewerContainer">
+                                                <iframe id="pdfViewer" 
+                                                        src="{{ url_for('download_assignment_file', assignment_id=assignment.id, view='true') }}#toolbar=0&navpanes=0&scrollbar=1&zoom=page-width" 
+                                                        class="document-viewer" 
+                                                        title="Assignment PDF"
+                                                        style="width: 100%; height: 100%; border: none; display: block; position: absolute; top: 0; left: 0;"
+                                                        allowfullscreen>
+                                                    <p>Your browser does not support PDFs. 
+                                                        <a href="{{ url_for('download_assignment_file', assignment_id=assignment.id) }}">Download the PDF</a> instead.
+                                                    </p>
+                                                </iframe>
+                                            </div>
+                                        </div>
+                                    {% else %}
+                                        <!-- Generic document viewer or download link -->
+                                        <div class="document-preview">
+                                            <div class="text-center p-5 bg-light">
+                                                <i class="bi bi-file-earmark-text display-1 text-muted mb-3"></i>
+                                                <p class="text-muted mb-3">{{ assignment.attachment_original_filename or assignment.attachment_filename }}</p>
+                                                <a href="{{ url_for('download_assignment_file', assignment_id=assignment.id) }}" 
+                                                   class="btn btn-primary" 
+                                                   download>
+                                                    <i class="bi bi-download me-2"></i>Download Document
+                                                </a>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
                         <!-- Details Grid -->
                         <div class="col-md-6">
                             <div class="compact-detail-item">
@@ -178,23 +269,66 @@
                     <h6 class="mb-0"><i class="bi bi-graph-up me-2"></i>Statistics</h6>
                 </div>
                 <div class="card-body p-3">
-                    <div class="compact-stats-row">
-                        <div class="compact-stat">
-                            <div class="compact-stat-icon bg-primary">
-                                <i class="bi bi-file-text-fill"></i>
-                            </div>
-                            <div>
-                                <div class="compact-stat-value">{{ submissions_count }}</div>
-                                <div class="compact-stat-label">Submissions</div>
+                    <div class="row g-3">
+                        <!-- Submissions -->
+                        <div class="col-6">
+                            <div class="stat-item">
+                                <div class="stat-icon-wrapper bg-primary bg-opacity-10">
+                                    <i class="bi bi-file-text-fill text-primary"></i>
+                                </div>
+                                <div class="stat-content">
+                                    <div class="stat-value">{{ submissions_count|default(0) }}</div>
+                                    <div class="stat-label">Submissions</div>
+                                    {% if total_students %}
+                                        <div class="stat-sublabel text-muted">{{ submission_rate }}% of class</div>
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
-                        <div class="compact-stat">
-                            <div class="compact-stat-icon bg-warning">
-                                <i class="bi bi-star-fill"></i>
+                        
+                        <!-- Points -->
+                        <div class="col-6">
+                            <div class="stat-item">
+                                <div class="stat-icon-wrapper bg-warning bg-opacity-10">
+                                    <i class="bi bi-star-fill text-warning"></i>
+                                </div>
+                                <div class="stat-content">
+                                    <div class="stat-value">{{ assignment_points|default(0)|int if assignment_points else 'N/A' }}</div>
+                                    <div class="stat-label">Total Points</div>
+                                    {% if average_score is not none %}
+                                        <div class="stat-sublabel text-success">Avg: {{ average_score }}%</div>
+                                    {% endif %}
+                                </div>
                             </div>
-                            <div>
-                                <div class="compact-stat-value">{{ assignment_points }}</div>
-                                <div class="compact-stat-label">Points</div>
+                        </div>
+                        
+                        <!-- Graded -->
+                        <div class="col-6">
+                            <div class="stat-item">
+                                <div class="stat-icon-wrapper bg-success bg-opacity-10">
+                                    <i class="bi bi-check-circle-fill text-success"></i>
+                                </div>
+                                <div class="stat-content">
+                                    <div class="stat-value">{{ graded_count|default(0) }}</div>
+                                    <div class="stat-label">Graded</div>
+                                    {% if total_students %}
+                                        <div class="stat-sublabel text-muted">{{ grading_rate }}% complete</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Students -->
+                        <div class="col-6">
+                            <div class="stat-item">
+                                <div class="stat-icon-wrapper bg-info bg-opacity-10">
+                                    <i class="bi bi-people-fill text-info"></i>
+                                </div>
+                                <div class="stat-content">
+                                    <div class="stat-value">{{ total_students|default(0) }}</div>
+                                    <div class="stat-label">Students</div>
+                                    <div class="stat-sublabel text-muted">Enrolled</div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -749,6 +883,120 @@ function selectVoidOption(type) {
     });
     event.currentTarget.classList.add('option-card-active');
 }
+
+// PDF Viewer Controls
+let currentZoom = 100;
+let currentPage = 1;
+let totalPages = 0;
+
+function zoomIn() {
+    currentZoom = Math.min(currentZoom + 25, 200);
+    updateZoom();
+}
+
+function zoomOut() {
+    currentZoom = Math.max(currentZoom - 25, 50);
+    updateZoom();
+}
+
+function resetZoom() {
+    currentZoom = 100;
+    updateZoom();
+}
+
+function updateZoom() {
+    const iframe = document.getElementById('pdfViewer');
+    if (iframe) {
+        const zoomLevelEl = document.getElementById('zoomLevel');
+        if (zoomLevelEl) {
+            zoomLevelEl.textContent = currentZoom + '%';
+        }
+        // Note: Direct iframe zoom is limited by browser security
+        // The PDF uses its own zoom controls
+    }
+}
+
+function previousPage() {
+    if (currentPage > 1) {
+        currentPage--;
+        updatePage();
+    }
+}
+
+function nextPage() {
+    if (totalPages > 0 && currentPage < totalPages) {
+        currentPage++;
+        updatePage();
+    }
+}
+
+function updatePage() {
+    const iframe = document.getElementById('pdfViewer');
+    if (iframe) {
+        const currentPageEl = document.getElementById('currentPage');
+        if (currentPageEl) {
+            currentPageEl.textContent = currentPage;
+        }
+        const currentSrc = iframe.src.split('#')[0];
+        iframe.src = currentSrc + '#page=' + currentPage;
+    }
+}
+
+function toggleFullscreen() {
+    const container = document.getElementById('pdfViewerContainer');
+    if (!container) return;
+    
+    const btn = event.target.closest('button');
+    
+    if (!document.fullscreenElement) {
+        container.requestFullscreen().then(() => {
+            container.classList.add('fullscreen');
+            if (btn) {
+                btn.innerHTML = '<i class="bi bi-fullscreen-exit"></i>';
+                btn.title = 'Exit Fullscreen';
+            }
+        }).catch(err => {
+            console.error('Error attempting to enable fullscreen:', err);
+        });
+    } else {
+        document.exitFullscreen().then(() => {
+            container.classList.remove('fullscreen');
+            if (btn) {
+                btn.innerHTML = '<i class="bi bi-fullscreen"></i>';
+                btn.title = 'Fullscreen';
+            }
+        });
+    }
+}
+
+function downloadDocument() {
+    {% if assignment.attachment_filename %}
+    const downloadUrl = "{{ url_for('download_assignment_file', assignment_id=assignment.id) }}";
+    window.open(downloadUrl, '_blank');
+    {% endif %}
+}
+
+function printDocument() {
+    const iframe = document.getElementById('pdfViewer');
+    if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.print();
+    }
+}
+
+// Initialize PDF viewer on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const iframe = document.getElementById('pdfViewer');
+    if (iframe) {
+        iframe.addEventListener('load', function() {
+            console.log('PDF loaded');
+        });
+    }
+    
+    const zoomLevelEl = document.getElementById('zoomLevel');
+    if (zoomLevelEl) {
+        zoomLevelEl.textContent = currentZoom + '%';
+    }
+});
 </script>
 
 {% endblock %}

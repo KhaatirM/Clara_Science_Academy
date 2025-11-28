@@ -931,6 +931,7 @@ def generate_report_card_form():
         student_id = request.form.get('student_id')
         school_year_id = request.form.get('school_year_id')
         class_ids = request.form.getlist('class_ids')  # Get multiple class IDs
+        selected_quarters = request.form.getlist('quarters')  # Get selected quarters
         report_type = request.form.get('report_type', 'official')  # Default to official
         include_attendance = request.form.get('include_attendance') == 'on'
         include_comments = request.form.get('include_comments') == 'on'
@@ -942,6 +943,10 @@ def generate_report_card_form():
         if not class_ids:
             flash("Please select at least one class.", 'danger')
             return redirect(request.url)
+        
+        if not selected_quarters:
+            flash("Please select at least one quarter.", 'danger')
+            return redirect(request.url)
 
         # Validate that the values can be converted to integers
         try:
@@ -952,23 +957,30 @@ def generate_report_card_form():
             flash("Invalid student, school year, or class selection.", 'danger')
             return redirect(request.url)
         
-        # Auto-determine the current/latest quarter
-        from datetime import date
-        quarters = AcademicPeriod.query.filter_by(
-            school_year_id=school_year_id_int,
-            period_type='quarter',
-            is_active=True
-        ).order_by(AcademicPeriod.start_date).all()
+        # Use selected quarters instead of auto-determining
+        # Validate selected quarters
+        valid_quarters = ['Q1', 'Q2', 'Q3', 'Q4']
+        quarters_to_include = [q for q in selected_quarters if q in valid_quarters]
         
-        today = date.today()
+        if not quarters_to_include:
+            flash("Invalid quarter selection. Please select valid quarters.", 'danger')
+            return redirect(request.url)
         
-        # Find the current or most recent quarter
-        quarter_str = 'Q1'  # Default
-        for q in quarters:
-            if today >= q.start_date:
-                quarter_str = q.name
+        # Determine the report period based on selected quarters
+        # If only one quarter selected, use that; otherwise use range (e.g., "Q1-Q2")
+        if len(quarters_to_include) == 1:
+            quarter_str = quarters_to_include[0]
+        else:
+            # Sort quarters and create range string
+            quarter_nums = sorted([int(q.replace('Q', '')) for q in quarters_to_include])
+            if len(quarter_nums) == len(quarters_to_include) and quarter_nums == list(range(min(quarter_nums), max(quarter_nums) + 1)):
+                # Consecutive quarters - show as range
+                quarter_str = f"Q{quarter_nums[0]}-Q{quarter_nums[-1]}"
+            else:
+                # Non-consecutive - use the latest quarter as primary, but show all
+                quarter_str = quarters_to_include[-1]  # Use last selected as primary
         
-        current_app.logger.info(f"Auto-determined quarter: {quarter_str} for date {today}")
+        current_app.logger.info(f"Selected quarters: {quarters_to_include}, Report period: {quarter_str}")
 
         # Verify all selected classes exist and student is ACTIVELY enrolled
         valid_class_ids = []
@@ -993,10 +1005,6 @@ def generate_report_card_form():
         from models import Grade, Assignment
         student = Student.query.get(student_id_int)
         
-        # Always include ALL quarters (Q1, Q2, Q3, Q4) for comprehensive report
-        # The system will show "—" for quarters without data
-        quarters_to_include = ['Q1', 'Q2', 'Q3', 'Q4']
-        
         # Update quarter grades in database (calculates/refreshes if needed)
         from utils.quarter_grade_calculator import update_all_quarter_grades_for_student, get_quarter_grades_for_report
         
@@ -1007,15 +1015,28 @@ def generate_report_card_form():
             force=False  # Respects 3-hour refresh interval
         )
         
-        # Get quarter grades from database
-        calculated_grades_by_quarter = get_quarter_grades_for_report(
+        # Get quarter grades from database (all quarters)
+        all_quarter_grades = get_quarter_grades_for_report(
             student_id=student_id_int,
             school_year_id=school_year_id_int,
             class_ids=valid_class_ids
         )
         
-        # Set the primary calculated_grades to the current quarter
-        calculated_grades = calculated_grades_by_quarter.get(quarter_str, {})
+        # Filter to only include selected quarters
+        calculated_grades_by_quarter = {}
+        for q in quarters_to_include:
+            if q in all_quarter_grades:
+                calculated_grades_by_quarter[q] = all_quarter_grades[q]
+            else:
+                # Include empty dict for quarters without data (will show "—" in template)
+                calculated_grades_by_quarter[q] = {}
+        
+        # Set the primary calculated_grades to the first selected quarter (or the determined quarter_str)
+        if len(quarters_to_include) == 1:
+            calculated_grades = calculated_grades_by_quarter.get(quarters_to_include[0], {})
+        else:
+            # For multiple quarters, use the first one as primary, but all will be shown
+            calculated_grades = calculated_grades_by_quarter.get(quarters_to_include[0], {})
         
         # Get or create report card
         report_card = ReportCard.query.filter_by(

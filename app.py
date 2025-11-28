@@ -665,27 +665,85 @@ def create_app(config_class=None):
     @app.route('/assignment/file/<int:assignment_id>')
     @login_required
     def download_assignment_file(assignment_id):
-        """Download assignment file"""
-        from flask import send_file, abort
-        from models import Assignment
+        """Download or view assignment file"""
+        from flask import send_file, abort, request
+        from models import Assignment, Enrollment
         import os
         
         assignment = Assignment.query.get_or_404(assignment_id)
+        class_obj = assignment.class_info
+        
+        # Check authorization - teachers/admins can view files for their classes
+        if class_obj:
+            # Directors and School Administrators have access
+            if current_user.role in ['Director', 'School Administrator']:
+                pass  # Authorized
+            elif current_user.role == 'Student':
+                # Check if student is enrolled in the class
+                enrollment = Enrollment.query.filter_by(
+                    class_id=class_obj.id,
+                    student_id=current_user.student_id if hasattr(current_user, 'student_id') else None,
+                    is_active=True
+                ).first()
+                if not enrollment:
+                    abort(403, description="You are not authorized to access this file")
+            else:
+                # For teachers, check if they're assigned to the class
+                from models import TeacherStaff, class_additional_teachers, class_substitute_teachers
+                
+                teacher = None
+                if current_user.teacher_staff_id:
+                    teacher = TeacherStaff.query.get(current_user.teacher_staff_id)
+                
+                if not teacher:
+                    abort(403, description="You are not authorized to access this file")
+                
+                # Check if teacher is primary, additional, or substitute
+                is_authorized = (
+                    class_obj.teacher_id == teacher.id or
+                    db.session.query(class_additional_teachers).filter(
+                        class_additional_teachers.c.class_id == class_obj.id,
+                        class_additional_teachers.c.teacher_id == teacher.id
+                    ).count() > 0 or
+                    db.session.query(class_substitute_teachers).filter(
+                        class_substitute_teachers.c.class_id == class_obj.id,
+                        class_substitute_teachers.c.teacher_id == teacher.id
+                    ).count() > 0
+                )
+                
+                if not is_authorized:
+                    abort(403, description="You are not authorized to access this file")
         
         if not assignment.attachment_filename:
             abort(404, description="No attachment found for this assignment")
         
-        file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], assignment.attachment_filename)
+        # Check if file is in assignments subfolder or root upload folder
+        file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], 'assignments', assignment.attachment_filename)
+        if not os.path.exists(file_path):
+            file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], assignment.attachment_filename)
         
         if not os.path.exists(file_path):
             abort(404, description="File not found")
         
+        # Check if this is a view request (for iframe) or download request
+        view_mode = request.args.get('view', 'false').lower() == 'true'
+        is_pdf = assignment.attachment_mime_type and 'pdf' in assignment.attachment_mime_type.lower()
+        
         try:
-            return send_file(
-                file_path,
-                as_attachment=True,
-                download_name=assignment.attachment_original_filename or assignment.attachment_filename
-            )
+            # For PDFs in view mode, serve without attachment flag to allow inline viewing
+            if view_mode and is_pdf:
+                return send_file(
+                    file_path,
+                    as_attachment=False,
+                    mimetype=assignment.attachment_mime_type or 'application/pdf'
+                )
+            else:
+                # Download mode
+                return send_file(
+                    file_path,
+                    as_attachment=True,
+                    download_name=assignment.attachment_original_filename or assignment.attachment_filename
+                )
         except Exception as e:
             current_app.logger.error(f"Error serving assignment file: {e}")
             abort(404)

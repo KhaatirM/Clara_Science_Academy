@@ -152,7 +152,7 @@
                             </div>
                             <span>Attendance</span>
                         </a>
-                        <a href="{{ url_for('teacher.dashboard.my_classes') }}" class="home-quick-action home-qa-reports">
+                        <a href="#" onclick="handleReportsClick(event); return false;" class="home-quick-action home-qa-reports">
                             <div class="home-qa-icon">
                                 <i class="bi bi-graph-up"></i>
                             </div>
@@ -1722,6 +1722,100 @@
 {% block scripts %}
 {{ super() }}
 <script>
+  // Handle Reports button click - Must be global and available before page load
+  window.handleReportsClick = function(event) {
+    try {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      
+      // Get classes data from template (use classes_json if available, fallback to classes)
+      const classesData = {{ classes_json|tojson|safe if classes_json is defined else classes|tojson|safe }};
+      const classes = Array.isArray(classesData) ? classesData : [];
+      const classCount = classes.length;
+      const analyticsBaseUrl = "{{ url_for('teacher.analytics.class_analytics', class_id=0) }}";
+      
+      console.log('Reports clicked. Classes:', classes, 'Count:', classCount);
+      
+      if (classCount === 0) {
+        alert('You do not have any classes assigned. Please contact an administrator.');
+        return false;
+      }
+      
+      if (classCount === 1) {
+        // Single class - redirect directly
+        const classId = classes[0].id;
+        const analyticsUrl = analyticsBaseUrl.replace('/0', '/' + classId);
+        console.log('Redirecting to:', analyticsUrl);
+        window.location.href = analyticsUrl;
+        return false;
+      } else {
+        // Multiple classes - show modal
+        const modalElement = document.getElementById('selectClassModal');
+        if (!modalElement) {
+          console.error('Modal element not found');
+          alert('Error: Modal not found. Please refresh the page.');
+          return false;
+        }
+        
+        // Check if Bootstrap is available
+        if (typeof bootstrap === 'undefined' || !bootstrap.Modal) {
+          console.error('Bootstrap not available');
+          alert('Error: Bootstrap not loaded. Please refresh the page.');
+          return false;
+        }
+        
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+        
+        // Populate class list
+        const classList = document.getElementById('classSelectList');
+        if (!classList) {
+          console.error('Class list element not found');
+          return false;
+        }
+        
+        classList.innerHTML = '';
+        
+        classes.forEach(classItem => {
+          const listItem = document.createElement('a');
+          listItem.href = '#';
+          listItem.className = 'list-group-item list-group-item-action';
+          listItem.style.cursor = 'pointer';
+          listItem.innerHTML = `
+            <div class="d-flex w-100 justify-content-between">
+              <h6 class="mb-1">${escapeHtml(classItem.name || 'Unnamed Class')}</h6>
+            </div>
+            <p class="mb-1 text-muted">${escapeHtml(classItem.subject || 'N/A')}</p>
+          `;
+          listItem.onclick = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            modal.hide();
+            const analyticsUrl = analyticsBaseUrl.replace('/0', '/' + classItem.id);
+            window.location.href = analyticsUrl;
+            return false;
+          };
+          classList.appendChild(listItem);
+        });
+        
+        return false;
+      }
+    } catch (error) {
+      console.error('Error in handleReportsClick:', error);
+      alert('An error occurred. Please try again or contact support.');
+      return false;
+    }
+  };
+  
+  // Helper function to escape HTML
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
 function showInfoUnavailableModal() {
     let modalEl = document.getElementById('infoUnavailableModal');
     if (!modalEl) {
@@ -2017,8 +2111,30 @@ function markAllPresent() {
     
     return html;
   }
-</script>
 
+
+<!-- Class Selection Modal -->
+<div class="modal fade" id="selectClassModal" tabindex="-1" aria-labelledby="selectClassModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="selectClassModalLabel">
+          <i class="bi bi-graph-up me-2"></i>Select a Class for Reports & Analytics
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted mb-3">Please select a class to view its Reports & Analytics:</p>
+        <div class="list-group" id="classSelectList">
+          <!-- Classes will be populated by JavaScript -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 {% endif %}
 {% endblock %} 

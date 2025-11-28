@@ -263,12 +263,20 @@ def get_quarter_grades_for_report(student_id, school_year_id, class_ids=None):
     
     for qg in quarter_grades:
         class_name = qg.class_info.name if qg.class_info else f"Class {qg.class_id}"
-        result[qg.quarter][class_name] = {
-            'letter': qg.letter_grade,
-            'percentage': qg.percentage,
-            'average': qg.percentage,  # Alias for compatibility
-            'assignments_count': qg.assignments_count
-        }
+        # Normalize quarter format: ensure it's 'Q1', 'Q2', etc., not '1', '2', etc.
+        quarter_key = qg.quarter
+        if quarter_key and not quarter_key.startswith('Q'):
+            # Convert '1' to 'Q1', '2' to 'Q2', etc.
+            quarter_key = f"Q{quarter_key}"
+        
+        # Only add if quarter_key is valid
+        if quarter_key in result:
+            result[quarter_key][class_name] = {
+                'letter': qg.letter_grade,
+                'percentage': qg.percentage,
+                'average': qg.percentage,  # Alias for compatibility
+                'assignments_count': qg.assignments_count
+            }
     
     return result
 

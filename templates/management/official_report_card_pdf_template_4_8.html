@@ -54,8 +54,8 @@
                     {% set teacher = class_obj.teacher if class_obj.teacher else None %}
                     <tr>
                         <td style="font-weight: bold;">{{ class_obj.name }}<br><small style="font-weight: normal;">{{ (teacher.first_name + ' ' + teacher.last_name) if teacher else 'N/A' }}</small></td>
-                        {# Show cumulative data for Q1 through current quarter #}
-                        {% for quarter in ['Q1', 'Q2', 'Q3', 'Q4'] %}
+                        {# Show data for selected quarters only #}
+                        {% for quarter in (selected_quarters if selected_quarters is defined else ['Q1', 'Q2', 'Q3', 'Q4']) %}
                             {% if grades_by_quarter and grades_by_quarter.get(quarter) %}
                                 {% set q_grades = grades_by_quarter.get(quarter, {}) %}
                                 {% set class_grade = q_grades.get(class_obj.name, {}) if q_grades else {} %}
@@ -75,8 +75,8 @@
                     {% for subject, grade_info in grades.items() %}
                         <tr>
                             <td style="font-weight: bold;">{{ subject }}</td>
-                            {# Show cumulative data for Q1 through current quarter #}
-                            {% for quarter in ['Q1', 'Q2', 'Q3', 'Q4'] %}
+                            {# Show data for selected quarters only #}
+                            {% for quarter in (selected_quarters if selected_quarters is defined else ['Q1', 'Q2', 'Q3', 'Q4']) %}
                                 {% if grades_by_quarter and grades_by_quarter.get(quarter) %}
                                     {% set q_grades = grades_by_quarter.get(quarter, {}) %}
                                     {% set q_grade_info = q_grades.get(subject, {}) if q_grades else {} %}

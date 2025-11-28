@@ -1023,10 +1023,18 @@ def generate_report_card_form():
         )
         
         # Filter to only include selected quarters
+        # Note: get_quarter_grades_for_report may return keys as 'Q1', 'Q2', etc. or '1', '2', etc.
+        # We need to handle both formats
         calculated_grades_by_quarter = {}
         for q in quarters_to_include:
-            if q in all_quarter_grades:
-                calculated_grades_by_quarter[q] = all_quarter_grades[q]
+            # Try both 'Q1' format and '1' format
+            q_key = q
+            q_num_key = q.replace('Q', '')
+            
+            if q_key in all_quarter_grades:
+                calculated_grades_by_quarter[q] = all_quarter_grades[q_key]
+            elif q_num_key in all_quarter_grades:
+                calculated_grades_by_quarter[q] = all_quarter_grades[q_num_key]
             else:
                 # Include empty dict for quarters without data (will show "—" in template)
                 calculated_grades_by_quarter[q] = {}
@@ -1159,7 +1167,8 @@ def generate_report_card_form():
                 report_card=report_card,
                 student=student_data,
                 grades=calculated_grades,
-                grades_by_quarter=calculated_grades_by_quarter,  # Cumulative quarter data
+                grades_by_quarter=calculated_grades_by_quarter,  # Only selected quarters
+                selected_quarters=quarters_to_include,  # Pass selected quarters to template
                 attendance=report_card_data.get('attendance', {}),
                 class_objects=class_objects,
                 include_attendance=include_attendance,

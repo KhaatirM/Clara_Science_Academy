@@ -2598,6 +2598,24 @@ def admin_class_group_assignments(class_id):
         flash('Group assignments feature is not yet available.', 'warning')
         group_assignments = []
     
+    # Calculate graded status for each assignment
+    from models import GroupGrade, StudentGroup
+    for assignment in group_assignments:
+        # Check if assignment has any grades
+        group_grades = GroupGrade.query.filter_by(group_assignment_id=assignment.id, is_voided=False).all()
+        
+        if group_grades and len(group_grades) > 0:
+            # Has grades - check if it's fully graded or partially graded
+            # For now, if it has any grades, we'll consider it "Graded"
+            # You can refine this logic later to check if all groups are graded
+            assignment.graded_status = 'Graded'
+        else:
+            # No grades - check assignment status
+            if assignment.status == 'Inactive':
+                assignment.graded_status = 'Inactive'
+            else:
+                assignment.graded_status = 'Active'
+    
     return render_template('management/admin_class_group_assignments.html',
                          class_obj=class_obj,
                          group_assignments=group_assignments,

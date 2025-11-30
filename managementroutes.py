@@ -10068,11 +10068,80 @@ def admin_view_group_assignment(assignment_id):
         except:
             extensions = []
         
+        # Calculate enhanced statistics
+        from models import GroupGrade
+        from datetime import datetime, timedelta
+        
+        # Get graded count
+        group_grades = GroupGrade.query.filter_by(group_assignment_id=assignment_id, is_voided=False).all()
+        graded_count = len(group_grades)
+        
+        # Calculate total students in groups
+        total_students = sum(len(group.members) for group in groups)
+        
+        # Calculate submission statistics
+        submission_count = len(submissions)
+        late_submissions = len([s for s in submissions if s.is_late])
+        on_time_submissions = submission_count - late_submissions
+        
+        # Calculate submission rate
+        submission_rate = (submission_count / len(groups) * 100) if groups else 0
+        
+        # Calculate time remaining/overdue
+        now = datetime.utcnow()
+        time_info = {}
+        if group_assignment.due_date:
+            if group_assignment.due_date > now:
+                time_diff = group_assignment.due_date - now
+                days_remaining = time_diff.days
+                hours_remaining = time_diff.seconds // 3600
+                time_info = {
+                    'status': 'upcoming',
+                    'days': days_remaining,
+                    'hours': hours_remaining,
+                    'is_overdue': False
+                }
+            else:
+                time_diff = now - group_assignment.due_date
+                days_overdue = time_diff.days
+                hours_overdue = time_diff.seconds // 3600
+                time_info = {
+                    'status': 'overdue',
+                    'days': days_overdue,
+                    'hours': hours_overdue,
+                    'is_overdue': True
+                }
+        else:
+            time_info = {
+                'status': 'no_due_date',
+                'is_overdue': False
+            }
+        
+        # Determine assignment status badge
+        if group_grades and len(group_grades) > 0:
+            assignment_status = 'Graded'
+            status_class = 'success'
+        elif group_assignment.status == 'Inactive':
+            assignment_status = 'Inactive'
+            status_class = 'secondary'
+        else:
+            assignment_status = 'Active'
+            status_class = 'primary'
+        
         return render_template('management/admin_view_group_assignment.html',
                              group_assignment=group_assignment,
                              submissions=submissions,
                              groups=groups,
-                             extensions=extensions)
+                             extensions=extensions,
+                             graded_count=graded_count,
+                             total_students=total_students,
+                             submission_count=submission_count,
+                             late_submissions=late_submissions,
+                             on_time_submissions=on_time_submissions,
+                             submission_rate=submission_rate,
+                             time_info=time_info,
+                             assignment_status=assignment_status,
+                             status_class=status_class)
     except Exception as e:
         print(f"Error viewing group assignment: {e}")
         flash('Error accessing group assignment details.', 'error')

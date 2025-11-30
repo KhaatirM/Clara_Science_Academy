@@ -2,111 +2,204 @@
 
 {% block dashboard_content %}
 <div class="container-fluid px-2 px-md-4">
-  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
-    <h3 class="mb-2 mb-md-0"><i class="bi bi-eye me-2"></i>{{ group_assignment.title }}</h3>
+  <!-- Enhanced Header with Status Badge -->
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
+    <div class="flex-grow-1">
+      <div class="d-flex align-items-center gap-3 mb-2">
+        <h3 class="mb-0"><i class="bi bi-journal-text me-2" style="color: #667eea;"></i>{{ group_assignment.title }}</h3>
+        <span class="badge bg-{{ status_class }} text-white px-3 py-2" style="font-size: 0.9rem;">
+          <i class="bi bi-{% if assignment_status == 'Graded' %}check-circle-fill{% elif assignment_status == 'Inactive' %}x-circle{% else %}clock{% endif %} me-1"></i>{{ assignment_status }}
+        </span>
+      </div>
+      {% if time_info and time_info.status != 'no_due_date' %}
+        <div class="mt-2">
+          {% if time_info.is_overdue %}
+            <span class="badge bg-danger text-white">
+              <i class="bi bi-exclamation-triangle me-1"></i>
+              {% if time_info.days > 0 %}
+                {{ time_info.days }} day{{ 's' if time_info.days != 1 else '' }} overdue
+              {% else %}
+                {{ time_info.hours }} hour{{ 's' if time_info.hours != 1 else '' }} overdue
+              {% endif %}
+            </span>
+          {% else %}
+            <span class="badge bg-warning text-dark">
+              <i class="bi bi-clock me-1"></i>
+              {% if time_info.days > 0 %}
+                {{ time_info.days }} day{{ 's' if time_info.days != 1 else '' }} remaining
+              {% else %}
+                {{ time_info.hours }} hour{{ 's' if time_info.hours != 1 else '' }} remaining
+              {% endif %}
+            </span>
+          {% endif %}
+        </div>
+      {% endif %}
+    </div>
     <div class="d-flex gap-2 flex-wrap">
       <a href="{{ url_for('management.admin_class_group_assignments', class_id=group_assignment.class_id) }}" class="btn btn-outline-secondary btn-sm">
-        <i class="bi bi-arrow-left me-1"></i>Back to Group Assignments
+        <i class="bi bi-arrow-left me-1"></i>Back
       </a>
       <a href="{{ url_for('management.admin_grade_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-success btn-sm">
-        <i class="bi bi-check-circle me-1"></i>Grade Assignment
+        <i class="bi bi-check-circle me-1"></i>Grade
       </a>
       <a href="{{ url_for('management.admin_edit_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-warning btn-sm">
-        <i class="bi bi-pencil me-1"></i>Edit Assignment
+        <i class="bi bi-pencil me-1"></i>Edit
       </a>
       <a href="{{ url_for('management.admin_grant_extensions', assignment_id=group_assignment.id) }}" class="btn btn-primary btn-sm">
         <i class="bi bi-clock me-1"></i>Extensions
       </a>
       <button type="button" class="btn btn-danger btn-sm" 
               onclick="confirmDeleteAssignment({{ group_assignment.id }}, '{{ group_assignment.title }}')">
-        <i class="bi bi-trash me-1"></i>Delete Assignment
+        <i class="bi bi-trash me-1"></i>Delete
       </button>
-      {# These features are not yet implemented
-      <a href="{{ url_for('teacher.create_assignment_rubric', assignment_id=group_assignment.id) }}?admin_view=true" class="btn btn-info btn-sm">
-        <i class="bi bi-list-check me-1"></i>Create Rubric
-      </a>
-      <a href="{{ url_for('teacher.view_peer_evaluations', assignment_id=group_assignment.id) }}?admin_view=true" class="btn btn-warning btn-sm">
-        <i class="bi bi-people me-1"></i>Peer Evaluations
-      </a>
-      <a href="{{ url_for('teacher.view_group_progress', assignment_id=group_assignment.id) }}?admin_view=true" class="btn btn-secondary btn-sm">
-        <i class="bi bi-graph-up me-1"></i>Progress
-      </a>
-      <a href="{{ url_for('teacher.view_peer_reviews', assignment_id=group_assignment.id) }}?admin_view=true" class="btn btn-dark btn-sm">
-        <i class="bi bi-eye me-1"></i>Peer Reviews
-      </a>
-      <a href="{{ url_for('teacher.view_draft_submissions', assignment_id=group_assignment.id) }}?admin_view=true" class="btn btn-light btn-sm">
-        <i class="bi bi-file-earmark-text me-1"></i>Draft Submissions
-      </a>
-      #}
+    </div>
+  </div>
+
+  <!-- Enhanced Statistics Cards -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+        <div class="card-body text-white text-center py-3">
+          <i class="bi bi-inbox display-6 mb-2 opacity-75"></i>
+          <h3 class="mb-0 fw-bold">{{ submission_count }}</h3>
+          <p class="mb-0 small text-white-50">Submissions</p>
+          {% if groups %}
+            <small class="text-white-75">of {{ groups|length }} groups</small>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+        <div class="card-body text-white text-center py-3">
+          <i class="bi bi-check-circle-fill display-6 mb-2 opacity-75"></i>
+          <h3 class="mb-0 fw-bold">{{ graded_count }}</h3>
+          <p class="mb-0 small text-white-50">Graded</p>
+          {% if total_students %}
+            <small class="text-white-75">of {{ total_students }} students</small>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+        <div class="card-body text-white text-center py-3">
+          <i class="bi bi-people display-6 mb-2 opacity-75"></i>
+          <h3 class="mb-0 fw-bold">{{ total_students }}</h3>
+          <p class="mb-0 small text-white-50">Students</p>
+          <small class="text-white-75">in {{ groups|length }} groups</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+        <div class="card-body text-white text-center py-3">
+          <i class="bi bi-graph-up-arrow display-6 mb-2 opacity-75"></i>
+          <h3 class="mb-0 fw-bold">{{ "%.0f"|format(submission_rate) }}%</h3>
+          <p class="mb-0 small text-white-50">Submission Rate</p>
+          <div class="progress mt-2" style="height: 4px; background: rgba(255,255,255,0.3);">
+            <div class="progress-bar bg-white" role="progressbar" style="width: {{ submission_rate }}%"></div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
   <div class="row g-3 g-md-4">
     <!-- Assignment Details -->
     <div class="col-12 col-lg-8">
-      <div class="card shadow-sm">
-        <div class="card-header bg-primary text-white">
+      <div class="card shadow-sm border-0">
+        <div class="card-header text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
           <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Assignment Details</h5>
         </div>
         <div class="card-body">
           {% if group_assignment.description %}
             <div class="mb-4">
-              <h6><i class="bi bi-file-text me-2"></i>Description</h6>
-              <p class="text-muted">{{ group_assignment.description }}</p>
+              <h6 class="text-primary"><i class="bi bi-file-text me-2"></i>Description</h6>
+              <p class="text-muted mb-0" style="line-height: 1.6;">{{ group_assignment.description }}</p>
             </div>
+            <hr>
           {% endif %}
 
           <div class="row g-3">
             <div class="col-md-6">
-              <div class="d-flex align-items-center">
-                <i class="bi bi-calendar-event text-primary me-2"></i>
+              <div class="d-flex align-items-start p-3 rounded" style="background: #f8f9fa;">
+                <i class="bi bi-calendar-event text-primary me-3 fs-5"></i>
                 <div>
-                  <small class="text-muted d-block">Due Date</small>
-                  <strong>{{ group_assignment.due_date.strftime('%B %d, %Y at %I:%M %p') if group_assignment.due_date else 'Not set' }}</strong>
+                  <small class="text-muted d-block mb-1">Due Date</small>
+                  <strong class="d-block">{{ group_assignment.due_date.strftime('%B %d, %Y at %I:%M %p') if group_assignment.due_date else 'Not set' }}</strong>
                 </div>
               </div>
             </div>
             <div class="col-md-6">
-              <div class="d-flex align-items-center">
-                <i class="bi bi-people text-success me-2"></i>
+              <div class="d-flex align-items-start p-3 rounded" style="background: #f8f9fa;">
+                <i class="bi bi-people text-success me-3 fs-5"></i>
                 <div>
-                  <small class="text-muted d-block">Group Size</small>
-                  <strong>{{ group_assignment.group_size_min }}-{{ group_assignment.group_size_max }} students</strong>
+                  <small class="text-muted d-block mb-1">Group Size</small>
+                  <strong class="d-block">{{ group_assignment.group_size_min }}-{{ group_assignment.group_size_max }} students</strong>
                 </div>
               </div>
             </div>
             <div class="col-md-6">
-              <div class="d-flex align-items-center">
-                <i class="bi bi-book text-info me-2"></i>
+              <div class="d-flex align-items-start p-3 rounded" style="background: #f8f9fa;">
+                <i class="bi bi-book text-info me-3 fs-5"></i>
                 <div>
-                  <small class="text-muted d-block">Class</small>
-                  <strong>{{ group_assignment.class_info.name }}</strong>
+                  <small class="text-muted d-block mb-1">Class</small>
+                  <strong class="d-block">{{ group_assignment.class_info.name }}</strong>
                 </div>
               </div>
             </div>
             <div class="col-md-6">
-              <div class="d-flex align-items-center">
-                <i class="bi bi-tag text-warning me-2"></i>
+              <div class="d-flex align-items-start p-3 rounded" style="background: #f8f9fa;">
+                <i class="bi bi-tag text-warning me-3 fs-5"></i>
                 <div>
-                  <small class="text-muted d-block">Type</small>
-                  <strong>{{ group_assignment.assignment_type.title() }}</strong>
+                  <small class="text-muted d-block mb-1">Type</small>
+                  <strong class="d-block">{{ group_assignment.assignment_type.title() }}</strong>
                 </div>
               </div>
             </div>
+            {% if group_assignment.quarter %}
+            <div class="col-md-6">
+              <div class="d-flex align-items-start p-3 rounded" style="background: #f8f9fa;">
+                <i class="bi bi-bookmark text-secondary me-3 fs-5"></i>
+                <div>
+                  <small class="text-muted d-block mb-1">Quarter</small>
+                  <strong class="d-block">Q{{ group_assignment.quarter }}</strong>
+                </div>
+              </div>
+            </div>
+            {% endif %}
+            {% if group_assignment.total_points %}
+            <div class="col-md-6">
+              <div class="d-flex align-items-start p-3 rounded" style="background: #f8f9fa;">
+                <i class="bi bi-star text-warning me-3 fs-5"></i>
+                <div>
+                  <small class="text-muted d-block mb-1">Total Points</small>
+                  <strong class="d-block">{{ group_assignment.total_points }}</strong>
+                </div>
+              </div>
+            </div>
+            {% endif %}
           </div>
 
           {% if group_assignment.attachment_filename %}
-            <div class="mt-4">
-              <h6><i class="bi bi-paperclip me-2"></i>Attachments</h6>
-              <div class="list-group">
-                <div class="list-group-item">
+            <hr>
+            <div class="mt-3">
+              <h6 class="text-primary mb-3"><i class="bi bi-paperclip me-2"></i>Attachments</h6>
+              <div class="card border">
+                <div class="card-body">
                   <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                      <i class="bi bi-file-earmark me-2"></i>
-                      {{ group_assignment.attachment_filename }}
+                    <div class="d-flex align-items-center">
+                      <i class="bi bi-file-earmark-pdf text-danger me-3 fs-3"></i>
+                      <div>
+                        <strong class="d-block">{{ group_assignment.attachment_original_filename or group_assignment.attachment_filename }}</strong>
+                        {% if group_assignment.attachment_file_size %}
+                          <small class="text-muted">{{ "%.2f"|format(group_assignment.attachment_file_size / 1024 / 1024) }} MB</small>
+                        {% endif %}
+                      </div>
                     </div>
                     <a href="{{ url_for('static', filename='uploads/' ~ group_assignment.attachment_filename) }}" 
-                       class="btn btn-outline-primary btn-sm" target="_blank">
+                       class="btn btn-primary btn-sm" target="_blank">
                       <i class="bi bi-download me-1"></i>Download
                     </a>
                   </div>
@@ -117,77 +210,123 @@
         </div>
       </div>
 
-      <!-- Submissions -->
-      <div class="card shadow-sm mt-4">
-        <div class="card-header bg-success text-white">
-          <h5 class="mb-0"><i class="bi bi-inbox me-2"></i>Group Submissions ({{ submissions|length }})</h5>
+      <!-- Enhanced Submissions -->
+      <div class="card shadow-sm border-0 mt-4">
+        <div class="card-header text-white" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border: none;">
+          <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-inbox me-2"></i>Group Submissions ({{ submission_count }})</h5>
+            {% if submission_count > 0 %}
+              <div class="d-flex gap-2">
+                <span class="badge bg-white text-success">{{ on_time_submissions }} On Time</span>
+                <span class="badge bg-white text-danger">{{ late_submissions }} Late</span>
+              </div>
+            {% endif %}
+          </div>
         </div>
         <div class="card-body p-0">
           {% if submissions %}
             <div class="list-group list-group-flush">
               {% for submission in submissions %}
-                <div class="list-group-item">
+                {% set group_name = '' %}
+                {% for group in groups %}
+                  {% if group.id == submission.group_id %}
+                    {% set group_name = group.name %}
+                  {% endif %}
+                {% endfor %}
+                <div class="list-group-item border-0 border-bottom">
                   <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                      <h6 class="mb-1">
-                        {% for group in groups %}
-                          {% if group.id == submission.group_id %}
-                            {{ group.name }}
-                          {% endif %}
-                        {% endfor %}
-                      </h6>
-                      <p class="mb-1 text-muted">
-                        Submitted: {{ submission.submitted_at.strftime('%b %d, %Y at %I:%M %p') if submission.submitted_at else 'Not submitted' }}
-                      </p>
+                    <div class="flex-grow-1">
+                      <div class="d-flex align-items-center gap-2 mb-2">
+                        <h6 class="mb-0">{{ group_name or 'Unknown Group' }}</h6>
+                        <span class="badge bg-{% if submission.is_late %}danger{% else %}success{% endif %}">
+                          <i class="bi bi-{% if submission.is_late %}exclamation-triangle{% else %}check-circle{% endif %} me-1"></i>
+                          {{ 'Late' if submission.is_late else 'On Time' }}
+                        </span>
+                      </div>
+                      <div class="mb-2">
+                        <small class="text-muted">
+                          <i class="bi bi-clock me-1"></i>
+                          Submitted: {{ submission.submitted_at.strftime('%b %d, %Y at %I:%M %p') if submission.submitted_at else 'Not submitted' }}
+                        </small>
+                        {% if submission.submitter %}
+                          <br>
+                          <small class="text-muted">
+                            <i class="bi bi-person me-1"></i>
+                            By: {{ submission.submitter.first_name }} {{ submission.submitter.last_name }}
+                          </small>
+                        {% endif %}
+                      </div>
+                      {% if submission.submission_text %}
+                        <p class="mb-2 text-muted small">{{ submission.submission_text[:150] }}{% if submission.submission_text|length > 150 %}...{% endif %}</p>
+                      {% endif %}
                       {% if submission.comments %}
-                        <small class="text-muted">{{ submission.comments[:100] }}{% if submission.comments|length > 100 %}...{% endif %}</small>
+                        <div class="alert alert-info py-2 px-3 mb-0 small">
+                          <i class="bi bi-chat-left-text me-1"></i>{{ submission.comments }}
+                        </div>
                       {% endif %}
                     </div>
-                    <div class="d-flex gap-1">
+                    <div class="d-flex flex-column gap-2 ms-3">
                       {% if submission.attachment_filename %}
                         <a href="{{ url_for('static', filename='uploads/' ~ submission.attachment_filename) }}" 
-                           class="btn btn-outline-primary btn-sm" target="_blank">
+                           class="btn btn-outline-primary btn-sm" target="_blank" title="Download submission">
                           <i class="bi bi-download"></i>
                         </a>
                       {% endif %}
-                      <span class="badge bg-{% if submission.is_late %}danger{% else %}success{% endif %}">
-                        {{ 'Late' if submission.is_late else 'On Time' }}
-                      </span>
+                      <a href="{{ url_for('management.admin_grade_group_assignment', assignment_id=group_assignment.id) }}" 
+                         class="btn btn-success btn-sm" title="Grade this submission">
+                        <i class="bi bi-check-circle"></i>
+                      </a>
                     </div>
                   </div>
                 </div>
               {% endfor %}
             </div>
           {% else %}
-            <div class="p-4 text-muted text-center">
-              <i class="bi bi-inbox text-muted" style="font-size: 2rem;"></i>
-              <p class="mb-0">No submissions yet.</p>
+            <div class="p-5 text-center">
+              <i class="bi bi-inbox text-muted" style="font-size: 4rem; opacity: 0.3;"></i>
+              <h5 class="text-muted mt-3">No Submissions Yet</h5>
+              <p class="text-muted mb-0">Groups haven't submitted their work for this assignment.</p>
             </div>
           {% endif %}
         </div>
       </div>
     </div>
 
-    <!-- Groups Overview -->
+    <!-- Enhanced Sidebar -->
     <div class="col-12 col-lg-4">
-      <div class="card shadow-sm">
-        <div class="card-header bg-info text-white">
+      <!-- Groups Overview -->
+      <div class="card shadow-sm border-0">
+        <div class="card-header text-white" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border: none;">
           <h5 class="mb-0"><i class="bi bi-people me-2"></i>Class Groups ({{ groups|length }})</h5>
         </div>
         <div class="card-body p-0">
           {% if groups %}
             <div class="list-group list-group-flush">
               {% for group in groups %}
-                <div class="list-group-item">
+                {% set group_submission = submissions|selectattr('group_id', 'equalto', group.id)|list|first %}
+                <div class="list-group-item border-0 border-bottom">
                   <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                      <h6 class="mb-1">{{ group.name }}</h6>
-                      <p class="mb-1 text-muted">{{ group.members|length }} members</p>
+                    <div class="flex-grow-1">
+                      <div class="d-flex align-items-center gap-2 mb-1">
+                        <h6 class="mb-0">{{ group.name }}</h6>
+                        {% if group_submission %}
+                          <span class="badge bg-success">
+                            <i class="bi bi-check-circle me-1"></i>Submitted
+                          </span>
+                        {% else %}
+                          <span class="badge bg-secondary">
+                            <i class="bi bi-clock me-1"></i>Pending
+                          </span>
+                        {% endif %}
+                      </div>
+                      <p class="mb-1 text-muted small">
+                        <i class="bi bi-people me-1"></i>{{ group.members|length }} member{{ 's' if group.members|length != 1 else '' }}
+                      </p>
                       {% if group.description %}
-                        <small class="text-muted">{{ group.description[:50] }}{% if group.description|length > 50 %}...{% endif %}</small>
+                        <small class="text-muted d-block">{{ group.description[:60] }}{% if group.description|length > 60 %}...{% endif %}</small>
                       {% endif %}
                     </div>
-                    <a href="{{ url_for('management.admin_manage_group', group_id=group.id) }}" class="btn btn-outline-primary btn-sm">
+                    <a href="{{ url_for('management.admin_manage_group', group_id=group.id) }}" class="btn btn-outline-primary btn-sm ms-2" title="Manage group">
                       <i class="bi bi-gear"></i>
                     </a>
                   </div>
@@ -195,10 +334,10 @@
               {% endfor %}
             </div>
           {% else %}
-            <div class="p-3 text-muted text-center">
-              <i class="bi bi-people text-muted" style="font-size: 2rem;"></i>
-              <p class="mb-0">No groups created yet.</p>
-              <a href="{{ url_for('management.admin_class_groups', class_id=group_assignment.class_id) }}" class="btn btn-primary btn-sm mt-2">
+            <div class="p-4 text-center">
+              <i class="bi bi-people text-muted" style="font-size: 3rem; opacity: 0.3;"></i>
+              <p class="text-muted mb-3 mt-2">No groups created yet.</p>
+              <a href="{{ url_for('management.admin_class_groups', class_id=group_assignment.class_id) }}" class="btn btn-primary btn-sm">
                 <i class="bi bi-plus-circle me-1"></i>Create Groups
               </a>
             </div>
@@ -206,30 +345,46 @@
         </div>
       </div>
 
-      <!-- Assignment Stats -->
-      <div class="card shadow-sm mt-4">
-        <div class="card-header bg-secondary text-white">
-          <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Assignment Statistics</h5>
+      <!-- Enhanced Assignment Stats -->
+      <div class="card shadow-sm border-0 mt-4">
+        <div class="card-header text-white" style="background: linear-gradient(135deg, #6c757d 0%, #495057 100%); border: none;">
+          <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Statistics</h5>
         </div>
         <div class="card-body">
-          <div class="row text-center">
+          <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="text-muted small">Submission Progress</span>
+              <span class="fw-bold">{{ submission_count }}/{{ groups|length }}</span>
+            </div>
+            <div class="progress" style="height: 8px;">
+              <div class="progress-bar bg-success" role="progressbar" style="width: {{ submission_rate }}%"></div>
+            </div>
+          </div>
+          
+          <div class="row g-3 text-center">
             <div class="col-6">
-              <h4 class="text-success">{{ submissions|length }}</h4>
-              <small class="text-muted">Submissions</small>
+              <div class="p-2 rounded" style="background: #e7f5e7;">
+                <h5 class="mb-0 text-success">{{ on_time_submissions }}</h5>
+                <small class="text-muted d-block">On Time</small>
+              </div>
             </div>
             <div class="col-6">
-              <h4 class="text-warning">
-                {% set total_students = groups|map(attribute='members')|map('length')|sum %}
-                {{ total_students }}
-              </h4>
-              <small class="text-muted">Students in Groups</small>
+              <div class="p-2 rounded" style="background: #ffe7e7;">
+                <h5 class="mb-0 text-danger">{{ late_submissions }}</h5>
+                <small class="text-muted d-block">Late</small>
+              </div>
             </div>
             <div class="col-6">
-              <h4 class="text-info">
-                {% set late_submissions = submissions|selectattr('is_late')|list|length %}
-                {{ late_submissions }}
-              </h4>
-              <small class="text-muted">Late Submissions</small>
+              <div class="p-2 rounded" style="background: #e7f0ff;">
+                <h5 class="mb-0 text-primary">{{ graded_count }}</h5>
+                <small class="text-muted d-block">Graded</small>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="p-2 rounded" style="background: #fff4e7;">
+                <h5 class="mb-0 text-warning">{{ total_students - graded_count }}</h5>
+                <small class="text-muted d-block">Pending</small>
+              </div>
             </div>
           </div>
         </div>
@@ -237,23 +392,25 @@
       
       <!-- Extensions Card -->
       {% if extensions %}
-      <div class="card shadow-sm mt-4">
-        <div class="card-header bg-warning text-dark">
-          <h5 class="mb-0"><i class="bi bi-clock me-2"></i>Extensions Granted ({{ extensions|length }})</h5>
+      <div class="card shadow-sm border-0 mt-4">
+        <div class="card-header text-white" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border: none;">
+          <h5 class="mb-0"><i class="bi bi-clock me-2"></i>Extensions ({{ extensions|length }})</h5>
         </div>
         <div class="card-body p-0">
           <div class="list-group list-group-flush">
             {% for ext in extensions %}
-              <div class="list-group-item">
+              <div class="list-group-item border-0 border-bottom">
                 <div class="d-flex justify-content-between align-items-start">
                   <div>
                     <h6 class="mb-1">{{ ext.student.first_name }} {{ ext.student.last_name }}</h6>
-                    <small class="text-muted">
+                    <small class="text-muted d-block">
                       <i class="bi bi-calendar-event me-1"></i>
-                      New Due Date: {{ ext.new_due_date.strftime('%b %d, %Y %I:%M %p') if ext.new_due_date else 'N/A' }}
+                      New Due: {{ ext.new_due_date.strftime('%b %d, %Y %I:%M %p') if ext.new_due_date else 'N/A' }}
                     </small>
                     {% if ext.reason %}
-                      <p class="mb-0 mt-1"><small>Reason: {{ ext.reason }}</small></p>
+                      <p class="mb-0 mt-1 small text-muted">
+                        <i class="bi bi-info-circle me-1"></i>{{ ext.reason }}
+                      </p>
                     {% endif %}
                   </div>
                   <span class="badge bg-{% if ext.approved %}success{% else %}warning{% endif %}">

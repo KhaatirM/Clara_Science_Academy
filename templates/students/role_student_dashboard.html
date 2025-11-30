@@ -2,6 +2,158 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/students_role_student_dashboard.css') }}">
+<style>
+/* Custom Modal Backdrop - Lighter and more readable */
+.modal-backdrop {
+    background-color: rgba(0, 0, 0, 0.25) !important;
+    backdrop-filter: blur(1px);
+}
+
+.modal-backdrop.show {
+    opacity: 0.25 !important;
+}
+
+/* Ensure modal content has good contrast */
+.modal-content {
+    background-color: #ffffff !important;
+    border: none;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.modal-body {
+    background-color: #ffffff !important;
+    color: #212529 !important;
+}
+
+/* Ensure all text in modals is readable */
+.modal-body {
+    color: #212529 !important;
+}
+
+.modal-body p,
+.modal-body span:not(.badge):not(.text-primary):not(.text-info):not(.text-success):not(.text-warning):not(.text-danger):not(.text-muted),
+.modal-body div:not(.alert):not(.badge),
+.modal-body label,
+.modal-body small,
+.modal-body .form-text,
+.modal-body h1,
+.modal-body h2,
+.modal-body h3,
+.modal-body h4,
+.modal-body h5,
+.modal-body h6 {
+    color: #212529 !important;
+}
+
+.modal-body .text-muted {
+    color: #6c757d !important;
+}
+
+.modal-body .text-primary {
+    color: #0d6efd !important;
+}
+
+.modal-body .text-info {
+    color: #0dcaf0 !important;
+}
+
+.modal-body .text-success {
+    color: #198754 !important;
+}
+
+.modal-body .text-warning {
+    color: #ffc107 !important;
+}
+
+.modal-body .text-danger {
+    color: #dc3545 !important;
+}
+
+/* Ensure form controls are readable */
+.modal-body .form-control,
+.modal-body .form-select {
+    background-color: #ffffff !important;
+    color: #212529 !important;
+    border-color: #dee2e6;
+}
+
+.modal-body .form-control:focus,
+.modal-body .form-select:focus {
+    background-color: #ffffff !important;
+    color: #212529 !important;
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.modal-body .form-control::placeholder {
+    color: #6c757d !important;
+}
+
+/* Alert boxes in modals */
+.modal-body .alert-light {
+    background-color: #f8f9fa !important;
+    color: #212529 !important;
+    border-color: #dee2e6;
+}
+
+.modal-body .alert-info {
+    background-color: #d1ecf1 !important;
+    color: #0c5460 !important;
+    border-color: #bee5eb;
+}
+
+/* File upload area */
+.modal-body .file-upload-area {
+    background-color: #f8f9fa !important;
+    color: #212529 !important;
+}
+
+.modal-body .file-upload-area:hover {
+    background-color: #f0f4ff !important;
+}
+
+.modal-body .file-upload-area p,
+.modal-body .file-upload-area .text-muted {
+    color: #212529 !important;
+}
+
+.modal-body .file-upload-area:hover p,
+.modal-body .file-upload-area:hover .text-muted {
+    color: #212529 !important;
+}
+
+/* Ensure header text is readable (white text on gradient is fine) */
+.modal-header.text-white h4,
+.modal-header.text-white h5,
+.modal-header.text-white p {
+    color: #ffffff !important;
+}
+
+/* Footer background */
+.modal-footer.bg-light {
+    background-color: #f8f9fa !important;
+}
+
+/* Ensure buttons are visible */
+.modal-footer .btn-primary,
+.modal-footer .btn-success,
+.modal-footer .btn-info,
+.modal-footer .btn-danger {
+    color: #ffffff !important;
+}
+
+.modal-footer .btn-outline-secondary {
+    color: #6c757d !important;
+    border-color: #6c757d;
+    background-color: transparent;
+}
+
+.modal-footer .btn-outline-secondary:hover {
+    color: #ffffff !important;
+    background-color: #6c757d;
+    border-color: #6c757d;
+}
+</style>
 {% endblock %}
 
 {% block dashboard_content %}
@@ -538,7 +690,13 @@ window.openSubmissionModal = function(assignmentId, assignmentTitle, isResubmit)
         document.getElementById('submissionAssignmentId').value = assignmentId;
         document.getElementById('submissionAssignmentTitle').textContent = assignmentTitle;
         document.getElementById('submissionModalLabel').textContent = isResubmit ? 'Resubmit Assignment' : 'Submit Assignment';
-        document.getElementById('submissionSubmitBtn').textContent = isResubmit ? 'Resubmit' : 'Submit';
+        const submitBtn = document.getElementById('submissionSubmitBtn');
+        const submitBtnText = document.getElementById('submissionSubmitBtnText');
+        if (submitBtnText) {
+            submitBtnText.textContent = isResubmit ? 'Resubmit Assignment' : 'Submit Assignment';
+        } else {
+            submitBtn.textContent = isResubmit ? 'Resubmit' : 'Submit';
+        }
         
         // Clear any previous file input
         const fileInput = document.getElementById('submission_file');
@@ -618,8 +776,13 @@ window.handleAssignmentSubmission = function() {
         
         // Show loading state
         const submitBtn = document.getElementById('submissionSubmitBtn');
-        const originalText = submitBtn.textContent;
-        submitBtn.textContent = 'Submitting...';
+        const submitBtnText = document.getElementById('submissionSubmitBtnText');
+        const originalText = submitBtnText ? submitBtnText.textContent : submitBtn.textContent;
+        if (submitBtnText) {
+            submitBtnText.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Submitting...';
+        } else {
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Submitting...';
+        }
         submitBtn.disabled = true;
         
         // Submit the assignment
@@ -656,7 +819,12 @@ window.handleAssignmentSubmission = function() {
         })
         .finally(() => {
             // Reset button state
-            submitBtn.textContent = originalText;
+            const submitBtnText = document.getElementById('submissionSubmitBtnText');
+            if (submitBtnText) {
+                submitBtnText.textContent = originalText;
+            } else {
+                submitBtn.textContent = originalText;
+            }
             submitBtn.disabled = false;
         });
         
@@ -667,24 +835,6 @@ window.handleAssignmentSubmission = function() {
     }
 };
 
-// Test function to verify submission functionality
-window.testSubmissionFunction = function() {
-    console.log('Test submission function called');
-    alert('Test function is working! This means JavaScript is properly loaded.');
-    
-    // Test if we can find the modal elements
-    const modal = document.getElementById('submissionModal');
-    const form = document.getElementById('assignmentSubmissionForm');
-    const submitBtn = document.getElementById('submissionSubmitBtn');
-    
-    console.log('Test results:', {
-        modal: !!modal,
-        form: !!form,
-        submitBtn: !!submitBtn
-    });
-    
-    alert(`Modal: ${!!modal}\nForm: ${!!form}\nSubmit Button: ${!!submitBtn}`);
-};
 
 // Function to submit assignment directly from the table
 window.submitAssignmentFromTable = function(assignmentId, assignmentTitle, hasSubmission) {
@@ -1063,9 +1213,9 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                             <a href="{{ url_for('student.view_class', class_id=class.id) }}" class="btn btn-sm btn-student-class-primary">
                                 <i class="bi bi-box-arrow-up-right me-1"></i>Open
                             </a>
-                            <a href="{{ url_for('student.view_class_assignments', class_id=class.id) }}" class="btn btn-sm btn-student-class-secondary">
+                            <button type="button" class="btn btn-sm btn-student-class-secondary" onclick="openClassAssignmentsModal({{ class.id }}, '{{ class.name }}')">
                                 <i class="bi bi-journal-text me-1"></i>Assignments
-                            </a>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -1990,7 +2140,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
     {% elif section == 'assignments' %}
         <!-- Modern Assignments View -->
         <div class="student-assignments-header mb-4">
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
                 <div>
                     <h2 class="student-assignments-title mb-1">
                         <i class="bi bi-journal-text me-2"></i>My Assignments
@@ -1999,36 +2149,75 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                         <i class="bi bi-clipboard-check me-2"></i>Track and complete your coursework
                     </p>
                 </div>
-                <div class="student-assignments-filters d-flex gap-2 flex-wrap">
-                    <select id="statusFilter" class="form-select form-select-sm student-filter-select">
-                        <option value="">All Statuses</option>
-                        <option value="Un-Submitted">Un-Submitted</option>
-                        <option value="Submitted or Awaiting Grade">Awaiting Grade</option>
-                        <option value="Graded">Graded</option>
-                        <option value="Past Due">Past Due</option>
-                        <option value="Extended">Extended</option>
-                        <option value="Voided">Voided</option>
-                    </select>
-                    <select id="typeFilter" class="form-select form-select-sm student-filter-select">
-                        <option value="">All Types</option>
-                        <option value="pdf">PDF/Paper</option>
-                        <option value="quiz">Quiz</option>
-                        <option value="discussion">Discussion</option>
-                    </select>
-                    <select id="sortBy" class="form-select form-select-sm student-filter-select">
-                        <option value="due_date">Due Date</option>
-                        <option value="title">Title</option>
-                        <option value="class">Class</option>
-                        <option value="status">Status</option>
-                    </select>
+            </div>
+            
+            <!-- Filter Section -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body p-3">
+                    <form method="GET" action="{{ url_for('student.student_assignments') }}" id="assignmentFilterForm" class="row g-3 align-items-end">
+                        <div class="col-12 col-md-3">
+                            <label for="filterClass" class="form-label small fw-bold">
+                                <i class="bi bi-book me-1"></i>Filter by Class
+                            </label>
+                            <select name="class_id" id="filterClass" class="form-select form-select-sm">
+                                <option value="">All Classes</option>
+                                {% for class_obj in classes %}
+                                <option value="{{ class_obj.id }}" {% if filter_class_id == class_obj.id %}selected{% endif %}>
+                                    {{ class_obj.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-2">
+                            <label for="filterStatus" class="form-label small fw-bold">
+                                <i class="bi bi-funnel me-1"></i>Status
+                            </label>
+                            <select name="status" id="filterStatus" class="form-select form-select-sm">
+                                <option value="">All Statuses</option>
+                                <option value="Active" {% if filter_status == 'Active' %}selected{% endif %}>Active</option>
+                                <option value="Inactive" {% if filter_status == 'Inactive' %}selected{% endif %}>Inactive</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-2">
+                            <label for="filterStartDate" class="form-label small fw-bold">
+                                <i class="bi bi-calendar3 me-1"></i>Start Date
+                            </label>
+                            <input type="date" name="start_date" id="filterStartDate" class="form-control form-control-sm" value="{{ filter_start_date }}">
+                        </div>
+                        <div class="col-12 col-md-2">
+                            <label for="filterEndDate" class="form-label small fw-bold">
+                                <i class="bi bi-calendar3 me-1"></i>End Date
+                            </label>
+                            <input type="date" name="end_date" id="filterEndDate" class="form-control form-control-sm" value="{{ filter_end_date }}">
+                        </div>
+                        <div class="col-12 col-md-3">
+                            <button type="submit" class="btn btn-primary btn-sm w-100">
+                                <i class="bi bi-search me-1"></i>Apply Filters
+                            </button>
+                            <a href="{{ url_for('student.student_assignments') }}" class="btn btn-outline-secondary btn-sm w-100 mt-2">
+                                <i class="bi bi-x-circle me-1"></i>Clear Filters
+                            </a>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
 
-        <!-- Assignments Grid -->
-        <div class="row g-3" id="assignmentsTable">
-            {% if assignments_with_status %}
-                {% for assignment, submission, student_status in assignments_with_status %}
+        <!-- Active Assignments Section -->
+        {% if active_assignments %}
+        <div class="mb-5">
+            <div class="d-flex align-items-center mb-3">
+                <div class="flex-grow-1">
+                    <h3 class="mb-0">
+                        <i class="bi bi-check-circle-fill text-success me-2"></i>Active Assignments
+                    </h3>
+                    <small class="text-muted">{{ active_assignments|length }} assignment(s)</small>
+                </div>
+            </div>
+            <div class="border-top border-success border-3 pt-3"></div>
+            
+            <div class="row g-3 mt-3" id="activeAssignmentsTable">
+                {% for assignment, submission, student_status in active_assignments %}
                 <div class="col-12 col-md-6 col-lg-4 assignment-card-wrapper" 
                      data-status="{{ student_status }}" 
                      data-type="{{ assignment.assignment_type or 'pdf' }}" 
@@ -2164,16 +2353,180 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                     </div>
                 </div>
                 {% endfor %}
-            {% else %}
-                <div class="col-12">
-                    <div class="student-assignments-empty">
-                        <i class="bi bi-inbox"></i>
-                        <h4>No Assignments Yet</h4>
-                        <p>You don't have any assignments at this time. Check back later!</p>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Inactive Assignments Section -->
+        {% if inactive_assignments %}
+        <div class="mb-5">
+            <div class="d-flex align-items-center mb-3">
+                <div class="flex-grow-1">
+                    <h3 class="mb-0">
+                        <i class="bi bi-pause-circle-fill text-secondary me-2"></i>Inactive Assignments
+                    </h3>
+                    <small class="text-muted">{{ inactive_assignments|length }} assignment(s)</small>
+                </div>
+            </div>
+            <div class="border-top border-secondary border-3 pt-3"></div>
+            
+            <div class="row g-3 mt-3" id="inactiveAssignmentsTable">
+                {% for assignment, submission, student_status in inactive_assignments %}
+                <div class="col-12 col-md-6 col-lg-4 assignment-card-wrapper" 
+                     data-status="{{ student_status }}" 
+                     data-type="{{ assignment.assignment_type or 'pdf' }}" 
+                     data-due="{{ assignment.due_date.strftime('%Y-%m-%d') if assignment.due_date else '9999-12-31' }}"
+                     data-title="{{ assignment.title }}"
+                     data-class="{{ assignment.class_info.name if assignment.class_info else 'Unknown' }}"
+                     style="opacity: 0.7;">
+                    <div class="student-assignment-card">
+                        <!-- Card Header -->
+                        <div class="student-assignment-card-header">
+                            <div class="student-assignment-type-icon
+                                {% if assignment.assignment_type == 'quiz' %}type-quiz
+                                {% elif assignment.assignment_type == 'discussion' %}type-discussion
+                                {% else %}type-pdf{% endif %}">
+                                {% if assignment.assignment_type == 'quiz' %}
+                                    <i class="bi bi-question-circle-fill"></i>
+                                {% elif assignment.assignment_type == 'discussion' %}
+                                    <i class="bi bi-chat-dots-fill"></i>
+                                {% else %}
+                                    <i class="bi bi-file-earmark-text-fill"></i>
+                                {% endif %}
+                            </div>
+                            <div class="student-assignment-status-badge">
+                                {% set grade_obj = grades.get(assignment.id) %}
+                                {% set score = none %}
+                                {% if grade_obj and grade_obj.grade_data %}
+                                    {% set grade_data_dict = grade_obj.grade_data|from_json %}
+                                    {% set score = grade_data_dict.get('score') if grade_data_dict else none %}
+                                {% endif %}
+                                
+                                {# Check if student has an active extension #}
+                                {% set has_extension = student_status == 'Extended' %}
+                                
+                                {% if student_status == 'Voided' %}
+                                    <span class="badge bg-secondary">Voided</span>
+                                {% elif has_extension and not score %}
+                                    {# Show Extension badge if extension granted and not yet graded #}
+                                    <span class="badge badge-extension">
+                                        <i class="bi bi-clock-history me-1"></i>Extension
+                                    </span>
+                                {% elif score is not none and score > 0 %}
+                                    {# Show letter grade if graded with score > 0 #}
+                                    {% if score >= 97 %}
+                                        <span class="badge grade-badge grade-a-plus">A+</span>
+                                    {% elif score >= 93 %}
+                                        <span class="badge grade-badge grade-a">A</span>
+                                    {% elif score >= 90 %}
+                                        <span class="badge grade-badge grade-a-minus">A-</span>
+                                    {% elif score >= 87 %}
+                                        <span class="badge grade-badge grade-b-plus">B+</span>
+                                    {% elif score >= 83 %}
+                                        <span class="badge grade-badge grade-b">B</span>
+                                    {% elif score >= 80 %}
+                                        <span class="badge grade-badge grade-b-minus">B-</span>
+                                    {% elif score >= 77 %}
+                                        <span class="badge grade-badge grade-c-plus">C+</span>
+                                    {% elif score >= 73 %}
+                                        <span class="badge grade-badge grade-c">C</span>
+                                    {% elif score >= 70 %}
+                                        <span class="badge grade-badge grade-c-minus">C-</span>
+                                    {% elif score >= 67 %}
+                                        <span class="badge grade-badge grade-d-plus">D+</span>
+                                    {% elif score >= 63 %}
+                                        <span class="badge grade-badge grade-d">D</span>
+                                    {% elif score >= 60 %}
+                                        <span class="badge grade-badge grade-d-minus">D-</span>
+                                    {% else %}
+                                        <span class="badge grade-badge grade-f">F</span>
+                                    {% endif %}
+                                {% elif score is not none and score == 0 %}
+                                    {# Show Overdue if graded with 0 #}
+                                    <span class="badge bg-danger">Overdue</span>
+                                {% elif student_status == 'completed' %}
+                                    {# Fallback: No grade data but marked completed #}
+                                    <span class="badge bg-danger">Overdue</span>
+                                {% elif student_status == 'Submitted or Awaiting Grade' %}
+                                    <span class="badge bg-info">Awaiting Grade</span>
+                                {% elif student_status == 'Past Due' %}
+                                    <span class="badge bg-danger">Overdue</span>
+                                {% elif student_status == 'Extended' %}
+                                    <span class="badge bg-warning">Extended</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Inactive</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Card Body -->
+                        <div class="student-assignment-card-body">
+                            <h5 class="student-assignment-card-title">{{ assignment.title }}</h5>
+                            <p class="student-assignment-card-class">
+                                <i class="bi bi-book me-1"></i>{{ assignment.class_info.name if assignment.class_info else 'Unknown Class' }}
+                            </p>
+                            <div class="student-assignment-card-meta">
+                                <span class="meta-item">
+                                    <i class="bi bi-calendar3 me-1"></i>
+                                    Due: {{ assignment.due_date.strftime('%b %d, %Y') if assignment.due_date else 'No due date' }}
+                                </span>
+                                {% if assignment.quarter %}
+                                <span class="meta-item">
+                                    <i class="bi bi-calendar-range me-1"></i>Q{{ assignment.quarter }}
+                                </span>
+                                {% endif %}
+                            </div>
+                            {% if assignment.attachment_filename %}
+                            <div class="student-assignment-attachment">
+                                <i class="bi bi-paperclip me-1"></i>
+                                <a href="{{ url_for('student.download_assignment_file', assignment_id=assignment.id) }}" class="text-decoration-none">
+                                    {{ assignment.attachment_original_filename or assignment.attachment_filename }}
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Card Footer -->
+                        <div class="student-assignment-card-footer">
+                            <button type="button" class="btn btn-sm btn-student-view" onclick="viewAssignment({{ assignment.id }}, '{{ assignment.title }}', '{{ assignment.description or '' }}', '{{ assignment.due_date.strftime('%Y-%m-%d') if assignment.due_date else 'No due date' }}', '{{ assignment.quarter or 'N/A' }}', '{{ assignment.attachment_filename or '' }}', {{ 'true' if submission else 'false' }}, {{ 'true' if grades.get(assignment.id) else 'false' }}, '{{ assignment.assignment_type }}')">
+                                <i class="bi bi-eye me-1"></i>View
+                            </button>
+                            {% if assignment.assignment_type == 'quiz' %}
+                                <button type="button" class="btn btn-sm btn-student-action" disabled style="opacity: 0.5; cursor: not-allowed;" title="Assignment is inactive">
+                                    <i class="bi bi-play-fill me-1"></i>Take Quiz
+                                </button>
+                            {% elif assignment.assignment_type == 'discussion' %}
+                                <button type="button" class="btn btn-sm btn-student-action" disabled style="opacity: 0.5; cursor: not-allowed;" title="Assignment is inactive">
+                                    <i class="bi bi-chat-fill me-1"></i>Discuss
+                                </button>
+                            {% else %}
+                                <button type="button" class="btn btn-sm btn-student-action" disabled style="opacity: 0.5; cursor: not-allowed;" title="Assignment is inactive - submission closed">
+                                    <i class="bi bi-upload me-1"></i>Submit
+                                </button>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
-            {% endif %}
+                {% endfor %}
+            </div>
         </div>
+        {% endif %}
+        
+        <!-- Empty State -->
+        {% if not active_assignments and not inactive_assignments %}
+        <div class="row g-3">
+            <div class="col-12">
+                <div class="student-assignments-empty">
+                    <i class="bi bi-inbox"></i>
+                    <h4>No Assignments Found</h4>
+                    <p>No assignments match your current filters. Try adjusting your search criteria.</p>
+                    <a href="{{ url_for('student.student_assignments') }}" class="btn btn-primary mt-2">
+                        <i class="bi bi-arrow-clockwise me-1"></i>Clear Filters
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
         
         <!-- Assignment Modal Functions (moved outside conditional for global access) -->
         <script>
@@ -3961,51 +4314,332 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
 
     <!-- Assignment Submission Modal -->
     <div class="modal fade" id="submissionModal" tabindex="-1" aria-labelledby="submissionModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="submissionModalLabel">Submit Assignment</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <!-- Enhanced Header -->
+                <div class="modal-header text-white border-0" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <div class="d-flex align-items-center w-100">
+                        <div class="me-3">
+                            <div class="bg-white bg-opacity-20 rounded-circle p-3">
+                                <i class="bi bi-cloud-upload-fill fs-2"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h4 class="modal-title mb-1" id="submissionModalLabel">Submit Assignment</h4>
+                            <p class="mb-0 opacity-75 small" id="submissionAssignmentTitle">Assignment Title</p>
+                        </div>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
                 </div>
-                <div class="modal-body">
+                
+                <div class="modal-body p-4" style="background-color: #ffffff; color: #212529;">
                     <form id="assignmentSubmissionForm" enctype="multipart/form-data">
                         <input type="hidden" id="submissionAssignmentId" name="assignment_id">
                         
-                        <div class="mb-3">
-                            <h6 id="submissionAssignmentTitle" class="text-primary"></h6>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="submission_file" class="form-label">
-                                <i class="bi bi-file-earmark-arrow-up me-1"></i>Upload Assignment File
+                        <!-- File Upload Section -->
+                        <div class="mb-4">
+                            <label for="submission_file" class="form-label fw-bold mb-3">
+                                <i class="bi bi-file-earmark-arrow-up me-2 text-primary"></i>Upload Your Assignment File
                             </label>
-                            <input type="file" class="form-control" id="submission_file" name="submission_file" required>
-                            <div class="form-text">
-                                Supported formats: PDF, DOC, DOCX, TXT, PNG, JPG, JPEG
+                            <div class="file-upload-area border-2 border-dashed rounded p-4 text-center" 
+                                 style="border-color: #dee2e6; background-color: #f8f9fa; transition: all 0.3s; color: #212529;"
+                                 onmouseover="this.style.borderColor='#667eea'; this.style.backgroundColor='#f0f4ff';"
+                                 onmouseout="this.style.borderColor='#dee2e6'; this.style.backgroundColor='#f8f9fa';">
+                                <i class="bi bi-cloud-upload display-4 mb-3" style="color: #6c757d;"></i>
+                                <p class="mb-2 fw-semibold" style="color: #212529;">Click to browse or drag and drop</p>
+                                <p class="small mb-3" style="color: #6c757d;">Select your assignment file to upload</p>
+                                <input type="file" 
+                                       class="form-control d-none" 
+                                       id="submission_file" 
+                                       name="submission_file" 
+                                       required
+                                       onchange="updateFileDisplay(this)">
+                                <button type="button" 
+                                        class="btn btn-outline-primary" 
+                                        onclick="document.getElementById('submission_file').click()">
+                                    <i class="bi bi-folder2-open me-2"></i>Choose File
+                                </button>
+                                <div id="fileDisplay" class="mt-3" style="display: none;">
+                                    <div class="alert alert-info d-flex align-items-center" style="background-color: #d1ecf1; border-color: #bee5eb;">
+                                        <i class="bi bi-file-earmark-check-fill me-2 fs-5" style="color: #0c5460;"></i>
+                                        <div class="flex-grow-1">
+                                            <strong id="fileName" style="color: #0c5460;"></strong>
+                                            <br>
+                                            <small id="fileSize" style="color: #0c5460; opacity: 0.85;"></small>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearFileSelection()">
+                                            <i class="bi bi-x"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-text mt-2">
+                                <i class="bi bi-info-circle me-1"></i>
+                                <strong>Supported formats:</strong> PDF, DOC, DOCX, TXT, PNG, JPG, JPEG, GIF, MD
                             </div>
                         </div>
                         
+                        <!-- Additional Notes Section -->
                         <div class="mb-3">
-                            <label for="submission_notes" class="form-label">
-                                <i class="bi bi-chat-text me-1"></i>Additional Notes (Optional)
+                            <label for="submission_notes" class="form-label fw-bold">
+                                <i class="bi bi-chat-left-text me-2 text-primary"></i>Additional Notes <span class="text-muted fw-normal">(Optional)</span>
                             </label>
-                            <textarea class="form-control" id="submission_notes" name="submission_notes" rows="3" 
-                                      placeholder="Add any additional notes or comments about your submission..."></textarea>
+                            <textarea class="form-control" 
+                                      id="submission_notes" 
+                                      name="submission_notes" 
+                                      rows="4" 
+                                      placeholder="Add any additional notes, comments, or special instructions about your submission..."
+                                      style="resize: vertical;"></textarea>
+                            <div class="form-text">
+                                <i class="bi bi-lightbulb me-1"></i>
+                                You can use this field to provide context, explain your approach, or note any special circumstances.
+                            </div>
+                        </div>
+                        
+                        <!-- Submission Guidelines -->
+                        <div class="alert alert-light border-start border-4 border-info mt-4">
+                            <div class="d-flex align-items-start">
+                                <i class="bi bi-exclamation-circle-fill text-info me-2 fs-5"></i>
+                                <div>
+                                    <h6 class="alert-heading mb-2">Before Submitting</h6>
+                                    <ul class="mb-0 small">
+                                        <li>Make sure your file is complete and ready for submission</li>
+                                        <li>Double-check that you've selected the correct file</li>
+                                        <li>You can resubmit if needed, but previous submissions will be replaced</li>
+                                    </ul>
+                                </div>
+                            </div>
                         </div>
                     </form>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-info me-2" onclick="testSubmissionFunction()">
-                        <i class="bi bi-bug me-1"></i>Test Function
+                
+                <div class="modal-footer border-0 bg-light">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i>Cancel
                     </button>
-                    <button type="button" class="btn btn-primary" id="submissionSubmitBtn" onclick="handleAssignmentSubmission()">
-                        <i class="bi bi-upload me-1"></i>Submit
+                    <button type="button" class="btn btn-primary btn-lg px-4" id="submissionSubmitBtn" onclick="handleAssignmentSubmission()">
+                        <i class="bi bi-cloud-upload me-2"></i><span id="submissionSubmitBtnText">Submit Assignment</span>
                     </button>
                 </div>
             </div>
         </div>
     </div>
+    
+    <script>
+    // File display functions
+    function updateFileDisplay(input) {
+        const fileDisplay = document.getElementById('fileDisplay');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        
+        if (input.files && input.files[0]) {
+            const file = input.files[0];
+            fileName.textContent = file.name;
+            
+            // Format file size
+            const sizeInBytes = file.size;
+            let sizeFormatted;
+            if (sizeInBytes < 1024) {
+                sizeFormatted = sizeInBytes + ' bytes';
+            } else if (sizeInBytes < 1048576) {
+                sizeFormatted = (sizeInBytes / 1024).toFixed(2) + ' KB';
+            } else {
+                sizeFormatted = (sizeInBytes / 1048576).toFixed(2) + ' MB';
+            }
+            fileSize.textContent = sizeFormatted;
+            
+            fileDisplay.style.display = 'block';
+        }
+    }
+    
+    function clearFileSelection() {
+        const fileInput = document.getElementById('submission_file');
+        const fileDisplay = document.getElementById('fileDisplay');
+        
+        fileInput.value = '';
+        fileDisplay.style.display = 'none';
+    }
+    
+    // Class Assignments Modal Functions
+    function closeClassAssignmentsModal() {
+        const modalElement = document.getElementById('classAssignmentsModal');
+        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+            const modal = bootstrap.Modal.getInstance(modalElement);
+            if (modal) {
+                modal.hide();
+            }
+        } else {
+            modalElement.style.display = 'none';
+            modalElement.classList.remove('show');
+        }
+    }
+    
+    function openClassAssignmentsModal(classId, className) {
+        const modalElement = document.getElementById('classAssignmentsModal');
+        const modalTitle = document.getElementById('classAssignmentsModalTitle');
+        const assignmentsContainer = document.getElementById('classAssignmentsList');
+        
+        // Set class name
+        modalTitle.textContent = `Assignments - ${className}`;
+        
+        // Show loading state
+        assignmentsContainer.innerHTML = `
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-3 text-muted">Loading assignments...</p>
+            </div>
+        `;
+        
+        // Show modal
+        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+            const modal = new bootstrap.Modal(modalElement);
+            modal.show();
+        } else {
+            modalElement.style.display = 'block';
+            modalElement.classList.add('show');
+        }
+        
+        // Fetch assignments
+        fetch(`/student/api/class/${classId}/assignments`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    assignmentsContainer.innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle me-2"></i>${data.error}
+                        </div>
+                    `;
+                    return;
+                }
+                
+                if (!data.assignments || data.assignments.length === 0) {
+                    assignmentsContainer.innerHTML = `
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>No assignments have been posted for this class yet.
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Group assignments by status
+                const activeAssignments = data.assignments.filter(a => a.is_active);
+                const inactiveAssignments = data.assignments.filter(a => !a.is_active);
+                
+                let html = '';
+                
+                // Active Assignments
+                if (activeAssignments.length > 0) {
+                    html += `
+                        <div class="mb-4">
+                            <h5 class="text-success mb-3">
+                                <i class="bi bi-check-circle me-2"></i>Active Assignments
+                            </h5>
+                            <div class="row g-3">
+                    `;
+                    
+                    activeAssignments.forEach(assignment => {
+                        html += createAssignmentCard(assignment);
+                    });
+                    
+                    html += `
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                // Inactive Assignments
+                if (inactiveAssignments.length > 0) {
+                    html += `
+                        <div class="mb-4">
+                            <h5 class="text-muted mb-3">
+                                <i class="bi bi-x-circle me-2"></i>Inactive Assignments
+                            </h5>
+                            <div class="row g-3">
+                    `;
+                    
+                    inactiveAssignments.forEach(assignment => {
+                        html += createAssignmentCard(assignment, true);
+                    });
+                    
+                    html += `
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                assignmentsContainer.innerHTML = html;
+            })
+            .catch(error => {
+                console.error('Error fetching assignments:', error);
+                assignmentsContainer.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Error loading assignments. Please try again.
+                    </div>
+                `;
+            });
+    }
+    
+    function createAssignmentCard(assignment, isInactive = false) {
+        const inactiveClass = isInactive ? 'opacity-75' : '';
+        const statusBadgeClass = `badge bg-${assignment.status_class}`;
+        
+        let daysInfo = '';
+        if (assignment.days_remaining !== null && assignment.days_remaining !== undefined) {
+            daysInfo = `<span class="badge bg-success ms-2">${assignment.days_remaining} days remaining</span>`;
+        } else if (assignment.days_overdue !== null && assignment.days_overdue !== undefined) {
+            daysInfo = `<span class="badge bg-danger ms-2">${assignment.days_overdue} days overdue</span>`;
+        }
+        
+        let gradeInfo = '';
+        if (assignment.has_grade) {
+            gradeInfo = `<div class="mt-2"><span class="badge bg-success">Graded: ${assignment.grade_percentage || assignment.grade_score}%</span></div>`;
+        }
+        
+        return `
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100 shadow-sm ${inactiveClass}">
+                    <div class="card-body">
+                        <h6 class="card-title">${assignment.title}</h6>
+                        <p class="card-text small text-muted">${assignment.description || 'No description provided.'}</p>
+                        
+                        <div class="mb-2">
+                            <strong>Due:</strong> ${assignment.due_date_formatted} ${daysInfo}
+                        </div>
+                        
+                        <div class="mb-2">
+                            <strong>Quarter:</strong> Q${assignment.quarter || 'N/A'}
+                        </div>
+                        
+                        ${assignment.has_attachment ? `
+                            <div class="mb-2">
+                                <a href="/student/download-assignment-file/${assignment.id}" 
+                                   class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-download me-1"></i>Download
+                                </a>
+                            </div>
+                        ` : ''}
+                        
+                        <div class="mt-2">
+                            <span class="${statusBadgeClass}">${assignment.submission_status}</span>
+                        </div>
+                        
+                        ${gradeInfo}
+                        
+                        <div class="mt-3">
+                            <button type="button" 
+                                    class="btn btn-sm btn-primary ${isInactive ? 'disabled' : ''}" 
+                                    ${isInactive ? 'disabled' : `onclick="closeClassAssignmentsModal(); window.openAssignmentViewModal(${assignment.id}, '${assignment.title.replace(/'/g, "\\'")}', '${(assignment.description || '').replace(/'/g, "\\'")}', '${assignment.due_date || ''}', '${assignment.quarter || 'N/A'}', '${assignment.attachment_filename || ''}', ${assignment.has_submission}, ${assignment.has_grade}, '${assignment.assignment_type}')"`}>
+                                <i class="bi bi-eye me-1"></i>View
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    </script>
 
     <!-- Assignment View Modal -->
     <div class="modal fade" id="assignmentViewModal" tabindex="-1" aria-labelledby="assignmentViewModalLabel" aria-hidden="true">
@@ -4027,7 +4661,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                     </div>
                 </div>
                 
-                <div class="modal-body p-5">
+                <div class="modal-body p-5" style="background-color: #ffffff; color: #212529;">
                     <!-- Assignment Status Banner -->
                     <div class="row mb-4">
                         <div class="col-12">
@@ -4430,5 +5064,41 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
     }
 
     </script>
+    
+    <!-- Class Assignments Modal -->
+    <div class="modal fade" id="classAssignmentsModal" tabindex="-1" aria-labelledby="classAssignmentsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-fullscreen-lg-down" style="max-width: 90vw; width: 90vw;">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header text-white border-0" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <div class="d-flex align-items-center w-100">
+                        <div class="me-3">
+                            <div class="bg-white bg-opacity-20 rounded-circle p-3">
+                                <i class="bi bi-journal-text fs-2"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h4 class="modal-title mb-1" id="classAssignmentsModalLabel">
+                                <span id="classAssignmentsModalTitle">Class Assignments</span>
+                            </h4>
+                            <p class="mb-0 opacity-75 small">View all assignments for this class</p>
+                        </div>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                </div>
+                
+                <div class="modal-body p-4" style="background-color: #ffffff; color: #212529; max-height: 70vh; overflow-y: auto;">
+                    <div id="classAssignmentsList">
+                        <!-- Assignments will be loaded here -->
+                    </div>
+                </div>
+                
+                <div class="modal-footer bg-light border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i>Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %} 

@@ -214,6 +214,11 @@
                                 <i class="bi bi-pencil-square"></i>
                                 <span>Edit</span>
                             </a>
+                            <a href="{{ url_for('teacher.assignments.view_assignment_submissions', assignment_id=assignment.id) }}" 
+                               class="btn btn-compact btn-compact-submissions">
+                                <i class="bi bi-file-earmark-arrow-up"></i>
+                                <span>Submissions</span>
+                            </a>
                             <a href="{{ url_for('management.grade_assignment', assignment_id=assignment.id) }}" 
                                class="btn btn-compact btn-compact-grade">
                                 <i class="bi bi-check-circle-fill"></i>
@@ -224,6 +229,11 @@
                                class="btn btn-compact btn-compact-edit">
                                 <i class="bi bi-pencil-square"></i>
                                 <span>Edit</span>
+                            </a>
+                            <a href="{{ url_for('teacher.assignments.view_assignment_submissions', assignment_id=assignment.id) }}" 
+                               class="btn btn-compact btn-compact-submissions">
+                                <i class="bi bi-file-earmark-arrow-up"></i>
+                                <span>Submissions</span>
                             </a>
                             <a href="{{ url_for('teacher.grading.grade_assignment', assignment_id=assignment.id) }}" 
                                class="btn btn-compact btn-compact-grade">

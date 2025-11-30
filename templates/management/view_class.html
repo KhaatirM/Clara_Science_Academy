@@ -408,6 +408,9 @@
                           <a href="{{ url_for('management.view_assignment', assignment_id=assignment.id) }}" class="btn-class-action-modern btn-sm">
                             <i class="bi bi-eye me-1"></i>View
                           </a>
+                          <a href="{{ url_for('teacher.assignments.view_assignment_submissions', assignment_id=assignment.id) }}" class="btn-class-action-modern btn-sm btn-success">
+                            <i class="bi bi-file-earmark-arrow-up me-1"></i>Submissions
+                          </a>
                           <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" class="btn-class-action-modern btn-sm">
                             <i class="bi bi-pencil me-1"></i>Edit
                           </a>

@@ -565,6 +565,171 @@ def change_assignment_status(assignment_id):
     
     return redirect(url_for('teacher.dashboard.my_assignments'))
 
+@bp.route('/assignment/<int:assignment_id>/submissions')
+@login_required
+@teacher_required
+def view_assignment_submissions(assignment_id):
+    """View all submissions for an assignment"""
+    from models import Submission, Enrollment, Student, Grade
+    from datetime import datetime
+    
+    assignment = Assignment.query.get_or_404(assignment_id)
+    class_obj = assignment.class_info
+    
+    if not class_obj:
+        flash("Assignment class information not found.", "danger")
+        return redirect(url_for('teacher.dashboard.my_assignments'))
+    
+    if not is_authorized_for_class(class_obj):
+        flash("You are not authorized to view submissions for this assignment.", "danger")
+        return redirect(url_for('teacher.dashboard.my_assignments'))
+    
+    # Get all enrolled students
+    enrollments = Enrollment.query.filter_by(
+        class_id=class_obj.id,
+        is_active=True
+    ).all()
+    
+    student_ids = [e.student_id for e in enrollments if e.student_id]
+    students = Student.query.filter(Student.id.in_(student_ids)).order_by(
+        Student.last_name, Student.first_name
+    ).all()
+    
+    # Get all submissions for this assignment
+    submissions = Submission.query.filter_by(assignment_id=assignment_id).all()
+    submissions_dict = {sub.student_id: sub for sub in submissions}
+    
+    # Get all grades for this assignment
+    grades = Grade.query.filter_by(assignment_id=assignment_id).all()
+    grades_dict = {g.student_id: g for g in grades}
+    
+    # Get extensions
+    extensions = AssignmentExtension.query.filter_by(
+        assignment_id=assignment_id,
+        is_active=True
+    ).all()
+    extensions_dict = {ext.student_id: ext for ext in extensions}
+    
+    # Calculate statistics
+    total_students = len(students)
+    submitted_count = len(submissions)
+    graded_count = len([g for g in grades if not g.is_voided])
+    late_count = 0
+    on_time_count = 0
+    
+    for submission in submissions:
+        due_date = assignment.due_date
+        if submission.student_id in extensions_dict:
+            due_date = extensions_dict[submission.student_id].extended_due_date
+        
+        if submission.submitted_at > due_date:
+            late_count += 1
+        else:
+            on_time_count += 1
+    
+    # Prepare student data with submission status
+    student_data = []
+    for student in students:
+        submission = submissions_dict.get(student.id)
+        grade = grades_dict.get(student.id)
+        
+        # Determine submission status
+        if submission:
+            due_date = assignment.due_date
+            if student.id in extensions_dict:
+                due_date = extensions_dict[student.id].extended_due_date
+            
+            is_late = submission.submitted_at > due_date
+            status = 'late' if is_late else 'on_time'
+            submission_type = submission.submission_type or 'online'
+        else:
+            status = 'not_submitted'
+            submission_type = None
+        
+        # Get grade info
+        grade_info = None
+        if grade and not grade.is_voided:
+            try:
+                import json
+                grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
+                grade_info = {
+                    'score': grade_data.get('score', 0),
+                    'percentage': grade_data.get('percentage', 0),
+                    'comment': grade_data.get('comment', '') or grade_data.get('feedback', ''),
+                    'graded_at': grade.graded_at
+                }
+            except (json.JSONDecodeError, TypeError):
+                grade_info = {'score': 0, 'percentage': 0, 'comment': '', 'graded_at': None}
+        
+        student_data.append({
+            'student': student,
+            'submission': submission,
+            'grade': grade_info,
+            'status': status,
+            'submission_type': submission_type,
+            'extension': extensions_dict.get(student.id)
+        })
+    
+    # Sort by status: submitted first, then not submitted
+    student_data.sort(key=lambda x: (
+        0 if x['status'] != 'not_submitted' else 1,
+        x['student'].last_name,
+        x['student'].first_name
+    ))
+    
+    return render_template('teachers/teacher_view_submissions.html',
+                         assignment=assignment,
+                         class_obj=class_obj,
+                         students=student_data,
+                         total_students=total_students,
+                         submitted_count=submitted_count,
+                         graded_count=graded_count,
+                         late_count=late_count,
+                         on_time_count=on_time_count,
+                         submission_rate=round((submitted_count / total_students * 100) if total_students > 0 else 0, 1))
+
+@bp.route('/assignment/<int:assignment_id>/submission/<int:submission_id>/download')
+@login_required
+@teacher_required
+def download_submission(assignment_id, submission_id):
+    """Download a student submission file"""
+    from flask import send_file
+    from models import Submission
+    import os
+    
+    assignment = Assignment.query.get_or_404(assignment_id)
+    submission = Submission.query.get_or_404(submission_id)
+    
+    # Verify submission belongs to assignment
+    if submission.assignment_id != assignment_id:
+        flash("Invalid submission.", "danger")
+        return redirect(url_for('teacher.assignments.view_assignment_submissions', assignment_id=assignment_id))
+    
+    # Check authorization
+    class_obj = assignment.class_info
+    if not class_obj or not is_authorized_for_class(class_obj):
+        flash("You are not authorized to download this submission.", "danger")
+        return redirect(url_for('teacher.dashboard.my_assignments'))
+    
+    # Get file path
+    if not submission.file_path:
+        flash("No file found for this submission.", "warning")
+        return redirect(url_for('teacher.assignments.view_assignment_submissions', assignment_id=assignment_id))
+    
+    file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], submission.file_path)
+    
+    if not os.path.exists(file_path):
+        flash("Submission file not found on server.", "warning")
+        return redirect(url_for('teacher.assignments.view_assignment_submissions', assignment_id=assignment_id))
+    
+    # Get student name for filename
+    student = submission.student
+    student_name = f"{student.last_name}_{student.first_name}" if student else "student"
+    file_ext = os.path.splitext(submission.file_path)[1]
+    download_filename = f"{assignment.title}_{student_name}{file_ext}"
+    
+    return send_file(file_path, as_attachment=True, download_name=download_filename)
+
 @bp.route('/assignment/remove/<int:assignment_id>', methods=['POST'])
 @login_required
 @teacher_required

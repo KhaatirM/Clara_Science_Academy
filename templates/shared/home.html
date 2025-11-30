@@ -687,13 +687,54 @@
                     </div>
                     <div>
                         <h6 class="updates-intro-title mb-2">
-                            <i class="fas fa-calendar-alt me-2"></i>Latest System Update - November 23, 2025
+                            <i class="fas fa-calendar-alt me-2"></i>Latest System Update - November 29, 2025
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>Major UI/UX Enhancement Release!</strong> Enhanced assignment creation experience, redesigned student settings, improved error handling, fixed critical bugs, and comprehensive design improvements across the platform!</p>
+                        <p class="updates-intro-text mb-0"><strong>Student Experience Enhancement Release!</strong> Improved modal visibility, enhanced class management with popup assignments view, fixed date comparison errors, and comprehensive student dashboard improvements!</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- November 29, 2025 - Student Experience Enhancements -->
+                    <div class="update-section mb-4">
+                        <h6 class="text-primary mb-3" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+                            <i class="fas fa-star me-2"></i>⭐ Student Experience Enhancements - November 29, 2025
+                        </h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Improved Modal Visibility:</strong> Fixed modal backdrop visibility issues by reducing opacity from 40% to 25% and ensuring all text has proper contrast. Modal bodies now have explicit white backgrounds with dark text for maximum readability. All form controls, alerts, and interactive elements are now clearly visible
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Class Assignments Modal Popup:</strong> Created a beautiful modal popup for viewing class assignments directly from the Classes tab. The "Assignments" button now opens a responsive modal showing all assignments for that class, grouped by Active and Inactive status, with submission status, grades, and quick view options
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Enhanced Student Classes Tab:</strong> Fixed the "Open" button to properly navigate to full class pages with announcements, notifications, student information, and comprehensive class details. The "Assignments" button now opens a convenient popup modal instead of navigating away
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Class Assignments API Endpoint:</strong> Added new API endpoint `/student/api/class/<class_id>/assignments` that returns JSON data for assignments, including submission status, grades, due dates, and days remaining/overdue. Enables dynamic loading of assignments in the modal
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Fixed Date Comparison Errors:</strong> Resolved "unsupported operand type(s) for -: 'datetime.date' and 'datetime.datetime'" errors by ensuring consistent date type handling throughout the application. All date comparisons now work correctly
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Assignment Status Safety Checks:</strong> Added comprehensive null checks for assignment relationships to prevent "NoneType object has no attribute 'status'" errors. All grade and assignment status checks now safely handle missing or deleted assignments
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Student Assignment Filtering:</strong> Enhanced student assignments tab with improved filtering by class, date range, and active/inactive status. Assignments are now clearly grouped into "Active Assignments" and "Inactive Assignments" sections with visible dividers
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Improved Submission Modal:</strong> Redesigned the assignment submission popup with modern gradient header, drag-and-drop file upload zone, file preview display, and comprehensive submission guidelines. Removed test function buttons for a cleaner interface
+                            </li>
+                        </ul>
+                    </div>
+
                     <!-- November 23, 2025 - Major Updates & Enhancements -->
                     <div class="update-section mb-4">
                         <h6 class="text-primary mb-3" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
@@ -829,6 +870,47 @@
                             <li class="mb-2">
                                 <i class="fas fa-check-circle text-success me-2"></i>
                                 <strong>GPA Calculation Accuracy:</strong> Updated GPA calculations across all views to properly exclude both voided assignments and voided individual grades
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Latest Updates - November 28, 2025 -->
+                    <div class="update-section mb-4">
+                        <h6 class="text-primary mb-3" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+                            <i class="fas fa-star me-2"></i>⭐ Latest Updates & Enhancements - November 28, 2025
+                        </h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Assignment Deletion Fix:</strong> Resolved database error when deleting assignments that prevented removal due to missing deadline_reminder column. Assignments can now be deleted successfully with proper cleanup of related reminder records
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Attendance Records View Fix:</strong> Fixed 500 Internal Server Error when teachers tried to view attendance records. Corrected template variable mismatch (class_obj vs class_item) to ensure proper data display
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Take Attendance Page Enhancements:</strong> Added visual confirmation messages when attendance is saved successfully. Fixed real-time statistics updates (Present, Late, Absent counts) that were previously stuck at zero. Improved form field naming consistency and added proper error handling
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Interactive PDF/Document Viewer:</strong> Added Blackboard-style document viewer for PDF/Paper assignments on the assignment view page. Features include zoom controls, page navigation, fullscreen mode, download, and print options. Viewer fills the container properly with responsive design for both desktop and mobile devices
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Assignment View Statistics:</strong> Enhanced assignment view page with comprehensive statistics including total students, submissions count, graded count, average score, submission rate, and grading rate. Provides teachers, administrators, and directors with better insights into assignment performance
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Teacher Reports Button Enhancement:</strong> Improved "Reports" quick action button on Teacher Home tab. Now shows a class selection popup when teachers have multiple classes, or redirects directly to Reports & Analytics page when only one class is assigned. Fixed JavaScript loading issues for proper functionality
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Report Card Quarter Selection:</strong> Added quarter selection feature to report card generation form. Users can now select which quarters (Q1-Q4) to include in the report card instead of auto-determining based on current date. All quarter columns (Q1-Q4) and Comments column now always display, with "—" shown for non-selected quarters
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Report Card PDF Generation Fix:</strong> Resolved "Unexpected error: '1'" when generating report cards on live server. Fixed quarter format normalization (converting '1' to 'Q1') to prevent KeyError exceptions. Report cards now generate successfully with proper quarter data display
                             </li>
                         </ul>
                     </div>
@@ -1265,12 +1347,12 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // ===== SHOW UPDATE MODAL =====
-    if (!sessionStorage.getItem('updateModalShownNov10_2025')) {
+    if (!sessionStorage.getItem('updateModalShownNov29_2025')) {
         const updateModalElement = document.getElementById('updateModal');
         if (updateModalElement) {
             const updateModal = new bootstrap.Modal(updateModalElement);
             updateModal.show();
-            sessionStorage.setItem('updateModalShownNov10_2025', 'true');
+            sessionStorage.setItem('updateModalShownNov29_2025', 'true');
         }
     }
     

@@ -1,0 +1,383 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/teacher_grade_assignment.css') }}">
+<style>
+.submission-status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+.submission-status-badge.not-submitted {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+.submission-status-badge.on-time {
+    background-color: #d1e7dd;
+    color: #0f5132;
+}
+.submission-status-badge.late {
+    background-color: #fff3cd;
+    color: #856404;
+}
+.submission-card {
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    transition: all 0.2s;
+}
+.submission-card:hover {
+    box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
+    border-color: #adb5bd;
+}
+.submission-card.not-submitted {
+    background-color: #f8f9fa;
+    border-left: 4px solid #dc3545;
+}
+.submission-card.on-time {
+    background-color: #f8f9fa;
+    border-left: 4px solid #28a745;
+}
+.submission-card.late {
+    background-color: #fffbf0;
+    border-left: 4px solid #ffc107;
+}
+.submission-info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+.submission-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+.filter-buttons {
+    margin-bottom: 1.5rem;
+}
+.filter-btn {
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+</style>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+    <!-- Enhanced Header -->
+    <div class="grading-header mb-4">
+        <div class="grading-header-content">
+            <div class="grading-header-icon">
+                <i class="bi bi-file-earmark-arrow-up"></i>
+            </div>
+            <div class="grading-header-info">
+                <h2 class="grading-header-title">{{ assignment.title }}</h2>
+                <p class="grading-header-subtitle">{{ class_obj.name }} • {{ assignment.quarter }}</p>
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('teacher.grading.grade_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-pencil-square me-1"></i>Grade Assignment
+            </a>
+            <a href="{{ url_for('teacher.assignments.view_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-info-circle me-1"></i>View Details
+            </a>
+            <button onclick="goBack()" class="btn-grading-back">
+                <i class="bi bi-arrow-left me-2"></i>Back
+            </button>
+        </div>
+    </div>
+
+    <!-- Submission Stats Bar -->
+    <div class="grading-stats-bar mb-4">
+        <div class="grading-stat-card stat-total">
+            <div class="stat-icon"><i class="bi bi-people-fill"></i></div>
+            <div class="stat-content">
+                <div class="stat-value">{{ total_students }}</div>
+                <div class="stat-label">Total Students</div>
+            </div>
+        </div>
+        <div class="grading-stat-card stat-submitted">
+            <div class="stat-icon"><i class="bi bi-check-circle-fill"></i></div>
+            <div class="stat-content">
+                <div class="stat-value">{{ submitted_count }}</div>
+                <div class="stat-label">Submitted</div>
+            </div>
+        </div>
+        <div class="grading-stat-card stat-graded">
+            <div class="stat-icon"><i class="bi bi-star-fill"></i></div>
+            <div class="stat-content">
+                <div class="stat-value">{{ graded_count }}</div>
+                <div class="stat-label">Graded</div>
+            </div>
+        </div>
+        <div class="grading-stat-card stat-pending">
+            <div class="stat-icon"><i class="bi bi-hourglass-split"></i></div>
+            <div class="stat-content">
+                <div class="stat-value">{{ total_students - submitted_count }}</div>
+                <div class="stat-label">Not Submitted</div>
+            </div>
+        </div>
+        <div class="grading-stat-card stat-average">
+            <div class="stat-icon"><i class="bi bi-percent"></i></div>
+            <div class="stat-content">
+                <div class="stat-value">{{ submission_rate }}%</div>
+                <div class="stat-label">Submission Rate</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assignment Details Card -->
+    <div class="assignment-details-card mb-4">
+        <div class="assignment-details-header">
+            <i class="bi bi-info-circle-fill me-2"></i>Assignment Details
+        </div>
+        <div class="assignment-details-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <div class="detail-item">
+                        <div class="detail-icon"><i class="bi bi-calendar-event"></i></div>
+                        <div>
+                            <div class="detail-label">Due Date</div>
+                            <div class="detail-value">{{ assignment.due_date.strftime('%b %d, %Y at %I:%M %p') }}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="detail-item">
+                        <div class="detail-icon"><i class="bi bi-clock-history"></i></div>
+                        <div>
+                            <div class="detail-label">On Time</div>
+                            <div class="detail-value">{{ on_time_count }} submissions</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="detail-item">
+                        <div class="detail-icon"><i class="bi bi-exclamation-triangle"></i></div>
+                        <div>
+                            <div class="detail-label">Late</div>
+                            <div class="detail-value">{{ late_count }} submissions</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="detail-item">
+                        <div class="detail-icon"><i class="bi bi-file-earmark-text"></i></div>
+                        <div>
+                            <div class="detail-label">Type</div>
+                            <div class="detail-value">{{ assignment.assignment_type|replace('_', ' ')|title }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% if assignment.description %}
+            <div class="assignment-description mt-3">
+                <strong>Description:</strong> {{ assignment.description }}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Filter Buttons -->
+    <div class="filter-buttons">
+        <button class="btn btn-sm filter-btn btn-outline-secondary active" onclick="filterSubmissions('all')">
+            <i class="bi bi-list-ul me-1"></i>All ({{ total_students }})
+        </button>
+        <button class="btn btn-sm filter-btn btn-outline-success" onclick="filterSubmissions('submitted')">
+            <i class="bi bi-check-circle me-1"></i>Submitted ({{ submitted_count }})
+        </button>
+        <button class="btn btn-sm filter-btn btn-outline-warning" onclick="filterSubmissions('late')">
+            <i class="bi bi-clock-history me-1"></i>Late ({{ late_count }})
+        </button>
+        <button class="btn btn-sm filter-btn btn-outline-danger" onclick="filterSubmissions('not_submitted')">
+            <i class="bi bi-x-circle me-1"></i>Not Submitted ({{ total_students - submitted_count }})
+        </button>
+        <button class="btn btn-sm filter-btn btn-outline-info" onclick="filterSubmissions('graded')">
+            <i class="bi bi-star me-1"></i>Graded ({{ graded_count }})
+        </button>
+    </div>
+
+    <!-- Submissions List -->
+    <div class="submissions-container">
+        {% for student_item in students %}
+            {% set student = student_item.student %}
+            {% set submission = student_item.submission %}
+            {% set grade = student_item.grade %}
+                    {% set status = student_item.status %}
+                    {% set submission_type = student_item.submission_type %}
+                    {% set extension = student_item.extension %}
+                    
+                    <div class="submission-card {{ status }}" data-status="{{ status }}" data-graded="{{ 'yes' if grade else 'no' }}">
+                        <div class="submission-info-row">
+                            <div class="d-flex align-items-center">
+                                <div class="student-avatar me-3" style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+                                    {{ student.first_name[0] if student.first_name else '?' }}{{ student.last_name[0] if student.last_name else '?' }}
+                                </div>
+                                <div>
+                                    <h5 class="mb-0">{{ student.first_name }} {{ student.last_name }}</h5>
+                                    <small class="text-muted">{{ student.email or 'No email' }}</small>
+                                </div>
+                            </div>
+                            <div>
+                                <span class="submission-status-badge {{ status }}">
+                                    {% if status == 'not_submitted' %}
+                                        <i class="bi bi-x-circle me-1"></i>Not Submitted
+                                    {% elif status == 'late' %}
+                                        <i class="bi bi-clock-history me-1"></i>Late
+                                    {% else %}
+                                        <i class="bi bi-check-circle me-1"></i>On Time
+                                    {% endif %}
+                                </span>
+                                {% if submission and submission_type == 'in_person' %}
+                                    <span class="badge bg-warning text-dark ms-2">
+                                        <i class="bi bi-file-earmark-text-fill me-1"></i>Paper/In-Person
+                                    </span>
+                                {% elif submission and submission_type == 'online' %}
+                                    <span class="badge bg-info ms-2">
+                                        <i class="bi bi-cloud-upload-fill me-1"></i>Online
+                                    </span>
+                                {% endif %}
+                                {% if grade %}
+                                    <span class="badge bg-success ms-2">
+                                        <i class="bi bi-star me-1"></i>Graded: {{ grade.score|round(1) }}%
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                
+                <div class="mt-3">
+                    {% if submission %}
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="submission-info-row">
+                                    <span class="text-muted"><i class="bi bi-calendar3 me-1"></i>Submitted:</span>
+                                    <strong>{{ submission.submitted_at.strftime('%b %d, %Y at %I:%M %p') }}</strong>
+                                </div>
+                                <div class="submission-info-row">
+                                    <span class="text-muted"><i class="bi bi-file-earmark me-1"></i>Type:</span>
+                                    {% if submission_type == 'in_person' %}
+                                        <strong class="text-warning">
+                                            <i class="bi bi-file-earmark-text-fill me-1"></i>Paper/In-Person
+                                        </strong>
+                                    {% else %}
+                                        <strong class="text-primary">
+                                            <i class="bi bi-cloud-upload-fill me-1"></i>Online
+                                        </strong>
+                                    {% endif %}
+                                </div>
+                                {% if submission.submission_notes %}
+                                <div class="submission-info-row">
+                                    <span class="text-muted"><i class="bi bi-sticky me-1"></i>Notes:</span>
+                                    <span>{{ submission.submission_notes }}</span>
+                                </div>
+                                {% endif %}
+                                {% if submission.comments %}
+                                <div class="submission-info-row">
+                                    <span class="text-muted"><i class="bi bi-chat-left-text me-1"></i>Comments:</span>
+                                    <span>{{ submission.comments }}</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                {% if extension %}
+                                <div class="alert alert-info mb-2">
+                                    <small>
+                                        <i class="bi bi-clock-history me-1"></i>
+                                        <strong>Extension granted:</strong> Due {{ extension.extended_due_date.strftime('%b %d, %Y at %I:%M %p') }}
+                                        {% if extension.reason %}
+                                        <br><em>{{ extension.reason }}</em>
+                                        {% endif %}
+                                    </small>
+                                </div>
+                                {% endif %}
+                                {% if grade %}
+                                <div class="alert alert-success mb-2">
+                                    <small>
+                                        <i class="bi bi-star me-1"></i>
+                                        <strong>Grade:</strong> {{ grade.score|round(1) }}% 
+                                        {% if grade.comment %}
+                                        <br><em>{{ grade.comment[:100] }}{% if grade.comment|length > 100 %}...{% endif %}</em>
+                                        {% endif %}
+                                    </small>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="submission-actions mt-3">
+                            {% if submission.file_path %}
+                            <a href="{{ url_for('teacher.assignments.download_submission', assignment_id=assignment.id, submission_id=submission.id) }}" 
+                               class="btn btn-sm btn-primary">
+                                <i class="bi bi-download me-1"></i>Download Submission
+                            </a>
+                            {% elif submission_type == 'in_person' %}
+                            <span class="btn btn-sm btn-outline-warning disabled" title="In-person submission - no file to download">
+                                <i class="bi bi-file-earmark-text me-1"></i>Paper Submission
+                            </span>
+                            {% endif %}
+                            <a href="{{ url_for('teacher.grading.grade_assignment', assignment_id=assignment.id) }}#student_{{ student.id }}" 
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-pencil-square me-1"></i>Grade
+                            </a>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning mb-0">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            <strong>No submission received.</strong>
+                            {% if extension %}
+                            <br><small>Extension granted until {{ extension.extended_due_date.strftime('%b %d, %Y at %I:%M %p') }}</small>
+                            {% endif %}
+                        </div>
+                        <div class="submission-actions mt-3">
+                            <a href="{{ url_for('teacher.grading.grade_assignment', assignment_id=assignment.id) }}#student_{{ student.id }}" 
+                               class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-pencil-square me-1"></i>Mark Submission
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+function goBack() {
+    window.history.back();
+}
+
+function filterSubmissions(filter) {
+    const cards = document.querySelectorAll('.submission-card');
+    const buttons = document.querySelectorAll('.filter-btn');
+    
+    // Update active button
+    buttons.forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    // Filter cards
+    cards.forEach(card => {
+        const status = card.getAttribute('data-status');
+        const graded = card.getAttribute('data-graded');
+        
+        let show = false;
+        if (filter === 'all') {
+            show = true;
+        } else if (filter === 'submitted') {
+            show = status !== 'not_submitted';
+        } else if (filter === 'late') {
+            show = status === 'late';
+        } else if (filter === 'not_submitted') {
+            show = status === 'not_submitted';
+        } else if (filter === 'graded') {
+            show = graded === 'yes';
+        }
+        
+        card.style.display = show ? 'block' : 'none';
+    });
+}
+</script>
+{% endblock %}
+

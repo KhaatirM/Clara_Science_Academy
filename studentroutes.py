@@ -139,7 +139,7 @@ def get_grade_trends(student_id, class_id, limit=10):
     trends = []
     for grade in reversed(grades):  # Reverse to show chronological order
         # Skip voided grades (double check)
-        if grade.is_voided or grade.assignment.status == 'Voided':
+        if grade.is_voided or (grade.assignment and grade.assignment.status == 'Voided'):
             continue
             
         try:
@@ -541,7 +541,7 @@ def student_dashboard():
     recent_grades = []
     for grade in recent_grades_raw:
         # Skip voided grades and voided assignments
-        if grade.is_voided or grade.assignment.status == 'Voided':
+        if grade.is_voided or (grade.assignment and grade.assignment.status == 'Voided'):
             continue
             
         grade_data = json.loads(grade.grade_data)
@@ -579,7 +579,7 @@ def student_dashboard():
 @student_required
 def student_assignments():
     student = Student.query.get_or_404(current_user.student_id)
-    from datetime import datetime
+    from datetime import datetime, timedelta
     
     # Get current school year
     current_school_year = SchoolYear.query.filter_by(is_active=True).first()
@@ -599,18 +599,46 @@ def student_assignments():
     classes = [enrollment.class_info for enrollment in enrollments]
     class_ids = [enrollment.class_id for enrollment in enrollments]
     
-    # Check if a specific class is requested via query parameter
-    requested_class_id = request.args.get('class_id')
-    if requested_class_id:
-        # Redirect to the proper class-specific route
-        return redirect(url_for('student.class_assignments', class_id=requested_class_id))
+    # Get filter parameters from request
+    filter_class_id = request.args.get('class_id', type=int)
+    filter_status = request.args.get('status', '')  # 'Active', 'Inactive', or ''
+    filter_start_date = request.args.get('start_date', '')
+    filter_end_date = request.args.get('end_date', '')
     
-    # Get assignments for student's classes (show Active and Inactive assignments to students)
-    assignments = Assignment.query.filter(
+    # Build query for assignments
+    query = Assignment.query.filter(
         Assignment.class_id.in_(class_ids),
         Assignment.school_year_id == current_school_year.id,
         Assignment.status.in_(['Active', 'Inactive'])  # Show both Active and Inactive assignments
-    ).order_by(Assignment.due_date.asc()).all()
+    )
+    
+    # Apply class filter
+    if filter_class_id:
+        query = query.filter(Assignment.class_id == filter_class_id)
+    
+    # Apply status filter
+    if filter_status:
+        query = query.filter(Assignment.status == filter_status)
+    
+    # Apply date range filter
+    if filter_start_date:
+        try:
+            start_date = datetime.strptime(filter_start_date, '%Y-%m-%d')
+            query = query.filter(Assignment.due_date >= start_date)
+        except ValueError:
+            pass
+    
+    if filter_end_date:
+        try:
+            end_date = datetime.strptime(filter_end_date, '%Y-%m-%d')
+            # Include the entire end date
+            end_date = end_date.replace(hour=23, minute=59, second=59)
+            query = query.filter(Assignment.due_date <= end_date)
+        except ValueError:
+            pass
+    
+    # Get assignments
+    assignments = query.order_by(Assignment.due_date.asc()).all()
     
     # Get all submissions for this student
     submissions = Submission.query.filter_by(student_id=student.id).all()
@@ -628,8 +656,9 @@ def student_assignments():
         Assignment.assignment_type.in_(['PDF', 'Paper', 'pdf', 'paper'])
     ).all()
     
-    # Create assignments with status for template
-    assignments_with_status = []
+    # Separate assignments into Active and Inactive
+    active_assignments = []
+    inactive_assignments = []
     past_due_assignments = []
     upcoming_assignments = []
     today = datetime.now().date()
@@ -641,7 +670,13 @@ def student_assignments():
         # Determine student-facing status
         student_status = get_student_assignment_status(assignment, submission, grade, student.id)
         
-        assignments_with_status.append((assignment, submission, student_status))
+        assignment_data = (assignment, submission, student_status)
+        
+        # Group by Active/Inactive status
+        if assignment.status == 'Active':
+            active_assignments.append(assignment_data)
+        else:
+            inactive_assignments.append(assignment_data)
         
         # Categorize assignments for alerts (only if not completed)
         if assignment.due_date and student_status not in ['completed', 'Voided']:
@@ -655,13 +690,18 @@ def student_assignments():
     
     return render_template('students/role_student_dashboard.html', 
                          **create_template_context(student, 'assignments', 'assignments',
-                             assignments_with_status=assignments_with_status,
+                             active_assignments=active_assignments,
+                             inactive_assignments=inactive_assignments,
                              grades=grades_dict,
                              today=today,
                              classes=classes,
                              past_due_assignments=past_due_assignments,
                              upcoming_assignments=upcoming_assignments,
-                             redo_opportunities=redo_opportunities))
+                             redo_opportunities=redo_opportunities,
+                             filter_class_id=filter_class_id,
+                             filter_status=filter_status,
+                             filter_start_date=filter_start_date,
+                             filter_end_date=filter_end_date))
 
 @student_blueprint.route('/assignments/class/<int:class_id>')
 @login_required
@@ -750,7 +790,7 @@ def student_classes():
             grade_percentages = []
             for g in class_grades:
                 # Skip voided grades and voided assignments
-                if g.is_voided or g.assignment.status == 'Voided':
+                if g.is_voided or (g.assignment and g.assignment.status == 'Voided'):
                     continue
                     
                 try:
@@ -854,7 +894,7 @@ def student_grades():
         # Process regular assignment grades
         for grade in grades:
             # Skip voided grades and voided assignments
-            if grade.is_voided or grade.assignment.status == 'Voided':
+            if grade.is_voided or (grade.assignment and grade.assignment.status == 'Voided'):
                 continue
                 
             grade_data = json.loads(grade.grade_data)
@@ -897,7 +937,7 @@ def student_grades():
             # Combine regular and group grades
             for grade in grades:
                 # Skip voided grades and voided assignments
-                if grade.is_voided or grade.assignment.status == 'Voided':
+                if grade.is_voided or (grade.assignment and grade.assignment.status == 'Voided'):
                     continue
                     
                 grade_data = json.loads(grade.grade_data)
@@ -1380,7 +1420,7 @@ def student_settings():
                     grade_percentages = []
                     for g in class_grades:
                         # Skip voided grades and voided assignments
-                        if g.is_voided or g.assignment.status == 'Voided':
+                        if g.is_voided or (g.assignment and g.assignment.status == 'Voided'):
                             continue
                             
                         grade_data = json.loads(g.grade_data)
@@ -1434,7 +1474,8 @@ def view_class(class_id):
     student_grades = {}
     for g in all_grades:
         # Skip voided grades and voided assignments
-        if not g.is_voided and g.assignment.status != 'Voided':
+        # Check if assignment exists and is not voided
+        if g.assignment and not g.is_voided and g.assignment.status != 'Voided':
             student_grades[g.assignment_id] = json.loads(g.grade_data)
     
     student_submissions = {s.assignment_id: s for s in Submission.query.filter_by(student_id=student.id).all()}
@@ -1475,7 +1516,7 @@ def view_class(class_id):
     
     # Get current date for assignment status
     from datetime import datetime
-    today = datetime.now()
+    today = datetime.now().date()
     
     return render_template('students/role_student_dashboard.html', 
                          **create_template_context(student, 'classes', 'classes', 
@@ -1510,7 +1551,8 @@ def view_class_assignments(class_id):
     student_grades = {}
     for g in all_grades:
         # Skip voided grades and voided assignments
-        if not g.is_voided and g.assignment.status != 'Voided':
+        # Check if assignment exists and is not voided
+        if g.assignment and not g.is_voided and g.assignment.status != 'Voided':
             student_grades[g.assignment_id] = g
     
     student_submissions = {s.assignment_id: s for s in Submission.query.filter_by(student_id=student.id).all()}
@@ -1537,6 +1579,100 @@ def view_class_assignments(class_id):
                          class_obj=class_obj, 
                          today=today,
                          show_assignments=True)
+
+
+@student_blueprint.route('/api/class/<int:class_id>/assignments')
+@login_required
+@student_required
+def get_class_assignments_api(class_id):
+    """API endpoint to get assignments for a specific class as JSON"""
+    student = Student.query.get_or_404(current_user.student_id)
+    class_obj = Class.query.get_or_404(class_id)
+    
+    # Verify student is enrolled
+    enrollment = Enrollment.query.filter_by(student_id=student.id, class_id=class_id, is_active=True).first()
+    if not enrollment:
+        return jsonify({'error': 'Not enrolled in this class'}), 403
+    
+    # Get assignments for this class
+    assignments = Assignment.query.filter(
+        Assignment.class_id == class_id,
+        Assignment.status.in_(['Active', 'Inactive'])
+    ).order_by(Assignment.due_date.desc()).all()
+    
+    # Get submissions and grades
+    all_grades = Grade.query.filter_by(student_id=student.id).all()
+    student_grades = {}
+    for g in all_grades:
+        # Check if assignment exists and is not voided
+        if g.assignment and not g.is_voided and g.assignment.status != 'Voided':
+            grade_data = json.loads(g.grade_data) if isinstance(g.grade_data, str) else g.grade_data
+            student_grades[g.assignment_id] = grade_data
+    
+    student_submissions = {s.assignment_id: s for s in Submission.query.filter_by(student_id=student.id).all()}
+    
+    from datetime import datetime
+    today = datetime.now()
+    
+    # Format assignments for JSON response
+    assignments_data = []
+    for assignment in assignments:
+        submission = student_submissions.get(assignment.id)
+        grade = student_grades.get(assignment.id)
+        
+        # Determine status
+        is_active = assignment.status == 'Active'
+        has_submission = submission is not None
+        has_grade = grade is not None
+        is_past_due = assignment.due_date and assignment.due_date.date() < today.date() if assignment.due_date else False
+        
+        if has_grade:
+            status = 'Graded'
+            status_class = 'success'
+        elif has_submission and is_past_due:
+            status = 'Submitted (Late)'
+            status_class = 'warning'
+        elif has_submission:
+            status = 'Submitted'
+            status_class = 'info'
+        elif is_past_due:
+            status = 'Past Due'
+            status_class = 'danger'
+        elif not is_active:
+            status = 'Inactive'
+            status_class = 'secondary'
+        else:
+            status = 'Not Submitted'
+            status_class = 'secondary'
+        
+        assignment_data = {
+            'id': assignment.id,
+            'title': assignment.title,
+            'description': assignment.description or '',
+            'due_date': assignment.due_date.isoformat() if assignment.due_date else None,
+            'due_date_formatted': assignment.due_date.strftime('%B %d, %Y at %I:%M %p') if assignment.due_date else 'No due date',
+            'quarter': assignment.quarter,
+            'assignment_type': assignment.assignment_type,
+            'status': assignment.status,
+            'is_active': is_active,
+            'has_attachment': bool(assignment.attachment_filename),
+            'attachment_filename': assignment.attachment_original_filename or assignment.attachment_filename or '',
+            'submission_status': status,
+            'status_class': status_class,
+            'has_submission': has_submission,
+            'has_grade': has_grade,
+            'grade_score': grade.get('score', None) if grade else None,
+            'grade_percentage': grade.get('percentage', None) if grade else None,
+            'days_remaining': (assignment.due_date.date() - today.date()).days if assignment.due_date and assignment.due_date.date() >= today.date() else None,
+            'days_overdue': (today.date() - assignment.due_date.date()).days if assignment.due_date and assignment.due_date.date() < today.date() else None
+        }
+        assignments_data.append(assignment_data)
+    
+    return jsonify({
+        'class_id': class_obj.id,
+        'class_name': class_obj.name,
+        'assignments': assignments_data
+    })
 
 
 @student_blueprint.route('/take-quiz/<int:assignment_id>')

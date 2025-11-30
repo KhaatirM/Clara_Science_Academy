@@ -21,8 +21,7 @@
               onclick="confirmDeleteAssignment({{ group_assignment.id }}, '{{ group_assignment.title }}')">
         <i class="bi bi-trash me-1"></i>Delete Assignment
       </button>
-      {% comment %}
-      <!-- These features are not yet implemented -->
+      {# These features are not yet implemented
       <a href="{{ url_for('teacher.create_assignment_rubric', assignment_id=group_assignment.id) }}?admin_view=true" class="btn btn-info btn-sm">
         <i class="bi bi-list-check me-1"></i>Create Rubric
       </a>
@@ -38,7 +37,7 @@
       <a href="{{ url_for('teacher.view_draft_submissions', assignment_id=group_assignment.id) }}?admin_view=true" class="btn btn-light btn-sm">
         <i class="bi bi-file-earmark-text me-1"></i>Draft Submissions
       </a>
-      {% endcomment %}
+      #}
     </div>
   </div>
 
@@ -72,7 +71,7 @@
                 <i class="bi bi-people text-success me-2"></i>
                 <div>
                   <small class="text-muted d-block">Group Size</small>
-                  <strong>{{ group_assignment.min_group_size }}-{{ group_assignment.max_group_size }} students</strong>
+                  <strong>{{ group_assignment.group_size_min }}-{{ group_assignment.group_size_max }} students</strong>
                 </div>
               </div>
             </div>

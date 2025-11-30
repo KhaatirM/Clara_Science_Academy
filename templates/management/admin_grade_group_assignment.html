@@ -482,7 +482,7 @@ function updateAverage() {
     }
 }
 
-// Initialize on page load
+// Handle form submission with AJAX
 document.addEventListener('DOMContentLoaded', function() {
     // Update all score visuals
     document.querySelectorAll('.score-input').forEach(input => {
@@ -491,6 +491,129 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Update counts
     updateGradedCount();
+    
+    // Intercept form submission
+    const gradingForm = document.getElementById('gradingForm');
+    if (gradingForm) {
+        gradingForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Show loading state
+            const submitButton = gradingForm.querySelector('button[type="submit"]');
+            const originalButtonText = submitButton.innerHTML;
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Saving...';
+            
+            // Create FormData from form
+            const formData = new FormData(gradingForm);
+            
+            // Submit via AJAX
+            fetch(gradingForm.action || window.location.href, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Show success message
+                    showSuccessMessage(data.message || 'Grades saved successfully!', data.graded_count || 0);
+                    
+                    // Update statistics
+                    if (data.graded_count !== undefined) {
+                        const gradedStatCountEl = document.getElementById('gradedStatCount');
+                        if (gradedStatCountEl) {
+                            gradedStatCountEl.textContent = data.graded_count;
+                        }
+                        updateGradedCount();
+                        updateAverage();
+                    }
+                    
+                    // Reload page after a short delay to show updated data
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    showErrorMessage(data.message || 'Error saving grades. Please try again.');
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = originalButtonText;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showErrorMessage('An error occurred while saving grades. Please try again.');
+                submitButton.disabled = false;
+                submitButton.innerHTML = originalButtonText;
+            });
+        });
+    }
 });
+
+function showSuccessMessage(message, gradedCount) {
+    // Remove any existing alerts
+    const existingAlert = document.querySelector('.grade-save-alert');
+    if (existingAlert) {
+        existingAlert.remove();
+    }
+    
+    // Create success alert
+    const alertDiv = document.createElement('div');
+    alertDiv.className = 'alert alert-success alert-dismissible fade show grade-save-alert';
+    alertDiv.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);';
+    alertDiv.innerHTML = `
+        <div class="d-flex align-items-center">
+            <i class="bi bi-check-circle-fill me-2 fs-4"></i>
+            <div class="flex-grow-1">
+                <strong>${message}</strong>
+                ${gradedCount > 0 ? `<br><small>${gradedCount} grade${gradedCount !== 1 ? 's' : ''} saved successfully.</small>` : ''}
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    `;
+    
+    document.body.appendChild(alertDiv);
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.classList.remove('show');
+            setTimeout(() => alertDiv.remove(), 300);
+        }
+    }, 5000);
+}
+
+function showErrorMessage(message) {
+    // Remove any existing alerts
+    const existingAlert = document.querySelector('.grade-save-alert');
+    if (existingAlert) {
+        existingAlert.remove();
+    }
+    
+    // Create error alert
+    const alertDiv = document.createElement('div');
+    alertDiv.className = 'alert alert-danger alert-dismissible fade show grade-save-alert';
+    alertDiv.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);';
+    alertDiv.innerHTML = `
+        <div class="d-flex align-items-center">
+            <i class="bi bi-exclamation-triangle-fill me-2 fs-4"></i>
+            <div class="flex-grow-1">
+                <strong>${message}</strong>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    `;
+    
+    document.body.appendChild(alertDiv);
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.classList.remove('show');
+            setTimeout(() => alertDiv.remove(), 300);
+        }
+    }, 5000);
+}
 </script>
 {% endblock %}

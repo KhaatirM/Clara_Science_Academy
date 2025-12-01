@@ -687,13 +687,42 @@
                     </div>
                     <div>
                         <h6 class="updates-intro-title mb-2">
-                            <i class="fas fa-calendar-alt me-2"></i>Latest System Update - November 29, 2025
+                            <i class="fas fa-calendar-alt me-2"></i>Latest System Update - December 1, 2025
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>Student Experience Enhancement Release!</strong> Improved modal visibility, enhanced class management with popup assignments view, fixed date comparison errors, and comprehensive student dashboard improvements!</p>
+                        <p class="updates-intro-text mb-0"><strong>Administrative & System Stability Release!</strong> Fixed deadline reminders functionality, resolved class view layout issues for School Administrators, and improved overall system reliability!</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- December 1, 2025 - Administrative & System Fixes -->
+                    <div class="update-section mb-4">
+                        <h6 class="text-primary mb-3" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+                            <i class="fas fa-tools me-2"></i>🔧 Administrative & System Fixes - December 1, 2025
+                        </h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Deadline Reminders Functionality Fixed:</strong> Resolved database column errors that prevented deadline reminders from loading. Added graceful handling for missing database columns and fixed all route references. Deadline reminders now work correctly for both teachers and School Administrators
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Class View Layout Fix for School Administrators:</strong> Fixed critical layout issue where the sidebar was appearing at the bottom instead of side-by-side with main content. Changed breakpoints from `col-lg-*` to `col-md-*` for better compatibility with standard laptop screens (768px+). Removed extra closing div tag that was breaking the layout structure
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Responsive Layout Improvements:</strong> Class view page now displays correctly on medium-sized screens (tablets and laptops) with proper side-by-side layout. Added `align-items: start` to prevent stretching issues when content heights differ
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Route Reference Fixes:</strong> Updated all deadline reminder route references from `url_for()` calls to direct URLs to prevent Flask route name resolution errors. All deadline reminder actions (create, edit, toggle, send, delete) now work correctly
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Database Query Improvements:</strong> Enhanced deadline reminders query to handle missing database columns gracefully using raw SQL fallback when needed. Prevents errors when database schema hasn't been fully migrated
+                            </li>
+                        </ul>
+                    </div>
+
                     <!-- November 29, 2025 - Student Experience Enhancements -->
                     <div class="update-section mb-4">
                         <h6 class="text-primary mb-3" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
@@ -1347,12 +1376,12 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // ===== SHOW UPDATE MODAL =====
-    if (!sessionStorage.getItem('updateModalShownNov29_2025')) {
+    if (!sessionStorage.getItem('updateModalShownDec1_2025')) {
         const updateModalElement = document.getElementById('updateModal');
         if (updateModalElement) {
             const updateModal = new bootstrap.Modal(updateModalElement);
             updateModal.show();
-            sessionStorage.setItem('updateModalShownNov29_2025', 'true');
+            sessionStorage.setItem('updateModalShownDec1_2025', 'true');
         }
     }
     

@@ -8,7 +8,7 @@
       <p class="text-muted mb-0">{{ class_obj.name }} • Data-Driven Insights</p>
     </div>
     <div class="d-flex gap-2">
-      <a href="{{ url_for('teacher.class_reports', class_id=class_obj.id) }}" class="btn btn-outline-primary btn-sm">
+      <a href="#" class="btn btn-outline-primary btn-sm" onclick="alert('Reports feature coming soon!'); return false;">
         <i class="bi bi-graph-up me-1"></i>Reports
       </a>
       <a href="{{ url_for('management.view_class', class_id=class_obj.id) }}" class="btn btn-outline-secondary btn-sm">
@@ -249,24 +249,9 @@
         </div>
         <div class="card-body">
           <div class="d-grid gap-2">
-            <a href="{{ url_for('teacher.class_contributions', class_id=class_obj.id) }}" class="btn btn-success btn-sm">
-              <i class="bi bi-people me-1"></i>Contributions Tracking
+            <a href="{{ url_for('management.admin_class_groups', class_id=class_obj.id) }}" class="btn btn-secondary btn-sm">
+              <i class="bi bi-people-fill me-1"></i>Manage Groups
             </a>
-            <a href="{{ url_for('teacher.class_time_tracking', class_id=class_obj.id) }}" class="btn btn-warning btn-sm">
-              <i class="bi bi-clock me-1"></i>Time Tracking
-            </a>
-            <a href="{{ url_for('teacher.create_report', class_id=class_obj.id) }}" class="btn btn-info btn-sm">
-              <i class="bi bi-plus-circle me-1"></i>Create Report
-            </a>
-            {% if current_user.role in ['Director', 'School Administrator'] or admin_view %}
-              <a href="{{ url_for('management.admin_class_groups', class_id=class_obj.id) }}" class="btn btn-secondary btn-sm">
-                <i class="bi bi-people-fill me-1"></i>Manage Groups
-              </a>
-            {% else %}
-              <a href="{{ url_for('teacher.class_groups', class_id=class_obj.id) }}" class="btn btn-secondary btn-sm">
-                <i class="bi bi-people-fill me-1"></i>Manage Groups
-              </a>
-            {% endif %}
           </div>
         </div>
       </div>

@@ -8,7 +8,7 @@
       <p class="text-muted mb-0">{{ class_obj.name }} • Stay on Track</p>
     </div>
     <div class="d-flex gap-2">
-      <a href="{{ url_for('teacher.create_deadline_reminder', class_id=class_obj.id) }}" class="btn text-white" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+      <a href="/teacher/class/{{ class_obj.id }}/deadline-reminder/create" class="btn text-white" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
         <i class="bi bi-plus-circle me-1"></i>Create Reminder
       </a>
       <a href="{{ url_for('management.view_class', class_id=class_obj.id) }}" class="btn btn-outline-secondary">
@@ -151,22 +151,22 @@
                   </td>
                   <td>
                     <div class="btn-group" role="group">
-                      <a href="{{ url_for('teacher.edit_deadline_reminder', reminder_id=reminder.id) }}" class="btn btn-outline-primary btn-sm">
+                      <a href="/teacher/deadline-reminder/{{ reminder.id }}/edit" class="btn btn-outline-primary btn-sm">
                         <i class="bi bi-pencil"></i>
                       </a>
-                      <form method="POST" action="{{ url_for('teacher.toggle_deadline_reminder', reminder_id=reminder.id) }}" class="d-inline">
+                      <form method="POST" action="/teacher/deadline-reminder/{{ reminder.id }}/toggle" class="d-inline">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <button type="submit" class="btn btn-outline-{% if reminder.is_active %}warning{% else %}success{% endif %} btn-sm" title="{% if reminder.is_active %}Deactivate{% else %}Activate{% endif %}">
                           <i class="bi bi-{% if reminder.is_active %}pause{% else %}play{% endif %}"></i>
                         </button>
                       </form>
-                      <form method="POST" action="{{ url_for('teacher.send_deadline_reminder_now', reminder_id=reminder.id) }}" class="d-inline">
+                      <form method="POST" action="/teacher/deadline-reminder/{{ reminder.id }}/send-now" class="d-inline">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <button type="submit" class="btn btn-outline-info btn-sm" title="Send Now">
                           <i class="bi bi-send"></i>
                         </button>
                       </form>
-                      <form method="POST" action="{{ url_for('teacher.delete_deadline_reminder', reminder_id=reminder.id) }}" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this reminder?')">
+                      <form method="POST" action="/teacher/deadline-reminder/{{ reminder.id }}/delete" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this reminder?')">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <button type="submit" class="btn btn-outline-danger btn-sm" title="Delete">
                           <i class="bi bi-trash"></i>
@@ -184,7 +184,7 @@
           <i class="bi bi-bell display-1 text-muted"></i>
           <h5 class="mt-3 text-muted">No Deadline Reminders Found</h5>
           <p class="text-muted">Create your first deadline reminder to help students stay on track with assignments.</p>
-          <a href="{{ url_for('teacher.create_deadline_reminder', class_id=class_obj.id) }}" class="btn btn-primary">
+          <a href="/teacher/class/{{ class_obj.id }}/deadline-reminder/create" class="btn btn-primary">
             <i class="bi bi-plus-circle me-1"></i>Create First Reminder
           </a>
         </div>
@@ -217,7 +217,7 @@
         </div>
         <div class="card-body">
           <div class="d-grid gap-2">
-            <a href="{{ url_for('teacher.create_deadline_reminder', class_id=class_obj.id) }}" class="btn btn-primary btn-sm">
+            <a href="/teacher/class/{{ class_obj.id }}/deadline-reminder/create" class="btn btn-primary btn-sm">
               <i class="bi bi-plus-circle me-1"></i>Create New Reminder
             </a>
             <a href="{{ url_for('management.view_class', class_id=class_obj.id) }}" class="btn btn-outline-secondary btn-sm">

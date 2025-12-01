@@ -2632,13 +2632,58 @@ def admin_class_deadline_reminders(class_id):
     # Get all deadline reminders for this class
     try:
         from datetime import timedelta
-        reminders = DeadlineReminder.query.filter_by(class_id=class_id).order_by(DeadlineReminder.reminder_date.asc()).all()
+        from models import DeadlineReminder
+        from sqlalchemy import text
+        
+        # Try normal query first
+        try:
+            reminders = DeadlineReminder.query.filter_by(class_id=class_id).order_by(DeadlineReminder.reminder_date.asc()).all()
+        except Exception as db_error:
+            # If selected_student_ids column doesn't exist, use raw SQL
+            error_str = str(db_error).lower()
+            if 'selected_student_ids' in error_str or 'no such column' in error_str:
+                try:
+                    result = db.session.execute(
+                        text("""
+                            SELECT id, assignment_id, group_assignment_id, class_id, reminder_type, 
+                                   reminder_title, reminder_message, reminder_date, reminder_frequency, 
+                                   is_active, created_by, created_at, last_sent, next_send
+                            FROM deadline_reminder 
+                            WHERE class_id = :class_id 
+                            ORDER BY reminder_date ASC
+                        """),
+                        {'class_id': class_id}
+                    )
+                    # Create simple reminder objects from results
+                    reminders = []
+                    for row in result:
+                        # Create a simple object that mimics DeadlineReminder
+                        class SimpleReminder:
+                            def __init__(self, row_data):
+                                for key, value in row_data.items():
+                                    setattr(self, key, value)
+                        reminders.append(SimpleReminder(dict(row._mapping)))
+                except Exception as sql_error:
+                    print(f"Error with raw SQL query: {sql_error}")
+                    reminders = []
+            else:
+                raise db_error
         
         # Get upcoming reminders (next 7 days)
         now = datetime.now()
         upcoming_date = now + timedelta(days=7)
-        upcoming_reminders = [r for r in reminders if r.reminder_date and now <= r.reminder_date <= upcoming_date]
+        upcoming_reminders = []
+        for r in reminders:
+            if hasattr(r, 'reminder_date') and r.reminder_date:
+                try:
+                    if now <= r.reminder_date <= upcoming_date:
+                        upcoming_reminders.append(r)
+                except:
+                    pass
     except Exception as e:
+        print(f"Error loading deadline reminders: {e}")
+        import traceback
+        traceback.print_exc()
         flash('Deadline reminders feature is not yet available.', 'warning')
         reminders = []
         upcoming_reminders = []
@@ -2646,7 +2691,8 @@ def admin_class_deadline_reminders(class_id):
     return render_template('management/admin_class_deadline_reminders.html',
                          class_obj=class_obj,
                          reminders=reminders,
-                         upcoming_reminders=upcoming_reminders)
+                         upcoming_reminders=upcoming_reminders,
+                         admin_view=True)
 
 
 @management_blueprint.route('/class/<int:class_id>/analytics')
@@ -2721,12 +2767,23 @@ def admin_class_reflection_journals(class_id):
 @management_required
 def admin_class_conflicts(class_id):
     """View conflicts for a specific class - Management view."""
+    from models import GroupConflict, StudentGroup
+    
     class_obj = Class.query.get_or_404(class_id)
     
-    # Get conflicts
+    # Get conflicts - GroupConflict doesn't have class_id, so we need to get it through groups
     try:
-        conflicts = GroupConflict.query.filter_by(class_id=class_id).order_by(GroupConflict.reported_at.desc()).all()
+        # Get all groups for this class
+        groups = StudentGroup.query.filter_by(class_id=class_id).all()
+        group_ids = [group.id for group in groups]
+        
+        # Get conflicts for these groups
+        if group_ids:
+            conflicts = GroupConflict.query.filter(GroupConflict.group_id.in_(group_ids)).order_by(GroupConflict.reported_at.desc()).all()
+        else:
+            conflicts = []
     except Exception as e:
+        print(f"Error loading conflicts: {e}")
         conflicts = []
     
     return render_template('management/admin_class_conflicts.html',
@@ -9346,11 +9403,13 @@ def admin_class_groups(class_id):
         enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
         enrolled_students = [enrollment.student for enrollment in enrollments]
         
-        # Get group members for each group
+        # Get group members for each group and add member_count to group objects
         group_data = []
         for group in groups:
             members = StudentGroupMember.query.filter_by(group_id=group.id).all()
             member_students = [member.student for member in members]
+            # Add member_count as an attribute to the group object for template access
+            group.member_count = len(member_students)
             group_data.append({
                 'group': group,
                 'members': member_students,
@@ -9486,6 +9545,22 @@ def admin_manage_group(group_id):
                         db.session.commit()
                         flash('Group leader updated successfully!', 'success')
                         return redirect(url_for('management.admin_manage_group', group_id=group_id))
+            
+            elif action == 'edit_group':
+                name = request.form.get('name')
+                description = request.form.get('description', '')
+                max_students = request.form.get('max_students', type=int)
+                
+                if name:
+                    group.name = name
+                if description is not None:
+                    group.description = description
+                if max_students is not None:
+                    group.max_students = max_students
+                
+                db.session.commit()
+                flash('Group updated successfully!', 'success')
+                return redirect(url_for('management.admin_class_groups', class_id=group.class_id))
         
         return render_template('teachers/teacher_manage_group.html',
                              group=group,

@@ -687,13 +687,70 @@
                     </div>
                     <div>
                         <h6 class="updates-intro-title mb-2">
-                            <i class="fas fa-calendar-alt me-2"></i>Latest System Update - December 1, 2025
+                            <i class="fas fa-calendar-alt me-2"></i>Latest System Update - December 8, 2025
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>Administrative & System Stability Release!</strong> Fixed deadline reminders functionality, resolved class view layout issues for School Administrators, and improved overall system reliability!</p>
+                        <p class="updates-intro-text mb-0"><strong>Public Homepage & Bug Fixes Release!</strong> Enhanced public homepage with comprehensive About Us information, fixed critical attendance and group management bugs, and improved user interface across the platform!</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- December 8, 2025 - Public Homepage & Bug Fixes -->
+                    <div class="update-section mb-4">
+                        <h6 class="text-primary mb-3" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+                            <i class="fas fa-globe me-2"></i>🌐 Public Homepage & Bug Fixes - December 8, 2025
+                        </h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>About Us Dropdown Updates:</strong> Added comprehensive information to all About Us sections including Education Plan with curriculum details (Amplify, Eureka, PLTW Launch), complete STEM Manifesto with all 10 principles, Tuition Assistance programs with PDF policy links, detailed Admission Policy with procedures, and Locations page with all school addresses
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Attendance System Fixes:</strong> Fixed critical bug where School Administrators couldn't save manual attendance due to field name mismatch (status_ vs status-). Resolved date selection issues for Class Period attendance - now properly loads and displays attendance data for selected dates instead of always showing today's date
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Group Management Bug Fix:</strong> Fixed 500 error when teachers clicked "Manage Groups" from class view. Resolved template variable mismatch (class_item vs class_obj) that was causing server errors
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Recent Assignments Button Styling:</strong> Completely redesigned assignment action buttons with modern gradients, smooth hover animations, enhanced shadows, and improved color-coding. Buttons now have a professional, polished appearance with better visual hierarchy
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Mobile/Tablet Hero Card Fix:</strong> Fixed issue where the dynamic hero card was blocking interactions when scrolling on tablets and phones. Added touch device detection and proper pointer event handling to prevent overlap issues
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Coming Soon - Future Updates -->
+                    <div class="update-section mb-4" style="border-top: 2px dashed #e2e8f0; padding-top: 1.5rem; margin-top: 2rem;">
+                        <h6 class="text-primary mb-3" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+                            <i class="fas fa-road me-2"></i>🚀 Coming Soon - Future Updates
+                        </h6>
+                        <div class="alert alert-info mb-3" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 100%); border-color: #10b981;">
+                            <p class="mb-2"><strong>We're constantly working to improve your experience!</strong> Here's what's on the horizon:</p>
+                        </div>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="fas fa-google me-2 text-primary"></i>
+                                <strong>Google Classroom Integration:</strong> Direct assignment linking with Google Classroom. Teachers will be able to sync assignments, sync grades, and manage classroom content seamlessly between platforms
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-file-alt me-2 text-primary"></i>
+                                <strong>Enhanced Report Card System:</strong> Improved report card generation with additional customization options, better formatting, and expanded reporting capabilities
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-cogs me-2 text-primary"></i>
+                                <strong>System Updates & Improvements:</strong> Ongoing enhancements to performance, user interface, and feature additions based on user feedback
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-bell me-2 text-primary"></i>
+                                <strong>Stay Tuned:</strong> More exciting features and improvements are in development. We'll keep you updated as new features become available!
+                            </li>
+                        </ul>
+                    </div>
+
                     <!-- December 1, 2025 - Administrative & System Fixes -->
                     <div class="update-section mb-4">
                         <h6 class="text-primary mb-3" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
@@ -1376,38 +1433,95 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // ===== SHOW UPDATE MODAL =====
-    if (!sessionStorage.getItem('updateModalShownDec1_2025')) {
+    if (!sessionStorage.getItem('updateModalShownDec8_2025')) {
         const updateModalElement = document.getElementById('updateModal');
         if (updateModalElement) {
             const updateModal = new bootstrap.Modal(updateModalElement);
             updateModal.show();
-            sessionStorage.setItem('updateModalShownDec1_2025', 'true');
+            sessionStorage.setItem('updateModalShownDec8_2025', 'true');
         }
     }
     
     // ===== ADD MOUSE FOLLOW EFFECT TO HERO =====
+    // Only enable on non-touch devices to prevent mobile/tablet overlap issues
     const heroContent = document.querySelector('.hero-content');
-    if (heroContent) {
-        document.addEventListener('mousemove', (e) => {
-            const rect = heroContent.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            
-            const centerX = rect.width / 2;
-            const centerY = rect.height / 2;
-            
-            const deltaX = (x - centerX) / centerX;
-            const deltaY = (y - centerY) / centerY;
-            
-            const tiltX = deltaY * 5;
-            const tiltY = -deltaX * 5;
-            
-            heroContent.style.transform = `perspective(1000px) rotateX(${tiltX}deg) rotateY(${tiltY}deg)`;
-        });
+    const heroSection = document.querySelector('.hero-section');
+    
+    if (heroContent && heroSection) {
+        // Detect if device is touch-enabled
+        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
         
-        heroContent.addEventListener('mouseleave', () => {
-            heroContent.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg)';
-        });
+        if (!isTouchDevice) {
+            // Only enable mouse follow on non-touch devices
+            document.addEventListener('mousemove', (e) => {
+                const rect = heroContent.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+                
+                const deltaX = (x - centerX) / centerX;
+                const deltaY = (y - centerY) / centerY;
+                
+                const tiltX = deltaY * 5;
+                const tiltY = -deltaX * 5;
+                
+                heroContent.style.transform = `perspective(1000px) rotateX(${tiltX}deg) rotateY(${tiltY}deg)`;
+            });
+            
+            heroContent.addEventListener('mouseleave', () => {
+                heroContent.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg)';
+            });
+        }
+        
+        // Fix for mobile/tablet: Prevent card from blocking interactions when scrolled
+        if (isTouchDevice) {
+            let ticking = false;
+            
+            window.addEventListener('scroll', () => {
+                if (!ticking) {
+                    window.requestAnimationFrame(() => {
+                        const heroRect = heroSection.getBoundingClientRect();
+                        const viewportHeight = window.innerHeight;
+                        const heroBottom = heroRect.bottom;
+                        
+                        // If hero section bottom is above viewport (scrolled past), disable pointer events
+                        // This prevents the hero from blocking interactions with content below
+                        if (heroBottom < 0) {
+                            // Hero is completely above viewport - disable pointer events
+                            heroSection.style.pointerEvents = 'none';
+                            heroSection.style.zIndex = '1';
+                        } else if (heroRect.top > viewportHeight) {
+                            // Hero is completely below viewport - disable pointer events
+                            heroSection.style.pointerEvents = 'none';
+                            heroSection.style.zIndex = '1';
+                        } else {
+                            // Hero is in viewport - enable normal interactions
+                            heroSection.style.pointerEvents = 'auto';
+                            heroSection.style.zIndex = '2';
+                        }
+                        
+                        ticking = false;
+                    });
+                    ticking = true;
+                }
+            }, { passive: true });
+            
+            // Also check on initial load
+            const checkHeroPosition = () => {
+                const heroRect = heroSection.getBoundingClientRect();
+                const viewportHeight = window.innerHeight;
+                
+                if (heroRect.bottom < 0 || heroRect.top > viewportHeight) {
+                    heroSection.style.pointerEvents = 'none';
+                    heroSection.style.zIndex = '1';
+                }
+            };
+            
+            // Check after a short delay to ensure layout is complete
+            setTimeout(checkHeroPosition, 100);
+        }
     }
 });
 </script>

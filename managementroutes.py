@@ -3777,7 +3777,8 @@ def take_class_attendance(class_id):
             "Suspended"
         ]
 
-        attendance_date_str = request.args.get('date') or request.form.get('attendance_date')
+        # Get date from form (POST) or query params (GET)
+        attendance_date_str = request.form.get('date') or request.args.get('date') or request.form.get('attendance_date')
         if not attendance_date_str:
             attendance_date_str = datetime.now().strftime('%Y-%m-%d')
         
@@ -3829,8 +3830,8 @@ def take_class_attendance(class_id):
                     teacher = TeacherStaff.query.get(current_user.teacher_staff_id)
             
             for student in students:
-                status = request.form.get(f'status-{student.id}')
-                notes = request.form.get(f'notes-{student.id}')
+                status = request.form.get(f'status_{student.id}')
+                notes = request.form.get(f'notes_{student.id}')
                 
                 if not status:
                     continue
@@ -3890,8 +3891,15 @@ def take_class_attendance(class_id):
             else:
                 flash('No attendance data was submitted.', 'warning')
             
-            # Redirect back to management view
-            return redirect(url_for('management.view_class', class_id=class_id))
+            # Redirect back to unified attendance with the date parameter to preserve context
+            # Check if we came from unified attendance (has referrer or class_date param)
+            referrer = request.referrer
+            if referrer and 'unified-attendance' in referrer:
+                # Extract class_date from referrer or use the attendance date
+                return redirect(url_for('management.unified_attendance', class_date=attendance_date_str))
+            else:
+                # Default redirect to view_class
+                return redirect(url_for('management.view_class', class_id=class_id))
 
         return render_template(
             'shared/take_attendance.html',
@@ -4107,10 +4115,21 @@ def unified_attendance():
     }
     
     # Class Period Attendance Data
-    classes = Class.query.all()
-    today_date = datetime.now().strftime('%Y-%m-%d')
+    # Get class_date parameter for Class Period tab (separate from School Day date)
+    # If class_date is not provided, use today's date (not the School Day date)
+    class_date_str = request.args.get('class_date')
+    if not class_date_str:
+        class_date_str = datetime.now().strftime('%Y-%m-%d')
+    try:
+        class_date = datetime.strptime(class_date_str, '%Y-%m-%d').date()
+    except ValueError:
+        class_date = datetime.now().date()
+        class_date_str = class_date.strftime('%Y-%m-%d')
     
-    # Calculate attendance stats for each class
+    classes = Class.query.all()
+    today_date = class_date_str  # Use selected date for display
+    
+    # Calculate attendance stats for each class for the selected date
     for class_obj in classes:
         # Get student count
         class_obj.student_count = db.session.query(Student).join(Enrollment).filter(
@@ -4118,23 +4137,23 @@ def unified_attendance():
             Enrollment.is_active == True
         ).count()
         
-        # Check if attendance was taken today
-        today_attendance = Attendance.query.filter_by(
+        # Check if attendance was taken for the selected date
+        date_attendance = Attendance.query.filter_by(
             class_id=class_obj.id,
-            date=datetime.now().date()
+            date=class_date
         ).count()
-        class_obj.attendance_taken_today = today_attendance > 0
+        class_obj.attendance_taken_today = date_attendance > 0
         
-        # Get today's attendance stats
+        # Get attendance stats for the selected date
         if class_obj.attendance_taken_today:
             present_count = Attendance.query.filter_by(
                 class_id=class_obj.id,
-                date=datetime.now().date(),
+                date=class_date,
                 status='Present'
             ).count()
             absent_count = Attendance.query.filter(
                 Attendance.class_id == class_obj.id,
-                Attendance.date == datetime.now().date(),
+                Attendance.date == class_date,
                 Attendance.status.in_(['Unexcused Absence', 'Excused Absence'])
             ).count()
             class_obj.today_present = present_count
@@ -4143,13 +4162,13 @@ def unified_attendance():
             class_obj.today_present = 0
             class_obj.today_absent = 0
     
-    # Calculate overall stats
+    # Calculate overall stats for the selected date
     today_attendance_count = sum(1 for c in classes if c.attendance_taken_today)
     pending_classes_count = len(classes) - today_attendance_count
     
-    # Calculate overall attendance rate
-    total_attendance_records = Attendance.query.filter_by(date=datetime.now().date()).count()
-    present_records = Attendance.query.filter_by(date=datetime.now().date(), status='Present').count()
+    # Calculate overall attendance rate for the selected date
+    total_attendance_records = Attendance.query.filter_by(date=class_date).count()
+    present_records = Attendance.query.filter_by(date=class_date, status='Present').count()
     overall_attendance_rate = round((present_records / total_attendance_records * 100), 1) if total_attendance_records > 0 else 0
     
     # Attendance Reports Data

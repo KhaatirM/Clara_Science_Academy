@@ -1919,3 +1919,29 @@
     }
 }
 
+/* ===== TOUCH DEVICE FIXES ===== */
+/* Prevent hero section from blocking interactions when scrolled on touch devices */
+@media (hover: none) and (pointer: coarse) {
+    .hero-section {
+        /* Ensure hero section doesn't block content below when scrolled */
+        will-change: transform;
+    }
+    
+    .hero-content {
+        /* Reset transform on touch devices to prevent overlap issues */
+        transform: none !important;
+    }
+    
+    /* Ensure sections below hero can receive touch events */
+    .about-section,
+    .features-section,
+    .programs-section,
+    .technology-section,
+    .testimonials-section,
+    .contact-section,
+    .cta-section {
+        position: relative;
+        z-index: 3;
+    }
+}
+

@@ -1813,8 +1813,8 @@ def take_attendance(class_id):
         valid_statuses = ["Present", "Late", "Unexcused Absence", "Excused Absence", "Suspended"]
         
         for student in students:
-            status = request.form.get(f'status-{student.id}')
-            notes = request.form.get(f'notes-{student.id}')
+            status = request.form.get(f'status_{student.id}')
+            notes = request.form.get(f'notes_{student.id}')
             
             if not status:
                 continue

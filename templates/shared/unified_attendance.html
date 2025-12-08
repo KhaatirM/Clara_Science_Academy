@@ -260,7 +260,7 @@
                     <div class="row g-3 align-items-end">
                         <div class="col-12 col-md-4">
                             <label for="class-attendance-date" class="form-label">Select Date:</label>
-                            <input type="date" class="form-control" id="class-attendance-date" value="{{ today_date }}">
+                            <input type="date" class="form-control" id="class-attendance-date" value="{{ today_date }}" onchange="updateClassDate()">
                         </div>
                         <div class="col-12 col-md-4">
                             <button class="btn btn-primary" onclick="loadClassAttendance()">
@@ -520,8 +520,22 @@ function setClassDateToYesterday() {
 function loadClassAttendance() {
     const selectedDate = document.getElementById('class-attendance-date').value;
     if (selectedDate) {
-        window.location.href = window.location.pathname + '?date=' + selectedDate;
+        // Use class_date parameter for Class Period tab, keep date for School Day tab
+        const url = new URL(window.location.href);
+        url.searchParams.set('class_date', selectedDate);
+        // Keep the school day date if it exists
+        if (url.searchParams.has('date')) {
+            // Keep existing date for school day
+        } else {
+            url.searchParams.set('date', selectedDate);
+        }
+        window.location.href = url.toString();
     }
+}
+
+function updateClassDate() {
+    // Auto-load when date changes (optional - can be removed if you prefer manual button click)
+    // loadClassAttendance();
 }
 
 // Reports Functions
@@ -533,12 +547,18 @@ function clearFilters() {
     document.getElementById('end_date').value = '';
 }
 
-// Set today's date as default for class attendance
+// Set date from URL parameter or today's date as default for class attendance
 document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const classDateParam = urlParams.get('class_date') || urlParams.get('date');
     const today = new Date().toISOString().split('T')[0];
     const classDateInput = document.getElementById('class-attendance-date');
-    if (classDateInput && !classDateInput.value) {
-        classDateInput.value = today;
+    if (classDateInput) {
+        if (classDateParam) {
+            classDateInput.value = classDateParam;
+        } else if (!classDateInput.value) {
+            classDateInput.value = today;
+        }
     }
 });
 

@@ -223,6 +223,16 @@
                 showSurveyModal(modal);
             } else if (page === 'academic-calendar') {
                 showAcademicCalendarModal(modal);
+            } else if (page === 'education-plan') {
+                showEducationPlanModal(modal);
+            } else if (page === 'stem-manifesto') {
+                showSTEMManifestoModal(modal);
+            } else if (page === 'tuition-assistance') {
+                showTuitionAssistanceModal(modal);
+            } else if (page === 'admission-policy') {
+                showAdmissionPolicyModal(modal);
+            } else if (page === 'locations') {
+                showLocationsModal(modal);
             } else {
                 showPlaceholderModal(modal, page);
             }
@@ -921,6 +931,469 @@
                                 <a href="tel:1-800-567-5110" class="btn btn-outline-success btn-sm">
                                     <i class="fas fa-phone me-1"></i>Call Us
                                 </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function showEducationPlanModal(modal) {
+            const modalTitle = modal.querySelector('#pageModalLabel');
+            const modalBody = modal.querySelector('#modalBody');
+            
+            modalTitle.innerHTML = '<i class="fas fa-book me-2"></i>Education Plan';
+            modalBody.innerHTML = `
+                <div class="welcome-section">
+                    <h4 class="mb-3">
+                        <i class="fas fa-graduation-cap me-2"></i>Our Educational Approach
+                    </h4>
+                    <p class="text-muted mb-0">Learn about Clara Science Academy's comprehensive education plan and curriculum.</p>
+                </div>
+                
+                <div class="education-plan-content mt-4">
+                    <div class="mb-4">
+                        <p>Clara Science Academy believes that students will achieve the greatest results when they have the freedom to discover and explore their creative interests. CSA students will participate in a robust STEM program and a rigorous academic experience that is mutually supportive in developing students through scientific inquiry, reasoning, investigative learning, critical thinking, and communication skills. We will provide an innovative educational experience utilizing STEM areas as a vehicle for investigation, problem solving and a global learning. While working in STEM, students are uniquely called upon to envision and set goals, determine methods to reach those goals, re-vision and re-work original ideas, work collaboratively, and develop self-discipline. CSA students will participate in weekly pull-out classes in the four primary STEM areas; Science, Technology, Engineering and Math. These classes will follow the North Carolina Education Standards, while also ensuring that students develop a meaningful knowledge base of the impact and importance of the STEM socially, historically and multi-culturally. The applied learning approach of STEM motivates students, ignites their curiosity and creativity, encourages problem solving, and instills strong work habits. STEM education equips CSA students with the knowledge, skills, creative thinking, and dispositions that will help them thrive in a rapidly changing, technologically rich world. Our education plan will include a curriculum that has been independently evaluated for alignment to rigorous college and career-ready standards that improve and deepen student learning.</p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5 class="mb-3">
+                            <i class="fas fa-book-open me-2"></i>Core Curriculum
+                        </h5>
+                        <p>The overall curriculum models and proposals to be utilized by CSA is the <strong>Amplify Core Knowledge Curriculum</strong> which includes the Amplify CKLA, Amplify ELS an Amplify Science (<a href="https://www.amplify.com" target="_blank" rel="noopener noreferrer">www.amplify.com</a>).</p>
+                        <p>The Amplify Curriculum has received all green ratings and near-perfect scores across K-5 literacy, 6-8 ELA and 6-8 Science. Amplify core curriculum programs are backed by proven foundational research, expert authorship, extensive field testing and has an all-green rating according to EdReports.</p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5 class="mb-3">
+                            <i class="fas fa-calculator me-2"></i>Supplementary Curricula
+                        </h5>
+                        <p><strong>Eureka Curriculum</strong> - CSA will utilize the Eureka curriculum which bases mathematics instructions in scientific inquiry and investigation (<a href="https://greatminds.org/math" target="_blank" rel="noopener noreferrer">https://greatminds.org/math</a>).</p>
+                        <p><strong>PLTW Launch (PreK-12)</strong> - PLTW Launch addresses Next Generation Science Standards, Common Core State Standards for Math and English Language Arts, and other national and state standards (<a href="https://www.pltw.org/our-programs/pltw-launch-curriculum" target="_blank" rel="noopener noreferrer">https://www.pltw.org/our-programs/pltw-launch-curriculum</a>).</p>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function showSTEMManifestoModal(modal) {
+            const modalTitle = modal.querySelector('#pageModalLabel');
+            const modalBody = modal.querySelector('#modalBody');
+            
+            modalTitle.innerHTML = '<i class="fas fa-atom me-2"></i>STEM Manifesto';
+            modalBody.innerHTML = `
+                <div class="welcome-section">
+                    <h4 class="mb-3">
+                        <i class="fas fa-lightbulb me-2"></i>Our STEM Manifesto
+                    </h4>
+                    <p class="text-muted mb-0">The core principles that guide our educational philosophy and approach to STEM learning.</p>
+                </div>
+                
+                <div class="stem-manifesto-content mt-4">
+                    <div class="manifesto-item mb-4">
+                        <div class="d-flex align-items-start">
+                            <div class="manifesto-number me-3">
+                                <span class="badge bg-primary rounded-circle" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">1</span>
+                            </div>
+                            <div class="manifesto-content">
+                                <h5 class="mb-2">All students have creative potential.</h5>
+                                <p class="mb-0">Our students are not passive consumers of information. CSA will provide the space for them to be active participants in their own learning and construction of knowledge. Their inherent talents, interests, and creativity have only to be unleashed.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="manifesto-item mb-4">
+                        <div class="d-flex align-items-start">
+                            <div class="manifesto-number me-3">
+                                <span class="badge bg-primary rounded-circle" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">2</span>
+                            </div>
+                            <div class="manifesto-content">
+                                <h5 class="mb-2">Each student deserves an opportunity to prosper.</h5>
+                                <p class="mb-0">Too many students who reflect the racial and ethnic diversity of CSA are from families navigating poverty, too many are from urban /rural communities, and too many young women are not afforded a path into high-wage, high-demand STEM professions. No student's potential, nor dreams, should be left unrealized.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="manifesto-item mb-4">
+                        <div class="d-flex align-items-start">
+                            <div class="manifesto-number me-3">
+                                <span class="badge bg-primary rounded-circle" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">3</span>
+                            </div>
+                            <div class="manifesto-content">
+                                <h5 class="mb-2">Diversity is our strength.</h5>
+                                <p class="mb-0">Differences of gender, ability, race, ethnicity, and culture provide critical and diverse perspectives and voices to address today's complex challenges. Innovation and solutions emerge where different ideas and cultures interconnect.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="manifesto-item mb-4">
+                        <div class="d-flex align-items-start">
+                            <div class="manifesto-number me-3">
+                                <span class="badge bg-primary rounded-circle" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">4</span>
+                            </div>
+                            <div class="manifesto-content">
+                                <h5 class="mb-2">Engaged learners succeed.</h5>
+                                <p class="mb-0">How we teach our students is as important as what we teach them. CSA will create meaningful learning experiences that empower all students to embrace their curiosity, take ownership of, and joy in their learning, and become lifelong learners.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="manifesto-item mb-4">
+                        <div class="d-flex align-items-start">
+                            <div class="manifesto-number me-3">
+                                <span class="badge bg-primary rounded-circle" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">5</span>
+                            </div>
+                            <div class="manifesto-content">
+                                <h5 class="mb-2">Education is a collective responsibility.</h5>
+                                <p class="mb-0">Effective STEM learning takes place both in and outside of classrooms. Everyone in our community is a potential educator. We need to engage with leaders, institutions, and volunteers in our communities who want to help our young succeed.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="manifesto-item mb-4">
+                        <div class="d-flex align-items-start">
+                            <div class="manifesto-number me-3">
+                                <span class="badge bg-primary rounded-circle" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">6</span>
+                            </div>
+                            <div class="manifesto-content">
+                                <h5 class="mb-2">Innovation is the cornerstone of prosperity.</h5>
+                                <p class="mb-0">CSA STEM education is not just about filling jobs, but also about creating jobs. Building an innovation-based economy is essential for the long-term competitiveness and prosperity of CSA and its students.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="manifesto-item mb-4">
+                        <div class="d-flex align-items-start">
+                            <div class="manifesto-number me-3">
+                                <span class="badge bg-primary rounded-circle" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">7</span>
+                            </div>
+                            <div class="manifesto-content">
+                                <h5 class="mb-2">Learning takes courage, persistence, and humility.</h5>
+                                <p class="mb-0">Pushing the boundaries of one's understanding requires us to value curiosity, risk and failure as a stepping stone to success, prize questions over answers, and see learning as an unending journey.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="manifesto-item mb-4">
+                        <div class="d-flex align-items-start">
+                            <div class="manifesto-number me-3">
+                                <span class="badge bg-primary rounded-circle" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">8</span>
+                            </div>
+                            <div class="manifesto-content">
+                                <h5 class="mb-2">STEM skills are essential skills.</h5>
+                                <p class="mb-0">Advancements in science, technology, engineering, and mathematics are transforming nearly every facet of life and work. Not only is STEM literacy integral to the requirements of daily life, civic engagement, and employment, so are STEM capabilities in analyzing needs, taking initiative, organizing effort, and solving problems.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="manifesto-item mb-4">
+                        <div class="d-flex align-items-start">
+                            <div class="manifesto-number me-3">
+                                <span class="badge bg-primary rounded-circle" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">9</span>
+                            </div>
+                            <div class="manifesto-content">
+                                <h5 class="mb-2">STEM learning is cross-disciplinary.</h5>
+                                <p class="mb-0">It is the interconnectedness of ideas that enables students to integrate new learning with their prior experiences. STEM by its nature synthesizes analytical and creative thinking across multiple areas of human knowledge and expression. It is a powerful tool that sits at the crossroads of the sciences, arts, and humanities.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="manifesto-item mb-4">
+                        <div class="d-flex align-items-start">
+                            <div class="manifesto-number me-3">
+                                <span class="badge bg-primary rounded-circle" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">10</span>
+                            </div>
+                            <div class="manifesto-content">
+                                <h5 class="mb-2">The best way to learn STEM, is to DO it.</h5>
+                                <p class="mb-0">STEM education is not about retaining facts or disconnected bits of information. Purpose-driven learning challenges students to pursue deeper questions, and to identify and solve problems that are relevant and meaningful.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function showTuitionAssistanceModal(modal) {
+            const modalTitle = modal.querySelector('#pageModalLabel');
+            const modalBody = modal.querySelector('#modalBody');
+            
+            modalTitle.innerHTML = '<i class="fas fa-dollar-sign me-2"></i>Tuition Assistance';
+            modalBody.innerHTML = `
+                <div class="welcome-section">
+                    <h4 class="mb-3">
+                        <i class="fas fa-handshake me-2"></i>Tuition Assistance Opportunities
+                    </h4>
+                    <p class="text-muted mb-0">At Clara Science Academy, we are committed to providing an exceptional STEM Education to students, regardless of their families' ability to pay in full. We recognize the need for additional financial resources for many families, and offer numerous opportunities to help families access the funds necessary for attending Clara Science Academy.</p>
+                </div>
+                
+                <div class="tuition-assistance-content mt-4">
+                    <div class="mb-4">
+                        <p class="fw-bold mb-3"><em>* for the Greensboro Location:</em></p>
+                    </div>
+                    
+                    <div class="assistance-program mb-4">
+                        <h5 class="mb-3">
+                            <i class="fas fa-graduation-cap me-2 text-primary"></i>North Carolina Opportunity Scholarship
+                        </h5>
+                        <p>The NCOPS expands school choice in NC through scholarship grants of up to $7,000 per year for children in kindergarten through 12th grade. An eligible student must live in a household whose income meets the income guidelines. Applicants who apply in the month of February receive priority consideration. Visit <a href="https://ncseaa.edu" target="_blank" rel="noopener noreferrer">ncseaa.edu</a> for more information.</p>
+                    </div>
+                    
+                    <div class="assistance-program mb-4">
+                        <h5 class="mb-3">
+                            <i class="fas fa-award me-2 text-primary"></i>Clara's Foundation Scholarship Program <span class="badge bg-secondary">TBA</span>
+                        </h5>
+                        <p>Focusing on broadening the number of traditionally underrepresented groups at CSA, the Clara's Foundation Scholarship Program gives qualifying new students a 50% reduction in tuition.</p>
+                    </div>
+                    
+                    <div class="assistance-program mb-4">
+                        <h5 class="mb-3">
+                            <i class="fas fa-calculator me-2 text-primary"></i>CSA Tuition Assistance <span class="badge bg-secondary">TBA</span>
+                        </h5>
+                        <p>Clara Science Academy utilizes the FAST program to best evaluate the financial needs of prospective families. FAST is completely confidential and allows the finance committee to set each recipient's tuition at an amount that is commensurate with the family's ability to pay.</p>
+                    </div>
+                    
+                    <div class="assistance-program mb-4">
+                        <h5 class="mb-3">
+                            <i class="fas fa-heart me-2 text-primary"></i>North Carolina Disabilities Grant Program
+                        </h5>
+                        <p>The Disabilities Grant Program was created to help parents pay up to $9,000 of qualified expenses for children with disabilities who attend a nonpublic school. CSA accepts only students for whom we have the resources to serve. Visit <a href="https://ncseaa.edu" target="_blank" rel="noopener noreferrer">ncseaa.edu</a> for more information.</p>
+                    </div>
+                    
+                    <div class="mt-4 pt-3 border-top">
+                        <p class="mb-2">
+                            <a href="{{ url_for('static', filename='CSA_Payment_of_Fees_Policy.pdf') }}" target="_blank" class="btn btn-primary">
+                                <i class="fas fa-file-pdf me-2"></i>View, Download, and/or Print the Clara Science Academy Tuition / Payment of School Fees Policy
+                            </a>
+                        </p>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function showAdmissionPolicyModal(modal) {
+            const modalTitle = modal.querySelector('#pageModalLabel');
+            const modalBody = modal.querySelector('#modalBody');
+            
+            modalTitle.innerHTML = '<i class="fas fa-clipboard-list me-2"></i>Admission Policy';
+            modalBody.innerHTML = `
+                <div class="welcome-section">
+                    <h4 class="mb-3">
+                        <i class="fas fa-door-open me-2"></i>Admission Policy & Procedures
+                    </h4>
+                    <p class="text-muted mb-0">Learn about the admission process and requirements for Clara Science Academy.</p>
+                </div>
+                
+                <div class="admission-policy-content mt-4">
+                    <div class="mb-4">
+                        <h5 class="mb-3">
+                            <i class="fas fa-list-ol me-2 text-primary"></i>Procedures for Admission
+                        </h5>
+                        <ol class="admission-procedures">
+                            <li class="mb-3">
+                                <p class="mb-0">An application for admission is available upon request. It must be submitted with the non-refundable application fee of $25 (this fee may also be waived or ask for a voucher) to the school. This can also be completed online.</p>
+                            </li>
+                            <li class="mb-3">
+                                <p class="mb-0">After the candidate's application has been received, an interview with the Head of School and the candidate's parents will be scheduled.</p>
+                            </li>
+                            <li class="mb-3">
+                                <p class="mb-0">All candidates for admission to kindergarten through grade 8 are required to take an assessment for entrance. An appointment for the assessment will be made after the application is received.</p>
+                            </li>
+                            <li class="mb-3">
+                                <p class="mb-0">A child must be five years old on or before August 31 to attend kindergarten.</p>
+                            </li>
+                            <li class="mb-3">
+                                <p class="mb-0">Clara Science Academy has the option to request a letter of reference from the applicant's current teacher for admission to grades 1 through 5. For admission to grades 6 through 8, CSA may request letters of reference from the applicant's current English and Mathematics instructors.</p>
+                            </li>
+                            <li class="mb-3">
+                                <p class="mb-0">The administration will take the following factors into account when considering an applicant:</p>
+                                <ul class="mt-2">
+                                    <li>The extent to which a student can profit from an experience at CSA.</li>
+                                    <li>The candidate's scores on entrance assessment.</li>
+                                    <li>Readiness level of 5 year old.</li>
+                                    <li>The candidate's previous school record.</li>
+                                    <li>The enrollment of other members of the candidate's family in our school.</li>
+                                </ul>
+                            </li>
+                            <li class="mb-3">
+                                <p class="mb-0">The school has the authority to place the child at the proper grade level as indicated by the assessment regardless of age or grade completed prior to admission to Clara Science Academy.</p>
+                            </li>
+                            <li class="mb-3">
+                                <p class="mb-0">The admission decision will be communicated to parents as soon as possible after the completion of all admissions procedures.</p>
+                            </li>
+                            <li class="mb-3">
+                                <p class="mb-0">Within ten days of acceptance at CSA, the initial registration fee of $25 for grades K-8 should be sent to the school.</p>
+                            </li>
+                        </ol>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5 class="mb-3">
+                            <i class="fas fa-file-alt me-2 text-primary"></i>General Requirements / Admission Policy
+                        </h5>
+                        <p>Clara Science Academy school serving students in grades K-8. Admission is open to students who wish to pursue their school studies in a safe and caring learning environment and who meet admissions requirements. Admissions information is evaluated to determine if the student is prepared to meet the school's academic and disciplinary standards.</p>
+                        <p>Clara Science Academy school admits qualified students to its programs. The school does not discriminate on the basis of race, color, national or ethnic origin, or disability in the administration of its educational policies, admissions policies, athletic programs, or other programs.</p>
+                        <p class="mb-0">A student who has been expelled from another school, who has not met the academic requirements of his former school, or who, in the view of Clara Science Academy school administration, has a history of serious academic or behavior problems, will not be admitted.</p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5 class="mb-3">
+                            <i class="fas fa-user-friends me-2 text-primary"></i>Student Shadow Visit Procedure
+                        </h5>
+                        <p>We welcome the opportunity for prospective students to shadow at our school. Come spend a day seeing CSA through the eyes of a student. In order to begin the process, click on the button below and submit the form found there.</p>
+                        <div class="mt-3">
+                            <button class="btn btn-primary" data-page="enrollment">
+                                <i class="fas fa-calendar-check me-2"></i>Schedule a Shadow Visit
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5 class="mb-3">
+                            <i class="fas fa-school me-2 text-primary"></i>Feeder School Admission
+                        </h5>
+                        <p class="mb-0">For students entering from a feeder school, the following information is evaluated: the student's overall school record, recommendation of the feeder school principal, and admissions interview when deemed necessary or appropriate. Priority is given to feeder school students whose completed enrollment applications are submitted by the registration deadline.</p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5 class="mb-3">
+                            <i class="fas fa-exchange-alt me-2 text-primary"></i>Transfer Student Admission
+                        </h5>
+                        <p>Students wishing to transfer from any state-approved school or home school must complete an admissions application, provide the indicated educational records, and schedule an admissions interview. The following information is evaluated to make an admissions decision:</p>
+                        <ul class="transfer-requirements">
+                            <li>Placement / Admissions Test (when indicated)</li>
+                            <li>IEP Information/Updated</li>
+                            <li>ID from parents</li>
+                            <li>Birth Certificate for child</li>
+                            <li>Child Social Security Number</li>
+                            <li>Health records</li>
+                            <li>The admissions interview</li>
+                            <li>School transcript</li>
+                            <li>Record of current grades</li>
+                            <li>Recent standardized test scores</li>
+                            <li>Discipline records</li>
+                            <li>Attendance records</li>
+                            <li>Recommendations from the previous school</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="mb-4 pt-3 border-top">
+                        <h5 class="mb-3">
+                            <i class="fas fa-gavel me-2 text-primary"></i>Policy of Clara Science Academy
+                        </h5>
+                        <p>Where it's clear that a student brings harm to itself or staff, In the event that a parent has conducted themselves in an unprofessional way, after being put on notice, a dismissal of the parent or student may be conducted under investigation.</p>
+                        <p class="mb-0 fw-bold">Clara Science Academy reserves the right to make all final decisions.</p>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function showLocationsModal(modal) {
+            const modalTitle = modal.querySelector('#pageModalLabel');
+            const modalBody = modal.querySelector('#modalBody');
+            
+            modalTitle.innerHTML = '<i class="fas fa-map-marker-alt me-2"></i>Locations';
+            modalBody.innerHTML = `
+                <div class="welcome-section">
+                    <h4 class="mb-3">
+                        <i class="fas fa-building me-2"></i>Clara Science Academy Locations
+                    </h4>
+                    <p class="text-muted mb-0">Find our school locations across the United States.</p>
+                </div>
+                
+                <div class="locations-content mt-4">
+                    <div class="row g-4">
+                        <!-- Greensboro Location 1 -->
+                        <div class="col-md-6">
+                            <div class="location-card card h-100 border-0 shadow-sm">
+                                <div class="card-body d-flex align-items-center p-4">
+                                    <div class="location-logo me-3 flex-shrink-0">
+                                        <div class="logo-container bg-light rounded p-3" style="width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; background-color: #e8f5e9 !important;">
+                                            <i class="fas fa-atom fa-2x text-success"></i>
+                                        </div>
+                                    </div>
+                                    <div class="location-info flex-grow-1">
+                                        <h5 class="mb-2 fw-bold text-dark">Greensboro, NC</h5>
+                                        <p class="mb-1 text-muted small">3015 East Bessemer Ave.</p>
+                                        <p class="mb-0 text-muted small">Greensboro, NC 27405</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Greensboro Location 2 -->
+                        <div class="col-md-6">
+                            <div class="location-card card h-100 border-0 shadow-sm">
+                                <div class="card-body d-flex align-items-center p-4">
+                                    <div class="location-logo me-3 flex-shrink-0">
+                                        <div class="logo-container bg-light rounded p-3" style="width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; background-color: #e8f5e9 !important;">
+                                            <i class="fas fa-atom fa-2x text-success"></i>
+                                        </div>
+                                    </div>
+                                    <div class="location-info flex-grow-1">
+                                        <h5 class="mb-2 fw-bold text-dark">Greensboro, NC</h5>
+                                        <p class="mb-1 text-muted small">2812 East Bessemer Ave.</p>
+                                        <p class="mb-0 text-muted small">Greensboro, NC 27405</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Charlotte Location -->
+                        <div class="col-md-6">
+                            <div class="location-card card h-100 border-0 shadow-sm">
+                                <div class="card-body d-flex align-items-center p-4">
+                                    <div class="location-logo me-3 flex-shrink-0">
+                                        <div class="logo-container bg-light rounded p-3" style="width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; background-color: #e8f5e9 !important;">
+                                            <i class="fas fa-atom fa-2x text-success"></i>
+                                        </div>
+                                    </div>
+                                    <div class="location-info flex-grow-1">
+                                        <h5 class="mb-2 fw-bold text-dark">Charlotte, NC</h5>
+                                        <p class="mb-0">
+                                            <span class="badge bg-secondary">TBA</span>
+                                            <span class="text-muted small ms-2">To Be Announced</span>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Newark Location -->
+                        <div class="col-md-6">
+                            <div class="location-card card h-100 border-0 shadow-sm">
+                                <div class="card-body d-flex align-items-center p-4">
+                                    <div class="location-logo me-3 flex-shrink-0">
+                                        <div class="logo-container bg-light rounded p-3" style="width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; background-color: #e8f5e9 !important;">
+                                            <i class="fas fa-atom fa-2x text-success"></i>
+                                        </div>
+                                    </div>
+                                    <div class="location-info flex-grow-1">
+                                        <h5 class="mb-2 fw-bold text-dark">Newark, NJ</h5>
+                                        <p class="mb-0">
+                                            <span class="badge bg-secondary">TBA</span>
+                                            <span class="text-muted small ms-2">To Be Announced</span>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Philadelphia Location -->
+                        <div class="col-md-6 offset-md-3">
+                            <div class="location-card card h-100 border-0 shadow-sm">
+                                <div class="card-body d-flex align-items-center p-4">
+                                    <div class="location-logo me-3 flex-shrink-0">
+                                        <div class="logo-container bg-light rounded p-3" style="width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; background-color: #e8f5e9 !important;">
+                                            <i class="fas fa-atom fa-2x text-success"></i>
+                                        </div>
+                                    </div>
+                                    <div class="location-info flex-grow-1">
+                                        <h5 class="mb-2 fw-bold text-dark">Philadelphia, PA</h5>
+                                        <p class="mb-0">
+                                            <span class="badge bg-secondary">TBA</span>
+                                            <span class="text-muted small ms-2">To Be Announced</span>
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

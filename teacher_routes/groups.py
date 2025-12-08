@@ -53,9 +53,10 @@ def class_groups(class_id):
     students = [e.student for e in enrollments if e.student]
     
     return render_template('teachers/teacher_class_groups.html',
-                         class_item=class_obj,
+                         class_obj=class_obj,
                          groups=groups,
-                         students=students)
+                         students=students,
+                         enrolled_students=students)
 
 @bp.route('/groups/create/<int:class_id>', methods=['POST'])
 @login_required

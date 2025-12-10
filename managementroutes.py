@@ -7297,6 +7297,8 @@ def edit_student(student_id):
             return jsonify({'success': False, 'message': 'Emergency phone number is invalid. Please enter a valid phone number (max 20 characters).'}), 400
         
         # Basic info
+        student.first_name = request.form.get('first_name', student.first_name).strip()
+        student.last_name = request.form.get('last_name', student.last_name).strip()
         student.dob = request.form.get('dob', student.dob)
         student.grade_level = request.form.get('grade_level', student.grade_level)
         # State ID is disabled, so we don't update it

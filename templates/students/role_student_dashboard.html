@@ -2176,6 +2176,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                 <option value="">All Statuses</option>
                                 <option value="Active" {% if filter_status == 'Active' %}selected{% endif %}>Active</option>
                                 <option value="Inactive" {% if filter_status == 'Inactive' %}selected{% endif %}>Inactive</option>
+                                <option value="Voided" {% if filter_status == 'Voided' %}selected{% endif %}>Voided</option>
                             </select>
                         </div>
                         <div class="col-12 col-md-2">
@@ -2512,8 +2513,103 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
         </div>
         {% endif %}
         
+        <!-- Voided Assignments Section -->
+        {% if voided_assignments %}
+        <div class="mb-5">
+            <div class="d-flex align-items-center mb-3">
+                <div class="flex-grow-1">
+                    <h3 class="mb-0">
+                        <i class="bi bi-x-circle-fill text-dark me-2"></i>Voided Assignments
+                    </h3>
+                    <small class="text-muted">{{ voided_assignments|length }} assignment(s)</small>
+                </div>
+            </div>
+            <div class="border-top border-dark border-3 pt-3"></div>
+            
+            <div class="row g-3 mt-3" id="voidedAssignmentsTable">
+                {% for assignment, submission, student_status in voided_assignments %}
+                <div class="col-12 col-md-6 col-lg-4 assignment-card-wrapper" 
+                     data-status="{{ student_status }}" 
+                     data-type="{{ assignment.assignment_type or 'pdf' }}" 
+                     data-due="{{ assignment.due_date.strftime('%Y-%m-%d') if assignment.due_date else '9999-12-31' }}"
+                     data-title="{{ assignment.title }}"
+                     data-class="{{ assignment.class_info.name if assignment.class_info else 'Unknown' }}"
+                     style="opacity: 0.6;">
+                    <div class="student-assignment-card">
+                        <!-- Card Header -->
+                        <div class="student-assignment-card-header">
+                            <div class="student-assignment-type-icon
+                                {% if assignment.assignment_type == 'quiz' %}type-quiz
+                                {% elif assignment.assignment_type == 'discussion' %}type-discussion
+                                {% else %}type-pdf{% endif %}">
+                                {% if assignment.assignment_type == 'quiz' %}
+                                    <i class="bi bi-question-circle-fill"></i>
+                                {% elif assignment.assignment_type == 'discussion' %}
+                                    <i class="bi bi-chat-dots-fill"></i>
+                                {% else %}
+                                    <i class="bi bi-file-earmark-text-fill"></i>
+                                {% endif %}
+                            </div>
+                            <div class="student-assignment-status-badge">
+                                <span class="badge bg-dark">Voided</span>
+                            </div>
+                        </div>
+
+                        <!-- Card Body -->
+                        <div class="student-assignment-card-body">
+                            <h5 class="student-assignment-card-title">{{ assignment.title }}</h5>
+                            <p class="student-assignment-card-class">
+                                <i class="bi bi-book me-1"></i>{{ assignment.class_info.name if assignment.class_info else 'Unknown Class' }}
+                            </p>
+                            <div class="student-assignment-card-meta">
+                                <span class="meta-item">
+                                    <i class="bi bi-calendar3 me-1"></i>
+                                    Due: {{ assignment.due_date.strftime('%b %d, %Y') if assignment.due_date else 'No due date' }}
+                                </span>
+                                {% if assignment.quarter %}
+                                <span class="meta-item">
+                                    <i class="bi bi-calendar-range me-1"></i>Q{{ assignment.quarter }}
+                                </span>
+                                {% endif %}
+                            </div>
+                            {% if assignment.attachment_filename %}
+                            <div class="student-assignment-attachment">
+                                <i class="bi bi-paperclip me-1"></i>
+                                <a href="{{ url_for('student.download_assignment_file', assignment_id=assignment.id) }}" class="text-decoration-none">
+                                    {{ assignment.attachment_original_filename or assignment.attachment_filename }}
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Card Footer -->
+                        <div class="student-assignment-card-footer">
+                            <button type="button" class="btn btn-sm btn-student-view" onclick="viewAssignment({{ assignment.id }}, '{{ assignment.title }}', '{{ assignment.description or '' }}', '{{ assignment.due_date.strftime('%Y-%m-%d') if assignment.due_date else 'No due date' }}', '{{ assignment.quarter or 'N/A' }}', '{{ assignment.attachment_filename or '' }}', {{ 'true' if submission else 'false' }}, {{ 'true' if grades.get(assignment.id) else 'false' }}, '{{ assignment.assignment_type }}')">
+                                <i class="bi bi-eye me-1"></i>View
+                            </button>
+                            {% if assignment.assignment_type == 'quiz' %}
+                                <button type="button" class="btn btn-sm btn-student-action" disabled style="opacity: 0.5; cursor: not-allowed;" title="Assignment is voided">
+                                    <i class="bi bi-play-fill me-1"></i>Take Quiz
+                                </button>
+                            {% elif assignment.assignment_type == 'discussion' %}
+                                <button type="button" class="btn btn-sm btn-student-action" disabled style="opacity: 0.5; cursor: not-allowed;" title="Assignment is voided">
+                                    <i class="bi bi-chat-fill me-1"></i>Discuss
+                                </button>
+                            {% else %}
+                                <button type="button" class="btn btn-sm btn-student-action" disabled style="opacity: 0.5; cursor: not-allowed;" title="Assignment is voided - submission closed">
+                                    <i class="bi bi-upload me-1"></i>Submit
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
         <!-- Empty State -->
-        {% if not active_assignments and not inactive_assignments %}
+        {% if not active_assignments and not inactive_assignments and not voided_assignments %}
         <div class="row g-3">
             <div class="col-12">
                 <div class="student-assignments-empty">

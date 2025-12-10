@@ -601,7 +601,7 @@ def student_assignments():
     
     # Get filter parameters from request
     filter_class_id = request.args.get('class_id', type=int)
-    filter_status = request.args.get('status', '')  # 'Active', 'Inactive', or ''
+    filter_status = request.args.get('status', '').strip()  # 'Active', 'Inactive', 'Voided', or ''
     filter_start_date = request.args.get('start_date', '')
     filter_end_date = request.args.get('end_date', '')
     
@@ -609,15 +609,15 @@ def student_assignments():
     query = Assignment.query.filter(
         Assignment.class_id.in_(class_ids),
         Assignment.school_year_id == current_school_year.id,
-        Assignment.status.in_(['Active', 'Inactive'])  # Show both Active and Inactive assignments
+        Assignment.status.in_(['Active', 'Inactive', 'Voided'])  # Show Active, Inactive, and Voided assignments
     )
     
     # Apply class filter
     if filter_class_id:
         query = query.filter(Assignment.class_id == filter_class_id)
     
-    # Apply status filter
-    if filter_status:
+    # Apply status filter (only if a specific status is selected, not empty)
+    if filter_status and filter_status in ['Active', 'Inactive', 'Voided']:
         query = query.filter(Assignment.status == filter_status)
     
     # Apply date range filter
@@ -656,9 +656,10 @@ def student_assignments():
         Assignment.assignment_type.in_(['PDF', 'Paper', 'pdf', 'paper'])
     ).all()
     
-    # Separate assignments into Active and Inactive
+    # Separate assignments into Active, Inactive, and Voided
     active_assignments = []
     inactive_assignments = []
+    voided_assignments = []
     past_due_assignments = []
     upcoming_assignments = []
     today = datetime.now().date()
@@ -672,8 +673,10 @@ def student_assignments():
         
         assignment_data = (assignment, submission, student_status)
         
-        # Group by Active/Inactive status
-        if assignment.status == 'Active':
+        # Group by Active/Inactive/Voided status
+        if assignment.status == 'Voided':
+            voided_assignments.append(assignment_data)
+        elif assignment.status == 'Active':
             active_assignments.append(assignment_data)
         else:
             inactive_assignments.append(assignment_data)
@@ -692,6 +695,7 @@ def student_assignments():
                          **create_template_context(student, 'assignments', 'assignments',
                              active_assignments=active_assignments,
                              inactive_assignments=inactive_assignments,
+                             voided_assignments=voided_assignments,
                              grades=grades_dict,
                              today=today,
                              classes=classes,
@@ -1540,10 +1544,10 @@ def view_class_assignments(class_id):
     student = Student.query.get_or_404(current_user.student_id)
     class_obj = Class.query.get_or_404(class_id)
     
-    # Get assignments for this class (show Active and Inactive assignments)
+    # Get assignments for this class (show Active, Inactive, and Voided assignments)
     assignments = Assignment.query.filter(
         Assignment.class_id == class_id,
-        Assignment.status.in_(['Active', 'Inactive'])
+        Assignment.status.in_(['Active', 'Inactive', 'Voided'])
     ).order_by(Assignment.due_date.desc()).all()
     
     # Get submissions and grades for this student (excluding voided grades and voided assignments)
@@ -1594,10 +1598,10 @@ def get_class_assignments_api(class_id):
     if not enrollment:
         return jsonify({'error': 'Not enrolled in this class'}), 403
     
-    # Get assignments for this class
+    # Get assignments for this class (show Active, Inactive, and Voided assignments)
     assignments = Assignment.query.filter(
         Assignment.class_id == class_id,
-        Assignment.status.in_(['Active', 'Inactive'])
+        Assignment.status.in_(['Active', 'Inactive', 'Voided'])
     ).order_by(Assignment.due_date.desc()).all()
     
     # Get submissions and grades

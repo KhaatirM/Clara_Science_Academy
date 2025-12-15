@@ -165,3 +165,52 @@ def list_user_classrooms(service):
         current_app.logger.error(f"Failed to list classrooms: {e}")
         return []
 
+
+def list_classroom_coursework(service, classroom_id):
+    """
+    List all Coursework (Assignments) for a specific Google Classroom course.
+    
+    Args:
+        service: Authenticated Google Classroom service object
+        classroom_id: Google Classroom course ID
+    
+    Returns:
+        List of coursework dictionaries, or empty list if retrieval fails
+    """
+    try:
+        # Fetches assignments, materials, and questions - we will filter for assignments later
+        results = service.courses().courseWork().list(courseId=classroom_id).execute()
+        coursework = results.get('courseWork', [])
+        return coursework
+    except Exception as e:
+        current_app.logger.error(f"Failed to list coursework for {classroom_id}: {e}")
+        return []
+
+
+def get_coursework_grades(service, classroom_id, coursework_id):
+    """
+    Get the grades/submissions for a specific piece of Coursework.
+    
+    Args:
+        service: Authenticated Google Classroom service object
+        classroom_id: Google Classroom course ID
+        coursework_id: Google Classroom CourseWork ID
+    
+    Returns:
+        List of submission dictionaries (including grades), or empty list if retrieval fails
+    """
+    try:
+        # Fetch all student submissions/grades for the coursework that are graded
+        # fields filter limits API payload to just the necessary grade/student info
+        results = service.courses().courseWork().studentSubmissions().list(
+            courseId=classroom_id,
+            courseWorkId=coursework_id,
+            states='GRADED',
+            fields='studentSubmissions(assignedGrade,userId,state)'
+        ).execute()
+        
+        submissions = results.get('studentSubmissions', [])
+        return submissions
+    except Exception as e:
+        current_app.logger.error(f"Failed to get grades for coursework {coursework_id} in {classroom_id}: {e}")
+        return []

@@ -402,7 +402,8 @@ class Class(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
     # Google Classroom integration
-    google_classroom_id = db.Column(db.String(100), nullable=True, unique=True)
+    # ACTION: Removed 'unique=True' constraint to enable linking one GC to multiple internal classes
+    google_classroom_id = db.Column(db.String(100), nullable=True)
 
     # Relationships
     teacher = db.relationship('TeacherStaff', backref='primary_classes', lazy=True, foreign_keys=[teacher_id])
@@ -511,6 +512,9 @@ class Assignment(db.Model):
     attachment_file_path = db.Column(db.String(500), nullable=True)
     attachment_file_size = db.Column(db.Integer, nullable=True)
     attachment_mime_type = db.Column(db.String(100), nullable=True)
+
+    # NEW FIELD: To link the internal assignment to the external Google Classroom Coursework
+    google_coursework_id = db.Column(db.String(100), unique=True, nullable=True)
 
     class_info = db.relationship('Class', backref='assignments', lazy=True)
     school_year = db.relationship('SchoolYear', backref='assignments', lazy=True)

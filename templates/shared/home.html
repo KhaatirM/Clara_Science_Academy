@@ -687,13 +687,49 @@
                     </div>
                     <div>
                         <h6 class="updates-intro-title mb-2">
-                            <i class="fas fa-calendar-alt me-2"></i>Latest System Update - December 8, 2025
+                            <i class="fas fa-calendar-alt me-2"></i>Latest System Update - December 14, 2025
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>Public Homepage & Bug Fixes Release!</strong> Enhanced public homepage with comprehensive About Us information, fixed critical attendance and group management bugs, and improved user interface across the platform!</p>
+                        <p class="updates-intro-text mb-0"><strong>Google Classroom Synchronization System!</strong> Automated two-way sync between Google Classroom and Clara Science Academy is now fully active, running every 15 minutes to automatically sync assignments and grades!</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- December 14, 2025 - Google Classroom Sync -->
+                    <div class="update-section mb-4">
+                        <h6 class="text-primary mb-3" style="background: linear-gradient(135deg, #4285f4 0%, #34a853 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+                            <i class="fab fa-google me-2"></i>🔗 Google Classroom Synchronization - December 14, 2025
+                        </h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Automated Synchronization System:</strong> The Google Classroom sync system is now fully active and configured to run automatically every 15 minutes via scheduled cron jobs. No manual intervention required!
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Many-to-One Classroom Linking:</strong> One Google Classroom can now be linked to multiple internal classes, allowing teachers to sync assignments and grades across different class sections efficiently
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Automatic Assignment Sync:</strong> When you create a new assignment (Coursework type) in Google Classroom, it automatically appears in your Clara Science Academy system within 15 minutes. Assignments are created as PDF type with proper due dates, point values, and academic period assignments
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Intelligent Grade Filtering:</strong> The system only syncs grades for students who are actively enrolled in the specific internal class. Students in Google Classroom but not enrolled in the internal class are automatically filtered out, ensuring accurate gradebooks
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Seamless Integration:</strong> All synced assignments and grades are properly linked via Google Coursework IDs, maintaining data integrity and preventing duplicates. The system handles date parsing, academic period assignment, and grade data formatting automatically
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Background Processing:</strong> All synchronization happens in the background without disrupting your workflow. Monitor sync status through Render dashboard logs and see real-time updates in your assignments and gradebooks
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3" style="background: linear-gradient(135deg, rgba(66, 133, 244, 0.1) 0%, rgba(52, 168, 83, 0.1) 100%); border-color: #4285f4;">
+                            <p class="mb-0"><strong>💡 How It Works:</strong> Connect your Google account in Settings, link your Google Classroom to internal classes, and the system will automatically sync assignments and grades every 15 minutes. Create assignments in Google Classroom and they'll appear in your system automatically!</p>
+                        </div>
+                    </div>
+
                     <!-- December 8, 2025 - Public Homepage & Bug Fixes -->
                     <div class="update-section mb-4">
                         <h6 class="text-primary mb-3" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
@@ -1433,12 +1469,12 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // ===== SHOW UPDATE MODAL =====
-    if (!sessionStorage.getItem('updateModalShownDec8_2025')) {
+    if (!sessionStorage.getItem('updateModalShownDec14_2025')) {
         const updateModalElement = document.getElementById('updateModal');
         if (updateModalElement) {
             const updateModal = new bootstrap.Modal(updateModalElement);
             updateModal.show();
-            sessionStorage.setItem('updateModalShownDec8_2025', 'true');
+            sessionStorage.setItem('updateModalShownDec14_2025', 'true');
         }
     }
     

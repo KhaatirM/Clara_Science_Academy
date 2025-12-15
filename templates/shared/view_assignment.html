@@ -246,6 +246,15 @@
                             <i class="bi bi-clock-history"></i>
                             <span>Extensions</span>
                         </button>
+                        {% set has_voided_grades = assignment.grades|selectattr('is_voided', 'equalto', True)|list|length > 0 %}
+                        {% if has_voided_grades %}
+                        <button class="btn btn-compact btn-compact-unvoid" 
+                                data-bs-toggle="modal" 
+                                data-bs-target="#unvoidModal">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                            <span>Unvoid</span>
+                        </button>
+                        {% endif %}
                         <button class="btn btn-compact btn-compact-void" 
                                 data-bs-toggle="modal" 
                                 data-bs-target="#voidModal">
@@ -531,6 +540,113 @@
                     </button>
                     <button type="submit" class="btn btn-void">
                         <i class="bi bi-slash-circle me-2"></i>Void Assignment
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Unvoid Assignment Modal -->
+<div class="modal fade" id="unvoidModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content modal-modern">
+            <div class="modal-header-unvoid">
+                <div class="modal-icon-unvoid">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <h5 class="modal-title-unvoid">Restore Assignment</h5>
+                    <p class="modal-subtitle-unvoid">Include back in grade calculations</p>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="unvoidAssignmentForm" method="POST" action="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.unvoid_assignment_for_students', assignment_id=assignment.id) }}{% else %}{{ url_for('teacher.unvoid_assignment_for_students', assignment_id=assignment.id) }}{% endif %}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <input type="hidden" name="assignment_type" value="individual"/>
+                <input type="hidden" name="unvoid_all" id="unvoidAllHidden" value="true"/>
+                <div class="modal-body modal-body-enhanced">
+                    <div class="alert-modern alert-unvoid">
+                        <div class="alert-icon">
+                            <i class="bi bi-info-circle"></i>
+                        </div>
+                        <div>
+                            <div class="alert-title">Restore Assignment</div>
+                            <p class="alert-text">Restoring will include this assignment back in grade calculations. Original grades will be restored if available.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="void-options-section">
+                        <label class="section-label">
+                            <i class="bi bi-gear me-2"></i>Restore Options
+                        </label>
+                        
+                        <div class="option-card option-card-active" onclick="selectUnvoidOption('all', event)">
+                            <input class="form-check-input" type="radio" name="unvoid_type" id="unvoidAll" value="all" checked onchange="toggleUnvoidStudentSelection(); updateUnvoidCardActiveState();">
+                            <label class="option-card-label" for="unvoidAll">
+                                <div class="option-icon bg-success">
+                                    <i class="bi bi-people-fill"></i>
+                                </div>
+                                <div class="option-content">
+                                    <div class="option-title">Restore for Entire Class</div>
+                                    <div class="option-description">All voided grades will be restored</div>
+                                </div>
+                            </label>
+                        </div>
+                        
+                        <div class="option-card" onclick="selectUnvoidOption('selected', event)">
+                            <input class="form-check-input" type="radio" name="unvoid_type" id="unvoidSelect" value="selected" onchange="toggleUnvoidStudentSelection(); updateUnvoidCardActiveState();">
+                            <label class="option-card-label" for="unvoidSelect">
+                                <div class="option-icon bg-warning">
+                                    <i class="bi bi-person-check-fill"></i>
+                                </div>
+                                <div class="option-content">
+                                    <div class="option-title">Restore for Selected Students Only</div>
+                                    <div class="option-description">Choose specific students to restore for</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div id="unvoidStudentSelectionDiv" class="student-selection-section" style="display: none;">
+                        <div class="selection-header">
+                            <i class="bi bi-people me-2"></i>Select Students
+                        </div>
+                        
+                        <div class="select-all-card">
+                            <input class="form-check-input" type="checkbox" id="selectAllUnvoid" onclick="toggleAllUnvoidStudents(this)">
+                            <label class="select-all-label" for="selectAllUnvoid">
+                                <i class="bi bi-check-all me-2"></i>Select All Students
+                            </label>
+                        </div>
+                        
+                        <div class="students-grid">
+                            {% set enrollments = assignment.class_info.enrollments %}
+                            {% for enrollment in enrollments %}
+                            {% if enrollment.is_active and enrollment.student %}
+                            {% set student_grade = assignment.grades|selectattr('student_id', 'equalto', enrollment.student.id)|selectattr('is_voided', 'equalto', True)|first %}
+                            {% if student_grade %}
+                            <div class="student-select-card">
+                                <input class="form-check-input unvoid-student-checkbox" type="checkbox" name="student_ids" value="{{ enrollment.student.id }}" id="unvoidstudent{{ enrollment.student.id }}">
+                                <label class="student-select-label" for="unvoidstudent{{ enrollment.student.id }}">
+                                    <div class="student-avatar-mini">
+                                        {{ enrollment.student.first_name[0] }}{{ enrollment.student.last_name[0] }}
+                                    </div>
+                                    <span>{{ enrollment.student.first_name }} {{ enrollment.student.last_name }}</span>
+                                </label>
+                            </div>
+                            {% endif %}
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer modal-footer-enhanced">
+                    <button type="button" class="btn btn-cancel" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-2"></i>Cancel
+                    </button>
+                    <button type="submit" class="btn btn-unvoid" onclick="submitUnvoidAssignment(event)">
+                        <i class="bi bi-arrow-counterclockwise me-2"></i>Restore Assignment
                     </button>
                 </div>
             </form>
@@ -888,6 +1004,131 @@ function selectVoidOption(type) {
     toggleStudentSelection();
     
     // Update visual active state
+}
+
+// Helper functions for unvoid modal
+function selectUnvoidOption(type, event) {
+    if (type === 'all') {
+        document.getElementById('unvoidAll').checked = true;
+        document.getElementById('unvoidSelect').checked = false;
+    } else {
+        document.getElementById('unvoidSelect').checked = true;
+        document.getElementById('unvoidAll').checked = false;
+    }
+    
+    // Update visual active state
+    document.querySelectorAll('#unvoidModal .option-card').forEach(card => {
+        card.classList.remove('option-card-active');
+    });
+    
+    // Add active class to the clicked card
+    if (event && event.currentTarget) {
+        event.currentTarget.classList.add('option-card-active');
+    } else {
+        // Fallback: find the card by the radio button
+        const radio = type === 'all' ? document.getElementById('unvoidAll') : document.getElementById('unvoidSelect');
+        if (radio) {
+            const card = radio.closest('.option-card');
+            if (card) {
+                card.classList.add('option-card-active');
+            }
+        }
+    }
+    
+    toggleUnvoidStudentSelection();
+}
+
+function toggleUnvoidStudentSelection() {
+    const unvoidSelect = document.getElementById('unvoidSelect');
+    const studentSelectionDiv = document.getElementById('unvoidStudentSelectionDiv');
+    
+    if (unvoidSelect && unvoidSelect.checked) {
+        studentSelectionDiv.style.display = 'block';
+    } else {
+        studentSelectionDiv.style.display = 'none';
+    }
+}
+
+function updateUnvoidCardActiveState() {
+    // Update visual active state based on radio button selection
+    document.querySelectorAll('#unvoidModal .option-card').forEach(card => {
+        card.classList.remove('option-card-active');
+    });
+    
+    const checkedRadio = document.querySelector('#unvoidModal input[name="unvoid_type"]:checked');
+    if (checkedRadio) {
+        const card = checkedRadio.closest('.option-card');
+        if (card) {
+            card.classList.add('option-card-active');
+        }
+    }
+}
+
+function toggleAllUnvoidStudents(source) {
+    const checkboxes = document.querySelectorAll('.unvoid-student-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = source.checked;
+    });
+}
+
+function submitUnvoidAssignment(event) {
+    event.preventDefault();
+    
+    const unvoidType = document.querySelector('input[name="unvoid_type"]:checked').value;
+    const unvoidAll = unvoidType === 'all';
+    
+    let studentIds = [];
+    if (!unvoidAll) {
+        studentIds = Array.from(document.querySelectorAll('.unvoid-student-checkbox:checked')).map(cb => cb.value);
+        
+        if (studentIds.length === 0) {
+            alert('Please select at least one student to restore the assignment for.');
+            return;
+        }
+    }
+    
+    const form = document.getElementById('unvoidAssignmentForm');
+    const formData = new FormData(form);
+    
+    // Update hidden field
+    document.getElementById('unvoidAllHidden').value = unvoidAll.toString();
+    
+    // Clear and add student IDs
+    formData.delete('student_ids');
+    studentIds.forEach(id => formData.append('student_ids', id));
+    
+    // Show loading state
+    const submitBtn = event.target;
+    const originalHTML = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Restoring...';
+    
+    // Submit via AJAX
+    fetch(form.action, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('unvoidModal')).hide();
+            alert(data.message || 'Assignment restored successfully!');
+            location.reload();
+        } else {
+            alert('Error: ' + (data.message || 'Failed to restore assignment'));
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalHTML;
+        }
+    })
+    .catch(error => {
+        alert('Error restoring assignment: ' + error);
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalHTML;
+    });
+}
     document.querySelectorAll('.option-card').forEach(card => {
         card.classList.remove('option-card-active');
     });

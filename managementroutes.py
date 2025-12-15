@@ -6468,6 +6468,8 @@ def void_assignment_for_students(assignment_id):
                         if group_grade:
                             # Grade exists - void it if not already voided
                             if not group_grade.is_voided:
+                                # Note: GroupGrade doesn't have GradeHistory, so we'll just void it
+                                # The unvoid will restore from the voided state
                                 group_grade.is_voided = True
                                 group_grade.voided_by = current_user.id
                                 group_grade.voided_at = datetime.utcnow()
@@ -6519,6 +6521,8 @@ def void_assignment_for_students(assignment_id):
                         if group_grade:
                             # Grade exists - void it if not already voided
                             if not group_grade.is_voided:
+                                # Note: GroupGrade doesn't have GradeHistory, so we'll just void it
+                                # The unvoid will restore from the voided state
                                 group_grade.is_voided = True
                                 group_grade.voided_by = current_user.id
                                 group_grade.voided_at = datetime.utcnow()
@@ -6571,6 +6575,34 @@ def void_assignment_for_students(assignment_id):
                     if grade:
                         # Grade exists - void it if not already voided
                         if not grade.is_voided:
+                            # Save current grade data to history before voiding
+                            from models import GradeHistory
+                            original_grade_data = grade.grade_data
+                            
+                            if original_grade_data:
+                                try:
+                                    # Create history entry to preserve original grade data
+                                    history_entry = GradeHistory(
+                                        grade_id=grade.id,
+                                        student_id=grade.student_id,
+                                        assignment_id=assignment_id,
+                                        previous_grade_data=original_grade_data,  # Save original
+                                        new_grade_data=json.dumps({
+                                            'score': 0,
+                                            'points_earned': 0,
+                                            'total_points': assignment.total_points if assignment.total_points else 100.0,
+                                            'percentage': 0,
+                                            'comment': '',
+                                            'feedback': '',
+                                            'is_voided': True
+                                        }),
+                                        changed_by=current_user.id,
+                                        change_reason=f'Assignment voided: {reason}'
+                                    )
+                                    db.session.add(history_entry)
+                                except Exception as e:
+                                    current_app.logger.warning(f"Could not save grade history for grade {grade.id}: {e}")
+                            
                             grade.is_voided = True
                             grade.voided_by = current_user.id
                             grade.voided_at = datetime.utcnow()
@@ -6616,6 +6648,34 @@ def void_assignment_for_students(assignment_id):
                     if grade:
                         # Grade exists - void it if not already voided
                         if not grade.is_voided:
+                            # Save current grade data to history before voiding
+                            from models import GradeHistory
+                            original_grade_data = grade.grade_data
+                            
+                            if original_grade_data:
+                                try:
+                                    # Create history entry to preserve original grade data
+                                    history_entry = GradeHistory(
+                                        grade_id=grade.id,
+                                        student_id=grade.student_id,
+                                        assignment_id=assignment_id,
+                                        previous_grade_data=original_grade_data,  # Save original
+                                        new_grade_data=json.dumps({
+                                            'score': 0,
+                                            'points_earned': 0,
+                                            'total_points': assignment.total_points if assignment.total_points else 100.0,
+                                            'percentage': 0,
+                                            'comment': '',
+                                            'feedback': '',
+                                            'is_voided': True
+                                        }),
+                                        changed_by=current_user.id,
+                                        change_reason=f'Assignment voided: {reason}'
+                                    )
+                                    db.session.add(history_entry)
+                                except Exception as e:
+                                    current_app.logger.warning(f"Could not save grade history for grade {grade.id}: {e}")
+                            
                             grade.is_voided = True
                             grade.voided_by = current_user.id
                             grade.voided_at = datetime.utcnow()
@@ -6708,6 +6768,190 @@ def void_assignment_for_students(assignment_id):
         else:
             flash(error_message, 'danger')
             return redirect(url_for('management.assignments_and_grades'))
+
+
+@management_blueprint.route('/unvoid-assignment/<int:assignment_id>', methods=['POST'])
+@login_required
+@management_required
+def unvoid_assignment_for_students(assignment_id):
+    """Un-void an assignment (restore grades) for all students or specific students."""
+    try:
+        assignment_type = request.form.get('assignment_type', 'individual')
+        student_ids = request.form.getlist('student_ids')
+        unvoid_all = request.form.get('unvoid_all', 'false').lower() == 'true'
+        
+        unvoided_count = 0
+        
+        if assignment_type == 'group':
+            from models import GroupAssignment, GroupGrade
+            group_assignment = GroupAssignment.query.get_or_404(assignment_id)
+            
+            if unvoid_all or not student_ids:
+                from models import StudentGroupMember, StudentGroup
+                
+                groups = StudentGroup.query.filter_by(class_id=group_assignment.class_id).all()
+                for group in groups:
+                    members = StudentGroupMember.query.filter_by(student_group_id=group.id).all()
+                    for member in members:
+                        group_grade = GroupGrade.query.filter_by(
+                            group_assignment_id=assignment_id,
+                            student_id=member.student_id,
+                            is_voided=True
+                        ).first()
+                        
+                        if group_grade:
+                            group_grade.is_voided = False
+                            group_grade.voided_by = None
+                            group_grade.voided_at = None
+                            group_grade.voided_reason = None
+                            unvoided_count += 1
+                
+                message = f'Restored group assignment "{group_assignment.title}" for all students ({unvoided_count} grades)'
+            else:
+                from models import StudentGroupMember
+                for student_id in student_ids:
+                    member = StudentGroupMember.query.filter_by(student_id=int(student_id)).first()
+                    if member:
+                        group_grade = GroupGrade.query.filter_by(
+                            group_assignment_id=assignment_id,
+                            student_id=int(student_id),
+                            is_voided=True
+                        ).first()
+                        
+                        if group_grade:
+                            group_grade.is_voided = False
+                            group_grade.voided_by = None
+                            group_grade.voided_at = None
+                            group_grade.voided_reason = None
+                            unvoided_count += 1
+                
+                message = f'Restored group assignment "{group_assignment.title}" for {unvoided_count} student(s)'
+        else:
+            assignment = Assignment.query.get_or_404(assignment_id)
+            
+            if unvoid_all or not student_ids:
+                # Unvoid for all students
+                from models import Enrollment
+                enrollments = Enrollment.query.filter_by(class_id=assignment.class_id, is_active=True).all()
+                
+                for enrollment in enrollments:
+                    grade = Grade.query.filter_by(
+                        assignment_id=assignment_id,
+                        student_id=enrollment.student_id,
+                        is_voided=True
+                    ).first()
+                    
+                    if grade:
+                        # Restore grade data from history if available
+                        from models import GradeHistory
+                        history_entry = GradeHistory.query.filter_by(
+                            grade_id=grade.id
+                        ).order_by(GradeHistory.changed_at.desc()).first()
+                        
+                        if history_entry and history_entry.previous_grade_data:
+                            # Restore original grade data from history
+                            try:
+                                grade.grade_data = history_entry.previous_grade_data
+                            except Exception as e:
+                                current_app.logger.warning(f"Could not restore grade data from history: {e}")
+                        
+                        grade.is_voided = False
+                        grade.voided_by = None
+                        grade.voided_at = None
+                        grade.voided_reason = None
+                        unvoided_count += 1
+                
+                message = f'Restored assignment "{assignment.title}" for all students ({unvoided_count} grades)'
+            else:
+                # Unvoid for specific students
+                for student_id in student_ids:
+                    grade = Grade.query.filter_by(
+                        assignment_id=assignment_id,
+                        student_id=int(student_id),
+                        is_voided=True
+                    ).first()
+                    
+                    if grade:
+                        # Restore grade data from history if available
+                        from models import GradeHistory
+                        history_entry = GradeHistory.query.filter_by(
+                            grade_id=grade.id
+                        ).order_by(GradeHistory.changed_at.desc()).first()
+                        
+                        if history_entry and history_entry.previous_grade_data:
+                            # Restore original grade data from history
+                            try:
+                                grade.grade_data = history_entry.previous_grade_data
+                            except Exception as e:
+                                current_app.logger.warning(f"Could not restore grade data from history: {e}")
+                        
+                        grade.is_voided = False
+                        grade.voided_by = None
+                        grade.voided_at = None
+                        grade.voided_reason = None
+                        unvoided_count += 1
+                
+                message = f'Restored assignment "{assignment.title}" for {unvoided_count} student(s)'
+        
+        db.session.commit()
+        
+        # Update quarter grades for affected students (force recalculation)
+        from utils.quarter_grade_calculator import update_quarter_grade
+        if assignment_type == 'individual':
+            quarter = assignment.quarter
+            school_year_id = assignment.school_year_id
+            class_id = assignment.class_id
+        else:
+            quarter = group_assignment.quarter
+            school_year_id = group_assignment.school_year_id
+            class_id = group_assignment.class_id
+        
+        # Refresh quarter grades for affected students
+        students_to_update = []
+        if student_ids:
+            students_to_update = student_ids
+        else:
+            if assignment_type == 'individual':
+                students_to_update = [g.student_id for g in Grade.query.filter_by(assignment_id=assignment_id).all()]
+            else:
+                students_to_update = [g.student_id for g in GroupGrade.query.filter_by(group_assignment_id=assignment_id).all()]
+        
+        for sid in students_to_update:
+            try:
+                update_quarter_grade(
+                    student_id=int(sid),
+                    class_id=class_id,
+                    school_year_id=school_year_id,
+                    quarter=quarter,
+                    force=True
+                )
+            except Exception as e:
+                current_app.logger.warning(f"Could not update quarter grade for student {sid}: {e}")
+        
+        # Check if this is an AJAX request
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or \
+                  'application/json' in request.headers.get('Accept', '')
+        
+        if is_ajax:
+            return jsonify({'success': True, 'message': message, 'unvoided_count': unvoided_count})
+        else:
+            flash(message, 'success')
+            return redirect(url_for('management.assignments_and_grades'))
+        
+    except Exception as e:
+        db.session.rollback()
+        error_message = f'Error unvoiding assignment: {str(e)}'
+        
+        # Check if this is an AJAX request
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or \
+                  'application/json' in request.headers.get('Accept', '')
+        
+        if is_ajax:
+            return jsonify({'success': False, 'message': error_message}), 500
+        else:
+            flash(error_message, 'danger')
+            return redirect(url_for('management.assignments_and_grades'))
+
 
 @management_blueprint.route('/grades/statistics/<int:assignment_id>')
 @login_required

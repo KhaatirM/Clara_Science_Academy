@@ -62,16 +62,26 @@ def calculate_quarter_grade_for_student_class(student_id, class_id, school_year_
     if not academic_period:
         return None  # Quarter period not found
     
-    # Check if student was enrolled during this quarter
-    if enrollment.enrolled_at:
-        # Convert datetime to date if needed
-        enrolled_date = enrollment.enrolled_at.date() if hasattr(enrollment.enrolled_at, 'date') else enrollment.enrolled_at
-        quarter_start = academic_period.start_date
-        quarter_end = academic_period.end_date
-        
-        # Student enrolled after quarter ended - don't include
-        if enrolled_date > quarter_end:
-            return None
+    # If we have grades for this quarter, include them regardless of enrollment date
+    # This handles cases where assignments from previous quarters exist in classes
+    # created in later quarters (e.g., Q1 assignment in a Q2 class)
+    if grades:
+        # Student has grades for this quarter, so we should calculate the grade
+        # Skip the enrollment date check in this case - grades exist, so include them
+        pass
+    else:
+        # No grades found - check enrollment date to see if student should have grades
+        # Check if student was enrolled during this quarter
+        if enrollment.enrolled_at:
+            # Convert datetime to date if needed
+            enrolled_date = enrollment.enrolled_at.date() if hasattr(enrollment.enrolled_at, 'date') else enrollment.enrolled_at
+            quarter_start = academic_period.start_date
+            quarter_end = academic_period.end_date
+            
+            # Student enrolled after quarter ended AND has no grades - don't include
+            # But if they have grades, include them (handles late-added assignments)
+            if enrolled_date > quarter_end:
+                return None
     
     # Check if student was unenrolled before or during the quarter
     if not enrollment.is_active and enrollment.dropped_at:

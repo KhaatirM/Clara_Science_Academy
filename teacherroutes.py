@@ -1097,8 +1097,23 @@ def remove_assignment(assignment_id):
         return redirect(url_for('teacher.teacher_dashboard'))
     
     try:
+        from models import DeadlineReminder
+        
         # Delete associated extensions first
         AssignmentExtension.query.filter_by(assignment_id=assignment_id).delete()
+        
+        # Delete deadline reminders (they reference assignments)
+        # Use raw SQL directly to avoid ORM trying to load columns that may not exist
+        # Must delete BEFORE deleting assignment to avoid relationship access
+        try:
+            db.session.execute(
+                db.text("DELETE FROM deadline_reminder WHERE assignment_id = :assignment_id"),
+                {"assignment_id": assignment_id}
+            )
+            # Flush to ensure deletion is processed before assignment deletion
+            db.session.flush()
+        except Exception as e:
+            current_app.logger.warning(f"Could not delete deadline reminders: {e}")
         
         # Delete associated file if it exists
         if assignment.attachment_filename:
@@ -1979,6 +1994,17 @@ def void_assignment_for_students(assignment_id):
                                 group_grade.voided_by = current_user.id
                                 group_grade.voided_at = datetime.utcnow()
                                 group_grade.voided_reason = reason
+                                # Nullify grade data if it exists
+                                if group_grade.grade_data:
+                                    group_grade.grade_data = json.dumps({
+                                        'score': 0,
+                                        'points_earned': 0,
+                                        'total_points': group_assignment.total_points if group_assignment.total_points else 100.0,
+                                        'percentage': 0,
+                                        'comment': '',
+                                        'feedback': '',
+                                        'is_voided': True
+                                    })
                                 voided_count += 1
                         else:
                             # No grade exists - create a placeholder voided grade
@@ -2019,6 +2045,17 @@ def void_assignment_for_students(assignment_id):
                                 group_grade.voided_by = current_user.id
                                 group_grade.voided_at = datetime.utcnow()
                                 group_grade.voided_reason = reason
+                                # Nullify grade data if it exists
+                                if group_grade.grade_data:
+                                    group_grade.grade_data = json.dumps({
+                                        'score': 0,
+                                        'points_earned': 0,
+                                        'total_points': group_assignment.total_points if group_assignment.total_points else 100.0,
+                                        'percentage': 0,
+                                        'comment': '',
+                                        'feedback': '',
+                                        'is_voided': True
+                                    })
                                 voided_count += 1
                         else:
                             # No grade exists - create a placeholder voided grade
@@ -2064,6 +2101,17 @@ def void_assignment_for_students(assignment_id):
                             grade.voided_by = current_user.id
                             grade.voided_at = datetime.utcnow()
                             grade.voided_reason = reason
+                            # Nullify grade data if it exists
+                            if grade.grade_data:
+                                grade.grade_data = json.dumps({
+                                    'score': 0,
+                                    'points_earned': 0,
+                                    'total_points': assignment.total_points if assignment.total_points else 100.0,
+                                    'percentage': 0,
+                                    'comment': '',
+                                    'feedback': '',
+                                    'is_voided': True
+                                })
                             voided_count += 1
                     else:
                         # No grade exists - create a placeholder voided grade
@@ -2098,6 +2146,17 @@ def void_assignment_for_students(assignment_id):
                             grade.voided_by = current_user.id
                             grade.voided_at = datetime.utcnow()
                             grade.voided_reason = reason
+                            # Nullify grade data if it exists
+                            if grade.grade_data:
+                                grade.grade_data = json.dumps({
+                                    'score': 0,
+                                    'points_earned': 0,
+                                    'total_points': assignment.total_points if assignment.total_points else 100.0,
+                                    'percentage': 0,
+                                    'comment': '',
+                                    'feedback': '',
+                                    'is_voided': True
+                                })
                             voided_count += 1
                     else:
                         # No grade exists - create a placeholder voided grade
@@ -2148,11 +2207,30 @@ def void_assignment_for_students(assignment_id):
             except Exception as e:
                 current_app.logger.warning(f"Could not update quarter grade for student {sid}: {e}")
         
-        return jsonify({'success': True, 'message': message, 'voided_count': voided_count})
+        # Check if this is an AJAX request
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or \
+                  'application/json' in request.headers.get('Accept', '')
+        
+        if is_ajax:
+            return jsonify({'success': True, 'message': message, 'voided_count': voided_count})
+        else:
+            # Regular form submission - redirect with flash message
+            flash(message, 'success')
+            return redirect(url_for('teacher.assignments_and_grades'))
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'message': str(e)}), 500
+        error_message = f'Error voiding assignment: {str(e)}'
+        
+        # Check if this is an AJAX request
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or \
+                  'application/json' in request.headers.get('Accept', '')
+        
+        if is_ajax:
+            return jsonify({'success': False, 'message': error_message}), 500
+        else:
+            flash(error_message, 'danger')
+            return redirect(url_for('teacher.assignments_and_grades'))
 
 @teacher_blueprint.route('/assignments-and-grades')
 @login_required

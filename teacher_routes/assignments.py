@@ -767,20 +767,17 @@ def remove_assignment(assignment_id):
         
         # Delete associated deadline reminders (use direct query to avoid loading relationship)
         from models import DeadlineReminder
+        # Use raw SQL directly to avoid ORM trying to load columns that may not exist
+        # Must delete BEFORE deleting assignment to avoid relationship access
         try:
-            # Use raw SQL or direct query to avoid loading the relationship
-            DeadlineReminder.query.filter_by(assignment_id=assignment_id).delete(synchronize_session=False)
+            db.session.execute(
+                db.text("DELETE FROM deadline_reminder WHERE assignment_id = :assignment_id"),
+                {"assignment_id": assignment_id}
+            )
+            # Flush to ensure deletion is processed before assignment deletion
+            db.session.flush()
         except Exception as e:
-            # If there's a schema mismatch, try to delete manually
-            current_app.logger.warning(f"Could not delete deadline reminders using ORM: {e}")
-            try:
-                # Use raw SQL as fallback
-                db.session.execute(
-                    db.text("DELETE FROM deadline_reminder WHERE assignment_id = :assignment_id"),
-                    {"assignment_id": assignment_id}
-                )
-            except Exception as e2:
-                current_app.logger.warning(f"Could not delete deadline reminders using raw SQL: {e2}")
+            current_app.logger.warning(f"Could not delete deadline reminders: {e}")
         
         # Delete associated file if it exists
         if assignment.attachment_filename:

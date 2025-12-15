@@ -293,7 +293,7 @@
                     {% endif %}
                     {% set performance_class = 'voided' if is_voided else ('excellent' if percentage_value >= 90 else ('good' if percentage_value >= 80 else ('warning' if percentage_value >= 70 else ('failing' if percentage_value > 0 else 'ungraded')))) %}
                     
-                    <div class="student-grade-card {{ performance_class }}" data-student-id="{{ student.id }}">
+                    <div class="student-grade-card {{ performance_class }}{% if is_voided %} voided-disabled{% endif %}" data-student-id="{{ student.id }}">
                         <div class="student-grade-header">
                             <!-- Bulk Select Checkbox -->
                             <div class="bulk-select-checkbox">
@@ -344,6 +344,7 @@
                                     <select class="form-select submission-type-select" 
                                             name="submission_type_{{ student.id }}" 
                                             data-student-id="{{ student.id }}"
+                                            {% if is_voided %}disabled{% endif %}
                                             onchange="updateSubmissionStatus(this)">
                                         <option value="not_submitted" {% if not submission %}selected{% endif %}>❌ Not Submitted</option>
                                         <option value="in_person" {% if submission and submission.submission_type == 'in_person' %}selected{% endif %}>📝 Submitted (Paper/In-Person)</option>
@@ -358,6 +359,7 @@
                                            class="form-control form-control-sm" 
                                            name="submission_notes_{{ student.id }}" 
                                            placeholder="e.g., Turned in late, Resubmitted..."
+                                           {% if is_voided %}disabled{% endif %}
                                            value="{{ submission.submission_notes if submission and submission.submission_notes else '' }}">
                                 </div>
                             </div>
@@ -371,20 +373,20 @@
                                         
                                         <!-- Quick Letter Grade Buttons -->
                                         <div class="letter-grade-buttons mb-2">
-                                            <button type="button" class="btn-letter-grade btn-grade-a" onclick="setLetterGrade({{ student.id }}, 95)" title="A (95%)">A</button>
-                                            <button type="button" class="btn-letter-grade btn-grade-b" onclick="setLetterGrade({{ student.id }}, 85)" title="B (85%)">B</button>
-                                            <button type="button" class="btn-letter-grade btn-grade-c" onclick="setLetterGrade({{ student.id }}, 75)" title="C (75%)">C</button>
-                                            <button type="button" class="btn-letter-grade btn-grade-d" onclick="setLetterGrade({{ student.id }}, 65)" title="D (65%)">D</button>
-                                            <button type="button" class="btn-letter-grade btn-grade-f" onclick="setLetterGrade({{ student.id }}, 50)" title="F (50%)">F</button>
+                                            <button type="button" class="btn-letter-grade btn-grade-a" {% if is_voided %}disabled{% endif %} onclick="setLetterGrade({{ student.id }}, 95)" title="A (95%)">A</button>
+                                            <button type="button" class="btn-letter-grade btn-grade-b" {% if is_voided %}disabled{% endif %} onclick="setLetterGrade({{ student.id }}, 85)" title="B (85%)">B</button>
+                                            <button type="button" class="btn-letter-grade btn-grade-c" {% if is_voided %}disabled{% endif %} onclick="setLetterGrade({{ student.id }}, 75)" title="C (75%)">C</button>
+                                            <button type="button" class="btn-letter-grade btn-grade-d" {% if is_voided %}disabled{% endif %} onclick="setLetterGrade({{ student.id }}, 65)" title="D (65%)">D</button>
+                                            <button type="button" class="btn-letter-grade btn-grade-f" {% if is_voided %}disabled{% endif %} onclick="setLetterGrade({{ student.id }}, 50)" title="F (50%)">F</button>
                                         </div>
                                         
                                         <!-- Common Grade Presets -->
                                         <div class="grade-presets mb-2">
-                                            <button type="button" class="btn-preset" onclick="setGrade({{ student.id }}, 100)">💯</button>
-                                            <button type="button" class="btn-preset" onclick="setGrade({{ student.id }}, 90)">90</button>
-                                            <button type="button" class="btn-preset" onclick="setGrade({{ student.id }}, 80)">80</button>
-                                            <button type="button" class="btn-preset" onclick="setGrade({{ student.id }}, 70)">70</button>
-                                            <button type="button" class="btn-preset" onclick="setGrade({{ student.id }}, 0)">0</button>
+                                            <button type="button" class="btn-preset" {% if is_voided %}disabled{% endif %} onclick="setGrade({{ student.id }}, 100)">💯</button>
+                                            <button type="button" class="btn-preset" {% if is_voided %}disabled{% endif %} onclick="setGrade({{ student.id }}, 90)">90</button>
+                                            <button type="button" class="btn-preset" {% if is_voided %}disabled{% endif %} onclick="setGrade({{ student.id }}, 80)">80</button>
+                                            <button type="button" class="btn-preset" {% if is_voided %}disabled{% endif %} onclick="setGrade({{ student.id }}, 70)">70</button>
+                                            <button type="button" class="btn-preset" {% if is_voided %}disabled{% endif %} onclick="setGrade({{ student.id }}, 0)">0</button>
                                         </div>
                                         
                                         <div class="score-input-wrapper">
@@ -400,6 +402,7 @@
                                                        placeholder="0-{{ total_points|int }}"
                                                        data-student-id="{{ student.id }}"
                                                        data-total-points="{{ total_points }}"
+                                                       {% if is_voided %}disabled{% endif %}
                                                        oninput="updateScoreVisual(this); autoSaveGrade({{ student.id }})">
                                                 <span class="input-group-text">/ {{ total_points|int }} pts</span>
                                             </div>
@@ -423,6 +426,7 @@
                                                   rows="3" 
                                                   maxlength="500"
                                                   placeholder="Add constructive feedback for the student..."
+                                                  {% if is_voided %}disabled{% endif %}
                                                   oninput="updateCharCount(this)">{{ comment_data }}</textarea>
                                         <div class="char-counter">
                                             <span class="char-count">{{ comment_data|length if comment_data else 0 }}</span>/500

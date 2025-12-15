@@ -6020,6 +6020,7 @@ def grade_assignment(assignment_id):
                         grade_data['total_points'] = total_points
                         grade_data['percentage'] = round(percentage, 2)
                         grade_data['grade_id'] = g.id  # Add grade_id for history link
+                        grade_data['is_voided'] = g.is_voided  # Include void status
                         grades[g.student_id] = grade_data
                     else:
                         grades[g.student_id] = {
@@ -6028,7 +6029,8 @@ def grade_assignment(assignment_id):
                             'total_points': assignment_total_points,
                             'percentage': 0,
                             'comment': '', 
-                            'grade_id': g.id
+                            'grade_id': g.id,
+                            'is_voided': g.is_voided  # Include void status
                         }
                 except (json.JSONDecodeError, TypeError, AttributeError) as e:
                     current_app.logger.error(f"Error parsing grade_data for grade {g.id}: {str(e)}")
@@ -6038,11 +6040,26 @@ def grade_assignment(assignment_id):
                         'total_points': assignment_total_points,
                         'percentage': 0,
                         'comment': '', 
-                        'grade_id': g.id
+                        'grade_id': g.id,
+                        'is_voided': g.is_voided  # Include void status
                     }
         except Exception as e:
             current_app.logger.error(f"Error fetching grades: {str(e)}")
             grades = {}
+        
+        # Also check for voided grades that might not have grade_data (placeholder voided grades)
+        voided_grades = Grade.query.filter_by(assignment_id=assignment_id, is_voided=True).all()
+        for g in voided_grades:
+            if g.student_id not in grades:
+                grades[g.student_id] = {
+                    'score': 0,
+                    'points_earned': 0,
+                    'total_points': assignment_total_points,
+                    'percentage': 0,
+                    'comment': '',
+                    'grade_id': g.id,
+                    'is_voided': True
+                }
         
         # Get submissions
         submissions = {}
@@ -6300,14 +6317,26 @@ def remove_assignment(assignment_id):
         flash("You are not authorized to remove this assignment.", "danger")
         return redirect(url_for('management.assignments_and_grades'))
     
-    # Store class_id before deletion for redirect
+    # Store values we need before any operations that might trigger relationships
     class_id = assignment.class_id
+    attachment_filename = assignment.attachment_filename
     
     try:
         from models import (
             QuizQuestion, QuizProgress, DiscussionThread, DiscussionPost, QuizAnswer, 
             DeadlineReminder, AssignmentExtension
         )
+        
+        # CRITICAL: Delete deadline reminders FIRST using raw SQL
+        # This must happen before any other operations to avoid relationship access
+        try:
+            db.session.execute(
+                db.text("DELETE FROM deadline_reminder WHERE assignment_id = :assignment_id"),
+                {"assignment_id": assignment_id}
+            )
+            db.session.flush()
+        except Exception as e:
+            current_app.logger.warning(f"Could not delete deadline reminders: {e}")
         
         # Delete associated records in proper order to avoid foreign key constraint issues
         
@@ -6338,18 +6367,23 @@ def remove_assignment(assignment_id):
         # 7. Delete extensions (they reference assignments)
         AssignmentExtension.query.filter_by(assignment_id=assignment_id).delete()
         
-        # 8. Delete deadline reminders (they reference assignments)
-        DeadlineReminder.query.filter_by(assignment_id=assignment_id).delete()
-        
-        # Delete the assignment file if it exists
-        if assignment.attachment_filename:
-            filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], assignment.attachment_filename)
+        # Delete the assignment file if it exists (using stored value to avoid accessing assignment)
+        if attachment_filename:
+            filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], attachment_filename)
             if os.path.exists(filepath):
                 os.remove(filepath)
         
-        # Delete the assignment from database
-        db.session.delete(assignment)
-        db.session.commit()
+        # Delete the assignment using raw SQL to avoid relationship access
+        # This prevents SQLAlchemy from trying to lazy-load deadline_reminders relationship
+        try:
+            db.session.execute(
+                db.text("DELETE FROM assignment WHERE id = :assignment_id"),
+                {"assignment_id": assignment_id}
+            )
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            raise e
         
         # Check if this is an AJAX/fetch request by checking Accept header or X-Requested-With
         wants_json = request.accept_mimetypes.accept_json or \
@@ -6414,36 +6448,107 @@ def void_assignment_for_students(assignment_id):
             group_assignment = GroupAssignment.query.get_or_404(assignment_id)
             
             if void_all or not student_ids:
-                group_grades = GroupGrade.query.filter_by(
-                    group_assignment_id=assignment_id,
-                    is_voided=False
-                ).all()
+                # Void for all students in groups
+                from models import StudentGroupMember, StudentGroup
+                import json
                 
-                for grade in group_grades:
-                    grade.is_voided = True
-                    grade.voided_by = current_user.id
-                    grade.voided_at = datetime.utcnow()
-                    grade.voided_reason = reason
-                    voided_count += 1
+                # Get all groups in this class
+                groups = StudentGroup.query.filter_by(class_id=group_assignment.class_id).all()
+                
+                for group in groups:
+                    # Get all members of this group
+                    members = StudentGroupMember.query.filter_by(student_group_id=group.id).all()
+                    
+                    for member in members:
+                        group_grade = GroupGrade.query.filter_by(
+                            group_assignment_id=assignment_id,
+                            student_id=member.student_id
+                        ).first()
+                        
+                        if group_grade:
+                            # Grade exists - void it if not already voided
+                            if not group_grade.is_voided:
+                                group_grade.is_voided = True
+                                group_grade.voided_by = current_user.id
+                                group_grade.voided_at = datetime.utcnow()
+                                group_grade.voided_reason = reason
+                                # Nullify grade data if it exists
+                                if group_grade.grade_data:
+                                    group_grade.grade_data = json.dumps({
+                                        'score': 0,
+                                        'points_earned': 0,
+                                        'total_points': group_assignment.total_points if group_assignment.total_points else 100.0,
+                                        'percentage': 0,
+                                        'comment': '',
+                                        'feedback': '',
+                                        'is_voided': True
+                                    })
+                                voided_count += 1
+                        else:
+                            # No grade exists - create a placeholder voided grade
+                            new_group_grade = GroupGrade(
+                                student_id=member.student_id,
+                                group_assignment_id=assignment_id,
+                                student_group_id=group.id,
+                                grade_data=json.dumps({'score': 'N/A', 'comments': ''}),
+                                is_voided=True,
+                                voided_by=current_user.id,
+                                voided_at=datetime.utcnow(),
+                                voided_reason=reason,
+                                graded_at=None
+                            )
+                            db.session.add(new_group_grade)
+                            voided_count += 1
                 
                 message = f'Voided group assignment "{group_assignment.title}" for all students ({voided_count} grades)'
             else:
+                # Void for specific students
+                from models import StudentGroupMember
+                import json
+                
                 for student_id in student_ids:
-                    from models import StudentGroupMember
+                    # Find student's group for this assignment
                     member = StudentGroupMember.query.filter_by(student_id=int(student_id)).first()
                     
                     if member:
                         group_grade = GroupGrade.query.filter_by(
                             group_assignment_id=assignment_id,
-                            student_group_id=member.student_group_id,
-                            is_voided=False
+                            student_id=int(student_id)
                         ).first()
                         
                         if group_grade:
-                            group_grade.is_voided = True
-                            group_grade.voided_by = current_user.id
-                            grade.voided_at = datetime.utcnow()
-                            group_grade.voided_reason = reason
+                            # Grade exists - void it if not already voided
+                            if not group_grade.is_voided:
+                                group_grade.is_voided = True
+                                group_grade.voided_by = current_user.id
+                                group_grade.voided_at = datetime.utcnow()
+                                group_grade.voided_reason = reason
+                                # Nullify grade data if it exists
+                                if group_grade.grade_data:
+                                    group_grade.grade_data = json.dumps({
+                                        'score': 0,
+                                        'points_earned': 0,
+                                        'total_points': group_assignment.total_points if group_assignment.total_points else 100.0,
+                                        'percentage': 0,
+                                        'comment': '',
+                                        'feedback': '',
+                                        'is_voided': True
+                                    })
+                                voided_count += 1
+                        else:
+                            # No grade exists - create a placeholder voided grade
+                            new_group_grade = GroupGrade(
+                                student_id=int(student_id),
+                                group_assignment_id=assignment_id,
+                                student_group_id=member.student_group_id,
+                                grade_data=json.dumps({'score': 'N/A', 'comments': ''}),
+                                is_voided=True,
+                                voided_by=current_user.id,
+                                voided_at=datetime.utcnow(),
+                                voided_reason=reason,
+                                graded_at=None
+                            )
+                            db.session.add(new_group_grade)
                             voided_count += 1
                 
                 message = f'Voided group assignment "{group_assignment.title}" for {voided_count} student(s)'
@@ -6451,32 +6556,95 @@ def void_assignment_for_students(assignment_id):
             assignment = Assignment.query.get_or_404(assignment_id)
             
             if void_all or not student_ids:
-                grades = Grade.query.filter_by(
-                    assignment_id=assignment_id,
-                    is_voided=False
-                ).all()
+                # Void for all students - need to get all enrolled students
+                from models import Enrollment
+                import json
                 
-                for grade in grades:
-                    grade.is_voided = True
-                    grade.voided_by = current_user.id
-                    grade.voided_at = datetime.utcnow()
-                    grade.voided_reason = reason
-                    voided_count += 1
+                enrollments = Enrollment.query.filter_by(class_id=assignment.class_id, is_active=True).all()
                 
-                message = f'Voided assignment "{assignment.title}" for all students ({voided_count} grades)'
-            else:
-                for student_id in student_ids:
+                for enrollment in enrollments:
                     grade = Grade.query.filter_by(
                         assignment_id=assignment_id,
-                        student_id=int(student_id),
-                        is_voided=False
+                        student_id=enrollment.student_id
                     ).first()
                     
                     if grade:
-                        grade.is_voided = True
-                        grade.voided_by = current_user.id
-                        grade.voided_at = datetime.utcnow()
-                        grade.voided_reason = reason
+                        # Grade exists - void it if not already voided
+                        if not grade.is_voided:
+                            grade.is_voided = True
+                            grade.voided_by = current_user.id
+                            grade.voided_at = datetime.utcnow()
+                            grade.voided_reason = reason
+                            # Nullify grade data if it exists
+                            if grade.grade_data:
+                                grade.grade_data = json.dumps({
+                                    'score': 0,
+                                    'points_earned': 0,
+                                    'total_points': assignment.total_points if assignment.total_points else 100.0,
+                                    'percentage': 0,
+                                    'comment': '',
+                                    'feedback': '',
+                                    'is_voided': True
+                                })
+                            voided_count += 1
+                    else:
+                        # No grade exists - create a placeholder voided grade
+                        new_grade = Grade(
+                            student_id=enrollment.student_id,
+                            assignment_id=assignment_id,
+                            grade_data=json.dumps({'score': 'N/A', 'comments': ''}),
+                            is_voided=True,
+                            voided_by=current_user.id,
+                            voided_at=datetime.utcnow(),
+                            voided_reason=reason,
+                            graded_at=None
+                        )
+                        db.session.add(new_grade)
+                        voided_count += 1
+                
+                message = f'Voided assignment "{assignment.title}" for all students ({voided_count} grades)'
+            else:
+                # Void for specific students
+                import json
+                
+                for student_id in student_ids:
+                    grade = Grade.query.filter_by(
+                        assignment_id=assignment_id,
+                        student_id=int(student_id)
+                    ).first()
+                    
+                    if grade:
+                        # Grade exists - void it if not already voided
+                        if not grade.is_voided:
+                            grade.is_voided = True
+                            grade.voided_by = current_user.id
+                            grade.voided_at = datetime.utcnow()
+                            grade.voided_reason = reason
+                            # Nullify grade data if it exists
+                            if grade.grade_data:
+                                grade.grade_data = json.dumps({
+                                    'score': 0,
+                                    'points_earned': 0,
+                                    'total_points': assignment.total_points if assignment.total_points else 100.0,
+                                    'percentage': 0,
+                                    'comment': '',
+                                    'feedback': '',
+                                    'is_voided': True
+                                })
+                            voided_count += 1
+                    else:
+                        # No grade exists - create a placeholder voided grade
+                        new_grade = Grade(
+                            student_id=int(student_id),
+                            assignment_id=assignment_id,
+                            grade_data=json.dumps({'score': 'N/A', 'comments': ''}),
+                            is_voided=True,
+                            voided_by=current_user.id,
+                            voided_at=datetime.utcnow(),
+                            voided_reason=reason,
+                            graded_at=None
+                        )
+                        db.session.add(new_grade)
                         voided_count += 1
                 
                 message = f'Voided assignment "{assignment.title}" for {voided_count} student(s)'
@@ -6516,11 +6684,30 @@ def void_assignment_for_students(assignment_id):
             except Exception as e:
                 current_app.logger.warning(f"Could not update quarter grade for student {sid}: {e}")
         
-        return jsonify({'success': True, 'message': message, 'voided_count': voided_count})
+        # Check if this is an AJAX request
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or \
+                  'application/json' in request.headers.get('Accept', '')
+        
+        if is_ajax:
+            return jsonify({'success': True, 'message': message, 'voided_count': voided_count})
+        else:
+            # Regular form submission - redirect with flash message
+            flash(message, 'success')
+            return redirect(url_for('management.assignments_and_grades'))
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'message': str(e)}), 500
+        error_message = f'Error voiding assignment: {str(e)}'
+        
+        # Check if this is an AJAX request
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or \
+                  'application/json' in request.headers.get('Accept', '')
+        
+        if is_ajax:
+            return jsonify({'success': False, 'message': error_message}), 500
+        else:
+            flash(error_message, 'danger')
+            return redirect(url_for('management.assignments_and_grades'))
 
 @management_blueprint.route('/grades/statistics/<int:assignment_id>')
 @login_required
@@ -10443,7 +10630,7 @@ def admin_grade_group_assignment(assignment_id):
 def admin_delete_group_assignment(assignment_id):
     """Delete a group assignment - Management view."""
     try:
-        from models import GroupAssignment, GroupGrade, GroupSubmission
+        from models import GroupAssignment, GroupGrade, GroupSubmission, DeadlineReminder
         
         group_assignment = GroupAssignment.query.get_or_404(assignment_id)
         
@@ -10452,6 +10639,16 @@ def admin_delete_group_assignment(assignment_id):
         
         # Delete related submissions
         GroupSubmission.query.filter_by(group_assignment_id=assignment_id).delete()
+        
+        # Delete deadline reminders (they reference group assignments)
+        # Use raw SQL directly to avoid ORM trying to load columns that may not exist
+        try:
+            db.session.execute(
+                db.text("DELETE FROM deadline_reminder WHERE group_assignment_id = :assignment_id"),
+                {"assignment_id": assignment_id}
+            )
+        except Exception as e:
+            current_app.logger.warning(f"Could not delete deadline reminders: {e}")
         
         # Delete the assignment itself
         db.session.delete(group_assignment)

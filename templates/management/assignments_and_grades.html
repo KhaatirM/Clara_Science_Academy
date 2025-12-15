@@ -847,6 +847,9 @@ function submitVoidAssignment() {
     
     fetch(`/management/void-assignment/${currentVoidAssignmentId}`, {
         method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
         body: formData
     })
     .then(response => response.json())

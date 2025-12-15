@@ -4795,21 +4795,51 @@
     border-left: 5px solid #6c757d;
 }
 
-.student-grade-card.voided {
+.student-grade-card.voided,
+.student-grade-card.voided-disabled {
     border-left: 5px solid #dc3545;
-    background: linear-gradient(135deg, #fff 0%, #ffe5e5 100%);
-    opacity: 0.85;
+    background: linear-gradient(135deg, #f5f5f5 0%, #e9e9e9 100%) !important;
+    opacity: 0.7;
+    filter: grayscale(0.3);
 }
 
-.student-grade-card.voided .student-grade-avatar {
-    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+.student-grade-card.voided:hover,
+.student-grade-card.voided-disabled:hover {
+    transform: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.student-grade-card.voided .student-grade-avatar,
+.student-grade-card.voided-disabled .student-grade-avatar {
+    background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%) !important;
+    opacity: 0.8;
 }
 
 .student-grade-card.voided .score-input,
-.student-grade-card.voided textarea {
-    background: #f8f9fa;
+.student-grade-card.voided textarea,
+.student-grade-card.voided select,
+.student-grade-card.voided button,
+.student-grade-card.voided-disabled .score-input,
+.student-grade-card.voided-disabled textarea,
+.student-grade-card.voided-disabled select,
+.student-grade-card.voided-disabled button {
+    background: #e9ecef !important;
     pointer-events: none;
     opacity: 0.6;
+    cursor: not-allowed !important;
+}
+
+.student-grade-card.voided input:disabled,
+.student-grade-card.voided textarea:disabled,
+.student-grade-card.voided select:disabled,
+.student-grade-card.voided button:disabled,
+.student-grade-card.voided-disabled input:disabled,
+.student-grade-card.voided-disabled textarea:disabled,
+.student-grade-card.voided-disabled select:disabled,
+.student-grade-card.voided-disabled button:disabled {
+    background: #e9ecef !important;
+    opacity: 0.6;
+    cursor: not-allowed !important;
 }
 
 .student-grade-header {

@@ -1,4 +1,4 @@
-﻿"""
+"""
 Assignment management routes for teachers.
 """
 

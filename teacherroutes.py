@@ -2268,7 +2268,7 @@ def void_assignment_for_students(assignment_id):
                   'application/json' in request.headers.get('Accept', '')
         
         if is_ajax:
-            return jsonify({'success': True, 'message': message, 'voided_count': voided_count})
+        return jsonify({'success': True, 'message': message, 'voided_count': voided_count})
         else:
             # Regular form submission - redirect with flash message
             flash(message, 'success')

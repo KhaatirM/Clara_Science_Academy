@@ -2495,8 +2495,16 @@ def create_and_link_classroom(class_id):
         return redirect(url_for('management.classes'))
         
     except Exception as e:
-        current_app.logger.error(f"Error creating Google Classroom: {e}")
-        flash(f"An error occurred while creating the Google Classroom: {str(e)}", "danger")
+        db.session.rollback()
+        error_message = str(e)
+        
+        # Check for database constraint errors
+        if "UniqueViolation" in error_message or "duplicate key" in error_message or "uq_class_google_classroom_id" in error_message:
+            flash(f"Error: A database constraint error occurred. Please ensure the 'uq_class_google_classroom_id' constraint has been dropped from your database.", 'danger')
+            current_app.logger.error(f"UniqueViolation during Google Classroom creation: {error_message}")
+        else:
+            current_app.logger.error(f"Error creating Google Classroom: {e}")
+            flash(f"An error occurred while creating the Google Classroom: {str(e)}", "danger")
         return redirect(url_for('management.classes'))
 
 
@@ -2548,15 +2556,40 @@ def confirm_link_classroom(class_id, google_classroom_id):
     """
     LINK THE SELECTED GOOGLE CLASSROOM (Management Version)
     Links a selected existing Google Classroom to the class in our system.
+    Added 'Teacher' permission check - teachers can link their own classes.
     """
+    if not current_user.is_authenticated:
+        return redirect(url_for('auth.login'))
+
     class_to_link = Class.query.get_or_404(class_id)
     
-    # Save the Google Classroom ID
+    # Permission check (expanded to check if user is the primary teacher)
+    if current_user.role not in ['Director', 'School Administrator', 'Tech Support']:
+        if current_user.teacher_staff_id != class_to_link.teacher_id:
+            flash("Permission denied. Only the primary teacher or an administrator can manage this classroom link.", 'danger')
+            return redirect(url_for('management.classes'))
+
+    # Update the class with the new Google Classroom ID
     class_to_link.google_classroom_id = google_classroom_id
-    db.session.commit()
+
+    try:
+        db.session.commit()  # This line caused the error before the SQL fix
+        flash(f"Successfully linked {class_to_link.name} to Google Classroom ID {google_classroom_id}.", 'success')
+        return redirect(url_for('management.classes'))
     
-    flash(f"Successfully linked Google Classroom to {class_to_link.name}!", "success")
-    return redirect(url_for('management.classes'))
+    except Exception as e:
+        db.session.rollback()
+        
+        # Check for the specific UniqueViolation error from PostgreSQL
+        error_message = str(e)
+        if "UniqueViolation" in error_message or "duplicate key" in error_message or "uq_class_google_classroom_id" in error_message:
+            flash(f"Error: Google Classroom ID {google_classroom_id} is already linked to another class in the system. The linking function has been fixed to allow this, but a unique constraint remains in your database. Please re-run the necessary SQL command to drop the 'uq_class_google_classroom_id' constraint.", 'danger')
+            current_app.logger.error(f"UniqueViolation during class linking: {error_message}")
+        else:
+            flash(f"An unexpected database error occurred while linking the class. Please check logs.", 'danger')
+            current_app.logger.error(f"Unexpected error during class linking: {e}")
+
+        return redirect(url_for('management.classes'))
 
 
 @management_blueprint.route('/class/<int:class_id>/unlink-google-classroom')

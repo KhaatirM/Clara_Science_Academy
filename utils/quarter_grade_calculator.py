@@ -93,22 +93,71 @@ def calculate_quarter_grade_for_student_class(student_id, class_id, school_year_
         if dropped_date < quarter_start:
             return None
     
-    # Calculate average from grades
-    scores = []
+    # Calculate weighted average from grades based on points earned vs total points
+    # This ensures assignments with different point values are properly weighted
+    total_points_sum = 0.0
+    points_earned_sum = 0.0
+    valid_grades_count = 0
+    
     for grade in grades:
         try:
             grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
-            if grade_data and 'score' in grade_data and grade_data['score'] is not None:
-                scores.append(float(grade_data['score']))
-        except (json.JSONDecodeError, TypeError, ValueError) as e:
+            if not grade_data:
+                continue
+            
+            # Get assignment total points (from assignment object)
+            assignment = grade.assignment
+            assignment_total_points = assignment.total_points if (hasattr(assignment, 'total_points') and assignment.total_points) else 100.0
+            
+            # Try to get points_earned and total_points from grade_data first (preferred method for new grades)
+            points_earned = grade_data.get('points_earned')
+            grade_total_points = grade_data.get('total_points')
+            
+            # Determine total points for this assignment
+            total_pts = float(grade_total_points) if grade_total_points else float(assignment_total_points)
+            
+            # If points_earned is not available, try to derive it from percentage or score (backward compatibility)
+            if points_earned is None:
+                percentage = grade_data.get('percentage')
+                score = grade_data.get('score')
+                
+                if percentage is not None:
+                    # We have percentage, calculate points_earned
+                    points_earned = (float(percentage) / 100.0) * total_pts
+                elif score is not None:
+                    # For backward compatibility: score might be percentage (old format) or points (new format)
+                    # If total_points is set (new system), assume score is likely points
+                    # If total_points is not set (old system, default 100), assume score is percentage
+                    score_val = float(score)
+                    if total_pts == 100.0 and score_val <= 100:
+                        # Old system: score is likely a percentage (0-100)
+                        points_earned = (score_val / 100.0) * total_pts
+                    elif score_val > total_pts:
+                        # Score exceeds total_points, must be a percentage
+                        points_earned = (score_val / 100.0) * total_pts
+                    else:
+                        # Score is within total_points, assume it's points earned
+                        points_earned = score_val
+                else:
+                    continue  # Skip if we can't determine points_earned
+            else:
+                # Convert to float if it's not already
+                points_earned = float(points_earned)
+            
+            # Add to sums for weighted average calculation
+            points_earned_sum += float(points_earned)
+            total_points_sum += total_pts
+            valid_grades_count += 1
+            
+        except (json.JSONDecodeError, TypeError, ValueError, AttributeError) as e:
             current_app.logger.warning(f"Could not parse grade data for grade {grade.id}: {e}")
             continue
     
-    if not scores:
+    if total_points_sum == 0 or valid_grades_count == 0:
         return None  # No valid grades
     
-    # Calculate average
-    average = sum(scores) / len(scores)
+    # Calculate weighted average percentage
+    average = (points_earned_sum / total_points_sum) * 100.0
     
     # Convert to letter grade
     if average >= 95:
@@ -135,7 +184,7 @@ def calculate_quarter_grade_for_student_class(student_id, class_id, school_year_
     return {
         'letter_grade': letter,
         'percentage': round(average, 2),
-        'assignments_count': len(scores)
+        'assignments_count': valid_grades_count
     }
 
 

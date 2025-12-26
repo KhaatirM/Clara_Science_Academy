@@ -1008,11 +1008,12 @@ def generate_report_card_form():
         # Update quarter grades in database (calculates/refreshes if needed)
         from utils.quarter_grade_calculator import update_all_quarter_grades_for_student, get_quarter_grades_for_report
         
-        # Update/calculate quarter grades for this student (respects 3-hour refresh rule)
+        # Update/calculate quarter grades for this student
+        # Force recalculation to ensure accurate weighted averages based on points
         update_all_quarter_grades_for_student(
             student_id=student_id_int,
             school_year_id=school_year_id_int,
-            force=False  # Respects 3-hour refresh interval
+            force=True  # Force recalculation to use corrected weighted average calculation
         )
         
         # Get quarter grades from database (all quarters)

@@ -561,7 +561,7 @@
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form id="unvoidAssignmentForm" method="POST" action="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.unvoid_assignment_for_students', assignment_id=assignment.id) }}{% else %}{{ url_for('teacher.unvoid_assignment_for_students', assignment_id=assignment.id) }}{% endif %}">
+            <form id="unvoidAssignmentForm" method="POST" action="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.unvoid_assignment_for_students', assignment_id=assignment.id) }}{% else %}{{ url_for('teacher.assignments.unvoid_assignment_for_students', assignment_id=assignment.id) }}{% endif %}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <input type="hidden" name="assignment_type" value="individual"/>
                 <input type="hidden" name="unvoid_all" id="unvoidAllHidden" value="true"/>

@@ -109,9 +109,12 @@ def teacher_dashboard():
     recent_activity = []
     
     # Recent submissions
-    recent_submissions = Submission.query.join(Assignment).filter(
-        Assignment.class_id.in_(class_ids)
-    ).order_by(Submission.submitted_at.desc()).limit(5).all()
+    if class_ids:
+        recent_submissions = Submission.query.join(Assignment).filter(
+            Assignment.class_id.in_(class_ids)
+        ).order_by(Submission.submitted_at.desc()).limit(5).all()
+    else:
+        recent_submissions = []
     
     for submission in recent_submissions:
         try:
@@ -131,9 +134,12 @@ def teacher_dashboard():
             continue
     
     # Recent grades entered
-    recent_grades_entered = Grade.query.join(Assignment).filter(
-        Assignment.class_id.in_(class_ids)
-    ).order_by(Grade.graded_at.desc()).limit(5).all()
+    if class_ids:
+        recent_grades_entered = Grade.query.join(Assignment).filter(
+            Assignment.class_id.in_(class_ids)
+        ).order_by(Grade.graded_at.desc()).limit(5).all()
+    else:
+        recent_grades_entered = []
     
     for grade in recent_grades_entered:
         try:
@@ -183,11 +189,14 @@ def teacher_dashboard():
     
     # Calculate statistics
     total_students = Student.query.count()  # Simplified - should filter by enrollment
-    active_assignments = Assignment.query.filter(Assignment.class_id.in_(class_ids)).count()
-    
-    # Calculate additional teacher stats
-    total_assignments = Assignment.query.filter(Assignment.class_id.in_(class_ids)).count()
-    grades_entered = Grade.query.join(Assignment).filter(Assignment.class_id.in_(class_ids)).count()
+    if class_ids:
+        active_assignments = Assignment.query.filter(Assignment.class_id.in_(class_ids)).count()
+        total_assignments = Assignment.query.filter(Assignment.class_id.in_(class_ids)).count()
+        grades_entered = Grade.query.join(Assignment).filter(Assignment.class_id.in_(class_ids)).count()
+    else:
+        active_assignments = 0
+        total_assignments = 0
+        grades_entered = 0
     
     # Calculate monthly and weekly stats
     now = datetime.now()
@@ -197,21 +206,27 @@ def teacher_dashboard():
     
     # Assignments due this week - safely handle None due_date
     try:
-        due_assignments = Assignment.query.filter(
-            Assignment.class_id.in_(class_ids),
-            Assignment.due_date.isnot(None),
-            Assignment.due_date >= week_start,
-            Assignment.due_date < week_end
-        ).count()
+        if class_ids:
+            due_assignments = Assignment.query.filter(
+                Assignment.class_id.in_(class_ids),
+                Assignment.due_date.isnot(None),
+                Assignment.due_date >= week_start,
+                Assignment.due_date < week_end
+            ).count()
+        else:
+            due_assignments = 0
     except Exception as e:
         print(f"Error counting due assignments: {e}")
         due_assignments = 0
     
     # Grades entered this month
-    grades_this_month = Grade.query.join(Assignment).filter(
-        Assignment.class_id.in_(class_ids),
-        Grade.graded_at >= month_start
-    ).count()
+    if class_ids:
+        grades_this_month = Grade.query.join(Assignment).filter(
+            Assignment.class_id.in_(class_ids),
+            Grade.graded_at >= month_start
+        ).count()
+    else:
+        grades_this_month = 0
     
     # Create teacher_data object for template compatibility
     teacher_data = {
@@ -344,7 +359,7 @@ def view_class(class_id):
     # Check authorization for this specific class
     if not is_authorized_for_class(class_obj):
         flash("You are not authorized to access this class.", "danger")
-        return redirect(url_for('teacher.teacher_dashboard'))
+        return redirect(url_for('teacher.dashboard.teacher_dashboard'))
 
     # Get only actively enrolled students for this class
     enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()

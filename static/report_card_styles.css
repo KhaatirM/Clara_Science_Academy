@@ -3,7 +3,7 @@
 /* Page margins for PDF generation */
 @page {
     size: Letter;
-    margin: 0.1in 0.125in;  /* top/bottom: 0.1in, left/right: 0.125in (75% tighter) */
+    margin: 1in;  /* 1 inch margins on all sides */
 }
 
 /* General Body and Font Styling */

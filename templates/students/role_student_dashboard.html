@@ -625,6 +625,12 @@ function showSubmissionHelp() {
 window.viewAssignment = function(assignmentId, assignmentTitle, assignmentDescription, assignmentDueDate, assignmentQuarter, assignmentAttachment, hasSubmission, hasGrade, assignmentType) {
     console.log('viewAssignment function called with:', arguments);
     try {
+        // For quiz assignments, redirect to take quiz page instead of showing modal
+        if (assignmentType === 'quiz') {
+            window.location.href = `/student/take-quiz/${assignmentId}`;
+            return;
+        }
+        // For other assignment types, show the view modal
         openAssignmentViewModal(assignmentId, assignmentTitle, assignmentDescription, assignmentDueDate, assignmentQuarter, assignmentAttachment, hasSubmission, hasGrade, assignmentType);
     } catch (error) {
         console.error('Error in viewAssignment function:', error);

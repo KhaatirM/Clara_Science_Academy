@@ -1033,13 +1033,21 @@ def view_assignment(assignment_id):
     # Get current date for status calculations
     today = datetime.now().date()
     
+    # For quiz assignments, check if there are open-ended questions that need manual grading
+    has_open_ended_questions = False
+    if assignment.assignment_type == 'quiz':
+        from models import QuizQuestion
+        quiz_questions = QuizQuestion.query.filter_by(assignment_id=assignment_id).all()
+        has_open_ended_questions = any(q.question_type in ['short_answer', 'essay'] for q in quiz_questions)
+    
     return render_template('shared/view_assignment.html', 
                          assignment=assignment,
                          class_info=class_info,
                          teacher=teacher,
                          submissions_count=total_submissions_count,
                          assignment_points=assignment_points,
-                         today=today)
+                         today=today,
+                         has_open_ended_questions=has_open_ended_questions)
 
 
 @teacher_blueprint.route('/assignment/edit/<int:assignment_id>', methods=['GET', 'POST'])

@@ -240,11 +240,20 @@
                                 <i class="bi bi-file-earmark-arrow-up"></i>
                                 <span>Submissions</span>
                             </a>
-                            <a href="{{ url_for('management.grade_assignment', assignment_id=assignment.id) }}" 
-                               class="btn btn-compact btn-compact-grade">
-                                <i class="bi bi-check-circle-fill"></i>
-                                <span>Grade</span>
-                            </a>
+                            {% if assignment.assignment_type == 'quiz' and not has_open_ended_questions %}
+                                <button class="btn btn-compact btn-compact-grade" 
+                                        title="This quiz contains only auto-graded questions. All grades are automatically calculated when students submit their quizzes." 
+                                        disabled style="opacity: 0.6; cursor: not-allowed;">
+                                    <i class="bi bi-check-circle-fill"></i>
+                                    <span>Auto-Graded</span>
+                                </button>
+                            {% else %}
+                                <a href="{{ url_for('management.grade_assignment', assignment_id=assignment.id) }}" 
+                                   class="btn btn-compact btn-compact-grade">
+                                    <i class="bi bi-check-circle-fill"></i>
+                                    <span>Grade</span>
+                                </a>
+                            {% endif %}
                         {% else %}
                             <a href="{{ url_for('teacher.assignments.edit_assignment', assignment_id=assignment.id) }}" 
                                class="btn btn-compact btn-compact-edit">
@@ -256,11 +265,20 @@
                                 <i class="bi bi-file-earmark-arrow-up"></i>
                                 <span>Submissions</span>
                             </a>
-                            <a href="{{ url_for('teacher.grading.grade_assignment', assignment_id=assignment.id) }}" 
-                               class="btn btn-compact btn-compact-grade">
-                                <i class="bi bi-check-circle-fill"></i>
-                                <span>Grade</span>
-                            </a>
+                            {% if assignment.assignment_type == 'quiz' and not has_open_ended_questions %}
+                                <button class="btn btn-compact btn-compact-grade" 
+                                        title="This quiz contains only auto-graded questions. All grades are automatically calculated when students submit their quizzes." 
+                                        disabled style="opacity: 0.6; cursor: not-allowed;">
+                                    <i class="bi bi-check-circle-fill"></i>
+                                    <span>Auto-Graded</span>
+                                </button>
+                            {% else %}
+                                <a href="{{ url_for('teacher.grading.grade_assignment', assignment_id=assignment.id) }}" 
+                                   class="btn btn-compact btn-compact-grade">
+                                    <i class="bi bi-check-circle-fill"></i>
+                                    <span>Grade</span>
+                                </a>
+                            {% endif %}
                         {% endif %}
                         <button class="btn btn-compact btn-compact-extension" 
                                 onclick="openExtensionModal()">

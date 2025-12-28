@@ -6192,7 +6192,41 @@ def grade_assignment(assignment_id):
             current_app.logger.error(f"Error fetching extensions: {str(e)}")
             extensions_dict = {}
         
-        return render_template('teachers/teacher_grade_assignment.html', 
+        # For quiz assignments, check if there are open-ended questions that need manual grading
+        quiz_questions = None
+        quiz_answers_by_student = {}
+        has_open_ended_questions = False
+        
+        if assignment.assignment_type == 'quiz':
+            # Load questions with options eagerly
+            from sqlalchemy.orm import joinedload
+            quiz_questions = QuizQuestion.query.options(joinedload(QuizQuestion.options)).filter_by(assignment_id=assignment_id).order_by(QuizQuestion.order).all()
+            
+            # Check if quiz has open-ended questions (short_answer or essay) that need manual grading
+            has_open_ended_questions = any(q.question_type in ['short_answer', 'essay'] for q in quiz_questions)
+            
+            # If quiz has no open-ended questions, all questions are auto-graded
+            # Show a message and redirect back to assignment view
+            if not has_open_ended_questions:
+                flash('This quiz contains only auto-graded questions (Multiple Choice/True-False). All grades are automatically calculated when students submit their quizzes. No manual grading is required.', 'info')
+                return redirect(url_for('management.view_assignment', assignment_id=assignment_id))
+            
+            # Load answers for all students with selected_option relationship
+            for student in students:
+                answers = QuizAnswer.query.options(
+                    joinedload(QuizAnswer.question),
+                    joinedload(QuizAnswer.selected_option)
+                ).filter_by(
+                    student_id=student.id
+                ).join(QuizQuestion).filter(
+                    QuizQuestion.assignment_id == assignment_id
+                ).all()
+                quiz_answers_by_student[student.id] = {answer.question_id: answer for answer in answers}
+        
+        # Use specialized quiz grading template if it's a quiz with open-ended questions, otherwise use regular template
+        template_name = 'teachers/teacher_grade_quiz.html' if (assignment.assignment_type == 'quiz' and has_open_ended_questions) else 'teachers/teacher_grade_assignment.html'
+        
+        return render_template(template_name, 
                              assignment=assignment, 
                              class_obj=class_obj,
                              students=students, 
@@ -6200,7 +6234,9 @@ def grade_assignment(assignment_id):
                              submissions=submissions,
                              extensions=extensions_dict,
                              role_prefix='management',
-                             total_points=assignment_total_points)
+                             total_points=assignment_total_points,
+                             quiz_questions=quiz_questions,
+                             quiz_answers_by_student=quiz_answers_by_student)
     
     except Exception as e:
         current_app.logger.error(f"Error in grade_assignment route: {str(e)}")
@@ -6447,6 +6483,13 @@ def view_assignment(assignment_id):
         voided_grades = Grade.query.filter_by(assignment_id=assignment_id, is_voided=True).all()
         voided_student_ids = {g.student_id for g in voided_grades}
         
+        # For quiz assignments, check if there are open-ended questions that need manual grading
+        has_open_ended_questions = False
+        if assignment.assignment_type == 'quiz':
+            from models import QuizQuestion
+            quiz_questions = QuizQuestion.query.filter_by(assignment_id=assignment_id).all()
+            has_open_ended_questions = any(q.question_type in ['short_answer', 'essay'] for q in quiz_questions)
+        
         return render_template('shared/view_assignment.html', 
                              assignment=assignment,
                              class_info=class_info,
@@ -6454,7 +6497,8 @@ def view_assignment(assignment_id):
                              submissions_count=total_submissions_count,
                              assignment_points=assignment_points,
                              today=today,
-                             voided_student_ids=voided_student_ids)
+                             voided_student_ids=voided_student_ids,
+                             has_open_ended_questions=has_open_ended_questions)
     except Exception as e:
         current_app.logger.error(f"Error in view_assignment route: {e}")
         import traceback

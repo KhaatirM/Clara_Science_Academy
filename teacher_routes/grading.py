@@ -249,10 +249,21 @@ def grade_assignment(assignment_id):
     # For quiz assignments, load questions and student answers
     quiz_questions = None
     quiz_answers_by_student = {}
+    has_open_ended_questions = False
+    
     if assignment.assignment_type == 'quiz':
         # Load questions with options eagerly
         from sqlalchemy.orm import joinedload
         quiz_questions = QuizQuestion.query.options(joinedload(QuizQuestion.options)).filter_by(assignment_id=assignment_id).order_by(QuizQuestion.order).all()
+        
+        # Check if quiz has open-ended questions (short_answer or essay) that need manual grading
+        has_open_ended_questions = any(q.question_type in ['short_answer', 'essay'] for q in quiz_questions)
+        
+        # If quiz has no open-ended questions, all questions are auto-graded
+        # Show a message and redirect back to assignment view
+        if not has_open_ended_questions:
+            flash('This quiz contains only auto-graded questions (Multiple Choice/True-False). All grades are automatically calculated when students submit their quizzes. No manual grading is required.', 'info')
+            return redirect(url_for('teacher.assignments.view_assignment', assignment_id=assignment_id))
         
         # Load answers for all students with selected_option relationship
         for student in students:
@@ -266,8 +277,8 @@ def grade_assignment(assignment_id):
             ).all()
             quiz_answers_by_student[student.id] = {answer.question_id: answer for answer in answers}
     
-    # Use specialized quiz grading template if it's a quiz, otherwise use regular template
-    template_name = 'teachers/teacher_grade_quiz.html' if assignment.assignment_type == 'quiz' else 'teachers/teacher_grade_assignment.html'
+    # Use specialized quiz grading template if it's a quiz with open-ended questions, otherwise use regular template
+    template_name = 'teachers/teacher_grade_quiz.html' if (assignment.assignment_type == 'quiz' and has_open_ended_questions) else 'teachers/teacher_grade_assignment.html'
     
     return render_template(template_name, 
                          assignment=assignment,

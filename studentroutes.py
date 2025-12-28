@@ -1996,6 +1996,69 @@ def submit_quiz(assignment_id):
         flash(f'Error submitting quiz: {str(e)}', 'danger')
         return redirect(url_for('student.take_quiz', assignment_id=assignment_id))
 
+@student_blueprint.route('/quiz-details/<int:assignment_id>')
+@login_required
+@student_required
+def get_quiz_details(assignment_id):
+    """Get quiz assignment details for AJAX request"""
+    from flask import jsonify
+    student = Student.query.get_or_404(current_user.student_id)
+    assignment = Assignment.query.get_or_404(assignment_id)
+    
+    # Verify student is enrolled
+    enrollment = Enrollment.query.filter_by(
+        student_id=student.id,
+        class_id=assignment.class_id,
+        is_active=True
+    ).first()
+    
+    if not enrollment:
+        return jsonify({'error': 'Not enrolled in this class'}), 403
+    
+    # Get submission count and grade
+    submissions_count = Submission.query.filter_by(
+        student_id=student.id,
+        assignment_id=assignment_id
+    ).count()
+    
+    grade = Grade.query.filter_by(
+        student_id=student.id,
+        assignment_id=assignment_id
+    ).first()
+    
+    # Calculate attempts remaining
+    attempts_remaining = None
+    if assignment.max_attempts:
+        attempts_remaining = max(0, assignment.max_attempts - submissions_count)
+    
+    # Get grade data
+    score = None
+    percentage = None
+    total_points = assignment.total_points or 100.0
+    if grade and grade.grade_data:
+        try:
+            grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
+            score = grade_data.get('score') or grade_data.get('points_earned')
+            percentage = grade_data.get('percentage')
+            if score and not percentage:
+                percentage = round((float(score) / total_points * 100), 2) if total_points > 0 else 0
+        except (json.JSONDecodeError, TypeError, ValueError):
+            pass
+    
+    return jsonify({
+        'time_limit_minutes': assignment.time_limit_minutes,
+        'max_attempts': assignment.max_attempts,
+        'attempts_used': submissions_count,
+        'attempts_remaining': attempts_remaining,
+        'shuffle_questions': assignment.shuffle_questions,
+        'show_correct_answers': assignment.show_correct_answers,
+        'total_points': total_points,
+        'score': score,
+        'percentage': percentage,
+        'has_grade': grade is not None,
+        'has_submission': submissions_count > 0
+    })
+
 @student_blueprint.route('/discussion/<int:assignment_id>')
 @login_required
 @student_required

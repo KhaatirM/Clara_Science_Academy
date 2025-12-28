@@ -429,18 +429,10 @@ window.openAssignmentViewModal = function(assignmentId, assignmentTitle, assignm
         `;
         
         if (assignmentType === 'quiz' || assignmentType === 'discussion') {
-            if (assignmentType === 'quiz' && hasQuizProgress) {
-                // Show actual quiz progress
-                const progressPercentage = Math.round((quizProgressData.questions_answered / quizProgressData.total_questions) * 100);
-                progressBar.style.width = progressPercentage + '%';
-                progressBar.className = 'progress-bar bg-info';
-                progressText.textContent = `Progress: ${progressPercentage}% - ${quizProgressData.questions_answered}/${quizProgressData.total_questions} questions answered`;
-            } else {
-                // Default complete state
-                progressBar.style.width = '100%';
-                progressBar.className = 'progress-bar bg-success';
-                progressText.textContent = 'Progress: 100% - Complete!';
-            }
+            // Default complete state
+            progressBar.style.width = '100%';
+            progressBar.className = 'progress-bar bg-success';
+            progressText.textContent = 'Progress: 100% - Complete!';
         }
         
     } else if (hasSubmission) {
@@ -467,18 +459,10 @@ window.openAssignmentViewModal = function(assignmentId, assignmentTitle, assignm
         `;
         
         if (assignmentType === 'quiz' || assignmentType === 'discussion') {
-            if (assignmentType === 'quiz' && hasQuizProgress) {
-                // Show actual quiz progress
-                const progressPercentage = Math.round((quizProgressData.questions_answered / quizProgressData.total_questions) * 100);
-                progressBar.style.width = progressPercentage + '%';
-                progressBar.className = 'progress-bar bg-warning';
-                progressText.textContent = `Progress: ${progressPercentage}% - ${quizProgressData.questions_answered}/${quizProgressData.total_questions} questions answered`;
-            } else {
-                // Default submitted state
-                progressBar.style.width = '75%';
-                progressBar.className = 'progress-bar bg-warning';
-                progressText.textContent = 'Progress: 75% - Awaiting Grade';
-            }
+            // Default submitted state
+            progressBar.style.width = '75%';
+            progressBar.className = 'progress-bar bg-warning';
+            progressText.textContent = 'Progress: 75% - Awaiting Grade';
         }
         
     } else {
@@ -505,18 +489,10 @@ window.openAssignmentViewModal = function(assignmentId, assignmentTitle, assignm
         `;
         
         if (assignmentType === 'quiz' || assignmentType === 'discussion') {
-            if (assignmentType === 'quiz' && hasQuizProgress) {
-                // Show actual quiz progress
-                const progressPercentage = Math.round((quizProgressData.questions_answered / quizProgressData.total_questions) * 100);
-                progressBar.style.width = progressPercentage + '%';
-                progressBar.className = 'progress-bar bg-info';
-                progressText.textContent = `Progress: ${progressPercentage}% - ${quizProgressData.questions_answered}/${quizProgressData.total_questions} questions answered`;
-            } else {
-                // Default not started state
-                progressBar.style.width = '25%';
-                progressBar.className = 'progress-bar bg-danger';
-                progressText.textContent = 'Progress: 25% - Not Started';
-            }
+            // Default not started state
+            progressBar.style.width = '25%';
+            progressBar.className = 'progress-bar bg-danger';
+            progressText.textContent = 'Progress: 25% - Not Started';
         }
     }
     

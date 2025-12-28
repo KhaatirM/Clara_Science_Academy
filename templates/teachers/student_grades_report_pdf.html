@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Student Grades Report - Clara Science Academy</title>
+</head>
+<body>
+    <div style="text-align: center; margin-bottom: 1cm;">
+        <h1 style="font-size: 18pt; font-weight: bold; text-decoration: underline;">STUDENT GRADES REPORT</h1>
+        <p style="font-size: 12pt; margin-top: 0.5cm;"><strong>Clara Science Academy</strong></p>
+        <p style="font-size: 10pt;">3015 East Bessemer Ave, Greensboro, NC 27405</p>
+    </div>
+
+    <table style="width: 100%; margin-bottom: 1cm; border: 1px solid #333;">
+        <tr>
+            <td style="padding: 8px; border: 1px solid #333; font-weight: bold; width: 25%;">Student Name:</td>
+            <td style="padding: 8px; border: 1px solid #333; width: 75%;">{{ student.first_name }} {{ student.last_name }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px; border: 1px solid #333; font-weight: bold;">Student ID:</td>
+            <td style="padding: 8px; border: 1px solid #333;">{{ student.student_id or 'N/A' }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px; border: 1px solid #333; font-weight: bold;">Grade Level:</td>
+            <td style="padding: 8px; border: 1px solid #333;">{{ student.grade_level }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px; border: 1px solid #333; font-weight: bold;">School Year:</td>
+            <td style="padding: 8px; border: 1px solid #333;">{{ school_year.name }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px; border: 1px solid #333; font-weight: bold;">Generated:</td>
+            <td style="padding: 8px; border: 1px solid #333;">{{ generated_date.strftime('%m/%d/%Y') if generated_date else 'N/A' }}</td>
+        </tr>
+    </table>
+
+    <p class="report-period-line"><strong>Report Period:</strong> {{ school_year.name }}</p>
+
+    <div class="section-title">Student Grades Report</div>
+
+    <div class="section-title margin-top-1cm">Quarter Grades by Class:</div>
+    <table>
+        <thead>
+            <tr>
+                <th class="width-40">Subject/Teacher</th>
+                {% for quarter_key in ['Q1', 'Q2', 'Q3', 'Q4'] %}
+                <th class="width-15">{{ quarter_key }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% if class_objects %}
+                {% for class_obj in class_objects %}
+                    {% set teacher = class_obj.teacher if class_obj.teacher else None %}
+                    <tr>
+                        <td style="font-weight: bold;">{{ class_obj.name }}<br><small style="font-weight: normal;">{{ (teacher.first_name + ' ' + teacher.last_name) if teacher else 'N/A' }}</small></td>
+                        {% for quarter_key in ['Q1', 'Q2', 'Q3', 'Q4'] %}
+                            {% if grades_by_quarter and grades_by_quarter.get(quarter_key) %}
+                                {% set q_grades = grades_by_quarter.get(quarter_key, {}) %}
+                                {% set class_grade = q_grades.get(class_obj.name, {}) if q_grades else {} %}
+                                {% set letter_grade = class_grade.get('letter', '') if class_grade else '' %}
+                                {% set percentage = class_grade.get('percentage', '') if class_grade else '' %}
+                                <td style="text-align: center;">
+                                    {% if letter_grade and percentage is not none %}
+                                        {{ letter_grade }}<br><small>({{ "%.1f"|format(percentage) }}%)</small>
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </td>
+                            {% else %}
+                                <td style="text-align: center;">N/A</td>
+                            {% endif %}
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            {% else %}
+                <tr><td colspan="5" style="text-align: center; padding: 15px; color: #666;">No grade data available</td></tr>
+            {% endif %}
+        </tbody>
+    </table>
+
+    <div class="footer">
+        <p>Generated: {{ generated_date.strftime('%B %d, %Y at %I:%M %p') if generated_date else 'N/A' }}</p>
+    </div>
+</body>
+</html>
+

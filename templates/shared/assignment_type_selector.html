@@ -62,9 +62,6 @@
         <!-- Questionnaire/Quiz Assignment -->
         <div class="col-12 col-md-6 col-lg-4">
             <div class="card h-100 assignment-type-card" data-type="quiz">
-                <div class="development-badge">
-                    <i class="bi bi-tools"></i>In Development
-                </div>
                 <div class="card-body text-center p-4">
                     <div class="assignment-type-icon mb-3">
                         <i class="bi bi-question-circle text-warning assignment-type-icon-large"></i>
@@ -170,8 +167,8 @@ document.addEventListener('DOMContentLoaded', function() {
     assignmentTypeCards.forEach(card => {
         const type = card.dataset.type;
         
-        // Disable hover and click for in-development types
-        if (type === 'quiz' || type === 'discussion') {
+        // Disable hover and click for in-development types (only discussion now)
+        if (type === 'discussion') {
             card.style.cursor = 'not-allowed';
             card.style.opacity = '0.85';
             return;
@@ -187,35 +184,29 @@ document.addEventListener('DOMContentLoaded', function() {
         
         card.addEventListener('click', function() {
             const type = this.dataset.type;
-            if (type !== 'quiz' && type !== 'discussion') {
+            if (type !== 'discussion') {
                 handleAssignmentTypeSelection(type);
             }
         });
     });
     
-    selectButtons.forEach(button => {
+        selectButtons.forEach(button => {
         button.addEventListener('click', function(e) {
             e.stopPropagation();
             const type = this.dataset.type;
-            if (type === 'quiz' || type === 'discussion') {
-                e.preventDefault();
-                handleAssignmentTypeSelection(type);
-            } else {
-                handleAssignmentTypeSelection(type);
-            }
+            handleAssignmentTypeSelection(type);
         });
     });
     
     function handleAssignmentTypeSelection(type) {
         // Check if assignment type is in development
-        if (type === 'quiz' || type === 'discussion') {
+        if (type === 'discussion') {
             // Show notification that it's in development
-            const typeName = type === 'quiz' ? 'Quiz' : 'Discussion';
             const notification = document.createElement('div');
             notification.className = 'alert alert-warning alert-dismissible fade show position-fixed';
             notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);';
             notification.innerHTML = `
-                <strong><i class="bi bi-tools me-2"></i>${typeName} Assignments</strong><br>
+                <strong><i class="bi bi-tools me-2"></i>Discussion Assignments</strong><br>
                 This feature is currently in development and will be available soon!
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             `;
@@ -235,6 +226,14 @@ document.addEventListener('DOMContentLoaded', function() {
             case 'pdf':
                 // Show popup to ask group vs individual
                 showAssignmentTargetModal();
+                break;
+            case 'quiz':
+                // Redirect to quiz creation page
+                {% if current_user.role in ['Director', 'School Administrator'] %}
+                window.location.href = "{{ url_for('management.create_quiz_assignment') }}";
+                {% else %}
+                window.location.href = "{{ url_for('teacher.create_quiz_assignment') }}";
+                {% endif %}
                 break;
             default:
                 console.error('Unknown assignment type:', type);

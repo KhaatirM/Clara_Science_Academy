@@ -77,6 +77,18 @@
     
     .class-card-body {
         padding: 1.5rem;
+        overflow: hidden;
+    }
+    
+    .class-card-body .d-grid {
+        overflow: hidden;
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+    }
+    
+    .class-card {
+        overflow: hidden;
     }
     
     .class-info-item {
@@ -267,4 +279,117 @@
         font-weight: 700;
         font-size: 1.8rem;
         margin-bottom: 1rem;
+    }
+    
+    /* ===== RESPONSIVE ACTION BUTTONS ===== */
+    .class-action-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+    }
+    
+    .action-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        min-width: 0;
+        max-width: 100%;
+        box-sizing: border-box;
+        word-break: break-word;
+    }
+    
+    .action-btn-icon {
+        flex-shrink: 0;
+        margin-right: 0.5rem;
+    }
+    
+    .action-btn-text {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        min-width: 0;
+        flex-shrink: 1;
+    }
+    
+    /* Medium screens (tablets, smaller laptops) - reduce padding and font size */
+    @media (max-width: 992px) {
+        .action-btn {
+            padding: 0.6rem 0.75rem;
+            font-size: 0.85rem;
+            flex: 1 1 calc(33.333% - 0.4rem);
+            min-width: 110px;
+            max-width: 100%;
+        }
+        
+        .action-btn-icon {
+            margin-right: 0.4rem;
+            font-size: 1rem;
+        }
+        
+        .class-action-buttons {
+            gap: 0.5rem;
+        }
+    }
+    
+    /* Small screens (phones) - smaller padding, show icons with abbreviated text */
+    @media (max-width: 768px) {
+        .action-btn {
+            padding: 0.5rem 0.5rem;
+            font-size: 0.8rem;
+            flex: 1 1 calc(50% - 0.25rem);
+            min-width: 100px;
+            max-width: calc(50% - 0.25rem);
+        }
+        
+        .action-btn-icon {
+            margin-right: 0.3rem;
+            font-size: 0.95rem;
+        }
+        
+        .class-action-buttons {
+            gap: 0.5rem;
+        }
+    }
+    
+    /* Extra small screens - very compact, icons only or very short text */
+    @media (max-width: 576px) {
+        .action-btn {
+            padding: 0.5rem 0.4rem;
+            font-size: 0.75rem;
+            flex: 1 1 calc(50% - 0.25rem);
+            min-width: 90px;
+            max-width: calc(50% - 0.25rem);
+        }
+        
+        .action-btn-icon {
+            margin-right: 0.25rem;
+            font-size: 0.9rem;
+        }
+        
+        .action-btn-text {
+            font-size: 0.7rem;
+        }
+        
+        .class-action-buttons {
+            gap: 0.4rem;
+        }
+    }
+    
+    /* Very small screens - stack buttons vertically if needed */
+    @media (max-width: 400px) {
+        .class-action-buttons {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .class-action-buttons .action-btn {
+            flex: 1 1 auto;
+            width: 100%;
+            min-width: 0;
+            max-width: 100%;
+        }
     }

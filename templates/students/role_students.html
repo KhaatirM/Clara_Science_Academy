@@ -87,10 +87,10 @@
                 
                 <!-- Card Footer with Actions -->
                 <div class="student-full-card-footer">
-                    <a href="/student/{{ student.id }}/grades" class="btn-student-action btn-student-grades">
+                    <a href="{{ url_for('teacher.dashboard.student_grades_report', student_id=student.id) }}" class="btn-student-action btn-student-grades">
                         <i class="bi bi-journal-check"></i><span>Grades</span>
                     </a>
-                    <a href="/student/{{ student.id }}/attendance" class="btn-student-action btn-student-attendance">
+                    <a href="{{ url_for('teacher.dashboard.student_attendance_report', student_id=student.id) }}" class="btn-student-action btn-student-attendance">
                         <i class="bi bi-calendar-check"></i><span>Attendance</span>
                     </a>
                     {% if current_user.role in ['Director', 'School Administrator'] %}

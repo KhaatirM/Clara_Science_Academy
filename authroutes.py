@@ -26,7 +26,7 @@ from google.auth.transport import requests as google_requests
 import pathlib
 
 # SQLAlchemy imports for OR queries
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 
 auth_blueprint = Blueprint('auth', __name__)
 
@@ -679,7 +679,7 @@ def google_login():
         
         return redirect(authorization_url)
         
-    except FileNotFoundError as e:
+    except (FileNotFoundError, ValueError) as e:
         current_app.logger.error(f"Google OAuth config error: {str(e)}")
         flash('Google Sign-In is not configured. Please contact your administrator.', 'danger')
         return redirect(url_for('auth.login'))
@@ -775,11 +775,15 @@ def google_callback():
         
         current_app.logger.info(f"Google OAuth successful for email: {google_email}")
         
+        # Normalize email to lowercase for case-insensitive comparison
+        google_email_lower = google_email.lower().strip() if google_email else None
+        
         # Check if user exists in the database (check both personal email and Google Workspace email)
+        # Use case-insensitive comparison to handle case differences
         user = User.query.filter(
             or_(
-                User.email == google_email,  # Check personal email
-                User.google_workspace_email == google_email  # Check Google Workspace email
+                func.lower(User.email) == google_email_lower,  # Check personal email (case-insensitive)
+                func.lower(User.google_workspace_email) == google_email_lower  # Check Google Workspace email (case-insensitive)
             )
         ).first()
         

@@ -82,13 +82,92 @@
                     <div class="card-body">
                         <div class="alert alert-info">
                             <h6>Submission Status</h6>
-                            <p class="mb-0">Your quiz has been submitted and is awaiting grading by your teacher.</p>
+                            <p class="mb-0">Your quiz has been submitted{% if not show_correct_answers %} and is awaiting grading by your teacher{% endif %}.</p>
+                            {% if show_correct_answers %}
+                                <p class="mb-0 mt-2"><strong>Review your answers below. Correct answers are highlighted in green.</strong></p>
+                            {% endif %}
                         </div>
-                        <div class="d-flex gap-2">
+                        <div class="d-flex gap-2 mb-3">
                             <a href="{{ url_for('student.student_assignments') }}" class="btn btn-primary">
                                 <i class="bi bi-arrow-left me-1"></i>Back to Assignments
                             </a>
                         </div>
+                        
+                        {% if show_correct_answers %}
+                            <!-- Show Answers with Correct Answers Highlighted -->
+                            <div class="mt-4">
+                                <h6 class="mb-3"><i class="bi bi-list-check me-2"></i>Your Answers</h6>
+                                {% for question in questions %}
+                                    <div class="card mb-3">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                                <h6 class="mb-0">
+                                                    <span class="badge bg-primary me-2">{{ loop.index }}</span>
+                                                    Question {{ loop.index }}
+                                                </h6>
+                                                <span class="badge bg-secondary">{{ question.points }} point{{ 's' if question.points != 1 else '' }}</span>
+                                            </div>
+                                            <p class="fw-bold mb-3">{{ question.question_text }}</p>
+                                            
+                                            {% set student_answer = existing_answers.get(question.id) %}
+                                            
+                                            {% if question.question_type == 'multiple_choice' %}
+                                                {% for option in quiz_options_by_question.get(question.id, []) %}
+                                                    <div class="mb-2 p-2 rounded {% if option.is_correct %}bg-success bg-opacity-25 border border-success{% elif student_answer and student_answer.selected_option_id == option.id and not option.is_correct %}bg-danger bg-opacity-25 border border-danger{% else %}bg-light{% endif %}">
+                                                        <div class="d-flex align-items-center">
+                                                            {% if option.is_correct %}
+                                                                <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                                            {% elif student_answer and student_answer.selected_option_id == option.id and not option.is_correct %}
+                                                                <i class="bi bi-x-circle-fill text-danger me-2"></i>
+                                                            {% else %}
+                                                                <i class="bi bi-circle text-muted me-2"></i>
+                                                            {% endif %}
+                                                            <span class="fw-bold me-2">{{ loop.index0|string|replace('0', 'A')|replace('1', 'B')|replace('2', 'C')|replace('3', 'D')|replace('4', 'E')|replace('5', 'F') }}:</span>
+                                                            <span>{{ option.option_text }}</span>
+                                                            {% if option.is_correct %}
+                                                                <span class="badge bg-success ms-auto">Correct Answer</span>
+                                                            {% elif student_answer and student_answer.selected_option_id == option.id %}
+                                                                <span class="badge bg-danger ms-auto">Your Answer</span>
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                {% endfor %}
+                                                
+                                            {% elif question.question_type == 'true_false' %}
+                                                {% for option in quiz_options_by_question.get(question.id, []) %}
+                                                    <div class="mb-2 p-2 rounded {% if option.is_correct %}bg-success bg-opacity-25 border border-success{% elif student_answer and student_answer.selected_option_id == option.id and not option.is_correct %}bg-danger bg-opacity-25 border border-danger{% else %}bg-light{% endif %}">
+                                                        <div class="d-flex align-items-center">
+                                                            {% if option.is_correct %}
+                                                                <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                                            {% elif student_answer and student_answer.selected_option_id == option.id and not option.is_correct %}
+                                                                <i class="bi bi-x-circle-fill text-danger me-2"></i>
+                                                            {% else %}
+                                                                <i class="bi bi-circle text-muted me-2"></i>
+                                                            {% endif %}
+                                                            <span>{{ option.option_text }}</span>
+                                                            {% if option.is_correct %}
+                                                                <span class="badge bg-success ms-auto">Correct Answer</span>
+                                                            {% elif student_answer and student_answer.selected_option_id == option.id %}
+                                                                <span class="badge bg-danger ms-auto">Your Answer</span>
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                {% endfor %}
+                                                
+                                            {% elif question.question_type in ['short_answer', 'essay'] %}
+                                                <div class="mb-2">
+                                                    <strong>Your Answer:</strong>
+                                                    <div class="p-3 bg-light rounded mt-2">
+                                                        {{ student_answer.answer_text if student_answer and student_answer.answer_text else '(No answer provided)' }}
+                                                    </div>
+                                                    <small class="text-muted mt-1 d-block">Note: Short answer and essay questions require manual grading by your teacher.</small>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
                     </div>
                 </div>
             {% else %}
@@ -100,6 +179,22 @@
                                 <i class="bi bi-pencil-square me-2"></i>Quiz Questions
                             </h5>
                             <div class="d-flex gap-2 align-items-center">
+                                <!-- Attempts Remaining -->
+                                {% if assignment.max_attempts and attempts_remaining is not none %}
+                                    <div class="badge bg-info">
+                                        <i class="bi bi-arrow-repeat me-1"></i>
+                                        Attempt {{ submissions_count + 1 }} of {{ assignment.max_attempts }}
+                                        {% if attempts_remaining > 0 %}
+                                            ({{ attempts_remaining }} remaining)
+                                        {% endif %}
+                                    </div>
+                                {% elif submissions_count > 0 %}
+                                    <div class="badge bg-secondary">
+                                        <i class="bi bi-arrow-repeat me-1"></i>
+                                        Attempt {{ submissions_count + 1 }}
+                                    </div>
+                                {% endif %}
+                                
                                 <!-- Quiz Timer -->
                                 {% if assignment.time_limit_minutes %}
                                     <div class="timer-display" id="quizTimer">

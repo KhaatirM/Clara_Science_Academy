@@ -9,7 +9,7 @@ from .utils import get_teacher_or_admin, is_admin, is_authorized_for_class
 from models import (
     db, Class, Assignment, Student, Grade, Submission, 
     Notification, Announcement, Enrollment, Attendance, SchoolYear, User, TeacherStaff,
-    class_additional_teachers, class_substitute_teachers
+    class_additional_teachers, class_substitute_teachers, GroupAssignment, GroupGrade
 )
 from sqlalchemy import or_, and_
 import json
@@ -984,6 +984,179 @@ def assignments_and_grades():
         from datetime import date
         today = date.today()
         
+        # For table view, calculate student grades and averages
+        table_student_grades = {}
+        table_student_averages = {}
+        enrolled_students = []
+        all_assignments_list = []
+        
+        if selected_class and view_mode == 'table':
+            # Get enrolled students
+            enrollments = Enrollment.query.filter_by(class_id=selected_class.id, is_active=True).all()
+            enrolled_students = [enrollment.student for enrollment in enrollments if enrollment.student]
+            
+            # Get all assignments for the table
+            all_assignments_list = list(class_assignments) + list(group_assignments)
+            
+            # Get grades for enrolled students (individual assignments)
+            for student in enrolled_students:
+                table_student_grades[student.id] = {}
+                for assignment in class_assignments:
+                    grade = Grade.query.filter_by(student_id=student.id, assignment_id=assignment.id).first()
+                    if grade:
+                        try:
+                            grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
+                            table_student_grades[student.id][assignment.id] = {
+                                'grade': grade_data.get('score', 'N/A'),
+                                'comments': grade_data.get('comments', ''),
+                                'graded_at': grade.graded_at,
+                                'type': 'individual',
+                                'is_voided': grade.is_voided if hasattr(grade, 'is_voided') else False
+                            }
+                        except (json.JSONDecodeError, TypeError):
+                            table_student_grades[student.id][assignment.id] = {
+                                'grade': 'N/A',
+                                'comments': 'Error parsing grade data',
+                                'graded_at': grade.graded_at,
+                                'type': 'individual',
+                                'is_voided': grade.is_voided if hasattr(grade, 'is_voided') else False
+                            }
+                    else:
+                        table_student_grades[student.id][assignment.id] = {
+                            'grade': 'Not Graded',
+                            'comments': '',
+                            'graded_at': None,
+                            'is_voided': False,
+                            'type': 'individual'
+                        }
+                
+                # Get group assignment grades
+                from models import GroupGrade, StudentGroupMember, StudentGroup
+                for group_assignment in group_assignments:
+                    # Check if this group assignment is for specific groups
+                    assignment_group_ids = []
+                    if group_assignment.selected_group_ids:
+                        try:
+                            raw_group_ids = json.loads(group_assignment.selected_group_ids)
+                            assignment_group_ids = [int(gid) for gid in raw_group_ids]
+                        except (json.JSONDecodeError, TypeError, ValueError):
+                            assignment_group_ids = []
+                    
+                    # Find what group this student is in for this class
+                    should_show_assignment = False
+                    student_group_id = None
+                    student_group_name = 'N/A'
+                    
+                    if not assignment_group_ids:
+                        student_group_member = StudentGroupMember.query.join(StudentGroup).filter(
+                            StudentGroup.class_id == selected_class.id,
+                            StudentGroupMember.student_id == student.id
+                        ).order_by(StudentGroupMember.id.desc()).first()
+                        
+                        if student_group_member and student_group_member.group:
+                            student_group_id = student_group_member.group.id
+                            student_group_name = student_group_member.group.name
+                            should_show_assignment = True
+                    else:
+                        student_group_member = StudentGroupMember.query.join(StudentGroup).filter(
+                            StudentGroup.class_id == selected_class.id,
+                            StudentGroupMember.student_id == student.id,
+                            StudentGroup.id.in_(assignment_group_ids)
+                        ).order_by(StudentGroupMember.id.desc()).first()
+                        
+                        if student_group_member and student_group_member.group:
+                            student_group_id = student_group_member.group.id
+                            student_group_name = student_group_member.group.name
+                            should_show_assignment = True
+                    
+                    if should_show_assignment:
+                        if student_group_id:
+                            group_grade = GroupGrade.query.filter_by(
+                                student_id=student.id,
+                                group_assignment_id=group_assignment.id
+                            ).first()
+                            
+                            if group_grade:
+                                try:
+                                    grade_data = json.loads(group_grade.grade_data) if group_grade.grade_data else {}
+                                    table_student_grades[student.id][f'group_{group_assignment.id}'] = {
+                                        'grade': grade_data.get('score', 'N/A'),
+                                        'comments': grade_data.get('comments', ''),
+                                        'graded_at': group_grade.graded_at,
+                                        'type': 'group',
+                                        'group_name': student_group_name,
+                                        'is_voided': group_grade.is_voided if hasattr(group_grade, 'is_voided') else False
+                                    }
+                                except (json.JSONDecodeError, TypeError, AttributeError):
+                                    table_student_grades[student.id][f'group_{group_assignment.id}'] = {
+                                        'grade': 'N/A',
+                                        'comments': 'Error parsing grade data',
+                                        'graded_at': None,
+                                        'type': 'group',
+                                        'group_name': student_group_name,
+                                        'is_voided': group_grade.is_voided if hasattr(group_grade, 'is_voided') else False
+                                    }
+                            else:
+                                table_student_grades[student.id][f'group_{group_assignment.id}'] = {
+                                    'grade': 'Not Graded',
+                                    'comments': '',
+                                    'graded_at': None,
+                                    'type': 'group',
+                                    'group_name': student_group_name,
+                                    'is_voided': False
+                                }
+                        else:
+                            table_student_grades[student.id][f'group_{group_assignment.id}'] = {
+                                'grade': 'No Group',
+                                'comments': 'Student not assigned to a group',
+                                'graded_at': None,
+                                'type': 'group',
+                                'group_name': 'N/A',
+                                'is_voided': False
+                            }
+                    else:
+                        if not assignment_group_ids:
+                            table_student_grades[student.id][f'group_{group_assignment.id}'] = {
+                                'grade': 'No Group',
+                                'comments': 'Student not assigned to a group',
+                                'graded_at': None,
+                                'is_voided': False,
+                                'type': 'group',
+                                'group_name': 'N/A'
+                            }
+                        else:
+                            table_student_grades[student.id][f'group_{group_assignment.id}'] = {
+                                'grade': 'Not Assigned',
+                                'comments': 'Not assigned to this group',
+                                'graded_at': None,
+                                'type': 'group',
+                                'group_name': 'N/A',
+                                'is_voided': False
+                            }
+            
+            # Calculate averages for each student
+            for student_id, grades in table_student_grades.items():
+                valid_grades = []
+                for g in grades.values():
+                    grade_val = g['grade']
+                    # Skip voided grades
+                    if g.get('is_voided', False):
+                        continue
+                    # Skip if the comment indicates the student isn't part of this assignment
+                    if 'Not assigned to this group' in g.get('comments', ''):
+                        continue
+                    # Only include numeric grades
+                    if grade_val not in ['N/A', 'Not Assigned', 'Not Graded', 'No Group']:
+                        try:
+                            valid_grades.append(float(grade_val))
+                        except (ValueError, TypeError):
+                            pass
+                
+                if valid_grades:
+                    table_student_averages[student_id] = round(sum(valid_grades) / len(valid_grades), 2)
+                else:
+                    table_student_averages[student_id] = 'N/A'
+        
         return render_template('management/assignments_and_grades.html',
                              accessible_classes=accessible_classes,
                              classes=accessible_classes,  # For dropdown filter
@@ -999,7 +1172,12 @@ def assignments_and_grades():
                              user_role=current_user.role if hasattr(current_user, 'role') else 'Teacher',
                              show_class_selection=not selected_class,
                              class_filter=class_filter if selected_class else '',
-                             today=today)
+                             today=today,
+                             # Table view data
+                             enrolled_students=enrolled_students if view_mode == 'table' else [],
+                             student_grades=table_student_grades if view_mode == 'table' else {},
+                             student_averages=table_student_averages if view_mode == 'table' else {},
+                             all_assignments=all_assignments_list if view_mode == 'table' else [])
     
     except Exception as e:
         current_app.logger.error(f"Error in assignments_and_grades route: {e}")
@@ -1495,4 +1673,368 @@ def view_student_details_data(student_id):
             'error': str(e),
             'details': traceback.format_exc()
         }), 500
+
+
+@bp.route('/student/<int:student_id>/grades')
+@login_required
+@teacher_required
+def student_grades_report(student_id):
+    """View printable student grades report."""
+    from models import GroupAssignment, GroupGrade, AcademicPeriod, QuarterGrade
+    from utils.quarter_grade_calculator import get_quarter_grades_for_report
+    
+    student = Student.query.get_or_404(student_id)
+    teacher = get_teacher_or_admin()
+    
+    # Verify teacher has access to this student
+    if not is_admin():
+        if teacher is None:
+            flash("You are not authorized to view this student's grades.", "danger")
+            return redirect(url_for('teacher.dashboard.my_students'))
+        
+        # Check if student is enrolled in any of teacher's classes
+        teacher_classes = Class.query.filter_by(teacher_id=teacher.id).all()
+        class_ids = [c.id for c in teacher_classes]
+        
+        student_enrollments = Enrollment.query.filter(
+            Enrollment.student_id == student_id,
+            Enrollment.class_id.in_(class_ids),
+            Enrollment.is_active == True
+        ).all()
+        
+        if not student_enrollments:
+            flash("You are not authorized to view this student's grades.", "danger")
+            return redirect(url_for('teacher.dashboard.my_students'))
+    
+    # Get active school year
+    school_year = SchoolYear.query.filter_by(is_active=True).first()
+    if not school_year:
+        flash('No active school year found.', 'error')
+        return redirect(url_for('teacher.dashboard.my_students'))
+    
+    # Get student's enrolled classes
+    enrollments = Enrollment.query.filter_by(
+        student_id=student_id,
+        is_active=True
+    ).join(Class).filter(
+        Class.school_year_id == school_year.id
+    ).all()
+    
+    # Get quarter grades for report
+    class_ids = [e.class_id for e in enrollments]
+    grades_by_quarter = get_quarter_grades_for_report(
+        student_id=student_id,
+        school_year_id=school_year.id,
+        class_ids=class_ids if class_ids else None
+    )
+    
+    # Get class objects
+    class_objects = [e.class_info for e in enrollments if e.class_info]
+    
+    # Format student data
+    student_data = {
+        'id': student.id,
+        'first_name': student.first_name,
+        'last_name': student.last_name,
+        'grade_level': student.grade_level,
+        'student_id': student.student_id or 'N/A',
+        'date_of_birth': student.dob or 'N/A',
+        'address': student.address or (f"{student.street or ''}, {student.city or ''}, {student.state or ''} {student.zip_code or ''}").strip(' ,') if (student.street or student.city) else 'N/A' or (f"{student.street or ''}, {student.city or ''}, {student.state or ''} {student.zip_code or ''}").strip(' ,') if (student.street or student.city) else 'N/A'
+    }
+    
+    return render_template('teachers/student_grades_report.html',
+                         student=student_data,
+                         grades_by_quarter=grades_by_quarter,
+                         class_objects=class_objects,
+                         school_year=school_year,
+                         generated_date=datetime.utcnow())
+
+
+@bp.route('/student/<int:student_id>/grades/pdf')
+@login_required
+@teacher_required
+def student_grades_report_pdf(student_id):
+    """Generate PDF of student grades report."""
+    from weasyprint import HTML
+    from io import BytesIO
+    from flask import make_response
+    from models import GroupAssignment, GroupGrade, AcademicPeriod
+    from utils.quarter_grade_calculator import get_quarter_grades_for_report
+    import os
+    
+    student = Student.query.get_or_404(student_id)
+    teacher = get_teacher_or_admin()
+    
+    # Verify teacher has access
+    if not is_admin():
+        if teacher is None:
+            flash("You are not authorized to view this student's grades.", "danger")
+            return redirect(url_for('teacher.dashboard.my_students'))
+        
+        teacher_classes = Class.query.filter_by(teacher_id=teacher.id).all()
+        class_ids = [c.id for c in teacher_classes]
+        
+        student_enrollments = Enrollment.query.filter(
+            Enrollment.student_id == student_id,
+            Enrollment.class_id.in_(class_ids),
+            Enrollment.is_active == True
+        ).all()
+        
+        if not student_enrollments:
+            flash("You are not authorized to view this student's grades.", "danger")
+            return redirect(url_for('teacher.dashboard.my_students'))
+    
+    # Get active school year
+    school_year = SchoolYear.query.filter_by(is_active=True).first()
+    if not school_year:
+        flash('No active school year found.', 'error')
+        return redirect(url_for('teacher.dashboard.my_students'))
+    
+    # Get enrollments
+    enrollments = Enrollment.query.filter_by(
+        student_id=student_id,
+        is_active=True
+    ).join(Class).filter(
+        Class.school_year_id == school_year.id
+    ).all()
+    
+    class_ids = [e.class_id for e in enrollments]
+    grades_by_quarter = get_quarter_grades_for_report(
+        student_id=student_id,
+        school_year_id=school_year.id,
+        class_ids=class_ids if class_ids else None
+    )
+    
+    class_objects = [e.class_info for e in enrollments if e.class_info]
+    
+    student_data = {
+        'id': student.id,
+        'first_name': student.first_name,
+        'last_name': student.last_name,
+        'grade_level': student.grade_level,
+        'student_id': student.student_id or 'N/A',
+        'date_of_birth': student.dob or 'N/A',
+        'address': student.address or (f"{student.street or ''}, {student.city or ''}, {student.state or ''} {student.zip_code or ''}").strip(' ,') if (student.street or student.city) else 'N/A'
+    }
+    
+    # Render HTML template
+    html_content = render_template('teachers/student_grades_report_pdf.html',
+                                  student=student_data,
+                                  grades_by_quarter=grades_by_quarter,
+                                  class_objects=class_objects,
+                                  school_year=school_year,
+                                  generated_date=datetime.utcnow())
+    
+    # Inject CSS
+    css_path = os.path.join(current_app.root_path, 'static', 'report_card_styles.css')
+    try:
+        with open(css_path, 'r', encoding='utf-8') as f:
+            css_content = f.read()
+        html_content = html_content.replace('</head>', f'<style>{css_content}</style></head>')
+    except Exception as e:
+        current_app.logger.warning(f"Could not load CSS file: {e}")
+    
+    # Generate PDF
+    html_doc = HTML(string=html_content)
+    pdf_bytes = html_doc.write_pdf()
+    
+    # Create response
+    response = make_response(pdf_bytes)
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = f'inline; filename="grades_report_{student.last_name}_{student.first_name}_{school_year.name}.pdf"'
+    
+    return response
+
+
+@bp.route('/student/<int:student_id>/attendance')
+@login_required
+@teacher_required
+def student_attendance_report(student_id):
+    """View printable student attendance report."""
+    from dateutil.relativedelta import relativedelta
+    
+    student = Student.query.get_or_404(student_id)
+    teacher = get_teacher_or_admin()
+    
+    # Verify teacher has access
+    if not is_admin():
+        if teacher is None:
+            flash("You are not authorized to view this student's attendance.", "danger")
+            return redirect(url_for('teacher.dashboard.my_students'))
+        
+        teacher_classes = Class.query.filter_by(teacher_id=teacher.id).all()
+        class_ids = [c.id for c in teacher_classes]
+        
+        student_enrollments = Enrollment.query.filter(
+            Enrollment.student_id == student_id,
+            Enrollment.class_id.in_(class_ids),
+            Enrollment.is_active == True
+        ).all()
+        
+        if not student_enrollments:
+            flash("You are not authorized to view this student's attendance.", "danger")
+            return redirect(url_for('teacher.dashboard.my_students'))
+    
+    # Get active school year
+    school_year = SchoolYear.query.filter_by(is_active=True).first()
+    if not school_year:
+        flash('No active school year found.', 'error')
+        return redirect(url_for('teacher.dashboard.my_students'))
+    
+    # Get all attendance records for this student in this school year
+    attendance_records = Attendance.query.filter_by(
+        student_id=student_id
+    ).join(Class, Attendance.class_id == Class.id).filter(
+        Class.school_year_id == school_year.id
+    ).order_by(Attendance.date.desc()).all()
+    
+    # Calculate statistics
+    total_records = len(attendance_records)
+    present_count = sum(1 for r in attendance_records if r.status and r.status.lower() == 'present')
+    late_count = sum(1 for r in attendance_records if r.status and r.status.lower() == 'late')
+    absent_count = sum(1 for r in attendance_records if r.status and r.status.lower() in ['absent', 'unexcused absence', 'excused absence'])
+    excused_absent_count = sum(1 for r in attendance_records if r.status and 'excused' in r.status.lower())
+    unexcused_absent_count = sum(1 for r in attendance_records if r.status and 'unexcused' in r.status.lower())
+    
+    attendance_rate = round((present_count / total_records * 100) if total_records > 0 else 0, 1)
+    
+    # Group by month
+    records_by_month = {}
+    for record in attendance_records:
+        month_key = record.date.strftime('%Y-%m')
+        if month_key not in records_by_month:
+            records_by_month[month_key] = []
+        records_by_month[month_key].append(record)
+    
+    # Format student data
+    student_data = {
+        'id': student.id,
+        'first_name': student.first_name,
+        'last_name': student.last_name,
+        'grade_level': student.grade_level,
+        'student_id': student.student_id or 'N/A',
+        'date_of_birth': student.dob or 'N/A'
+    }
+    
+    return render_template('teachers/student_attendance_report.html',
+                         student=student_data,
+                         attendance_records=attendance_records,
+                         records_by_month=records_by_month,
+                         school_year=school_year,
+                         total_records=total_records,
+                         present_count=present_count,
+                         late_count=late_count,
+                         absent_count=absent_count,
+                         excused_absent_count=excused_absent_count,
+                         unexcused_absent_count=unexcused_absent_count,
+                         attendance_rate=attendance_rate,
+                         generated_date=datetime.utcnow())
+
+
+@bp.route('/student/<int:student_id>/attendance/pdf')
+@login_required
+@teacher_required
+def student_attendance_report_pdf(student_id):
+    """Generate PDF of student attendance report."""
+    from weasyprint import HTML
+    from io import BytesIO
+    from flask import make_response
+    import os
+    
+    student = Student.query.get_or_404(student_id)
+    teacher = get_teacher_or_admin()
+    
+    # Verify teacher has access
+    if not is_admin():
+        if teacher is None:
+            flash("You are not authorized to view this student's attendance.", "danger")
+            return redirect(url_for('teacher.dashboard.my_students'))
+        
+        teacher_classes = Class.query.filter_by(teacher_id=teacher.id).all()
+        class_ids = [c.id for c in teacher_classes]
+        
+        student_enrollments = Enrollment.query.filter(
+            Enrollment.student_id == student_id,
+            Enrollment.class_id.in_(class_ids),
+            Enrollment.is_active == True
+        ).all()
+        
+        if not student_enrollments:
+            flash("You are not authorized to view this student's attendance.", "danger")
+            return redirect(url_for('teacher.dashboard.my_students'))
+    
+    # Get active school year
+    school_year = SchoolYear.query.filter_by(is_active=True).first()
+    if not school_year:
+        flash('No active school year found.', 'error')
+        return redirect(url_for('teacher.dashboard.my_students'))
+    
+    # Get attendance records
+    attendance_records = Attendance.query.filter_by(
+        student_id=student_id
+    ).join(Class, Attendance.class_id == Class.id).filter(
+        Class.school_year_id == school_year.id
+    ).order_by(Attendance.date.desc()).all()
+    
+    # Calculate statistics
+    total_records = len(attendance_records)
+    present_count = sum(1 for r in attendance_records if r.status and r.status.lower() == 'present')
+    late_count = sum(1 for r in attendance_records if r.status and r.status.lower() == 'late')
+    absent_count = sum(1 for r in attendance_records if r.status and r.status.lower() in ['absent', 'unexcused absence', 'excused absence'])
+    excused_absent_count = sum(1 for r in attendance_records if r.status and 'excused' in r.status.lower())
+    unexcused_absent_count = sum(1 for r in attendance_records if r.status and 'unexcused' in r.status.lower())
+    
+    attendance_rate = round((present_count / total_records * 100) if total_records > 0 else 0, 1)
+    
+    # Group by month
+    records_by_month = {}
+    for record in attendance_records:
+        month_key = record.date.strftime('%Y-%m')
+        if month_key not in records_by_month:
+            records_by_month[month_key] = []
+        records_by_month[month_key].append(record)
+    
+    student_data = {
+        'id': student.id,
+        'first_name': student.first_name,
+        'last_name': student.last_name,
+        'grade_level': student.grade_level,
+        'student_id': student.student_id or 'N/A',
+        'date_of_birth': student.dob or 'N/A'
+    }
+    
+    # Render HTML template
+    html_content = render_template('teachers/student_attendance_report_pdf.html',
+                                  student=student_data,
+                                  attendance_records=attendance_records,
+                                  records_by_month=records_by_month,
+                                  school_year=school_year,
+                                  total_records=total_records,
+                                  present_count=present_count,
+                                  late_count=late_count,
+                                  absent_count=absent_count,
+                                  excused_absent_count=excused_absent_count,
+                                  unexcused_absent_count=unexcused_absent_count,
+                                  attendance_rate=attendance_rate,
+                                  generated_date=datetime.utcnow())
+    
+    # Inject CSS
+    css_path = os.path.join(current_app.root_path, 'static', 'report_card_styles.css')
+    try:
+        with open(css_path, 'r', encoding='utf-8') as f:
+            css_content = f.read()
+        html_content = html_content.replace('</head>', f'<style>{css_content}</style></head>')
+    except Exception as e:
+        current_app.logger.warning(f"Could not load CSS file: {e}")
+    
+    # Generate PDF
+    html_doc = HTML(string=html_content)
+    pdf_bytes = html_doc.write_pdf()
+    
+    # Create response
+    response = make_response(pdf_bytes)
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = f'inline; filename="attendance_report_{student.last_name}_{student.first_name}_{school_year.name}.pdf"'
+    
+    return response
 

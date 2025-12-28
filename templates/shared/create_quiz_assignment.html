@@ -40,7 +40,7 @@
             <div class="col-12 col-lg-8">
                 <!-- Basic Assignment Info -->
                 <div class="card mb-4 border-0 shadow-sm">
-                    <div class="card-header bg-primary text-white">
+                    <div class="card-header text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
                         <h5 class="mb-0 fw-bold"><i class="bi bi-info-circle me-2"></i>Quiz Information</h5>
                     </div>
                     <div class="card-body p-4">
@@ -99,7 +99,7 @@
 
                 <!-- Quiz Settings -->
                 <div class="card mb-4 border-0 shadow-sm">
-                    <div class="card-header bg-success text-white">
+                    <div class="card-header text-white" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
                         <h5 class="mb-0 fw-bold"><i class="bi bi-gear me-2"></i>Quiz Configuration</h5>
                     </div>
                     <div class="card-body p-4">
@@ -162,6 +162,34 @@
                             </div>
                         </div>
                         
+                        <!-- Google Forms Integration -->
+                        <div class="border-top pt-4 mb-4">
+                            <div class="mb-3">
+                                <h6 class="fw-semibold text-muted mb-3">
+                                    <i class="bi bi-google me-2"></i>Google Forms Integration (Optional)
+                                </h6>
+                                <div class="alert alert-info mb-3" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.1) 100%); border-color: #3b82f6; border-left: 4px solid #3b82f6;">
+                                    <i class="bi bi-info-circle me-2 text-primary"></i>
+                                    <strong>Link an existing Google Form:</strong> If you've created a quiz in Google Forms, paste the form URL below to link it to this assignment. Students will be directed to complete the form in Google. You can also export native quizzes to Google Forms later.
+                                </div>
+                                <div class="mb-3">
+                                    <label for="google_form_url" class="form-label fw-semibold">
+                                        <i class="bi bi-link-45deg me-1"></i>Google Form URL
+                                    </label>
+                                    <input type="url" class="form-control" id="google_form_url" name="google_form_url" 
+                                           placeholder="https://docs.google.com/forms/d/e/1FAIpQLS...">
+                                    <div class="form-text">Paste the full Google Form URL here</div>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="link_google_form" name="link_google_form" 
+                                           onchange="toggleGoogleFormLink(this)">
+                                    <label class="form-check-label" for="link_google_form">
+                                        Link this quiz to the Google Form above
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <!-- Save and Continue Settings -->
                         <div class="border-top pt-4">
                             <div class="form-check form-switch mb-3">
@@ -169,7 +197,7 @@
                                 <label class="form-check-label fw-bold" for="allow_save_and_continue">
                                     <i class="bi bi-save me-2 text-warning"></i>Allow Save and Continue
                                 </label>
-                                <div class="form-text">Students can save progress and return later</div>
+                                <div class="form-text">Students can save progress and return later (only for native quizzes)</div>
                             </div>
                             
                             <div id="saveContinueSettings" class="row g-3">
@@ -199,11 +227,16 @@
 
                 <!-- Questions Section -->
                 <div class="card mb-4 border-0 shadow-sm">
-                    <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                    <div class="card-header text-white d-flex justify-content-between align-items-center flex-wrap gap-2" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
                         <h5 class="mb-0 fw-bold"><i class="bi bi-question-square me-2"></i>Quiz Questions</h5>
-                        <button type="button" class="btn btn-light btn-lg fw-bold" id="addQuestionBtn">
-                            <i class="bi bi-plus-circle me-2"></i>Add Question
-                        </button>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-info btn-sm fw-bold shadow-sm" id="importFromBankBtn" title="Import questions from question banks" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border: none; transition: transform 0.2s;">
+                                <i class="bi bi-database me-2"></i>Import from Bank
+                            </button>
+                            <button type="button" class="btn btn-light btn-sm fw-bold shadow-sm" id="addQuestionBtn" style="transition: transform 0.2s;">
+                                <i class="bi bi-plus-circle me-2"></i>Add Question
+                            </button>
+                        </div>
                     </div>
                     <div class="card-body p-4">
                         <div id="questionsContainer">
@@ -226,7 +259,7 @@
             <div class="col-12 col-lg-4">
                 <!-- Quiz Preview -->
                 <div class="card mb-4 border-0 shadow-sm">
-                    <div class="card-header bg-info text-white">
+                    <div class="card-header text-white" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);">
                         <h6 class="mb-0 fw-bold"><i class="bi bi-eye me-2"></i>Live Preview</h6>
                     </div>
                     <div class="card-body p-3">
@@ -241,7 +274,7 @@
 
                 <!-- Question Types Guide -->
                 <div class="card mb-4 border-0 shadow-sm">
-                    <div class="card-header bg-secondary text-white">
+                    <div class="card-header text-white" style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);">
                         <h6 class="mb-0 fw-bold"><i class="bi bi-lightbulb me-2"></i>Question Types Guide</h6>
                     </div>
                     <div class="card-body p-3">
@@ -296,7 +329,7 @@
 
                 <!-- Quick Stats -->
                 <div class="card mb-4 border-0 shadow-sm">
-                    <div class="card-header bg-dark text-white">
+                    <div class="card-header text-white" style="background: linear-gradient(135deg, #1f2937 0%, #111827 100%);">
                         <h6 class="mb-0 fw-bold"><i class="bi bi-graph-up me-2"></i>Quiz Stats</h6>
                     </div>
                     <div class="card-body p-3">
@@ -319,7 +352,7 @@
                 <div class="card border-0 shadow-sm">
                     <div class="card-body p-4">
                         <div class="d-grid gap-3">
-                            <button type="submit" class="btn btn-success btn-lg fw-bold" id="createQuizBtn">
+                            <button type="submit" class="btn btn-lg fw-bold shadow-sm" id="createQuizBtn" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none; color: white; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(16, 185, 129, 0.4)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)';">
                                 <i class="bi bi-check-circle me-2"></i>Create Quiz Assignment
                             </button>
                             {% if current_user.role in ['Director', 'School Administrator'] %}
@@ -341,20 +374,20 @@
 
 <!-- Enhanced Question Template (Hidden) -->
 <template id="questionTemplate">
-    <div class="question-item card mb-4 border-0 shadow-sm" data-question-id="" style="border-left: 4px solid #007bff !important;">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+    <div class="question-item card mb-4 border-0 shadow-sm" data-question-id="" style="border-left: 4px solid #667eea !important; transition: box-shadow 0.2s;">
+        <div class="card-header d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);">
             <div class="d-flex align-items-center">
                 <span class="badge bg-primary me-2 question-number-badge">1</span>
                 <h6 class="mb-0 fw-bold">Question <span class="question-number"></span></h6>
             </div>
             <div class="btn-group btn-group-sm">
-                <button type="button" class="btn btn-outline-primary move-question-up" title="Move Up">
+                <button type="button" class="btn btn-outline-primary move-question-up" title="Move Up" style="transition: all 0.2s;" onmouseover="this.style.background='#667eea'; this.style.color='white';" onmouseout="this.style.background='transparent'; this.style.color='#667eea';">
                     <i class="bi bi-arrow-up"></i>
                 </button>
-                <button type="button" class="btn btn-outline-primary move-question-down" title="Move Down">
+                <button type="button" class="btn btn-outline-primary move-question-down" title="Move Down" style="transition: all 0.2s;" onmouseover="this.style.background='#667eea'; this.style.color='white';" onmouseout="this.style.background='transparent'; this.style.color='#667eea';">
                     <i class="bi bi-arrow-down"></i>
                 </button>
-                <button type="button" class="btn btn-outline-danger delete-question" title="Delete Question">
+                <button type="button" class="btn btn-outline-danger delete-question" title="Delete Question" style="transition: all 0.2s;" onmouseover="this.style.background='#dc2626'; this.style.color='white';" onmouseout="this.style.background='transparent'; this.style.color='#dc2626';">
                     <i class="bi bi-trash"></i>
                 </button>
             </div>
@@ -403,7 +436,7 @@
                                 <input class="form-check-input" type="radio" name="correct_answer_0" value="0" required>
                             </div>
                             <input type="text" class="form-control" name="option_text_0[]" placeholder="Option A" required>
-                            <button type="button" class="btn btn-outline-danger remove-option" title="Remove Option">
+                            <button type="button" class="btn btn-outline-danger remove-option" title="Remove Option" style="transition: all 0.2s;" onmouseover="this.style.background='#dc2626'; this.style.color='white';" onmouseout="this.style.background='transparent'; this.style.color='#dc2626';">
                                 <i class="bi bi-trash"></i>
                             </button>
                         </div>
@@ -414,14 +447,14 @@
                                 <input class="form-check-input" type="radio" name="correct_answer_0" value="1" required>
                             </div>
                             <input type="text" class="form-control" name="option_text_0[]" placeholder="Option B" required>
-                            <button type="button" class="btn btn-outline-danger remove-option" title="Remove Option">
+                            <button type="button" class="btn btn-outline-danger remove-option" title="Remove Option" style="transition: all 0.2s;" onmouseover="this.style.background='#dc2626'; this.style.color='white';" onmouseout="this.style.background='transparent'; this.style.color='#dc2626';">
                                 <i class="bi bi-trash"></i>
                             </button>
                         </div>
                     </div>
                 </div>
                 <div class="d-flex justify-content-between align-items-center mt-2">
-                    <button type="button" class="btn btn-sm btn-outline-primary add-option">
+                    <button type="button" class="btn btn-sm btn-outline-primary add-option" style="transition: all 0.2s;" onmouseover="this.style.background='#667eea'; this.style.color='white';" onmouseout="this.style.background='transparent'; this.style.color='#667eea';">
                         <i class="bi bi-plus-circle me-1"></i>Add Option
                     </button>
                     <small class="text-muted">Select the radio button next to the correct answer</small>
@@ -470,10 +503,28 @@ document.addEventListener('DOMContentLoaded', function() {
     const quizPreview = document.getElementById('quizPreview');
     const form = document.getElementById('quizAssignmentForm');
     
-    // Add question functionality
+    // Add question functionality with animation
     addQuestionBtn.addEventListener('click', function() {
         addQuestion();
+        // Animate button press
+        this.style.transform = 'scale(0.95)';
+        setTimeout(() => {
+            this.style.transform = 'scale(1)';
+        }, 150);
     });
+    
+    // Import from bank button animation
+    const importFromBankBtn = document.getElementById('importFromBankBtn');
+    if (importFromBankBtn) {
+        importFromBankBtn.addEventListener('click', function() {
+            // TODO: Implement import from bank functionality
+            alert('Question Bank import feature coming soon!');
+            this.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                this.style.transform = 'scale(1)';
+            }, 150);
+        });
+    }
     
     // Add first question button
     const addFirstQuestionBtn = document.getElementById('addFirstQuestionBtn');
@@ -833,15 +884,62 @@ document.addEventListener('DOMContentLoaded', function() {
     allowSaveContinue.addEventListener('change', toggleSaveContinueSettings);
     toggleSaveContinueSettings(); // Initialize on page load
     
+    // Google Form linking
+    function toggleGoogleFormLink(checkbox) {
+        const formUrlInput = document.getElementById('google_form_url');
+        const questionsSection = document.querySelector('#questionsContainer').closest('.card');
+        if (checkbox.checked) {
+            // If linking Google Form, make URL required and hide questions section
+            if (formUrlInput) {
+                formUrlInput.setAttribute('required', 'required');
+            }
+            if (questionsSection) {
+                questionsSection.style.display = 'none';
+            }
+        } else {
+            // If not linking, remove required and show questions section
+            if (formUrlInput) {
+                formUrlInput.removeAttribute('required');
+            }
+            if (questionsSection) {
+                questionsSection.style.display = 'block';
+            }
+        }
+    }
+    
+    // Validate Google Form URL format
+    const googleFormUrlInput = document.getElementById('google_form_url');
+    if (googleFormUrlInput) {
+        googleFormUrlInput.addEventListener('blur', function() {
+            const url = this.value.trim();
+            if (url && !url.match(/^https:\/\/docs\.google\.com\/forms\/d\/e\/[A-Za-z0-9_-]+\/viewform/)) {
+                alert('Please enter a valid Google Forms URL (should start with https://docs.google.com/forms/d/e/...)');
+                this.focus();
+            }
+        });
+    }
+    
     // Form submission
     form.addEventListener('submit', function(e) {
         console.log('Form submission started');
         const questions = questionsContainer.querySelectorAll('.question-item');
         console.log(`Found ${questions.length} questions`);
         
-        if (questions.length === 0) {
+        // Check if linking Google Form
+        const linkGoogleForm = document.getElementById('link_google_form')?.checked;
+        const googleFormUrl = document.getElementById('google_form_url')?.value?.trim();
+        
+        // If linking Google Form, skip question validation
+        if (!linkGoogleForm && questions.length === 0) {
             e.preventDefault();
-            alert('Please add at least one question to the quiz.');
+            alert('Please add at least one question to the quiz, or link a Google Form.');
+            return;
+        }
+        
+        // If linking Google Form, validate URL
+        if (linkGoogleForm && !googleFormUrl) {
+            e.preventDefault();
+            alert('Please enter a Google Form URL to link.');
             return;
         }
         
@@ -891,8 +989,10 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Form validation passed, submitting...');
         // Show loading state
         const submitBtn = document.getElementById('createQuizBtn');
-        submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Creating Quiz...';
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Creating Quiz...';
         submitBtn.disabled = true;
+        submitBtn.style.opacity = '0.7';
+        submitBtn.style.cursor = 'not-allowed';
     });
 });
 </script>

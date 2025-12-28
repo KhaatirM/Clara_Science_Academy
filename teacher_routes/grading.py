@@ -7,7 +7,8 @@ from flask_login import login_required, current_user
 from decorators import teacher_required
 from .utils import get_teacher_or_admin, is_admin, is_authorized_for_class
 from models import (
-    db, Class, Assignment, Student, Grade, Submission, Enrollment, AssignmentExtension
+    db, Class, Assignment, Student, Grade, Submission, Enrollment, AssignmentExtension,
+    QuizQuestion, QuizAnswer, QuizOption
 )
 import json
 from datetime import datetime
@@ -27,7 +28,7 @@ def grade_assignment(assignment_id):
         return redirect(url_for('teacher.dashboard.my_assignments'))
     
     if request.method == 'POST':
-        # Handle batch grading submission
+        # Handle quiz per-question grading or regular assignment grading
         try:
             grades_saved = 0
             
@@ -35,70 +36,135 @@ def grade_assignment(assignment_id):
             enrollments = Enrollment.query.filter_by(class_id=assignment.class_id, is_active=True).all()
             student_ids = [e.student_id for e in enrollments if e.student_id]
             
-            # Process each student's grade
-            for student_id in student_ids:
-                score = request.form.get(f'score_{student_id}')
-                comments = request.form.get(f'comment_{student_id}', '').strip()
-                
-                # Skip if no score provided
-                if not score or score == '':
-                    continue
-                
-                try:
-                    points_earned = float(score)
-                except ValueError:
-                    continue
-                
-                # Check if grade already exists
-                existing_grade = Grade.query.filter_by(
-                    assignment_id=assignment_id,
-                    student_id=student_id
-                ).first()
-                
-                # Check if this student has a voided grade
-                is_voided = False
-                if existing_grade and existing_grade.grade_data:
-                    try:
-                        existing_data = json.loads(existing_grade.grade_data)
-                        is_voided = existing_data.get('is_voided', False)
-                    except:
-                        pass
-                
-                # Don't update voided grades
-                if is_voided:
-                    continue
-                
-                # Get total points from assignment (default to 100 if not set)
+            # Check if this is quiz grading with per-question scores
+            if assignment.assignment_type == 'quiz' and request.form.get('grading_mode') == 'per_question':
+                # Quiz per-question grading
+                quiz_questions = QuizQuestion.query.filter_by(assignment_id=assignment_id).order_by(QuizQuestion.order).all()
                 total_points = assignment.total_points if assignment.total_points else 100.0
                 
-                # Calculate percentage based on points earned vs total points
-                percentage = (points_earned / total_points * 100) if total_points > 0 else 0
-                
-                grade_data = {
-                    'score': points_earned,
-                    'points_earned': points_earned,
-                    'total_points': total_points,
-                    'max_score': total_points,  # Keep for backward compatibility
-                    'percentage': round(percentage, 2),
-                    'feedback': comments,
-                    'graded_at': datetime.now().isoformat()
-                }
-                
-                if existing_grade:
-                    # Update existing grade
-                    existing_grade.grade_data = json.dumps(grade_data)
-                    existing_grade.graded_at = datetime.now()
-                else:
-                    # Create new grade
-                    new_grade = Grade(
+                for student_id in student_ids:
+                    # Check if grade is voided
+                    existing_grade = Grade.query.filter_by(
                         assignment_id=assignment_id,
-                        student_id=student_id,
-                        grade_data=json.dumps(grade_data),
-                        graded_at=datetime.now()
-                    )
-                    db.session.add(new_grade)
-                
-                grades_saved += 1
+                        student_id=student_id
+                    ).first()
+                    
+                    if existing_grade and existing_grade.is_voided:
+                        continue
+                    
+                    # Calculate points from per-question grades
+                    earned_points = 0.0
+                    for question in quiz_questions:
+                        # Get points for this question (for text answers, it's from the form; for auto-graded, it's already in QuizAnswer)
+                        if question.question_type in ['short_answer', 'essay']:
+                            # Get manually graded points
+                            points_key = f'points_{student_id}_q{question.id}'
+                            question_points = request.form.get(points_key, '0')
+                            try:
+                                earned_points += float(question_points)
+                                # Update QuizAnswer points_earned
+                                answer = QuizAnswer.query.filter_by(
+                                    student_id=student_id,
+                                    question_id=question.id
+                                ).first()
+                                if answer:
+                                    answer.points_earned = float(question_points)
+                                    answer.is_correct = (float(question_points) == question.points)
+                            except ValueError:
+                                pass
+                        else:
+                            # For auto-graded questions, get points from existing answer
+                            answer = QuizAnswer.query.filter_by(
+                                student_id=student_id,
+                                question_id=question.id
+                            ).first()
+                            if answer:
+                                earned_points += answer.points_earned
+                    
+                    # Get feedback comment
+                    comments = request.form.get(f'comment_{student_id}', '').strip()
+                    
+                    # Create or update grade
+                    grade_data = {
+                        'score': earned_points,
+                        'points_earned': earned_points,
+                        'total_points': total_points,
+                        'max_score': total_points,
+                        'percentage': round((earned_points / total_points * 100) if total_points > 0 else 0, 2),
+                        'feedback': comments,
+                        'graded_at': datetime.now().isoformat()
+                    }
+                    
+                    if existing_grade:
+                        existing_grade.grade_data = json.dumps(grade_data)
+                        existing_grade.graded_at = datetime.now()
+                    else:
+                        new_grade = Grade(
+                            assignment_id=assignment_id,
+                            student_id=student_id,
+                            grade_data=json.dumps(grade_data),
+                            graded_at=datetime.now()
+                        )
+                        db.session.add(new_grade)
+                    
+                    grades_saved += 1
+            else:
+                # Regular assignment grading (existing logic)
+                for student_id in student_ids:
+                    score = request.form.get(f'score_{student_id}')
+                    comments = request.form.get(f'comment_{student_id}', '').strip()
+                    
+                    # Skip if no score provided
+                    if not score or score == '':
+                        continue
+                    
+                    try:
+                        points_earned = float(score)
+                    except ValueError:
+                        continue
+                    
+                    # Check if grade already exists
+                    existing_grade = Grade.query.filter_by(
+                        assignment_id=assignment_id,
+                        student_id=student_id
+                    ).first()
+                    
+                    # Check if this student's grade is voided (check the database field, not JSON)
+                    if existing_grade and existing_grade.is_voided:
+                        # Don't update voided grades - preserve the void status
+                        continue
+                    
+                    # Get total points from assignment (default to 100 if not set)
+                    total_points = assignment.total_points if assignment.total_points else 100.0
+                    
+                    # Calculate percentage based on points earned vs total points
+                    percentage = (points_earned / total_points * 100) if total_points > 0 else 0
+                    
+                    grade_data = {
+                        'score': points_earned,
+                        'points_earned': points_earned,
+                        'total_points': total_points,
+                        'max_score': total_points,  # Keep for backward compatibility
+                        'percentage': round(percentage, 2),
+                        'feedback': comments,
+                        'graded_at': datetime.now().isoformat()
+                    }
+                    
+                    if existing_grade:
+                        # Update existing grade
+                        existing_grade.grade_data = json.dumps(grade_data)
+                        existing_grade.graded_at = datetime.now()
+                    else:
+                        # Create new grade
+                        new_grade = Grade(
+                            assignment_id=assignment_id,
+                            student_id=student_id,
+                            grade_data=json.dumps(grade_data),
+                            graded_at=datetime.now()
+                        )
+                        db.session.add(new_grade)
+                    
+                    grades_saved += 1
             
             db.session.commit()
             
@@ -180,14 +246,39 @@ def grade_assignment(assignment_id):
     ).all()
     extensions_dict = {ext.student_id: ext for ext in extensions}
     
-    return render_template('teachers/teacher_grade_assignment.html', 
+    # For quiz assignments, load questions and student answers
+    quiz_questions = None
+    quiz_answers_by_student = {}
+    if assignment.assignment_type == 'quiz':
+        # Load questions with options eagerly
+        from sqlalchemy.orm import joinedload
+        quiz_questions = QuizQuestion.query.options(joinedload(QuizQuestion.options)).filter_by(assignment_id=assignment_id).order_by(QuizQuestion.order).all()
+        
+        # Load answers for all students with selected_option relationship
+        for student in students:
+            answers = QuizAnswer.query.options(
+                joinedload(QuizAnswer.question),
+                joinedload(QuizAnswer.selected_option)
+            ).filter_by(
+                student_id=student.id
+            ).join(QuizQuestion).filter(
+                QuizQuestion.assignment_id == assignment_id
+            ).all()
+            quiz_answers_by_student[student.id] = {answer.question_id: answer for answer in answers}
+    
+    # Use specialized quiz grading template if it's a quiz, otherwise use regular template
+    template_name = 'teachers/teacher_grade_quiz.html' if assignment.assignment_type == 'quiz' else 'teachers/teacher_grade_assignment.html'
+    
+    return render_template(template_name, 
                          assignment=assignment,
                          class_obj=assignment.class_info,
                          students=students,
                          grades=grades_dict,
                          submissions=submissions_dict,
                          extensions=extensions_dict,
-                         total_points=assignment_total_points)
+                         total_points=assignment_total_points,
+                         quiz_questions=quiz_questions,
+                         quiz_answers_by_student=quiz_answers_by_student)
 
 @bp.route('/grades/statistics/<int:assignment_id>')
 @login_required

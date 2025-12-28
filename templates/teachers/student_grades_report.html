@@ -1,0 +1,180 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/print_styles.css') }}">
+<style>
+    @media print {
+        .no-print { display: none; }
+        .print-actions { display: none; }
+    }
+    .report-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+        background: white;
+    }
+    .report-header {
+        text-align: center;
+        margin-bottom: 2rem;
+        border-bottom: 3px solid #667eea;
+        padding-bottom: 1rem;
+    }
+    .report-header h1 {
+        color: #667eea;
+        margin-bottom: 0.5rem;
+    }
+    .student-info {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+    .info-item {
+        display: flex;
+        flex-direction: column;
+    }
+    .info-label {
+        font-weight: 600;
+        color: #666;
+        font-size: 0.9rem;
+        margin-bottom: 0.25rem;
+    }
+    .info-value {
+        font-size: 1.1rem;
+        color: #333;
+    }
+    .grades-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 2rem;
+    }
+    .grades-table th,
+    .grades-table td {
+        border: 1px solid #ddd;
+        padding: 0.75rem;
+        text-align: left;
+    }
+    .grades-table th {
+        background: #667eea;
+        color: white;
+        font-weight: 600;
+        text-align: center;
+    }
+    .grades-table tr:nth-child(even) {
+        background: #f8f9fa;
+    }
+    .grade-cell {
+        text-align: center;
+        font-weight: 600;
+    }
+    .print-actions {
+        margin-bottom: 2rem;
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+    }
+    .btn-print {
+        padding: 0.75rem 2rem;
+        background: #667eea;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+    }
+    .btn-print:hover {
+        background: #5568d3;
+    }
+</style>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="report-container">
+    <div class="print-actions no-print">
+        <button onclick="window.print()" class="btn-print">
+            <i class="bi bi-printer me-2"></i>Print Report
+        </button>
+        <a href="{{ url_for('teacher.dashboard.student_grades_report_pdf', student_id=student.id) }}" class="btn-print" style="background: #dc3545;">
+            <i class="bi bi-file-earmark-pdf me-2"></i>Download PDF
+        </a>
+        <a href="{{ url_for('teacher.dashboard.my_students') }}" class="btn-print" style="background: #6c757d;">
+            <i class="bi bi-arrow-left me-2"></i>Back to Students
+        </a>
+    </div>
+
+    <div class="report-header">
+        <h1>Student Grades Report</h1>
+        <p>Clara Science Academy</p>
+        <p>Generated: {{ generated_date.strftime('%B %d, %Y') }}</p>
+    </div>
+
+    <div class="student-info">
+        <div class="info-item">
+            <span class="info-label">Student Name</span>
+            <span class="info-value">{{ student.first_name }} {{ student.last_name }}</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Student ID</span>
+            <span class="info-value">{{ student.student_id or 'N/A' }}</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Grade Level</span>
+            <span class="info-value">{{ student.grade_level }}</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">School Year</span>
+            <span class="info-value">{{ school_year.name }}</span>
+        </div>
+    </div>
+
+    <h2 style="margin-bottom: 1rem;">Quarter Grades by Class</h2>
+    <table class="grades-table">
+        <thead>
+            <tr>
+                <th>Class/Subject</th>
+                {% for quarter_key in ['Q1', 'Q2', 'Q3', 'Q4'] %}
+                <th>{{ quarter_key }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% if class_objects %}
+                {% for class_obj in class_objects %}
+                <tr>
+                    <td style="font-weight: 600;">{{ class_obj.name }}</td>
+                    {% for quarter_key in ['Q1', 'Q2', 'Q3', 'Q4'] %}
+                        {% if grades_by_quarter and grades_by_quarter.get(quarter_key) %}
+                            {% set q_grades = grades_by_quarter.get(quarter_key, {}) %}
+                            {% set class_grade = q_grades.get(class_obj.name, {}) if q_grades else {} %}
+                            {% set letter_grade = class_grade.get('letter', '') if class_grade else '' %}
+                            {% set percentage = class_grade.get('percentage', '') if class_grade else '' %}
+                            <td class="grade-cell">
+                                {% if letter_grade and percentage is not none %}
+                                    {{ letter_grade }} ({{ "%.1f"|format(percentage) }}%)
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                        {% else %}
+                            <td class="grade-cell">N/A</td>
+                        {% endif %}
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 2rem; color: #666;">
+                        No grade data available
+                    </td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+

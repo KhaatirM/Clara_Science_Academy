@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Student Attendance Report - Clara Science Academy</title>
+</head>
+<body>
+    <div style="text-align: center; margin-bottom: 1cm;">
+        <h1 style="font-size: 18pt; font-weight: bold; text-decoration: underline;">STUDENT ATTENDANCE REPORT</h1>
+        <p style="font-size: 12pt; margin-top: 0.5cm;"><strong>Clara Science Academy</strong></p>
+        <p style="font-size: 10pt;">3015 East Bessemer Ave, Greensboro, NC 27405</p>
+    </div>
+
+    <table style="width: 100%; margin-bottom: 1cm; border: 1px solid #333;">
+        <tr>
+            <td style="padding: 8px; border: 1px solid #333; font-weight: bold; width: 25%;">Student Name:</td>
+            <td style="padding: 8px; border: 1px solid #333; width: 75%;">{{ student.first_name }} {{ student.last_name }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px; border: 1px solid #333; font-weight: bold;">Student ID:</td>
+            <td style="padding: 8px; border: 1px solid #333;">{{ student.student_id or 'N/A' }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px; border: 1px solid #333; font-weight: bold;">Grade Level:</td>
+            <td style="padding: 8px; border: 1px solid #333;">{{ student.grade_level }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px; border: 1px solid #333; font-weight: bold;">School Year:</td>
+            <td style="padding: 8px; border: 1px solid #333;">{{ school_year.name }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px; border: 1px solid #333; font-weight: bold;">Generated:</td>
+            <td style="padding: 8px; border: 1px solid #333;">{{ generated_date.strftime('%m/%d/%Y') if generated_date else 'N/A' }}</td>
+        </tr>
+    </table>
+
+    <p class="report-period-line"><strong>Report Period:</strong> {{ school_year.name }}</p>
+
+    <div class="section-title">Student Attendance Report</div>
+
+    <table style="margin-bottom: 1cm;">
+        <thead>
+            <tr>
+                <th style="width: 30%;">Statistic</th>
+                <th style="width: 70%;">Value</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Present</strong></td>
+                <td>{{ present_count }}</td>
+            </tr>
+            <tr>
+                <td><strong>Late</strong></td>
+                <td>{{ late_count }}</td>
+            </tr>
+            <tr>
+                <td><strong>Absent</strong></td>
+                <td>{{ absent_count }}</td>
+            </tr>
+            <tr>
+                <td><strong>Excused Absences</strong></td>
+                <td>{{ excused_absent_count }}</td>
+            </tr>
+            <tr>
+                <td><strong>Unexcused Absences</strong></td>
+                <td>{{ unexcused_absent_count }}</td>
+            </tr>
+            <tr>
+                <td><strong>Attendance Rate</strong></td>
+                <td>{{ "%.1f"|format(attendance_rate) }}%</td>
+            </tr>
+            <tr>
+                <td><strong>Total Records</strong></td>
+                <td>{{ total_records }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="section-title margin-top-1cm">Attendance Records:</div>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 25%;">Date</th>
+                <th style="width: 30%;">Class</th>
+                <th style="width: 25%;">Status</th>
+                <th style="width: 20%;">Notes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if attendance_records %}
+                {% for record in attendance_records %}
+                <tr>
+                    <td>{{ record.date.strftime('%m/%d/%Y') }}</td>
+                    <td>{{ record.class_info.name if record.class_info else 'N/A' }}</td>
+                    <td>{{ record.status }}</td>
+                    <td>{{ record.notes or 'N/A' }}</td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr><td colspan="4" style="text-align: center; padding: 15px; color: #666;">No attendance records found</td></tr>
+            {% endif %}
+        </tbody>
+    </table>
+
+    <div class="footer">
+        <p>Generated: {{ generated_date.strftime('%B %d, %Y at %I:%M %p') if generated_date else 'N/A' }}</p>
+    </div>
+</body>
+</html>
+

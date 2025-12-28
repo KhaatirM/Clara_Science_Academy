@@ -3189,6 +3189,30 @@ def create_quiz_assignment():
             max_save_attempts = int(request.form.get('max_save_attempts', 10))
             save_timeout_minutes = int(request.form.get('save_timeout_minutes', 30))
             
+            # Get quiz time limit and max attempts
+            time_limit_str = request.form.get('time_limit', '').strip()
+            time_limit_minutes = int(time_limit_str) if time_limit_str else None
+            max_attempts = int(request.form.get('attempts', 1))
+            
+            # Get quiz display and behavior settings
+            shuffle_questions = request.form.get('shuffle_questions') == 'on'
+            show_correct_answers = request.form.get('show_correct_answers') == 'on'
+            
+            # Get Google Forms link settings
+            link_google_form = request.form.get('link_google_form') == 'on'
+            google_form_url = request.form.get('google_form_url', '').strip()
+            google_form_id = None
+            
+            if link_google_form and google_form_url:
+                # Extract form ID from Google Forms URL
+                # URL format: https://docs.google.com/forms/d/e/FORM_ID/viewform
+                import re
+                match = re.search(r'/forms/d/e/([A-Za-z0-9_-]+)/', google_form_url)
+                if match:
+                    google_form_id = match.group(1)
+                else:
+                    flash('Invalid Google Forms URL format. Please check the URL.', 'warning')
+            
             # Get assignment context from form or query parameter
             assignment_context = request.form.get('assignment_context', 'homework')
             
@@ -3205,6 +3229,13 @@ def create_quiz_assignment():
                 allow_save_and_continue=allow_save_and_continue,
                 max_save_attempts=max_save_attempts,
                 save_timeout_minutes=save_timeout_minutes,
+                time_limit_minutes=time_limit_minutes,
+                max_attempts=max_attempts,
+                shuffle_questions=shuffle_questions,
+                show_correct_answers=show_correct_answers,
+                google_form_id=google_form_id,
+                google_form_url=google_form_url if link_google_form else None,
+                google_form_linked=link_google_form,
                 assignment_context=assignment_context,
                 created_by=current_user.id
             )
@@ -3212,46 +3243,86 @@ def create_quiz_assignment():
             db.session.add(new_assignment)
             db.session.flush()  # Get the assignment ID
             
-            # Save quiz questions
+            # Save quiz questions and calculate total points
             question_count = 0
-            for key, value in request.form.items():
-                if key.startswith('question_text_'):
-                    question_id = key.split('_')[2]
-                    question_text = value
-                    question_type = request.form.get(f'question_type_{question_id}')
-                    points = float(request.form.get(f'points_{question_id}', 1.0))
-                    
-                    # Create the question
-                    question = QuizQuestion(
-                        assignment_id=new_assignment.id,
-                        question_text=question_text,
-                        question_type=question_type,
-                        points=points,
-                        order=question_count
-                    )
-                    db.session.add(question)
-                    db.session.flush()  # Get the question ID
-                    
-                    # Save options for multiple choice and true/false
-                    if question_type in ['multiple_choice', 'true_false']:
-                        option_count = 0
-                        for option_key, option_value in request.form.items():
-                            if option_key.startswith(f'option_text_{question_id}_'):
-                                option_text = option_value
-                                option_id = option_key.split('_')[3]
-                                is_correct = request.form.get(f'correct_answer_{question_id}') == option_id
-                                
-                                option = QuizOption(
-                                    question_id=question.id,
-                                    option_text=option_text,
-                                    is_correct=is_correct,
-                                    order=option_count
-                                )
-                                db.session.add(option)
-                                option_count += 1
-                    
-                    question_count += 1
+            total_points = 0.0
             
+            # Process questions - collect all question IDs first
+            question_ids = set()
+            for key in request.form.keys():
+                if key.startswith('question_text_') and not key.endswith('[]'):
+                    # Extract question ID (e.g., "question_text_1" -> "1")
+                    question_id = key.split('_')[-1]
+                    question_ids.add(question_id)
+            
+            for question_id in sorted(question_ids, key=lambda x: int(x) if x.isdigit() else 999):
+                question_text = request.form.get(f'question_text_{question_id}', '').strip()
+                if not question_text:
+                    continue
+                    
+                question_type = request.form.get(f'question_type_{question_id}', 'multiple_choice')
+                points = float(request.form.get(f'question_points_{question_id}', 1.0))
+                total_points += points
+                
+                # Create the question
+                question = QuizQuestion(
+                    assignment_id=new_assignment.id,
+                    question_text=question_text,
+                    question_type=question_type,
+                    points=points,
+                    order=question_count
+                )
+                db.session.add(question)
+                db.session.flush()  # Get the question ID
+                
+                # Save options for multiple choice and true/false
+                if question_type == 'multiple_choice':
+                    option_count = 0
+                    correct_answer = request.form.get(f'correct_answer_{question_id}', '')
+                    
+                    # Handle array format for options (option_text_1[])
+                    option_values = request.form.getlist(f'option_text_{question_id}[]')
+                    
+                    for option_text in option_values:
+                        option_text = option_text.strip()
+                        if not option_text:
+                            continue
+                            
+                        is_correct = str(option_count) == correct_answer
+                        
+                        option = QuizOption(
+                            question_id=question.id,
+                            option_text=option_text,
+                            is_correct=is_correct,
+                            order=option_count
+                        )
+                        db.session.add(option)
+                        option_count += 1
+                elif question_type == 'true_false':
+                    correct_answer = request.form.get(f'correct_answer_{question_id}', '')
+                    
+                    # Create True option
+                    true_option = QuizOption(
+                        question_id=question.id,
+                        option_text='True',
+                        is_correct=(correct_answer == 'true'),
+                        order=0
+                    )
+                    db.session.add(true_option)
+                    
+                    # Create False option
+                    false_option = QuizOption(
+                        question_id=question.id,
+                        option_text='False',
+                        is_correct=(correct_answer == 'false'),
+                        order=1
+                    )
+                    db.session.add(false_option)
+                
+                question_count += 1
+            
+            # Update assignment total_points
+            new_assignment.total_points = total_points if total_points > 0 else 100.0
             db.session.commit()
             flash('Quiz assignment created successfully!', 'success')
             return redirect(url_for('management.assignments_and_grades'))
@@ -5519,7 +5590,10 @@ def google_connect_account():
                 'https://www.googleapis.com/auth/userinfo.profile',
                 'openid',
                 'https://www.googleapis.com/auth/classroom.courses',
-                'https://www.googleapis.com/auth/classroom.rosters'
+                'https://www.googleapis.com/auth/classroom.rosters',
+                'https://www.googleapis.com/auth/forms.responses.readonly',  # Read Google Forms responses
+                'https://www.googleapis.com/auth/forms.body',  # Read/write Google Forms structure (needed for export)
+                'https://www.googleapis.com/auth/drive'  # Create forms in Drive
             ],
             redirect_uri=url_for('management.google_connect_callback', _external=True)
         )
@@ -5944,11 +6018,13 @@ def grade_assignment(assignment_id):
                             
                             grade = Grade.query.filter_by(student_id=student.id, assignment_id=assignment_id).first()
                             if grade:
-                                grade.grade_data = grade_data
-                                grade.graded_at = datetime.utcnow()
-                                # Check if grade should be voided (even if updating)
-                                from management_routes.late_enrollment_utils import check_and_void_grade
-                                check_and_void_grade(grade)
+                                # Don't update grades that are already voided (preserve void status)
+                                if not grade.is_voided:
+                                    grade.grade_data = grade_data
+                                    grade.graded_at = datetime.utcnow()
+                                    # Check if grade should be voided due to late enrollment (only if not already voided)
+                                    from management_routes.late_enrollment_utils import check_and_void_grade
+                                    check_and_void_grade(grade)
                             else:
                                 # Create grade using attribute assignment
                                 grade = Grade()
@@ -6134,6 +6210,184 @@ def grade_assignment(assignment_id):
         return redirect(url_for('management.assignments_and_grades'))
 
 
+@management_blueprint.route('/assignment/<int:assignment_id>/export-to-google-forms', methods=['POST'])
+@login_required
+@management_required
+def export_quiz_to_google_forms(assignment_id):
+    """Export a native quiz to Google Forms"""
+    from google_forms_service import get_google_forms_service, export_quiz_to_google_form
+    from models import QuizQuestion, QuizOption, User
+    from sqlalchemy.orm import joinedload
+    
+    assignment = Assignment.query.get_or_404(assignment_id)
+    
+    # Check if assignment is a quiz
+    if assignment.assignment_type != 'quiz':
+        flash('This is not a quiz assignment.', 'warning')
+        return redirect(url_for('management.view_assignment', assignment_id=assignment_id))
+    
+    # Check if already linked to a Google Form
+    if assignment.google_form_linked:
+        flash('This quiz is already linked to a Google Form. Unlink it first if you want to export to a new form.', 'warning')
+        return redirect(url_for('management.view_assignment', assignment_id=assignment_id))
+    
+    # Get the current user and check if they have Google credentials
+    user = User.query.get(current_user.id)
+    if not user.google_refresh_token:
+        flash('Please connect your Google account in Settings to export quizzes to Google Forms.', 'warning')
+        return redirect(url_for('management.view_assignment', assignment_id=assignment_id))
+    
+    try:
+        # Get Google Forms service
+        service = get_google_forms_service(user)
+        if not service:
+            flash('Failed to connect to Google Forms. Please check your Google account connection.', 'danger')
+            return redirect(url_for('management.view_assignment', assignment_id=assignment_id))
+        
+        # Load quiz questions with options
+        questions = QuizQuestion.query.options(joinedload(QuizQuestion.options)).filter_by(
+            assignment_id=assignment_id
+        ).order_by(QuizQuestion.order).all()
+        
+        if not questions:
+            flash('This quiz has no questions. Please add questions before exporting.', 'warning')
+            return redirect(url_for('management.view_assignment', assignment_id=assignment_id))
+        
+        # Export to Google Forms
+        result = export_quiz_to_google_form(service, assignment, questions)
+        
+        if result:
+            # Update assignment with Google Form link
+            import re
+            form_id_match = re.search(r'/forms/d/e/([A-Za-z0-9_-]+)/', result['form_url'])
+            form_id = form_id_match.group(1) if form_id_match else result['form_id']
+            
+            assignment.google_form_id = form_id
+            assignment.google_form_url = result['form_url']
+            assignment.google_form_linked = True
+            
+            db.session.commit()
+            
+            flash(f'Quiz successfully exported to Google Forms! <a href="{result["form_url"]}" target="_blank">View Form</a>', 'success')
+        else:
+            flash('Failed to export quiz to Google Forms. Please try again.', 'danger')
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error exporting quiz to Google Forms: {e}")
+        import traceback
+        traceback.print_exc()
+        flash(f'Error exporting quiz to Google Forms: {str(e)}', 'danger')
+    
+    return redirect(url_for('management.view_assignment', assignment_id=assignment_id))
+
+
+@management_blueprint.route('/assignment/<int:assignment_id>/sync-google-forms', methods=['POST'])
+@login_required
+@management_required
+def sync_google_forms_submissions(assignment_id):
+    """Sync submissions from a linked Google Form"""
+    from google_forms_service import get_google_forms_service, get_form_responses
+    from models import Student, Submission, Grade, Enrollment, User
+    from datetime import datetime
+    import json
+    
+    assignment = Assignment.query.get_or_404(assignment_id)
+    
+    # Check if assignment is linked to Google Form
+    if not assignment.google_form_linked or not assignment.google_form_id:
+        flash('This assignment is not linked to a Google Form.', 'warning')
+        return redirect(url_for('management.view_assignment', assignment_id=assignment_id))
+    
+    # Get the current user and check if they have Google credentials
+    user = User.query.get(current_user.id)
+    if not user.google_refresh_token:
+        flash('Please connect your Google account in Settings to sync Google Forms submissions.', 'warning')
+        return redirect(url_for('management.view_assignment', assignment_id=assignment_id))
+    
+    try:
+        # Get Google Forms service
+        service = get_google_forms_service(user)
+        if not service:
+            flash('Failed to connect to Google Forms. Please check your Google account connection.', 'danger')
+            return redirect(url_for('management.view_assignment', assignment_id=assignment_id))
+        
+        # Get form responses
+        responses = get_form_responses(service, assignment.google_form_id)
+        if responses is None:
+            flash('Failed to retrieve form responses from Google Forms.', 'danger')
+            return redirect(url_for('management.view_assignment', assignment_id=assignment_id))
+        
+        # Get enrolled students for this class
+        enrollments = Enrollment.query.filter_by(class_id=assignment.class_id, is_active=True).all()
+        students_dict = {student.email.lower(): student for enrollment in enrollments 
+                        for student in [enrollment.student] if enrollment.student and enrollment.student.email}
+        
+        synced_count = 0
+        created_submissions = 0
+        
+        # Process each response
+        for response in responses:
+            # Get respondent email from response
+            # Google Forms responses have answers with respondentEmail field
+            respondent_email = response.get('respondentEmail', '').lower()
+            
+            if not respondent_email or respondent_email not in students_dict:
+                # Try to find by name or skip if not found
+                continue
+            
+            student = students_dict[respondent_email]
+            
+            # Get submission timestamp
+            create_time = response.get('createTime', '')
+            submitted_at = datetime.fromisoformat(create_time.replace('Z', '+00:00')) if create_time else datetime.utcnow()
+            
+            # Check if submission already exists
+            existing_submission = Submission.query.filter_by(
+                student_id=student.id,
+                assignment_id=assignment_id
+            ).first()
+            
+            if not existing_submission:
+                # Create new submission
+                submission = Submission(
+                    student_id=student.id,
+                    assignment_id=assignment_id,
+                    submitted_at=submitted_at,
+                    submission_type='online',
+                    comments=f'Synced from Google Form on {datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")}'
+                )
+                db.session.add(submission)
+                created_submissions += 1
+            else:
+                submission = existing_submission
+            
+            # Try to extract grade/score from response if available
+            # Google Forms quiz responses may have a score
+            answers = response.get('answers', {})
+            score = None
+            total_points = assignment.total_points or 100.0
+            
+            # Check if this is a quiz with grading
+            # Google Forms stores grades in a specific format - we'd need to check the form structure
+            # For now, we'll just create submissions and let teachers grade manually
+            
+            synced_count += 1
+        
+        db.session.commit()
+        
+        flash(f'Successfully synced {synced_count} submission(s) from Google Forms ({created_submissions} new).', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error syncing Google Forms submissions: {e}")
+        import traceback
+        traceback.print_exc()
+        flash(f'Error syncing Google Forms submissions: {str(e)}', 'danger')
+    
+    return redirect(url_for('management.view_assignment', assignment_id=assignment_id))
+
+
 @management_blueprint.route('/view-assignment/<int:assignment_id>')
 @login_required
 @management_required
@@ -6188,13 +6442,19 @@ def view_assignment(assignment_id):
         # Get current date for status calculations
         today = datetime.now().date()
         
+        # Get voided grades for the unvoid modal
+        from models import Grade
+        voided_grades = Grade.query.filter_by(assignment_id=assignment_id, is_voided=True).all()
+        voided_student_ids = {g.student_id for g in voided_grades}
+        
         return render_template('shared/view_assignment.html', 
                              assignment=assignment,
                              class_info=class_info,
                              teacher=teacher,
                              submissions_count=total_submissions_count,
                              assignment_points=assignment_points,
-                             today=today)
+                             today=today,
+                             voided_student_ids=voided_student_ids)
     except Exception as e:
         current_app.logger.error(f"Error in view_assignment route: {e}")
         import traceback

@@ -110,83 +110,83 @@
                     <!-- Action Buttons -->
                     <div class="d-grid gap-2">
                         {% if current_user.role in ['Director', 'School Administrator'] %}
-                            <div class="d-flex gap-2 mb-2">
+                            <div class="d-flex gap-2 mb-2 class-action-buttons">
                                 <a href="{{ url_for('management.manage_class_roster', class_id=class.id) }}" class="action-btn btn-manage flex-fill">
-                                    <i class="bi bi-people-fill me-2"></i>Manage Roster
+                                    <i class="bi bi-people-fill action-btn-icon"></i><span class="action-btn-text">Manage Roster</span>
                                 </a>
                                 <a href="{{ url_for('management.class_grades_view', class_id=class.id) }}" class="action-btn btn-grades flex-fill">
-                                    <i class="bi bi-journal-check me-2"></i>View Grades
+                                    <i class="bi bi-journal-check action-btn-icon"></i><span class="action-btn-text">View Grades</span>
                                 </a>
                             </div>
                             
                             <!-- Google Classroom Actions for Admins -->
                             {% if class.google_classroom_id %}
-                                <div class="d-flex gap-2">
+                                <div class="d-flex gap-2 class-action-buttons">
                                     <a href="https://classroom.google.com/c/{{ class.google_classroom_id }}" 
                                        target="_blank" 
                                        class="action-btn btn-google-open flex-fill"
                                        title="Open in Google Classroom">
-                                        <i class="bi bi-google me-2"></i>Open Classroom
+                                        <i class="bi bi-google action-btn-icon"></i><span class="action-btn-text">Open Classroom</span>
                                     </a>
                                     <a href="{{ url_for('management.unlink_classroom', class_id=class.id) }}" 
                                        class="action-btn btn-google-unlink flex-fill"
                                        onclick="return confirm('Are you sure you want to unlink this Google Classroom? The classroom will still exist in Google.');">
-                                        <i class="bi bi-link-45deg me-2"></i>Unlink
+                                        <i class="bi bi-link-45deg action-btn-icon"></i><span class="action-btn-text">Unlink</span>
                                     </a>
                                 </div>
                             {% else %}
-                                <div class="d-flex gap-2">
+                                <div class="d-flex gap-2 class-action-buttons">
                                     <a href="{{ url_for('management.link_existing_classroom', class_id=class.id) }}" 
                                        class="action-btn btn-google-link flex-fill"
                                        title="Link to an existing Google Classroom">
-                                        <i class="bi bi-link-45deg me-2"></i>Link Existing
+                                        <i class="bi bi-link-45deg action-btn-icon"></i><span class="action-btn-text">Link Existing</span>
                                     </a>
                                     <a href="{{ url_for('management.create_and_link_classroom', class_id=class.id) }}" 
                                        class="action-btn btn-google-create flex-fill"
                                        title="Create a new Google Classroom and link it">
-                                        <i class="bi bi-plus-circle-fill me-2"></i>Create New
+                                        <i class="bi bi-plus-circle-fill action-btn-icon"></i><span class="action-btn-text">Create New</span>
                                     </a>
                                 </div>
                             {% endif %}
                         {% elif 'Teacher' in current_user.role and current_user.role not in ['Director', 'School Administrator'] %}
-                            <div class="d-flex gap-2 mb-2">
+                            <div class="d-flex gap-2 mb-2 class-action-buttons">
                                 <a href="{{ url_for('teacher.dashboard.view_class', class_id=class.id) }}" class="action-btn btn-view flex-fill">
-                                    <i class="bi bi-eye-fill me-1"></i>View Class
+                                    <i class="bi bi-eye-fill action-btn-icon"></i><span class="action-btn-text">View Class</span>
                                 </a>
                                 <a href="{{ url_for('teacher.attendance.take_attendance', class_id=class.id) }}" class="action-btn btn-attendance flex-fill">
-                                    <i class="bi bi-calendar-check me-1"></i>Attendance
+                                    <i class="bi bi-calendar-check action-btn-icon"></i><span class="action-btn-text">Attendance</span>
                                 </a>
                                 <a href="{{ url_for('teacher.assignments.assignment_type_selector') }}?class_id={{ class.id }}" class="action-btn btn-assignment flex-fill">
-                                    <i class="bi bi-plus-circle-fill me-1"></i>Assignment
+                                    <i class="bi bi-plus-circle-fill action-btn-icon"></i><span class="action-btn-text">Assignment</span>
                                 </a>
                             </div>
                             
                             <!-- Google Classroom Actions -->
                             {% if class.google_classroom_id %}
-                                <div class="d-flex gap-2">
+                                <div class="d-flex gap-2 class-action-buttons">
                                     <a href="https://classroom.google.com/c/{{ class.google_classroom_id }}" 
                                        target="_blank" 
                                        class="action-btn btn-google-open flex-fill"
                                        title="Open in Google Classroom">
-                                        <i class="bi bi-google me-2"></i>Open Classroom
+                                        <i class="bi bi-google action-btn-icon"></i><span class="action-btn-text">Open Classroom</span>
                                     </a>
                                     <a href="{{ url_for('teacher.dashboard.unlink_classroom', class_id=class.id) }}" 
                                        class="action-btn btn-google-unlink flex-fill"
                                        onclick="return confirm('Are you sure you want to unlink this Google Classroom? The classroom will still exist in Google.');">
-                                        <i class="bi bi-link-45deg me-2"></i>Unlink
+                                        <i class="bi bi-link-45deg action-btn-icon"></i><span class="action-btn-text">Unlink</span>
                                     </a>
                                 </div>
                             {% else %}
-                                <div class="d-flex gap-2">
+                                <div class="d-flex gap-2 class-action-buttons">
                                     <a href="{{ url_for('teacher.dashboard.link_existing_classroom', class_id=class.id) }}" 
                                        class="action-btn btn-google-link flex-fill"
                                        title="Link to an existing Google Classroom">
-                                        <i class="bi bi-link-45deg me-2"></i>Link Existing
+                                        <i class="bi bi-link-45deg action-btn-icon"></i><span class="action-btn-text">Link Existing</span>
                                     </a>
                                     <a href="{{ url_for('teacher.dashboard.create_and_link_classroom', class_id=class.id) }}" 
                                        class="action-btn btn-google-create flex-fill"
                                        title="Create a new Google Classroom and link it">
-                                        <i class="bi bi-plus-circle-fill me-2"></i>Create New
+                                        <i class="bi bi-plus-circle-fill action-btn-icon"></i><span class="action-btn-text">Create New</span>
                                     </a>
                                 </div>
                             {% endif %}

@@ -279,6 +279,202 @@ def edit_assignment(assignment_id):
                          current_quarter=current_quarter,
                          context=context)
 
+@bp.route('/assignment/<int:assignment_id>/export-to-google-forms', methods=['POST'])
+@login_required
+@teacher_required
+def export_quiz_to_google_forms(assignment_id):
+    """Export a native quiz to Google Forms"""
+    from google_forms_service import get_google_forms_service, export_quiz_to_google_form
+    from models import QuizQuestion, QuizOption, User
+    from sqlalchemy.orm import joinedload
+    
+    assignment = Assignment.query.get_or_404(assignment_id)
+    
+    # Check if assignment is a quiz
+    if assignment.assignment_type != 'quiz':
+        flash('This is not a quiz assignment.', 'warning')
+        return redirect(url_for('teacher.assignments.view_assignment', assignment_id=assignment_id))
+    
+    # Check if already linked to a Google Form
+    if assignment.google_form_linked:
+        flash('This quiz is already linked to a Google Form. Unlink it first if you want to export to a new form.', 'warning')
+        return redirect(url_for('teacher.assignments.view_assignment', assignment_id=assignment_id))
+    
+    # Get the current user and check if they have Google credentials
+    user = User.query.get(current_user.id)
+    if not user.google_refresh_token:
+        flash('Please connect your Google account in Settings to export quizzes to Google Forms.', 'warning')
+        return redirect(url_for('teacher.assignments.view_assignment', assignment_id=assignment_id))
+    
+    try:
+        # Get Google Forms service
+        service = get_google_forms_service(user)
+        if not service:
+            flash('Failed to connect to Google Forms. Please check your Google account connection.', 'danger')
+            return redirect(url_for('teacher.assignments.view_assignment', assignment_id=assignment_id))
+        
+        # Load quiz questions with options
+        questions = QuizQuestion.query.options(joinedload(QuizQuestion.options)).filter_by(
+            assignment_id=assignment_id
+        ).order_by(QuizQuestion.order).all()
+        
+        if not questions:
+            flash('This quiz has no questions. Please add questions before exporting.', 'warning')
+            return redirect(url_for('teacher.assignments.view_assignment', assignment_id=assignment_id))
+        
+        # Export to Google Forms
+        result = export_quiz_to_google_form(service, assignment, questions)
+        
+        if result:
+            # Update assignment with Google Form link
+            import re
+            form_id_match = re.search(r'/forms/d/e/([A-Za-z0-9_-]+)/', result['form_url'])
+            form_id = form_id_match.group(1) if form_id_match else result['form_id']
+            
+            assignment.google_form_id = form_id
+            assignment.google_form_url = result['form_url']
+            assignment.google_form_linked = True
+            
+            db.session.commit()
+            
+            flash(f'Quiz successfully exported to Google Forms! <a href="{result["form_url"]}" target="_blank">View Form</a>', 'success')
+        else:
+            flash('Failed to export quiz to Google Forms. Please try again.', 'danger')
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error exporting quiz to Google Forms: {e}")
+        import traceback
+        traceback.print_exc()
+        flash(f'Error exporting quiz to Google Forms: {str(e)}', 'danger')
+    
+    return redirect(url_for('teacher.assignments.view_assignment', assignment_id=assignment_id))
+
+
+@bp.route('/assignment/<int:assignment_id>/sync-google-forms', methods=['POST'])
+@login_required
+@teacher_required
+def sync_google_forms_submissions(assignment_id):
+    """Sync submissions from a linked Google Form"""
+    from google_forms_service import get_google_forms_service, get_form_responses
+    from models import Student, Submission, Grade, Enrollment, User
+    from datetime import datetime
+    import json
+    
+    assignment = Assignment.query.get_or_404(assignment_id)
+    
+    # Check if assignment is linked to Google Form
+    if not assignment.google_form_linked or not assignment.google_form_id:
+        flash('This assignment is not linked to a Google Form.', 'warning')
+        return redirect(url_for('teacher.assignments.view_assignment', assignment_id=assignment_id))
+    
+    # Get the current user and check if they have Google credentials
+    user = User.query.get(current_user.id)
+    if not user.google_refresh_token:
+        flash('Please connect your Google account in Settings to sync Google Forms submissions.', 'warning')
+        return redirect(url_for('teacher.assignments.view_assignment', assignment_id=assignment_id))
+    
+    try:
+        # Get Google Forms service
+        service = get_google_forms_service(user)
+        if not service:
+            flash('Failed to connect to Google Forms. Please check your Google account connection.', 'danger')
+            return redirect(url_for('teacher.assignments.view_assignment', assignment_id=assignment_id))
+        
+        # Get form responses
+        responses = get_form_responses(service, assignment.google_form_id)
+        if responses is None:
+            flash('Failed to retrieve form responses from Google Forms.', 'danger')
+            return redirect(url_for('teacher.assignments.view_assignment', assignment_id=assignment_id))
+        
+        # Get enrolled students for this class
+        enrollments = Enrollment.query.filter_by(class_id=assignment.class_id, is_active=True).all()
+        students_dict = {student.email.lower(): student for enrollment in enrollments 
+                        for student in [enrollment.student] if enrollment.student and enrollment.student.email}
+        
+        synced_count = 0
+        created_submissions = 0
+        
+        # Process each response
+        for response in responses:
+            # Get respondent email from response
+            # Google Forms responses may have respondentEmail if form collects emails
+            # Otherwise, we need to extract from answers (first question asking for email)
+            respondent_email = response.get('respondentEmail', '').lower()
+            
+            # If no direct email, try to extract from answers
+            # Look for a question answer that matches an email pattern
+            if not respondent_email:
+                answers = response.get('answers', {})
+                for question_id, answer_data in answers.items():
+                    # Check text answers for email patterns
+                    text_answers = answer_data.get('textAnswers', {}).get('answers', [])
+                    for text_answer in text_answers:
+                        value = text_answer.get('value', '').lower().strip()
+                        # Simple email pattern check
+                        if '@' in value and '.' in value.split('@')[1] if '@' in value else False:
+                            respondent_email = value
+                            break
+                    if respondent_email:
+                        break
+            
+            if not respondent_email or respondent_email not in students_dict:
+                # Skip if we can't match to a student
+                current_app.logger.warning(f"Could not match Google Form response to a student: {respondent_email}")
+                continue
+            
+            student = students_dict[respondent_email]
+            
+            # Get submission timestamp
+            create_time = response.get('createTime', '')
+            submitted_at = datetime.fromisoformat(create_time.replace('Z', '+00:00')) if create_time else datetime.utcnow()
+            
+            # Check if submission already exists
+            existing_submission = Submission.query.filter_by(
+                student_id=student.id,
+                assignment_id=assignment_id
+            ).first()
+            
+            if not existing_submission:
+                # Create new submission
+                submission = Submission(
+                    student_id=student.id,
+                    assignment_id=assignment_id,
+                    submitted_at=submitted_at,
+                    submission_type='online',
+                    comments=f'Synced from Google Form on {datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")}'
+                )
+                db.session.add(submission)
+                created_submissions += 1
+            else:
+                submission = existing_submission
+            
+            # Try to extract grade/score from response if available
+            # Google Forms quiz responses may have a score
+            answers = response.get('answers', {})
+            score = None
+            total_points = assignment.total_points or 100.0
+            
+            # Check if this is a quiz with grading
+            # Google Forms stores grades in a specific format - we'd need to check the form structure
+            # For now, we'll just create submissions and let teachers grade manually
+            
+            synced_count += 1
+        
+        db.session.commit()
+        
+        flash(f'Successfully synced {synced_count} submission(s) from Google Forms ({created_submissions} new).', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error syncing Google Forms submissions: {e}")
+        import traceback
+        traceback.print_exc()
+        flash(f'Error syncing Google Forms submissions: {str(e)}', 'danger')
+    
+    return redirect(url_for('teacher.assignments.view_assignment', assignment_id=assignment_id))
+
+
 @bp.route('/assignment/view/<int:assignment_id>')
 @login_required
 @teacher_required
@@ -353,6 +549,10 @@ def view_assignment(assignment_id):
     # Calculate grading completion rate
     grading_rate = round((graded_count / total_students * 100) if total_students > 0 else 0, 1)
     
+    # Get voided grades for the unvoid modal
+    voided_grades = Grade.query.filter_by(assignment_id=assignment_id, is_voided=True).all()
+    voided_student_ids = {g.student_id for g in voided_grades}
+    
     return render_template('shared/view_assignment.html', 
                          assignment=assignment,
                          class_info=class_obj,
@@ -364,7 +564,8 @@ def view_assignment(assignment_id):
                          graded_count=graded_count,
                          average_score=average_score,
                          submission_rate=submission_rate,
-                         grading_rate=grading_rate)
+                         grading_rate=grading_rate,
+                         voided_student_ids=voided_student_ids)
 
 
 @bp.route('/assignment/<int:assignment_id>/void', methods=['POST'])

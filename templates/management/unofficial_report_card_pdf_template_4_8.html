@@ -63,14 +63,14 @@
                                 {% set q_grades = grades_by_quarter.get(quarter, {}) %}
                                 {% set class_grade = q_grades.get(class_obj.name, {}) if q_grades else {} %}
                                 {% set letter_grade = class_grade.get('letter', '') if class_grade else '' %}
-                                <td style="text-align: center;">{{ letter_grade if letter_grade else '—' }}</td>
+                                <td style="text-align: center;">{{ letter_grade if letter_grade else 'N/A' }}</td>
                             {% else %}
-                                <td style="text-align: center;">—</td>
+                                <td style="text-align: center;">N/A</td>
                             {% endif %}
                         {% endfor %}
                         {# Show comments for current quarter only #}
                         {% set current_class_grade = grades.get(class_obj.name, {}) if grades else {} %}
-                        <td style="font-size: 8.5pt;">{% if include_comments and current_class_grade.get('comments') %}{{ current_class_grade.get('comments', '')|nl2br }}{% else %}—{% endif %}</td>
+                        <td style="font-size: 8.5pt;">{% if include_comments and current_class_grade.get('comments') %}{{ current_class_grade.get('comments', '')|nl2br }}{% else %}N/A{% endif %}</td>
                     </tr>
                 {% endfor %}
             {% else %}
@@ -89,12 +89,12 @@
                                     {% else %}
                                         {% set letter_grade = '' %}
                                     {% endif %}
-                                    <td style="text-align: center;">{{ letter_grade if letter_grade else '—' }}</td>
+                                    <td style="text-align: center;">{{ letter_grade if letter_grade else 'N/A' }}</td>
                                 {% else %}
-                                    <td style="text-align: center;">—</td>
+                                    <td style="text-align: center;">N/A</td>
                                 {% endif %}
                             {% endfor %}
-                            <td>{% if include_comments and grade_info.get('comments') %}{{ grade_info.get('comments', '')|nl2br }}{% else %}—{% endif %}</td>
+                            <td>{% if include_comments and grade_info.get('comments') %}{{ grade_info.get('comments', '')|nl2br }}{% else %}N/A{% endif %}</td>
                         </tr>
                     {% endfor %}
                 {% else %}

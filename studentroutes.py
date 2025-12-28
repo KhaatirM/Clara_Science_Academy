@@ -1692,6 +1692,12 @@ def take_quiz(assignment_id):
         flash("This is not a quiz assignment.", "danger")
         return redirect(url_for('student.student_assignments'))
     
+    # If this quiz is linked to a Google Form, redirect to the form
+    if assignment.google_form_linked and assignment.google_form_url:
+        return render_template('shared/google_form_quiz_redirect.html',
+                             assignment=assignment,
+                             google_form_url=assignment.google_form_url)
+    
     # Check if student is enrolled in the class
     enrollment = Enrollment.query.filter_by(
         student_id=student.id,
@@ -1708,11 +1714,22 @@ def take_quiz(assignment_id):
         flash("This assignment is no longer available.", "danger")
         return redirect(url_for('student.student_assignments'))
     
-    # Check if already submitted
+    # Check number of attempts (submissions)
+    submissions_count = Submission.query.filter_by(
+        student_id=student.id,
+        assignment_id=assignment_id
+    ).count()
+    
+    # Check max attempts
+    if assignment.max_attempts and submissions_count >= assignment.max_attempts:
+        flash(f"You have reached the maximum number of attempts ({assignment.max_attempts}) for this quiz.", "warning")
+        return redirect(url_for('student.student_assignments'))
+    
+    # Get the most recent submission (if any)
     submission = Submission.query.filter_by(
         student_id=student.id,
         assignment_id=assignment_id
-    ).first()
+    ).order_by(Submission.submitted_at.desc()).first()
     
     # Check if already graded
     grade = Grade.query.filter_by(
@@ -1722,6 +1739,13 @@ def take_quiz(assignment_id):
     
     # Load quiz questions
     questions = QuizQuestion.query.filter_by(assignment_id=assignment_id).order_by(QuizQuestion.order).all()
+    
+    # Shuffle questions if enabled
+    if assignment.shuffle_questions and not submission:
+        # Only shuffle if this is a new attempt (no existing submission)
+        import random
+        questions = list(questions)
+        random.shuffle(questions)
     
     # Load student's existing answers if any
     existing_answers = {}
@@ -1733,13 +1757,30 @@ def take_quiz(assignment_id):
         for answer in answers:
             existing_answers[answer.question_id] = answer
     
+    # Load quiz options for showing correct answers (only needed if show_correct_answers is enabled)
+    quiz_options_by_question = {}
+    if assignment.show_correct_answers:
+        from models import QuizOption
+        for question in questions:
+            options = QuizOption.query.filter_by(question_id=question.id).all()
+            quiz_options_by_question[question.id] = options
+    
+    # Calculate attempts remaining
+    attempts_remaining = None
+    if assignment.max_attempts:
+        attempts_remaining = max(0, assignment.max_attempts - submissions_count)
+    
     return render_template('shared/take_quiz.html', 
                          assignment=assignment,
                          questions=questions,
                          submission=submission,
                          grade=grade,
                          student=student,
-                         existing_answers=existing_answers)
+                         existing_answers=existing_answers,
+                         quiz_options_by_question=quiz_options_by_question,
+                         submissions_count=submissions_count,
+                         attempts_remaining=attempts_remaining,
+                         show_correct_answers=assignment.show_correct_answers if assignment else False)
 
 @student_blueprint.route('/save-quiz-progress/<int:assignment_id>', methods=['POST'])
 @login_required
@@ -1857,15 +1898,16 @@ def submit_quiz(assignment_id):
         flash("This is not a quiz assignment.", "danger")
         return redirect(url_for('student.student_assignments'))
     
-    # Check if already submitted
-    existing_submission = Submission.query.filter_by(
+    # Check number of attempts
+    submissions_count = Submission.query.filter_by(
         student_id=student.id,
         assignment_id=assignment_id
-    ).first()
+    ).count()
     
-    if existing_submission:
-        flash("You have already submitted this quiz.", "warning")
-        return redirect(url_for('student.take_quiz', assignment_id=assignment_id))
+    # Check max attempts (allow submission if under limit, or if max_attempts is None/unlimited)
+    if assignment.max_attempts and submissions_count >= assignment.max_attempts:
+        flash(f"You have reached the maximum number of attempts ({assignment.max_attempts}) for this quiz.", "warning")
+        return redirect(url_for('student.student_assignments'))
     
     try:
         # Get all questions for this assignment
@@ -1925,13 +1967,23 @@ def submit_quiz(assignment_id):
         )
         db.session.add(submission)
         
-        # Create grade record
+        # Create grade record using grade_data JSON format
+        import json
         grade_percentage = (earned_points / total_points * 100) if total_points > 0 else 0
+        grade_data = {
+            'score': earned_points,
+            'points_earned': earned_points,
+            'total_points': total_points,
+            'max_score': total_points,
+            'percentage': round(grade_percentage, 2),
+            'feedback': f"Auto-graded quiz: {earned_points}/{total_points} points",
+            'graded_at': datetime.now().isoformat()
+        }
         grade = Grade(
             student_id=student.id,
             assignment_id=assignment_id,
-            grade_percentage=round(grade_percentage, 2),
-            comments=f"Auto-graded quiz: {earned_points}/{total_points} points"
+            grade_data=json.dumps(grade_data),
+            graded_at=datetime.now()
         )
         db.session.add(grade)
         

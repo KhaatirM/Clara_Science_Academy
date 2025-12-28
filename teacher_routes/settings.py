@@ -56,7 +56,10 @@ def google_connect_account():
                 'https://www.googleapis.com/auth/userinfo.profile',
                 'openid',
                 'https://www.googleapis.com/auth/classroom.courses',
-                'https://www.googleapis.com/auth/classroom.rosters'
+                'https://www.googleapis.com/auth/classroom.rosters',
+                'https://www.googleapis.com/auth/forms.responses.readonly',  # Read Google Forms responses
+                'https://www.googleapis.com/auth/forms.body',  # Read/write Google Forms structure (needed for export)
+                'https://www.googleapis.com/auth/drive'  # Create forms in Drive
             ],
             redirect_uri=url_for('teacher.google_connect_callback', _external=True)
         )

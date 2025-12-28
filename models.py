@@ -506,6 +506,19 @@ class Assignment(db.Model):
     max_save_attempts = db.Column(db.Integer, default=10, nullable=False)
     save_timeout_minutes = db.Column(db.Integer, default=30, nullable=False)
     
+    # Quiz time limit and attempts settings
+    time_limit_minutes = db.Column(db.Integer, nullable=True)  # NULL = unlimited time
+    max_attempts = db.Column(db.Integer, default=1, nullable=False)  # Number of times student can take the quiz
+    
+    # Quiz display and behavior settings
+    shuffle_questions = db.Column(db.Boolean, default=False, nullable=False)  # Randomize question order
+    show_correct_answers = db.Column(db.Boolean, default=True, nullable=False)  # Show correct answers after submission
+    
+    # Google Forms Integration
+    google_form_id = db.Column(db.String(255), nullable=True)  # Google Form ID (extracted from URL)
+    google_form_url = db.Column(db.String(500), nullable=True)  # Full URL to Google Form
+    google_form_linked = db.Column(db.Boolean, default=False, nullable=False)  # Is this quiz linked to a Google Form?
+    
     # File attachment fields
     attachment_filename = db.Column(db.String(255), nullable=True)
     attachment_original_filename = db.Column(db.String(255), nullable=True)
@@ -604,6 +617,57 @@ class QuizAnswer(db.Model):
     
     def __repr__(self):
         return f"QuizAnswer(Student: {self.student_id}, Question: {self.question_id}, Correct: {self.is_correct})"
+
+
+class QuestionBank(db.Model):
+    """
+    Model for storing reusable question banks that teachers can use across multiple quizzes.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_public = db.Column(db.Boolean, default=False, nullable=False)  # If True, other teachers can use it
+    
+    creator = db.relationship('User', backref='question_banks')
+    
+    def __repr__(self):
+        return f"QuestionBank('{self.name}', Created by: {self.created_by})"
+
+
+class QuestionBankQuestion(db.Model):
+    """
+    Model for storing questions within a question bank.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    bank_id = db.Column(db.Integer, db.ForeignKey('question_bank.id'), nullable=False)
+    question_text = db.Column(db.Text, nullable=False)
+    question_type = db.Column(db.String(20), nullable=False)  # multiple_choice, true_false, short_answer, essay
+    points = db.Column(db.Float, default=1.0, nullable=False)
+    order = db.Column(db.Integer, default=0, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    bank = db.relationship('QuestionBank', backref='questions')
+    
+    def __repr__(self):
+        return f"QuestionBankQuestion('{self.question_text[:50]}...', Type: {self.question_type})"
+
+
+class QuestionBankOption(db.Model):
+    """
+    Model for storing options for question bank questions (multiple choice and true/false).
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    question_id = db.Column(db.Integer, db.ForeignKey('question_bank_question.id'), nullable=False)
+    option_text = db.Column(db.String(500), nullable=False)
+    is_correct = db.Column(db.Boolean, default=False, nullable=False)
+    order = db.Column(db.Integer, default=0, nullable=False)
+    
+    question = db.relationship('QuestionBankQuestion', backref='options')
+    
+    def __repr__(self):
+        return f"QuestionBankOption('{self.option_text[:30]}...', Correct: {self.is_correct})"
 
 
 class QuizProgress(db.Model):

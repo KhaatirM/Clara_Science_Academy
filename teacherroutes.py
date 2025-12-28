@@ -458,6 +458,30 @@ def create_quiz_assignment():
             max_save_attempts = int(request.form.get('max_save_attempts', 10))
             save_timeout_minutes = int(request.form.get('save_timeout_minutes', 30))
             
+            # Get quiz time limit and max attempts
+            time_limit_str = request.form.get('time_limit', '').strip()
+            time_limit_minutes = int(time_limit_str) if time_limit_str else None
+            max_attempts = int(request.form.get('attempts', 1))
+            
+            # Get quiz display and behavior settings
+            shuffle_questions = request.form.get('shuffle_questions') == 'on'
+            show_correct_answers = request.form.get('show_correct_answers') == 'on'
+            
+            # Get Google Forms link settings
+            link_google_form = request.form.get('link_google_form') == 'on'
+            google_form_url = request.form.get('google_form_url', '').strip()
+            google_form_id = None
+            
+            if link_google_form and google_form_url:
+                # Extract form ID from Google Forms URL
+                # URL format: https://docs.google.com/forms/d/e/FORM_ID/viewform
+                import re
+                match = re.search(r'/forms/d/e/([A-Za-z0-9_-]+)/', google_form_url)
+                if match:
+                    google_form_id = match.group(1)
+                else:
+                    flash('Invalid Google Forms URL format. Please check the URL.', 'warning')
+            
             # Get assignment context from form or query parameter
             assignment_context = request.form.get('assignment_context', request.args.get('context', 'homework'))
             
@@ -475,6 +499,13 @@ def create_quiz_assignment():
                 allow_save_and_continue=allow_save_and_continue,
                 max_save_attempts=max_save_attempts,
                 save_timeout_minutes=save_timeout_minutes,
+                time_limit_minutes=time_limit_minutes,
+                max_attempts=max_attempts,
+                shuffle_questions=shuffle_questions,
+                show_correct_answers=show_correct_answers,
+                google_form_id=google_form_id,
+                google_form_url=google_form_url if link_google_form else None,
+                google_form_linked=link_google_form,
                 created_by=current_user.id
             )
             
@@ -488,68 +519,86 @@ def create_quiz_assignment():
             
             print(f"DEBUG: Found {len([k for k in request.form.keys() if k.startswith('question_text_') and not k.endswith('[]')])} questions")
             
-            # Save quiz questions
+            # Save quiz questions and calculate total points
             question_count = 0
-            for key, value in request.form.items():
-                if key.startswith('question_text_') and not key.endswith('[]'):
-                    # Extract question ID from the field name (e.g., question_text_1 -> 1)
-                    question_id = key.split('_')[-1]
-                    question_text = value
-                    question_type = request.form.get(f'question_type_{question_id}')
-                    points = float(request.form.get(f'question_points_{question_id}', 1.0))
-                    
-                    print(f"DEBUG: Processing question {question_count}:")
-                    print(f"  ID: {question_id}")
-                    print(f"  Text: {question_text}")
-                    print(f"  Type: {question_type}")
-                    print(f"  Points: {points}")
-                    
-                    # Create the question
-                    question = QuizQuestion(
-                        assignment_id=new_assignment.id,
-                        question_text=question_text,
-                        question_type=question_type,
-                        points=points,
-                        order=question_count
-                    )
-                    db.session.add(question)
-                    db.session.flush()  # Get the question ID
-                    
-                    # Save options for multiple choice and true/false
-                    if question_type in ['multiple_choice', 'true_false']:
-                        option_count = 0
-                        for option_key, option_value in request.form.items():
-                            if option_key == f'option_text_{question_id}[]':
-                                # Handle array of options
-                                if isinstance(option_value, list):
-                                    options_list = option_value
-                                else:
-                                    options_list = [option_value]
-                                
-                                # Find the correct answer for this question
-                                correct_answer = request.form.get(f'correct_answer_{question_id}')
-                                
-                                print(f"DEBUG: Processing options for question {question_id}:")
-                                print(f"  Correct answer: {correct_answer}")
-                                print(f"  Options: {options_list}")
-                                
-                                for option_text in options_list:
-                                    if option_text and option_text.strip():
-                                        is_correct = str(option_count) == correct_answer
-                                        print(f"    Option {option_count}: '{option_text}' (correct: {is_correct})")
-                                        
-                                        option = QuizOption(
-                                            question_id=question.id,
-                                            option_text=option_text.strip(),
-                                            is_correct=is_correct,
-                                            order=option_count
-                                        )
-                                        db.session.add(option)
-                                        option_count += 1
-                    
-                    question_count += 1
+            total_points = 0.0
             
-            print(f"DEBUG: Successfully processed {question_count} questions")
+            # Process questions - collect all question IDs first
+            question_ids = set()
+            for key in request.form.keys():
+                if key.startswith('question_text_') and not key.endswith('[]'):
+                    # Extract question ID (e.g., "question_text_1" -> "1")
+                    question_id = key.split('_')[-1]
+                    question_ids.add(question_id)
+            
+            for question_id in sorted(question_ids, key=lambda x: int(x) if x.isdigit() else 999):
+                question_text = request.form.get(f'question_text_{question_id}', '').strip()
+                if not question_text:
+                    continue
+                    
+                question_type = request.form.get(f'question_type_{question_id}', 'multiple_choice')
+                points = float(request.form.get(f'question_points_{question_id}', 1.0))
+                total_points += points
+                
+                # Create the question
+                question = QuizQuestion(
+                    assignment_id=new_assignment.id,
+                    question_text=question_text,
+                    question_type=question_type,
+                    points=points,
+                    order=question_count
+                )
+                db.session.add(question)
+                db.session.flush()  # Get the question ID
+                
+                # Save options for multiple choice and true/false
+                if question_type == 'multiple_choice':
+                    option_count = 0
+                    correct_answer = request.form.get(f'correct_answer_{question_id}', '')
+                    
+                    # Handle array format for options
+                    option_values = request.form.getlist(f'option_text_{question_id}[]')
+                    
+                    for option_text in option_values:
+                        option_text = option_text.strip()
+                        if not option_text:
+                            continue
+                            
+                        is_correct = str(option_count) == correct_answer
+                        
+                        option = QuizOption(
+                            question_id=question.id,
+                            option_text=option_text,
+                            is_correct=is_correct,
+                            order=option_count
+                        )
+                        db.session.add(option)
+                        option_count += 1
+                elif question_type == 'true_false':
+                    correct_answer = request.form.get(f'correct_answer_{question_id}', '')
+                    
+                    # Create True option
+                    true_option = QuizOption(
+                        question_id=question.id,
+                        option_text='True',
+                        is_correct=(correct_answer == 'true'),
+                        order=0
+                    )
+                    db.session.add(true_option)
+                    
+                    # Create False option
+                    false_option = QuizOption(
+                        question_id=question.id,
+                        option_text='False',
+                        is_correct=(correct_answer == 'false'),
+                        order=1
+                    )
+                    db.session.add(false_option)
+                
+                question_count += 1
+            
+            # Update assignment total_points
+            new_assignment.total_points = total_points if total_points > 0 else 100.0
             db.session.commit()
             flash('Quiz assignment created successfully!', 'success')
             return redirect(url_for('teacher.dashboard.my_assignments'))
@@ -1408,10 +1457,12 @@ def grade_assignment(assignment_id):
                     
                     grade = Grade.query.filter_by(student_id=student.id, assignment_id=assignment_id).first()
                     if grade:
-                        grade.grade_data = grade_data
-                        # Check if grade should be voided (even if updating)
-                        from management_routes.late_enrollment_utils import check_and_void_grade
-                        check_and_void_grade(grade)
+                        # Don't update grades that are already voided (preserve void status)
+                        if not grade.is_voided:
+                            grade.grade_data = grade_data
+                            # Check if grade should be voided due to late enrollment (only if not already voided)
+                            from management_routes.late_enrollment_utils import check_and_void_grade
+                            check_and_void_grade(grade)
                     else:
                         # Create grade using attribute assignment
                         grade = Grade()

@@ -23,23 +23,6 @@
                 </div>
             </div>
             <div class="d-flex gap-2 flex-wrap align-items-start">
-                {% if assignment.due_date %}
-                    {% set due_date = assignment.due_date.date() if assignment.due_date.__class__.__name__ == 'datetime' else assignment.due_date %}
-                    {% set today_date = today.date() if today.__class__.__name__ == 'datetime' else today %}
-                    {% set days_remaining = (due_date - today_date).days %}
-                    {% if days_remaining < 0 %}
-                        <span class="view-status-badge badge-overdue" title="This assignment was due {{ -days_remaining }} day{% if -days_remaining != 1 %}s{% endif %} ago">
-                            <i class="bi bi-exclamation-triangle-fill me-1"></i>PAST DUE
-                            {% if -days_remaining > 0 %}
-                                <small class="d-block" style="font-size: 0.7rem; opacity: 0.9;">{{ -days_remaining }} day{% if -days_remaining != 1 %}s{% endif %} ago</small>
-                            {% endif %}
-                        </span>
-                    {% elif days_remaining == 0 %}
-                        <span class="view-status-badge badge-due-today">DUE TODAY</span>
-                    {% else %}
-                        <span class="view-status-badge badge-due-soon">{{ days_remaining }} DAYS LEFT</span>
-                    {% endif %}
-                {% endif %}
                 <span class="view-status-badge badge-{{ assignment.status.lower() if assignment.status else 'active' }}">{{ assignment.status.upper() if assignment.status else 'ACTIVE' }}</span>
             </div>
         </div>
@@ -184,16 +167,17 @@
                                 <i class="bi bi-file-earmark text-warning"></i>
                                 <div>
                                     <label>Type</label>
-                                    <span class="type-badge-compact">{{ assignment.assignment_type.title() if assignment.assignment_type else 'N/A' }}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="compact-detail-item">
-                                <i class="bi bi-star-fill text-info"></i>
-                                <div>
-                                    <label>Points</label>
-                                    <span>{{ assignment.points if assignment.points else 'N/A' }}</span>
+                                    <span class="type-badge-compact">
+                                        {% if assignment.assignment_type == 'pdf' %}
+                                            PDF/Paper
+                                        {% elif assignment.assignment_type == 'quiz' %}
+                                            Quiz
+                                        {% elif assignment.assignment_type == 'discussion' %}
+                                            Discussion
+                                        {% else %}
+                                            {{ assignment.assignment_type.title() if assignment.assignment_type else 'N/A' }}
+                                        {% endif %}
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -207,6 +191,43 @@
                     <h6 class="mb-0"><i class="bi bi-lightning-fill me-2"></i>Quick Actions</h6>
                 </div>
                 <div class="card-body p-3">
+                    <!-- Google Forms Integration Section (for quiz assignments) -->
+                    {% if assignment.assignment_type == 'quiz' %}
+                    <div class="mb-3 p-3 bg-info bg-opacity-10 border border-info rounded">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <strong><i class="bi bi-google me-2"></i>Google Forms Integration</strong>
+                        </div>
+                        
+                        {% if assignment.google_form_linked and assignment.google_form_url %}
+                            <!-- Already Linked -->
+                            <div class="mb-2">
+                                <p class="mb-1 small text-muted">This quiz is linked to a Google Form</p>
+                                <div class="d-flex gap-2">
+                                    <form method="POST" action="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.sync_google_forms_submissions', assignment_id=assignment.id) }}{% else %}{{ url_for('teacher.assignments.sync_google_forms_submissions', assignment_id=assignment.id) }}{% endif %}" class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                        <button type="submit" class="btn btn-sm btn-info">
+                                            <i class="bi bi-arrow-repeat me-1"></i>Sync Submissions
+                                        </button>
+                                    </form>
+                                    <a href="{{ assignment.google_form_url }}" target="_blank" class="btn btn-sm btn-outline-info">
+                                        <i class="bi bi-box-arrow-up-right me-1"></i>View Form
+                                    </a>
+                                </div>
+                            </div>
+                        {% else %}
+                            <!-- Not Linked - Offer Export -->
+                            <div class="mb-2">
+                                <p class="mb-1 small text-muted">Export this quiz to Google Forms</p>
+                                <form method="POST" action="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.export_quiz_to_google_forms', assignment_id=assignment.id) }}{% else %}{{ url_for('teacher.assignments.export_quiz_to_google_forms', assignment_id=assignment.id) }}{% endif %}" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <button type="submit" class="btn btn-sm btn-success">
+                                        <i class="bi bi-upload me-1"></i>Export to Google Forms
+                                    </button>
+                                </form>
+                            </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
                     <div class="compact-action-grid">
                         {% if current_user.role in ['Director', 'School Administrator'] %}
                             <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" 
@@ -581,7 +602,7 @@
                             <i class="bi bi-gear me-2"></i>Restore Options
                         </label>
                         
-                        <div class="option-card option-card-active" onclick="selectUnvoidOption('all', event)">
+                        <div class="option-card option-card-active" onclick="selectUnvoidOption('all')">
                             <input class="form-check-input" type="radio" name="unvoid_type" id="unvoidAll" value="all" checked onchange="toggleUnvoidStudentSelection(); updateUnvoidCardActiveState();">
                             <label class="option-card-label" for="unvoidAll">
                                 <div class="option-icon bg-success">
@@ -594,7 +615,7 @@
                             </label>
                         </div>
                         
-                        <div class="option-card" onclick="selectUnvoidOption('selected', event)">
+                        <div class="option-card" onclick="selectUnvoidOption('selected')">
                             <input class="form-check-input" type="radio" name="unvoid_type" id="unvoidSelect" value="selected" onchange="toggleUnvoidStudentSelection(); updateUnvoidCardActiveState();">
                             <label class="option-card-label" for="unvoidSelect">
                                 <div class="option-icon bg-warning">
@@ -624,8 +645,7 @@
                             {% set enrollments = assignment.class_info.enrollments %}
                             {% for enrollment in enrollments %}
                             {% if enrollment.is_active and enrollment.student %}
-                            {% set student_grade = assignment.grades|selectattr('student_id', 'equalto', enrollment.student.id)|selectattr('is_voided', 'equalto', True)|first %}
-                            {% if student_grade %}
+                            {% if voided_student_ids is defined and enrollment.student.id in voided_student_ids %}
                             <div class="student-select-card">
                                 <input class="form-check-input unvoid-student-checkbox" type="checkbox" name="student_ids" value="{{ enrollment.student.id }}" id="unvoidstudent{{ enrollment.student.id }}">
                                 <label class="student-select-label" for="unvoidstudent{{ enrollment.student.id }}">
@@ -1007,35 +1027,21 @@ function selectVoidOption(type) {
 }
 
 // Helper functions for unvoid modal
-function selectUnvoidOption(type, event) {
+function selectUnvoidOption(type) {
+    // Check the appropriate radio button (this will trigger onchange)
     if (type === 'all') {
-        document.getElementById('unvoidAll').checked = true;
-        document.getElementById('unvoidSelect').checked = false;
+        const allRadio = document.getElementById('unvoidAll');
+        if (allRadio) {
+            allRadio.checked = true;
+            allRadio.dispatchEvent(new Event('change'));
+        }
     } else {
-        document.getElementById('unvoidSelect').checked = true;
-        document.getElementById('unvoidAll').checked = false;
-    }
-    
-    // Update visual active state
-    document.querySelectorAll('#unvoidModal .option-card').forEach(card => {
-        card.classList.remove('option-card-active');
-    });
-    
-    // Add active class to the clicked card
-    if (event && event.currentTarget) {
-        event.currentTarget.classList.add('option-card-active');
-    } else {
-        // Fallback: find the card by the radio button
-        const radio = type === 'all' ? document.getElementById('unvoidAll') : document.getElementById('unvoidSelect');
-        if (radio) {
-            const card = radio.closest('.option-card');
-            if (card) {
-                card.classList.add('option-card-active');
-            }
+        const selectedRadio = document.getElementById('unvoidSelect');
+        if (selectedRadio) {
+            selectedRadio.checked = true;
+            selectedRadio.dispatchEvent(new Event('change'));
         }
     }
-    
-    toggleUnvoidStudentSelection();
 }
 
 function toggleUnvoidStudentSelection() {
@@ -1074,7 +1080,13 @@ function toggleAllUnvoidStudents(source) {
 function submitUnvoidAssignment(event) {
     event.preventDefault();
     
-    const unvoidType = document.querySelector('input[name="unvoid_type"]:checked').value;
+    const checkedRadio = document.querySelector('input[name="unvoid_type"]:checked');
+    if (!checkedRadio) {
+        alert('Please select a restore option (Entire Class or Selected Students).');
+        return;
+    }
+    
+    const unvoidType = checkedRadio.value;
     const unvoidAll = unvoidType === 'all';
     
     let studentIds = [];
@@ -1088,14 +1100,24 @@ function submitUnvoidAssignment(event) {
     }
     
     const form = document.getElementById('unvoidAssignmentForm');
+    
+    // Update hidden field in the DOM
+    const unvoidAllHidden = document.getElementById('unvoidAllHidden');
+    if (unvoidAllHidden) {
+        unvoidAllHidden.value = unvoidAll.toString();
+    }
+    
+    // Create FormData after updating the hidden field
     const formData = new FormData(form);
     
-    // Update hidden field
-    document.getElementById('unvoidAllHidden').value = unvoidAll.toString();
+    // Ensure the unvoid_all value is correct in FormData
+    formData.set('unvoid_all', unvoidAll.toString());
     
     // Clear and add student IDs
     formData.delete('student_ids');
-    studentIds.forEach(id => formData.append('student_ids', id));
+    if (!unvoidAll) {
+        studentIds.forEach(id => formData.append('student_ids', id));
+    }
     
     // Show loading state
     const submitBtn = event.target;
@@ -1128,11 +1150,6 @@ function submitUnvoidAssignment(event) {
         submitBtn.disabled = false;
         submitBtn.innerHTML = originalHTML;
     });
-}
-    document.querySelectorAll('.option-card').forEach(card => {
-        card.classList.remove('option-card-active');
-    });
-    event.currentTarget.classList.add('option-card-active');
 }
 
 // PDF Viewer Controls

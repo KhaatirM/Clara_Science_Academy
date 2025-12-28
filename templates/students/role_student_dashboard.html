@@ -295,20 +295,38 @@ window.openAssignmentViewModal = function(assignmentId, assignmentTitle, assignm
         
         // Fetch quiz details via AJAX and display in both the type card and details card
         fetch(`/student/quiz-details/${assignmentId}`)
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.error) {
                     console.error('Error fetching quiz details:', data.error);
+                    const errorMsg = '<div class="alert alert-warning"><small>Unable to load quiz details. Please try again later.</small></div>';
+                    const container = document.getElementById('quizDetailsContainer');
+                    if (container) container.innerHTML = errorMsg;
+                    const content = document.getElementById('quizDetailsContent');
+                    if (content) content.innerHTML = errorMsg;
                     return;
                 }
                 // Display in the type card
-                displayQuizDetails(data);
+                try {
+                    displayQuizDetails(data);
+                } catch (e) {
+                    console.error('Error in displayQuizDetails:', e);
+                }
                 // Also display in the dedicated quiz details card
-                displayQuizDetailsInCard(data);
+                try {
+                    displayQuizDetailsInCard(data);
+                } catch (e) {
+                    console.error('Error in displayQuizDetailsInCard:', e);
+                }
             })
             .catch(error => {
                 console.error('Error fetching quiz details:', error);
-                const errorMsg = '<div class="alert alert-warning"><small>Unable to load quiz details. Please refresh the page.</small></div>';
+                const errorMsg = '<div class="alert alert-warning"><small>Unable to load quiz details. The quiz will still work normally.</small></div>';
                 const container = document.getElementById('quizDetailsContainer');
                 if (container) container.innerHTML = errorMsg;
                 const content = document.getElementById('quizDetailsContent');
@@ -652,6 +670,271 @@ function showDiscussionHelp() {
 
 function showSubmissionHelp() {
     alert('Submission Help:\n\n• Review all assignment requirements\n• Download and read the assignment file\n• Follow the formatting guidelines\n• Save your work frequently\n• Submit before the deadline\n• Keep a backup copy of your work');
+}
+
+// Function to display quiz details in the modal
+function displayQuizDetails(quizData) {
+    try {
+        const container = document.getElementById('quizDetailsContainer');
+        if (!container) {
+            console.warn('quizDetailsContainer not found');
+            return;
+        }
+        
+        let html = '<div class="quiz-details-section">';
+        
+        // Quiz Settings Section
+        html += '<div class="mb-3">';
+        html += '<h6 class="text-dark fw-bold mb-2"><i class="bi bi-gear me-2"></i>Quiz Settings</h6>';
+        
+        // Time limit
+        if (quizData.time_limit_minutes) {
+            html += `<div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="small"><i class="bi bi-clock-history me-1"></i>Time Limit:</span>
+                <strong class="text-dark">${quizData.time_limit_minutes} minutes</strong>
+            </div>`;
+        } else {
+            html += `<div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="small"><i class="bi bi-clock-history me-1"></i>Time Limit:</span>
+                <strong class="text-success">No time limit</strong>
+            </div>`;
+        }
+        
+        // Max attempts
+        if (quizData.max_attempts) {
+            html += `<div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="small"><i class="bi bi-repeat me-1"></i>Max Attempts:</span>
+                <strong class="text-dark">${quizData.max_attempts}</strong>
+            </div>`;
+            html += `<div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="small"><i class="bi bi-check-circle me-1"></i>Attempts Used:</span>
+                <strong class="${quizData.attempts_used >= quizData.max_attempts ? 'text-danger' : 'text-dark'}">${quizData.attempts_used} / ${quizData.max_attempts}</strong>
+            </div>`;
+            if (quizData.attempts_remaining !== null) {
+                html += `<div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="small"><i class="bi bi-arrow-left-circle me-1"></i>Attempts Remaining:</span>
+                    <strong class="${quizData.attempts_remaining > 0 ? 'text-success' : 'text-danger'}">${quizData.attempts_remaining}</strong>
+                </div>`;
+            }
+        } else {
+            html += `<div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="small"><i class="bi bi-repeat me-1"></i>Attempts:</span>
+                <strong class="text-success">Unlimited</strong>
+            </div>`;
+            html += `<div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="small"><i class="bi bi-check-circle me-1"></i>Attempts Used:</span>
+                <strong class="text-dark">${quizData.attempts_used}</strong>
+            </div>`;
+        }
+        
+        // Total points
+        html += `<div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="small"><i class="bi bi-star me-1"></i>Total Points:</span>
+            <strong class="text-dark">${quizData.total_points}</strong>
+        </div>`;
+        
+        // Quiz features
+        if (quizData.shuffle_questions) {
+            html += `<div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="small"><i class="bi bi-shuffle me-1"></i>Question Order:</span>
+                <span class="badge bg-info">Shuffled</span>
+            </div>`;
+        }
+        
+        if (quizData.show_correct_answers) {
+            html += `<div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="small"><i class="bi bi-eye me-1"></i>Correct Answers:</span>
+                <span class="badge bg-success">Shown after submission</span>
+            </div>`;
+        }
+        
+        html += '</div>';
+        
+        // Score/Grade Section (if submitted)
+        if (quizData.has_submission || quizData.has_grade) {
+            html += '<div class="mb-3 p-3 rounded" style="background: linear-gradient(135deg, #d1f2eb 0%, #a8e6cf 100%);">';
+            html += '<h6 class="text-dark fw-bold mb-2"><i class="bi bi-trophy me-2"></i>Your Results</h6>';
+            
+            if (quizData.score !== null && quizData.percentage !== null) {
+                const scoreColor = quizData.percentage >= 70 ? 'text-success' : (quizData.percentage >= 60 ? 'text-warning' : 'text-danger');
+                html += `<div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="small"><i class="bi bi-star-fill me-1"></i>Score:</span>
+                    <strong class="${scoreColor}">${quizData.score} / ${quizData.total_points}</strong>
+                </div>`;
+                html += `<div class="d-flex justify-content-between align-items-center">
+                    <span class="small"><i class="bi bi-percent me-1"></i>Percentage:</span>
+                    <strong class="${scoreColor} fs-5">${quizData.percentage}%</strong>
+                </div>`;
+                
+                // Grade badge
+                let gradeBadge = '';
+                if (quizData.percentage >= 90) gradeBadge = '<span class="badge bg-success">A</span>';
+                else if (quizData.percentage >= 80) gradeBadge = '<span class="badge bg-success">B</span>';
+                else if (quizData.percentage >= 70) gradeBadge = '<span class="badge bg-warning">C</span>';
+                else if (quizData.percentage >= 60) gradeBadge = '<span class="badge bg-warning">D</span>';
+                else gradeBadge = '<span class="badge bg-danger">F</span>';
+                
+                html += `<div class="mt-2 text-center">${gradeBadge}</div>`;
+            } else if (quizData.has_submission) {
+                html += `<div class="text-center">
+                    <i class="bi bi-hourglass-split fs-4 text-warning mb-2"></i>
+                    <p class="mb-0 small text-muted">Quiz submitted and pending grading</p>
+                </div>`;
+            }
+            
+            html += '</div>';
+        }
+        
+        html += '</div>';
+        container.innerHTML = html;
+    } catch (error) {
+        console.error('Error in displayQuizDetails:', error);
+        const container = document.getElementById('quizDetailsContainer');
+        if (container) {
+            container.innerHTML = '<div class="alert alert-warning"><small>Error displaying quiz details.</small></div>';
+        }
+    }
+}
+
+// Function to display quiz details in the dedicated quiz details card
+function displayQuizDetailsInCard(quizData) {
+    try {
+        const card = document.getElementById('quizDetailsCard');
+        const content = document.getElementById('quizDetailsContent');
+        if (!card || !content) {
+            console.warn('quizDetailsCard or quizDetailsContent not found');
+            return;
+        }
+        
+        // Show the card
+        card.style.display = 'block';
+        
+        let html = '';
+        
+        // Quiz Settings Section
+        html += '<div class="row g-3 mb-3">';
+        
+        // Time limit
+        html += '<div class="col-md-6">';
+        html += '<div class="p-3 rounded border" style="background-color: #f8f9fa;">';
+        html += '<div class="d-flex align-items-center mb-2">';
+        html += '<i class="bi bi-clock-history fs-4 text-primary me-2"></i>';
+        html += '<div>';
+        html += '<div class="fw-bold">Time Limit</div>';
+        html += `<div class="small text-muted">${quizData.time_limit_minutes ? quizData.time_limit_minutes + ' minutes' : 'No time limit'}</div>`;
+        html += '</div></div></div></div>';
+        
+        // Max attempts
+        html += '<div class="col-md-6">';
+        html += '<div class="p-3 rounded border" style="background-color: #f8f9fa;">';
+        html += '<div class="d-flex align-items-center mb-2">';
+        html += '<i class="bi bi-repeat fs-4 text-info me-2"></i>';
+        html += '<div>';
+        html += '<div class="fw-bold">Attempts</div>';
+        if (quizData.max_attempts) {
+            html += `<div class="small text-muted">${quizData.attempts_used} / ${quizData.max_attempts} used`;
+            if (quizData.attempts_remaining !== null) {
+                html += ` (${quizData.attempts_remaining} remaining)`;
+            }
+            html += '</div>';
+        } else {
+            html += '<div class="small text-muted">Unlimited attempts</div>';
+            html += `<div class="small text-muted">${quizData.attempts_used} used so far</div>`;
+        }
+        html += '</div></div></div></div>';
+        
+        // Total points
+        html += '<div class="col-md-6">';
+        html += '<div class="p-3 rounded border" style="background-color: #f8f9fa;">';
+        html += '<div class="d-flex align-items-center mb-2">';
+        html += '<i class="bi bi-star fs-4 text-warning me-2"></i>';
+        html += '<div>';
+        html += '<div class="fw-bold">Total Points</div>';
+        html += `<div class="small text-muted">${quizData.total_points} points</div>`;
+        html += '</div></div></div></div>';
+        
+        // Quiz features
+        html += '<div class="col-md-6">';
+        html += '<div class="p-3 rounded border" style="background-color: #f8f9fa;">';
+        html += '<div class="d-flex align-items-center mb-2">';
+        html += '<i class="bi bi-gear fs-4 text-secondary me-2"></i>';
+        html += '<div>';
+        html += '<div class="fw-bold">Features</div>';
+        html += '<div class="small">';
+        if (quizData.shuffle_questions) html += '<span class="badge bg-info me-1">Shuffled</span>';
+        if (quizData.show_correct_answers) html += '<span class="badge bg-success">Shows Answers</span>';
+        if (!quizData.shuffle_questions && !quizData.show_correct_answers) html += '<span class="text-muted">Standard quiz</span>';
+        html += '</div>';
+        html += '</div></div></div></div>';
+        
+        html += '</div>';
+        
+        // Score/Grade Section (if submitted)
+        if (quizData.has_submission || quizData.has_grade) {
+            html += '<div class="mt-3 p-4 rounded" style="background: linear-gradient(135deg, #d1f2eb 0%, #a8e6cf 100%); border: 2px solid #16a085;">';
+            html += '<h6 class="text-dark fw-bold mb-3"><i class="bi bi-trophy me-2"></i>Your Results</h6>';
+            
+            if (quizData.score !== null && quizData.percentage !== null) {
+                const scoreColor = quizData.percentage >= 70 ? 'text-success' : (quizData.percentage >= 60 ? 'text-warning' : 'text-danger');
+                const bgColor = quizData.percentage >= 70 ? 'bg-success' : (quizData.percentage >= 60 ? 'bg-warning' : 'bg-danger');
+                
+                html += '<div class="row text-center">';
+                html += `<div class="col-md-6 mb-3">
+                    <div class="p-3 rounded bg-white">
+                        <div class="small text-muted mb-1">Score</div>
+                        <div class="fs-3 fw-bold ${scoreColor}">${quizData.score} / ${quizData.total_points}</div>
+                    </div>
+                </div>`;
+                html += `<div class="col-md-6 mb-3">
+                    <div class="p-3 rounded bg-white">
+                        <div class="small text-muted mb-1">Percentage</div>
+                        <div class="fs-3 fw-bold ${scoreColor}">${quizData.percentage}%</div>
+                    </div>
+                </div>`;
+                html += '</div>';
+                
+                // Grade badge
+                let gradeBadge = '';
+                let gradeText = '';
+                if (quizData.percentage >= 90) {
+                    gradeBadge = 'bg-success';
+                    gradeText = 'A';
+                } else if (quizData.percentage >= 80) {
+                    gradeBadge = 'bg-success';
+                    gradeText = 'B';
+                } else if (quizData.percentage >= 70) {
+                    gradeBadge = 'bg-warning';
+                    gradeText = 'C';
+                } else if (quizData.percentage >= 60) {
+                    gradeBadge = 'bg-warning';
+                    gradeText = 'D';
+                } else {
+                    gradeBadge = 'bg-danger';
+                    gradeText = 'F';
+                }
+                
+                html += `<div class="text-center mt-2">
+                    <span class="badge ${gradeBadge} fs-5 px-4 py-2">Grade: ${gradeText}</span>
+                </div>`;
+            } else if (quizData.has_submission) {
+                html += `<div class="text-center py-3">
+                    <i class="bi bi-hourglass-split fs-1 text-warning mb-2"></i>
+                    <p class="mb-0 fw-bold">Quiz Submitted</p>
+                    <p class="mb-0 small text-muted">Your quiz is pending grading</p>
+                </div>`;
+            }
+            
+            html += '</div>';
+        }
+        
+        content.innerHTML = html;
+    } catch (error) {
+        console.error('Error in displayQuizDetailsInCard:', error);
+        const content = document.getElementById('quizDetailsContent');
+        if (content) {
+            content.innerHTML = '<div class="alert alert-warning"><small>Error displaying quiz details.</small></div>';
+        }
+    }
 }
 
 // Global view assignment function - called by View button

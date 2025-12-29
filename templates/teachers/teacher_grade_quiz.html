@@ -119,7 +119,12 @@
                 {% if grade_data %}
                     {% set is_voided = grade_data.is_voided|default(false) %}
                     {% set points_earned = grade_data.points_earned|default(grade_data.score|default(0))|float %}
+                    {# Use total_points from grade_data for quizzes (actual quiz total), not assignment.total_points #}
+                    {% set total_points = grade_data.total_points|default(grade_data.max_score|default(assignment.total_points if assignment.total_points else 100.0))|float %}
                     {% set percentage_value = grade_data.percentage|default(0)|float %}
+                    {% if not percentage_value and points_earned > 0 and total_points > 0 %}
+                        {% set percentage_value = (points_earned / total_points * 100)|round(2) %}
+                    {% endif %}
                     {% set comment_data = grade_data.comment|default('') or grade_data.feedback|default('') %}
                 {% endif %}
                 

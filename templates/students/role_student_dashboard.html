@@ -2536,51 +2536,62 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                             <div class="student-assignment-status-badge">
                                 {% set grade_obj = grades.get(assignment.id) %}
                                 {% set score = none %}
+                                {% set percentage = none %}
                                 {% if grade_obj and grade_obj.grade_data %}
                                     {% set grade_data_dict = grade_obj.grade_data|from_json %}
                                     {% set score = grade_data_dict.get('score') if grade_data_dict else none %}
+                                    {% set percentage = grade_data_dict.get('percentage') if grade_data_dict else none %}
+                                    {% if not percentage and score is not none and grade_data_dict %}
+                                        {# Calculate percentage if not present #}
+                                        {% set total_points = grade_data_dict.get('total_points') or grade_data_dict.get('max_score') or (assignment.total_points if assignment.total_points else 100.0) %}
+                                        {% if total_points and total_points > 0 %}
+                                            {% set percentage = (score / total_points * 100) %}
+                                        {% endif %}
+                                    {% endif %}
                                 {% endif %}
+                                {# Use percentage for letter grade calculation (it's the percentage score) #}
+                                {% set grade_percentage = percentage if percentage is not none else score %}
                                 
                                 {# Check if student has an active extension #}
                                 {% set has_extension = student_status == 'Extended' %}
                                 
                                 {% if student_status == 'Voided' %}
                                     <span class="badge bg-secondary">Voided</span>
-                                {% elif has_extension and not score %}
+                                {% elif has_extension and not grade_percentage %}
                                     {# Show Extension badge if extension granted and not yet graded #}
                                     <span class="badge badge-extension">
                                         <i class="bi bi-clock-history me-1"></i>Extension
                                     </span>
-                                {% elif score is not none and score > 0 %}
-                                    {# Show letter grade if graded with score > 0 #}
-                                    {% if score >= 97 %}
+                                {% elif grade_percentage is not none and grade_percentage > 0 %}
+                                    {# Show letter grade if graded with percentage > 0 #}
+                                    {% if grade_percentage >= 97 %}
                                         <span class="badge grade-badge grade-a-plus">A+</span>
-                                    {% elif score >= 93 %}
+                                    {% elif grade_percentage >= 93 %}
                                         <span class="badge grade-badge grade-a">A</span>
-                                    {% elif score >= 90 %}
+                                    {% elif grade_percentage >= 90 %}
                                         <span class="badge grade-badge grade-a-minus">A-</span>
-                                    {% elif score >= 87 %}
+                                    {% elif grade_percentage >= 87 %}
                                         <span class="badge grade-badge grade-b-plus">B+</span>
-                                    {% elif score >= 83 %}
+                                    {% elif grade_percentage >= 83 %}
                                         <span class="badge grade-badge grade-b">B</span>
-                                    {% elif score >= 80 %}
+                                    {% elif grade_percentage >= 80 %}
                                         <span class="badge grade-badge grade-b-minus">B-</span>
-                                    {% elif score >= 77 %}
+                                    {% elif grade_percentage >= 77 %}
                                         <span class="badge grade-badge grade-c-plus">C+</span>
-                                    {% elif score >= 73 %}
+                                    {% elif grade_percentage >= 73 %}
                                         <span class="badge grade-badge grade-c">C</span>
-                                    {% elif score >= 70 %}
+                                    {% elif grade_percentage >= 70 %}
                                         <span class="badge grade-badge grade-c-minus">C-</span>
-                                    {% elif score >= 67 %}
+                                    {% elif grade_percentage >= 67 %}
                                         <span class="badge grade-badge grade-d-plus">D+</span>
-                                    {% elif score >= 63 %}
+                                    {% elif grade_percentage >= 63 %}
                                         <span class="badge grade-badge grade-d">D</span>
-                                    {% elif score >= 60 %}
+                                    {% elif grade_percentage >= 60 %}
                                         <span class="badge grade-badge grade-d-minus">D-</span>
                                     {% else %}
                                         <span class="badge grade-badge grade-f">F</span>
                                     {% endif %}
-                                {% elif score is not none and score == 0 %}
+                                {% elif grade_percentage is not none and grade_percentage == 0 %}
                                     {# Show Overdue if graded with 0 #}
                                     <span class="badge bg-danger">Overdue</span>
                                 {% elif student_status == 'completed' %}
@@ -2691,51 +2702,62 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                             <div class="student-assignment-status-badge">
                                 {% set grade_obj = grades.get(assignment.id) %}
                                 {% set score = none %}
+                                {% set percentage = none %}
                                 {% if grade_obj and grade_obj.grade_data %}
                                     {% set grade_data_dict = grade_obj.grade_data|from_json %}
                                     {% set score = grade_data_dict.get('score') if grade_data_dict else none %}
+                                    {% set percentage = grade_data_dict.get('percentage') if grade_data_dict else none %}
+                                    {% if not percentage and score is not none and grade_data_dict %}
+                                        {# Calculate percentage if not present #}
+                                        {% set total_points = grade_data_dict.get('total_points') or grade_data_dict.get('max_score') or (assignment.total_points if assignment.total_points else 100.0) %}
+                                        {% if total_points and total_points > 0 %}
+                                            {% set percentage = (score / total_points * 100) %}
+                                        {% endif %}
+                                    {% endif %}
                                 {% endif %}
+                                {# Use percentage for letter grade calculation (it's the percentage score) #}
+                                {% set grade_percentage = percentage if percentage is not none else score %}
                                 
                                 {# Check if student has an active extension #}
                                 {% set has_extension = student_status == 'Extended' %}
                                 
                                 {% if student_status == 'Voided' %}
                                     <span class="badge bg-secondary">Voided</span>
-                                {% elif has_extension and not score %}
+                                {% elif has_extension and not grade_percentage %}
                                     {# Show Extension badge if extension granted and not yet graded #}
                                     <span class="badge badge-extension">
                                         <i class="bi bi-clock-history me-1"></i>Extension
                                     </span>
-                                {% elif score is not none and score > 0 %}
-                                    {# Show letter grade if graded with score > 0 #}
-                                    {% if score >= 97 %}
+                                {% elif grade_percentage is not none and grade_percentage > 0 %}
+                                    {# Show letter grade if graded with percentage > 0 #}
+                                    {% if grade_percentage >= 97 %}
                                         <span class="badge grade-badge grade-a-plus">A+</span>
-                                    {% elif score >= 93 %}
+                                    {% elif grade_percentage >= 93 %}
                                         <span class="badge grade-badge grade-a">A</span>
-                                    {% elif score >= 90 %}
+                                    {% elif grade_percentage >= 90 %}
                                         <span class="badge grade-badge grade-a-minus">A-</span>
-                                    {% elif score >= 87 %}
+                                    {% elif grade_percentage >= 87 %}
                                         <span class="badge grade-badge grade-b-plus">B+</span>
-                                    {% elif score >= 83 %}
+                                    {% elif grade_percentage >= 83 %}
                                         <span class="badge grade-badge grade-b">B</span>
-                                    {% elif score >= 80 %}
+                                    {% elif grade_percentage >= 80 %}
                                         <span class="badge grade-badge grade-b-minus">B-</span>
-                                    {% elif score >= 77 %}
+                                    {% elif grade_percentage >= 77 %}
                                         <span class="badge grade-badge grade-c-plus">C+</span>
-                                    {% elif score >= 73 %}
+                                    {% elif grade_percentage >= 73 %}
                                         <span class="badge grade-badge grade-c">C</span>
-                                    {% elif score >= 70 %}
+                                    {% elif grade_percentage >= 70 %}
                                         <span class="badge grade-badge grade-c-minus">C-</span>
-                                    {% elif score >= 67 %}
+                                    {% elif grade_percentage >= 67 %}
                                         <span class="badge grade-badge grade-d-plus">D+</span>
-                                    {% elif score >= 63 %}
+                                    {% elif grade_percentage >= 63 %}
                                         <span class="badge grade-badge grade-d">D</span>
-                                    {% elif score >= 60 %}
+                                    {% elif grade_percentage >= 60 %}
                                         <span class="badge grade-badge grade-d-minus">D-</span>
                                     {% else %}
                                         <span class="badge grade-badge grade-f">F</span>
                                     {% endif %}
-                                {% elif score is not none and score == 0 %}
+                                {% elif grade_percentage is not none and grade_percentage == 0 %}
                                     {# Show Overdue if graded with 0 #}
                                     <span class="badge bg-danger">Overdue</span>
                                 {% elif student_status == 'completed' %}

@@ -41,8 +41,17 @@
                             <h3 class="admin-stat-number">{{ stats.students if stats else 0 }}</h3>
                             <p class="admin-stat-label">Total Students</p>
                             <div class="admin-stat-trend">
-                                <i class="bi bi-arrow-up text-success"></i>
-                                <span class="text-success">+5% this month</span>
+                                {% set change_percent = stats.students_change_percent if stats and stats.students_change_percent is defined else 0 %}
+                                {% if change_percent > 0 %}
+                                    <i class="bi bi-arrow-up text-success"></i>
+                                    <span class="text-success">+{{ "%.1f"|format(change_percent) }}% this month</span>
+                                {% elif change_percent < 0 %}
+                                    <i class="bi bi-arrow-down text-danger"></i>
+                                    <span class="text-danger">{{ "%.1f"|format(change_percent) }}% this month</span>
+                                {% else %}
+                                    <i class="bi bi-dash text-muted"></i>
+                                    <span class="text-muted">No change this month</span>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -56,8 +65,17 @@
                             <h3 class="admin-stat-number">{{ stats.teachers if stats else 0 }}</h3>
                             <p class="admin-stat-label">Teachers & Staff</p>
                             <div class="admin-stat-trend">
-                                <i class="bi bi-arrow-up text-success"></i>
-                                <span class="text-success">+2% this month</span>
+                                {% set change_percent = stats.teachers_change_percent if stats and stats.teachers_change_percent is defined else 0 %}
+                                {% if change_percent > 0 %}
+                                    <i class="bi bi-arrow-up text-success"></i>
+                                    <span class="text-success">+{{ "%.1f"|format(change_percent) }}% this month</span>
+                                {% elif change_percent < 0 %}
+                                    <i class="bi bi-arrow-down text-danger"></i>
+                                    <span class="text-danger">{{ "%.1f"|format(change_percent) }}% this month</span>
+                                {% else %}
+                                    <i class="bi bi-dash text-muted"></i>
+                                    <span class="text-muted">No change this month</span>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -71,8 +89,17 @@
                             <h3 class="admin-stat-number">{{ stats.classes if stats else 0 }}</h3>
                             <p class="admin-stat-label">Total Classes</p>
                             <div class="admin-stat-trend">
-                                <i class="bi bi-arrow-up text-success"></i>
-                                <span class="text-success">+3% this month</span>
+                                {% set change_percent = stats.classes_change_percent if stats and stats.classes_change_percent is defined else 0 %}
+                                {% if change_percent > 0 %}
+                                    <i class="bi bi-arrow-up text-success"></i>
+                                    <span class="text-success">+{{ "%.1f"|format(change_percent) }}% this month</span>
+                                {% elif change_percent < 0 %}
+                                    <i class="bi bi-arrow-down text-danger"></i>
+                                    <span class="text-danger">{{ "%.1f"|format(change_percent) }}% this month</span>
+                                {% else %}
+                                    <i class="bi bi-dash text-muted"></i>
+                                    <span class="text-muted">No change this month</span>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -83,11 +110,20 @@
                             <i class="bi bi-journal-check"></i>
                         </div>
                         <div class="admin-stat-content">
-                            <h3 class="admin-stat-number">{{ stats.assignments if stats else 0 }}</h3>
+                            <h3 class="admin-stat-number">{{ stats.active_assignments if stats else 0 }}</h3>
                             <p class="admin-stat-label">Active Assignments</p>
                             <div class="admin-stat-trend">
-                                <i class="bi bi-arrow-up text-success"></i>
-                                <span class="text-success">+12% this month</span>
+                                {% set change_percent = stats.assignments_change_percent if stats and stats.assignments_change_percent is defined else 0 %}
+                                {% if change_percent > 0 %}
+                                    <i class="bi bi-arrow-up text-success"></i>
+                                    <span class="text-success">+{{ "%.1f"|format(change_percent) }}% this month</span>
+                                {% elif change_percent < 0 %}
+                                    <i class="bi bi-arrow-down text-danger"></i>
+                                    <span class="text-danger">{{ "%.1f"|format(change_percent) }}% this month</span>
+                                {% else %}
+                                    <i class="bi bi-dash text-muted"></i>
+                                    <span class="text-muted">No change this month</span>
+                                {% endif %}
                             </div>
                         </div>
                     </div>

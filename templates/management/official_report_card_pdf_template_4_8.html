@@ -4,113 +4,175 @@
     <meta charset="utf-8">
     <title>4th-8th Grade Progress Report - Clara Science Academy</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='report_card_styles.css') }}">
+    <style>
+        .page-1-content {
+            page-break-after: always;
+        }
+        .page-2-content {
+            page-break-before: always;
+        }
+        .section-title {
+            page-break-after: avoid;
+        }
+        table {
+            page-break-inside: avoid;
+        }
+    </style>
 </head>
 <body>
-    {% include 'management/_report_card_header.html' %}
+    <!-- PAGE 1: Header, Progress/Grades, Signatures -->
+    <div class="page-1-content">
+        {% include 'management/_report_card_header.html' %}
 
-    <p class="report-period-line"><strong>Report Period:</strong> {{ report_card.quarter }} - {{ generated_date.strftime('%m/%d/%Y') if generated_date else 'N/A' }}</p>
+        <p class="report-period-line"><strong>Report Period:</strong> {{ report_card.quarter }} - {{ generated_date.strftime('%m/%d/%Y') if generated_date else 'N/A' }}</p>
 
-    <div class="section-title">Progress/Grades</div>
+        <div class="section-title">Progress/Grades</div>
 
-    <div class="grades-layout-container">
-        <div class="grades-text">
-            <p>Clara Science Academy reports student performance quarterly. Students in Middle School are expected to work daily based on Teachers’ lessons and assignments. These assignments are evaluated and a grade score based on the grading system below is determined. Appropriate academy progress and achievement is reflected in completion of expected progress and mastery of concepts and skills assessed based on submitted assignments and classroom performance. Both submitted assignments and classroom performance will be taken into consideration when determining student promotion.</p>
-            <p>On the second page of this report, you will find your child's course grade and teachers' comments. Please remember, at the end of the school year students must have demonstrated mastery based on final grade. These grades are considered when determining a student's readiness for promotion.</p>
+        <div class="grades-layout-container">
+            <div class="grades-text">
+                <p>Clara Science Academy reports student performance quarterly. Students in Middle School are expected to work daily based on Teachers' lessons and assignments. These assignments are evaluated and a grade score based on the grading system below is determined. Appropriate academy progress and achievement is reflected in completion of expected progress and mastery of concepts and skills assessed based on submitted assignments and classroom performance. Both submitted assignments and classroom performance will be taken into consideration when determining student promotion.</p>
+                <p>On the second page of this report, you will find your child's course grade and teachers' comments. Please remember, at the end of the school year students must have demonstrated mastery based on final grade. These grades are considered when determining a student's readiness for promotion.</p>
+            </div>
+            <div class="grading-scale">
+                <h6>Grading Scale</h6>
+                <table>
+                    <tr><td>A</td><td>100-95</td></tr>
+                    <tr><td>A-</td><td>94-90</td></tr>
+                    <tr><td>B+</td><td>89-87</td></tr>
+                    <tr><td>B</td><td>86-83</td></tr>
+                    <tr><td>B-</td><td>82-80</td></tr>
+                    <tr><td>C+</td><td>79-77</td></tr>
+                    <tr><td>C</td><td>76-73</td></tr>
+                    <tr><td>C-</td><td>72-70</td></tr>
+                    <tr><td>D</td><td>69-65</td></tr>
+                    <tr><td>F</td><td>64-0</td></tr>
+                    <tr><td>P</td><td>Pass</td></tr>
+                    <tr><td>I</td><td>Incomplete</td></tr>
+                </table>
+            </div>
         </div>
-        <div class="grading-scale">
-            <h6>Grading Scale</h6>
-            <table>
-                <tr><td>A</td><td>100-95</td></tr>
-                <tr><td>A-</td><td>94-90</td></tr>
-                <tr><td>B+</td><td>89-87</td></tr>
-                <tr><td>B</td><td>86-83</td></tr>
-                <tr><td>B-</td><td>82-80</td></tr>
-                <tr><td>C+</td><td>79-77</td></tr>
-                <tr><td>C</td><td>76-73</td></tr>
-                <tr><td>C-</td><td>72-70</td></tr>
-                <tr><td>D</td><td>69-65</td></tr>
-                <tr><td>F</td><td>64-0</td></tr>
-                <tr><td>P</td><td>Pass</td></tr>
-                <tr><td>I</td><td>Incomplete</td></tr>
-            </table>
+
+        <div class="footer" style="margin-top: 2cm;">
+            <div class="section-title" style="margin-top: 1.5cm; margin-bottom: 1.8cm; text-align: left;">Signatures:</div>
+            <div style="margin-bottom: 1cm;">
+                <div style="border-bottom: 2px solid #000; width: 100%; height: 1px; margin-bottom: 5px;"></div>
+                <div style="text-align: left; width: 100%; margin-top: 0; font-size: 9pt; padding-top: 2px;">Parent</div>
+            </div>
+            <div style="margin-bottom: 1cm;">
+                <div style="border-bottom: 2px solid #000; width: 100%; height: 1px; margin-bottom: 5px;"></div>
+                <table style="width: 100%; border-collapse: collapse; margin-top: 0;">
+                    <tr>
+                        <td style="border: none; padding: 2px 0; font-size: 9pt; width: 50%;">Academy Director</td>
+                        <td style="border: none; padding: 2px 0; font-size: 9pt; width: 50%; text-align: right;">Date</td>
+                    </tr>
+                </table>
+            </div>
         </div>
     </div>
 
-    <div class="section-title margin-top-1cm">Subject Grades & Teacher Comments:</div>
-    <table>
-        <thead>
-            <tr>
-                <th class="width-40">Subject/Teacher</th>
-<th class="width-10">Q1</th>
-<th class="width-10">Q2</th>
-<th class="width-10">Q3</th>
-<th class="width-10">Q4</th>
-<th class="width-20">Comments</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% if class_objects %}
-                {% for class_obj in class_objects %}
-                    {% set teacher = class_obj.teacher if class_obj.teacher else None %}
-                    <tr>
-                        <td style="font-weight: bold;">{{ class_obj.name }}<br><small style="font-weight: normal;">{{ (teacher.first_name + ' ' + teacher.last_name) if teacher else 'N/A' }}</small></td>
-                        {# Always show all 4 quarters, but only populate data for selected ones #}
-                        {% for quarter in ['Q1', 'Q2', 'Q3', 'Q4'] %}
-                            {% set is_selected = selected_quarters is defined and quarter in selected_quarters %}
-                            {% if is_selected and grades_by_quarter and grades_by_quarter.get(quarter) %}
-                                {% set q_grades = grades_by_quarter.get(quarter, {}) %}
-                                {% set class_grade = q_grades.get(class_obj.name, {}) if q_grades else {} %}
-                                {% set letter_grade = class_grade.get('letter', '') if class_grade else '' %}
-                                <td style="text-align: center;">{{ letter_grade if letter_grade else 'N/A' }}</td>
-                            {% else %}
-                                <td style="text-align: center;">N/A</td>
-                            {% endif %}
-                        {% endfor %}
-                        {# Show comments for current quarter only #}
-                        {% set current_class_grade = grades.get(class_obj.name, {}) if grades else {} %}
-                        <td style="font-size: 8.5pt;">{% if include_comments and current_class_grade.get('comments') %}{{ current_class_grade.get('comments', '')|nl2br }}{% else %}N/A{% endif %}</td>
-                    </tr>
-                {% endfor %}
-            {% else %}
-                {% if grades %}
-                    {% for subject, grade_info in grades.items() %}
+    <!-- PAGE 2: Header, Subject Grades & Teacher Comments, Additional Comment, Parent Comment -->
+    <div class="page-2-content">
+        {% include 'management/_report_card_header.html' %}
+
+        <p class="report-period-line"><strong>Report Period:</strong> {{ report_card.quarter }} - {{ generated_date.strftime('%m/%d/%Y') if generated_date else 'N/A' }}</p>
+
+        {# Calculate number of classes/subjects #}
+        {% if class_objects %}
+            {% set num_classes = class_objects|length %}
+        {% elif grades %}
+            {% set num_classes = grades|length %}
+        {% else %}
+            {% set num_classes = 0 %}
+        {% endif %}
+
+        {# Determine box height based on number of classes #}
+        {% if num_classes <= 5 %}
+            {% set box_height = 88 %}
+        {% elif num_classes == 6 %}
+            {% set box_height = 70 %}
+        {% elif num_classes == 7 %}
+            {% set box_height = 55 %}
+        {% elif num_classes == 8 %}
+            {% set box_height = 45 %}
+        {% else %}
+            {% set box_height = 35 %}
+        {% endif %}
+
+        <div class="section-title">Subject Grades & Teacher Comments:</div>
+        <table>
+            <thead>
+                <tr>
+                    <th class="width-40">Subject/Teacher</th>
+                    <th class="width-10">Q1</th>
+                    <th class="width-10">Q2</th>
+                    <th class="width-10">Q3</th>
+                    <th class="width-10">Q4</th>
+                    <th class="width-20">Comments</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if class_objects %}
+                    {% for class_obj in class_objects %}
+                        {% set teacher = class_obj.teacher if class_obj.teacher else None %}
                         <tr>
-                            <td style="font-weight: bold;">{{ subject }}</td>
+                            <td style="font-weight: bold;">{{ class_obj.name }}<br><small style="font-weight: normal;">{{ (teacher.first_name + ' ' + teacher.last_name) if teacher else 'N/A' }}</small></td>
                             {# Always show all 4 quarters, but only populate data for selected ones #}
                             {% for quarter in ['Q1', 'Q2', 'Q3', 'Q4'] %}
                                 {% set is_selected = selected_quarters is defined and quarter in selected_quarters %}
                                 {% if is_selected and grades_by_quarter and grades_by_quarter.get(quarter) %}
                                     {% set q_grades = grades_by_quarter.get(quarter, {}) %}
-                                    {% set q_grade_info = q_grades.get(subject, {}) if q_grades else {} %}
-                                    {% if q_grade_info is mapping %}
-                                        {% set letter_grade = q_grade_info.get('letter', '') %}
-                                    {% else %}
-                                        {% set letter_grade = '' %}
-                                    {% endif %}
+                                    {% set class_grade = q_grades.get(class_obj.name, {}) if q_grades else {} %}
+                                    {% set letter_grade = class_grade.get('letter', '') if class_grade else '' %}
                                     <td style="text-align: center;">{{ letter_grade if letter_grade else 'N/A' }}</td>
                                 {% else %}
                                     <td style="text-align: center;">N/A</td>
                                 {% endif %}
                             {% endfor %}
-                            <td>{% if include_comments and grade_info.get('comments') %}{{ grade_info.get('comments', '')|nl2br }}{% else %}N/A{% endif %}</td>
+                            {# Show comments for current quarter only #}
+                            {% set current_class_grade = grades.get(class_obj.name, {}) if grades else {} %}
+                            <td style="font-size: 8.5pt;">{% if include_comments and current_class_grade.get('comments') %}{{ current_class_grade.get('comments', '')|nl2br }}{% else %}N/A{% endif %}</td>
                         </tr>
                     {% endfor %}
                 {% else %}
-                    <tr><td colspan="6" style="text-align: center; padding: 15px; color: #666;">No grade data available</td></tr>
+                    {% if grades %}
+                        {% for subject, grade_info in grades.items() %}
+                            <tr>
+                                <td style="font-weight: bold;">{{ subject }}</td>
+                                {# Always show all 4 quarters, but only populate data for selected ones #}
+                                {% for quarter in ['Q1', 'Q2', 'Q3', 'Q4'] %}
+                                    {% set is_selected = selected_quarters is defined and quarter in selected_quarters %}
+                                    {% if is_selected and grades_by_quarter and grades_by_quarter.get(quarter) %}
+                                        {% set q_grades = grades_by_quarter.get(quarter, {}) %}
+                                        {% set q_grade_info = q_grades.get(subject, {}) if q_grades else {} %}
+                                        {% if q_grade_info is mapping %}
+                                            {% set letter_grade = q_grade_info.get('letter', '') %}
+                                        {% else %}
+                                            {% set letter_grade = '' %}
+                                        {% endif %}
+                                        <td style="text-align: center;">{{ letter_grade if letter_grade else 'N/A' }}</td>
+                                    {% else %}
+                                        <td style="text-align: center;">N/A</td>
+                                    {% endif %}
+                                {% endfor %}
+                                <td>{% if include_comments and grade_info.get('comments') %}{{ grade_info.get('comments', '')|nl2br }}{% else %}N/A{% endif %}</td>
+                            </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr><td colspan="6" style="text-align: center; padding: 15px; color: #666;">No grade data available</td></tr>
+                    {% endif %}
                 {% endif %}
-            {% endif %}
-        </tbody>
-    </table>
+            </tbody>
+        </table>
 
-    <div class="section-title">Additional Comment/Concern:</div>
-    <div class="comments-box min-height-50">
-        <p>N/A</p>
-    </div>
+        <div class="section-title margin-top-1cm">Additional Comment/Concern:</div>
+        <div class="comments-box" style="min-height: {{ box_height }}px; padding: 8px; margin-bottom: 0.6cm;">
+            <p style="margin: 0;">N/A</p>
+        </div>
 
-    <div class="footer">
-        <p>Parent Comment: ___________________________________</p>
-        <p>Parent Signature: ___________________________________ Date: _________________</p>
-        <p>Academy Director: ___________________________________ Date: _________________</p>
+        <div class="section-title" style="margin-top: 0.5cm;">Parent Comment:</div>
+        <div class="comments-box" style="min-height: {{ box_height }}px; padding: 8px; margin-bottom: 0;">
+            <p style="min-height: {{ box_height }}px; margin: 0;">&nbsp;</p>
+        </div>
     </div>
 </body>
 </html>

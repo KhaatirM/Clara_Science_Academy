@@ -2545,7 +2545,9 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                         {# Calculate percentage if not present #}
                                         {% set total_points = grade_data_dict.get('total_points') or grade_data_dict.get('max_score') or (assignment.total_points if assignment.total_points else 100.0) %}
                                         {% if total_points and total_points > 0 %}
-                                            {% set percentage = (score / total_points * 100) %}
+                                            {% set score_float = score|float %}
+                                            {% set total_points_float = total_points|float %}
+                                            {% set percentage = (score_float / total_points_float * 100) %}
                                         {% endif %}
                                     {% endif %}
                                 {% endif %}
@@ -2711,7 +2713,9 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                         {# Calculate percentage if not present #}
                                         {% set total_points = grade_data_dict.get('total_points') or grade_data_dict.get('max_score') or (assignment.total_points if assignment.total_points else 100.0) %}
                                         {% if total_points and total_points > 0 %}
-                                            {% set percentage = (score / total_points * 100) %}
+                                            {% set score_float = score|float %}
+                                            {% set total_points_float = total_points|float %}
+                                            {% set percentage = (score_float / total_points_float * 100) %}
                                         {% endif %}
                                     {% endif %}
                                 {% endif %}

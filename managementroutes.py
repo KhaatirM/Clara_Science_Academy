@@ -918,6 +918,79 @@ def get_student_classes(student_id):
             'message': str(e)
         }), 500
 
+@management_blueprint.route('/api/student/<int:student_id>/details', methods=['GET'])
+@login_required
+@management_required
+def get_student_details(student_id):
+    """Get detailed student information for report card confirmation"""
+    try:
+        from datetime import datetime
+        student = Student.query.get_or_404(student_id)
+        
+        # Format address
+        address_parts = []
+        if student.street:
+            address_parts.append(student.street)
+        if student.apt_unit:
+            address_parts.append(student.apt_unit)
+        if student.city:
+            address_parts.append(student.city)
+        if student.state:
+            address_parts.append(student.state)
+        if student.zip_code:
+            address_parts.append(student.zip_code)
+        address = ', '.join(address_parts) if address_parts else ''
+        
+        # Calculate expected graduation date
+        # Assuming graduation is in June of the year they reach 12th grade
+        expected_grad_date = None
+        if student.grade_level:
+            years_to_graduation = 12 - student.grade_level
+            if years_to_graduation >= 0:
+                current_year = datetime.now().year
+                grad_year = current_year + years_to_graduation
+                expected_grad_date = f"06/{grad_year}"
+        
+        # Format student ID
+        student_id_formatted = student.student_id if student.student_id else 'N/A'
+        if hasattr(student, 'student_id_formatted'):
+            student_id_formatted = student.student_id_formatted
+        
+        # Get SSN/State ID (might not exist in model)
+        ssn = getattr(student, 'ssn', None) or getattr(student, 'state_student_id', None) or 'N/A'
+        
+        # Get gender (might not exist in model)
+        gender = getattr(student, 'gender', None) or 'N/A'
+        
+        # Format DOB
+        dob = student.dob if student.dob else 'N/A'
+        
+        # Get entrance date (might not exist in model)
+        entrance_date = getattr(student, 'entrance_date', None) or ''
+        
+        student_data = {
+            'first_name': student.first_name,
+            'last_name': student.last_name,
+            'student_id': student_id_formatted,
+            'gender': gender,
+            'grade_level': student.grade_level,
+            'address': address,
+            'dob': dob,
+            'state_id': ssn,
+            'entrance_date': entrance_date,
+            'expected_grad_date': expected_grad_date
+        }
+        
+        return jsonify({
+            'success': True,
+            'student': student_data
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
+
 # Report Card Generation
 @management_blueprint.route('/report/card/generate', methods=['GET', 'POST'])
 @login_required
@@ -1142,15 +1215,34 @@ def generate_report_card_form():
                 except Exception:
                     return 'N/A'
 
+            # Get confirmation form values (use form values if provided, otherwise use student data)
+            confirm_gender = request.form.get('confirm_gender', '').strip()
+            confirm_address = request.form.get('confirm_address', '').strip()
+            confirm_dob = request.form.get('confirm_dob', '').strip()
+            confirm_entrance_date = request.form.get('confirm_entrance_date', '').strip()
+            confirm_first_name = request.form.get('confirm_first_name', '').strip()
+            confirm_last_name = request.form.get('confirm_last_name', '').strip()
+            
+            # Use confirmation values if provided, otherwise fall back to student data
+            student_name = f"{confirm_first_name} {confirm_last_name}".strip() if confirm_first_name or confirm_last_name else f"{student.first_name} {student.last_name}"
+            student_dob = _format_date_value(confirm_dob) if confirm_dob else _format_date_value(getattr(student, 'dob', None))
+            student_gender = confirm_gender if confirm_gender else getattr(student, 'gender', 'N/A')
+            student_address = confirm_address if confirm_address else f"{getattr(student, 'street', '')}, {getattr(student, 'city', '')}, {getattr(student, 'state', '')} {getattr(student, 'zip_code', '')}".strip(', ')
+            
+            # Get expected graduation date from form
+            confirm_expected_grad_date = request.form.get('confirm_expected_grad_date', '').strip()
+            
             student_data = {
-                'name': f"{student.first_name} {student.last_name}",
+                'name': student_name,
                 'student_id_formatted': student.student_id_formatted if hasattr(student, 'student_id_formatted') else (student.student_id if student.student_id else 'N/A'),
                 'ssn': getattr(student, 'ssn', None),
-                'dob': _format_date_value(getattr(student, 'dob', None)),
+                'dob': student_dob,
                 'grade': student.grade_level,
-                'gender': getattr(student, 'gender', 'N/A'),
-                'address': f"{getattr(student, 'street', '')}, {getattr(student, 'city', '')}, {getattr(student, 'state', '')} {getattr(student, 'zip_code', '')}".strip(', '),
-                'phone': getattr(student, 'phone', '')
+                'gender': student_gender,
+                'address': student_address,
+                'phone': getattr(student, 'phone', ''),
+                'entrance_date': _format_date_value(confirm_entrance_date) if confirm_entrance_date else 'N/A',
+                'expected_grad_date': confirm_expected_grad_date if confirm_expected_grad_date else 'N/A'
             }
             
             # Choose template based on grade level and report type

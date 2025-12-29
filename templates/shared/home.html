@@ -699,13 +699,69 @@
                     </div>
                     <div>
                         <h6 class="updates-intro-title mb-2">
-                            <i class="fas fa-calendar-alt me-2"></i>Latest System Update - December 28, 2025
+                            <i class="fas fa-calendar-alt me-2"></i>Latest System Update - Latest Updates
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>Interactive Quiz Assignment System!</strong> Powerful native quiz builder with Google Forms integration, auto-grading, multiple attempts, time limits, and comprehensive quiz management tools!</p>
+                        <p class="updates-intro-text mb-0"><strong>Quiz System Enhancements & Report Card Improvements!</strong> Enhanced quiz viewing experience, fixed grade calculations, improved report card PDF generation, and streamlined user interface updates!</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- Latest Updates - Quiz & Report Card Improvements -->
+                    <div class="update-section mb-4">
+                        <h6 class="text-primary mb-3" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+                            <i class="fas fa-bug me-2"></i>🔧 Latest Updates & Bug Fixes - Recent
+                        </h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Enhanced Quiz Assignment View Modal:</strong> Students can now view comprehensive quiz details including time limits, attempts remaining, scores, percentages, letter grades, and quiz settings directly from the dashboard. Beautiful modal interface with color-coded grade badges and detailed progress information
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Quiz Grading Logic Improvements:</strong> The grading page now only appears for quizzes with open-ended questions (short answer/essay) that require manual grading. Fully auto-graded quizzes show an "Auto-Graded" button with tooltip instead of a grading interface, streamlining the workflow
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Fixed Quiz Grade Calculation Bug:</strong> Resolved critical issue where students received "F" grades despite answering all questions correctly. The system now correctly uses percentage values instead of raw scores, ensuring accurate letter grade calculations (A, B, C, D, F) for all quiz assignments
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Google Sign-in Error Notification Fix:</strong> Fixed false error notifications appearing after successful Google OAuth logins. Users now see success messages when login succeeds, even if non-critical logging operations fail. Improved error handling prevents user confusion
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Quiz Assignment Type Cursor Fix:</strong> Removed "not-allowed" cursor from the "Questionnaire/Quiz Assignment" option on the assignment creation page. Quiz assignments are now fully available with normal pointer cursor and hover effects
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Report Card PDF Restructuring (4th-8th Grade):</strong> Completely redesigned report card layout to a clean 2-page format. Page 1 includes header, progress/grades section, and signatures. Page 2 contains subject grades & teacher comments table, additional comments, and parent comment section. Dynamic comment box sizing based on number of classes ensures content fits perfectly without creating a third page
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Report Card Header Styling Improvements:</strong> Removed horizontal lines between labels and values in student and school info sections for a cleaner appearance. Increased border thickness to 2px for better visibility. Made student and school info boxes symmetrical in height. Bold and italic styling for "Clara Science Academy" school name
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Report Card Column Width Optimization:</strong> Reduced quarter columns (Q1-Q4) width to 6% each (from 10%) to accommodate letter grades like "A+" or "N/A". Slightly reduced Subject/Teacher column to 35% (from 40%). Increased Comments column to 41% (from 20%) providing significantly more space for teacher feedback
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>PDF Generation Form Enhancements:</strong> Added comprehensive confirmation section with student and school information fields. Student fields include: First & Last Name (read-only), Student ID (read-only), Gender (editable), Grade (read-only), Address (editable), DOB (editable), State ID (read-only). School fields include: Entrance Date (editable), Expected Graduation Date (auto-calculated based on current grade). Auto-calculation determines graduation year in June based on years remaining to 12th grade
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Feature Development Indicators:</strong> Added "In Development" badges to "Include Comments" and "Include Attendance" options in the PDF generation form. Clear visual indicators with disabled state prevent confusion about feature availability while maintaining professional appearance
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Administrator Dashboard Statistics Fix:</strong> Fixed month-over-month percentage calculations to show accurate changes based on actual data. Active Assignments card now correctly displays only active assignments instead of total assignments. Statistics now reflect real changes with proper up/down indicators and "No change" messages when applicable
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.1) 100%); border-color: #f59e0b;">
+                            <p class="mb-0"><strong>💡 User Experience Improvements:</strong> These updates focus on bug fixes, accuracy improvements, and enhanced user experience. Quiz assignments now provide better feedback, report cards have improved layouts and readability, and the PDF generation process includes comprehensive information confirmation steps!</p>
+                        </div>
+                    </div>
+
                     <!-- December 28, 2025 - Quiz Assignment System -->
                     <div class="update-section mb-4">
                         <h6 class="text-primary mb-3" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">

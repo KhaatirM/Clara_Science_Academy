@@ -94,6 +94,86 @@
 
             <hr class="my-5">
 
+            <!-- Step 1.5: Confirm Student & School Information -->
+            <div class="form-section mb-5" id="confirmation-section" style="display: none;">
+              <div class="section-header mb-4">
+                <div class="section-icon">
+                  <i class="bi bi-check-circle"></i>
+                </div>
+                <div>
+                  <h5 class="fw-bold mb-1">2. Confirm Information</h5>
+                  <p class="text-muted mb-0 small">Please review and confirm the student and school information</p>
+                </div>
+              </div>
+              <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                  <div class="row g-4">
+                    <!-- Student Information -->
+                    <div class="col-md-6">
+                      <h6 class="fw-bold mb-3 text-primary">
+                        <i class="bi bi-person me-2"></i>Student Information
+                      </h6>
+                      <div class="row g-3">
+                        <div class="col-12">
+                          <label class="form-label fw-semibold">Student First & Last Name</label>
+                          <input type="text" class="form-control" id="confirm_first_name" name="confirm_first_name" readonly>
+                          <input type="text" class="form-control mt-2" id="confirm_last_name" name="confirm_last_name" readonly>
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label fw-semibold">Student ID</label>
+                          <input type="text" class="form-control" id="confirm_student_id" name="confirm_student_id" readonly>
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label fw-semibold">Student Gender</label>
+                          <select class="form-select" id="confirm_gender" name="confirm_gender">
+                            <option value="">Select Gender</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                            <option value="Prefer not to say">Prefer not to say</option>
+                          </select>
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label fw-semibold">Student Grade</label>
+                          <input type="text" class="form-control" id="confirm_grade" name="confirm_grade" readonly>
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label fw-semibold">Student Address</label>
+                          <textarea class="form-control" id="confirm_address" name="confirm_address" rows="3"></textarea>
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label fw-semibold">Student DOB</label>
+                          <input type="text" class="form-control" id="confirm_dob" name="confirm_dob" placeholder="MM/DD/YYYY">
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label fw-semibold">Student State ID</label>
+                          <input type="text" class="form-control" id="confirm_state_id" name="confirm_state_id" readonly>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- School Information -->
+                    <div class="col-md-6">
+                      <h6 class="fw-bold mb-3 text-primary">
+                        <i class="bi bi-building me-2"></i>School Information
+                      </h6>
+                      <div class="row g-3">
+                        <div class="col-12">
+                          <label class="form-label fw-semibold">Entrance Date</label>
+                          <input type="text" class="form-control" id="confirm_entrance_date" name="confirm_entrance_date" placeholder="MM/DD/YYYY">
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label fw-semibold">Expected to Graduate Date</label>
+                          <input type="text" class="form-control" id="confirm_expected_grad_date" name="confirm_expected_grad_date" readonly>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <hr class="my-5" id="confirmation-separator" style="display: none;">
+
             <!-- Step 2: Select Classes -->
             <div class="form-section mb-5">
               <div class="section-header mb-4">
@@ -101,7 +181,7 @@
                   <i class="bi bi-book"></i>
                 </div>
                 <div>
-                  <h5 class="fw-bold mb-1">2. Select Classes</h5>
+                  <h5 class="fw-bold mb-1">3. Select Classes</h5>
                   <p class="text-muted mb-0 small">Choose one or more classes to include in the report card</p>
                 </div>
               </div>
@@ -135,7 +215,7 @@
                   <i class="bi bi-calendar3"></i>
                 </div>
                 <div>
-                  <h5 class="fw-bold mb-1">3. Select School Year & Quarters</h5>
+                  <h5 class="fw-bold mb-1">4. Select School Year & Quarters</h5>
                   <p class="text-muted mb-0 small">Choose the school year and which quarters to include in the report card</p>
                 </div>
               </div>
@@ -210,7 +290,7 @@
                   <i class="bi bi-gear"></i>
                 </div>
                 <div>
-                  <h5 class="fw-bold mb-1">4. Select Options</h5>
+                  <h5 class="fw-bold mb-1">5. Select Options</h5>
                   <p class="text-muted mb-0 small">Configure report card settings and additional information</p>
                 </div>
               </div>
@@ -243,10 +323,13 @@
                       </div>
                     </div>
                     <div class="col-md-6">
-                      <div class="option-card">
+                      <div class="option-card position-relative" style="opacity: 0.7; cursor: not-allowed;">
+                        <span class="badge bg-warning text-dark position-absolute top-0 start-50 translate-middle-x" style="z-index: 10; font-size: 0.75rem; padding: 0.25rem 0.5rem;">
+                          In Development
+                        </span>
                         <div class="form-check form-switch form-switch-lg">
-                          <input class="form-check-input" type="checkbox" id="include_attendance" name="include_attendance">
-                          <label class="form-check-label" for="include_attendance">
+                          <input class="form-check-input" type="checkbox" id="include_attendance" name="include_attendance" disabled>
+                          <label class="form-check-label" for="include_attendance" style="cursor: not-allowed;">
                             <div class="d-flex align-items-center">
                               <div class="option-icon me-3">
                                 <i class="bi bi-calendar-check"></i>
@@ -263,10 +346,13 @@
                   </div>
                   <div class="row g-3 mt-2">
                     <div class="col-md-6">
-                      <div class="option-card">
+                      <div class="option-card position-relative" style="opacity: 0.7; cursor: not-allowed;">
+                        <span class="badge bg-warning text-dark position-absolute top-0 start-50 translate-middle-x" style="z-index: 10; font-size: 0.75rem; padding: 0.25rem 0.5rem;">
+                          In Development
+                        </span>
                         <div class="form-check form-switch form-switch-lg">
-                          <input class="form-check-input" type="checkbox" id="include_comments" name="include_comments">
-                          <label class="form-check-label" for="include_comments">
+                          <input class="form-check-input" type="checkbox" id="include_comments" name="include_comments" disabled>
+                          <label class="form-check-label" for="include_comments" style="cursor: not-allowed;">
                             <div class="d-flex align-items-center">
                               <div class="option-icon me-3">
                                 <i class="bi bi-chat-text"></i>
@@ -319,12 +405,18 @@ document.addEventListener('DOMContentLoaded', function() {
   const classesList = document.getElementById('classes-list');
   const generateBtn = document.getElementById('generateBtn');
 
-  // Load classes when student is selected (or on page load if pre-selected)
+  const confirmationSection = document.getElementById('confirmation-section');
+  const confirmationSeparator = document.getElementById('confirmation-separator');
+
+  // Load classes and student details when student is selected (or on page load if pre-selected)
   if (studentSelect) {
     studentSelect.addEventListener('change', function() {
       if (this.value) {
+        loadStudentDetails(this.value);
         loadStudentClasses(this.value);
       } else {
+        confirmationSection.style.display = 'none';
+        confirmationSeparator.style.display = 'none';
         classesContainer.style.display = 'none';
         noClassesMessage.style.display = 'block';
         noClassesMessage.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>Please select a student first to see their enrolled classes.';
@@ -333,10 +425,48 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
-  // Auto-load classes if student is pre-selected
+  // Auto-load student details and classes if student is pre-selected
   const studentIdField = document.getElementById('student_id');
   if (studentIdField && studentIdField.value) {
+    loadStudentDetails(studentIdField.value);
     loadStudentClasses(studentIdField.value);
+  }
+
+  function loadStudentDetails(studentId) {
+    fetch(`/management/api/student/${studentId}/details`)
+      .then(response => response.json())
+      .then(data => {
+        if (data.success && data.student) {
+          const student = data.student;
+          
+          // Populate readonly fields
+          document.getElementById('confirm_first_name').value = student.first_name || '';
+          document.getElementById('confirm_last_name').value = student.last_name || '';
+          document.getElementById('confirm_student_id').value = student.student_id || 'N/A';
+          document.getElementById('confirm_grade').value = student.grade_level || '';
+          document.getElementById('confirm_state_id').value = student.state_id || 'N/A';
+          document.getElementById('confirm_expected_grad_date').value = student.expected_grad_date || '';
+          
+          // Populate editable fields
+          document.getElementById('confirm_gender').value = student.gender || '';
+          document.getElementById('confirm_address').value = student.address || '';
+          document.getElementById('confirm_dob').value = student.dob || '';
+          document.getElementById('confirm_entrance_date').value = student.entrance_date || '';
+          
+          // Show confirmation section
+          confirmationSection.style.display = 'block';
+          confirmationSeparator.style.display = 'block';
+        } else {
+          console.error('Failed to load student details');
+          confirmationSection.style.display = 'none';
+          confirmationSeparator.style.display = 'none';
+        }
+      })
+      .catch(error => {
+        console.error('Error loading student details:', error);
+        confirmationSection.style.display = 'none';
+        confirmationSeparator.style.display = 'none';
+      });
   }
 
   function loadStudentClasses(studentId) {

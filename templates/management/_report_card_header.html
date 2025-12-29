@@ -51,23 +51,21 @@
                     <td class="school-name-label" colspan="2">School Name & Address:</td>
                 </tr>
                 <tr>
-                    <td class="school-name-value" colspan="2">Clara Science Academy<br>3015 East Bessemer Ave<br>Greensboro, NC 27405</td>
+                    <td class="school-name-value" colspan="2"><strong><em>Clara Science Academy</em></strong><br>3015 East Bessemer Ave<br>Greensboro, NC 27405</td>
                 </tr>
                 <tr>
-                    <td class="school-phone-label">Ph:</td>
-                    <td class="school-ceeb-label">CEEB:</td>
+                    <td class="school-phone-label" colspan="2">Ph:</td>
                 </tr>
                 <tr>
-                    <td class="school-phone-value">866-728-2751</td>
-                    <td class="school-ceeb-value">N/A</td>
+                    <td class="school-phone-value" colspan="2">866-728-2751</td>
                 </tr>
                 <tr>
                     <td class="school-entrance-label">Entrance Date:</td>
                     <td class="school-grad-label">Expected to Graduate:</td>
                 </tr>
                 <tr>
-                    <td class="school-entrance-value">N/A</td>
-                    <td class="school-grad-value">N/A</td>
+                    <td class="school-entrance-value">{{ student.entrance_date if student.entrance_date else 'N/A' }}</td>
+                    <td class="school-grad-value">{{ student.expected_grad_date if student.expected_grad_date else 'N/A' }}</td>
                 </tr>
             </table>
         </td>

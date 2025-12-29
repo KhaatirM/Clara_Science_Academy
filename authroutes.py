@@ -848,23 +848,37 @@ def google_callback():
     except Exception as e:
         current_app.logger.error(f"Error in Google OAuth callback: {str(e)}")
         
-        # Log the error
-        log_activity(
-            user_id=None,
-            action='google_callback_error',
-            details={'error': str(e), 'url': request.url},
-            ip_address=request.remote_addr,
-            user_agent=request.headers.get('User-Agent'),
-            success=False,
-            error_message=str(e)
-        )
+        # Check if user is already logged in (login may have succeeded before exception)
+        user_id = None
+        if current_user.is_authenticated:
+            user_id = current_user.id
         
-        flash(
-            'An error occurred while signing in with Google. Please try again or use your password to login.',
-            'danger'
-        )
+        # Log the error
+        try:
+            log_activity(
+                user_id=user_id,
+                action='google_callback_error',
+                details={'error': str(e), 'url': request.url},
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get('User-Agent'),
+                success=False,
+                error_message=str(e)
+            )
+        except:
+            # If logging fails, continue anyway
+            pass
         
         # Clear the OAuth state from session
         session.pop('oauth_state', None)
         
+        # If user is already logged in, redirect to dashboard (login succeeded)
+        if current_user.is_authenticated:
+            flash('Logged in successfully with Google.', 'success')
+            return redirect(url_for('auth.dashboard'))
+        
+        # Otherwise, show error and redirect to login
+        flash(
+            'An error occurred while signing in with Google. Please try again or use your password to login.',
+            'danger'
+        )
         return redirect(url_for('auth.login'))

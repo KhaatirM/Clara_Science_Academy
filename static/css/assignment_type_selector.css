@@ -405,21 +405,18 @@
     font-size: 1.25rem;
 }
 
-/* Disabled State for In Development */
-.assignment-type-card[data-type="quiz"] .select-assignment-type,
+/* Disabled State for In Development (Discussion Only) */
 .assignment-type-card[data-type="discussion"] .select-assignment-type {
     position: relative;
     opacity: 0.7;
     cursor: not-allowed;
 }
 
-.assignment-type-card[data-type="quiz"]:hover,
 .assignment-type-card[data-type="discussion"]:hover {
     cursor: not-allowed;
     transform: none;
 }
 
-.assignment-type-card[data-type="quiz"]:hover .select-assignment-type,
 .assignment-type-card[data-type="discussion"]:hover .select-assignment-type {
     transform: none;
     box-shadow: none;

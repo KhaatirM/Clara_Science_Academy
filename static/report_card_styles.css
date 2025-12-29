@@ -53,6 +53,7 @@ body {
     border: 1px solid black;
     border-left: none;
     padding: 0;
+    padding-bottom: 1.2cm;
 }
 
 /* Header: Central Column Content (Logo & Title) */
@@ -123,39 +124,89 @@ body {
 }
 
 /* Specific Border and Style Rules for Info Grid Cells */
-/* All label cells - bold font */
+/* Student info label cells - remove bottom border to eliminate horizontal line between label and value */
 .info-grid-table .student-name-label,
 .info-grid-table .id-label-cell,
 .info-grid-table .state-id-label-cell,
 .info-grid-table .dob-label-cell,
 .info-grid-table .grade-label-cell,
 .info-grid-table .gender-label-cell,
-.info-grid-table .address-label-cell,
-.info-grid-table .school-name-label,
-.info-grid-table .school-phone-label,
-.info-grid-table .school-ceeb-label,
-.info-grid-table .school-entrance-label,
-.info-grid-table .school-grad-label {
-    border: 1px solid black;
+.info-grid-table .address-label-cell {
+    border-left: 2px solid black;
+    border-right: 2px solid black;
+    border-top: 2px solid black;
+    border-bottom: none;
     font-weight: bold;
     padding: 4px 6px;
     background-color: #ffffff;
 }
 
-/* All value cells - normal font */
+/* Student info value cells - remove top border, add bottom border only on last row (address) */
 .info-grid-table .student-name-value,
 .info-grid-table .id-value-cell,
 .info-grid-table .state-id-value-cell,
 .info-grid-table .dob-value-cell,
 .info-grid-table .grade-value-cell,
-.info-grid-table .gender-value-cell,
-.info-grid-table .address-value-cell,
+.info-grid-table .gender-value-cell {
+    border-left: 2px solid black;
+    border-right: 2px solid black;
+    border-top: none;
+    border-bottom: none;
+    font-weight: normal;
+    padding: 4px 6px;
+    background-color: #ffffff;
+    vertical-align: top;
+    white-space: normal;
+}
+
+/* Address value cell (last row) - needs bottom border */
+.info-grid-table .address-value-cell {
+    border-left: 2px solid black;
+    border-right: 2px solid black;
+    border-top: none;
+    border-bottom: 2px solid black;
+    font-weight: normal;
+    padding: 4px 6px;
+    background-color: #ffffff;
+    vertical-align: top;
+    white-space: normal;
+}
+
+/* School info label cells - remove bottom border to eliminate horizontal line between label and value */
+.info-grid-table .school-name-label,
+.info-grid-table .school-phone-label,
+.info-grid-table .school-entrance-label,
+.info-grid-table .school-grad-label {
+    border-left: 2px solid black;
+    border-right: 2px solid black;
+    border-top: 2px solid black;
+    border-bottom: none;
+    font-weight: bold;
+    padding: 4px 6px;
+    background-color: #ffffff;
+}
+
+/* School info value cells - remove top border, add bottom border only on last row */
 .info-grid-table .school-name-value,
-.info-grid-table .school-phone-value,
-.info-grid-table .school-ceeb-value,
+.info-grid-table .school-phone-value {
+    border-left: 2px solid black;
+    border-right: 2px solid black;
+    border-top: none;
+    border-bottom: none;
+    font-weight: normal;
+    padding: 4px 6px;
+    background-color: #ffffff;
+    vertical-align: top;
+    white-space: normal;
+}
+
+/* School entrance and grad value cells - last row needs bottom border */
 .info-grid-table .school-entrance-value,
 .info-grid-table .school-grad-value {
-    border: 1px solid black;
+    border-left: 2px solid black;
+    border-right: 2px solid black;
+    border-top: none;
+    border-bottom: 2px solid black;
     font-weight: normal;
     padding: 4px 6px;
     background-color: #ffffff;
@@ -187,15 +238,15 @@ table {
 }
 
 .width-40 {
-    width: 40%;
+    width: 35%;
 }
 
 .width-10 {
-    width: 10%;
+    width: 6%;
 }
 
 .width-20 {
-    width: 20%;
+    width: 41%;
 }
 
 .margin-top-1cm {

@@ -8,7 +8,7 @@ from decorators import management_required
 from .utils import update_assignment_statuses, get_current_quarter, calculate_student_gpa
 from models import (
     db, Class, Assignment, Student, Grade, Submission, 
-    Notification, TeacherStaff, SchoolYear, Enrollment
+    Notification, TeacherStaff, SchoolYear, Enrollment, User
 )
 from sqlalchemy import or_, and_
 import json
@@ -54,8 +54,86 @@ def management_dashboard():
         # Calculate monthly and weekly stats
         now = datetime.now()
         month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        
+        # Calculate last month's start date
+        if month_start.month == 1:
+            last_month_start = datetime(month_start.year - 1, 12, 1)
+        else:
+            last_month_start = datetime(month_start.year, month_start.month - 1, 1)
+        
         week_start = now - timedelta(days=now.weekday())
         week_end = week_start + timedelta(days=7)
+        
+        # Calculate month-over-month changes
+        # Students: Use User model's created_at where student_id is not None
+        students_this_month = User.query.filter(
+            User.student_id.isnot(None),
+            User.created_at >= month_start
+        ).count()
+        
+        students_last_month = User.query.filter(
+            User.student_id.isnot(None),
+            User.created_at >= last_month_start,
+            User.created_at < month_start
+        ).count()
+        
+        # Calculate percentage change for students
+        if students_last_month > 0:
+            students_change_percent = round(((students_this_month - students_last_month) / students_last_month) * 100, 1)
+        else:
+            students_change_percent = 100.0 if students_this_month > 0 else 0.0
+        
+        # Teachers: Use User model's created_at where teacher_staff_id is not None
+        teachers_this_month = User.query.filter(
+            User.teacher_staff_id.isnot(None),
+            User.created_at >= month_start
+        ).count()
+        
+        teachers_last_month = User.query.filter(
+            User.teacher_staff_id.isnot(None),
+            User.created_at >= last_month_start,
+            User.created_at < month_start
+        ).count()
+        
+        # Calculate percentage change for teachers
+        if teachers_last_month > 0:
+            teachers_change_percent = round(((teachers_this_month - teachers_last_month) / teachers_last_month) * 100, 1)
+        else:
+            teachers_change_percent = 100.0 if teachers_this_month > 0 else 0.0
+        
+        # Classes: Use Class model's created_at
+        classes_this_month = Class.query.filter(
+            Class.created_at >= month_start
+        ).count()
+        
+        classes_last_month = Class.query.filter(
+            Class.created_at >= last_month_start,
+            Class.created_at < month_start
+        ).count()
+        
+        # Calculate percentage change for classes
+        if classes_last_month > 0:
+            classes_change_percent = round(((classes_this_month - classes_last_month) / classes_last_month) * 100, 1)
+        else:
+            classes_change_percent = 100.0 if classes_this_month > 0 else 0.0
+        
+        # Active Assignments: Use Assignment model's created_at for Active status
+        active_assignments_this_month = Assignment.query.filter(
+            Assignment.status == 'Active',
+            Assignment.created_at >= month_start
+        ).count()
+        
+        active_assignments_last_month = Assignment.query.filter(
+            Assignment.status == 'Active',
+            Assignment.created_at >= last_month_start,
+            Assignment.created_at < month_start
+        ).count()
+        
+        # Calculate percentage change for active assignments
+        if active_assignments_last_month > 0:
+            assignments_change_percent = round(((active_assignments_this_month - active_assignments_last_month) / active_assignments_last_month) * 100, 1)
+        else:
+            assignments_change_percent = 100.0 if active_assignments_this_month > 0 else 0.0
         
         # Assignments due this week
         due_assignments = Assignment.query.filter(
@@ -111,13 +189,18 @@ def management_dashboard():
         
         # Create stats object for template compatibility
         stats = {
-            'total_students': total_students,
-            'total_teachers': total_teachers,
-            'total_classes': total_classes,
+            'students': total_students,
+            'teachers': total_teachers,
+            'classes': total_classes,
+            'assignments': active_assignments,  # Show active assignments count
             'total_assignments': total_assignments,
             'active_assignments': active_assignments,
             'due_assignments': due_assignments,
-            'grades_entered': grades_this_month
+            'grades_entered': grades_this_month,
+            'students_change_percent': students_change_percent,
+            'teachers_change_percent': teachers_change_percent,
+            'classes_change_percent': classes_change_percent,
+            'assignments_change_percent': assignments_change_percent
         }
         
         # --- AT-RISK STUDENT ALERTS ---

@@ -88,7 +88,18 @@
                         Start New DM
                     </button>
                     {% endif %}
-                    {% if direct_messages %}
+                    {% if dm_conversations %}
+                        {% for dm in dm_conversations %}
+                        <div class="comm-channel-item {% if active_channel_id == dm.id %}active{% endif %}" 
+                             onclick="loadDirectMessage({{ dm.other_user_id }})">
+                            <i class="bi bi-person-circle me-2"></i>
+                            <span class="channel-name">{{ dm.name }}</span>
+                            {% if dm.unread_count > 0 %}
+                            <span class="channel-badge">{{ dm.unread_count }}</span>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    {% elif direct_messages %}
                         {% for dm in direct_messages %}
                         <div class="comm-channel-item {% if active_channel_id == dm.id %}active{% endif %}" 
                              onclick="loadDirectMessage({{ dm.other_user_id }})">
@@ -430,6 +441,7 @@
 <script>
 let currentChannelId = null;
 let currentChannelType = null;
+let currentDirectMessageUserId = null; // Store the other user ID for DMs
 let messagePollInterval = null;
 let pollingChannelId = null; // Track which channel we're polling for
 
@@ -558,8 +570,10 @@ function loadDirectMessage(otherUserId) {
         pollingChannelId = null;
     }
     
+    // Store the other user ID for sending messages
     currentChannelId = null;
     currentChannelType = 'direct';
+    currentDirectMessageUserId = otherUserId;  // Store for sendMessage
     
     // Update UI
     document.querySelectorAll('.comm-channel-item').forEach(item => item.classList.remove('active'));
@@ -574,6 +588,8 @@ function loadDirectMessage(otherUserId) {
                     title: `Direct Message: ${data.other_user_name}`,
                     description: 'Private conversation'
                 });
+                // Show message input for DMs
+                document.getElementById('message-input-container').style.display = 'block';
             }
         })
         .catch(error => {
@@ -733,30 +749,49 @@ function sendMessage(event) {
     const input = document.getElementById('message-input');
     const content = input.value.trim();
     
-    if (!content || !currentChannelId) return;
+    if (!content) return;
+    
+    // Prepare request body based on channel type
+    let requestBody = {
+        channel_type: currentChannelType,
+        content: content
+    };
+    
+    // For direct messages, use recipient_id instead of channel_id
+    if (currentChannelType === 'direct' && currentDirectMessageUserId) {
+        requestBody.recipient_id = currentDirectMessageUserId;
+        requestBody.channel_id = null;  // Explicitly set to null for virtual DM channels
+    } else if (currentChannelId) {
+        requestBody.channel_id = currentChannelId;
+    } else {
+        alert('Error: Cannot send message. No channel or recipient selected.');
+        return;
+    }
     
     fetch('/communications/api/send-message', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-            channel_id: currentChannelId,
-            channel_type: currentChannelType,
-            content: content
-        })
+        body: JSON.stringify(requestBody)
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
             input.value = '';
             // Reload messages
-            if (currentChannelType === 'direct') {
-                loadDirectMessage(data.other_user_id);
-            } else {
+            if (currentChannelType === 'direct' && currentDirectMessageUserId) {
+                loadDirectMessage(currentDirectMessageUserId);
+            } else if (currentChannelId) {
                 loadChannel(currentChannelId, currentChannelType);
             }
+        } else {
+            alert('Error: ' + (data.message || 'Failed to send message'));
         }
+    })
+    .catch(error => {
+        console.error('Error sending message:', error);
+        alert('An error occurred while sending the message');
     });
 }
 

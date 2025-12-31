@@ -17,7 +17,7 @@ bp = Blueprint('communications', __name__)
 @teacher_required
 def communications_hub():
     """Main communications hub for teachers."""
-    from shared_communications import get_user_channels, get_direct_messages, get_user_announcements, ensure_class_channel_exists
+    from shared_communications import get_user_channels, get_direct_messages, get_user_announcements, ensure_class_channel_exists, get_dm_conversations
     from models import Class, Enrollment, MessageGroup, MessageGroupMember, Message
     
     # Get teacher's classes
@@ -37,6 +37,8 @@ def communications_hub():
     class_channels = get_user_channels(current_user.id, current_user.role)
     # Teachers cannot see student DMs or student groups
     direct_messages = get_direct_messages(current_user.id, current_user.role)
+    # Get DM conversations for sidebar injection
+    dm_conversations = get_dm_conversations(current_user.id, current_user.role)
     announcements = get_user_announcements(current_user.id, current_user.role)
     unread_announcements = len([a for a in announcements if not a.get('read', False)])
     
@@ -67,11 +69,13 @@ def communications_hub():
     return render_template('shared/communications_hub.html',
                          class_channels=class_channels,
                          direct_messages=direct_messages,
+                         dm_conversations=dm_conversations,
                          announcements=announcements,
                          unread_announcements_count=unread_announcements,
                          available_classes=classes,
                          active_channel_id=None,
-                         active_view=None,
+                         active_view='hub',
+                         active_tab='hub',
                          staff_channels=staff_channels,
                          student_groups=[])  # Teachers don't have student groups
 

@@ -2641,7 +2641,7 @@ def delete_goal(goal_id):
 @student_required
 def student_communications():
     """Main communications hub for students."""
-    from shared_communications import get_user_channels, get_direct_messages, get_user_announcements, ensure_class_channel_exists
+    from shared_communications import get_user_channels, get_direct_messages, get_user_announcements, ensure_class_channel_exists, get_dm_conversations
     
     student = Student.query.get_or_404(current_user.student_id)
     
@@ -2661,6 +2661,8 @@ def student_communications():
     
     # Get direct messages (students can see all their DMs)
     direct_messages = get_direct_messages(current_user.id, 'Student')
+    # Get DM conversations for sidebar injection
+    dm_conversations = get_dm_conversations(current_user.id, 'Student')
     
     # Get student-created groups (including old groups that might not have group_type set)
     student_groups = []
@@ -2711,11 +2713,13 @@ def student_communications():
     return render_template('shared/communications_hub.html',
                          class_channels=class_channels,
                          direct_messages=direct_messages,
+                         dm_conversations=dm_conversations,
                          announcements=announcements,
                          unread_announcements_count=unread_announcements,
                          available_classes=available_classes,
                          active_channel_id=None,
-                         active_view=None,
+                         active_view='hub',
+                         active_tab='hub',
                          staff_channels=[])
 
 @student_blueprint.route('/communications/messages')

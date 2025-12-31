@@ -348,3 +348,71 @@ def ensure_class_channel_exists(class_id):
     db.session.commit()
     return new_group
 
+def get_dm_conversations(user_id, user_role=None):
+    """Get DM conversations as a list for sidebar injection (virtual channels)."""
+    # Find all unique users the current_user has exchanged messages with where group_id is NULL
+    # This creates "virtual channels" for DMs
+    sent_partners = db.session.query(Message.recipient_id).filter(
+        Message.sender_id == user_id,
+        Message.group_id.is_(None),
+        Message.recipient_id.isnot(None)
+    ).distinct().all()
+    
+    received_partners = db.session.query(Message.sender_id).filter(
+        Message.recipient_id == user_id,
+        Message.group_id.is_(None),
+        Message.sender_id.isnot(None)
+    ).distinct().all()
+    
+    # Get unique partner IDs
+    partner_ids = set()
+    for partner in sent_partners:
+        if partner[0]:
+            partner_ids.add(partner[0])
+    for partner in received_partners:
+        if partner[0]:
+            partner_ids.add(partner[0])
+    
+    dm_conversations = []
+    for partner_id in partner_ids:
+        # Filter: Teachers cannot see student-to-student DMs
+        if user_role and 'Teacher' in user_role and user_role not in ['Director', 'School Administrator']:
+            partner = User.query.get(partner_id)
+            if partner and partner.role == 'Student':
+                current_user_obj = User.query.get(user_id)
+                if current_user_obj and current_user_obj.role == 'Student':
+                    pass  # Students can see student DMs
+                else:
+                    continue  # Skip student DMs for teachers
+        
+        # Get latest message
+        latest_msg = Message.query.filter(
+            or_(
+                and_(Message.sender_id == user_id, Message.recipient_id == partner_id),
+                and_(Message.sender_id == partner_id, Message.recipient_id == user_id)
+            ),
+            Message.group_id.is_(None),
+            Message.recipient_id.isnot(None)
+        ).order_by(Message.created_at.desc()).first()
+        
+        if latest_msg:
+            other_user = User.query.get(partner_id)
+            if other_user:
+                unread = Message.query.filter(
+                    Message.sender_id == partner_id,
+                    Message.recipient_id == user_id,
+                    Message.group_id.is_(None),
+                    Message.is_read == False
+                ).count()
+                
+                dm_conversations.append({
+                    'id': f'dm_{partner_id}',  # Virtual ID for DM
+                    'name': other_user.username,
+                    'other_user_id': partner_id,
+                    'type': 'direct',
+                    'unread_count': unread,
+                    'is_virtual': True  # Flag to indicate this is a virtual channel
+                })
+    
+    return dm_conversations
+

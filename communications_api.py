@@ -236,12 +236,13 @@ def send_message_api():
             if not recipient_id:
                 return jsonify({'success': False, 'message': 'Recipient is required'}), 400
             
-            # Create direct message
+            # Create direct message with NULL group_id for virtual DM channels
             message = Message(
                 sender_id=current_user.id,
                 recipient_id=recipient_id,
                 content=content,
-                message_type='direct'
+                message_type='direct',
+                group_id=None  # Explicitly set to None for virtual DM channels
             )
             db.session.add(message)
             

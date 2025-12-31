@@ -2386,6 +2386,9 @@ def manage_class(class_id):
 @management_required
 def edit_class(class_id):
     """Edit a specific class."""
+    from models import ClassSchedule
+    from datetime import time
+    
     class_obj = Class.query.get_or_404(class_id)
     
     if request.method == 'POST':
@@ -2420,6 +2423,43 @@ def edit_class(class_id):
                     if teacher:
                         class_obj.additional_teachers.append(teacher)
             
+            # Handle ClassSchedule records
+            # Delete existing schedules for this class
+            ClassSchedule.query.filter_by(class_id=class_id).delete()
+            
+            # Process schedule data from form
+            # Format: schedule_day_0, schedule_start_0, schedule_end_0, schedule_room_0, etc.
+            schedule_index = 0
+            while True:
+                day_checkbox = request.form.get(f'schedule_day_{schedule_index}')
+                if not day_checkbox:
+                    break
+                
+                day_of_week = request.form.get(f'schedule_day_value_{schedule_index}', type=int)
+                start_time_str = request.form.get(f'schedule_start_{schedule_index}', '').strip()
+                end_time_str = request.form.get(f'schedule_end_{schedule_index}', '').strip()
+                room = request.form.get(f'schedule_room_{schedule_index}', '').strip() or None
+                
+                # Only create schedule if day, start_time, and end_time are provided
+                if day_of_week is not None and start_time_str and end_time_str:
+                    try:
+                        start_time = datetime.strptime(start_time_str, '%H:%M').time()
+                        end_time = datetime.strptime(end_time_str, '%H:%M').time()
+                        
+                        new_schedule = ClassSchedule(
+                            class_id=class_id,
+                            day_of_week=day_of_week,
+                            start_time=start_time,
+                            end_time=end_time,
+                            room=room
+                        )
+                        db.session.add(new_schedule)
+                    except ValueError:
+                        # Invalid time format, skip this schedule
+                        pass
+                
+                schedule_index += 1
+            
             db.session.commit()
             flash(f'Class "{class_obj.name}" updated successfully!', 'success')
             return redirect(url_for('management.classes'))
@@ -2431,7 +2471,13 @@ def edit_class(class_id):
     
     # GET request - show edit form
     teachers = TeacherStaff.query.all()
-    return render_template('management/edit_class.html', class_info=class_obj, available_teachers=teachers)
+    # Get existing schedules for this class
+    from models import ClassSchedule
+    schedules = ClassSchedule.query.filter_by(class_id=class_id).order_by(ClassSchedule.day_of_week, ClassSchedule.start_time).all()
+    return render_template('management/edit_class.html', 
+                         class_info=class_obj, 
+                         available_teachers=teachers,
+                         existing_schedules=schedules)
 
 @management_blueprint.route('/class/<int:class_id>/roster', methods=['GET', 'POST'])
 @login_required
@@ -5168,10 +5214,10 @@ def delete_school_break(break_id):
 @login_required
 @management_required
 def communications():
-    """Communications tab - Under Development."""
-    return render_template('shared/under_development.html',
-                         section='communications',
-                         active_tab='communications')
+    """Communications hub for management - redirects to the proper communications hub."""
+    # Import the communications hub from management_routes
+    from management_routes.communications import communications_hub
+    return communications_hub()
 
 
 @management_blueprint.route('/communications/messages')

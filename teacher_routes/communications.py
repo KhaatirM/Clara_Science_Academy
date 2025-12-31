@@ -72,7 +72,8 @@ def communications_hub():
                          available_classes=classes,
                          active_channel_id=None,
                          active_view=None,
-                         staff_channels=staff_channels)
+                         staff_channels=staff_channels,
+                         student_groups=[])  # Teachers don't have student groups
 
 # 360° Feedback routes have been moved to teacher_routes/feedback360.py
 # The route is now handled by teacher.feedback360.class_feedback360

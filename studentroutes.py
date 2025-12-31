@@ -2697,7 +2697,8 @@ def student_communications():
             'id': group.id,
             'name': group.name,
             'type': 'student',
-            'unread_count': unread
+            'unread_count': unread,
+            'created_by': group.created_by
         })
     
     # Get announcements

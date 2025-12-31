@@ -140,23 +140,32 @@ def get_user_channels(user_id, user_role):
 
 def get_direct_messages(user_id, user_role=None):
     """Get all direct message conversations for a user."""
-    # Get all messages where user is sender or recipient
-    sent_messages = Message.query.filter_by(
-        sender_id=user_id,
-        message_type='direct'
+    # Get all messages where user is sender or recipient (both direct type and NULL group_id)
+    # This handles both explicit direct messages and messages in virtual DM channels
+    sent_messages = Message.query.filter(
+        Message.sender_id == user_id,
+        or_(
+            Message.message_type == 'direct',
+            and_(Message.group_id.is_(None), Message.recipient_id.isnot(None))
+        )
     ).all()
     
-    received_messages = Message.query.filter_by(
-        recipient_id=user_id,
-        message_type='direct'
+    received_messages = Message.query.filter(
+        Message.recipient_id == user_id,
+        or_(
+            Message.message_type == 'direct',
+            and_(Message.group_id.is_(None), Message.sender_id.isnot(None))
+        )
     ).all()
     
     # Get unique conversation partners
     conversation_partners = set()
     for msg in sent_messages:
-        conversation_partners.add(msg.recipient_id)
+        if msg.recipient_id:
+            conversation_partners.add(msg.recipient_id)
     for msg in received_messages:
-        conversation_partners.add(msg.sender_id)
+        if msg.sender_id:
+            conversation_partners.add(msg.sender_id)
     
     dms = []
     for partner_id in conversation_partners:
@@ -172,23 +181,30 @@ def get_direct_messages(user_id, user_role=None):
                     # Skip student DMs for teachers
                     continue
         
-        # Get latest message
+        # Get latest message (check both direct type and NULL group_id for virtual DMs)
         latest_msg = Message.query.filter(
             or_(
                 and_(Message.sender_id == user_id, Message.recipient_id == partner_id),
                 and_(Message.sender_id == partner_id, Message.recipient_id == user_id)
             ),
-            Message.message_type == 'direct'
+            or_(
+                Message.message_type == 'direct',
+                and_(Message.group_id.is_(None), Message.recipient_id.isnot(None))
+            )
         ).order_by(Message.created_at.desc()).first()
         
         if latest_msg:
             other_user = User.query.get(partner_id)
             if other_user:
-                unread = Message.query.filter_by(
-                    sender_id=partner_id,
-                    recipient_id=user_id,
-                    message_type='direct',
-                    is_read=False
+                # Count unread messages (both direct type and NULL group_id)
+                unread = Message.query.filter(
+                    Message.sender_id == partner_id,
+                    Message.recipient_id == user_id,
+                    Message.is_read == False,
+                    or_(
+                        Message.message_type == 'direct',
+                        and_(Message.group_id.is_(None), Message.recipient_id.isnot(None))
+                    )
                 ).count()
                 
                 dms.append({

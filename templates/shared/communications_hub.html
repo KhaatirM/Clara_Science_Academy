@@ -56,12 +56,21 @@
                         {% if group.unread_count > 0 %}
                         <span class="channel-badge">{{ group.unread_count }}</span>
                         {% endif %}
+                        {% if group.created_by == current_user.id %}
+                        <button class="btn btn-sm btn-danger leave-group-btn" 
+                                onclick="event.stopPropagation(); event.preventDefault(); deleteGroup({{ group.id }}, '{{ group.name|replace("'", "\\'") }}')"
+                                style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); padding: 0.25rem 0.4rem; font-size: 0.75rem; min-width: 26px; height: 26px; display: flex !important; align-items: center; justify-content: center; z-index: 1000; background-color: #dc3545 !important; border: 1px solid #dc3545 !important; color: white !important; opacity: 1 !important; visibility: visible !important;"
+                                title="Delete Group">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                        {% else %}
                         <button class="btn btn-sm btn-danger leave-group-btn" 
                                 onclick="event.stopPropagation(); event.preventDefault(); leaveGroup({{ group.id }}, '{{ group.name|replace("'", "\\'") }}')"
                                 style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); padding: 0.25rem 0.4rem; font-size: 0.75rem; min-width: 26px; height: 26px; display: flex !important; align-items: center; justify-content: center; z-index: 1000; background-color: #dc3545 !important; border: 1px solid #dc3545 !important; color: white !important; opacity: 1 !important; visibility: visible !important;"
                                 title="Leave Group">
                             <i class="bi bi-x"></i>
                         </button>
+                        {% endif %}
                     </div>
                     {% endfor %}
                 </div>
@@ -894,6 +903,44 @@ function leaveGroup(groupId, groupName) {
             window.location.reload();
         } else {
             alert('Error: ' + (data.message || 'Failed to leave group'));
+            btn.disabled = false;
+            btn.innerHTML = originalHTML;
+        }
+    })
+    .catch(error => {
+        console.error('Error leaving group:', error);
+        alert('An error occurred while leaving the group');
+        btn.disabled = false;
+        btn.innerHTML = originalHTML;
+    });
+}
+
+function deleteGroup(groupId, groupName) {
+    if (!confirm(`Are you sure you want to DELETE "${groupName}"? This will permanently delete the group and all its messages. This action cannot be undone.`)) {
+        return;
+    }
+    
+    const btn = event.target.closest('button');
+    const originalHTML = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+    
+    fetch(`/communications/api/delete-group/${groupId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Show success message
+            alert(data.message || 'Group deleted successfully');
+            // Reload page to update group list
+            window.location.reload();
+        } else {
+            alert('Error: ' + (data.message || 'Failed to delete group'));
             btn.disabled = false;
             btn.innerHTML = originalHTML;
         }

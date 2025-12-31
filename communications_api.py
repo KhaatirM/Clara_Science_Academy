@@ -132,20 +132,27 @@ def get_channel_messages(channel_id):
 def get_direct_message_conversation(other_user_id):
     """Get or create direct message conversation."""
     try:
-        # Get messages between current user and other user
+        # Get messages between current user and other user (both direct type and NULL group_id for virtual DMs)
         messages = Message.query.filter(
             or_(
                 and_(Message.sender_id == current_user.id, Message.recipient_id == other_user_id),
                 and_(Message.sender_id == other_user_id, Message.recipient_id == current_user.id)
             ),
-            Message.message_type == 'direct'
+            or_(
+                Message.message_type == 'direct',
+                and_(Message.group_id.is_(None), Message.recipient_id.isnot(None))
+            )
         ).order_by(Message.created_at.asc()).limit(100).all()
         
-        # Mark as read
-        Message.query.filter_by(
-            sender_id=other_user_id,
-            recipient_id=current_user.id,
-            is_read=False
+        # Mark as read (both direct type and NULL group_id)
+        Message.query.filter(
+            Message.sender_id == other_user_id,
+            Message.recipient_id == current_user.id,
+            Message.is_read == False,
+            or_(
+                Message.message_type == 'direct',
+                and_(Message.group_id.is_(None), Message.recipient_id.isnot(None))
+            )
         ).update({'is_read': True, 'read_at': datetime.utcnow()})
         db.session.commit()
         
@@ -820,20 +827,15 @@ def leave_group(group_id):
         if not member:
             return jsonify({'success': False, 'message': 'You are not a member of this group'}), 404
         
-        # Remove member (creators can also leave)
-        db.session.delete(member)
+        # Prevent creators from leaving - they must delete the group instead
+        if group.created_by == current_user.id:
+            return jsonify({
+                'success': False, 
+                'message': 'Group creators cannot leave. Please delete the group instead if you want to remove it.'
+            }), 403
         
-        # If creator is leaving and they're the only admin, transfer admin to another member
-        if group.created_by == current_user.id and member.is_admin:
-            # Find another member to make admin
-            other_member = MessageGroupMember.query.filter(
-                MessageGroupMember.group_id == group_id,
-                MessageGroupMember.user_id != current_user.id
-            ).first()
-            
-            if other_member:
-                other_member.is_admin = True
-            # If no other members, the group will just have no admin (which is fine)
+        # Remove member
+        db.session.delete(member)
         
         db.session.commit()
         
@@ -844,5 +846,41 @@ def leave_group(group_id):
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error leaving group: {e}", exc_info=True)
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@api_bp.route('/communications/api/delete-group/<int:group_id>', methods=['POST'])
+@login_required
+def delete_group(group_id):
+    """Delete a student-created group (only by creator)."""
+    try:
+        if current_user.role != 'Student':
+            return jsonify({'success': False, 'message': 'Only students can delete groups'}), 403
+        
+        # Verify group exists and is a student group
+        group = MessageGroup.query.get_or_404(group_id)
+        if group.group_type != 'student':
+            return jsonify({'success': False, 'message': 'You can only delete student-created groups'}), 403
+        
+        # Only creator can delete
+        if group.created_by != current_user.id:
+            return jsonify({'success': False, 'message': 'Only the group creator can delete the group'}), 403
+        
+        # Delete all messages in the group
+        Message.query.filter_by(group_id=group_id).delete()
+        
+        # Delete all members
+        MessageGroupMember.query.filter_by(group_id=group_id).delete()
+        
+        # Delete the group
+        db.session.delete(group)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Group deleted successfully'
+        })
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error deleting group: {e}", exc_info=True)
         return jsonify({'success': False, 'message': str(e)}), 500
 

@@ -165,6 +165,7 @@
 /* Ensure leave buttons are visible for student groups */
 .student-group-item {
     overflow: visible !important;
+    position: relative !important;
 }
 
 .student-group-item .leave-group-btn {
@@ -175,11 +176,22 @@
     border-color: #dc3545 !important;
     color: white !important;
     pointer-events: auto !important;
+    position: absolute !important;
+    right: 8px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    z-index: 1000 !important;
+    min-width: 26px !important;
+    height: 26px !important;
+    padding: 0.25rem 0.4rem !important;
+    font-size: 0.75rem !important;
 }
 
 .student-group-item:hover .leave-group-btn {
     background-color: #c82333 !important;
     border-color: #bd2130 !important;
+    opacity: 1 !important;
+    visibility: visible !important;
 }
 
 .comm-channel-item::before {

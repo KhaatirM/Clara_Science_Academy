@@ -5,7 +5,7 @@ Communications management routes for management users.
 from flask import Blueprint, render_template, request, flash, redirect, url_for
 from flask_login import login_required, current_user
 from decorators import management_required
-from models import db, Message, Announcement
+from models import db, Message, Announcement, MessageGroup, MessageGroupMember
 
 bp = Blueprint('communications', __name__)
 

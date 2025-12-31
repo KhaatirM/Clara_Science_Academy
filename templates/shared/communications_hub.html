@@ -1,0 +1,1370 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/communications_hub.css') }}">
+{% endblock %}
+
+{% block title %}Communications Hub{% endblock %}
+
+{% block dashboard_content %}
+<div class="communications-container">
+    <!-- Three-Panel Layout -->
+    <div class="comm-layout">
+        <!-- Left Sidebar: Channels/Rooms -->
+        <div class="comm-sidebar-left">
+            <div class="comm-sidebar-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-chat-left-text-fill me-2"></i>
+                    Channels
+                </h5>
+            </div>
+            
+            <div class="comm-channels-list">
+                <!-- Class Channels Section -->
+                {% if class_channels %}
+                <div class="comm-channel-section">
+                    <div class="comm-section-header">
+                        <i class="bi bi-book-fill me-2"></i>
+                        <span>My Classes</span>
+                    </div>
+                    {% for channel in class_channels %}
+                    <div class="comm-channel-item {% if active_channel_id == channel.id %}active{% endif %}" 
+                         onclick="loadChannel({{ channel.id }}, 'class')">
+                        <i class="bi bi-hash me-2"></i>
+                        <span class="channel-name">{{ channel.name }}</span>
+                        {% if channel.unread_count > 0 %}
+                        <span class="channel-badge">{{ channel.unread_count }}</span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+                <!-- Student Groups Section (Students only) -->
+                {% if current_user.role == 'Student' and student_groups %}
+                <div class="comm-channel-section">
+                    <div class="comm-section-header">
+                        <i class="bi bi-people-fill me-2"></i>
+                        <span>My Groups</span>
+                    </div>
+                    {% for group in student_groups %}
+                    <div class="comm-channel-item student-group-item {% if active_channel_id == group.id %}active{% endif %}" 
+                         onclick="loadChannel({{ group.id }}, 'student')"
+                         style="position: relative; display: flex; align-items: center; padding-right: 45px;">
+                        <i class="bi bi-hash me-2"></i>
+                        <span class="channel-name" style="flex: 1; overflow: hidden; text-overflow: ellipsis; min-width: 0;">{{ group.name }}</span>
+                        {% if group.unread_count > 0 %}
+                        <span class="channel-badge">{{ group.unread_count }}</span>
+                        {% endif %}
+                        <button class="btn btn-sm btn-danger leave-group-btn" 
+                                onclick="event.stopPropagation(); event.preventDefault(); leaveGroup({{ group.id }}, '{{ group.name|replace("'", "\\'") }}')"
+                                style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); padding: 0.25rem 0.4rem; font-size: 0.75rem; min-width: 26px; height: 26px; display: flex !important; align-items: center; justify-content: center; z-index: 1000; background-color: #dc3545 !important; border: 1px solid #dc3545 !important; color: white !important; opacity: 1 !important; visibility: visible !important;"
+                                title="Leave Group">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+                <!-- Direct Messages Section -->
+                <div class="comm-channel-section">
+                    <div class="comm-section-header">
+                        <i class="bi bi-envelope-fill me-2"></i>
+                        <span>Direct Messages</span>
+                    </div>
+                    {% if current_user.role == 'Student' %}
+                    <button class="comm-create-btn w-100 mb-2" onclick="showStartDMModal()" style="font-size: 0.9rem; padding: 0.5rem;">
+                        <i class="bi bi-plus-circle me-2"></i>
+                        Start New DM
+                    </button>
+                    {% endif %}
+                    {% if direct_messages %}
+                        {% for dm in direct_messages %}
+                        <div class="comm-channel-item {% if active_channel_id == dm.id %}active{% endif %}" 
+                             onclick="loadDirectMessage({{ dm.other_user_id }})">
+                            <i class="bi bi-person-circle me-2"></i>
+                            <span class="channel-name">{{ dm.other_user_name }}</span>
+                            {% if dm.unread_count > 0 %}
+                            <span class="channel-badge">{{ dm.unread_count }}</span>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+                
+                <!-- Announcements Section -->
+                <div class="comm-channel-section">
+                    <div class="comm-section-header">
+                        <i class="bi bi-megaphone-fill me-2"></i>
+                        <span>Announcements</span>
+                    </div>
+                    <div class="comm-channel-item {% if active_view == 'announcements' %}active{% endif %}" 
+                         onclick="loadAnnouncements()">
+                        <i class="bi bi-bullhorn me-2"></i>
+                        <span class="channel-name">All Announcements</span>
+                        {% if unread_announcements_count > 0 %}
+                        <span class="channel-badge">{{ unread_announcements_count }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Create Group Button (Students only) -->
+                {% if current_user.role == 'Student' %}
+                <div class="comm-channel-section">
+                    <button class="comm-create-btn w-100" onclick="showCreateGroupModal()">
+                        <i class="bi bi-people-plus me-2"></i>
+                        Create Group
+                    </button>
+                </div>
+                {% endif %}
+                
+                <!-- Staff Channels (Teachers/Admins only) -->
+                {% if current_user.role in ['Director', 'School Administrator'] or 'Teacher' in current_user.role %}
+                <div class="comm-channel-section">
+                    <div class="comm-section-header">
+                        <i class="bi bi-people-fill me-2"></i>
+                        <span>Staff</span>
+                    </div>
+                    {% if staff_channels %}
+                        {% for channel in staff_channels %}
+                        <div class="comm-channel-item {% if active_channel_id == channel.id %}active{% endif %}" 
+                             onclick="loadChannel({{ channel.id }}, 'staff')">
+                            <i class="bi bi-hash me-2"></i>
+                            <span class="channel-name">{{ channel.name }}</span>
+                            {% if channel.unread_count > 0 %}
+                            <span class="channel-badge">{{ channel.unread_count }}</span>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+                    
+                    <!-- Create Announcement Button (Teachers/Admins) -->
+                    <button class="comm-create-btn" onclick="showCreateAnnouncementModal()">
+                        <i class="bi bi-plus-circle me-2"></i>
+                        New Announcement
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Center Panel: Message Feed -->
+        <div class="comm-main-panel">
+            <!-- Header -->
+            <div class="comm-main-header">
+                <div class="comm-header-info">
+                    <h4 class="mb-0" id="channel-title">
+                        <i class="bi bi-chat-left-text me-2"></i>
+                        Select a channel
+                    </h4>
+                    <p class="mb-0 text-muted small" id="channel-description"></p>
+                </div>
+                <div class="comm-header-actions">
+                    {% if current_user.role in ['Director', 'School Administrator'] or 'Teacher' in current_user.role %}
+                    <button class="btn btn-sm btn-outline-primary" onclick="showChannelSettings()">
+                        <i class="bi bi-gear"></i>
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Messages Container -->
+            <div class="comm-messages-container" id="messages-container">
+                <div class="comm-empty-state">
+                    <i class="bi bi-chat-left-text display-1 text-muted mb-3"></i>
+                    <h5 class="text-muted">No channel selected</h5>
+                    <p class="text-muted">Choose a channel from the sidebar to start messaging</p>
+                </div>
+            </div>
+            
+            <!-- Message Input -->
+            <div class="comm-input-container" id="message-input-container" style="display: none;">
+                <form id="message-form" onsubmit="sendMessage(event)">
+                    <div class="comm-input-wrapper">
+                        <textarea 
+                            id="message-input" 
+                            class="comm-message-input" 
+                            placeholder="Type your message here..."
+                            rows="1"></textarea>
+                        <div class="comm-input-actions">
+                            <button type="button" class="comm-attach-btn" onclick="showAttachmentOptions()" title="Attach file">
+                                <i class="bi bi-paperclip"></i>
+                            </button>
+                            <button type="submit" class="comm-send-btn" title="Send message">
+                                <i class="bi bi-send-fill"></i>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Right Sidebar: Participants/Info (Optional) -->
+        <div class="comm-sidebar-right" id="right-sidebar">
+            <div class="comm-sidebar-header">
+                <h6 class="mb-0">Channel Info</h6>
+            </div>
+            <div class="comm-participants-list" id="participants-list">
+                <p class="text-muted text-center p-3">Select a channel to see participants</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Announcement Modal -->
+<div class="modal fade" id="createAnnouncementModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-megaphone-fill me-2"></i>
+                    Create Announcement
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="announcement-form" method="POST" action="/communications/create-announcement" onsubmit="event.preventDefault(); submitAnnouncement(); return false;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    
+                    <div class="mb-3">
+                        <label for="announcement-title" class="form-label">Title</label>
+                        <input type="text" class="form-control" id="announcement-title" name="title" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="announcement-message" class="form-label">Message</label>
+                        <textarea class="form-control" id="announcement-message" name="message" rows="5" required></textarea>
+                    </div>
+                    
+                    {% if current_user.role in ['Director', 'School Administrator'] %}
+                    <div class="mb-3">
+                        <label for="announcement-target" class="form-label">Target Audience</label>
+                        <select class="form-select" id="announcement-target" name="target_group">
+                            <option value="all">All Users</option>
+                            <option value="all_students">All Students</option>
+                            <option value="all_staff">All Staff</option>
+                            <option value="class">Specific Class</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3" id="class-select-container" style="display: none;">
+                        <label for="announcement-class" class="form-label">Select Class <span class="text-danger">*</span></label>
+                        <select class="form-select" id="announcement-class" name="class_id">
+                            <option value="">-- Select a class --</option>
+                            {% for class_obj in available_classes %}
+                            <option value="{{ class_obj.id }}">{{ class_obj.name }}</option>
+                            {% endfor %}
+                        </select>
+                        {% if not available_classes %}
+                        <small class="text-muted">No classes available</small>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <!-- Teachers can only send to their classes -->
+                    <input type="hidden" id="announcement-target" name="target_group" value="class">
+                    <div class="mb-3">
+                        <label for="announcement-class" class="form-label">Select Class <span class="text-danger">*</span></label>
+                        <select class="form-select" id="announcement-class" name="class_id" required>
+                            <option value="">-- Select a class --</option>
+                            {% for class_obj in available_classes %}
+                            <option value="{{ class_obj.id }}">{{ class_obj.name }}</option>
+                            {% endfor %}
+                        </select>
+                        {% if not available_classes %}
+                        <small class="text-muted">No classes available</small>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="announcement-important" name="is_important">
+                            <label class="form-check-label" for="announcement-important">
+                                Mark as Important (requires read receipt)
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitAnnouncement()">Create Announcement</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Start New DM Modal (Students only) -->
+{% if current_user.role == 'Student' %}
+<div class="modal fade" id="startDMModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 15px; overflow: hidden;">
+            <div class="modal-header border-0" style="background: rgba(255, 255, 255, 0.1);">
+                <h5 class="modal-title text-white fw-bold">
+                    <i class="bi bi-envelope-plus-fill me-2"></i>Start New Direct Message
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="background: rgba(255, 255, 255, 0.95);">
+                <div class="mb-3">
+                    <label for="dm-student-select" class="form-label fw-bold">Select Student</label>
+                    <select class="form-select" id="dm-student-select" size="10">
+                        <!-- Will be populated by JavaScript -->
+                    </select>
+                    <small class="text-muted">Select a student to start a conversation</small>
+                </div>
+            </div>
+            <div class="modal-footer border-0" style="background: rgba(255, 255, 255, 0.95);">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="startDM()">
+                    <i class="bi bi-check-circle me-2"></i>Start Conversation
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Create Group Modal (Students only) -->
+{% if current_user.role == 'Student' %}
+<div class="modal fade" id="createGroupModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 15px; overflow: hidden;">
+            <div class="modal-header border-0" style="background: rgba(255, 255, 255, 0.1);">
+                <h5 class="modal-title text-white fw-bold">
+                    <i class="bi bi-people-plus-fill me-2"></i>Create Group
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="background: rgba(255, 255, 255, 0.95);">
+                <form id="create-group-form" onsubmit="event.preventDefault(); submitCreateGroup(); return false;">
+                    <div class="mb-3">
+                        <label for="group-name" class="form-label fw-bold">Group Name</label>
+                        <input type="text" class="form-control" id="group-name" name="name" required placeholder="Enter group name">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="group-description" class="form-label fw-bold">Description (Optional)</label>
+                        <textarea class="form-control" id="group-description" name="description" rows="3" placeholder="What's this group about?"></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="group-members" class="form-label fw-bold">Add Members</label>
+                        <select class="form-select" id="group-members" multiple size="8">
+                            <!-- Will be populated by JavaScript -->
+                        </select>
+                        <small class="text-muted">Hold Ctrl/Cmd to select multiple students</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0" style="background: rgba(255, 255, 255, 0.95);">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitCreateGroup()">
+                    <i class="bi bi-check-circle me-2"></i>Create Group
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Mute Student Modal -->
+<div class="modal fade" id="muteStudentModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 15px; overflow: hidden;">
+            <div class="modal-header border-0" style="background: rgba(255, 255, 255, 0.1);">
+                <h5 class="modal-title text-white fw-bold" id="muteModalTitle">
+                    <i class="bi bi-mic-mute-fill me-2"></i>Mute Student
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="background: rgba(255, 255, 255, 0.95);">
+                <div class="mb-3">
+                    <p class="mb-2">Mute <strong id="muteModalUserName"></strong> from sending messages in this channel.</p>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="mute-duration-select" class="form-label fw-bold">Mute Duration</label>
+                    <select class="form-select" id="mute-duration-select" onchange="toggleCustomDuration()">
+                        <option value="1">1 hour</option>
+                        <option value="6">6 hours</option>
+                        <option value="12">12 hours</option>
+                        <option value="24" selected>24 hours (1 day)</option>
+                        <option value="48">48 hours (2 days)</option>
+                        <option value="168">168 hours (1 week)</option>
+                        <option value="custom">Custom duration</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3" id="mute-custom-hours" style="display: none;">
+                    <label for="mute-duration" class="form-label fw-bold">Custom Duration (hours)</label>
+                    <input type="number" class="form-control" id="mute-duration" min="1" value="24" placeholder="Enter hours">
+                    <small class="text-muted">Enter the number of hours to mute the student</small>
+                </div>
+                
+                <div class="alert alert-info mb-0">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <small>The student will be unable to send messages in this channel until the mute expires.</small>
+                </div>
+            </div>
+            <div class="modal-footer border-0" style="background: rgba(255, 255, 255, 0.95);">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="mute-submit-btn" onclick="submitMute()">
+                    <i class="bi bi-mic-mute me-2"></i>Mute Student
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentChannelId = null;
+let currentChannelType = null;
+let messagePollInterval = null;
+let pollingChannelId = null; // Track which channel we're polling for
+
+// Cleanup polling on page unload
+window.addEventListener('beforeunload', function() {
+    if (messagePollInterval) {
+        clearInterval(messagePollInterval);
+        messagePollInterval = null;
+        pollingChannelId = null;
+    }
+});
+
+// Load channel messages
+function loadChannel(channelId, channelType) {
+    // Stop any existing polling first
+    if (messagePollInterval) {
+        clearInterval(messagePollInterval);
+        messagePollInterval = null;
+        pollingChannelId = null;
+    }
+    
+    currentChannelId = channelId;
+    currentChannelType = channelType;
+    
+    // Update UI
+    document.querySelectorAll('.comm-channel-item').forEach(item => item.classList.remove('active'));
+    const clickedItem = event ? event.currentTarget : document.querySelector(`[onclick*="${channelId}"]`);
+    if (clickedItem) clickedItem.classList.add('active');
+    
+    // Show message input
+    document.getElementById('message-input-container').style.display = 'block';
+    
+    // Fetch messages
+    fetch(`/communications/api/channel/${channelId}/messages`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayMessages(data.messages);
+                updateChannelInfo(data.channel_info);
+                updateParticipants(data.participants || []);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading channel:', error);
+        });
+    
+    // Start polling for new messages
+    startMessagePolling(channelId, channelType);
+}
+
+function startMessagePolling(channelId, channelType) {
+    // Clear existing polling
+    if (messagePollInterval) {
+        clearInterval(messagePollInterval);
+        messagePollInterval = null;
+    }
+    
+    // Don't poll for announcements
+    if (channelType === 'announcements' || currentChannelType === 'announcements') {
+        pollingChannelId = null;
+        return;
+    }
+    
+    // Store the channel we're polling for
+    pollingChannelId = channelId;
+    
+    // Poll every 5 seconds for new messages
+    messagePollInterval = setInterval(() => {
+        // Stop polling if channel changed, type changed, or viewing announcements/DMs
+        if (!pollingChannelId || 
+            pollingChannelId !== channelId || 
+            currentChannelId !== channelId || 
+            currentChannelType !== channelType || 
+            currentChannelType === 'announcements' || 
+            currentChannelType === 'direct') {
+            if (messagePollInterval) {
+                clearInterval(messagePollInterval);
+                messagePollInterval = null;
+                pollingChannelId = null;
+            }
+            return;
+        }
+        
+        fetch(`/communications/api/channel/${channelId}/messages`)
+            .then(response => response.json())
+            .then(data => {
+                // Only update if we're still on the same channel
+                if (data.success && pollingChannelId === channelId && currentChannelId === channelId && currentChannelType === channelType && currentChannelType !== 'announcements' && currentChannelType !== 'direct') {
+                    displayMessages(data.messages);
+                } else {
+                    // Channel changed or invalid state, stop polling
+                    if (messagePollInterval) {
+                        clearInterval(messagePollInterval);
+                        messagePollInterval = null;
+                        pollingChannelId = null;
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error polling messages:', error);
+                if (messagePollInterval) {
+                    clearInterval(messagePollInterval);
+                    messagePollInterval = null;
+                    pollingChannelId = null;
+                }
+            });
+    }, 5000);
+}
+
+function showChannelSettings() {
+    // Placeholder for channel settings
+    alert('Channel settings coming soon!');
+}
+
+function showAttachmentOptions() {
+    // Placeholder for attachment options
+    alert('File attachments coming soon!');
+}
+
+// Load direct message
+function loadDirectMessage(otherUserId) {
+    // Stop any existing polling
+    if (messagePollInterval) {
+        clearInterval(messagePollInterval);
+        messagePollInterval = null;
+        pollingChannelId = null;
+    }
+    
+    currentChannelId = null;
+    currentChannelType = 'direct';
+    
+    // Update UI
+    document.querySelectorAll('.comm-channel-item').forEach(item => item.classList.remove('active'));
+    
+    // Fetch or create DM conversation
+    fetch(`/communications/api/direct-message/${otherUserId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayMessages(data.messages);
+                updateChannelInfo({
+                    title: `Direct Message: ${data.other_user_name}`,
+                    description: 'Private conversation'
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error loading DM:', error);
+        });
+}
+
+// Load announcements
+function loadAnnouncements() {
+    // Stop any existing polling FIRST
+    if (messagePollInterval) {
+        clearInterval(messagePollInterval);
+        messagePollInterval = null;
+        pollingChannelId = null;
+    }
+    
+    currentChannelId = null;
+    currentChannelType = 'announcements';
+    
+    fetch('/communications/api/announcements')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayAnnouncements(data.announcements);
+                updateChannelInfo({
+                    title: 'Announcements',
+                    description: 'All announcements relevant to you'
+                });
+            }
+        });
+    
+    // Hide message input for announcements
+    document.getElementById('message-input-container').style.display = 'none';
+}
+
+// Display messages
+function displayMessages(messages) {
+    const container = document.getElementById('messages-container');
+    
+    if (!messages || messages.length === 0) {
+        container.innerHTML = `
+            <div class="comm-empty-state">
+                <i class="bi bi-chat-left-text display-1 text-muted mb-3"></i>
+                <h5 class="text-muted">No messages yet</h5>
+                <p class="text-muted">Be the first to send a message!</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '<div class="comm-messages-list">';
+    messages.forEach(msg => {
+        const isOwn = msg.sender_id === {{ current_user.id }};
+        const isReply = msg.parent_message_id !== null;
+        const editedBadge = msg.is_edited ? '<span class="comm-edited-badge">(edited)</span>' : '';
+        
+        html += `
+            <div class="comm-message ${isOwn ? 'own-message' : ''} ${isReply ? 'comm-reply' : ''}" data-message-id="${msg.id}">
+                ${isReply ? '<div class="comm-reply-indicator"><i class="bi bi-reply"></i> Replying to message</div>' : ''}
+                <div class="comm-message-avatar">
+                    <i class="bi bi-person-circle"></i>
+                </div>
+                <div class="comm-message-content">
+                    <div class="comm-message-header">
+                        <span class="comm-message-author">${escapeHtml(msg.sender_name)}</span>
+                        <span class="comm-message-time">
+                            ${formatTime(msg.created_at)}
+                            ${editedBadge}
+                        </span>
+                    </div>
+                    <div class="comm-message-text" id="message-text-${msg.id}">${escapeHtml(msg.content)}</div>
+                    
+                    ${(msg.reply_count || 0) > 0 ? `<div class="comm-reply-count" onclick="showReplies(${msg.id})"><i class="bi bi-chat-left"></i> ${msg.reply_count} ${msg.reply_count === 1 ? 'reply' : 'replies'}</div>` : ''}
+                    
+                    <div class="comm-message-reactions" id="reactions-${msg.id}">
+                        ${msg.reactions && Object.keys(msg.reactions).length > 0 ? Object.entries(msg.reactions).map(([emoji, count]) => {
+                            const userReacted = (msg.user_reactions || []).includes(emoji);
+                            return `<span class="comm-reaction ${userReacted ? 'user-reacted' : ''}" onclick="toggleReaction(${msg.id}, '${emoji}')" title="${count} ${count === 1 ? 'person' : 'people'}">${emoji} ${count}</span>`;
+                        }).join('') : ''}
+                    </div>
+                    
+                    <div class="comm-message-actions">
+                        <button class="comm-action-btn" onclick="showReactionPicker(${msg.id})" title="Add reaction">
+                            <i class="bi bi-emoji-smile"></i>
+                        </button>
+                        <button class="comm-action-btn" onclick="replyToMessage(${msg.id})" title="Reply">
+                            <i class="bi bi-reply"></i>
+                        </button>
+                        ${isOwn ? `
+                        <button class="comm-action-btn" onclick="editMessage(${msg.id})" title="Edit">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        ` : ''}
+                        {% if current_user.role in ['Director', 'School Administrator'] or 'Teacher' in current_user.role %}
+                        <button class="comm-action-btn comm-action-delete" onclick="deleteMessage(${msg.id})" title="Delete message">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    html += '</div>';
+    
+    container.innerHTML = html;
+    container.scrollTop = container.scrollHeight;
+}
+
+// Display announcements
+function displayAnnouncements(announcements) {
+    const container = document.getElementById('messages-container');
+    
+    if (!announcements || announcements.length === 0) {
+        container.innerHTML = `
+            <div class="comm-empty-state">
+                <i class="bi bi-megaphone display-1 text-muted mb-3"></i>
+                <h5 class="text-muted">No announcements</h5>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '<div class="comm-announcements-list">';
+    announcements.forEach(ann => {
+        const classBadge = ann.class_name ? `<span class="badge bg-primary me-2"><i class="bi bi-book me-1"></i>${escapeHtml(ann.class_name)}</span>` : '';
+        html += `
+            <div class="comm-announcement-card ${ann.is_important ? 'important' : ''}" style="cursor: default;">
+                <div class="comm-announcement-header">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">${escapeHtml(ann.title)}</h6>
+                            ${classBadge}
+                        </div>
+                        <small class="text-muted">${formatTime(ann.timestamp)}</small>
+                    </div>
+                </div>
+                <div class="comm-announcement-content">
+                    ${escapeHtml(ann.message)}
+                </div>
+                <div class="comm-announcement-footer">
+                    <span class="text-muted">From: ${ann.sender_name}</span>
+                    ${ann.is_important ? '<span class="badge bg-warning ms-2">Important</span>' : ''}
+                </div>
+            </div>
+        `;
+    });
+    html += '</div>';
+    
+    container.innerHTML = html;
+}
+
+// Send message
+function sendMessage(event) {
+    event.preventDefault();
+    
+    const input = document.getElementById('message-input');
+    const content = input.value.trim();
+    
+    if (!content || !currentChannelId) return;
+    
+    fetch('/communications/api/send-message', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            channel_id: currentChannelId,
+            channel_type: currentChannelType,
+            content: content
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            input.value = '';
+            // Reload messages
+            if (currentChannelType === 'direct') {
+                loadDirectMessage(data.other_user_id);
+            } else {
+                loadChannel(currentChannelId, currentChannelType);
+            }
+        }
+    });
+}
+
+// Helper functions
+function formatTime(timestamp) {
+    const date = new Date(timestamp);
+    return date.toLocaleString();
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function updateChannelInfo(info) {
+    document.getElementById('channel-title').innerHTML = `<i class="bi bi-chat-left-text me-2"></i>${info.title}`;
+    document.getElementById('channel-description').textContent = info.description || '';
+}
+
+function updateParticipants(participants) {
+    const container = document.getElementById('participants-list');
+    if (!participants || participants.length === 0) {
+        container.innerHTML = '<p class="text-muted text-center p-3">No participants</p>';
+        return;
+    }
+    
+    const isTeacher = {{ 'true' if (current_user.role in ['Director', 'School Administrator'] or 'Teacher' in current_user.role) else 'false' }};
+    const currentUserId = {{ current_user.id }};
+    
+    let html = '';
+    participants.forEach(p => {
+        html += `
+            <div class="comm-participant-item" data-user-id="${p.id}">
+                <i class="bi bi-person-circle me-2"></i>
+                <span>${p.name}</span>
+                ${isTeacher && p.id !== currentUserId ? `
+                <div class="comm-participant-actions ms-auto">
+                    <button class="comm-action-btn btn-sm" onclick="showMuteModal(${p.id}, '${escapeHtml(p.name)}')" title="Mute student">
+                        <i class="bi bi-mic-mute"></i>
+                    </button>
+                </div>
+                ` : ''}
+            </div>
+        `;
+    });
+    container.innerHTML = html;
+}
+
+function showCreateAnnouncementModal() {
+    const modal = new bootstrap.Modal(document.getElementById('createAnnouncementModal'));
+    modal.show();
+}
+
+function showStartDMModal() {
+    // Load available students for DM
+    fetch('/communications/api/available-students')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const select = document.getElementById('dm-student-select');
+                select.innerHTML = '';
+                data.students.forEach(student => {
+                    const option = document.createElement('option');
+                    option.value = student.id;
+                    option.textContent = `${student.first_name} ${student.last_name} (${student.username})`;
+                    select.appendChild(option);
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error loading students:', error);
+            alert('Error loading students. Please try again.');
+        });
+    
+    const modal = new bootstrap.Modal(document.getElementById('startDMModal'));
+    modal.show();
+}
+
+function startDM() {
+    const select = document.getElementById('dm-student-select');
+    const selectedStudentId = select.value;
+    
+    if (!selectedStudentId) {
+        alert('Please select a student to message');
+        return;
+    }
+    
+    // Close modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('startDMModal'));
+    modal.hide();
+    
+    // Load the DM conversation
+    loadDirectMessage(parseInt(selectedStudentId));
+}
+
+function showCreateGroupModal() {
+    // Load available students for the group
+    fetch('/communications/api/available-students')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const select = document.getElementById('group-members');
+                select.innerHTML = '';
+                data.students.forEach(student => {
+                    const option = document.createElement('option');
+                    option.value = student.id;
+                    option.textContent = `${student.first_name} ${student.last_name} (${student.username})`;
+                    select.appendChild(option);
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error loading students:', error);
+        });
+    
+    const modal = new bootstrap.Modal(document.getElementById('createGroupModal'));
+    modal.show();
+}
+
+function leaveGroup(groupId, groupName) {
+    if (!confirm(`Are you sure you want to leave "${groupName}"? You won't be able to see messages from this group anymore.`)) {
+        return;
+    }
+    
+    const btn = event.target.closest('button');
+    const originalHTML = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+    
+    fetch(`/communications/api/leave-group/${groupId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Show success message
+            alert(data.message || 'You have left the group');
+            // Reload page to update group list
+            window.location.reload();
+        } else {
+            alert('Error: ' + (data.message || 'Failed to leave group'));
+            btn.disabled = false;
+            btn.innerHTML = originalHTML;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while leaving the group');
+        btn.disabled = false;
+        btn.innerHTML = originalHTML;
+    });
+}
+
+function submitCreateGroup() {
+    const form = document.getElementById('create-group-form');
+    const name = document.getElementById('group-name').value.trim();
+    const description = document.getElementById('group-description').value.trim();
+    const membersSelect = document.getElementById('group-members');
+    const memberIds = Array.from(membersSelect.selectedOptions).map(opt => parseInt(opt.value));
+    
+    if (!name) {
+        alert('Please enter a group name');
+        return;
+    }
+    
+    const submitBtn = document.querySelector('#createGroupModal .btn-primary');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating...';
+    
+    fetch('/communications/api/create-group', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+            name: name,
+            description: description,
+            member_ids: memberIds
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('createGroupModal'));
+            modal.hide();
+            
+            // Reset form
+            form.reset();
+            
+            // Reload page to show new group
+            window.location.reload();
+        } else {
+            alert('Error: ' + (data.message || 'Failed to create group'));
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while creating the group');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+    });
+}
+
+function submitAnnouncement() {
+    const form = document.getElementById('announcement-form');
+    const targetGroup = document.getElementById('announcement-target').value;
+    const classSelect = document.getElementById('announcement-class');
+    
+    // Validate class selection if "Specific Class" is selected
+    if (targetGroup === 'class') {
+        if (!classSelect.value) {
+            alert('Please select a class');
+            return;
+        }
+        classSelect.required = true;
+    } else {
+        classSelect.required = false;
+    }
+    
+    // Validate form
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    
+    // Disable submit button to prevent double submission
+    const submitBtn = form.querySelector('button[type="submit"]') || document.querySelector('button[form="announcement-form"]');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating...';
+        submitBtn.dataset.originalText = originalText;
+    }
+    
+    // Submit via AJAX for better error handling
+    const formData = new FormData(form);
+    
+    fetch('/communications/create-announcement', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        // Check if response is JSON
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            return response.json();
+        } else {
+            // If not JSON, it might be a redirect or HTML
+            throw new Error('Unexpected response format');
+        }
+    })
+    .then(data => {
+        if (data.success) {
+            // Close modal
+            const modalElement = document.getElementById('createAnnouncementModal');
+            const modal = bootstrap.Modal.getInstance(modalElement);
+            if (modal) {
+                modal.hide();
+            }
+            
+            // Reset form
+            form.reset();
+            document.getElementById('class-select-container').style.display = 'none';
+            document.getElementById('announcement-target').value = '';
+            
+            // Switch to announcements view and reload
+            currentChannelType = 'announcements';
+            loadAnnouncements();
+            
+            // Update active state
+            document.querySelectorAll('.comm-channel-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            const announcementsItem = document.querySelector('.comm-channel-item[onclick="loadAnnouncements()"]');
+            if (announcementsItem) {
+                announcementsItem.classList.add('active');
+            }
+            
+            // Show success message
+            alert('Announcement created successfully!');
+        } else {
+            alert('Error: ' + (data.message || 'Failed to create announcement'));
+            if (submitBtn && submitBtn.dataset.originalText) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = submitBtn.dataset.originalText;
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while creating the announcement. Please try again.');
+        if (submitBtn && submitBtn.dataset.originalText) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = submitBtn.dataset.originalText;
+        }
+    });
+}
+
+// Show/hide class selector based on target (only for admins)
+const announcementTarget = document.getElementById('announcement-target');
+if (announcementTarget) {
+    announcementTarget.addEventListener('change', function() {
+        const classContainer = document.getElementById('class-select-container');
+        const classSelect = document.getElementById('announcement-class');
+        if (this.value === 'class') {
+            if (classContainer) classContainer.style.display = 'block';
+            if (classSelect) classSelect.required = true;
+        } else {
+            if (classContainer) classContainer.style.display = 'none';
+            if (classSelect) {
+                classSelect.required = false;
+                classSelect.value = '';
+            }
+        }
+    });
+}
+
+// Auto-resize textarea
+const messageInput = document.getElementById('message-input');
+if (messageInput) {
+    messageInput.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight) + 'px';
+    });
+}
+
+// Edit message
+function editMessage(messageId) {
+    const messageText = document.getElementById(`message-text-${messageId}`);
+    const currentContent = messageText.textContent;
+    
+    const newContent = prompt('Edit your message:', currentContent);
+    if (newContent !== null && newContent.trim() !== currentContent.trim()) {
+        fetch(`/communications/api/edit-message/${messageId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                content: newContent.trim()
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Reload messages
+                if (currentChannelType === 'direct') {
+                    // For DMs, reload current view
+                    const activeChannel = document.querySelector('.comm-channel-item.active');
+                    if (activeChannel && activeChannel.onclick) {
+                        activeChannel.onclick();
+                    }
+                } else {
+                    loadChannel(currentChannelId, currentChannelType);
+                }
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error editing message');
+        });
+    }
+}
+
+// Toggle reaction
+function toggleReaction(messageId, emoji) {
+    fetch(`/communications/api/react-message/${messageId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            emoji: emoji
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Update reaction display
+            const reactionsContainer = document.getElementById(`reactions-${messageId}`);
+            if (reactionsContainer) {
+                reactionsContainer.innerHTML = '';
+                
+                Object.entries(data.reactions).forEach(([emojiKey, count]) => {
+                    const reactionEl = document.createElement('span');
+                    reactionEl.className = 'comm-reaction';
+                    reactionEl.textContent = `${emojiKey} ${count}`;
+                    reactionEl.title = `${count} ${count === 1 ? 'person' : 'people'}`;
+                    reactionEl.onclick = () => toggleReaction(messageId, emojiKey);
+                    reactionsContainer.appendChild(reactionEl);
+                });
+            }
+            
+            // Reload messages to get updated user reactions
+            if (currentChannelType !== 'direct' && currentChannelId) {
+                setTimeout(() => loadChannel(currentChannelId, currentChannelType), 500);
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+
+// Show reaction picker
+function showReactionPicker(messageId) {
+    const emojis = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥', '👏'];
+    const picker = document.createElement('div');
+    picker.className = 'comm-reaction-picker';
+    picker.innerHTML = emojis.map(emoji => 
+        `<span class="comm-emoji-option" onclick="toggleReaction(${messageId}, '${emoji}'); this.parentElement.remove();">${emoji}</span>`
+    ).join('');
+    
+    // Position picker near the message
+    const messageEl = document.querySelector(`[data-message-id="${messageId}"]`);
+    if (messageEl) {
+        messageEl.style.position = 'relative';
+        messageEl.appendChild(picker);
+        setTimeout(() => {
+            if (picker.parentElement) {
+                picker.remove();
+            }
+        }, 5000); // Auto-remove after 5 seconds
+    }
+}
+
+// Reply to message
+function replyToMessage(parentMessageId) {
+    const replyContent = prompt('Type your reply:');
+    if (replyContent && replyContent.trim()) {
+        fetch('/communications/api/reply-message', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                parent_message_id: parentMessageId,
+                content: replyContent.trim(),
+                channel_id: currentChannelId,
+                channel_type: currentChannelType
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Reload messages
+                if (currentChannelType === 'direct') {
+                    const activeChannel = document.querySelector('.comm-channel-item.active');
+                    if (activeChannel && activeChannel.onclick) {
+                        activeChannel.onclick();
+                    }
+                } else {
+                    loadChannel(currentChannelId, currentChannelType);
+                }
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error sending reply');
+        });
+    }
+}
+
+function deleteMessage(messageId) {
+    if (!confirm('Are you sure you want to delete this message? This action cannot be undone.')) {
+        return;
+    }
+    
+    fetch(`/communications/api/delete-message/${messageId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Remove message from DOM
+            const messageEl = document.querySelector(`[data-message-id="${messageId}"]`);
+            if (messageEl) {
+                messageEl.remove();
+            }
+            // Reload messages
+            if (currentChannelId) {
+                loadChannel(currentChannelId, currentChannelType);
+            }
+        } else {
+            alert('Error: ' + (data.message || 'Failed to delete message'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while deleting the message');
+    });
+}
+
+let muteModalUserId = null;
+let muteModalUserName = null;
+
+function showMuteModal(userId, userName) {
+    if (!currentChannelId) {
+        alert('No channel selected');
+        return;
+    }
+    
+    muteModalUserId = userId;
+    muteModalUserName = userName;
+    
+    // Set the modal title
+    document.getElementById('muteModalTitle').textContent = `Mute ${userName}`;
+    document.getElementById('muteModalUserName').textContent = userName;
+    
+    // Reset form
+    document.getElementById('mute-duration').value = '24';
+    document.getElementById('mute-duration-select').value = '24';
+    document.getElementById('mute-custom-hours').style.display = 'none';
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('muteStudentModal'));
+    modal.show();
+}
+
+function toggleCustomDuration() {
+    const select = document.getElementById('mute-duration-select');
+    const customInput = document.getElementById('mute-custom-hours');
+    if (select.value === 'custom') {
+        customInput.style.display = 'block';
+        document.getElementById('mute-duration').required = true;
+    } else {
+        customInput.style.display = 'none';
+        document.getElementById('mute-duration').required = false;
+    }
+}
+
+function submitMute() {
+    if (!muteModalUserId || !currentChannelId) {
+        return;
+    }
+    
+    const durationSelect = document.getElementById('mute-duration-select').value;
+    let hours = 24;
+    
+    if (durationSelect === 'custom') {
+        hours = parseInt(document.getElementById('mute-duration').value) || 24;
+        if (hours < 1) {
+            alert('Duration must be at least 1 hour');
+            return;
+        }
+    } else {
+        hours = parseInt(durationSelect);
+    }
+    
+    const submitBtn = document.getElementById('mute-submit-btn');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Muting...';
+    
+    fetch(`/communications/api/mute-student/${currentChannelId}/${muteModalUserId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ duration_hours: hours })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const mutedUntil = new Date(data.muted_until);
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('muteStudentModal'));
+            modal.hide();
+            
+            // Show success message
+            alert(`${muteModalUserName} has been muted until ${mutedUntil.toLocaleString()}`);
+            
+            // Reload participants to show muted status
+            if (currentChannelId) {
+                loadChannel(currentChannelId, currentChannelType);
+            }
+        } else {
+            alert('Error: ' + (data.message || 'Failed to mute student'));
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while muting the student');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+    });
+}
+
+// Show replies (placeholder for future threading feature)
+function showReplies(messageId) {
+    alert('Thread view coming soon!');
+}
+
+</script>
+{% endblock %}
+

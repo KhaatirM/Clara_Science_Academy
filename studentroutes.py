@@ -1232,9 +1232,88 @@ def student_grades():
 @login_required
 @student_required
 def student_schedule():
+    """View student's weekly class schedule"""
+    from datetime import datetime, timedelta
+    
     student = Student.query.get_or_404(current_user.student_id)
+    
+    # Get current school year
+    current_school_year = SchoolYear.query.filter_by(is_active=True).first()
+    if not current_school_year:
+        return render_template('students/role_student_dashboard.html', 
+                             **create_template_context(student, 'schedule', 'schedule',
+                                                      schedules_by_day={},
+                                                      today_schedule=[]))
+    
+    # Get student's enrolled classes
+    enrollments = Enrollment.query.filter_by(
+        student_id=student.id,
+        is_active=True
+    ).join(Class).filter(
+        Class.school_year_id == current_school_year.id
+    ).all()
+    
+    classes = [enrollment.class_info for enrollment in enrollments]
+    
+    # Get schedules for all enrolled classes
+    class_ids = [c.id for c in classes]
+    all_schedules = []
+    if class_ids:  # Only query if there are classes
+        all_schedules = ClassSchedule.query.filter(
+            ClassSchedule.class_id.in_(class_ids)
+        ).order_by(ClassSchedule.day_of_week, ClassSchedule.start_time).all()
+    
+    # Organize schedules by day of week
+    schedules_by_day = {i: [] for i in range(7)}  # 0=Monday, 6=Sunday
+    time_slots_set = set()  # Track unique time slots
+    
+    for schedule in all_schedules:
+        try:
+            class_obj = next((c for c in classes if c.id == schedule.class_id), None)
+            if not class_obj:
+                continue
+                
+            # Ensure day_of_week is an integer (0-6)
+            day_of_week = int(schedule.day_of_week) if schedule.day_of_week is not None else 0
+            if day_of_week < 0 or day_of_week > 6:
+                continue  # Skip invalid day_of_week values
+            
+            # Ensure start_time and end_time are not None
+            if not schedule.start_time or not schedule.end_time:
+                continue
+                
+            time_key = f"{schedule.start_time.strftime('%H:%M')}-{schedule.end_time.strftime('%H:%M')}"
+            time_slots_set.add(time_key)
+            
+            schedules_by_day[day_of_week].append({
+                'class': class_obj,
+                'start_time': schedule.start_time,
+                'end_time': schedule.end_time,
+                'room': schedule.room or (class_obj.room_number if class_obj.room_number else 'TBD'),
+                'teacher': class_obj.teacher.first_name + ' ' + class_obj.teacher.last_name if class_obj.teacher else 'TBD'
+            })
+        except Exception as e:
+            current_app.logger.error(f"Error processing schedule item {schedule.id if schedule else 'unknown'}: {e}")
+            continue
+    
+    # Sort time slots
+    time_slots = sorted(time_slots_set) if time_slots_set else []
+    
+    # Get today's schedule
+    today = datetime.now()
+    today_weekday = today.weekday()  # 0=Monday, 1=Tuesday, etc.
+    today_schedule = schedules_by_day.get(today_weekday, [])
+    
+    # Sort today's schedule by start time
+    if today_schedule:
+        today_schedule.sort(key=lambda x: x['start_time'])
+    
     return render_template('students/role_student_dashboard.html', 
-                         **create_template_context(student, 'schedule', 'schedule'))
+                         **create_template_context(student, 'schedule', 'schedule',
+                                                  schedules_by_day=schedules_by_day,
+                                                  today_schedule=today_schedule,
+                                                  classes=classes,
+                                                  time_slots=time_slots))
 
 @student_blueprint.route('/school-calendar')
 @login_required
@@ -2561,10 +2640,82 @@ def delete_goal(goal_id):
 @login_required
 @student_required
 def student_communications():
-    """Communications tab - Under Development."""
-    return render_template('shared/under_development.html',
-                         section='communications',
-                         active_tab='communications')
+    """Main communications hub for students."""
+    from shared_communications import get_user_channels, get_direct_messages, get_user_announcements, ensure_class_channel_exists
+    
+    student = Student.query.get_or_404(current_user.student_id)
+    
+    # Get user's channels
+    class_channels = get_user_channels(current_user.id, 'Student')
+    
+    # Ensure channels exist for enrolled classes
+    enrollments = Enrollment.query.filter_by(
+        student_id=student.id,
+        is_active=True
+    ).all()
+    for enrollment in enrollments:
+        ensure_class_channel_exists(enrollment.class_id)
+    
+    # Refresh channels after ensuring they exist
+    class_channels = get_user_channels(current_user.id, 'Student')
+    
+    # Get direct messages (students can see all their DMs)
+    direct_messages = get_direct_messages(current_user.id, 'Student')
+    
+    # Get student-created groups (including old groups that might not have group_type set)
+    student_groups = []
+    # First try to get groups with group_type='student'
+    user_groups = MessageGroup.query.join(MessageGroupMember).filter(
+        MessageGroupMember.user_id == current_user.id,
+        MessageGroup.group_type == 'student',
+        MessageGroup.is_active == True
+    ).all()
+    
+    # Also get old groups that might not have group_type set but are student-created
+    # (groups created by students that don't have a class_id)
+    old_user_groups = MessageGroup.query.join(MessageGroupMember).filter(
+        MessageGroupMember.user_id == current_user.id,
+        MessageGroup.class_id.is_(None),
+        MessageGroup.group_type != 'class',
+        MessageGroup.group_type != 'staff',
+        MessageGroup.is_active == True
+    ).all()
+    
+    # Combine and deduplicate
+    all_user_groups = {g.id: g for g in user_groups}
+    for g in old_user_groups:
+        if g.id not in all_user_groups:
+            all_user_groups[g.id] = g
+    
+    for group in all_user_groups.values():
+        unread = Message.query.filter(
+            Message.group_id == group.id,
+            Message.sender_id != current_user.id,
+            Message.is_read == False
+        ).count()
+        student_groups.append({
+            'id': group.id,
+            'name': group.name,
+            'type': 'student',
+            'unread_count': unread
+        })
+    
+    # Get announcements
+    announcements = get_user_announcements(current_user.id, 'Student')
+    unread_announcements = len([a for a in announcements if not a.get('read', False)])
+    
+    # Get available classes for announcements
+    available_classes = [e.class_info for e in enrollments if e.class_info]
+    
+    return render_template('shared/communications_hub.html',
+                         class_channels=class_channels,
+                         direct_messages=direct_messages,
+                         announcements=announcements,
+                         unread_announcements_count=unread_announcements,
+                         available_classes=available_classes,
+                         active_channel_id=None,
+                         active_view=None,
+                         staff_channels=[])
 
 @student_blueprint.route('/communications/messages')
 @login_required

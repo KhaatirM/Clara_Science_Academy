@@ -9,7 +9,7 @@ from flask import Blueprint, render_template, request, flash, redirect, url_for,
 from flask_login import login_required, current_user, login_user, logout_user
 
 # Database and model imports
-from models import db, User, MaintenanceMode, ActivityLog, TeacherStaff, Student, Grade, Assignment
+from models import db, User, MaintenanceMode, ActivityLog, TeacherStaff, Student, Grade, Assignment, Message, MessageGroup, MessageGroupMember
 from gpa_scheduler import calculate_student_gpa
 from copy import copy
 
@@ -1070,6 +1070,148 @@ def resources():
         return redirect(url_for('tech.tech_dashboard'))
 
 @tech_blueprint.route('/resources/download/<path:filename>')
+
+@tech_blueprint.route('/message-logs')
+@login_required
+@tech_required
+def message_logs():
+    """View all message logs (tech users only - complete message history)."""
+    # Get filter parameters
+    user_id = request.args.get('user_id', type=int)
+    group_id = request.args.get('group_id', type=int)
+    message_type = request.args.get('message_type', '')
+    start_date = request.args.get('start_date', '')
+    end_date = request.args.get('end_date', '')
+    search_query = request.args.get('search', '').strip()
+    page = request.args.get('page', 1, type=int)
+    per_page = 50
+    
+    # Build query
+    query = Message.query
+    
+    # Apply filters
+    if user_id:
+        query = query.filter(
+            or_(Message.sender_id == user_id, Message.recipient_id == user_id)
+        )
+    
+    if group_id:
+        query = query.filter(Message.group_id == group_id)
+    
+    if message_type:
+        query = query.filter(Message.message_type == message_type)
+    
+    if start_date:
+        try:
+            start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+            query = query.filter(Message.created_at >= start_dt)
+        except ValueError:
+            pass
+    
+    if end_date:
+        try:
+            end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+            # Add one day to include the entire end date
+            end_dt = end_dt + timedelta(days=1)
+            query = query.filter(Message.created_at < end_dt)
+        except ValueError:
+            pass
+    
+    if search_query:
+        query = query.filter(Message.content.contains(search_query))
+    
+    # Order by most recent first
+    query = query.order_by(Message.created_at.desc())
+    
+    # Paginate
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    messages = pagination.items
+    
+    # Format messages for display
+    formatted_messages = []
+    for msg in messages:
+        sender = User.query.get(msg.sender_id)
+        recipient = User.query.get(msg.recipient_id) if msg.recipient_id else None
+        group = MessageGroup.query.get(msg.group_id) if msg.group_id else None
+        
+        # Get sender/recipient names
+        sender_name = 'Unknown'
+        if sender:
+            if sender.role == 'Student' and sender.student_id:
+                student = Student.query.get(sender.student_id)
+                if student:
+                    sender_name = f"{student.first_name} {student.last_name} (Student)"
+            elif sender.role in ['Director', 'School Administrator'] or 'Teacher' in sender.role:
+                if sender.teacher_staff_id:
+                    teacher = TeacherStaff.query.get(sender.teacher_staff_id)
+                    if teacher:
+                        sender_name = f"{teacher.first_name} {teacher.last_name} ({sender.role})"
+            else:
+                sender_name = f"{sender.username} ({sender.role})"
+        
+        recipient_name = None
+        if recipient:
+            if recipient.role == 'Student' and recipient.student_id:
+                student = Student.query.get(recipient.student_id)
+                if student:
+                    recipient_name = f"{student.first_name} {student.last_name} (Student)"
+            elif recipient.role in ['Director', 'School Administrator'] or 'Teacher' in recipient.role:
+                if recipient.teacher_staff_id:
+                    teacher = TeacherStaff.query.get(recipient.teacher_staff_id)
+                    if teacher:
+                        recipient_name = f"{teacher.first_name} {teacher.last_name} ({recipient.role})"
+            else:
+                recipient_name = f"{recipient.username} ({recipient.role})"
+        
+        formatted_messages.append({
+            'id': msg.id,
+            'sender_name': sender_name,
+            'sender_id': msg.sender_id,
+            'recipient_name': recipient_name,
+            'recipient_id': msg.recipient_id,
+            'group_name': group.name if group else None,
+            'group_id': msg.group_id,
+            'message_type': msg.message_type,
+            'content': msg.content,
+            'created_at': msg.created_at,
+            'is_read': msg.is_read,
+            'is_edited': msg.is_edited,
+            'parent_message_id': msg.parent_message_id
+        })
+    
+    # Get all users for filter dropdown
+    all_users = User.query.order_by(User.username).all()
+    users_list = []
+    for user in all_users:
+        name = user.username
+        if user.role == 'Student' and user.student_id:
+            student = Student.query.get(user.student_id)
+            if student:
+                name = f"{student.first_name} {student.last_name} ({user.username})"
+        elif user.role in ['Director', 'School Administrator'] or 'Teacher' in user.role:
+            if user.teacher_staff_id:
+                teacher = TeacherStaff.query.get(user.teacher_staff_id)
+                if teacher:
+                    name = f"{teacher.first_name} {teacher.last_name} ({user.username})"
+        users_list.append({'id': user.id, 'name': name, 'role': user.role})
+    
+    # Get all groups for filter dropdown
+    all_groups = MessageGroup.query.order_by(MessageGroup.name).all()
+    groups_list = [{'id': g.id, 'name': g.name, 'type': g.group_type} for g in all_groups]
+    
+    return render_template('tech/message_logs.html',
+                         messages=formatted_messages,
+                         pagination=pagination,
+                         users=users_list,
+                         groups=groups_list,
+                         current_filters={
+                             'user_id': user_id,
+                             'group_id': group_id,
+                             'message_type': message_type,
+                             'start_date': start_date,
+                             'end_date': end_date,
+                             'search': search_query
+                         })
 @login_required
 @tech_required
 def download_resource(filename):

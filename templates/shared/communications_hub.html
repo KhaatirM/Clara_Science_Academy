@@ -8,14 +8,14 @@
 
 {% block dashboard_content %}
 <div class="communications-container">
-    <!-- Three-Panel Layout -->
+    <!-- Modern Card-Based Layout -->
     <div class="comm-layout">
-        <!-- Left Sidebar: Channels/Rooms -->
+        <!-- Left Panel: Channels Navigation -->
         <div class="comm-sidebar-left">
             <div class="comm-sidebar-header">
                 <h5 class="mb-0">
                     <i class="bi bi-chat-left-text-fill me-2"></i>
-                    Channels
+                    Communications
                 </h5>
             </div>
             
@@ -104,7 +104,7 @@
                         </div>
                         {% endfor %}
                     {% else %}
-                        <div class="text-muted text-center p-3" style="font-size: 0.85rem;">
+                        <div style="color: rgba(26, 26, 46, 0.6); text-align: center; padding: 20px; font-size: 0.9rem; background: rgba(255, 255, 255, 0.2); border-radius: 12px; margin: 8px 0;">
                             <i class="bi bi-chat-left-text me-2"></i>
                             No direct messages yet
                         </div>
@@ -190,9 +190,9 @@
             <!-- Messages Container -->
             <div class="comm-messages-container" id="messages-container">
                 <div class="comm-empty-state">
-                    <i class="bi bi-chat-left-text display-1 text-muted mb-3"></i>
-                    <h5 class="text-muted">No channel selected</h5>
-                    <p class="text-muted">Choose a channel from the sidebar to start messaging</p>
+                    <i class="bi bi-chat-left-text"></i>
+                    <h5>No channel selected</h5>
+                    <p>Choose a channel from the sidebar to start messaging</p>
                 </div>
             </div>
             
@@ -630,9 +630,9 @@ function displayMessages(messages) {
     if (!messages || messages.length === 0) {
         container.innerHTML = `
             <div class="comm-empty-state">
-                <i class="bi bi-chat-left-text display-1 text-muted mb-3"></i>
-                <h5 class="text-muted">No messages yet</h5>
-                <p class="text-muted">Be the first to send a message!</p>
+                <i class="bi bi-chat-left-text"></i>
+                <h5>No messages yet</h5>
+                <p>Be the first to send a message!</p>
             </div>
         `;
         return;
@@ -647,46 +647,41 @@ function displayMessages(messages) {
         html += `
             <div class="comm-message ${isOwn ? 'own-message' : ''} ${isReply ? 'comm-reply' : ''}" data-message-id="${msg.id}">
                 ${isReply ? '<div class="comm-reply-indicator"><i class="bi bi-reply"></i> Replying to message</div>' : ''}
-                <div class="comm-message-avatar">
-                    <i class="bi bi-person-circle"></i>
+                <div class="comm-message-header">
+                    <span class="comm-message-author">${escapeHtml(msg.sender_name)}</span>
+                    <span class="comm-message-time">
+                        ${formatTime(msg.created_at)}
+                        ${editedBadge}
+                    </span>
                 </div>
-                <div class="comm-message-content">
-                    <div class="comm-message-header">
-                        <span class="comm-message-author">${escapeHtml(msg.sender_name)}</span>
-                        <span class="comm-message-time">
-                            ${formatTime(msg.created_at)}
-                            ${editedBadge}
-                        </span>
-                    </div>
-                    <div class="comm-message-text" id="message-text-${msg.id}">${escapeHtml(msg.content)}</div>
-                    
-                    ${(msg.reply_count || 0) > 0 ? `<div class="comm-reply-count" onclick="showReplies(${msg.id})"><i class="bi bi-chat-left"></i> ${msg.reply_count} ${msg.reply_count === 1 ? 'reply' : 'replies'}</div>` : ''}
-                    
-                    <div class="comm-message-reactions" id="reactions-${msg.id}">
-                        ${msg.reactions && Object.keys(msg.reactions).length > 0 ? Object.entries(msg.reactions).map(([emoji, count]) => {
-                            const userReacted = (msg.user_reactions || []).includes(emoji);
-                            return `<span class="comm-reaction ${userReacted ? 'user-reacted' : ''}" onclick="toggleReaction(${msg.id}, '${emoji}')" title="${count} ${count === 1 ? 'person' : 'people'}">${emoji} ${count}</span>`;
-                        }).join('') : ''}
-                    </div>
-                    
-                    <div class="comm-message-actions">
-                        <button class="comm-action-btn" onclick="showReactionPicker(${msg.id})" title="Add reaction">
-                            <i class="bi bi-emoji-smile"></i>
-                        </button>
-                        <button class="comm-action-btn" onclick="replyToMessage(${msg.id})" title="Reply">
-                            <i class="bi bi-reply"></i>
-                        </button>
-                        ${isOwn ? `
-                        <button class="comm-action-btn" onclick="editMessage(${msg.id})" title="Edit">
-                            <i class="bi bi-pencil"></i>
-                        </button>
-                        ` : ''}
-                        {% if current_user.role in ['Director', 'School Administrator'] or 'Teacher' in current_user.role %}
-                        <button class="comm-action-btn comm-action-delete" onclick="deleteMessage(${msg.id})" title="Delete message">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                        {% endif %}
-                    </div>
+                <div class="comm-message-text" id="message-text-${msg.id}">${escapeHtml(msg.content)}</div>
+                
+                ${(msg.reply_count || 0) > 0 ? `<div class="comm-reply-count" onclick="showReplies(${msg.id})" style="margin-top: 12px; padding: 8px 12px; background: rgba(78, 205, 196, 0.2); border-radius: 8px; font-size: 0.85rem; color: rgba(26, 26, 46, 0.7); cursor: pointer; display: inline-block;"><i class="bi bi-chat-left"></i> ${msg.reply_count} ${msg.reply_count === 1 ? 'reply' : 'replies'}</div>` : ''}
+                
+                <div class="comm-message-reactions" id="reactions-${msg.id}">
+                    ${msg.reactions && Object.keys(msg.reactions).length > 0 ? Object.entries(msg.reactions).map(([emoji, count]) => {
+                        const userReacted = (msg.user_reactions || []).includes(emoji);
+                        return `<span class="comm-reaction ${userReacted ? 'user-reacted' : ''}" onclick="toggleReaction(${msg.id}, '${emoji}')" title="${count} ${count === 1 ? 'person' : 'people'}">${emoji} ${count}</span>`;
+                    }).join('') : ''}
+                </div>
+                
+                <div class="comm-message-actions">
+                    <button class="comm-action-btn" onclick="showReactionPicker(${msg.id})" title="Add reaction">
+                        <i class="bi bi-emoji-smile"></i>
+                    </button>
+                    <button class="comm-action-btn" onclick="replyToMessage(${msg.id})" title="Reply">
+                        <i class="bi bi-reply"></i>
+                    </button>
+                    ${isOwn ? `
+                    <button class="comm-action-btn" onclick="editMessage(${msg.id})" title="Edit">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    ` : ''}
+                    {% if current_user.role in ['Director', 'School Administrator'] or 'Teacher' in current_user.role %}
+                    <button class="comm-action-btn comm-action-delete" onclick="deleteMessage(${msg.id})" title="Delete message">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                    {% endif %}
                 </div>
             </div>
         `;
@@ -704,8 +699,8 @@ function displayAnnouncements(announcements) {
     if (!announcements || announcements.length === 0) {
         container.innerHTML = `
             <div class="comm-empty-state">
-                <i class="bi bi-megaphone display-1 text-muted mb-3"></i>
-                <h5 class="text-muted">No announcements</h5>
+                <i class="bi bi-megaphone"></i>
+                <h5>No announcements</h5>
             </div>
         `;
         return;

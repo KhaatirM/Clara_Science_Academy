@@ -350,18 +350,25 @@ def ensure_class_channel_exists(class_id):
 
 def get_dm_conversations(user_id, user_role=None):
     """Get DM conversations as a list for sidebar injection (virtual channels)."""
-    # Find all unique users the current_user has exchanged messages with where group_id is NULL
+    # Find all unique users the current_user has exchanged messages with
+    # Check both: messages with group_id IS NULL OR message_type='direct' (for backward compatibility)
     # This creates "virtual channels" for DMs
     sent_partners = db.session.query(Message.recipient_id).filter(
         Message.sender_id == user_id,
-        Message.group_id.is_(None),
-        Message.recipient_id.isnot(None)
+        Message.recipient_id.isnot(None),
+        or_(
+            Message.group_id.is_(None),
+            Message.message_type == 'direct'
+        )
     ).distinct().all()
     
     received_partners = db.session.query(Message.sender_id).filter(
         Message.recipient_id == user_id,
-        Message.group_id.is_(None),
-        Message.sender_id.isnot(None)
+        Message.sender_id.isnot(None),
+        or_(
+            Message.group_id.is_(None),
+            Message.message_type == 'direct'
+        )
     ).distinct().all()
     
     # Get unique partner IDs
@@ -385,13 +392,16 @@ def get_dm_conversations(user_id, user_role=None):
                 else:
                     continue  # Skip student DMs for teachers
         
-        # Get latest message
+        # Get latest message (check both NULL group_id and direct message_type for backward compatibility)
         latest_msg = Message.query.filter(
             or_(
                 and_(Message.sender_id == user_id, Message.recipient_id == partner_id),
                 and_(Message.sender_id == partner_id, Message.recipient_id == user_id)
             ),
-            Message.group_id.is_(None),
+            or_(
+                Message.group_id.is_(None),
+                Message.message_type == 'direct'
+            ),
             Message.recipient_id.isnot(None)
         ).order_by(Message.created_at.desc()).first()
         
@@ -401,7 +411,10 @@ def get_dm_conversations(user_id, user_role=None):
                 unread = Message.query.filter(
                     Message.sender_id == partner_id,
                     Message.recipient_id == user_id,
-                    Message.group_id.is_(None),
+                    or_(
+                        Message.group_id.is_(None),
+                        Message.message_type == 'direct'
+                    ),
                     Message.is_read == False
                 ).count()
                 

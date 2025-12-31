@@ -56,7 +56,7 @@
                         {% if group.unread_count > 0 %}
                         <span class="channel-badge">{{ group.unread_count }}</span>
                         {% endif %}
-                        {% if group.created_by == current_user.id %}
+                        {% if group.created_by and group.created_by == current_user.id %}
                         <button class="btn btn-sm btn-danger leave-group-btn" 
                                 onclick="event.stopPropagation(); event.preventDefault(); deleteGroup({{ group.id }}, '{{ group.name|replace("'", "\\'") }}')"
                                 style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); padding: 0.25rem 0.4rem; font-size: 0.75rem; min-width: 26px; height: 26px; display: flex !important; align-items: center; justify-content: center; z-index: 1000; background-color: #dc3545 !important; border: 1px solid #dc3545 !important; color: white !important; opacity: 1 !important; visibility: visible !important;"

@@ -351,7 +351,10 @@ def ensure_class_channel_exists(class_id):
 def get_dm_conversations(user_id, user_role=None):
     """Get DM conversations as a list for sidebar injection (virtual channels)."""
     # Find all unique users the current_user has exchanged messages with
-    # Check both: messages with group_id IS NULL OR message_type='direct' (for backward compatibility)
+    # For DMs, we want messages where:
+    # 1. group_id IS NULL (virtual DM channels), OR
+    # 2. message_type='direct' (explicit direct messages), OR  
+    # 3. recipient_id is set and group_id is NULL (any message with a recipient but no group)
     # This creates "virtual channels" for DMs
     sent_partners = db.session.query(Message.recipient_id).filter(
         Message.sender_id == user_id,
@@ -371,12 +374,32 @@ def get_dm_conversations(user_id, user_role=None):
         )
     ).distinct().all()
     
-    # Get unique partner IDs
+    # Also check for any messages where recipient_id exists but group_id is NULL (catch-all)
+    # This ensures we don't miss any DM-like conversations
+    additional_sent = db.session.query(Message.recipient_id).filter(
+        Message.sender_id == user_id,
+        Message.recipient_id.isnot(None),
+        Message.group_id.is_(None)
+    ).distinct().all()
+    
+    additional_received = db.session.query(Message.sender_id).filter(
+        Message.recipient_id == user_id,
+        Message.sender_id.isnot(None),
+        Message.group_id.is_(None)
+    ).distinct().all()
+    
+    # Get unique partner IDs (combine all queries)
     partner_ids = set()
     for partner in sent_partners:
         if partner[0]:
             partner_ids.add(partner[0])
     for partner in received_partners:
+        if partner[0]:
+            partner_ids.add(partner[0])
+    for partner in additional_sent:
+        if partner[0]:
+            partner_ids.add(partner[0])
+    for partner in additional_received:
         if partner[0]:
             partner_ids.add(partner[0])
     

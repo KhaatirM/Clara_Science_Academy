@@ -699,13 +699,81 @@
                     </div>
                     <div>
                         <h6 class="updates-intro-title mb-2">
-                            <i class="fas fa-calendar-alt me-2"></i>Latest System Update - Latest Updates
+                            <i class="fas fa-calendar-alt me-2"></i>Latest System Update - December 31, 2025
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>Quiz System Enhancements & Report Card Improvements!</strong> Enhanced quiz viewing experience, fixed grade calculations, improved report card PDF generation, and streamlined user interface updates!</p>
+                        <p class="updates-intro-text mb-0"><strong>Complete Tech Dashboard Redesign & Communication System Overhaul!</strong> Massive design improvements across all tech pages, communication system enhancements with event-based polling, homepage visual upgrades, and critical bug fixes for better performance and user experience!</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- December 31, 2025 - Complete Tech Dashboard Redesign & System Updates -->
+                    <div class="update-section mb-4">
+                        <h6 class="text-primary mb-3" style="background: linear-gradient(135deg, #4c63d2 0%, #5a3d91 20%, #c850c0 40%, #3d8bfd 70%, #0066cc 90%, #0073e6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+                            <i class="fas fa-palette me-2"></i>🎨 Complete Tech Dashboard Redesign & System Enhancements - December 31, 2025
+                        </h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Tech Dashboard Complete Visual Overhaul:</strong> Redesigned all tech dashboard pages (Dashboard, Message Logs, Error/Bug Reports, Activity Log, Bug Reports, System Status & Config, User Management, Maintenance) with modern card-based layouts, glassmorphism effects, vibrant gradient color schemes, and enhanced visual hierarchy. All pages now use white backgrounds with dark text for optimal readability and contrast.
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Activity Log Critical Fixes:</strong> Fixed text visibility issues by changing all text from white/transparent to dark colors (#333, #666) on white backgrounds. Resolved Action column readability with dark gray gradient badges. Fixed severe performance lag by disabling heavy animations, removing backdrop-filter, adding eager database loading with `joinedload`, implementing pagination, and optimizing filter queries.
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Activity Log Title Enhancement:</strong> Applied darker, more vibrant gradient to "Activity Log" heading with increased font size (2.25rem) and weight (800) for better visibility. Enhanced gradient includes deeper blues and purples with improved contrast.
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>System Status & Configuration Merge:</strong> Combined System Status and System Config into a single, unified tabbed interface for better organization and user experience. Implemented smooth tab navigation with hash-based routing.
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Performance Cards Complete Redesign:</strong> Redesigned CPU, Memory, Disk, and Uptime performance cards with elegant new design featuring enhanced headers with larger icons and subtle pulse animations, redesigned progress bars with larger height, multi-stop gradient backgrounds, shimmer animations, 3D effects, and white text with text shadows. Improved typography and spacing throughout.
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>System Status Alert Visibility Improvements:</strong> Enhanced alert boxes with better backgrounds (white/off-white), stronger borders for definition, improved text contrast with darker colors, and better shadows for visual hierarchy.
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>User Management & Maintenance Pages Redesign:</strong> Complete visual overhaul of User Management and Maintenance Control pages with gradient page titles, modern card layouts, enhanced table styling, improved form controls, and better badges and modal designs matching the tech dashboard design system.
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Communication System Polling Overhaul:</strong> Removed constant 5-second interval polling in favor of event-based polling. Messages now poll only when someone sends or edits a message. Each channel polls independently when activity occurs, eliminating unnecessary background polling and significantly improving performance and reducing server load.
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Leave/Delete Group Functionality:</strong> Students can now leave student-created groups (except creators who must delete). Group creators have the option to delete their groups. Backend routes and API endpoints fully implemented with proper frontend UI buttons and conditional rendering based on user role and group creator status.
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Direct Message (DM) Persistence:</strong> DMs now appear as "virtual channels" in the sidebar and persist across sessions. Enhanced `get_dm_conversations` function with improved querying logic for better DM channel visibility and user experience.
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Administrator Communications Hub:</strong> Replaced "Under Development" placeholder with full communications hub functionality for administrators, matching the functionality available to students and teachers. Added proper imports and backend logic.
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Homepage Complete Visual Enhancement:</strong> Enhanced hero section with multi-layered text shadows and vibrant glow effects. Improved section titles with deeper, more vibrant colors and multi-layered glow effects. Enhanced all buttons with multi-color animated gradients. Improved feature cards, program cards, and CTA section with enhanced gradients, better hover effects, and improved visual impact.
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Tech Dashboard 500 Error Fix:</strong> Fixed critical 500 error preventing tech users from logging in by updating `tech_dashboard.html` to use the new `tech.system_status_config` endpoint instead of the old merged `tech.system_status` endpoint.
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Performance Optimizations:</strong> Disabled heavy animations on data-heavy pages, removed backdrop-filter for better rendering performance, added eager loading for database queries, implemented pagination where needed, and optimized CSS for better rendering across all tech dashboard pages.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3" style="background: linear-gradient(135deg, rgba(76, 99, 210, 0.1) 0%, rgba(200, 80, 192, 0.1) 100%); border-color: #4c63d2;">
+                            <p class="mb-0"><strong>🎯 Key Improvements:</strong> This update brings Clara Science Academy's interface to a new level of polish, performance, and user experience. All changes maintain existing functionality while significantly enhancing visual design, performance, and usability. The event-based polling system reduces server load while providing immediate updates on user actions!</p>
+                        </div>
+                    </div>
+
                     <!-- Latest Updates - Quiz & Report Card Improvements -->
                     <div class="update-section mb-4">
                         <h6 class="text-primary mb-3" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
@@ -1581,12 +1649,12 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // ===== SHOW UPDATE MODAL =====
-    if (!sessionStorage.getItem('updateModalShownDec14_2025')) {
+    if (!sessionStorage.getItem('updateModalShownDec31_2025')) {
         const updateModalElement = document.getElementById('updateModal');
         if (updateModalElement) {
             const updateModal = new bootstrap.Modal(updateModalElement);
             updateModal.show();
-            sessionStorage.setItem('updateModalShownDec14_2025', 'true');
+            sessionStorage.setItem('updateModalShownDec31_2025', 'true');
         }
     }
     

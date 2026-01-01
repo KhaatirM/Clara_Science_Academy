@@ -1,0 +1,304 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tech_dashboard.css') }}">
+<style>
+    .dashboard-content-wrapper {
+        position: relative;
+        z-index: 1;
+    }
+    
+    /* Performance optimizations */
+    .tech-dashboard-wrapper {
+        animation: none !important;
+    }
+    
+    .tech-dashboard-wrapper::before,
+    .tech-dashboard-wrapper::after {
+        display: none !important;
+    }
+    
+    /* Better text contrast */
+    .tech-card {
+        background: rgba(255, 255, 255, 0.95) !important;
+        backdrop-filter: blur(5px) !important;
+        -webkit-backdrop-filter: blur(5px) !important;
+    }
+    
+    .tech-card.tech-header {
+        overflow: visible !important;
+        background: rgba(255, 255, 255, 0.95) !important;
+    }
+    
+    /* Page Title with Gradient */
+    h2.tech-page-title,
+    .tech-page-title {
+        background: linear-gradient(135deg, #4c63d2 0%, #5a3d91 20%, #c850c0 40%, #3d8bfd 70%, #0066cc 90%, #0073e6 100%) !important;
+        -webkit-background-clip: text !important;
+        -webkit-text-fill-color: transparent !important;
+        background-clip: text !important;
+        font-weight: 800 !important;
+        display: inline-block;
+        overflow: visible !important;
+    }
+    
+    .tech-page-title i {
+        background: linear-gradient(135deg, #4c63d2 0%, #5a3d91 20%, #c850c0 40%, #3d8bfd 70%, #0066cc 90%, #0073e6 100%) !important;
+        -webkit-background-clip: text !important;
+        -webkit-text-fill-color: transparent !important;
+        background-clip: text !important;
+    }
+    
+    .tech-header h2,
+    .tech-header h5 {
+        color: #333 !important;
+    }
+    
+    .tech-header p {
+        color: #666 !important;
+    }
+    
+    .tech-filters {
+        background: rgba(255, 255, 255, 0.95) !important;
+    }
+    
+    .tech-filters h5 {
+        color: #333 !important;
+    }
+    
+    .tech-form-label {
+        color: #333 !important;
+    }
+    
+    .tech-table {
+        background: rgba(255, 255, 255, 0.95) !important;
+        backdrop-filter: none !important;
+    }
+    
+    .tech-table thead th {
+        color: #333 !important;
+        background: rgba(102, 126, 234, 0.1) !important;
+    }
+    
+    .tech-table tbody td {
+        color: #333 !important;
+        background: white !important;
+    }
+    
+    .tech-badge-secondary {
+        background: linear-gradient(135deg, #6c757d, #495057) !important;
+        color: white !important;
+    }
+</style>
+{% endblock %}
+
+{% block title %}Message Logs - Tech Dashboard{% endblock %}
+
+{% block dashboard_content %}
+<div class="tech-dashboard-wrapper">
+<div class="container-fluid px-2 px-md-4 dashboard-content-wrapper py-4">
+    <div class="tech-card tech-header mb-4">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div style="overflow: visible; padding: 0.5rem 0.5rem 0.5rem 0;">
+                <h2 class="mb-1 tech-page-title">
+                    <i class="bi bi-chat-left-text-fill me-2"></i>Message Logs
+                </h2>
+                <p class="mb-0" style="color: #666;">Complete message history across all users, groups, and channels</p>
+            </div>
+            <a href="{{ url_for('tech.tech_dashboard') }}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="tech-filters mb-4">
+        <h5 class="mb-3" style="color: #333;">
+            <i class="bi bi-funnel-fill me-2"></i>Filters
+        </h5>
+        <form method="GET" action="{{ url_for('tech.message_logs') }}" class="row g-3">
+            <div class="col-md-3">
+                <label for="user_id" class="tech-form-label" style="color: #333;">User</label>
+                <select class="form-select" id="user_id" name="user_id" style="background: white; color: #333; border: 1px solid #ddd;">
+                        <option value="">All Users</option>
+                        {% for user in users %}
+                        <option value="{{ user.id }}" {% if current_filters.user_id == user.id %}selected{% endif %}>
+                            {{ user.name }} - {{ user.role }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+            <div class="col-md-3">
+                <label for="group_id" class="tech-form-label" style="color: #333;">Group/Channel</label>
+                <select class="form-select" id="group_id" name="group_id" style="background: white; color: #333; border: 1px solid #ddd;">
+                    <option value="">All Groups</option>
+                    {% for group in groups %}
+                    <option value="{{ group.id }}" {% if current_filters.group_id == group.id %}selected{% endif %}>
+                        {{ group.name }} ({{ group.type }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-2">
+                <label for="message_type" class="tech-form-label" style="color: #333;">Message Type</label>
+                <select class="form-select" id="message_type" name="message_type" style="background: white; color: #333; border: 1px solid #ddd;">
+                    <option value="">All Types</option>
+                    <option value="direct" {% if current_filters.message_type == 'direct' %}selected{% endif %}>Direct</option>
+                    <option value="group" {% if current_filters.message_type == 'group' %}selected{% endif %}>Group</option>
+                    <option value="announcement" {% if current_filters.message_type == 'announcement' %}selected{% endif %}>Announcement</option>
+                </select>
+            </div>
+            
+            <div class="col-md-2">
+                <label for="start_date" class="tech-form-label" style="color: #333;">Start Date</label>
+                <input type="date" class="form-control" id="start_date" name="start_date" value="{{ current_filters.start_date }}" style="background: white; color: #333; border: 1px solid #ddd;">
+            </div>
+            
+            <div class="col-md-2">
+                <label for="end_date" class="tech-form-label" style="color: #333;">End Date</label>
+                <input type="date" class="form-control" id="end_date" name="end_date" value="{{ current_filters.end_date }}" style="background: white; color: #333; border: 1px solid #ddd;">
+            </div>
+            
+            <div class="col-12">
+                <label for="search" class="tech-form-label" style="color: #333;">Search Content</label>
+                <input type="text" class="form-control" id="search" name="search" placeholder="Search message content..." value="{{ current_filters.search }}" style="background: white; color: #333; border: 1px solid #ddd;">
+            </div>
+            
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-search me-2"></i>Apply Filters
+                </button>
+                <a href="{{ url_for('tech.message_logs') }}" class="btn btn-secondary">
+                    <i class="bi bi-x-circle me-2"></i>Clear Filters
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Messages Table -->
+    <div class="tech-card">
+        <div class="tech-header" style="background: rgba(102, 126, 234, 0.1) !important;">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0" style="color: #333;">
+                    <i class="bi bi-list-ul me-2"></i>Messages
+                    <span class="tech-badge tech-badge-secondary ms-2">{{ pagination.total }} total</span>
+                </h5>
+            </div>
+        </div>
+        <div class="p-0">
+            <div class="table-responsive">
+                <table class="tech-table table mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 150px;">Timestamp</th>
+                            <th style="width: 150px;">Sender</th>
+                            <th style="width: 120px;">Type</th>
+                            <th style="width: 150px;">Recipient/Group</th>
+                            <th>Content</th>
+                            <th style="width: 100px;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if messages %}
+                            {% for msg in messages %}
+                            <tr>
+                                <td>
+                                    <small>{{ msg.created_at.strftime('%Y-%m-%d %H:%M:%S') if msg.created_at else 'N/A' }}</small>
+                                </td>
+                                <td>
+                                    <strong>{{ msg.sender_name }}</strong>
+                                    <br><small class="text-muted">ID: {{ msg.sender_id }}</small>
+                                </td>
+                                <td>
+                                    <span class="tech-badge tech-badge-{% if msg.message_type == 'direct' %}primary{% elif msg.message_type == 'group' %}info{% else %}secondary{% endif %}">
+                                        {{ msg.message_type }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if msg.group_name %}
+                                        <strong>{{ msg.group_name }}</strong>
+                                        <br><small class="text-muted">Group ID: {{ msg.group_id }}</small>
+                                    {% elif msg.recipient_name %}
+                                        <strong>{{ msg.recipient_name }}</strong>
+                                        <br><small class="text-muted">ID: {{ msg.recipient_id }}</small>
+                                    {% else %}
+                                        <span class="text-muted">N/A</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div style="max-width: 400px; overflow: hidden; text-overflow: ellipsis;">
+                                        {{ msg.content[:200] }}{% if msg.content|length > 200 %}...{% endif %}
+                                    </div>
+                                    {% if msg.is_edited %}
+                                    <small class="text-muted"><i class="bi bi-pencil"></i> Edited</small>
+                                    {% endif %}
+                                    {% if msg.parent_message_id %}
+                                    <small class="text-muted"><i class="bi bi-reply"></i> Reply</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if msg.is_read %}
+                                    <span class="tech-badge tech-badge-success">Read</span>
+                                    {% else %}
+                                    <span class="tech-badge tech-badge-warning">Unread</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="6" class="tech-empty-state">
+                                    <i class="bi bi-inbox d-block mb-3"></i>
+                                    <h5>No messages found</h5>
+                                    <p>Try adjusting your filters</p>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% if pagination.pages > 1 %}
+        <div class="p-3" style="background: rgba(255, 255, 255, 0.95); border-top: 1px solid rgba(0, 0, 0, 0.1);">
+            <nav aria-label="Message pagination">
+                <ul class="pagination mb-0 justify-content-center">
+                    {% if pagination.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('tech.message_logs', page=pagination.prev_num, **current_filters) }}">Previous</a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                        {% if page_num %}
+                            {% if page_num == pagination.page %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ page_num }}</span>
+                            </li>
+                            {% else %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('tech.message_logs', page=page_num, **current_filters) }}">{{ page_num }}</a>
+                            </li>
+                            {% endif %}
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if pagination.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('tech.message_logs', page=pagination.next_num, **current_filters) }}">Next</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+</div>
+</div>
+{% endblock %}
+

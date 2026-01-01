@@ -1664,6 +1664,148 @@
             </div>
         {% endif %}
 
+    {% elif section == 'schedule' or show_schedule %}
+        <!-- Schedule View -->
+        <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px; background: linear-gradient(135deg, #4A90E2 0%, #5BA3F5 100%);">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <div>
+                        <h2 class="mb-1 text-white" style="font-weight: 600;">
+                            <i class="bi bi-calendar-week-fill me-2"></i>My Schedule
+                        </h2>
+                        <p class="mb-0 text-white" style="opacity: 0.9;">
+                            <i class="bi bi-calendar3 me-2"></i>Weekly class schedule
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Today's Schedule Card -->
+        {% if today_schedule %}
+        <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
+            <div class="card-header border-0 bg-white pb-0 pt-3">
+                <h5 class="mb-0 fw-bold" style="color: #1f2937;">
+                    <i class="bi bi-calendar-day me-2 text-primary"></i>
+                    Today's Schedule
+                </h5>
+            </div>
+            <div class="card-body pt-3">
+                <div class="row g-3">
+                    {% for item in today_schedule %}
+                        {% if item and item.class %}
+                        <div class="col-12">
+                            <div class="card border h-100" style="border-radius: 10px; border-color: #e5e7eb !important; border-left: 4px solid #4A90E2;">
+                                <div class="card-body p-3">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-2 fw-bold" style="color: #1f2937;">{{ item.class.name if item.class else 'Unknown Class' }}</h6>
+                                            <div class="d-flex flex-wrap gap-3 mb-2">
+                                                {% if item.start_time and item.end_time %}
+                                                <small class="text-muted">
+                                                    <i class="bi bi-clock me-1"></i>{{ item.start_time.strftime('%I:%M %p') }} - {{ item.end_time.strftime('%I:%M %p') }}
+                                                </small>
+                                                {% endif %}
+                                                <small class="text-muted">
+                                                    <i class="bi bi-geo-alt me-1"></i>{{ item.room or 'TBD' }}
+                                                </small>
+                                                <small class="text-muted">
+                                                    <i class="bi bi-people me-1"></i>{{ item.enrollment_count or 0 }} students
+                                                </small>
+                                            </div>
+                                            <span class="badge bg-primary bg-opacity-10 text-primary">{{ item.class.subject if item.class and item.class.subject else 'N/A' }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Weekly Schedule -->
+        <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+            <div class="card-header border-0 bg-white pb-0 pt-3">
+                <h5 class="mb-0 fw-bold" style="color: #1f2937;">
+                    <i class="bi bi-calendar-week me-2 text-primary"></i>
+                    Weekly Schedule
+                </h5>
+            </div>
+            <div class="card-body pt-3">
+                <div class="table-responsive">
+                    <table class="table table-bordered mb-0" style="table-layout: fixed;">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 12%;" class="text-center">Time</th>
+                                <th style="width: 12.5%;" class="text-center">Monday</th>
+                                <th style="width: 12.5%;" class="text-center">Tuesday</th>
+                                <th style="width: 12.5%;" class="text-center">Wednesday</th>
+                                <th style="width: 12.5%;" class="text-center">Thursday</th>
+                                <th style="width: 12.5%;" class="text-center">Friday</th>
+                                <th style="width: 12.5%;" class="text-center">Saturday</th>
+                                <th style="width: 12.5%;" class="text-center">Sunday</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if time_slots and time_slots|length > 0 %}
+                                {% for time_slot in time_slots %}
+                                    {% if time_slot and time_slot is string and '-' in time_slot %}
+                                        {% set time_parts = time_slot.split('-') %}
+                                        {% set start_time_str = time_parts[0] if time_parts|length > 0 else '' %}
+                                        {% set end_time_str = time_parts[1] if time_parts|length > 1 else '' %}
+                                        {% if start_time_str and end_time_str %}
+                                        <tr>
+                                            <td class="text-center fw-semibold" style="background-color: #f9fafb;">
+                                                {{ start_time_str }}<br>
+                                                <small class="text-muted">{{ end_time_str }}</small>
+                                            </td>
+                                            {% for day in range(7) %}
+                                                <td class="align-top" style="min-height: 80px;">
+                                                    {% if schedules_by_day and schedules_by_day.get(day) %}
+                                                        {% for schedule_item in schedules_by_day.get(day, []) %}
+                                                            {% if schedule_item and schedule_item.start_time and schedule_item.end_time and schedule_item.class %}
+                                                                {% set schedule_time_key = schedule_item.start_time.strftime('%H:%M') ~ '-' ~ schedule_item.end_time.strftime('%H:%M') %}
+                                                                {% if schedule_time_key == time_slot %}
+                                                                    <div class="card border-0 mb-2" style="background: linear-gradient(135deg, #4A90E2 0%, #5BA3F5 100%); border-radius: 8px;">
+                                                                        <div class="card-body p-2 text-white">
+                                                                            <h6 class="mb-1 fw-bold" style="font-size: 0.85rem;">{{ schedule_item.class.name if schedule_item.class else 'Unknown Class' }}</h6>
+                                                                            <small class="d-block mb-1" style="opacity: 0.9;">{{ schedule_item.class.subject if schedule_item.class and schedule_item.class.subject else 'N/A' }}</small>
+                                                                            <small class="d-block mb-1">
+                                                                                <i class="bi bi-geo-alt me-1"></i>{{ schedule_item.room or 'TBD' }}
+                                                                            </small>
+                                                                            <small class="d-block">
+                                                                                <i class="bi bi-people me-1"></i>{{ schedule_item.enrollment_count or 0 }} students
+                                                                            </small>
+                                                                        </div>
+                                                                    </div>
+                                                                {% endif %}
+                                                            {% endif %}
+                                                        {% endfor %}
+                                                    {% endif %}
+                                                </td>
+                                            {% endfor %}
+                                        </tr>
+                                        {% endif %}
+                                    {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted py-5">
+                                        <i class="bi bi-calendar-x display-4 d-block mb-3"></i>
+                                        <p>No schedule has been set for your classes yet.</p>
+                                        <p class="small">Contact your school administrator to set up your class schedule.</p>
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
     {% elif section == 'communications' %}
         <!-- Communications View -->
         <h2 class="mb-4">Communications</h2>

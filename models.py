@@ -1005,6 +1005,7 @@ class Message(db.Model):
     read_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    is_edited = db.Column(db.Boolean, default=False)  # Track if message was edited
     
     # For group messages
     group_id = db.Column(db.Integer, db.ForeignKey('message_group.id'), nullable=True)
@@ -1012,13 +1013,37 @@ class Message(db.Model):
     # For announcements
     announcement_id = db.Column(db.Integer, db.ForeignKey('announcement.id'), nullable=True)
     
+    # For replies/threading
+    parent_message_id = db.Column(db.Integer, db.ForeignKey('message.id'), nullable=True)
+    
     sender = db.relationship('User', foreign_keys=[sender_id], backref='sent_messages')
     recipient = db.relationship('User', foreign_keys=[recipient_id], backref='received_messages')
     group = db.relationship('MessageGroup', backref='messages')
     announcement = db.relationship('Announcement', backref='messages')
+    parent_message = db.relationship('Message', remote_side=[id], backref='replies')
     
     def __repr__(self):
         return f"Message(Sender: {self.sender_id}, Recipient: {self.recipient_id}, Type: {self.message_type})"
+
+
+class MessageReaction(db.Model):
+    """
+    Model for message reactions (emojis).
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    message_id = db.Column(db.Integer, db.ForeignKey('message.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    emoji = db.Column(db.String(10), nullable=False)  # Emoji character or code
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    message = db.relationship('Message', backref='reactions')
+    user = db.relationship('User', backref='message_reactions')
+    
+    # Unique constraint: one user can only have one reaction per emoji per message
+    __table_args__ = (db.UniqueConstraint('message_id', 'user_id', 'emoji', name='unique_user_message_emoji'),)
+    
+    def __repr__(self):
+        return f"MessageReaction(Message: {self.message_id}, User: {self.user_id}, Emoji: {self.emoji})"
 
 
 class MessageGroup(db.Model):
@@ -1051,6 +1076,7 @@ class MessageGroupMember(db.Model):
     joined_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_admin = db.Column(db.Boolean, default=False)  # For group admins
     is_muted = db.Column(db.Boolean, default=False)  # For muting notifications
+    muted_until = db.Column(db.DateTime, nullable=True)  # Temporary mute expiration
     
     group = db.relationship('MessageGroup', backref='members')
     user = db.relationship('User', backref='group_memberships')

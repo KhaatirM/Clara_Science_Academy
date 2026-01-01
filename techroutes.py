@@ -9,7 +9,7 @@ from flask import Blueprint, render_template, request, flash, redirect, url_for,
 from flask_login import login_required, current_user, login_user, logout_user
 
 # Database and model imports
-from models import db, User, MaintenanceMode, ActivityLog, TeacherStaff, Student, Grade, Assignment
+from models import db, User, MaintenanceMode, ActivityLog, TeacherStaff, Student, Grade, Assignment, Message, MessageGroup, MessageGroupMember
 from gpa_scheduler import calculate_student_gpa
 from copy import copy
 
@@ -40,6 +40,35 @@ def tech_dashboard():
     
     return render_template('tech/tech_dashboard.html', users=users, maintenance=maintenance)
 
+@tech_blueprint.route('/activity/log/details/<int:log_id>')
+@login_required
+@tech_required
+def activity_log_details(log_id):
+    """Get activity log details as JSON for modal display."""
+    from flask import jsonify
+    log = ActivityLog.query.get_or_404(log_id)
+    
+    # Parse details if it's JSON
+    details = None
+    if log.details:
+        try:
+            details = json.loads(log.details)
+        except (json.JSONDecodeError, TypeError):
+            details = log.details
+    
+    return jsonify({
+        'id': log.id,
+        'user': log.user.username if log.user else 'Unknown',
+        'user_role': log.user.role if log.user else 'N/A',
+        'action': log.action,
+        'timestamp': log.timestamp.strftime('%Y-%m-%d %H:%M:%S') if log.timestamp else 'N/A',
+        'ip_address': log.ip_address or 'N/A',
+        'user_agent': log.user_agent or 'N/A',
+        'success': log.success,
+        'details': details,
+        'error_message': log.error_message or None
+    })
+
 @tech_blueprint.route('/activity/log')
 @login_required
 @tech_required
@@ -66,24 +95,55 @@ def activity_log():
         except ValueError:
             pass
     
-    # Get activity logs
-    logs = get_user_activity_log(
-        user_id=user_id,
-        action=action if action else None,
-        start_date=start_date,
-        end_date=end_date,
-        limit=limit
+    # Get activity logs with pagination
+    from sqlalchemy import or_
+    page = request.args.get('page', 1, type=int)
+    per_page = min(limit, 100)  # Cap at 100 per page for performance
+    
+    query = ActivityLog.query
+    
+    if user_id:
+        query = query.filter_by(user_id=user_id)
+    if action:
+        query = query.filter_by(action=action)
+    if start_date:
+        query = query.filter(ActivityLog.timestamp >= start_date)
+    if end_date:
+        query = query.filter(ActivityLog.timestamp <= end_date)
+    
+    # Paginate the results - use eager loading to prevent N+1 queries
+    from sqlalchemy.orm import joinedload
+    pagination = query.options(joinedload(ActivityLog.user)).order_by(ActivityLog.timestamp.desc()).paginate(
+        page=page, per_page=per_page, error_out=False
     )
+    logs = pagination.items
     
-    # Get users for filter dropdown
-    users = User.query.all()
+    # Optimize: Only get users that have activity logs in the filtered date range (much faster)
+    user_query = db.session.query(ActivityLog.user_id).distinct().filter(
+        ActivityLog.user_id.isnot(None)
+    )
+    if start_date:
+        user_query = user_query.filter(ActivityLog.timestamp >= start_date)
+    if end_date:
+        user_query = user_query.filter(ActivityLog.timestamp <= end_date)
     
-    # Get unique actions for filter dropdown
-    actions = db.session.query(ActivityLog.action).distinct().all()
+    user_ids_with_logs = user_query.limit(200).all()
+    user_ids = [uid[0] for uid in user_ids_with_logs if uid[0]]
+    users = User.query.filter(User.id.in_(user_ids)).order_by(User.username).all() if user_ids else []
+    
+    # Optimize: Get unique actions from filtered results only
+    action_query = db.session.query(ActivityLog.action).distinct()
+    if start_date:
+        action_query = action_query.filter(ActivityLog.timestamp >= start_date)
+    if end_date:
+        action_query = action_query.filter(ActivityLog.timestamp <= end_date)
+    
+    actions = action_query.limit(50).all()
     actions = [action[0] for action in actions]
     
     return render_template('tech/activity_log.html', 
-                         logs=logs, 
+                         logs=logs,
+                         pagination=pagination,
                          users=users, 
                          actions=actions,
                          filters={
@@ -94,12 +154,15 @@ def activity_log():
                              'limit': limit
                          })
 
-@tech_blueprint.route('/system/status')
+@tech_blueprint.route('/system/status-config')
 @login_required
 @tech_required
-def system_status():
+def system_status_config():
+    """Merged System Status & Configuration page"""
     import psutil
-    from models import User, Student, TeacherStaff, ActivityLog, BugReport, MaintenanceMode
+    from models import User, Student, TeacherStaff, ActivityLog, BugReport, MaintenanceMode, SystemConfig
+    import sys
+    import flask
     
     now = datetime.now()
     
@@ -231,7 +294,27 @@ def system_status():
             'error': str(e)
         }
     
-    return render_template('management/system_status.html', **system_data)
+    # Get configuration data for the config tab
+    config_info = {
+        'debug_mode': SystemConfig.get_value('debug_mode', 'Development Server'),
+        'database_path': SystemConfig.get_value('database_path', 'instance/app.db'),
+        'max_upload_size': SystemConfig.get_value('max_upload_size', '16 MB'),
+        'session_timeout': SystemConfig.get_value('session_timeout', '24 hours'),
+        'backup_location': SystemConfig.get_value('backup_location', 'backups/'),
+        'log_level': SystemConfig.get_value('log_level', 'INFO')
+    }
+    
+    system_info = {
+        'python_version': sys.version.split()[0],
+        'flask_version': flask.__version__,
+        'database': 'SQLite',
+        'server': 'Development' if config_info['debug_mode'] == 'Development Server' else 'Production'
+    }
+    
+    system_data['config'] = config_info
+    system_data['system_info'] = system_info
+    
+    return render_template('tech/system_status_config.html', **system_data)
 
 @tech_blueprint.route('/error/reports')
 @login_required
@@ -481,7 +564,7 @@ def restart_server():
     except Exception as e:
         flash(f'Error restarting server: {str(e)}', 'danger')
     
-    return redirect(url_for('tech.system_config'))
+    return redirect(url_for('tech.system_status_config') + '#config')
 
 @tech_blueprint.route('/system/view-logs')
 @login_required
@@ -700,29 +783,8 @@ def view_user_details(user_id):
 @login_required
 @tech_required
 def system_config():
-    from models import SystemConfig
-    import sys
-    import flask
-    
-    # Get current configuration from database
-    config_info = {
-        'debug_mode': SystemConfig.get_value('debug_mode', 'Development Server'),
-        'database_path': SystemConfig.get_value('database_path', 'instance/app.db'),
-        'max_upload_size': SystemConfig.get_value('max_upload_size', '16 MB'),
-        'session_timeout': SystemConfig.get_value('session_timeout', '24 hours'),
-        'backup_location': SystemConfig.get_value('backup_location', 'backups/'),
-        'log_level': SystemConfig.get_value('log_level', 'INFO')
-    }
-    
-    # Get system information
-    system_info = {
-        'python_version': sys.version.split()[0],
-        'flask_version': flask.__version__,
-        'database': 'SQLite',
-        'server': 'Development' if config_info['debug_mode'] == 'Development Server' else 'Production'
-    }
-    
-    return render_template('management/system_config.html', config=config_info, system_info=system_info)
+    """Redirect to merged system status/config page (config tab)"""
+    return redirect(url_for('tech.system_status_config') + '#config')
 
 @tech_blueprint.route('/system/config/update', methods=['POST'])
 @login_required
@@ -764,7 +826,7 @@ def update_system_config():
     except Exception as e:
         flash(f'Error updating configuration: {str(e)}', 'danger')
     
-    return redirect(url_for('tech.system_config'))
+    return redirect(url_for('tech.system_status_config') + '#config')
 
 @tech_blueprint.route('/user/management', methods=['GET', 'POST'])
 @login_required
@@ -1070,6 +1132,148 @@ def resources():
         return redirect(url_for('tech.tech_dashboard'))
 
 @tech_blueprint.route('/resources/download/<path:filename>')
+
+@tech_blueprint.route('/message-logs')
+@login_required
+@tech_required
+def message_logs():
+    """View all message logs (tech users only - complete message history)."""
+    # Get filter parameters
+    user_id = request.args.get('user_id', type=int)
+    group_id = request.args.get('group_id', type=int)
+    message_type = request.args.get('message_type', '')
+    start_date = request.args.get('start_date', '')
+    end_date = request.args.get('end_date', '')
+    search_query = request.args.get('search', '').strip()
+    page = request.args.get('page', 1, type=int)
+    per_page = 50
+    
+    # Build query
+    query = Message.query
+    
+    # Apply filters
+    if user_id:
+        query = query.filter(
+            or_(Message.sender_id == user_id, Message.recipient_id == user_id)
+        )
+    
+    if group_id:
+        query = query.filter(Message.group_id == group_id)
+    
+    if message_type:
+        query = query.filter(Message.message_type == message_type)
+    
+    if start_date:
+        try:
+            start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+            query = query.filter(Message.created_at >= start_dt)
+        except ValueError:
+            pass
+    
+    if end_date:
+        try:
+            end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+            # Add one day to include the entire end date
+            end_dt = end_dt + timedelta(days=1)
+            query = query.filter(Message.created_at < end_dt)
+        except ValueError:
+            pass
+    
+    if search_query:
+        query = query.filter(Message.content.contains(search_query))
+    
+    # Order by most recent first
+    query = query.order_by(Message.created_at.desc())
+    
+    # Paginate
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    messages = pagination.items
+    
+    # Format messages for display
+    formatted_messages = []
+    for msg in messages:
+        sender = User.query.get(msg.sender_id)
+        recipient = User.query.get(msg.recipient_id) if msg.recipient_id else None
+        group = MessageGroup.query.get(msg.group_id) if msg.group_id else None
+        
+        # Get sender/recipient names
+        sender_name = 'Unknown'
+        if sender:
+            if sender.role == 'Student' and sender.student_id:
+                student = Student.query.get(sender.student_id)
+                if student:
+                    sender_name = f"{student.first_name} {student.last_name} (Student)"
+            elif sender.role in ['Director', 'School Administrator'] or 'Teacher' in sender.role:
+                if sender.teacher_staff_id:
+                    teacher = TeacherStaff.query.get(sender.teacher_staff_id)
+                    if teacher:
+                        sender_name = f"{teacher.first_name} {teacher.last_name} ({sender.role})"
+            else:
+                sender_name = f"{sender.username} ({sender.role})"
+        
+        recipient_name = None
+        if recipient:
+            if recipient.role == 'Student' and recipient.student_id:
+                student = Student.query.get(recipient.student_id)
+                if student:
+                    recipient_name = f"{student.first_name} {student.last_name} (Student)"
+            elif recipient.role in ['Director', 'School Administrator'] or 'Teacher' in recipient.role:
+                if recipient.teacher_staff_id:
+                    teacher = TeacherStaff.query.get(recipient.teacher_staff_id)
+                    if teacher:
+                        recipient_name = f"{teacher.first_name} {teacher.last_name} ({recipient.role})"
+            else:
+                recipient_name = f"{recipient.username} ({recipient.role})"
+        
+        formatted_messages.append({
+            'id': msg.id,
+            'sender_name': sender_name,
+            'sender_id': msg.sender_id,
+            'recipient_name': recipient_name,
+            'recipient_id': msg.recipient_id,
+            'group_name': group.name if group else None,
+            'group_id': msg.group_id,
+            'message_type': msg.message_type,
+            'content': msg.content,
+            'created_at': msg.created_at,
+            'is_read': msg.is_read,
+            'is_edited': msg.is_edited,
+            'parent_message_id': msg.parent_message_id
+        })
+    
+    # Get all users for filter dropdown
+    all_users = User.query.order_by(User.username).all()
+    users_list = []
+    for user in all_users:
+        name = user.username
+        if user.role == 'Student' and user.student_id:
+            student = Student.query.get(user.student_id)
+            if student:
+                name = f"{student.first_name} {student.last_name} ({user.username})"
+        elif user.role in ['Director', 'School Administrator'] or 'Teacher' in user.role:
+            if user.teacher_staff_id:
+                teacher = TeacherStaff.query.get(user.teacher_staff_id)
+                if teacher:
+                    name = f"{teacher.first_name} {teacher.last_name} ({user.username})"
+        users_list.append({'id': user.id, 'name': name, 'role': user.role})
+    
+    # Get all groups for filter dropdown
+    all_groups = MessageGroup.query.order_by(MessageGroup.name).all()
+    groups_list = [{'id': g.id, 'name': g.name, 'type': g.group_type} for g in all_groups]
+    
+    return render_template('tech/message_logs.html',
+                         messages=formatted_messages,
+                         pagination=pagination,
+                         users=users_list,
+                         groups=groups_list,
+                         current_filters={
+                             'user_id': user_id,
+                             'group_id': group_id,
+                             'message_type': message_type,
+                             'start_date': start_date,
+                             'end_date': end_date,
+                             'search': search_query
+                         })
 @login_required
 @tech_required
 def download_resource(filename):

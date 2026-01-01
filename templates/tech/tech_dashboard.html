@@ -1,24 +1,94 @@
 {% extends "shared/dashboard_layout.html" %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tech_dashboard.css') }}">
+<style>
+    .dashboard-content-wrapper {
+        position: relative;
+        z-index: 1;
+    }
+    
+    /* Performance optimizations for tech dashboard */
+    .tech-dashboard-wrapper {
+        animation: none !important;
+    }
+    
+    .tech-dashboard-wrapper::before,
+    .tech-dashboard-wrapper::after {
+        display: none !important;
+    }
+    
+    /* Better text contrast for cards */
+    .tech-card {
+        background: rgba(255, 255, 255, 0.95) !important;
+        backdrop-filter: blur(5px) !important;
+        -webkit-backdrop-filter: blur(5px) !important;
+    }
+    
+    /* Tech Dashboard Title with Gradient */
+    .tech-dashboard-title,
+    h1.tech-dashboard-title {
+        background: linear-gradient(135deg, #4c63d2 0%, #5a3d91 20%, #c850c0 40%, #3d8bfd 70%, #0066cc 90%, #0073e6 100%) !important;
+        -webkit-background-clip: text !important;
+        -webkit-text-fill-color: transparent !important;
+        background-clip: text !important;
+        font-weight: 800 !important;
+        display: inline-block;
+        overflow: visible !important;
+    }
+    
+    .tech-dashboard-title i {
+        background: linear-gradient(135deg, #4c63d2 0%, #5a3d91 20%, #c850c0 40%, #3d8bfd 70%, #0066cc 90%, #0073e6 100%) !important;
+        -webkit-background-clip: text !important;
+        -webkit-text-fill-color: transparent !important;
+        background-clip: text !important;
+    }
+    
+    .tech-header h2,
+    .tech-header h5 {
+        color: #333 !important;
+    }
+    
+    .tech-header p,
+    .tech-card p {
+        color: #666 !important;
+    }
+    
+    .tech-card .p-3 p {
+        color: #666 !important;
+    }
+</style>
+{% endblock %}
+
 {% block dashboard_content %}
-<div class="container-fluid px-2 px-md-4">
-    <div class="row g-3 g-md-4">
+<div class="tech-dashboard-wrapper">
+<div class="container-fluid px-2 px-md-4 dashboard-content-wrapper py-4">
+    <div class="row g-3 g-md-4 mb-4">
         <div class="col-12">
-            <h1 class="mb-4">Tech Support Dashboard</h1>
-            <div class="alert alert-info">
-                <h5>Welcome, {{ current_user.username }}!</h5>
-                <p>You are logged in as a Tech Support user.</p>
+            <div class="tech-card tech-header" style="background: rgba(255, 255, 255, 0.95) !important; overflow: visible;">
+                <h1 class="mb-2 tech-dashboard-title">
+                    <i class="bi bi-gear-fill me-2"></i>Tech Support Dashboard
+                </h1>
+                <p class="mb-0" style="color: #666;">Welcome, <strong style="color: #333;">{{ current_user.username }}</strong>! Manage system operations and monitor performance.</p>
             </div>
             
             {% if maintenance %}
-            <div class="alert alert-warning">
-                <h5><i class="bi bi-exclamation-triangle"></i> Maintenance Mode Active</h5>
-                <p><strong>Reason:</strong> {{ maintenance.reason }}</p>
-                <p><strong>End Time:</strong> {{ maintenance.end_time.strftime('%Y-%m-%d %H:%M:%S') }}</p>
-                <p><strong>Message:</strong> {{ maintenance.maintenance_message }}</p>
-                <a href="{{ url_for('tech.maintenance_control') }}" class="btn btn-warning btn-sm">
-                    <i class="bi bi-tools me-1"></i> Manage Maintenance
-                </a>
+            <div class="alert alert-warning mt-3">
+                <h5 class="mb-3" style="color: #333;">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>Maintenance Mode Active
+                </h5>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <p class="mb-2" style="color: #333;"><strong>Reason:</strong> {{ maintenance.reason }}</p>
+                        <p class="mb-2" style="color: #333;"><strong>End Time:</strong> {{ maintenance.end_time.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-2" style="color: #333;"><strong>Message:</strong> {{ maintenance.maintenance_message }}</p>
+                        <a href="{{ url_for('tech.maintenance_control') }}" class="btn btn-warning">
+                            <i class="bi bi-tools me-1"></i>Manage Maintenance
+                        </a>
+                    </div>
+                </div>
             </div>
             {% endif %}
         </div>
@@ -26,87 +96,129 @@
 
     <div class="row g-3 g-md-4">
         <div class="col-12 col-sm-6 col-lg-4">
-            <div class="card h-100">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">System Status</h5>
+            <div class="tech-card h-100">
+                <div class="tech-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-activity me-2"></i>System Status
+                    </h5>
                 </div>
-                <div class="card-body d-flex flex-column">
-                    <p class="flex-grow-1">Check system health and performance metrics.</p>
-                    <a href="{{ url_for('tech.system_status') }}" class="btn btn-primary">View Status</a>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-12 col-sm-6 col-lg-4">
-            <div class="card h-100">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Activity Log</h5>
-                </div>
-                <div class="card-body d-flex flex-column">
-                    <p class="flex-grow-1">View detailed user activity and security logs.</p>
-                    <a href="{{ url_for('tech.activity_log') }}" class="btn btn-primary">View Logs</a>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-12 col-sm-6 col-lg-4">
-            <div class="card h-100">
-                <div class="card-header">
-                    <h5 class="card-title mb-0"><i class="fas fa-bug"></i> Bug Reports</h5>
-                </div>
-                <div class="card-body d-flex flex-column">
-                    <p class="flex-grow-1">Monitor and manage automatic error reports from the system.</p>
-                    <a href="{{ url_for('tech.bug_reports') }}" class="btn btn-warning">
-                        <i class="fas fa-bug"></i> View Bug Reports
+                <div class="p-3 d-flex flex-column" style="min-height: 150px;">
+                    <p class="flex-grow-1" style="color: #666;">Check system health and performance metrics.</p>
+                    <a href="{{ url_for('tech.system_status_config') }}" class="btn btn-primary mt-auto">
+                        <i class="bi bi-arrow-right me-2"></i>View Status
                     </a>
                 </div>
             </div>
         </div>
 
         <div class="col-12 col-sm-6 col-lg-4">
-            <div class="card h-100">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">User Management</h5>
+            <div class="tech-card h-100">
+                <div class="tech-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-clock-history me-2"></i>Activity Log
+                    </h5>
                 </div>
-                <div class="card-body d-flex flex-column">
-                    <p class="flex-grow-1">Manage user accounts and permissions.</p>
-                    <a href="{{ url_for('tech.user_management') }}" class="btn btn-primary">Manage Users</a>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-12 col-sm-6 col-lg-4">
-            <div class="card h-100">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Error/Bug Log</h5>
-                </div>
-                <div class="card-body d-flex flex-column">
-                    <p class="flex-grow-1">View and manage system errors and user-submitted bug reports.</p>
-                    <a href="{{ url_for('tech.error_reports') }}" class="btn btn-primary">View Log</a>
+                <div class="p-3 d-flex flex-column" style="min-height: 150px;">
+                    <p class="flex-grow-1" style="color: #666;">View detailed user activity and security logs.</p>
+                    <a href="{{ url_for('tech.activity_log') }}" class="btn btn-primary mt-auto">
+                        <i class="bi bi-arrow-right me-2"></i>View Logs
+                    </a>
                 </div>
             </div>
         </div>
 
         <div class="col-12 col-sm-6 col-lg-4">
-            <div class="card h-100">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">System Config</h5>
+            <div class="tech-card h-100">
+                <div class="tech-header" style="background: linear-gradient(135deg, rgba(79, 172, 254, 0.3), rgba(0, 242, 254, 0.3));">
+                    <h5 class="mb-0">
+                        <i class="bi bi-chat-left-text-fill me-2"></i>Message Logs
+                    </h5>
                 </div>
-                <div class="card-body d-flex flex-column">
-                    <p class="flex-grow-1">Configure system settings and parameters.</p>
-                    <a href="{{ url_for('tech.system_config') }}" class="btn btn-primary">Configure</a>
+                <div class="p-3 d-flex flex-column" style="min-height: 150px;">
+                    <p class="flex-grow-1" style="color: #666;">View all system messages including student DMs and groups. Complete message history with filtering options.</p>
+                    <a href="{{ url_for('tech.message_logs') }}" class="btn btn-info mt-auto">
+                        <i class="bi bi-arrow-right me-2"></i>View Message Logs
+                    </a>
                 </div>
             </div>
         </div>
 
         <div class="col-12 col-sm-6 col-lg-4">
-            <div class="card h-100">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Maintenance</h5>
+            <div class="tech-card h-100">
+                <div class="tech-header" style="background: linear-gradient(135deg, rgba(240, 147, 251, 0.3), rgba(245, 87, 108, 0.3));">
+                    <h5 class="mb-0">
+                        <i class="bi bi-bug-fill me-2"></i>Bug Reports
+                    </h5>
                 </div>
-                <div class="card-body d-flex flex-column">
-                    <p class="flex-grow-1">Control system maintenance mode.</p>
-                    <a href="{{ url_for('tech.maintenance_control') }}" class="btn btn-primary">Manage</a>
+                <div class="p-3 d-flex flex-column" style="min-height: 150px;">
+                    <p class="flex-grow-1" style="color: #666;">Monitor and manage automatic error reports from the system.</p>
+                    <a href="{{ url_for('tech.bug_reports') }}" class="btn btn-warning mt-auto">
+                        <i class="bi bi-arrow-right me-2"></i>View Bug Reports
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-lg-4">
+            <div class="tech-card h-100">
+                <div class="tech-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-people-fill me-2"></i>User Management
+                    </h5>
+                </div>
+                <div class="p-3 d-flex flex-column" style="min-height: 150px;">
+                    <p class="flex-grow-1" style="color: #666;">Manage user accounts and permissions.</p>
+                    <a href="{{ url_for('tech.user_management') }}" class="btn btn-primary mt-auto">
+                        <i class="bi bi-arrow-right me-2"></i>Manage Users
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-lg-4">
+            <div class="tech-card h-100">
+                <div class="tech-header" style="background: linear-gradient(135deg, rgba(235, 51, 73, 0.3), rgba(244, 92, 67, 0.3));">
+                    <h5 class="mb-0">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>Error/Bug Log
+                    </h5>
+                </div>
+                <div class="p-3 d-flex flex-column" style="min-height: 150px;">
+                    <p class="flex-grow-1" style="color: #666;">View and manage system errors and user-submitted bug reports.</p>
+                    <a href="{{ url_for('tech.error_reports') }}" class="btn btn-danger mt-auto">
+                        <i class="bi bi-arrow-right me-2"></i>View Log
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-lg-4">
+            <div class="tech-card h-100">
+                <div class="tech-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-sliders me-2"></i>System Config
+                    </h5>
+                </div>
+                <div class="p-3 d-flex flex-column" style="min-height: 150px;">
+                    <p class="flex-grow-1" style="color: #666;">Configure system settings and parameters.</p>
+                    <a href="{{ url_for('tech.system_status_config') }}#config" class="btn btn-primary mt-auto">
+                        <i class="bi bi-arrow-right me-2"></i>Configure
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-lg-4">
+            <div class="tech-card h-100">
+                <div class="tech-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-tools me-2"></i>Maintenance
+                    </h5>
+                </div>
+                <div class="p-3 d-flex flex-column" style="min-height: 150px;">
+                    <p class="flex-grow-1" style="color: #666;">Control system maintenance mode.</p>
+                    <a href="{{ url_for('tech.maintenance_control') }}" class="btn btn-primary mt-auto">
+                        <i class="bi bi-arrow-right me-2"></i>Manage
+                    </a>
                 </div>
             </div>
         </div>
@@ -114,56 +226,63 @@
 
     <div class="row mt-4">
         <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Quick Actions</h5>
+            <div class="tech-card">
+                <div class="tech-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-lightning-fill me-2"></i>Quick Actions
+                    </h5>
                 </div>
-                <div class="card-body">
-                    <div class="row g-3">
+                <div class="p-3">
+                    <div class="row g-4">
                         <div class="col-12 col-md-6">
-                            <h6>Database Operations</h6>
-                            <ul class="list-unstyled">
-                                <li class="mb-2">
-                                    <form method="POST" action="{{ url_for('tech.backup_database') }}" class="display-inline">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                        <button type="submit" class="btn btn-link text-decoration-none p-0">Backup Database</button>
-                                    </form>
-                                </li>
-                                <li class="mb-2">
-                                    <form method="POST" action="{{ url_for('tech.check_database_integrity') }}" class="display-inline">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                        <button type="submit" class="btn btn-link text-decoration-none p-0">Check Database Integrity</button>
-                                    </form>
-                                </li>
-                                <li class="mb-2">
-                                    <a href="{{ url_for('tech.view_database_logs') }}" class="text-decoration-none">View Database Logs</a>
-                                </li>
-                            </ul>
+                            <h6 style="color: #333; margin-bottom: 1rem; font-weight: 600;">
+                                <i class="bi bi-database me-2"></i>Database Operations
+                            </h6>
+                            <div class="tech-quick-actions">
+                                <form method="POST" action="{{ url_for('tech.backup_database') }}" class="mb-2">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <button type="submit" class="btn btn-success w-100 text-start">
+                                        <i class="bi bi-download me-2"></i>Backup Database
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ url_for('tech.check_database_integrity') }}" class="mb-2">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <button type="submit" class="btn btn-info w-100 text-start">
+                                        <i class="bi bi-shield-check me-2"></i>Check Database Integrity
+                                    </button>
+                                </form>
+                                <a href="{{ url_for('tech.view_database_logs') }}" class="btn btn-primary w-100 text-start">
+                                    <i class="bi bi-file-text me-2"></i>View Database Logs
+                                </a>
+                            </div>
                         </div>
                         <div class="col-12 col-md-6">
-                            <h6>System Maintenance</h6>
-                            <ul class="list-unstyled">
-                                <li class="mb-2">
-                                    <form method="POST" action="{{ url_for('tech.clear_cache') }}" class="display-inline">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                        <button type="submit" class="btn btn-link text-decoration-none p-0">Clear Cache</button>
-                                    </form>
-                                </li>
-                                <li class="mb-2">
-                                    <form method="POST" action="{{ url_for('tech.update_system') }}" class="display-inline">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                        <button type="submit" class="btn btn-link text-decoration-none p-0">Update System</button>
-                                    </form>
-                                </li>
-                                <li class="mb-2">
-                                    <a href="{{ url_for('tech.view_system_logs') }}" class="text-decoration-none">View System Logs</a>
-                                </li>
-                            </ul>
+                            <h6 style="color: #333; margin-bottom: 1rem; font-weight: 600;">
+                                <i class="bi bi-gear me-2"></i>System Maintenance
+                            </h6>
+                            <div class="tech-quick-actions">
+                                <form method="POST" action="{{ url_for('tech.clear_cache') }}" class="mb-2">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <button type="submit" class="btn btn-warning w-100 text-start">
+                                        <i class="bi bi-arrow-clockwise me-2"></i>Clear Cache
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ url_for('tech.update_system') }}" class="mb-2">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <button type="submit" class="btn btn-success w-100 text-start">
+                                        <i class="bi bi-arrow-up-circle me-2"></i>Update System
+                                    </button>
+                                </form>
+                                <a href="{{ url_for('tech.view_system_logs') }}" class="btn btn-primary w-100 text-start">
+                                    <i class="bi bi-list-ul me-2"></i>View System Logs
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+</div>
 </div>
 {% endblock %} 

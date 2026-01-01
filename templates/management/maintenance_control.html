@@ -1,55 +1,316 @@
 {% extends "shared/dashboard_layout.html" %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tech_dashboard.css') }}">
+<style>
+    .dashboard-content-wrapper {
+        position: relative;
+        z-index: 1;
+    }
+    
+    /* Performance optimizations */
+    .tech-dashboard-wrapper {
+        animation: none !important;
+    }
+    
+    .tech-dashboard-wrapper::before,
+    .tech-dashboard-wrapper::after {
+        display: none !important;
+    }
+    
+    /* Better text contrast */
+    .tech-card {
+        background: rgba(255, 255, 255, 0.95) !important;
+        backdrop-filter: blur(5px) !important;
+        -webkit-backdrop-filter: blur(5px) !important;
+    }
+    
+    .tech-card.tech-header {
+        overflow: visible !important;
+        background: rgba(255, 255, 255, 0.95) !important;
+    }
+    
+    /* Page Title with Gradient */
+    h1.tech-page-title,
+    .tech-page-title {
+        background: linear-gradient(135deg, #4c63d2 0%, #5a3d91 20%, #c850c0 40%, #3d8bfd 70%, #0066cc 90%, #0073e6 100%) !important;
+        -webkit-background-clip: text !important;
+        -webkit-text-fill-color: transparent !important;
+        background-clip: text !important;
+        font-weight: 800 !important;
+        font-size: 2.25rem !important;
+        display: inline-block;
+        overflow: visible !important;
+    }
+    
+    .tech-page-title i {
+        background: linear-gradient(135deg, #4c63d2 0%, #5a3d91 20%, #c850c0 40%, #3d8bfd 70%, #0066cc 90%, #0073e6 100%) !important;
+        -webkit-background-clip: text !important;
+        -webkit-text-fill-color: transparent !important;
+        background-clip: text !important;
+    }
+    
+    .tech-header h2,
+    .tech-header h5 {
+        color: #333 !important;
+    }
+    
+    .tech-header p {
+        color: #666 !important;
+    }
+    
+    /* Enhanced Alert Styling */
+    .alert-warning {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(255, 250, 240, 0.95)) !important;
+        border: 2px solid rgba(255, 193, 7, 0.3);
+        border-left: 5px solid #ffc107;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        padding: 1.5rem !important;
+    }
+    
+    .alert-warning h5, .alert-warning h6 {
+        color: #856404 !important;
+        font-weight: 700 !important;
+    }
+    
+    .alert-warning p, .alert-warning li {
+        color: #664d03 !important;
+        font-weight: 500 !important;
+    }
+    
+    .alert-info {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(240, 248, 255, 0.95)) !important;
+        border: 2px solid rgba(13, 110, 253, 0.2);
+        border-left: 5px solid #0d6efd;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        padding: 1.5rem !important;
+    }
+    
+    .alert-info h5, .alert-info h6 {
+        color: #084298 !important;
+        font-weight: 700 !important;
+    }
+    
+    .alert-info p, .alert-info li {
+        color: #055160 !important;
+        font-weight: 500 !important;
+    }
+    
+    .alert-success {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(240, 255, 245, 0.95)) !important;
+        border: 2px solid rgba(25, 135, 84, 0.2);
+        border-left: 5px solid #198754;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        padding: 1.5rem !important;
+    }
+    
+    .alert-success h6 {
+        color: #0f5132 !important;
+        font-weight: 700 !important;
+    }
+    
+    .alert-success li {
+        color: #0a3622 !important;
+        font-weight: 500 !important;
+    }
+    
+    /* Maintenance Active Card */
+    .maintenance-active-card {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(255, 240, 240, 0.95)) !important;
+        border: 3px solid rgba(220, 53, 69, 0.3);
+        border-left: 8px solid #dc3545;
+        box-shadow: 0 8px 30px rgba(220, 53, 69, 0.2);
+    }
+    
+    .maintenance-active-header {
+        background: linear-gradient(135deg, #dc3545, #c82333) !important;
+        color: white !important;
+        border-radius: 16px 16px 0 0;
+        padding: 1.5rem !important;
+    }
+    
+    .maintenance-active-header h5 {
+        color: white !important;
+        font-weight: 700 !important;
+    }
+    
+    /* Enhanced Form Styling */
+    .form-label {
+        color: #333;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-control, .form-select {
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 0.75rem;
+        color: #333;
+        background: white;
+        transition: all 0.3s ease;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        outline: none;
+    }
+    
+    .form-text {
+        color: #666;
+        font-size: 0.875rem;
+    }
+    
+    /* Enhanced Button Styles */
+    .btn-maintenance-start {
+        background: linear-gradient(135deg, #ffc107, #ff9800);
+        border: none;
+        color: #333;
+        font-weight: 700;
+        padding: 0.75rem 2rem;
+        box-shadow: 0 4px 15px rgba(255, 193, 7, 0.4);
+        transition: all 0.3s ease;
+    }
+    
+    .btn-maintenance-start:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(255, 193, 7, 0.5);
+        color: #333;
+    }
+    
+    .btn-maintenance-stop {
+        background: linear-gradient(135deg, #198754, #157347);
+        border: none;
+        color: white;
+        font-weight: 700;
+        padding: 0.75rem 2rem;
+        box-shadow: 0 4px 15px rgba(25, 135, 84, 0.4);
+        transition: all 0.3s ease;
+    }
+    
+    .btn-maintenance-stop:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(25, 135, 84, 0.5);
+        color: white;
+    }
+    
+    /* Info Card Styling */
+    .info-card {
+        background: rgba(255, 255, 255, 0.95) !important;
+    }
+    
+    .info-card-header {
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1)) !important;
+        border-bottom: 2px solid rgba(102, 126, 234, 0.2);
+    }
+    
+    .info-card-header h5 {
+        color: #333 !important;
+        font-weight: 700 !important;
+    }
+    
+    /* Table Styling */
+    .table-borderless td {
+        color: #333;
+        font-weight: 500;
+        padding: 0.75rem;
+        border: none;
+    }
+    
+    .table-borderless td strong {
+        color: #333;
+        font-weight: 700;
+    }
+</style>
+{% endblock %}
+
 {% block dashboard_content %}
-<div class="container-fluid px-2 px-md-4 mt-4">
+<div class="tech-dashboard-wrapper">
+<div class="container-fluid px-2 px-md-4 dashboard-content-wrapper py-4">
     <div class="row g-3 g-md-4">
         <div class="col-12">
-            <h1 class="mb-4">Maintenance Mode Control</h1>
-            <div class="alert alert-warning">
-                <h5><i class="bi bi-exclamation-triangle"></i> System Maintenance</h5>
-                <p>Control system maintenance mode to temporarily restrict access while keeping the home page available.</p>
+            <div class="tech-card tech-header mb-4" style="background: rgba(255, 255, 255, 0.95) !important; overflow: visible;">
+                <div style="overflow: visible;">
+                    <h1 class="mb-2 tech-page-title">
+                        <i class="bi bi-tools me-2"></i>Maintenance Mode Control
+                    </h1>
+                    <p class="mb-0" style="color: #666;">Control system maintenance mode to temporarily restrict access while keeping the home page available</p>
+                </div>
             </div>
         </div>
     </div>
+    
+    <div class="row g-3 g-md-4">
+        <div class="col-12">
+            <div class="alert alert-warning">
+                <h5 class="mb-2">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>System Maintenance
+                </h5>
+                <p class="mb-0">
+                    Control system maintenance mode to temporarily restrict access while keeping the home page available. Tech users always maintain access during maintenance.
+                </p>
+            </div>
+        </div>
+    </div>
+    
     {% if maintenance %}
     <div class="row g-3 g-md-4 mb-4">
         <div class="col-12">
-            <div class="card border-danger">
-                <div class="card-header bg-danger text-white">
-                    <h5 class="card-title mb-0"><i class="bi bi-tools"></i> Maintenance Mode Active</h5>
+            <div class="tech-card maintenance-active-card">
+                <div class="maintenance-active-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-tools me-2"></i>Maintenance Mode Active
+                    </h5>
                 </div>
-                <div class="card-body">
-                    <div class="row g-3">
+                <div class="p-4">
+                    <div class="row g-4">
                         <div class="col-12 col-md-6">
                             <table class="table table-borderless">
                                 <tr>
-                                    <td><strong>Start Time:</strong></td>
-                                    <td>{{ maintenance.start_time.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                    <td style="width: 40%;"><strong>Start Time:</strong></td>
+                                    <td>
+                                        <span class="badge bg-secondary" style="font-weight: 600; padding: 0.5rem 1rem;">
+                                            {{ maintenance.start_time.strftime('%Y-%m-%d %H:%M:%S') }}
+                                        </span>
+                                    </td>
                                 </tr>
                                 <tr>
                                     <td><strong>End Time:</strong></td>
-                                    <td>{{ maintenance.end_time.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                    <td>
+                                        <span class="badge bg-danger" style="font-weight: 600; padding: 0.5rem 1rem;">
+                                            {{ maintenance.end_time.strftime('%Y-%m-%d %H:%M:%S') }}
+                                        </span>
+                                    </td>
                                 </tr>
                                 <tr>
                                     <td><strong>Duration:</strong></td>
-                                    <td>{{ maintenance.duration_minutes }} minutes</td>
+                                    <td>
+                                        <span class="badge bg-info" style="font-weight: 600; padding: 0.5rem 1rem;">
+                                            {{ maintenance.duration_minutes }} minutes
+                                        </span>
+                                    </td>
                                 </tr>
                                 <tr>
                                     <td><strong>Reason:</strong></td>
-                                    <td>{{ maintenance.reason }}</td>
+                                    <td style="color: #333; font-weight: 600;">{{ maintenance.reason }}</td>
                                 </tr>
                             </table>
                         </div>
                         <div class="col-12 col-md-6">
-                            <div class="alert alert-info">
+                            <div class="alert alert-info mb-3">
                                 <strong>Maintenance Message:</strong><br>
-                                {{ maintenance.maintenance_message }}
+                                <span style="color: #055160;">{{ maintenance.maintenance_message }}</span>
                             </div>
                             <div class="d-grid">
                                 <form method="POST" action="{{ url_for('tech.stop_maintenance') }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                    <button type="submit" class="btn btn-success" onclick="return confirm('Stop maintenance mode? Users will be able to access the system again.')">
-                                        <i class="bi bi-play-circle"></i> Stop Maintenance Mode
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <button type="submit" 
+                                            class="btn btn-maintenance-stop w-100" 
+                                            onclick="return confirm('Stop maintenance mode? Users will be able to access the system again.')">
+                                        <i class="bi bi-play-circle me-2"></i>Stop Maintenance Mode
                                     </button>
                                 </form>
                             </div>
@@ -60,15 +321,18 @@
         </div>
     </div>
     {% endif %}
+    
     <div class="row g-3 g-md-4">
         <div class="col-12 col-lg-8">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Start Maintenance Mode</h5>
+            <div class="tech-card info-card">
+                <div class="tech-header info-card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-gear-fill me-2"></i>Start Maintenance Mode
+                    </h5>
                 </div>
-                <div class="card-body">
+                <div class="p-4">
                     <form method="POST" action="{{ url_for('tech.start_maintenance') }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <div class="row g-3">
                             <div class="col-12 col-md-6">
                                 <div class="mb-3">
@@ -87,8 +351,14 @@
                                 </div>
                                 <div class="mb-3" id="custom_duration_group" style="display: none;">
                                     <label for="custom_duration" class="form-label">Custom Duration (hours)</label>
-                                    <input type="number" class="form-control" id="custom_duration" name="custom_duration" 
-                                           min="1" max="168" placeholder="Enter hours (max 168 = 7 days)">
+                                    <input type="number" 
+                                           class="form-control" 
+                                           id="custom_duration" 
+                                           name="custom_duration" 
+                                           min="1" 
+                                           max="168" 
+                                           placeholder="Enter hours (max 168 = 7 days)"
+                                           oninput="updateDurationMinutes()">
                                     <div class="form-text">Maximum 168 hours (7 days)</div>
                                 </div>
                                 <input type="hidden" id="duration_minutes" name="duration_minutes" value="60">
@@ -107,32 +377,44 @@
                             <div class="col-12 col-md-6">
                                 <div class="mb-3">
                                     <label for="maintenance_message" class="form-label">Message to Display</label>
-                                    <textarea class="form-control" id="maintenance_message" name="maintenance_message" rows="3" required>System is under maintenance. Please check back later.</textarea>
+                                    <textarea class="form-control" 
+                                              id="maintenance_message" 
+                                              name="maintenance_message" 
+                                              rows="5" 
+                                              required
+                                              placeholder="Enter message to display to users during maintenance">System is under maintenance. Please check back later.</textarea>
                                 </div>
                                 <div class="alert alert-info">
-                                    <i class="bi bi-info-circle"></i>
+                                    <i class="bi bi-info-circle me-2"></i>
                                     <strong>Tech Access:</strong> Tech users will always be able to access the system during maintenance mode.
                                 </div>
                             </div>
                         </div>
-                        <div class="d-flex justify-content-end">
-                            <button type="submit" class="btn btn-warning" onclick="return confirm('Start maintenance mode? This will restrict access for all users except Tech users.')">
-                                <i class="bi bi-tools"></i> Start Maintenance Mode
+                        <div class="d-flex justify-content-end mt-4">
+                            <button type="submit" 
+                                    class="btn btn-maintenance-start" 
+                                    onclick="return validateAndConfirm()">
+                                <i class="bi bi-tools me-2"></i>Start Maintenance Mode
                             </button>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
+        
         <div class="col-12 col-lg-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Maintenance Information</h5>
+            <div class="tech-card info-card mb-4">
+                <div class="tech-header info-card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle-fill me-2"></i>Maintenance Information
+                    </h5>
                 </div>
-                <div class="card-body">
-                    <div class="alert alert-info">
-                        <h6><i class="bi bi-info-circle"></i> What happens during maintenance?</h6>
-                        <ul class="mb-0">
+                <div class="p-4">
+                    <div class="alert alert-info mb-3">
+                        <h6 class="mb-2">
+                            <i class="bi bi-info-circle me-2"></i>What happens during maintenance?
+                        </h6>
+                        <ul class="mb-0 ps-3">
                             <li>Home page remains accessible</li>
                             <li>Login is disabled for regular users</li>
                             <li><strong>Tech users always have access</strong></li>
@@ -141,9 +423,11 @@
                             <li>Maximum duration: 7 days</li>
                         </ul>
                     </div>
-                    <div class="alert alert-warning">
-                        <h6><i class="bi bi-exclamation-triangle"></i> Important Notes</h6>
-                        <ul class="mb-0">
+                    <div class="alert alert-warning mb-3">
+                        <h6 class="mb-2">
+                            <i class="bi bi-exclamation-triangle me-2"></i>Important Notes
+                        </h6>
+                        <ul class="mb-0 ps-3">
                             <li>Maintenance mode affects all regular users</li>
                             <li>Tech users can always bypass maintenance</li>
                             <li>Maximum maintenance duration: 7 days</li>
@@ -153,8 +437,10 @@
                         </ul>
                     </div>
                     <div class="alert alert-success">
-                        <h6><i class="bi bi-shield-check"></i> Tech User Benefits</h6>
-                        <ul class="mb-0">
+                        <h6 class="mb-2">
+                            <i class="bi bi-shield-check me-2"></i>Tech User Benefits
+                        </h6>
+                        <ul class="mb-0 ps-3">
                             <li>Always able to login during maintenance</li>
                             <li>Can stop maintenance mode anytime</li>
                             <li>Full system access maintained</li>
@@ -165,6 +451,7 @@
             </div>
         </div>
     </div>
+</div>
 </div>
 
 <script>
@@ -199,32 +486,34 @@ function updateDurationMinutes() {
     }
 }
 
+function validateAndConfirm() {
+    const durationType = document.getElementById('duration_type');
+    const customDuration = document.getElementById('custom_duration');
+    
+    if (durationType.value === 'custom') {
+        const hours = parseInt(customDuration.value);
+        if (!hours || hours < 1 || hours > 168) {
+            alert('Please enter a valid duration between 1 and 168 hours (7 days maximum).');
+            customDuration.focus();
+            return false;
+        }
+    }
+    
+    return confirm('Start maintenance mode? This will restrict access for all users except Tech users.');
+}
+
 // Add event listeners
 document.addEventListener('DOMContentLoaded', function() {
     const durationType = document.getElementById('duration_type');
     const customDuration = document.getElementById('custom_duration');
     
-    durationType.addEventListener('change', toggleCustomDuration);
-    customDuration.addEventListener('input', updateDurationMinutes);
+    if (durationType) {
+        durationType.addEventListener('change', toggleCustomDuration);
+    }
     
-    // Form validation
-    const form = document.querySelector('form');
-    form.addEventListener('submit', function(e) {
-        const durationType = document.getElementById('duration_type');
-        const customDuration = document.getElementById('custom_duration');
-        
-        if (durationType.value === 'custom') {
-            const hours = parseInt(customDuration.value);
-            if (!hours || hours < 1 || hours > 168) {
-                e.preventDefault();
-                alert('Please enter a valid duration between 1 and 168 hours (7 days maximum).');
-                customDuration.focus();
-                return false;
-            }
-        }
-        
-        return confirm('Start maintenance mode? This will restrict access for all users except Tech users.');
-    });
+    if (customDuration) {
+        customDuration.addEventListener('input', updateDurationMinutes);
+    }
 });
 </script>
-{% endblock %} 
+{% endblock %}

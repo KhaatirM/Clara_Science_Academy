@@ -207,6 +207,107 @@
                             </div>
                         </div>
 
+                        <!-- Schedule Management Section -->
+                        <div class="row g-4 mb-4">
+                            <div class="col-12">
+                                <div class="bg-light rounded-3 p-4 border-start border-4 border-primary">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <h6 class="text-primary mb-0 fw-bold">
+                                            <i class="bi bi-calendar-week me-2"></i>
+                                            Class Schedule
+                                        </h6>
+                                        <button type="button" class="btn btn-sm btn-primary" onclick="addScheduleRow()">
+                                            <i class="bi bi-plus-circle me-1"></i>Add Time Slot
+                                        </button>
+                                    </div>
+                                    <div class="form-text mb-3">
+                                        <i class="bi bi-lightbulb me-1"></i>
+                                        Define when this class meets during the week. You can add multiple time slots per day.
+                                    </div>
+                                    
+                                    <div id="scheduleContainer">
+                                        {% if existing_schedules %}
+                                            {% for schedule in existing_schedules %}
+                                            <div class="schedule-row card border mb-3 p-3">
+                                                <div class="row g-3 align-items-end">
+                                                    <div class="col-md-2">
+                                                        <label class="form-label fw-semibold small">Day</label>
+                                                        <select class="form-select" name="schedule_day_value_{{ loop.index0 }}" required>
+                                                            <option value="0" {% if schedule.day_of_week == 0 %}selected{% endif %}>Monday</option>
+                                                            <option value="1" {% if schedule.day_of_week == 1 %}selected{% endif %}>Tuesday</option>
+                                                            <option value="2" {% if schedule.day_of_week == 2 %}selected{% endif %}>Wednesday</option>
+                                                            <option value="3" {% if schedule.day_of_week == 3 %}selected{% endif %}>Thursday</option>
+                                                            <option value="4" {% if schedule.day_of_week == 4 %}selected{% endif %}>Friday</option>
+                                                            <option value="5" {% if schedule.day_of_week == 5 %}selected{% endif %}>Saturday</option>
+                                                            <option value="6" {% if schedule.day_of_week == 6 %}selected{% endif %}>Sunday</option>
+                                                        </select>
+                                                        <input type="hidden" name="schedule_day_{{ loop.index0 }}" value="1">
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <label class="form-label fw-semibold small">Start Time</label>
+                                                        <input type="time" class="form-control" name="schedule_start_{{ loop.index0 }}" 
+                                                               value="{{ schedule.start_time.strftime('%H:%M') }}" required>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <label class="form-label fw-semibold small">End Time</label>
+                                                        <input type="time" class="form-control" name="schedule_end_{{ loop.index0 }}" 
+                                                               value="{{ schedule.end_time.strftime('%H:%M') }}" required>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <label class="form-label fw-semibold small">Room (Optional)</label>
+                                                        <input type="text" class="form-control" name="schedule_room_{{ loop.index0 }}" 
+                                                               value="{{ schedule.room or '' }}" placeholder="e.g., Room 101">
+                                                    </div>
+                                                    <div class="col-md-1">
+                                                        <button type="button" class="btn btn-sm btn-danger w-100" onclick="removeScheduleRow(this)">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                        {% else %}
+                                            <!-- Default empty row -->
+                                            <div class="schedule-row card border mb-3 p-3">
+                                                <div class="row g-3 align-items-end">
+                                                    <div class="col-md-2">
+                                                        <label class="form-label fw-semibold small">Day</label>
+                                                        <select class="form-select" name="schedule_day_value_0" required>
+                                                            <option value="0">Monday</option>
+                                                            <option value="1">Tuesday</option>
+                                                            <option value="2">Wednesday</option>
+                                                            <option value="3">Thursday</option>
+                                                            <option value="4">Friday</option>
+                                                            <option value="5">Saturday</option>
+                                                            <option value="6">Sunday</option>
+                                                        </select>
+                                                        <input type="hidden" name="schedule_day_0" value="1">
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <label class="form-label fw-semibold small">Start Time</label>
+                                                        <input type="time" class="form-control" name="schedule_start_0" required>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <label class="form-label fw-semibold small">End Time</label>
+                                                        <input type="time" class="form-control" name="schedule_end_0" required>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <label class="form-label fw-semibold small">Room (Optional)</label>
+                                                        <input type="text" class="form-control" name="schedule_room_0" placeholder="e.g., Room 101">
+                                                    </div>
+                                                    <div class="col-md-1">
+                                                        <button type="button" class="btn btn-sm btn-danger w-100" onclick="removeScheduleRow(this)">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Class Status Section -->
                         <div class="row g-4 mb-4">
                             <div class="col-12">
@@ -413,5 +514,60 @@
 </div>
 
 <!-- Enhanced Visual Styling -->
+
+<script>
+let scheduleRowIndex = {{ existing_schedules|length if existing_schedules else 1 }};
+
+function addScheduleRow() {
+    const container = document.getElementById('scheduleContainer');
+    const newRow = document.createElement('div');
+    newRow.className = 'schedule-row card border mb-3 p-3';
+    newRow.innerHTML = `
+        <div class="row g-3 align-items-end">
+            <div class="col-md-2">
+                <label class="form-label fw-semibold small">Day</label>
+                <select class="form-select" name="schedule_day_value_${scheduleRowIndex}" required>
+                    <option value="0">Monday</option>
+                    <option value="1">Tuesday</option>
+                    <option value="2">Wednesday</option>
+                    <option value="3">Thursday</option>
+                    <option value="4">Friday</option>
+                    <option value="5">Saturday</option>
+                    <option value="6">Sunday</option>
+                </select>
+                <input type="hidden" name="schedule_day_${scheduleRowIndex}" value="1">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold small">Start Time</label>
+                <input type="time" class="form-control" name="schedule_start_${scheduleRowIndex}" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold small">End Time</label>
+                <input type="time" class="form-control" name="schedule_end_${scheduleRowIndex}" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold small">Room (Optional)</label>
+                <input type="text" class="form-control" name="schedule_room_${scheduleRowIndex}" placeholder="e.g., Room 101">
+            </div>
+            <div class="col-md-1">
+                <button type="button" class="btn btn-sm btn-danger w-100" onclick="removeScheduleRow(this)">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        </div>
+    `;
+    container.appendChild(newRow);
+    scheduleRowIndex++;
+}
+
+function removeScheduleRow(button) {
+    const row = button.closest('.schedule-row');
+    if (row && document.querySelectorAll('.schedule-row').length > 1) {
+        row.remove();
+    } else {
+        alert('You must have at least one schedule entry.');
+    }
+}
+</script>
 
 {% endblock %} 

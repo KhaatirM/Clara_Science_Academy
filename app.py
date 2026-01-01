@@ -503,6 +503,32 @@ def create_app(config_class=None):
                         
             except Exception as schema_error:
                 print(f"Error updating class table schema: {schema_error}")
+            
+            # Check and add muted_until column to message_group_member if needed
+            try:
+                from sqlalchemy import inspect, text
+                inspector = inspect(db.engine)
+                
+                if 'message_group_member' in inspector.get_table_names():
+                    columns = [col['name'] for col in inspector.get_columns('message_group_member')]
+                    
+                    if 'muted_until' not in columns:
+                        print("Adding muted_until column to message_group_member table...")
+                        with db.engine.connect() as connection:
+                            db_url = str(db.engine.url)
+                            is_postgres = 'postgresql' in db_url
+                            
+                            if is_postgres:
+                                connection.execute(text("ALTER TABLE message_group_member ADD COLUMN muted_until TIMESTAMP NULL"))
+                            else:
+                                connection.execute(text("ALTER TABLE message_group_member ADD COLUMN muted_until DATETIME NULL"))
+                            connection.commit()
+                        print("muted_until column added successfully")
+                    else:
+                        print("message_group_member.muted_until column already exists")
+                        
+            except Exception as mute_error:
+                print(f"Error updating message_group_member table schema: {mute_error}")
                 
         except Exception as e:
             # Re-raise the exception immediately to force a visible traceback in the console.
@@ -526,12 +552,16 @@ def create_app(config_class=None):
     from teacher_routes import teacher_blueprint  # Using new modular teacher_routes package
     from managementroutes import management_blueprint
     from techroutes import tech_blueprint
+    from communications_api import api_bp as communications_api_bp
+    from shared_communications import bp as shared_communications_bp
     
     app.register_blueprint(auth_blueprint)
     app.register_blueprint(student_blueprint, url_prefix='/student')
     app.register_blueprint(teacher_blueprint, url_prefix='/teacher')
     app.register_blueprint(management_blueprint, url_prefix='/management')
     app.register_blueprint(tech_blueprint, url_prefix='/tech')
+    app.register_blueprint(communications_api_bp)  # Communications API - no prefix, uses absolute paths
+    app.register_blueprint(shared_communications_bp)  # Shared communications routes
 
     # Custom template filters
     @app.template_filter('from_json')

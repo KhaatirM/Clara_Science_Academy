@@ -17,8 +17,89 @@ bp = Blueprint('communications', __name__)
 @teacher_required
 def communications_hub():
     """Main communications hub for teachers."""
-    flash("Communications features are currently under development. Check back soon!", "info")
-    return redirect(url_for('teacher.dashboard.teacher_dashboard'))
+    from shared_communications import get_user_channels, get_direct_messages, get_user_announcements, ensure_class_channel_exists, get_dm_conversations
+    from models import Class, Enrollment, MessageGroup, MessageGroupMember, Message
+    
+    # Get teacher's classes
+    teacher = get_teacher_or_admin()
+    if teacher and hasattr(teacher, 'id'):
+        classes = Class.query.filter_by(teacher_id=teacher.id, is_active=True).all()
+    elif is_admin():
+        classes = Class.query.filter_by(is_active=True).all()
+    else:
+        classes = []
+    
+    # Ensure channels exist for classes
+    for class_obj in classes:
+        ensure_class_channel_exists(class_obj.id)
+    
+    # Get channels (teachers don't see student groups)
+    class_channels = get_user_channels(current_user.id, current_user.role)
+    # Teachers cannot see student DMs or student groups
+    direct_messages = get_direct_messages(current_user.id, current_user.role)
+    # Get DM conversations for sidebar injection
+    dm_conversations = get_dm_conversations(current_user.id, current_user.role)
+    
+    # Fetch unique users involved in DMs with current_user (simplified approach)
+    from sqlalchemy import or_
+    from models import User
+    all_dm_messages = Message.query.filter(
+        or_(
+            Message.sender_id == current_user.id,
+            Message.recipient_id == current_user.id
+        ),
+        Message.group_id.is_(None)
+    ).order_by(Message.created_at.desc()).limit(50).all()
+    
+    contact_ids = set()
+    for msg in all_dm_messages:
+        if msg.sender_id != current_user.id:
+            contact_ids.add(msg.sender_id)
+        if msg.recipient_id and msg.recipient_id != current_user.id:
+            contact_ids.add(msg.recipient_id)
+    
+    direct_message_contacts = User.query.filter(User.id.in_(contact_ids)).all() if contact_ids else []
+    
+    announcements = get_user_announcements(current_user.id, current_user.role)
+    unread_announcements = len([a for a in announcements if not a.get('read', False)])
+    
+    # Get staff channels
+    staff_channels = []
+    staff_groups = MessageGroup.query.filter_by(
+        group_type='staff',
+        is_active=True
+    ).all()
+    for group in staff_groups:
+        member = MessageGroupMember.query.filter_by(
+            group_id=group.id,
+            user_id=current_user.id
+        ).first()
+        if member or is_admin():
+            unread = Message.query.filter(
+                Message.group_id == group.id,
+                Message.sender_id != current_user.id,
+                Message.is_read == False
+            ).count()
+            staff_channels.append({
+                'id': group.id,
+                'name': group.name,
+                'type': 'staff',
+                'unread_count': unread
+            })
+    
+    return render_template('shared/communications_hub.html',
+                         class_channels=class_channels,
+                         direct_messages=direct_messages,
+                         dm_conversations=dm_conversations,
+                         direct_message_contacts=direct_message_contacts,
+                         announcements=announcements,
+                         unread_announcements_count=unread_announcements,
+                         available_classes=classes,
+                         active_channel_id=None,
+                         active_view='hub',
+                         active_tab='hub',
+                         staff_channels=staff_channels,
+                         student_groups=[])  # Teachers don't have student groups
 
 # 360° Feedback routes have been moved to teacher_routes/feedback360.py
 # The route is now handled by teacher.feedback360.class_feedback360

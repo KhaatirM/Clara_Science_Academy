@@ -452,3 +452,47 @@ def get_dm_conversations(user_id, user_role=None):
     
     return dm_conversations
 
+# Create Blueprint for shared communications routes
+bp = Blueprint('shared_communications', __name__)
+
+@bp.route('/communications/group/<int:group_id>/leave', methods=['POST'])
+@login_required
+def leave_group(group_id):
+    """Leave a group (students only, cannot leave if creator)."""
+    group = MessageGroup.query.get_or_404(group_id)
+    
+    # Prevent owner from leaving (they must delete)
+    if group.created_by == current_user.id:
+        from flask import flash, redirect, url_for
+        flash('You cannot leave a group you created. You must delete it instead.', 'error')
+        # Redirect based on user role
+        if current_user.role == 'Student':
+            return redirect(url_for('student.communications_hub'))
+        elif current_user.role in ['Director', 'School Administrator']:
+            return redirect(url_for('management.communications_hub'))
+        else:
+            return redirect(url_for('teacher.dashboard.communications_hub'))
+    
+    # Find membership
+    membership = MessageGroupMember.query.filter_by(
+        group_id=group.id, 
+        user_id=current_user.id
+    ).first()
+    
+    if membership:
+        db.session.delete(membership)
+        db.session.commit()
+        from flask import flash, redirect, url_for
+        flash(f'You have left the group "{group.name}".', 'success')
+    else:
+        from flask import flash, redirect, url_for
+        flash('You are not a member of this group.', 'error')
+    
+    # Redirect based on user role
+    if current_user.role == 'Student':
+        return redirect(url_for('student.communications_hub'))
+    elif current_user.role in ['Director', 'School Administrator']:
+        return redirect(url_for('management.communications_hub'))
+    else:
+        return redirect(url_for('teacher.dashboard.communications_hub'))
+

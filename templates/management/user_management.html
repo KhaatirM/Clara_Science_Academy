@@ -1,56 +1,247 @@
 {% extends "shared/dashboard_layout.html" %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tech_dashboard.css') }}">
+<style>
+    .dashboard-content-wrapper {
+        position: relative;
+        z-index: 1;
+    }
+    
+    /* Performance optimizations */
+    .tech-dashboard-wrapper {
+        animation: none !important;
+    }
+    
+    .tech-dashboard-wrapper::before,
+    .tech-dashboard-wrapper::after {
+        display: none !important;
+    }
+    
+    /* Better text contrast */
+    .tech-card {
+        background: rgba(255, 255, 255, 0.95) !important;
+        backdrop-filter: blur(5px) !important;
+        -webkit-backdrop-filter: blur(5px) !important;
+    }
+    
+    .tech-card.tech-header {
+        overflow: visible !important;
+        background: rgba(255, 255, 255, 0.95) !important;
+    }
+    
+    /* Page Title with Gradient */
+    h1.tech-page-title,
+    .tech-page-title {
+        background: linear-gradient(135deg, #4c63d2 0%, #5a3d91 20%, #c850c0 40%, #3d8bfd 70%, #0066cc 90%, #0073e6 100%) !important;
+        -webkit-background-clip: text !important;
+        -webkit-text-fill-color: transparent !important;
+        background-clip: text !important;
+        font-weight: 800 !important;
+        font-size: 2.25rem !important;
+        display: inline-block;
+        overflow: visible !important;
+    }
+    
+    .tech-page-title i {
+        background: linear-gradient(135deg, #4c63d2 0%, #5a3d91 20%, #c850c0 40%, #3d8bfd 70%, #0066cc 90%, #0073e6 100%) !important;
+        -webkit-background-clip: text !important;
+        -webkit-text-fill-color: transparent !important;
+        background-clip: text !important;
+    }
+    
+    .tech-header h2,
+    .tech-header h5 {
+        color: #333 !important;
+    }
+    
+    .tech-header p {
+        color: #666 !important;
+    }
+    
+    /* Enhanced Alert Styling */
+    .alert-info {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(250, 250, 255, 0.95)) !important;
+        border: 2px solid rgba(102, 126, 234, 0.2);
+        border-left: 5px solid #667eea;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        padding: 1.5rem !important;
+    }
+    
+    .alert-info h5 {
+        color: #2d3436 !important;
+        font-weight: 700 !important;
+        font-size: 1.25rem !important;
+    }
+    
+    .alert-info p {
+        color: #555 !important;
+        font-weight: 500 !important;
+    }
+    
+    /* Enhanced Table Styling */
+    .tech-table {
+        background: rgba(255, 255, 255, 0.95) !important;
+    }
+    
+    .tech-table thead th {
+        color: #333 !important;
+        background: rgba(102, 126, 234, 0.1) !important;
+        font-weight: 600;
+        border-bottom: 2px solid rgba(102, 126, 234, 0.2);
+    }
+    
+    .tech-table tbody td {
+        color: #333 !important;
+        background: white !important;
+    }
+    
+    .tech-table tbody tr {
+        background: white !important;
+        transition: background 0.2s ease;
+    }
+    
+    .tech-table tbody tr:hover {
+        background: rgba(102, 126, 234, 0.05) !important;
+    }
+    
+    /* Enhanced Button Styles */
+    .btn-add-user {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        border: none;
+        color: white;
+        font-weight: 600;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        transition: all 0.3s ease;
+    }
+    
+    .btn-add-user:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+    
+    /* Enhanced Badge Styles */
+    .role-badge {
+        font-weight: 600;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-size: 0.85rem;
+    }
+    
+    /* Modal Styling */
+    .modal-content {
+        border-radius: 16px;
+        border: none;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    }
+    
+    .modal-header {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        border-radius: 16px 16px 0 0;
+        border-bottom: none;
+    }
+    
+    .form-label {
+        color: #333;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-control, .form-select {
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 0.75rem;
+        color: #333;
+        background: white;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+</style>
+{% endblock %}
+
 {% block dashboard_content %}
-<div class="container-fluid px-2 px-md-4 mt-4">
+<div class="tech-dashboard-wrapper">
+<div class="container-fluid px-2 px-md-4 dashboard-content-wrapper py-4">
     <div class="row g-3 g-md-4">
         <div class="col-12">
-            <h1 class="mb-4">User Management</h1>
-            <div class="alert alert-info">
-                <h5>User Account Management</h5>
-                <p>View and manage all user accounts in the system.</p>
+            <div class="tech-card tech-header mb-4" style="background: rgba(255, 255, 255, 0.95) !important; overflow: visible;">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3" style="overflow: visible;">
+                    <div style="overflow: visible;">
+                        <h1 class="mb-2 tech-page-title">
+                            <i class="bi bi-people-fill me-2"></i>User Management
+                        </h1>
+                        <p class="mb-0" style="color: #666;">View and manage all user accounts in the system</p>
+                    </div>
+                    <button class="btn btn-add-user" data-bs-toggle="modal" data-bs-target="#addUserModal">
+                        <i class="bi bi-plus-circle me-2"></i>Add New User
+                    </button>
+                </div>
             </div>
         </div>
     </div>
+    
     <div class="row g-3 g-md-4">
         <div class="col-12">
-            <div class="card">
-                <div class="card-header d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
-                    <h5 class="card-title mb-2 mb-md-0">All Users</h5>
-                    <button class="btn btn-sm text-white" style="background: linear-gradient(135deg, #2E8B57 0%, #228B22 50%, #556B2F 100%);" data-bs-toggle="modal" data-bs-target="#addUserModal">
-                        Add New User
-                    </button>
+            <div class="alert alert-info mb-4">
+                <h5 class="mb-2">
+                    <i class="bi bi-info-circle me-2" style="color: #667eea;"></i>User Account Management
+                </h5>
+                <p class="mb-0">
+                    Manage user accounts, roles, and permissions across the system. Use the actions below to view details, edit users, impersonate for troubleshooting, or delete accounts.
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row g-3 g-md-4">
+        <div class="col-12">
+            <div class="tech-card" style="background: rgba(255, 255, 255, 0.95) !important;">
+                <div class="tech-header">
+                    <h5 class="mb-0" style="color: #333;">
+                        <i class="bi bi-table me-2"></i>All Users
+                    </h5>
                 </div>
-                <div class="card-body">
+                <div class="p-4">
                     <div class="table-responsive">
-                        <table class="table table-striped">
+                        <table class="table table-hover tech-table mb-0">
                             <thead>
                                 <tr>
-                                    <th>User ID</th>
-                                    <th>Username</th>
-                                    <th>Login ID</th>
-                                    <th>Role</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
+                                    <th style="color: #333;">User ID</th>
+                                    <th style="color: #333;">Username</th>
+                                    <th style="color: #333;">Login ID</th>
+                                    <th style="color: #333;">Role</th>
+                                    <th style="color: #333;">Status</th>
+                                    <th style="color: #333;" class="text-center">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for user in users %}
                                 <tr>
-                                    <td>{{ user.id }}</td>
-                                    <td>{{ user.username }}</td>
-                                    <td>
+                                    <td style="color: #333; font-weight: 600;">{{ user.id }}</td>
+                                    <td style="color: #333;">
+                                        <strong>{{ user.username }}</strong>
+                                    </td>
+                                    <td style="color: #333;">
                                         {% if user.student_profile and user.student_profile.student_id %}
-                                            <code class="bg-light p-1 rounded">{{ user.student_profile.student_id }}</code>
+                                            <code class="bg-light p-2 rounded border" style="color: #667eea; font-weight: 600;">{{ user.student_profile.student_id }}</code>
                                         {% elif user.teacher_staff_profile and user.teacher_staff_profile.staff_id %}
-                                            <code class="bg-light p-1 rounded">{{ user.teacher_staff_profile.staff_id }}</code>
+                                            <code class="bg-light p-2 rounded border" style="color: #667eea; font-weight: 600;">{{ user.teacher_staff_profile.staff_id }}</code>
                                         {% else %}
                                             <span class="text-muted">N/A</span>
                                         {% endif %}
                                     </td>
                                     <td>
-                                        <span class="badge 
+                                        <span class="badge role-badge
                                             {% if user.role == 'Director' %}bg-danger
-                                            {% elif user.role == 'School Administrator' %}bg-warning
+                                            {% elif user.role == 'School Administrator' %}bg-warning text-dark
                                             {% elif user.role == 'Teacher' %}bg-info
                                             {% elif user.role == 'Student' %}bg-success
                                             {% elif user.role in ['Tech', 'IT Support'] %}bg-secondary
@@ -59,35 +250,49 @@
                                         </span>
                                     </td>
                                     <td>
-                                        <span class="badge bg-success">Active</span>
+                                        <span class="badge bg-success" style="font-weight: 600; padding: 0.5rem 1rem;">
+                                            <i class="bi bi-check-circle me-1"></i>Active
+                                        </span>
                                     </td>
                                     <td>
-                                        <div class="btn-group btn-group-sm flex-wrap">
+                                        <div class="d-flex justify-content-center gap-2 flex-wrap">
                                             <a href="{{ url_for('tech.view_user_details', user_id=user.id) }}" 
-                                               class="btn btn-outline-info" title="View Details">
+                                               class="btn btn-sm btn-outline-info" 
+                                               title="View Details"
+                                               style="border-width: 2px; font-weight: 600;">
                                                 <i class="bi bi-eye"></i>
                                             </a>
-                                            <button type="button" class="btn btn-outline-warning" 
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-outline-warning" 
                                                     onclick="editUser({{ user.id }}, '{{ user.username }}', '{{ user.role }}')" 
-                                                    title="Edit User">
+                                                    title="Edit User"
+                                                    style="border-width: 2px; font-weight: 600;">
                                                 <i class="bi bi-pencil"></i>
                                             </button>
                                             {% if user.id != current_user.id %}
                                             <a href="{{ url_for('tech.impersonate_user', user_id=user.id) }}" 
-                                               class="btn btn-outline-primary" title="Impersonate User"
-                                               onclick="return confirm('Impersonate {{ user.username }}? This will log you in as this user.')">
+                                               class="btn btn-sm btn-outline-primary" 
+                                               title="Impersonate User"
+                                               onclick="return confirm('Impersonate {{ user.username }}? This will log you in as this user.')"
+                                               style="border-width: 2px; font-weight: 600;">
                                                 <i class="bi bi-person-check"></i>
                                             </a>
-                                            <form method="POST" action="{{ url_for('tech.delete_user', user_id=user.id) }}" 
-                                                  class="display-inline" 
-                                                  onsubmit="return confirm('Are you sure you want to delete {{ user.username }}?')">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                                <button type="submit" class="btn btn-outline-danger" title="Delete User">
+                                            <form method="POST" 
+                                                  action="{{ url_for('tech.delete_user', user_id=user.id) }}" 
+                                                  class="d-inline" 
+                                                  onsubmit="return confirm('Are you sure you want to delete {{ user.username }}? This action cannot be undone.')">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                                <button type="submit" 
+                                                        class="btn btn-sm btn-outline-danger" 
+                                                        title="Delete User"
+                                                        style="border-width: 2px; font-weight: 600;">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
                                             </form>
                                             {% else %}
-                                            <span class="text-muted">Current User</span>
+                                            <span class="badge bg-primary" style="font-weight: 600; padding: 0.5rem 1rem;">
+                                                <i class="bi bi-person-fill me-1"></i>Current User
+                                            </span>
                                             {% endif %}
                                         </div>
                                     </td>
@@ -101,24 +306,40 @@
         </div>
     </div>
 </div>
+</div>
 
 <!-- Add User Modal -->
 <div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="addUserModalLabel">Add New User</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h5 class="modal-title" id="addUserModalLabel">
+                    <i class="bi bi-person-plus me-2"></i>Add New User
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form id="addUserForm">
+                <form id="addUserForm" method="POST" action="{{ url_for('tech.user_management') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     <div class="mb-3">
                         <label for="username" class="form-label">Username</label>
-                        <input type="text" class="form-control" id="username" name="username" autocomplete="username" required>
+                        <input type="text" 
+                               class="form-control" 
+                               id="username" 
+                               name="username" 
+                               autocomplete="username" 
+                               required
+                               placeholder="Enter username">
                     </div>
                     <div class="mb-3">
                         <label for="password" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="password" name="password" autocomplete="new-password" required>
+                        <input type="password" 
+                               class="form-control" 
+                               id="password" 
+                               name="password" 
+                               autocomplete="new-password" 
+                               required
+                               placeholder="Enter password">
                     </div>
                     <div class="mb-3">
                         <label for="role" class="form-label">Role</label>
@@ -135,60 +356,24 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="saveUser()">Save User</button>
+                <button type="submit" form="addUserForm" class="btn btn-primary" style="background: linear-gradient(135deg, #667eea, #764ba2); border: none; font-weight: 600;">
+                    <i class="bi bi-check-circle me-2"></i>Save User
+                </button>
             </div>
         </div>
     </div>
 </div>
 
-{% if section == 'communications' %}
-<div class="card mb-4">
-    <div class="card-header">
-        <h5>Send School-wide Announcement</h5>
-    </div>
-    <div class="card-body">
-        <form method="POST">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-            <div class="mb-3">
-                <label for="title" class="form-label">Title</label>
-                <input type="text" class="form-control" id="title" name="title" required>
-            </div>
-            <div class="mb-3">
-                <label for="message" class="form-label">Message</label>
-                <textarea class="form-control" id="message" name="message" rows="3" required></textarea>
-            </div>
-            <div class="mb-3">
-                <label for="target_group" class="form-label">Send To</label>
-                <select class="form-select" id="target_group" name="target_group" required>
-                    <option value="">Select recipients</option>
-                    <option value="all_students">All Students</option>
-                    <option value="all_staff">All Staff</option>
-                    <option value="all">All Students & Staff</option>
-                </select>
-            </div>
-            <button type="submit" class="btn btn-success">Send Announcement</button>
-        </form>
-    </div>
-</div>
-{% endif %}
-
 <script>
 function editUser(userId, username, role) {
-    // Placeholder for edit user functionality
-    alert('Edit user ' + userId + ' - functionality to be implemented');
-}
-
-function deleteUser(userId) {
-    if (confirm('Are you sure you want to delete this user?')) {
-        // Placeholder for delete user functionality
-        alert('Delete user ' + userId + ' - functionality to be implemented');
-    }
+    // Populate edit form (you may need to create an edit modal similar to add modal)
+    alert('Edit user functionality: User ID ' + userId + ', Username: ' + username + ', Role: ' + role);
+    // TODO: Implement edit modal similar to addUserModal
 }
 
 function saveUser() {
-    // Placeholder for save user functionality
-    alert('Save user - functionality to be implemented');
-    $('#addUserModal').modal('hide');
+    // Form submission is handled by the form's action attribute
+    document.getElementById('addUserForm').submit();
 }
 </script>
-{% endblock %} 
+{% endblock %}

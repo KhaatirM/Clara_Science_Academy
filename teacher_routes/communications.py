@@ -39,6 +39,27 @@ def communications_hub():
     direct_messages = get_direct_messages(current_user.id, current_user.role)
     # Get DM conversations for sidebar injection
     dm_conversations = get_dm_conversations(current_user.id, current_user.role)
+    
+    # Fetch unique users involved in DMs with current_user (simplified approach)
+    from sqlalchemy import or_
+    from models import User
+    all_dm_messages = Message.query.filter(
+        or_(
+            Message.sender_id == current_user.id,
+            Message.recipient_id == current_user.id
+        ),
+        Message.group_id.is_(None)
+    ).order_by(Message.created_at.desc()).limit(50).all()
+    
+    contact_ids = set()
+    for msg in all_dm_messages:
+        if msg.sender_id != current_user.id:
+            contact_ids.add(msg.sender_id)
+        if msg.recipient_id and msg.recipient_id != current_user.id:
+            contact_ids.add(msg.recipient_id)
+    
+    direct_message_contacts = User.query.filter(User.id.in_(contact_ids)).all() if contact_ids else []
+    
     announcements = get_user_announcements(current_user.id, current_user.role)
     unread_announcements = len([a for a in announcements if not a.get('read', False)])
     
@@ -70,6 +91,7 @@ def communications_hub():
                          class_channels=class_channels,
                          direct_messages=direct_messages,
                          dm_conversations=dm_conversations,
+                         direct_message_contacts=direct_message_contacts,
                          announcements=announcements,
                          unread_announcements_count=unread_announcements,
                          available_classes=classes,

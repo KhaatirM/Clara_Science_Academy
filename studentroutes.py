@@ -2664,6 +2664,25 @@ def student_communications():
     # Get DM conversations for sidebar injection
     dm_conversations = get_dm_conversations(current_user.id, 'Student')
     
+    # Fetch unique users involved in DMs with current_user (simplified approach)
+    from sqlalchemy import or_
+    all_dm_messages = Message.query.filter(
+        or_(
+            Message.sender_id == current_user.id,
+            Message.recipient_id == current_user.id
+        ),
+        Message.group_id.is_(None)
+    ).order_by(Message.created_at.desc()).limit(50).all()
+    
+    contact_ids = set()
+    for msg in all_dm_messages:
+        if msg.sender_id != current_user.id:
+            contact_ids.add(msg.sender_id)
+        if msg.recipient_id and msg.recipient_id != current_user.id:
+            contact_ids.add(msg.recipient_id)
+    
+    direct_message_contacts = User.query.filter(User.id.in_(contact_ids)).all() if contact_ids else []
+    
     # Get student-created groups (including old groups that might not have group_type set)
     student_groups = []
     # First try to get groups with group_type='student'
@@ -2714,6 +2733,7 @@ def student_communications():
                          class_channels=class_channels,
                          direct_messages=direct_messages,
                          dm_conversations=dm_conversations,
+                         direct_message_contacts=direct_message_contacts,
                          announcements=announcements,
                          unread_announcements_count=unread_announcements,
                          available_classes=available_classes,

@@ -49,21 +49,25 @@
                     </div>
                     {% for group in student_groups %}
                     <div class="comm-channel-item student-group-item {% if active_channel_id == group.id %}active{% endif %}" 
-                         onclick="loadChannel({{ group.id }}, 'student')"
                          style="position: relative; display: flex; align-items: center; padding-right: 45px;">
-                        <i class="bi bi-hash me-2"></i>
-                        <span class="channel-name" style="flex: 1; overflow: hidden; text-overflow: ellipsis; min-width: 0;">{{ group.name }}</span>
-                        {% if group.unread_count > 0 %}
-                        <span class="channel-badge">{{ group.unread_count }}</span>
+                        <div class="d-flex justify-content-between align-items-center w-100" onclick="loadChannel({{ group.id }}, 'student')" style="flex: 1; min-width: 0;">
+                            <a href="#" onclick="event.stopPropagation(); loadChannel({{ group.id }}, 'student'); return false;" class="text-decoration-none text-dark text-truncate" style="flex: 1; min-width: 0;">
+                                <i class="bi bi-hash me-2"></i>
+                                <span class="channel-name">{{ group.name }}</span>
+                            </a>
+                            {% if group.unread_count > 0 %}
+                            <span class="channel-badge ms-2">{{ group.unread_count }}</span>
+                            {% endif %}
+                        </div>
+                        {# Show leave button if user is not the creator #}
+                        {% if group.created_by != current_user.id %}
+                        <form action="{{ url_for('shared_communications.leave_group', group_id=group.id) }}" method="POST" class="ms-2" onsubmit="return confirm('Are you sure you want to leave this group?');" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); z-index: 1000;" onclick="event.stopPropagation();">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-link text-danger p-0" title="Leave Group" style="font-size: 0.8rem; padding: 0.25rem 0.4rem !important; min-width: 26px; height: 26px; display: flex !important; align-items: center; justify-content: center; background-color: #dc3545 !important; border: 1px solid #dc3545 !important; color: white !important; opacity: 1 !important; visibility: visible !important;">
+                                <i class="fas fa-sign-out-alt"></i>
+                            </button>
+                        </form>
                         {% endif %}
-                        {# Always show a button - delete if creator, leave otherwise #}
-                        {% set is_group_creator = (group.created_by is defined and group.created_by is not none and group.created_by == current_user.id) %}
-                        <button class="btn btn-sm btn-danger leave-group-btn" 
-                                onclick="event.stopPropagation(); event.preventDefault(); {% if is_group_creator %}deleteGroup{% else %}leaveGroup{% endif %}({{ group.id }}, '{{ group.name|replace("'", "\\'") }}')"
-                                style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); padding: 0.25rem 0.4rem; font-size: 0.75rem; min-width: 26px; height: 26px; display: flex !important; align-items: center; justify-content: center; z-index: 1000; background-color: #dc3545 !important; border: 1px solid #dc3545 !important; color: white !important; opacity: 1 !important; visibility: visible !important;"
-                                title="{% if is_group_creator %}Delete Group{% else %}Leave Group{% endif %}">
-                            <i class="bi {% if is_group_creator %}bi-trash{% else %}bi-x{% endif %}"></i>
-                        </button>
                     </div>
                     {% endfor %}
                 </div>
@@ -81,7 +85,18 @@
                         Start New DM
                     </button>
                     {% endif %}
-                    {% if dm_conversations and dm_conversations|length > 0 %}
+                    {% if direct_message_contacts and direct_message_contacts|length > 0 %}
+                        {% for contact in direct_message_contacts %}
+                        <div class="comm-channel-item" onclick="loadDirectMessage({{ contact.id }})">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-circle bg-secondary text-white me-2" style="width: 24px; height: 24px; font-size: 10px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                    {{ contact.first_name[0] if contact.first_name else contact.username[0] }}
+                                </div>
+                                <span class="text-truncate channel-name">{{ contact.first_name }} {{ contact.last_name }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% elif dm_conversations and dm_conversations|length > 0 %}
                         {% for dm in dm_conversations %}
                         <div class="comm-channel-item {% if active_channel_id == dm.id %}active{% endif %}" 
                              onclick="loadDirectMessage({{ dm.other_user_id }})">
@@ -440,27 +455,9 @@
 let currentChannelId = null;
 let currentChannelType = null;
 let currentDirectMessageUserId = null; // Store the other user ID for DMs
-let messagePollInterval = null;
-let pollingChannelId = null; // Track which channel we're polling for
-
-// Cleanup polling on page unload
-window.addEventListener('beforeunload', function() {
-    if (messagePollInterval) {
-        clearInterval(messagePollInterval);
-        messagePollInterval = null;
-        pollingChannelId = null;
-    }
-});
 
 // Load channel messages
 function loadChannel(channelId, channelType) {
-    // Stop any existing polling first
-    if (messagePollInterval) {
-        clearInterval(messagePollInterval);
-        messagePollInterval = null;
-        pollingChannelId = null;
-    }
-    
     currentChannelId = channelId;
     currentChannelType = channelType;
     
@@ -472,7 +469,12 @@ function loadChannel(channelId, channelType) {
     // Show message input
     document.getElementById('message-input-container').style.display = 'block';
     
-    // Fetch messages
+    // Fetch messages once (no automatic polling)
+    fetchChannelMessages(channelId, channelType);
+}
+
+// Fetch messages for a channel (called once when loading or after actions)
+function fetchChannelMessages(channelId, channelType) {
     fetch(`/communications/api/channel/${channelId}/messages`)
         .then(response => response.json())
         .then(data => {
@@ -485,68 +487,14 @@ function loadChannel(channelId, channelType) {
         .catch(error => {
             console.error('Error loading channel:', error);
         });
-    
-    // Start polling for new messages
-    startMessagePolling(channelId, channelType);
 }
 
-function startMessagePolling(channelId, channelType) {
-    // Clear existing polling
-    if (messagePollInterval) {
-        clearInterval(messagePollInterval);
-        messagePollInterval = null;
+// Poll a channel after an action (message sent, edited, etc.)
+function pollChannelAfterAction(channelId, channelType) {
+    // Only poll if we're currently viewing this channel
+    if (currentChannelId === channelId && currentChannelType === channelType && channelType !== 'announcements' && channelType !== 'direct') {
+        fetchChannelMessages(channelId, channelType);
     }
-    
-    // Don't poll for announcements
-    if (channelType === 'announcements' || currentChannelType === 'announcements') {
-        pollingChannelId = null;
-        return;
-    }
-    
-    // Store the channel we're polling for
-    pollingChannelId = channelId;
-    
-    // Poll every 5 seconds for new messages
-    messagePollInterval = setInterval(() => {
-        // Stop polling if channel changed, type changed, or viewing announcements/DMs
-        if (!pollingChannelId || 
-            pollingChannelId !== channelId || 
-            currentChannelId !== channelId || 
-            currentChannelType !== channelType || 
-            currentChannelType === 'announcements' || 
-            currentChannelType === 'direct') {
-            if (messagePollInterval) {
-                clearInterval(messagePollInterval);
-                messagePollInterval = null;
-                pollingChannelId = null;
-            }
-            return;
-        }
-        
-        fetch(`/communications/api/channel/${channelId}/messages`)
-            .then(response => response.json())
-            .then(data => {
-                // Only update if we're still on the same channel
-                if (data.success && pollingChannelId === channelId && currentChannelId === channelId && currentChannelType === channelType && currentChannelType !== 'announcements' && currentChannelType !== 'direct') {
-                    displayMessages(data.messages);
-                } else {
-                    // Channel changed or invalid state, stop polling
-                    if (messagePollInterval) {
-                        clearInterval(messagePollInterval);
-                        messagePollInterval = null;
-                        pollingChannelId = null;
-                    }
-                }
-            })
-            .catch(error => {
-                console.error('Error polling messages:', error);
-                if (messagePollInterval) {
-                    clearInterval(messagePollInterval);
-                    messagePollInterval = null;
-                    pollingChannelId = null;
-                }
-            });
-    }, 5000);
 }
 
 function showChannelSettings() {
@@ -561,13 +509,6 @@ function showAttachmentOptions() {
 
 // Load direct message
 function loadDirectMessage(otherUserId) {
-    // Stop any existing polling
-    if (messagePollInterval) {
-        clearInterval(messagePollInterval);
-        messagePollInterval = null;
-        pollingChannelId = null;
-    }
-    
     // Store the other user ID for sending messages
     currentChannelId = null;
     currentChannelType = 'direct';
@@ -597,13 +538,6 @@ function loadDirectMessage(otherUserId) {
 
 // Load announcements
 function loadAnnouncements() {
-    // Stop any existing polling FIRST
-    if (messagePollInterval) {
-        clearInterval(messagePollInterval);
-        messagePollInterval = null;
-        pollingChannelId = null;
-    }
-    
     currentChannelId = null;
     currentChannelType = 'announcements';
     
@@ -772,11 +706,12 @@ function sendMessage(event) {
     .then(data => {
         if (data.success) {
             input.value = '';
-            // Reload messages
+            // Poll the channel after sending a message
             if (currentChannelType === 'direct' && currentDirectMessageUserId) {
                 loadDirectMessage(currentDirectMessageUserId);
-            } else if (currentChannelId) {
-                loadChannel(currentChannelId, currentChannelType);
+            } else if (currentChannelId && currentChannelType !== 'announcements') {
+                // Poll this channel after sending
+                pollChannelAfterAction(currentChannelId, currentChannelType);
             }
         } else {
             alert('Error: ' + (data.message || 'Failed to send message'));
@@ -1189,7 +1124,7 @@ function editMessage(messageId) {
                         activeChannel.onclick();
                     }
                 } else {
-                    loadChannel(currentChannelId, currentChannelType);
+                    pollChannelAfterAction(currentChannelId, currentChannelType);
                 }
             } else {
                 alert('Error: ' + data.message);
@@ -1231,9 +1166,9 @@ function toggleReaction(messageId, emoji) {
                 });
             }
             
-            // Reload messages to get updated user reactions
+            // Poll channel after reaction change
             if (currentChannelType !== 'direct' && currentChannelId) {
-                setTimeout(() => loadChannel(currentChannelId, currentChannelType), 500);
+                pollChannelAfterAction(currentChannelId, currentChannelType);
             }
         }
     })
@@ -1290,7 +1225,7 @@ function replyToMessage(parentMessageId) {
                         activeChannel.onclick();
                     }
                 } else {
-                    loadChannel(currentChannelId, currentChannelType);
+                    pollChannelAfterAction(currentChannelId, currentChannelType);
                 }
             } else {
                 alert('Error: ' + data.message);
@@ -1323,9 +1258,9 @@ function deleteMessage(messageId) {
             if (messageEl) {
                 messageEl.remove();
             }
-            // Reload messages
+            // Poll channel after deletion
             if (currentChannelId) {
-                loadChannel(currentChannelId, currentChannelType);
+                pollChannelAfterAction(currentChannelId, currentChannelType);
             }
         } else {
             alert('Error: ' + (data.message || 'Failed to delete message'));
@@ -1417,9 +1352,9 @@ function submitMute() {
             // Show success message
             alert(`${muteModalUserName} has been muted until ${mutedUntil.toLocaleString()}`);
             
-            // Reload participants to show muted status
+            // Poll channel after muting to refresh participants
             if (currentChannelId) {
-                loadChannel(currentChannelId, currentChannelType);
+                pollChannelAfterAction(currentChannelId, currentChannelType);
             }
         } else {
             alert('Error: ' + (data.message || 'Failed to mute student'));

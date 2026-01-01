@@ -1,0 +1,1042 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tech_dashboard.css') }}">
+<style>
+    .dashboard-content-wrapper {
+        position: relative;
+        z-index: 1;
+    }
+    
+    /* Performance optimizations */
+    .tech-dashboard-wrapper {
+        animation: none !important;
+    }
+    
+    .tech-dashboard-wrapper::before,
+    .tech-dashboard-wrapper::after {
+        display: none !important;
+    }
+    
+    /* Better text contrast */
+    .tech-card {
+        background: rgba(255, 255, 255, 0.95) !important;
+        backdrop-filter: blur(5px) !important;
+        -webkit-backdrop-filter: blur(5px) !important;
+    }
+    
+    .tech-card.tech-header {
+        overflow: visible !important;
+        background: rgba(255, 255, 255, 0.95) !important;
+    }
+    
+    /* Page Title with Gradient */
+    h1.tech-page-title,
+    .tech-page-title {
+        background: linear-gradient(135deg, #4c63d2 0%, #5a3d91 20%, #c850c0 40%, #3d8bfd 70%, #0066cc 90%, #0073e6 100%) !important;
+        -webkit-background-clip: text !important;
+        -webkit-text-fill-color: transparent !important;
+        background-clip: text !important;
+        font-weight: 800 !important;
+        display: inline-block;
+        overflow: visible !important;
+    }
+    
+    .tech-page-title i {
+        background: linear-gradient(135deg, #4c63d2 0%, #5a3d91 20%, #c850c0 40%, #3d8bfd 70%, #0066cc 90%, #0073e6 100%) !important;
+        -webkit-background-clip: text !important;
+        -webkit-text-fill-color: transparent !important;
+        background-clip: text !important;
+    }
+    
+    .tech-header h2,
+    .tech-header h5 {
+        color: #333 !important;
+    }
+    
+    .tech-header p {
+        color: #666 !important;
+    }
+    
+    /* Enhanced Tab Styling */
+    .nav-tabs {
+        border-bottom: 3px solid #e9ecef;
+        background: white;
+        border-radius: 12px 12px 0 0;
+        padding: 0.5rem;
+    }
+    
+    .nav-tabs .nav-link {
+        color: #666;
+        border: none;
+        border-radius: 8px;
+        padding: 0.75rem 1.5rem;
+        margin: 0 0.25rem;
+        transition: all 0.3s ease;
+        font-weight: 500;
+    }
+    
+    .nav-tabs .nav-link:hover {
+        background: rgba(102, 126, 234, 0.1);
+        color: #4c63d2;
+        transform: translateY(-2px);
+    }
+    
+    .nav-tabs .nav-link.active {
+        color: white;
+        font-weight: 600;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        transform: translateY(-2px);
+    }
+    
+    /* Enhanced Performance Cards Styling */
+    .performance-card {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        border: none;
+        overflow: hidden;
+        position: relative;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .performance-card:hover {
+        transform: translateY(-8px) scale(1.02);
+        box-shadow: 0 16px 48px rgba(0, 0, 0, 0.15);
+    }
+    
+    .performance-card-header {
+        background: linear-gradient(135deg, var(--header-color-1), var(--header-color-2));
+        color: white;
+        padding: 1.5rem;
+        border: none;
+        font-weight: 600;
+        font-size: 1.1rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .performance-card-header::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+        animation: pulse 3s ease-in-out infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); opacity: 0.5; }
+        50% { transform: scale(1.1); opacity: 0.8; }
+    }
+    
+    .performance-card-header-content {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .performance-card-header i {
+        font-size: 2rem;
+        opacity: 0.95;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+    }
+    
+    .performance-card-body {
+        padding: 2rem 1.5rem;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        background: linear-gradient(to bottom, rgba(255, 255, 255, 1), rgba(250, 250, 255, 0.8));
+    }
+    
+    /* Legacy stat-card for other sections */
+    .stat-card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        transition: all 0.3s ease;
+        border: none;
+        overflow: hidden;
+        position: relative;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+    }
+    
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--card-gradient));
+    }
+    
+    .stat-card-header {
+        background: linear-gradient(135deg, var(--header-color-1), var(--header-color-2));
+        color: white;
+        padding: 1.25rem;
+        border: none;
+        font-weight: 600;
+        font-size: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .stat-card-header i {
+        font-size: 1.5rem;
+        opacity: 0.9;
+    }
+    
+    .stat-card-body {
+        padding: 1.5rem;
+    }
+    
+    /* Enhanced Progress Bar Styling */
+    .performance-progress-wrapper {
+        position: relative;
+        margin: 1.5rem 0;
+    }
+    
+    .performance-progress {
+        height: 36px;
+        border-radius: 18px;
+        background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+        overflow: hidden;
+        box-shadow: 
+            inset 0 2px 8px rgba(0, 0, 0, 0.1),
+            0 2px 4px rgba(0, 0, 0, 0.05);
+        position: relative;
+        border: 2px solid rgba(255, 255, 255, 0.8);
+    }
+    
+    .performance-progress-bar {
+        height: 100%;
+        border-radius: 18px;
+        font-weight: 700;
+        font-size: 0.95rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+        color: white;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        box-shadow: 
+            inset 0 2px 4px rgba(255, 255, 255, 0.3),
+            0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+    
+    .performance-progress-bar::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, transparent 50%, rgba(0, 0, 0, 0.1) 100%);
+        pointer-events: none;
+    }
+    
+    .performance-progress-bar::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+        animation: shimmer 2.5s infinite;
+    }
+    
+    @keyframes shimmer {
+        0% { left: -100%; }
+        100% { left: 100%; }
+    }
+    
+    .performance-progress-bar.bg-danger {
+        background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 50%, #dc3545 100%) !important;
+    }
+    
+    .performance-progress-bar.bg-warning {
+        background: linear-gradient(135deg, #feca57 0%, #ff9ff3 50%, #f093fb 100%) !important;
+    }
+    
+    .performance-progress-bar.bg-success {
+        background: linear-gradient(135deg, #48dbfb 0%, #0abde3 50%, #0097e6 100%) !important;
+    }
+    
+    .performance-progress-bar.bg-info {
+        background: linear-gradient(135deg, #54a0ff 0%, #2e86de 50%, #1e74fd 100%) !important;
+    }
+    
+    .performance-progress-label {
+        font-size: 0.85rem;
+        color: #666;
+        font-weight: 500;
+        margin-top: 0.75rem;
+        text-align: center;
+        letter-spacing: 0.3px;
+    }
+    
+    /* Legacy progress for other sections */
+    .progress-wrapper {
+        position: relative;
+        margin-bottom: 1rem;
+    }
+    
+    .progress {
+        height: 28px;
+        border-radius: 14px;
+        background: #f0f0f0;
+        overflow: hidden;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .progress-bar {
+        border-radius: 14px;
+        font-weight: 600;
+        font-size: 0.875rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: width 0.6s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .progress-bar::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        right: 0;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        animation: shimmer 2s infinite;
+    }
+    
+    .progress-bar.bg-danger {
+        background: linear-gradient(135deg, #ff6b6b, #ee5a6f) !important;
+    }
+    
+    .progress-bar.bg-warning {
+        background: linear-gradient(135deg, #feca57, #ff9ff3) !important;
+    }
+    
+    .progress-bar.bg-success {
+        background: linear-gradient(135deg, #48dbfb, #0abde3) !important;
+    }
+    
+    .progress-bar.bg-info {
+        background: linear-gradient(135deg, #54a0ff, #2e86de) !important;
+    }
+    
+    /* Stat Number Styling */
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 0.5rem 0;
+        background: linear-gradient(135deg, var(--stat-color-1), var(--stat-color-2));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    
+    /* Metric Cards */
+    .metric-card {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.85));
+        border-radius: 12px;
+        padding: 1rem;
+        border-left: 4px solid var(--metric-color);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s ease;
+    }
+    
+    .metric-card:hover {
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        transform: translateX(4px);
+    }
+    
+    .metric-label {
+        font-size: 0.85rem;
+        color: #666;
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+    }
+    
+    .metric-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--metric-color);
+    }
+    
+    /* Status Badge Enhancements */
+    .status-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.875rem;
+        display: inline-block;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+    
+    /* Enhanced Uptime Display */
+    .performance-uptime {
+        text-align: center;
+        padding: 1rem 0;
+    }
+    
+    .uptime-display {
+        font-size: 2.5rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #00d2d3 0%, #01a3a4 50%, #0097e6 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin: 1rem 0;
+        letter-spacing: -1px;
+        text-shadow: 0 2px 20px rgba(0, 210, 211, 0.3);
+        position: relative;
+        display: inline-block;
+    }
+    
+    .uptime-label {
+        font-size: 0.9rem;
+        color: #888;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-top: 0.5rem;
+    }
+    
+    /* Performance Value Display */
+    .performance-value {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #555;
+        margin-top: 0.75rem;
+        text-align: center;
+    }
+    
+    .performance-value strong {
+        color: #333;
+        font-weight: 700;
+    }
+    
+    /* Info Cards */
+    .info-card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+    
+    .info-card:hover {
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+    }
+    
+    .info-card-header {
+        background: linear-gradient(135deg, #2d3436, #636e72);
+        color: white;
+        padding: 1.25rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    /* Form Styling */
+    .form-label {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-select, .form-control {
+        border-radius: 8px;
+        border: 2px solid #e9ecef;
+        padding: 0.75rem;
+        transition: all 0.3s ease;
+    }
+    
+    .form-select:focus, .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    
+    /* Enhanced Alert Styling */
+    .alert-info {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(250, 250, 255, 0.95)) !important;
+        border: 2px solid rgba(102, 126, 234, 0.2);
+        border-left: 5px solid #667eea;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        padding: 1.5rem !important;
+    }
+    
+    .alert-info h5 {
+        color: #2d3436 !important;
+        font-weight: 700 !important;
+        font-size: 1.25rem !important;
+    }
+    
+    .alert-info p {
+        color: #555 !important;
+        font-weight: 500 !important;
+    }
+</style>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="tech-dashboard-wrapper">
+<div class="container-fluid px-2 px-md-4 dashboard-content-wrapper py-4">
+    <div class="row g-3 g-md-4 mb-4">
+        <div class="col-12">
+            <div class="tech-card tech-header mb-4" style="background: rgba(255, 255, 255, 0.95) !important; overflow: visible;">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <div style="overflow: visible; padding: 0.5rem 0.5rem 0.5rem 0;">
+                        <h1 class="mb-1 tech-page-title">
+                            <i class="bi bi-gear-fill me-2"></i>System Status & Configuration
+                        </h1>
+                        <p class="mb-0" style="color: #666;">Monitor system health and manage configuration settings</p>
+                    </div>
+                    <a href="{{ url_for('tech.tech_dashboard') }}" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <ul class="nav nav-tabs" id="systemTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="status-tab" data-bs-toggle="tab" data-bs-target="#status" type="button" role="tab" aria-controls="status" aria-selected="true">
+                        <i class="bi bi-activity me-2"></i>System Status
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="config-tab" data-bs-toggle="tab" data-bs-target="#config" type="button" role="tab" aria-controls="config" aria-selected="false">
+                        <i class="bi bi-sliders me-2"></i>Configuration
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Tab Content -->
+    <div class="tab-content" id="systemTabsContent">
+        <!-- System Status Tab -->
+        <div class="tab-pane fade show active" id="status" role="tabpanel" aria-labelledby="status-tab">
+            <div class="alert alert-info d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h5 class="mb-2">
+                        <i class="bi bi-activity me-2" style="color: #667eea;"></i>System Health Overview
+                    </h5>
+                    <p class="mb-0">
+                        <i class="bi bi-info-circle me-2" style="color: #667eea;"></i>Live system status and performance metrics. Auto-refreshes every 30 seconds.
+                    </p>
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                    <button class="btn btn-primary" onclick="refreshData()" style="background: linear-gradient(135deg, #667eea, #764ba2); border: none; font-weight: 600; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+                        <i class="bi bi-arrow-clockwise me-2"></i>Refresh Now
+                    </button>
+                    <span class="badge" id="last-update" style="background: linear-gradient(135deg, #00d2d3, #01a3a4); color: white; padding: 0.6rem 1rem; font-weight: 600; font-size: 0.9rem; box-shadow: 0 2px 10px rgba(0, 210, 211, 0.3);">
+                        <i class="bi bi-clock me-1"></i>Last updated: {{ now.strftime('%H:%M:%S') }}
+                    </span>
+                </div>
+            </div>
+            
+            <!-- System Performance Cards -->
+            <div class="row g-4 mb-4">
+                <div class="col-12 col-md-3">
+                    <div class="performance-card" style="--header-color-1: #667eea; --header-color-2: #764ba2;">
+                        <div class="performance-card-header">
+                            <div class="performance-card-header-content">
+                                <i class="bi bi-cpu-fill"></i>
+                                <h5 class="mb-0">CPU Usage</h5>
+                            </div>
+                        </div>
+                        <div class="performance-card-body text-center">
+                            <div class="performance-progress-wrapper">
+                                <div class="performance-progress">
+                                    <div class="performance-progress-bar {% if cpu_percent != 'N/A' and cpu_percent > 80 %}bg-danger{% elif cpu_percent != 'N/A' and cpu_percent > 60 %}bg-warning{% else %}bg-success{% endif %}" 
+                                         role="progressbar" 
+                                         style="width: {{ cpu_percent if cpu_percent != 'N/A' else 0 }}%"
+                                         aria-valuenow="{{ cpu_percent if cpu_percent != 'N/A' else 0 }}" 
+                                         aria-valuemin="0" 
+                                         aria-valuemax="100">
+                                        {{ cpu_percent if cpu_percent != 'N/A' else 'N/A' }}%
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="performance-progress-label">
+                                Processor utilization
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-12 col-md-3">
+                    <div class="performance-card" style="--header-color-1: #48dbfb; --header-color-2: #0abde3;">
+                        <div class="performance-card-header">
+                            <div class="performance-card-header-content">
+                                <i class="bi bi-memory"></i>
+                                <h5 class="mb-0">Memory Usage</h5>
+                            </div>
+                        </div>
+                        <div class="performance-card-body text-center">
+                            <div class="performance-progress-wrapper">
+                                <div class="performance-progress">
+                                    <div class="performance-progress-bar {% if memory_percent != 'N/A' and memory_percent > 80 %}bg-danger{% elif memory_percent != 'N/A' and memory_percent > 60 %}bg-warning{% else %}bg-info{% endif %}" 
+                                         role="progressbar" 
+                                         style="width: {{ memory_percent if memory_percent != 'N/A' else 0 }}%"
+                                         aria-valuenow="{{ memory_percent if memory_percent != 'N/A' else 0 }}" 
+                                         aria-valuemin="0" 
+                                         aria-valuemax="100">
+                                        {{ memory_percent if memory_percent != 'N/A' else 'N/A' }}%
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="performance-value">
+                                <strong>{{ memory_used_gb if memory_used_gb != 'N/A' else 'N/A' }}</strong> / {{ memory_total_gb if memory_total_gb != 'N/A' else 'N/A' }} GB
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-12 col-md-3">
+                    <div class="performance-card" style="--header-color-1: #feca57; --header-color-2: #ff9ff3;">
+                        <div class="performance-card-header">
+                            <div class="performance-card-header-content">
+                                <i class="bi bi-hdd-stack-fill"></i>
+                                <h5 class="mb-0">Disk Usage</h5>
+                            </div>
+                        </div>
+                        <div class="performance-card-body text-center">
+                            <div class="performance-progress-wrapper">
+                                <div class="performance-progress">
+                                    <div class="performance-progress-bar {% if disk_percent != 'N/A' and disk_percent > 80 %}bg-danger{% elif disk_percent != 'N/A' and disk_percent > 60 %}bg-warning{% else %}bg-warning{% endif %}" 
+                                         role="progressbar" 
+                                         style="width: {{ disk_percent if disk_percent != 'N/A' else 0 }}%"
+                                         aria-valuenow="{{ disk_percent if disk_percent != 'N/A' else 0 }}" 
+                                         aria-valuemin="0" 
+                                         aria-valuemax="100">
+                                        {{ disk_percent if disk_percent != 'N/A' else 'N/A' }}%
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="performance-value">
+                                <strong>{{ disk_used_gb if disk_used_gb != 'N/A' else 'N/A' }}</strong> / {{ disk_total_gb if disk_total_gb != 'N/A' else 'N/A' }} GB
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-12 col-md-3">
+                    <div class="performance-card" style="--header-color-1: #00d2d3; --header-color-2: #01a3a4;">
+                        <div class="performance-card-header">
+                            <div class="performance-card-header-content">
+                                <i class="bi bi-clock-history"></i>
+                                <h5 class="mb-0">System Uptime</h5>
+                            </div>
+                        </div>
+                        <div class="performance-card-body">
+                            <div class="performance-uptime">
+                                <div class="uptime-display" id="uptime-display">
+                                    {% if uptime != 'N/A' %}
+                                        {{ uptime.days }}d {{ uptime.seconds // 3600 }}h {{ (uptime.seconds % 3600) // 60 }}m
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </div>
+                                <div class="uptime-label">Running time</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- User Statistics -->
+            <div class="row g-4 mb-4">
+                <div class="col-12 col-md-4">
+                    <div class="stat-card h-100" style="--header-color-1: #667eea; --header-color-2: #764ba2; --card-gradient: #667eea, #764ba2; --stat-color-1: #667eea; --stat-color-2: #764ba2;">
+                        <div class="stat-card-header">
+                            <i class="bi bi-people-fill"></i>
+                            <h5 class="mb-0">User Statistics</h5>
+                        </div>
+                        <div class="stat-card-body">
+                            <div class="row g-3">
+                                <div class="col-6">
+                                    <div class="metric-card" style="--metric-color: #667eea;">
+                                        <div class="metric-label">Total Users</div>
+                                        <div class="metric-value">{{ total_users }}</div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="metric-card" style="--metric-color: #00d2d3;">
+                                        <div class="metric-label">Active Sessions</div>
+                                        <div class="metric-value">{{ active_sessions }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-3 text-center">
+                                <small class="text-muted" style="font-weight: 500;"><i class="bi bi-clock me-1"></i>Based on activity in last 30 minutes</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-12 col-md-4">
+                    <div class="stat-card h-100" style="--header-color-1: #48dbfb; --header-color-2: #0abde3; --card-gradient: #48dbfb, #0abde3; --stat-color-1: #48dbfb; --stat-color-2: #0abde3;">
+                        <div class="stat-card-header">
+                            <i class="bi bi-mortarboard-fill"></i>
+                            <h5 class="mb-0">Student Statistics</h5>
+                        </div>
+                        <div class="stat-card-body">
+                            <div class="row g-3">
+                                <div class="col-6">
+                                    <div class="metric-card" style="--metric-color: #48dbfb;">
+                                        <div class="metric-label">Total Students</div>
+                                        <div class="metric-value">{{ total_students }}</div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="metric-card" style="--metric-color: #00d2d3;">
+                                        <div class="metric-label">Enrolled</div>
+                                        <div class="metric-value">{{ total_students }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-12 col-md-4">
+                    <div class="stat-card h-100" style="--header-color-1: #feca57; --header-color-2: #ff9ff3; --card-gradient: #feca57, #ff9ff3; --stat-color-1: #feca57; --stat-color-2: #ff9ff3;">
+                        <div class="stat-card-header">
+                            <i class="bi bi-person-badge-fill"></i>
+                            <h5 class="mb-0">Staff Statistics</h5>
+                        </div>
+                        <div class="stat-card-body">
+                            <div class="row g-3">
+                                <div class="col-6">
+                                    <div class="metric-card" style="--metric-color: #feca57;">
+                                        <div class="metric-label">Total Teachers</div>
+                                        <div class="metric-value">{{ total_teachers }}</div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="metric-card" style="--metric-color: #00d2d3;">
+                                        <div class="metric-label">Active</div>
+                                        <div class="metric-value">{{ total_teachers }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- System Status and Network -->
+            <div class="row g-4 mb-4">
+                <div class="col-12 col-md-6">
+                    <div class="info-card">
+                        <div class="info-card-header">
+                            <i class="bi bi-shield-check-fill"></i>
+                            <h5 class="mb-0">System Status</h5>
+                        </div>
+                        <div class="card-body" style="padding: 1.5rem;">
+                            <div class="row g-3">
+                                <div class="col-6">
+                                    <div class="metric-card" style="--metric-color: #00d2d3;">
+                                        <div class="metric-label">Database Status</div>
+                                        <span class="status-badge bg-success text-white">Online</span>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="metric-card" style="--metric-color: #667eea;">
+                                        <div class="metric-label">Application Status</div>
+                                        <span class="status-badge bg-success text-white">Running</span>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="metric-card" style="--metric-color: #feca57;">
+                                        <div class="metric-label">Maintenance Mode</div>
+                                        <span class="status-badge {% if is_maintenance_mode %}bg-warning{% else %}bg-success{% endif %} text-white">
+                                            {% if is_maintenance_mode %}Active{% else %}Inactive{% endif %}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="metric-card" style="--metric-color: {% if recent_errors > 10 %}#ff6b6b{% elif recent_errors > 5 %}#feca57{% else %}#00d2d3{% endif %};">
+                                        <div class="metric-label">Error Rate (24h)</div>
+                                        <span class="status-badge {% if recent_errors > 10 %}bg-danger{% elif recent_errors > 5 %}bg-warning{% else %}bg-success{% endif %} text-white">
+                                            {{ recent_errors }} errors
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-12 col-md-6">
+                    <div class="info-card">
+                        <div class="info-card-header">
+                            <i class="bi bi-router-fill"></i>
+                            <h5 class="mb-0">Network & Activity</h5>
+                        </div>
+                        <div class="card-body" style="padding: 1.5rem;">
+                            <div class="row g-3">
+                                <div class="col-6">
+                                    <div class="metric-card" style="--metric-color: #48dbfb;">
+                                        <div class="metric-label">Network Sent</div>
+                                        <div class="metric-value">{{ "%.2f"|format(network_bytes_sent / (1024**3)) if network_bytes_sent != 'N/A' else 'N/A' }} GB</div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="metric-card" style="--metric-color: #0abde3;">
+                                        <div class="metric-label">Network Received</div>
+                                        <div class="metric-value">{{ "%.2f"|format(network_bytes_recv / (1024**3)) if network_bytes_recv != 'N/A' else 'N/A' }} GB</div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="metric-card" style="--metric-color: #667eea;">
+                                        <div class="metric-label">Recent Activities (24h)</div>
+                                        <div class="metric-value">{{ recent_activities }}</div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="metric-card" style="--metric-color: {% if open_bugs > 5 %}#ff6b6b{% elif open_bugs > 2 %}#feca57{% else %}#00d2d3{% endif %};">
+                                        <div class="metric-label">Open Bug Reports</div>
+                                        <span class="status-badge {% if open_bugs > 5 %}bg-danger{% elif open_bugs > 2 %}bg-warning{% else %}bg-success{% endif %} text-white">
+                                            {{ open_bugs }} / {{ total_bugs }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Configuration Tab -->
+        <div class="tab-pane fade" id="config" role="tabpanel" aria-labelledby="config-tab">
+            <div class="alert alert-info mb-4">
+                <h5 class="mb-2">
+                    <i class="bi bi-sliders me-2" style="color: #667eea;"></i>System Settings Management
+                </h5>
+                <p class="mb-0">
+                    <i class="bi bi-info-circle me-2" style="color: #667eea;"></i>View and modify system configuration settings.
+                </p>
+            </div>
+            
+            <div class="row g-4">
+                <div class="col-12 col-lg-8">
+                    <div class="stat-card" style="--header-color-1: #667eea; --header-color-2: #764ba2; --card-gradient: #667eea, #764ba2;">
+                        <div class="stat-card-header">
+                            <i class="bi bi-gear-fill"></i>
+                            <h5 class="mb-0">Current Configuration</h5>
+                        </div>
+                        <div class="stat-card-body">
+                            <form method="POST" action="{{ url_for('tech.update_system_config') }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                <div class="row g-4">
+                                    <div class="col-12 col-md-6">
+                                        <div class="mb-4">
+                                            <label for="debug_mode" class="form-label">Debug Mode</label>
+                                            <select class="form-select" id="debug_mode" name="debug_mode">
+                                                <option value="Development Server" {% if config.debug_mode == 'Development Server' %}selected{% endif %}>Development Server</option>
+                                                <option value="Production Server" {% if config.debug_mode == 'Production Server' %}selected{% endif %}>Production Server</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-4">
+                                            <label for="database_path" class="form-label">Database Path</label>
+                                            <input type="text" class="form-control" id="database_path" name="database_path" value="{{ config.database_path }}" readonly style="background-color: #f8f9fa;">
+                                        </div>
+                                        <div class="mb-4">
+                                            <label for="max_upload_size" class="form-label">Max Upload Size</label>
+                                            <select class="form-select" id="max_upload_size" name="max_upload_size">
+                                                <option value="8 MB" {% if config.max_upload_size == '8 MB' %}selected{% endif %}>8 MB</option>
+                                                <option value="16 MB" {% if config.max_upload_size == '16 MB' %}selected{% endif %}>16 MB</option>
+                                                <option value="32 MB" {% if config.max_upload_size == '32 MB' %}selected{% endif %}>32 MB</option>
+                                                <option value="64 MB" {% if config.max_upload_size == '64 MB' %}selected{% endif %}>64 MB</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <div class="mb-4">
+                                            <label for="session_timeout" class="form-label">Session Timeout</label>
+                                            <select class="form-select" id="session_timeout" name="session_timeout">
+                                                <option value="1 hour" {% if config.session_timeout == '1 hour' %}selected{% endif %}>1 hour</option>
+                                                <option value="4 hours" {% if config.session_timeout == '4 hours' %}selected{% endif %}>4 hours</option>
+                                                <option value="8 hours" {% if config.session_timeout == '8 hours' %}selected{% endif %}>8 hours</option>
+                                                <option value="24 hours" {% if config.session_timeout == '24 hours' %}selected{% endif %}>24 hours</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-4">
+                                            <label for="backup_location" class="form-label">Backup Location</label>
+                                            <input type="text" class="form-control" id="backup_location" name="backup_location" value="{{ config.backup_location }}">
+                                        </div>
+                                        <div class="mb-4">
+                                            <label for="log_level" class="form-label">Log Level</label>
+                                            <select class="form-select" id="log_level" name="log_level">
+                                                <option value="DEBUG" {% if config.log_level == 'DEBUG' %}selected{% endif %}>DEBUG</option>
+                                                <option value="INFO" {% if config.log_level == 'INFO' %}selected{% endif %}>INFO</option>
+                                                <option value="WARNING" {% if config.log_level == 'WARNING' %}selected{% endif %}>WARNING</option>
+                                                <option value="ERROR" {% if config.log_level == 'ERROR' %}selected{% endif %}>ERROR</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-end mt-4">
+                                    <button type="submit" class="btn btn-primary" style="background: linear-gradient(135deg, #667eea, #764ba2); border: none; padding: 0.75rem 2rem; font-weight: 600; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
+                                        <i class="bi bi-save me-2"></i>Save Configuration
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-12 col-lg-4">
+                    <div class="stat-card mb-4" style="--header-color-1: #48dbfb; --header-color-2: #0abde3; --card-gradient: #48dbfb, #0abde3;">
+                        <div class="stat-card-header">
+                            <i class="bi bi-info-circle-fill"></i>
+                            <h5 class="mb-0">System Information</h5>
+                        </div>
+                        <div class="stat-card-body">
+                            <div class="mb-3 pb-3 border-bottom">
+                                <div class="metric-label">Python Version</div>
+                                <span class="status-badge bg-info text-white">{{ system_info.python_version }}</span>
+                            </div>
+                            <div class="mb-3 pb-3 border-bottom">
+                                <div class="metric-label">Flask Version</div>
+                                <span class="status-badge bg-info text-white">{{ system_info.flask_version }}</span>
+                            </div>
+                            <div class="mb-3 pb-3 border-bottom">
+                                <div class="metric-label">Database</div>
+                                <span class="status-badge bg-success text-white">{{ system_info.database }}</span>
+                            </div>
+                            <div class="mb-0">
+                                <div class="metric-label">Server</div>
+                                <span class="status-badge {% if system_info.server == 'Development' %}bg-warning{% else %}bg-success{% endif %} text-white">{{ system_info.server }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card" style="--header-color-1: #feca57; --header-color-2: #ff9ff3; --card-gradient: #feca57, #ff9ff3;">
+                        <div class="stat-card-header">
+                            <i class="bi bi-lightning-fill"></i>
+                            <h5 class="mb-0">Quick Actions</h5>
+                        </div>
+                        <div class="stat-card-body">
+                            <div class="d-grid gap-2">
+                                <form method="POST" action="{{ url_for('tech.restart_server') }}" style="display: inline;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <button type="submit" class="btn btn-outline-primary w-100" onclick="return confirm('Are you sure you want to restart the server?')" style="border-width: 2px; font-weight: 500;">
+                                        <i class="bi bi-arrow-clockwise me-2"></i>Restart Server
+                                    </button>
+                                </form>
+                                <a href="{{ url_for('tech.activity_log') }}" class="btn btn-outline-info" style="border-width: 2px; font-weight: 500;">
+                                    <i class="bi bi-file-text me-2"></i>View Logs
+                                </a>
+                                <form method="POST" action="{{ url_for('tech.clear_cache') }}" style="display: inline;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <button type="submit" class="btn btn-outline-warning w-100" onclick="return confirm('Are you sure you want to clear all caches?')" style="border-width: 2px; font-weight: 500;">
+                                        <i class="bi bi-trash me-2"></i>Clear All Caches
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+<script>
+// Auto-refresh functionality for status tab
+let refreshInterval;
+
+function startAutoRefresh() {
+    refreshInterval = setInterval(function() {
+        refreshData();
+    }, 30000); // Refresh every 30 seconds
+}
+
+function refreshData() {
+    location.reload();
+}
+
+// Start auto-refresh when status tab is active
+document.addEventListener('DOMContentLoaded', function() {
+    const statusTab = document.getElementById('status-tab');
+    const configTab = document.getElementById('config-tab');
+    const statusPane = document.getElementById('status');
+    const configPane = document.getElementById('config');
+    
+    // Handle hash-based tab switching (for redirects)
+    if (window.location.hash === '#config') {
+        const bsTab = new bootstrap.Tab(configTab);
+        bsTab.show();
+    }
+    
+    // Check if status tab is active
+    if (statusTab.classList.contains('active')) {
+        startAutoRefresh();
+    }
+    
+    // Listen for tab changes
+    statusTab.addEventListener('shown.bs.tab', function() {
+        startAutoRefresh();
+    });
+    
+    configTab.addEventListener('shown.bs.tab', function() {
+        if (refreshInterval) {
+            clearInterval(refreshInterval);
+        }
+    });
+    
+    // Stop auto-refresh when page is hidden
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+        } else {
+            if (statusTab.classList.contains('active')) {
+                startAutoRefresh();
+            }
+        }
+    });
+});
+</script>
+{% endblock %}
+

@@ -751,7 +751,7 @@ def create_app(config_class=None):
     # Start GPA scheduler in development mode
     if app.config.get('ENV') == 'development':
         try:
-            from gpa_scheduler import start_gpa_scheduler
+            from scripts.gpa_scheduler import start_gpa_scheduler
             start_gpa_scheduler()
             print("GPA scheduler started successfully.")
         except Exception as e:

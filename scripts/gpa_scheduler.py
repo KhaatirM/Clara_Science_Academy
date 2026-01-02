@@ -1,7 +1,7 @@
 import time
 import threading
 from datetime import datetime
-from app import create_app
+# Lazy import to avoid circular dependency - create_app imported inside function
 from models import db, Student, Grade
 import json
 
@@ -55,6 +55,8 @@ def calculate_student_gpa(grades):
 
 def update_all_gpas():
     """Update GPA for all students"""
+    # Lazy import to avoid circular dependency
+    from app import create_app
     app = create_app()
     with app.app_context():
         print(f"[{datetime.now()}] Starting GPA update for all students...")

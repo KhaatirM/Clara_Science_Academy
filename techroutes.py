@@ -10,14 +10,22 @@ from flask_login import login_required, current_user, login_user, logout_user
 
 # Database and model imports
 from models import db, User, MaintenanceMode, ActivityLog, TeacherStaff, Student, Grade, Assignment
-from gpa_scheduler import calculate_student_gpa
+from scripts.gpa_scheduler import calculate_student_gpa
 from copy import copy
 
 # Authentication and decorators
 from decorators import tech_required
 
-# Application imports
-from app import log_activity, get_user_activity_log
+# Application imports - lazy import to avoid circular dependency
+def get_log_activity():
+    """Lazy import of log_activity to avoid circular dependency."""
+    from app import log_activity
+    return log_activity
+
+def get_user_activity_log():
+    """Lazy import of get_user_activity_log to avoid circular dependency."""
+    from app import get_user_activity_log
+    return get_user_activity_log
 
 # Werkzeug utilities
 from werkzeug.security import generate_password_hash
@@ -67,7 +75,7 @@ def activity_log():
             pass
     
     # Get activity logs
-    logs = get_user_activity_log(
+    logs = get_user_activity_log()(
         user_id=user_id,
         action=action if action else None,
         start_date=start_date,
@@ -352,7 +360,7 @@ def backup_database():
             raise Exception("Backup file was not created successfully")
         
         # Log the backup action
-        log_activity(
+        get_log_activity()(
             user_id=current_user.id,
             action='database_backup',
             details={'backup_file': backup_filename, 'backup_size': os.path.getsize(backup_path)},
@@ -364,7 +372,7 @@ def backup_database():
     except Exception as e:
         flash(f'Error creating database backup: {str(e)}', 'danger')
         # Log the error
-        log_activity(
+        get_log_activity()(
             user_id=current_user.id,
             action='database_backup_failed',
             details={'error': str(e)},
@@ -410,7 +418,7 @@ def check_database_integrity():
                 errors_found += 1
         
         # Log the integrity check
-        log_activity(
+        get_log_activity()(
             user_id=current_user.id,
             action='database_integrity_check',
             details={'tables_checked': len(tables), 'errors_found': errors_found, 'results': results},
@@ -426,7 +434,7 @@ def check_database_integrity():
     except Exception as e:
         flash(f'Error checking database integrity: {str(e)}', 'danger')
         # Log the error
-        log_activity(
+        get_log_activity()(
             user_id=current_user.id,
             action='database_integrity_check_failed',
             details={'error': str(e)},
@@ -447,7 +455,7 @@ def clear_cache():
         # In a real application, you might clear Redis cache, file cache, etc.
         
         # Log the cache clearing action
-        log_activity(
+        get_log_activity()(
             user_id=current_user.id,
             action='clear_system_cache',
             details={'cache_type': 'all'},
@@ -467,7 +475,7 @@ def clear_cache():
 def restart_server():
     try:
         # Log the restart action
-        log_activity(
+        get_log_activity()(
             user_id=current_user.id,
             action='restart_server',
             details={'initiated_by': current_user.username},
@@ -497,7 +505,7 @@ def view_database_logs():
     """View database-specific logs and operations"""
     try:
         # Get recent database operations from activity log
-        db_logs = get_user_activity_log(
+        db_logs = get_user_activity_log()(
             action='database',
             limit=50
         )
@@ -526,7 +534,7 @@ def update_system():
     """Initiate system update process"""
     try:
         # Log the update action
-        log_activity(
+        get_log_activity()(
             user_id=current_user.id,
             action='initiate_system_update',
             details={'timestamp': datetime.now().isoformat()},
@@ -746,7 +754,7 @@ def update_system_config():
         SystemConfig.set_value('log_level', log_level, 'Application logging level', 'general', current_user.id)
         
         # Log the configuration update
-        log_activity(
+        get_log_activity()(
             user_id=current_user.id,
             action='update_system_config',
             details={
@@ -934,7 +942,7 @@ def impersonate_user(user_id):
             return redirect(url_for('tech.user_management'))
         
         # Log the impersonation action
-        log_activity(
+        get_log_activity()(
             user_id=current_user.id,
             action='impersonate_user',
             details={
@@ -979,7 +987,7 @@ def stop_impersonating():
             return redirect(url_for('auth.login'))
         
         # Log the stop impersonation action
-        log_activity(
+        get_log_activity()(
             user_id=original_user.id,
             action='stop_impersonating',
             details={

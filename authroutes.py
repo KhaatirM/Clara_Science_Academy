@@ -13,8 +13,11 @@ from models import User, TeacherStaff, db, MaintenanceMode, BugReport
 # Authentication and decorators
 from decorators import is_teacher_role
 
-# Application imports
-from app import log_activity
+# Application imports - lazy import to avoid circular dependency
+def get_log_activity():
+    """Lazy import of log_activity to avoid circular dependency."""
+    from app import log_activity
+    return log_activity
 
 # Werkzeug utilities
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -62,7 +65,7 @@ def login():
                 if user.role in ['Tech', 'IT Support'] and maintenance.allow_tech_access:
                     login_user(user)
                     # Log successful tech login during maintenance
-                    log_activity(
+                    get_log_activity()(
                         user_id=user.id,
                         action='login_maintenance',
                         details={'role': user.role, 'maintenance_mode': True},
@@ -73,7 +76,7 @@ def login():
                     return redirect(url_for('auth.dashboard'))
                 else:
                     # Log failed login attempt during maintenance
-                    log_activity(
+                    get_log_activity()(
                         user_id=user.id if user else None,
                         action='login_failed_maintenance',
                         details={'username': username, 'role': user.role if user else 'unknown', 'reason': 'access_denied'},
@@ -86,7 +89,7 @@ def login():
                     return redirect(url_for('auth.login'))
             else:
                 # Log failed login attempt during maintenance
-                log_activity(
+                get_log_activity()(
                     user_id=None,
                     action='login_failed_maintenance',
                     details={'username': username, 'role': user.role if user else 'unknown'},
@@ -137,7 +140,7 @@ def login():
                 db.session.commit()
                 
                 # Log successful login
-                log_activity(
+                get_log_activity()(
                     user_id=user.id,
                     action='login',
                     details={'role': user.role, 'remember': remember, 'login_count': user.login_count},
@@ -155,7 +158,7 @@ def login():
             else:
                 print(f"DEBUG: Login failed - User: {user}, Password check: {user and check_password_hash(user.password_hash, password) if user else 'No user found'}")
                 # Log failed login attempt - invalid credentials
-                log_activity(
+                get_log_activity()(
                     user_id=None,
                     action='login_failed',
                     details={'username': username, 'reason': 'invalid_credentials'},
@@ -175,7 +178,7 @@ def login():
 @login_required
 def logout():
     # Log logout activity
-    log_activity(
+    get_log_activity()(
         user_id=current_user.id,
         action='logout',
         details={'role': current_user.role},
@@ -254,7 +257,7 @@ def change_password_popup():
         print(f"DEBUG: After change - is_temporary_password: {current_user.is_temporary_password}, login_count: {current_user.login_count}")
         
         # Log password change
-        log_activity(
+        get_log_activity()(
             user_id=current_user.id,
             action='password_changed_popup',
             details={'role': current_user.role, 'login_count': current_user.login_count},
@@ -323,7 +326,7 @@ def submit_bug_report():
         db.session.commit()
         
         # Log the bug report submission
-        log_activity(
+        get_log_activity()(
             current_user.id,
             'bug_report_submitted',
             {
@@ -344,7 +347,7 @@ def submit_bug_report():
         return jsonify({'success': False, 'message': 'Invalid request. Please try again.'})
     except Exception as e:
         db.session.rollback()
-        log_activity(
+        get_log_activity()(
             current_user.id,
             'bug_report_failed',
             {'error': str(e)},
@@ -394,7 +397,7 @@ def update_bug_report_status(report_id):
         db.session.commit()
         
         # Log the status update
-        log_activity(
+        get_log_activity()(
             current_user.id,
             'bug_report_status_updated',
             {
@@ -454,7 +457,7 @@ def change_password():
             db.session.commit()
             
             # Log the password change
-            log_activity(
+            get_log_activity()(
                 current_user.id,
                 'password_changed',
                 {'role': current_user.role},
@@ -470,7 +473,7 @@ def change_password():
             return redirect(url_for('auth.change_password'))
         except Exception as e:
             db.session.rollback()
-            log_activity(
+            get_log_activity()(
                 current_user.id,
                 'password_change_failed',
                 {'error': str(e)},
@@ -540,7 +543,7 @@ def change_password_ajax():
         db.session.commit()
         
         # Log the password change
-        log_activity(
+        get_log_activity()(
             current_user.id,
             'password_changed_from_temporary',
             {'user_id': current_user.id, 'username': current_user.username},
@@ -568,7 +571,7 @@ def change_password_ajax():
         
     except Exception as e:
         db.session.rollback()
-        log_activity(
+        get_log_activity()(
             current_user.id,
             'password_change_ajax_failed',
             {'error': str(e)},
@@ -669,7 +672,7 @@ def google_login():
         session['oauth_state'] = state
         
         # Log the Google login initiation
-        log_activity(
+        get_log_activity()(
             user_id=None,
             action='google_login_initiated',
             details={'redirect_uri': url_for('auth.google_callback', _external=True)},
@@ -685,7 +688,7 @@ def google_login():
         return redirect(url_for('auth.login'))
     except Exception as e:
         current_app.logger.error(f"Error initiating Google login: {str(e)}")
-        log_activity(
+        get_log_activity()(
             user_id=None,
             action='google_login_failed',
             details={'error': str(e)},
@@ -796,7 +799,7 @@ def google_callback():
             db.session.commit()
             
             # Log successful Google login
-            log_activity(
+            get_log_activity()(
                 user_id=user.id,
                 action='google_login_success',
                 details={
@@ -820,7 +823,7 @@ def google_callback():
             current_app.logger.warning(f"Google login attempted with unregistered email: {google_email}")
             
             # Log failed Google login attempt
-            log_activity(
+            get_log_activity()(
                 user_id=None,
                 action='google_login_failed',
                 details={
@@ -855,7 +858,7 @@ def google_callback():
         
         # Log the error
         try:
-            log_activity(
+            get_log_activity()(
                 user_id=user_id,
                 action='google_callback_error',
                 details={'error': str(e), 'url': request.url},

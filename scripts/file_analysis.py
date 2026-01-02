@@ -35,8 +35,7 @@ def analyze_files():
     
     # Route files
     route_files = [
-        'authroutes.py', 'teacherroutes.py', 'studentroutes.py', 
-        'managementroutes.py', 'techroutes.py'
+        'authroutes.py', 'studentroutes.py', 'techroutes.py'
     ]
     
     # Database and models

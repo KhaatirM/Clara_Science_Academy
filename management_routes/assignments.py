@@ -710,7 +710,7 @@ def assignments_legacy():
             if teacher_staff:
                 teacher_staff_id = teacher_staff.id
     
-    return render_template('management/management_assignments.html',
+    return render_template('shared/assignments_list.html',
                          assignments=assignments,
                          classes=all_classes,
                          accessible_classes=accessible_classes,

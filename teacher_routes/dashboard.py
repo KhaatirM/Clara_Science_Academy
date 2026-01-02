@@ -15,6 +15,9 @@ from sqlalchemy import or_, and_
 import json
 import calendar as cal
 from datetime import datetime, timedelta
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), 'scripts'))
 from google_classroom_service import get_google_service
 from googleapiclient.errors import HttpError
 
@@ -655,21 +658,60 @@ def my_assignments():
     # Get teacher object or None for administrators
     teacher = get_teacher_or_admin()
     
+    # Get filter parameters
+    selected_class_id = request.args.get('class_id', '')
+    sort_by = request.args.get('sort', 'due_date')
+    sort_order = request.args.get('order', 'desc')
+    
+    # Ensure selected_class_id is a string for template comparison
+    selected_class_id = str(selected_class_id) if selected_class_id else ''
+    
     # Directors and School Administrators see all assignments, teachers only see their assigned classes
     if is_admin():
-        assignments = Assignment.query.order_by(Assignment.due_date.desc()).all()
+        assignments_query = Assignment.query
+        classes = Class.query.all()
     else:
         # Check if teacher object exists
         if teacher is None:
             # If user is a Teacher but has no teacher_staff_id, show empty assignments list
-            assignments = []
+            assignments_query = Assignment.query.none()
+            classes = []
         else:
             # Get classes for this teacher
             classes = Class.query.filter_by(teacher_id=teacher.id).all()
             class_ids = [c.id for c in classes]
-            assignments = Assignment.query.filter(Assignment.class_id.in_(class_ids)).order_by(Assignment.due_date.desc()).all()
+            assignments_query = Assignment.query.filter(Assignment.class_id.in_(class_ids))
     
-    return render_template('teachers/teacher_assignments.html', assignments=assignments, teacher=teacher)
+    # Apply class filter if selected
+    if selected_class_id:
+        assignments_query = assignments_query.filter(Assignment.class_id == selected_class_id)
+    
+    # Apply sorting
+    if sort_by == 'due_date':
+        if sort_order == 'asc':
+            assignments_query = assignments_query.order_by(Assignment.due_date.asc())
+        else:
+            assignments_query = assignments_query.order_by(Assignment.due_date.desc())
+    elif sort_by == 'title':
+        if sort_order == 'asc':
+            assignments_query = assignments_query.order_by(Assignment.title.asc())
+        else:
+            assignments_query = assignments_query.order_by(Assignment.title.desc())
+    elif sort_by == 'class':
+        if sort_order == 'asc':
+            assignments_query = assignments_query.join(Class).order_by(Class.name.asc())
+        else:
+            assignments_query = assignments_query.join(Class).order_by(Class.name.desc())
+    
+    assignments = assignments_query.all()
+    
+    return render_template('shared/assignments_list.html', 
+                         assignments=assignments, 
+                         teacher=teacher,
+                         classes=classes,
+                         selected_class_id=selected_class_id,
+                         sort_by=sort_by,
+                         sort_order=sort_order)
 
 @bp.route('/students')
 @login_required

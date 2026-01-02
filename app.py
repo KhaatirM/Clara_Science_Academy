@@ -938,3 +938,10 @@ def create_app(config_class=None):
             return jsonify({'success': False, 'message': str(e)}), 500
 
     return app
+
+# Create the application instance
+app = create_app()
+
+if __name__ == '__main__':
+    # This block only runs if you execute 'python app.py' directly
+    app.run(debug=True, port=5000)

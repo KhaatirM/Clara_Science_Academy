@@ -48,8 +48,13 @@ from .dashboard import management_dashboard as management_dashboard_func
 from .calendar import calendar as calendar_func
 from .students import students as students_func, student_jobs as student_jobs_func, add_student as add_student_func
 from .teachers import teachers as teachers_func, add_teacher_staff as add_teacher_staff_func
-from .classes import classes as classes_func, add_class as add_class_func
-from .assignments import assignments_and_grades as assignments_and_grades_func
+from .classes import classes as classes_func, add_class as add_class_func, view_class as view_class_func
+from .assignments import (
+    assignments_and_grades as assignments_and_grades_func,
+    view_assignment as view_assignment_func,
+    grade_assignment as grade_assignment_func,
+    edit_assignment as edit_assignment_func
+)
 from .attendance import unified_attendance as unified_attendance_func
 from .reports import report_cards as report_cards_func
 from .communications import (
@@ -229,6 +234,35 @@ def student_jobs_route():
 def settings_route():
     """Settings route - delegates to administration module"""
     return settings_func()
+
+# Add aliases for assignment routes to maintain backward compatibility
+@management_blueprint.route('/view-assignment/<int:assignment_id>', endpoint='view_assignment')
+@login_required
+@management_required
+def view_assignment_route(assignment_id):
+    """View assignment route - delegates to assignments module"""
+    return view_assignment_func(assignment_id)
+
+@management_blueprint.route('/grade/assignment/<int:assignment_id>', methods=['GET', 'POST'], endpoint='grade_assignment')
+@login_required
+@management_required
+def grade_assignment_route(assignment_id):
+    """Grade assignment route - delegates to assignments module"""
+    return grade_assignment_func(assignment_id)
+
+@management_blueprint.route('/edit-assignment/<int:assignment_id>', methods=['GET', 'POST'], endpoint='edit_assignment')
+@login_required
+@management_required
+def edit_assignment_route(assignment_id):
+    """Edit assignment route - delegates to assignments module"""
+    return edit_assignment_func(assignment_id)
+
+@management_blueprint.route('/view-class/<int:class_id>', endpoint='view_class')
+@login_required
+@management_required
+def view_class_route(class_id):
+    """View class route - delegates to classes module"""
+    return view_class_func(class_id)
 
 
 

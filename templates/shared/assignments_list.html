@@ -7,14 +7,26 @@
             <i class="bi bi-journal-text me-2"></i>
             {% if user_role == 'Director' %}
                 All Assignments
+            {% elif user_role in ['School Administrator', 'Teacher'] %}
+                {% if current_user.role == 'Teacher' %}
+                    My Assignments
+                {% else %}
+                    Assignment Management
+                {% endif %}
             {% else %}
-                Assignment Management
+                Assignments
             {% endif %}
         </h3>
         <div class="d-flex gap-2">
-            <a href="{{ url_for('teacher.assignment_type_selector') }}" class="btn btn-sm text-white" style="background: linear-gradient(135deg, #2E8B57 0%, #228B22 50%, #556B2F 100%);">
-                <i class="bi bi-plus-circle me-1 me-md-2"></i>Add Assignment
-            </a>
+            {% if current_user.role in ['Director', 'School Administrator'] %}
+                <a href="{{ url_for('management.assignments.assignment_type_selector') }}" class="btn btn-sm text-white" style="background: linear-gradient(135deg, #2E8B57 0%, #228B22 50%, #556B2F 100%);">
+                    <i class="bi bi-plus-circle me-1 me-md-2"></i>Add Assignment
+                </a>
+            {% elif current_user.role == 'Teacher' %}
+                <a href="{{ url_for('teacher.assignments.assignment_type_selector') }}" class="btn btn-sm text-white" style="background: linear-gradient(135deg, #2E8B57 0%, #228B22 50%, #556B2F 100%);">
+                    <i class="bi bi-plus-circle me-1 me-md-2"></i>Add Assignment
+                </a>
+            {% endif %}
             <button class="btn btn-sm text-white" style="background: linear-gradient(135deg, #2E8B57 0%, #228B22 50%, #556B2F 100%);" onclick="window.history.back()">
                 <i class="bi bi-arrow-left me-1 me-md-2"></i>Back to Dashboard
             </button>
@@ -22,9 +34,11 @@
     </div>
 
     <!-- Filter and Sort Controls -->
+    {% if classes or selected_class_id is defined or selected_status is defined or sort_by is defined %}
     <div class="card mb-4" style="background-color: #f8f9fa; border: 1px solid #e9ecef;">
         <div class="card-body">
             <form method="GET" class="row g-3" id="filterForm">
+                {% if classes %}
                 <div class="col-12 col-sm-6 col-md-3">
                     <label for="class_filter" class="form-label fw-bold">Filter by Class</label>
                     <select class="form-select" id="class_filter" name="class_id" onchange="this.form.submit()">
@@ -36,6 +50,8 @@
                         {% endfor %}
                     </select>
                 </div>
+                {% endif %}
+                {% if current_user.role in ['Director', 'School Administrator'] %}
                 <div class="col-12 col-sm-6 col-md-3">
                     <label for="status_filter" class="form-label fw-bold">Filter by Status</label>
                     <select class="form-select" id="status_filter" name="status" onchange="this.form.submit()">
@@ -45,12 +61,15 @@
                         <option value="Voided" {% if selected_status == 'Voided' %}selected{% endif %}>Voided</option>
                     </select>
                 </div>
+                {% endif %}
                 <div class="col-12 col-sm-6 col-md-3">
                     <label for="sort_by" class="form-label fw-bold">Sort by</label>
                     <select class="form-select" id="sort_by" name="sort" onchange="this.form.submit()">
                         <option value="due_date" {% if sort_by == 'due_date' %}selected{% endif %}>Due Date</option>
                         <option value="title" {% if sort_by == 'title' %}selected{% endif %}>Assignment Title</option>
+                        {% if classes %}
                         <option value="class" {% if sort_by == 'class' %}selected{% endif %}>Class</option>
+                        {% endif %}
                     </select>
                 </div>
                 <div class="col-12 col-sm-6 col-md-3 d-flex align-items-end">
@@ -61,6 +80,7 @@
             </form>
         </div>
     </div>
+    {% endif %}
 
     {% if assignments %}
         <!-- Assignment Summary -->
@@ -91,13 +111,17 @@
                                 <i class="bi bi-arrow-{% if sort_order == 'asc' %}up{% else %}down{% endif %} ms-1"></i>
                             {% endif %}
                         </th>
+                        {% if classes %}
                         <th class="sortable" data-sort="class">
                             Class
                             {% if sort_by == 'class' %}
                                 <i class="bi bi-arrow-{% if sort_order == 'asc' %}up{% else %}down{% endif %} ms-1"></i>
                             {% endif %}
                         </th>
+                        {% endif %}
+                        {% if current_user.role in ['Director', 'School Administrator'] %}
                         <th>Status</th>
+                        {% endif %}
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -134,7 +158,10 @@
                                     </small>
                                 {% endif %}
                             </td>
+                            {% if classes %}
                             <td data-label="Class">{{ assignment.class_info.name if assignment.class_info else 'N/A' }}</td>
+                            {% endif %}
+                            {% if current_user.role in ['Director', 'School Administrator'] %}
                             <td data-label="Status">
                                 {% if assignment.status == 'Active' %}
                                     <span class="badge bg-success">Active</span>
@@ -146,20 +173,30 @@
                                     <span class="badge bg-secondary">{{ assignment.status|title }}</span>
                                 {% endif %}
                             </td>
+                            {% endif %}
                             <td data-label="Actions">
                                 <div class="assignment-actions">
                                     <!-- Primary Actions Row -->
                                     <div class="d-flex gap-1 mb-1">
-                                        <a href="{{ url_for('management.view_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-secondary btn-sm" title="View Assignment Details">
-                                            <i class="bi bi-eye"></i>
-                                        </a>
-                                        <a href="{{ url_for('management.view_class', class_id=assignment.class_id) }}" class="btn btn-outline-info btn-sm" title="View Class">
-                                            <i class="bi bi-people"></i>
-                                        </a>
+                                        {% if current_user.role in ['Director', 'School Administrator'] %}
+                                            <a href="{{ url_for('management.view_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-secondary btn-sm" title="View Assignment Details">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <a href="{{ url_for('management.view_class', class_id=assignment.class_id) }}" class="btn btn-outline-info btn-sm" title="View Class">
+                                                <i class="bi bi-people"></i>
+                                            </a>
+                                        {% elif current_user.role == 'Teacher' %}
+                                            <a href="{{ url_for('teacher.assignments.view_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-secondary btn-sm" title="View Assignment Details">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <a href="{{ url_for('teacher.dashboard.view_class', class_id=assignment.class_id) }}" class="btn btn-outline-info btn-sm" title="View Class">
+                                                <i class="bi bi-people"></i>
+                                            </a>
+                                        {% endif %}
                                     </div>
                                     
                                     <!-- Management Actions for Directors and School Administrators -->
-                                    {% if user_role in ['Director', 'School Administrator'] %}
+                                    {% if current_user.role in ['Director', 'School Administrator'] %}
                                         <div class="d-flex gap-1 mb-1">
                                             <a href="{{ url_for('management.grade_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-primary btn-sm" title="Grade Assignment">
                                                 <i class="bi bi-pencil"></i>
@@ -174,7 +211,7 @@
                                                 data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}" 
                                                 data-current-status="{{ assignment.status }}">
                                                 <i class="bi bi-gear"></i>
-                                        </button>
+                                            </button>
                                             <button type="button" class="btn btn-outline-success btn-sm manage-extensions-btn" title="Manage Extensions"
                                                 data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}"
                                                 data-class-id="{{ assignment.class_id }}">
@@ -183,7 +220,7 @@
                                             <button type="button" class="btn btn-outline-danger btn-sm remove-assignment-btn" title="Remove Assignment"
                                                     data-assignment-id="{{ assignment.id }}" data-assignment-title="{{ assignment.title }}">
                                                 <i class="bi bi-trash"></i>
-                                        </button>
+                                            </button>
                                         </div>
                                     {% endif %}
                                 </div>
@@ -203,9 +240,15 @@
                     <div class="row g-2">
                         {% for class in classes %}
                             <div class="col-12 col-sm-6 col-md-4">
-                                <a href="{{ url_for('management.add_assignment', class_id=class.id) }}" class="btn btn-outline-primary btn-sm w-100">
-                                    <i class="bi bi-plus-circle me-1"></i>{{ class.name }}
-                                </a>
+                                {% if current_user.role in ['Director', 'School Administrator'] %}
+                                    <a href="{{ url_for('management.assignments.add_assignment', class_id=class.id) }}" class="btn btn-outline-primary btn-sm w-100">
+                                        <i class="bi bi-plus-circle me-1"></i>{{ class.name }}
+                                    </a>
+                                {% elif current_user.role == 'Teacher' %}
+                                    <a href="{{ url_for('teacher.assignments.assignment_type_selector') }}" class="btn btn-outline-primary btn-sm w-100">
+                                        <i class="bi bi-plus-circle me-1"></i>{{ class.name }}
+                                    </a>
+                                {% endif %}
                             </div>
                         {% endfor %}
                     </div>
@@ -215,7 +258,8 @@
     {% endif %}
 </div>
 
-<!-- Status Change Modal -->
+<!-- Status Change Modal (Management only) -->
+{% if current_user.role in ['Director', 'School Administrator'] %}
 <div class="modal fade" id="statusModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -244,7 +288,7 @@
     </div>
 </div>
 
-<!-- Extension Management Modal -->
+<!-- Extension Management Modal (Management only) -->
 <div class="modal fade" id="extensionModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -308,7 +352,7 @@
     </div>
 </div>
 
-<!-- Remove Assignment Modal -->
+<!-- Remove Assignment Modal (Management only) -->
 <div class="modal fade" id="removeModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -329,9 +373,11 @@
         </div>
     </div>
 </div>
+{% endif %}
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    {% if current_user.role in ['Director', 'School Administrator'] %}
     // Status change functionality
     const statusModal = new bootstrap.Modal(document.getElementById('statusModal'));
     const changeStatusBtns = document.querySelectorAll('.change-status-btn');
@@ -377,7 +423,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Extension functionality
     const extensionModal = new bootstrap.Modal(document.getElementById('extensionModal'));
-    const extensionsBtns = document.querySelectorAll('.extensions-btn');
+    const extensionsBtns = document.querySelectorAll('.manage-extensions-btn');
     const extensionForm = document.getElementById('extensionForm');
     const extensionAssignmentId = document.getElementById('extensionAssignmentId');
     const extensionClassId = document.getElementById('extensionClassId');
@@ -559,22 +605,9 @@ document.addEventListener('DOMContentLoaded', function() {
             removeModal.show();
         });
     });
-});
-</script>
+    {% endif %}
 
-<script>
-function clearFilters() {
-    // Clear all form inputs
-    document.getElementById('class_filter').value = '';
-    document.getElementById('status_filter').value = '';
-    document.getElementById('sort_by').value = 'due_date';
-    
-    // Submit the form to reload with cleared filters
-    document.getElementById('filterForm').submit();
-}
-
-// Add sortable column functionality
-document.addEventListener('DOMContentLoaded', function() {
+    // Sortable column functionality
     const sortableColumns = document.querySelectorAll('.sortable');
     
     sortableColumns.forEach(column => {
@@ -597,6 +630,26 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+function clearFilters() {
+    // Clear all form inputs
+    const classFilter = document.getElementById('class_filter');
+    const statusFilter = document.getElementById('status_filter');
+    const sortBy = document.getElementById('sort_by');
+    
+    if (classFilter) classFilter.value = '';
+    if (statusFilter) statusFilter.value = '';
+    if (sortBy) sortBy.value = 'due_date';
+    
+    // Submit the form to reload with cleared filters
+    const filterForm = document.getElementById('filterForm');
+    if (filterForm) {
+        filterForm.submit();
+    } else {
+        // If no form, just redirect to base URL
+        window.location.href = window.location.pathname;
+    }
+}
 </script>
 {% endblock %}
 

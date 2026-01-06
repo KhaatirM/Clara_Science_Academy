@@ -3990,7 +3990,10 @@
                 form.onsubmit = function(e) {
                     e.preventDefault();
                     let formData = new FormData(form);
-                    fetch(`/management/edit-teacher/${teacherId}`, {
+                    fetch(`/management/edit-teacher-staff/${teacherId}`, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
                         method: 'POST',
                         body: formData
                     })

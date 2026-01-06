@@ -242,6 +242,9 @@ def edit_teacher_staff(staff_id):
     teacher_staff = TeacherStaff.query.get_or_404(staff_id)
     
     if request.method == 'POST':
+        # Check if this is an AJAX request (from the modal)
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json
+        
         # Get form data
         first_name = request.form.get('first_name', '').strip()
         middle_initial = request.form.get('middle_initial', '').strip()
@@ -267,17 +270,23 @@ def edit_teacher_staff(staff_id):
         
         # Validate required fields
         if not all([first_name, last_name, email]):
+            if is_ajax:
+                return jsonify({'success': False, 'message': 'First name, last name, and email are required.'})
             flash('First name, last name, and email are required.', 'danger')
             return render_template('management/add_teacher_staff.html', teacher_staff=teacher_staff, editing=True)
         
         # Validate email format
         if '@' not in email or '.' not in email:
+            if is_ajax:
+                return jsonify({'success': False, 'message': 'Please enter a valid email address.'})
             flash('Please enter a valid email address.', 'danger')
             return render_template('management/add_teacher_staff.html', teacher_staff=teacher_staff, editing=True)
         
         # Check if email already exists (excluding current staff)
         existing_staff = TeacherStaff.query.filter_by(email=email).first()
         if existing_staff and existing_staff.id != staff_id:
+            if is_ajax:
+                return jsonify({'success': False, 'message': 'A teacher/staff member with this email already exists.'})
             flash('A teacher/staff member with this email already exists.', 'danger')
             return render_template('management/add_teacher_staff.html', teacher_staff=teacher_staff, editing=True)
         
@@ -313,9 +322,13 @@ def edit_teacher_staff(staff_id):
                         access_expires_at = access_expires_at.replace(tzinfo=timezone.utc)
                         teacher_staff.access_expires_at = access_expires_at
                     except ValueError:
+                        if is_ajax:
+                            return jsonify({'success': False, 'message': 'Invalid expiration date format. Please use the date picker.'})
                         flash('Invalid expiration date format. Please use the date picker.', 'warning')
                         return render_template('management/add_teacher_staff.html', teacher_staff=teacher_staff, editing=True)
                 else:
+                    if is_ajax:
+                        return jsonify({'success': False, 'message': 'Expiration date is required for temporary staff.'})
                     flash('Expiration date is required for temporary staff.', 'danger')
                     return render_template('management/add_teacher_staff.html', teacher_staff=teacher_staff, editing=True)
             else:
@@ -342,12 +355,19 @@ def edit_teacher_staff(staff_id):
                 user.role = assigned_role
             
             db.session.commit()
+            
+            if is_ajax:
+                return jsonify({'success': True, 'message': f'{assigned_role} updated successfully!'})
+            
             flash(f'{assigned_role} updated successfully!', 'success')
             return redirect(url_for('management.teachers'))
             
         except Exception as e:
             db.session.rollback()
-            flash(f'Error updating {assigned_role.lower()}: {str(e)}', 'danger')
+            error_msg = f'Error updating {assigned_role.lower()}: {str(e)}'
+            if is_ajax:
+                return jsonify({'success': False, 'message': error_msg})
+            flash(error_msg, 'danger')
             return render_template('management/add_teacher_staff.html', teacher_staff=teacher_staff, editing=True)
     
     return render_template('management/add_teacher_staff.html', teacher_staff=teacher_staff, editing=True)
@@ -688,19 +708,36 @@ def delete_teacher_work_day(work_day_id):
 @management_required
 def view_teacher(teacher_id):
     """View detailed teacher/staff information"""
-    teacher = TeacherStaff.query.get_or_404(teacher_id)
+    try:
+        teacher = TeacherStaff.query.get_or_404(teacher_id)
+    except Exception as e:
+        current_app.logger.error(f"Error loading teacher {teacher_id}: {str(e)}")
+        return jsonify({'error': 'Could not load teacher/staff details.'}), 500
     
-    # Get assigned classes
-    assigned_classes = Class.query.filter_by(teacher_id=teacher.id).all()
-    
-    # Count students in all assigned classes (placeholder)
-    total_students = 0
-    for class_info in assigned_classes:
-        # This would need to be implemented based on enrollment system
-        total_students += 0  # Placeholder
-    
-    # Get role from user account
-    role = teacher.user.role if teacher.user else "No Account"
+    try:
+        # Get assigned classes
+        from models import Class
+        assigned_classes = Class.query.filter_by(teacher_id=teacher.id).all()
+        
+        # Count students in all assigned classes
+        total_students = 0
+        try:
+            from models import Enrollment
+            for class_info in assigned_classes:
+                enrollment_count = Enrollment.query.filter_by(class_id=class_info.id, is_active=True).count()
+                total_students += enrollment_count
+        except Exception as e:
+            current_app.logger.warning(f"Error counting students for teacher {teacher_id}: {str(e)}")
+            total_students = 0
+        
+        # Get role from user account
+        try:
+            role = teacher.user.role if teacher.user else "No Account"
+        except AttributeError:
+            role = "No Account"
+    except Exception as e:
+        current_app.logger.error(f"Error processing teacher data {teacher_id}: {str(e)}")
+        return jsonify({'error': 'Could not load teacher/staff details.'}), 500
     
     # Format emergency contact information
     emergency_contact = "Not available"
@@ -753,40 +790,44 @@ def view_teacher(teacher_id):
     except Exception:
         grades_taught_str = None
 
-    return jsonify({
-        'id': teacher.id,
-        'first_name': teacher.first_name,
-        'middle_initial': getattr(teacher, 'middle_initial', None),
-        'last_name': teacher.last_name,
-        'staff_id': teacher.staff_id,
-        'dob': _fmt_date(getattr(teacher, 'dob', None)),
-        'role': role,
-        'assigned_role': getattr(teacher, 'assigned_role', None),
-        'employment_type': getattr(teacher, 'employment_type', None),
-        'subject': getattr(teacher, 'subject', None),
-        'email': teacher.email,
-        'google_workspace_email': teacher.user.google_workspace_email if teacher.user else None,
-        'username': teacher.user.username if teacher.user else None,
-        'department': teacher.department,
-        'position': teacher.position,
-        'hire_date': _fmt_date(teacher.hire_date),
-        'phone': teacher.phone,
-        'street': teacher.street,
-        'apt_unit': teacher.apt_unit,
-        'city': teacher.city,
-        'state': teacher.state,
-        'zip_code': teacher.zip_code,
-        'address': address,
-        'emergency_contact': emergency_contact,
-        'emergency_first_name': getattr(teacher, 'emergency_first_name', None),
-        'emergency_last_name': getattr(teacher, 'emergency_last_name', None),
-        'emergency_email': getattr(teacher, 'emergency_email', None),
-        'emergency_phone': getattr(teacher, 'emergency_phone', None),
-        'emergency_relationship': getattr(teacher, 'emergency_relationship', None),
-        'grades_taught': grades_taught_str or '',
-        'assigned_classes': [{'id': c.id, 'name': c.name, 'subject': c.subject} for c in assigned_classes],
-        'total_students': total_students
-    })
+    try:
+        return jsonify({
+            'id': teacher.id,
+            'first_name': teacher.first_name,
+            'middle_initial': getattr(teacher, 'middle_initial', None),
+            'last_name': teacher.last_name,
+            'staff_id': teacher.staff_id,
+            'dob': _fmt_date(getattr(teacher, 'dob', None)),
+            'role': role,
+            'assigned_role': getattr(teacher, 'assigned_role', None),
+            'employment_type': getattr(teacher, 'employment_type', None),
+            'subject': getattr(teacher, 'subject', None),
+            'email': teacher.email,
+            'google_workspace_email': teacher.user.google_workspace_email if teacher.user and hasattr(teacher.user, 'google_workspace_email') else None,
+            'username': teacher.user.username if teacher.user and hasattr(teacher.user, 'username') else None,
+            'department': teacher.department,
+            'position': teacher.position,
+            'hire_date': _fmt_date(teacher.hire_date),
+            'phone': teacher.phone,
+            'street': teacher.street,
+            'apt_unit': teacher.apt_unit,
+            'city': teacher.city,
+            'state': teacher.state,
+            'zip_code': teacher.zip_code,
+            'address': address,
+            'emergency_contact': emergency_contact,
+            'emergency_first_name': getattr(teacher, 'emergency_first_name', None),
+            'emergency_last_name': getattr(teacher, 'emergency_last_name', None),
+            'emergency_email': getattr(teacher, 'emergency_email', None),
+            'emergency_phone': getattr(teacher, 'emergency_phone', None),
+            'emergency_relationship': getattr(teacher, 'emergency_relationship', None),
+            'grades_taught': grades_taught_str or '',
+            'assigned_classes': [{'id': c.id, 'name': c.name, 'subject': c.subject} for c in assigned_classes],
+            'total_students': total_students
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error serializing teacher data {teacher_id}: {str(e)}")
+        return jsonify({'error': 'Could not load teacher/staff details.'}), 500
 
 
 

@@ -134,7 +134,6 @@ def login():
                 # Check if user has expired temporary access
                 if user.teacher_staff_id:
                     from models import TeacherStaff
-                    from datetime import datetime, timezone
                     teacher_staff = TeacherStaff.query.get(user.teacher_staff_id)
                     if teacher_staff and teacher_staff.is_temporary and teacher_staff.access_expires_at:
                         # Handle both naive and aware datetimes
@@ -274,7 +273,7 @@ def change_password_popup():
         # Update user password
         current_user.password_hash = generate_password_hash(new_password)
         current_user.is_temporary_password = False
-        current_user.password_changed_at = datetime.utcnow()
+        current_user.password_changed_at = datetime.now(timezone.utc)
         
         # If this was a first-time login (login_count == 1), increment it to prevent popup from showing again
         if current_user.login_count == 1:
@@ -566,7 +565,7 @@ def change_password_ajax():
         # Update user password and clear temporary flag
         current_user.password_hash = new_password_hash
         current_user.is_temporary_password = False
-        current_user.password_changed_at = datetime.utcnow()
+        current_user.password_changed_at = datetime.now(timezone.utc)
         
         db.session.commit()
         
@@ -679,7 +678,7 @@ def google_login():
         except:
             pass
         
-        if maintenance and maintenance.end_time > datetime.now():
+        if maintenance and maintenance.end_time > datetime.now(timezone.utc):
             flash('System is currently under maintenance. Please try again later.', 'warning')
             return redirect(url_for('auth.login'))
         

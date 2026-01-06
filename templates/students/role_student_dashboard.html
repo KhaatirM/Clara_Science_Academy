@@ -2556,15 +2556,93 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                     <h3 class="mb-0">
                         <i class="bi bi-calendar-event text-info me-2"></i>Upcoming Assignments
                     </h3>
-                    <small class="text-muted">Feature coming soon</small>
+                    <small class="text-muted">{{ upcoming_assignments|length if upcoming_assignments else 0 }} assignment(s)</small>
                 </div>
             </div>
             <div class="border-top border-info border-3 pt-3"></div>
             
+            {% if upcoming_assignments %}
+            <div class="row g-3 mt-3" id="upcomingAssignmentsTable">
+                {% for assignment, submission, student_status in upcoming_assignments %}
+                <div class="col-12 col-md-6 col-lg-4 assignment-card-wrapper" 
+                     data-status="{{ student_status }}" 
+                     data-type="{{ assignment.assignment_type or 'pdf' }}" 
+                     data-due="{{ assignment.due_date.strftime('%Y-%m-%d') if assignment.due_date else '9999-12-31' }}"
+                     data-title="{{ assignment.title }}"
+                     data-class="{{ assignment.class_info.name if assignment.class_info else 'Unknown' }}">
+                    <div class="student-assignment-card">
+                        <!-- Card Header -->
+                        <div class="student-assignment-card-header">
+                            <div class="student-assignment-type-icon
+                                {% if assignment.assignment_type == 'quiz' %}type-quiz
+                                {% elif assignment.assignment_type == 'discussion' %}type-discussion
+                                {% else %}type-pdf{% endif %}">
+                                {% if assignment.assignment_type == 'quiz' %}
+                                    <i class="bi bi-question-circle-fill"></i>
+                                {% elif assignment.assignment_type == 'discussion' %}
+                                    <i class="bi bi-chat-dots-fill"></i>
+                                {% else %}
+                                    <i class="bi bi-file-earmark-text-fill"></i>
+                                {% endif %}
+                            </div>
+                            <div class="student-assignment-status-badge">
+                                <span class="badge bg-info">
+                                    <i class="bi bi-clock me-1"></i>Upcoming
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <!-- Card Body -->
+                        <div class="student-assignment-card-body">
+                            <h6 class="student-assignment-title">{{ assignment.title }}</h6>
+                            <p class="student-assignment-class mb-2">
+                                <i class="bi bi-book me-1"></i>{{ assignment.class_info.name if assignment.class_info else 'Unknown Class' }}
+                            </p>
+                            
+                            {% if assignment.open_date %}
+                            <p class="student-assignment-due mb-2">
+                                <i class="bi bi-calendar-event me-1"></i>
+                                <strong>Opens:</strong> {{ assignment.open_date.strftime('%m/%d/%Y %I:%M %p') if assignment.open_date else 'TBD' }}
+                            </p>
+                            {% endif %}
+                            
+                            {% if assignment.due_date %}
+                            <p class="student-assignment-due mb-2">
+                                <i class="bi bi-calendar-check me-1"></i>
+                                <strong>Due:</strong> {{ assignment.due_date.strftime('%m/%d/%Y %I:%M %p') if assignment.due_date else 'TBD' }}
+                            </p>
+                            {% endif %}
+                            
+                            {% if assignment.total_points %}
+                            <p class="student-assignment-points mb-2">
+                                <i class="bi bi-star me-1"></i>
+                                <strong>{{ assignment.total_points }}</strong> points
+                            </p>
+                            {% endif %}
+                            
+                            {% if assignment.description %}
+                            <p class="student-assignment-description mb-0">
+                                {{ assignment.description[:100] }}{% if assignment.description|length > 100 %}...{% endif %}
+                            </p>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Card Footer -->
+                        <div class="student-assignment-card-footer">
+                            <button class="btn btn-outline-info btn-sm w-100" disabled>
+                                <i class="bi bi-lock me-1"></i>Not Yet Available
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
             <div class="text-center py-4 mt-3">
                 <i class="bi bi-calendar-x text-muted" style="font-size: 3rem;"></i>
-                <p class="text-muted mt-3 mb-0">Upcoming assignments feature will be available soon.</p>
+                <p class="text-muted mt-3 mb-0">No upcoming assignments at this time.</p>
             </div>
+            {% endif %}
         </div>
 
         <!-- Active Assignments Section -->

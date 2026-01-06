@@ -5,7 +5,7 @@ Classes routes for management users.
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, Response, abort, jsonify
 from flask_login import login_required, current_user
 from decorators import management_required
-from models import db, Class, TeacherStaff, Student, Enrollment, Assignment, Attendance, Grade, StudentGroup, StudentGroupMember, GroupAssignment, GroupConflict, GroupGrade
+from models import db, Class, TeacherStaff, Student, Enrollment, Assignment, Attendance, Grade, StudentGroup, StudentGroupMember, GroupAssignment, GroupConflict, GroupGrade, SchoolDayAttendance
 from datetime import datetime
 import json
 

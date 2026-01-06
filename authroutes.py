@@ -60,57 +60,57 @@ def login():
         if end_time and end_time > now:
             # Allow tech users and administrators to login during maintenance
             if request.method == 'POST':
-            username = request.form.get('username')
-            password = request.form.get('password')
-            
-            # Check if username and password are provided
-            if not username or not password:
-                flash('Username and password are required.', 'danger')
-                return render_template('shared/maintenance.html', 
-                                     maintenance=maintenance, 
-                                     progress_percentage=0)
-            
-            user = User.query.filter_by(username=username).first()
-            if user and password and check_password_hash(user.password_hash, password):
-                # Tech users and administrators can access during maintenance
-                if user.role in ['Tech', 'IT Support', 'Director', 'School Administrator'] and maintenance.allow_tech_access:
-                    login_user(user)
-                    # Log successful tech login during maintenance
-                    get_log_activity()(
-                        user_id=user.id,
-                        action='login_maintenance',
-                        details={'role': user.role, 'maintenance_mode': True},
-                        ip_address=request.remote_addr,
-                        user_agent=request.headers.get('User-Agent')
-                    )
-                    flash('Welcome back! You have access during maintenance mode.', 'info')
-                    return redirect(url_for('auth.dashboard'))
+                username = request.form.get('username')
+                password = request.form.get('password')
+                
+                # Check if username and password are provided
+                if not username or not password:
+                    flash('Username and password are required.', 'danger')
+                    return render_template('shared/maintenance.html', 
+                                         maintenance=maintenance, 
+                                         progress_percentage=0)
+                
+                user = User.query.filter_by(username=username).first()
+                if user and password and check_password_hash(user.password_hash, password):
+                    # Tech users and administrators can access during maintenance
+                    if user.role in ['Tech', 'IT Support', 'Director', 'School Administrator'] and maintenance.allow_tech_access:
+                        login_user(user)
+                        # Log successful tech login during maintenance
+                        get_log_activity()(
+                            user_id=user.id,
+                            action='login_maintenance',
+                            details={'role': user.role, 'maintenance_mode': True},
+                            ip_address=request.remote_addr,
+                            user_agent=request.headers.get('User-Agent')
+                        )
+                        flash('Welcome back! You have access during maintenance mode.', 'info')
+                        return redirect(url_for('auth.dashboard'))
+                    else:
+                        # Log failed login attempt during maintenance
+                        get_log_activity()(
+                            user_id=user.id if user else None,
+                            action='login_failed_maintenance',
+                            details={'username': username, 'role': user.role if user else 'unknown', 'reason': 'access_denied'},
+                            ip_address=request.remote_addr,
+                            user_agent=request.headers.get('User-Agent'),
+                            success=False,
+                            error_message='Access denied during maintenance'
+                        )
+                        flash('Access denied during maintenance. Only technical staff and administrators can login.', 'warning')
+                        return redirect(url_for('auth.login'))
                 else:
                     # Log failed login attempt during maintenance
                     get_log_activity()(
-                        user_id=user.id if user else None,
+                        user_id=None,
                         action='login_failed_maintenance',
-                        details={'username': username, 'role': user.role if user else 'unknown', 'reason': 'access_denied'},
+                        details={'username': username, 'role': user.role if user else 'unknown'},
                         ip_address=request.remote_addr,
                         user_agent=request.headers.get('User-Agent'),
                         success=False,
-                        error_message='Access denied during maintenance'
+                        error_message='Login blocked during maintenance'
                     )
-                    flash('Access denied during maintenance. Only technical staff and administrators can login.', 'warning')
+                    flash('System is currently under maintenance. Please try again later.', 'warning')
                     return redirect(url_for('auth.login'))
-            else:
-                # Log failed login attempt during maintenance
-                get_log_activity()(
-                    user_id=None,
-                    action='login_failed_maintenance',
-                    details={'username': username, 'role': user.role if user else 'unknown'},
-                    ip_address=request.remote_addr,
-                    user_agent=request.headers.get('User-Agent'),
-                    success=False,
-                    error_message='Login blocked during maintenance'
-                )
-                flash('System is currently under maintenance. Please try again later.', 'warning')
-                return redirect(url_for('auth.login'))
             
             # Show maintenance page for non-tech/admin users
             start_time = ensure_aware(maintenance.start_time)

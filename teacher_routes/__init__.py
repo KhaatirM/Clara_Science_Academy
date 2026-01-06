@@ -82,6 +82,15 @@ def create_quiz_assignment():
     from .quizzes import create_quiz_assignment as create_quiz_func
     return create_quiz_func()
 
+# Add route alias for create_discussion_assignment for backward compatibility
+@teacher_blueprint.route('/assignment/create/discussion', methods=['GET', 'POST'], endpoint='create_discussion_assignment')
+@login_required
+@teacher_required
+def create_discussion_assignment():
+    """Create discussion assignment route - delegates to quizzes module"""
+    from .quizzes import create_discussion_assignment as create_discussion_func
+    return create_discussion_func()
+
 # Add route aliases for extension requests
 @teacher_blueprint.route('/extension-requests', endpoint='view_extension_requests')
 @login_required

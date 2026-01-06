@@ -712,8 +712,18 @@ def student_assignments():
     # Separate assignments into 3 categories: Inactive, Active, and Upcoming
     inactive_assignments = []  # Assignments with status='Inactive' - students can't turn them in
     active_assignments = []  # Assignments with status='Active' - students can submit
-    upcoming_assignments = []  # Placeholder for future feature
+    upcoming_assignments = []  # Assignments that haven't opened yet (open_date in future)
     today = datetime.now().date()
+    now = datetime.now()
+    
+    # Helper to ensure timezone-aware datetime
+    from datetime import timezone
+    def ensure_aware(dt):
+        if dt is None:
+            return None
+        if dt.tzinfo is None:
+            return dt.replace(tzinfo=timezone.utc)
+        return dt
     
     for assignment in assignments:
         submission = submissions_dict.get(assignment.id)
@@ -728,13 +738,32 @@ def student_assignments():
         if assignment.status == 'Voided' or student_status == 'Voided':
             continue
         
-        # Categorize by assignment status set by teacher
-        if assignment.status == 'Inactive':
+        # Check if assignment is upcoming based on open_date (even if status isn't 'Upcoming')
+        is_upcoming = False
+        if hasattr(assignment, 'open_date') and assignment.open_date:
+            raw_open_date = assignment.open_date
+            # Convert to timezone-aware datetime
+            if isinstance(raw_open_date, datetime):
+                open_date_dt = ensure_aware(raw_open_date)
+            else:
+                # It's a date object, convert to datetime at start of day
+                from datetime import date as date_type
+                if isinstance(raw_open_date, date_type):
+                    open_date_dt = datetime.combine(raw_open_date, datetime.min.time()).replace(tzinfo=timezone.utc)
+                else:
+                    open_date_dt = ensure_aware(raw_open_date)
+            # Ensure now is also timezone-aware
+            now_aware = now if (hasattr(now, 'tzinfo') and now.tzinfo) else datetime.now(timezone.utc)
+            if open_date_dt > now_aware:
+                is_upcoming = True
+        
+        # Categorize by assignment status and open_date
+        if is_upcoming or assignment.status == 'Upcoming':
+            # Upcoming assignments - not yet open (check open_date or status)
+            upcoming_assignments.append(assignment_data)
+        elif assignment.status == 'Inactive':
             # Inactive assignments - students can view but can't turn them in
             inactive_assignments.append(assignment_data)
-        elif assignment.status == 'Upcoming':
-            # Upcoming assignments - not yet open
-            upcoming_assignments.append(assignment_data)
         elif assignment.status == 'Active':
             # Active assignments - students can submit
             active_assignments.append(assignment_data)

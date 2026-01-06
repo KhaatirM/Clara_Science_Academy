@@ -2,13 +2,20 @@
 Group management routes for teachers.
 """
 
-from flask import Blueprint, render_template, request, flash, redirect, url_for, jsonify
+from flask import Blueprint, render_template, request, flash, redirect, url_for, jsonify, current_app
 from flask_login import login_required, current_user
 from decorators import teacher_required
 from .utils import get_teacher_or_admin, is_admin, is_authorized_for_class
 from models import db, Class, StudentGroup, StudentGroupMember, GroupAssignment, Enrollment, Student, SchoolYear
 from datetime import datetime
+from werkzeug.utils import secure_filename
 import json
+import os
+
+def allowed_file(filename):
+    """Check if file extension is allowed."""
+    ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'txt', 'jpg', 'jpeg', 'png', 'gif', 'xls', 'xlsx', 'ppt', 'pptx'}
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 bp = Blueprint('groups', __name__)
 
@@ -310,6 +317,10 @@ def group_assignment_select_class():
         else:
             classes = Class.query.filter_by(teacher_id=teacher.id).all()
     
+    # If teacher has only 1 class, skip selection and go directly to creation
+    if not is_admin() and len(classes) == 1:
+        return redirect(url_for('teacher.groups.create_group_assignment', class_id=classes[0].id))
+    
     return render_template('teachers/teacher_group_assignment_select_class.html', classes=classes)
 
 @bp.route('/group-assignment/create/<int:class_id>', methods=['GET', 'POST'])
@@ -373,7 +384,7 @@ def save_group_assignment(class_id):
         due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
         
         # Get current school year
-        current_year = SchoolYear.query.filter_by(is_current=True).first()
+        current_year = SchoolYear.query.filter_by(is_active=True).first()
         if not current_year:
             flash("No active school year found. Please contact administrator.", "danger")
             return redirect(url_for('teacher.groups.create_group_assignment', class_id=class_id, admin_view=admin_view))
@@ -408,6 +419,26 @@ def save_group_assignment(class_id):
             status='Active'
         )
         db.session.add(new_assignment)
+        db.session.flush()  # Get the ID for file path
+        
+        # Handle file upload
+        if 'assignment_file' in request.files:
+            file = request.files['assignment_file']
+            if file and file.filename and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_')
+                unique_filename = timestamp + filename
+                
+                upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'group_assignments')
+                os.makedirs(upload_dir, exist_ok=True)
+                filepath = os.path.join(upload_dir, unique_filename)
+                file.save(filepath)
+                
+                new_assignment.attachment_filename = unique_filename
+                new_assignment.attachment_original_filename = filename
+                new_assignment.attachment_file_path = filepath
+                new_assignment.attachment_file_size = os.path.getsize(filepath)
+                new_assignment.attachment_mime_type = file.content_type
         
         db.session.commit()
         flash(f"Group assignment '{title}' created successfully for {len(selected_groups)} group(s)!", "success")
@@ -416,7 +447,7 @@ def save_group_assignment(class_id):
         if admin_view:
             return redirect(url_for('management.admin_class_group_assignments', class_id=class_id))
         else:
-            return redirect(url_for('teacher.dashboard.my_assignments'))
+            return redirect(url_for('teacher.dashboard.assignments_and_grades'))
         
     except Exception as e:
         db.session.rollback()

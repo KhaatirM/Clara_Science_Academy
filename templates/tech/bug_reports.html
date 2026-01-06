@@ -2,33 +2,31 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/tech_dashboard.css') }}">
-<style>
-    .dashboard-content-wrapper {
-        position: relative;
-        z-index: 1;
-    }
-</style>
 {% endblock %}
 
 {% block dashboard_content %}
-<div class="tech-dashboard-wrapper">
-<div class="container-fluid px-2 px-md-4 dashboard-content-wrapper py-4">
-    <div class="tech-card tech-header mb-4">
-        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
+<div class="container-fluid px-2 px-md-4">
+    <!-- Modern Header -->
+    <div class="tech-dashboard-header mb-4">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
             <div>
-                <h2 class="mb-1"><i class="bi bi-bug-fill me-2"></i>Bug Reports</h2>
-                <p class="mb-0" style="color: rgba(255, 255, 255, 0.9);">Monitor and manage bug reports from users</p>
+                <h2 class="tech-dashboard-title mb-1">
+                    <i class="bi bi-bug-fill me-2"></i>Bug Reports
+                </h2>
+                <p class="tech-dashboard-subtitle mb-0">
+                    <i class="bi bi-shield-exclamation me-2"></i>Monitor and manage system bug reports
+                </p>
             </div>
             <div class="btn-group">
                 {% if can_manage %}
-                    <button class="tech-btn tech-btn-secondary" onclick="exportBugReports()">
+                    <button class="btn btn-light" onclick="exportBugReports()">
                         <i class="bi bi-download me-1"></i>Export
                     </button>
                 {% endif %}
-                <button class="tech-btn tech-btn-primary" onclick="refreshReports()">
+                <button class="btn btn-light" onclick="refreshReports()">
                     <i class="bi bi-arrow-clockwise me-1"></i>Refresh
                 </button>
-                <button class="tech-btn tech-btn-warning" data-bs-toggle="modal" data-bs-target="#submitBugReportModal">
+                <button class="btn btn-light" data-bs-toggle="modal" data-bs-target="#submitBugReportModal">
                     <i class="bi bi-plus-circle me-1"></i>Submit Bug Report
                 </button>
             </div>
@@ -37,37 +35,57 @@
 
     {% if can_manage %}
     <!-- Bug Report Statistics (Tech users only) -->
-    <div class="row g-3 g-md-4 mb-4">
+    <div class="row g-4 mb-4">
         <div class="col-6 col-md-3">
-            <div class="tech-stat-card">
-                <div class="tech-stat-label">Total Reports</div>
-                <div class="tech-stat-number">{{ bug_reports|length }}</div>
+            <div class="tech-card tech-card-primary">
+                <div class="tech-card-icon">
+                    <i class="bi bi-list-ul"></i>
+                </div>
+                <div class="tech-card-content">
+                    <h5 class="tech-card-title">Total Reports</h5>
+                    <h2 class="mb-0" style="color: #667eea;">{{ bug_reports|length }}</h2>
+                </div>
             </div>
         </div>
         <div class="col-6 col-md-3">
-            <div class="tech-stat-card" style="border-color: rgba(245, 87, 108, 0.5);">
-                <div class="tech-stat-label">Open</div>
-                <div class="tech-stat-number" style="color: #f5576c;">{{ bug_reports|selectattr('status', 'equalto', 'open')|list|length }}</div>
+            <div class="tech-card tech-card-warning">
+                <div class="tech-card-icon">
+                    <i class="bi bi-circle"></i>
+                </div>
+                <div class="tech-card-content">
+                    <h5 class="tech-card-title">Open</h5>
+                    <h2 class="mb-0" style="color: #f59e0b;">{{ bug_reports|selectattr('status', 'equalto', 'open')|list|length }}</h2>
+                </div>
             </div>
         </div>
         <div class="col-6 col-md-3">
-            <div class="tech-stat-card" style="border-color: rgba(79, 172, 254, 0.5);">
-                <div class="tech-stat-label">In Progress</div>
-                <div class="tech-stat-number" style="color: #4facfe;">{{ bug_reports|selectattr('status', 'equalto', 'in_progress')|list|length }}</div>
+            <div class="tech-card tech-card-info">
+                <div class="tech-card-icon">
+                    <i class="bi bi-arrow-repeat"></i>
+                </div>
+                <div class="tech-card-content">
+                    <h5 class="tech-card-title">In Progress</h5>
+                    <h2 class="mb-0" style="color: #06b6d4;">{{ bug_reports|selectattr('status', 'equalto', 'in_progress')|list|length }}</h2>
+                </div>
             </div>
         </div>
         <div class="col-6 col-md-3">
-            <div class="tech-stat-card" style="border-color: rgba(17, 153, 142, 0.5);">
-                <div class="tech-stat-label">Resolved</div>
-                <div class="tech-stat-number" style="color: #38ef7d;">{{ bug_reports|selectattr('status', 'equalto', 'resolved')|list|length }}</div>
+            <div class="tech-card tech-card-success">
+                <div class="tech-card-icon">
+                    <i class="bi bi-check-circle"></i>
+                </div>
+                <div class="tech-card-content">
+                    <h5 class="tech-card-title">Resolved</h5>
+                    <h2 class="mb-0" style="color: #10b981;">{{ bug_reports|selectattr('status', 'equalto', 'resolved')|list|length }}</h2>
+                </div>
             </div>
         </div>
     </div>
     {% endif %}
 
     <!-- Bug Reports Table -->
-    <div class="tech-card">
-        <div class="tech-header">
+    <div class="tech-quick-actions">
+        <div class="tech-quick-actions-header">
             <h5 class="mb-0">
                 <i class="bi bi-list-ul me-2"></i>
                 {% if can_manage %}
@@ -77,10 +95,10 @@
                 {% endif %}
             </h5>
         </div>
-        <div class="p-0">
+        <div class="tech-quick-actions-body">
             {% if bug_reports %}
                 <div class="table-responsive">
-                    <table class="tech-table table">
+                    <table class="table table-hover">
                         <thead>
                             <tr>
                                 <th>ID</th>
@@ -98,62 +116,62 @@
                             {% for report in bug_reports %}
                             <tr>
                                 <td>
-                                    <span class="tech-badge tech-badge-secondary">#{{ report.id }}</span>
+                                    <span class="badge bg-secondary">#{{ report.id }}</span>
                                 </td>
                                 <td>
-                                    <strong style="color: white;">{{ report.title }}</strong>
+                                    <strong>{{ report.title }}</strong>
                                     <br>
-                                    <small style="color: rgba(255, 255, 255, 0.7);">{{ report.description[:100] }}{% if report.description|length > 100 %}...{% endif %}</small>
+                                    <small class="text-muted">{{ report.description[:100] }}{% if report.description|length > 100 %}...{% endif %}</small>
                                 </td>
                                 {% if can_manage %}
                                     <td>
                                         {% if report.user %}
-                                            <span class="tech-badge tech-badge-primary">{{ report.user.username }}</span>
+                                            <span class="badge bg-primary">{{ report.user.username }}</span>
                                             <br>
-                                            <small style="color: rgba(255, 255, 255, 0.7); margin-top: 0.25rem; display: block;">{{ report.user.role }}</small>
+                                            <small class="text-muted">{{ report.user.role }}</small>
                                         {% else %}
-                                            <span style="color: rgba(255, 255, 255, 0.7);">Unknown</span>
+                                            <span class="text-muted">Unknown</span>
                                         {% endif %}
                                     </td>
                                 {% endif %}
                                 <td>
                                     {% if report.severity == 'critical' %}
-                                        <span class="tech-badge tech-badge-danger">Critical</span>
+                                        <span class="badge bg-danger">Critical</span>
                                     {% elif report.severity == 'high' %}
-                                        <span class="tech-badge tech-badge-warning">High</span>
+                                        <span class="badge bg-warning text-dark">High</span>
                                     {% elif report.severity == 'medium' %}
-                                        <span class="tech-badge tech-badge-info">Medium</span>
+                                        <span class="badge bg-info">Medium</span>
                                     {% else %}
-                                        <span class="tech-badge tech-badge-secondary">Low</span>
+                                        <span class="badge bg-secondary">Low</span>
                                     {% endif %}
                                 </td>
                                 <td>
                                     {% if report.status == 'open' %}
-                                        <span class="tech-badge tech-badge-warning">Open</span>
+                                        <span class="badge bg-warning text-dark">Open</span>
                                     {% elif report.status == 'in_progress' %}
-                                        <span class="tech-badge tech-badge-info">In Progress</span>
+                                        <span class="badge bg-info">In Progress</span>
                                     {% elif report.status == 'resolved' %}
-                                        <span class="tech-badge tech-badge-success">Resolved</span>
+                                        <span class="badge bg-success">Resolved</span>
                                     {% elif report.status == 'closed' %}
-                                        <span class="tech-badge tech-badge-secondary">Closed</span>
+                                        <span class="badge bg-secondary">Closed</span>
                                     {% else %}
-                                        <span class="tech-badge tech-badge-secondary">{{ report.status|title }}</span>
+                                        <span class="badge bg-secondary">{{ report.status|title }}</span>
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <small style="color: rgba(255, 255, 255, 0.7);">{{ report.created_at.strftime('%b %d, %Y') if report.created_at else 'Unknown' }}</small>
+                                    <small class="text-muted">{{ report.created_at.strftime('%b %d, %Y') if report.created_at else 'Unknown' }}</small>
                                 </td>
                                 <td>
-                                    <div class="d-flex gap-1">
-                                        <button class="tech-btn tech-btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;" onclick="viewBugReport({{ report.id }})" title="View Details">
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button class="btn btn-outline-primary" onclick="viewBugReport({{ report.id }})" title="View Details">
                                             <i class="bi bi-eye"></i>
                                         </button>
                                         {% if can_manage %}
-                                            <div class="dropdown">
-                                                <button type="button" class="tech-btn tech-btn-secondary dropdown-toggle" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;" data-bs-toggle="dropdown" title="Update Status">
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" title="Update Status">
                                                     <i class="bi bi-gear"></i>
                                                 </button>
-                                                <ul class="dropdown-menu" style="background: rgba(255, 255, 255, 0.95);">
+                                                <ul class="dropdown-menu">
                                                     <li><a class="dropdown-item" href="#" onclick="updateStatus({{ report.id }}, 'open')">Mark as Open</a></li>
                                                     <li><a class="dropdown-item" href="#" onclick="updateStatus({{ report.id }}, 'in_progress')">Mark as In Progress</a></li>
                                                     <li><a class="dropdown-item" href="#" onclick="updateStatus({{ report.id }}, 'resolved')">Mark as Resolved</a></li>
@@ -169,24 +187,23 @@
                     </table>
                 </div>
             {% else %}
-                <div class="tech-empty-state">
-                    <i class="bi bi-bug d-block mb-3"></i>
-                    <h5>No bug reports found</h5>
-                    <p>
+                <div class="text-center py-4">
+                    <i class="bi bi-bug text-muted" style="font-size: 3rem;"></i>
+                    <h5 class="text-muted mt-3">No bug reports found</h5>
+                    <p class="text-muted">
                         {% if can_manage %}
                             No bug reports have been submitted yet.
                         {% else %}
                             You haven't submitted any bug reports yet.
                         {% endif %}
                     </p>
-                    <button class="tech-btn tech-btn-warning" data-bs-toggle="modal" data-bs-target="#submitBugReportModal">
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#submitBugReportModal">
                         <i class="bi bi-plus-circle me-1"></i>Submit Your First Bug Report
                     </button>
                 </div>
             {% endif %}
         </div>
     </div>
-</div>
 </div>
 
 <!-- Submit Bug Report Modal -->

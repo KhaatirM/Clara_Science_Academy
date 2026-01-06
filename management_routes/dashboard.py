@@ -2,246 +2,171 @@
 Dashboard routes for management users.
 """
 
-from flask import Blueprint, render_template, request, flash, redirect, url_for
+from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, Response, abort, jsonify
 from flask_login import login_required, current_user
 from decorators import management_required
-from .utils import update_assignment_statuses, get_current_quarter, calculate_student_gpa
 from models import (
-    db, Class, Assignment, Student, Grade, Submission, 
-    Notification, TeacherStaff, SchoolYear, Enrollment, User
+    db, Student, TeacherStaff, Class, Assignment, Grade, Submission, Notification, Enrollment, Attendance
 )
 from sqlalchemy import or_, and_
-import json
 from datetime import datetime, timedelta
+import json
+from .utils import update_assignment_statuses
 
 bp = Blueprint('dashboard', __name__)
+
+
+# ============================================================
+# Route: /dashboard
+# Function: management_dashboard
+# ============================================================
 
 @bp.route('/dashboard')
 @login_required
 @management_required
 def management_dashboard():
-    """Main management dashboard with overview and statistics."""
+    from datetime import datetime, timedelta
+    from sqlalchemy import or_, and_
+    import json
+    from flask import current_app, flash
+    
     try:
-        # Update assignment statuses before displaying
-        update_assignment_statuses()
+        # Basic stats
+        stats = {
+            'students': Student.query.count(),
+            'teachers': TeacherStaff.query.count(),
+            'classes': Class.query.count(),
+            'assignments': Assignment.query.count()
+        }
         
-        # Get all classes, students, and teachers for management view
-        classes = Class.query.all()
-        students = Student.query.all()
-        teachers = TeacherStaff.query.all()
-        
-        # Get recent assignments
-        recent_assignments = Assignment.query.order_by(Assignment.due_date.desc()).limit(5).all()
-        
-        # Get recent submissions
-        recent_submissions = Submission.query.order_by(Submission.submitted_at.desc()).limit(5).all()
-        
-        # Get recent grades
-        recent_grades = Grade.query.order_by(Grade.graded_at.desc()).limit(5).all()
-        
-        # Get notifications for the current user
-        notifications = Notification.query.filter_by(
-            user_id=current_user.id
-        ).order_by(Notification.timestamp.desc()).limit(10).all()
-        
-        # Calculate statistics
-        total_students = len(students)
-        total_teachers = len(teachers)
-        total_classes = len(classes)
-        total_assignments = Assignment.query.count()
-        active_assignments = Assignment.query.filter_by(status='Active').count()
-        
-        # Calculate monthly and weekly stats
+        # Calculate monthly stats
         now = datetime.now()
         month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         
-        # Calculate last month's start date
-        if month_start.month == 1:
-            last_month_start = datetime(month_start.year - 1, 12, 1)
-        else:
-            last_month_start = datetime(month_start.year, month_start.month - 1, 1)
+        # New students this month (using ID as proxy since no created_at field)
+        # This is a simplified approach - in a real system, you'd want a created_at field
+        total_students = Student.query.count()
+        # For now, we'll use a placeholder since we can't track creation dates
+        # In a real implementation, you'd add a created_at field to the Student model
+        new_students = 0
         
+        # Alternative: Track new enrollments this month
+        try:
+            new_enrollments = Enrollment.query.filter(Enrollment.enrolled_at >= month_start).count()
+        except (AttributeError, Exception) as e:
+            current_app.logger.warning(f"Error getting new enrollments: {e}")
+            new_enrollments = 0
+    
+        # Assignments due this week
         week_start = now - timedelta(days=now.weekday())
         week_end = week_start + timedelta(days=7)
-        
-        # Calculate month-over-month changes
-        # Students: Use User model's created_at where student_id is not None
-        students_this_month = User.query.filter(
-            User.student_id.isnot(None),
-            User.created_at >= month_start
-        ).count()
-        
-        students_last_month = User.query.filter(
-            User.student_id.isnot(None),
-            User.created_at >= last_month_start,
-            User.created_at < month_start
-        ).count()
-        
-        # Calculate percentage change for students
-        if students_last_month > 0:
-            students_change_percent = round(((students_this_month - students_last_month) / students_last_month) * 100, 1)
-        else:
-            students_change_percent = 100.0 if students_this_month > 0 else 0.0
-        
-        # Teachers: Use User model's created_at where teacher_staff_id is not None
-        teachers_this_month = User.query.filter(
-            User.teacher_staff_id.isnot(None),
-            User.created_at >= month_start
-        ).count()
-        
-        teachers_last_month = User.query.filter(
-            User.teacher_staff_id.isnot(None),
-            User.created_at >= last_month_start,
-            User.created_at < month_start
-        ).count()
-        
-        # Calculate percentage change for teachers
-        if teachers_last_month > 0:
-            teachers_change_percent = round(((teachers_this_month - teachers_last_month) / teachers_last_month) * 100, 1)
-        else:
-            teachers_change_percent = 100.0 if teachers_this_month > 0 else 0.0
-        
-        # Classes: Use Class model's created_at
-        classes_this_month = Class.query.filter(
-            Class.created_at >= month_start
-        ).count()
-        
-        classes_last_month = Class.query.filter(
-            Class.created_at >= last_month_start,
-            Class.created_at < month_start
-        ).count()
-        
-        # Calculate percentage change for classes
-        if classes_last_month > 0:
-            classes_change_percent = round(((classes_this_month - classes_last_month) / classes_last_month) * 100, 1)
-        else:
-            classes_change_percent = 100.0 if classes_this_month > 0 else 0.0
-        
-        # Active Assignments: Use Assignment model's created_at for Active status
-        active_assignments_this_month = Assignment.query.filter(
-            Assignment.status == 'Active',
-            Assignment.created_at >= month_start
-        ).count()
-        
-        active_assignments_last_month = Assignment.query.filter(
-            Assignment.status == 'Active',
-            Assignment.created_at >= last_month_start,
-            Assignment.created_at < month_start
-        ).count()
-        
-        # Calculate percentage change for active assignments
-        if active_assignments_last_month > 0:
-            assignments_change_percent = round(((active_assignments_this_month - active_assignments_last_month) / active_assignments_last_month) * 100, 1)
-        else:
-            assignments_change_percent = 100.0 if active_assignments_this_month > 0 else 0.0
-        
-        # Assignments due this week
         due_assignments = Assignment.query.filter(
             Assignment.due_date >= week_start,
             Assignment.due_date < week_end
         ).count()
         
-        # Grades entered this month
-        grades_this_month = Grade.query.filter(
-            Grade.graded_at >= month_start
-        ).count()
+        # Calculate attendance rate (simplified)
+        try:
+            total_attendance_records = Attendance.query.count()
+            present_records = Attendance.query.filter_by(status='Present').count()
+            attendance_rate = round((present_records / total_attendance_records * 100), 1) if total_attendance_records > 0 else 0
+        except Exception as e:
+            current_app.logger.warning(f"Error calculating attendance rate: {e}")
+            attendance_rate = 0
         
-        # Recent activity
-        recent_activity = []
+        # Calculate average grade (simplified)
+        grades = Grade.query.all()
+        if grades:
+            total_score = 0
+            valid_grades = 0
+            for grade in grades:
+                try:
+                    grade_data = json.loads(grade.grade_data)
+                    if 'score' in grade_data and isinstance(grade_data['score'], (int, float)):
+                        total_score += grade_data['score']
+                        valid_grades += 1
+                except (json.JSONDecodeError, TypeError, KeyError):
+                    continue
+            
+            average_grade = round(total_score / valid_grades, 1) if valid_grades > 0 else 0
+        else:
+            average_grade = 0
         
-        # Add recent submissions to activity
-        for submission in recent_submissions:
-            recent_activity.append({
-                'type': 'submission',
-                'title': f'New submission for {submission.assignment.title}',
-                'description': f'{submission.student.first_name} {submission.student.last_name} submitted work',
-                'timestamp': submission.submitted_at,
-                'link': url_for('management.grade_assignment', assignment_id=submission.assignment_id)
-            })
+        monthly_stats = {
+            'new_students': new_enrollments,  # Using new enrollments as proxy for new students
+            'attendance_rate': attendance_rate,
+            'average_grade': average_grade
+        }
         
-        # Add recent grades to activity
-        for grade in recent_grades:
-            try:
-                grade_data = json.loads(grade.grade_data)
-                recent_activity.append({
-                    'type': 'grade',
-                    'title': f'Grade entered for {grade.assignment.title}',
-                    'description': f'Graded {grade.student.first_name} {grade.student.last_name} - Score: {grade_data.get("score", "N/A")}',
-                    'timestamp': grade.graded_at,
-                    'link': url_for('management.grade_assignment', assignment_id=grade.assignment_id)
-                })
-            except (json.JSONDecodeError, TypeError):
-                continue
-        
-        # Add recent assignments to activity
-        for assignment in recent_assignments:
-            recent_activity.append({
-                'type': 'assignment',
-                'title': f'New assignment: {assignment.title}',
-                'description': f'Created for {assignment.class_info.name} - Due: {assignment.due_date.strftime("%b %d, %Y")}',
-                'timestamp': assignment.created_at,
-                'link': url_for('management.view_class', class_id=assignment.class_id)
-            })
-        
-        # Sort recent activity by timestamp
-        recent_activity.sort(key=lambda x: x['timestamp'], reverse=True)
-        recent_activity = recent_activity[:10]  # Limit to 10 most recent
-        
-        # Create stats object for template compatibility
-        stats = {
-            'students': total_students,
-            'teachers': total_teachers,
-            'classes': total_classes,
-            'assignments': active_assignments,  # Show active assignments count
-            'total_assignments': total_assignments,
-            'active_assignments': active_assignments,
-            'due_assignments': due_assignments,
-            'grades_entered': grades_this_month,
-            'students_change_percent': students_change_percent,
-            'teachers_change_percent': teachers_change_percent,
-            'classes_change_percent': classes_change_percent,
-            'assignments_change_percent': assignments_change_percent
+        weekly_stats = {
+            'due_assignments': due_assignments
         }
         
         # --- AT-RISK STUDENT ALERTS ---
         at_risk_alerts = []  # Initialize here to ensure it's always defined
+        at_risk_grades = []  # Initialize here to ensure it's always defined
         try:
             students_to_check = Student.query.all() # Management sees all students
             student_ids = [s.id for s in students_to_check]
 
+            # Get ALL non-voided grades for our students (not just overdue ones)
             at_risk_grades = db.session.query(Grade).join(Assignment).join(Student)\
                 .filter(Student.id.in_(student_ids))\
-                .filter(Assignment.due_date < datetime.utcnow()) \
+                .filter(Grade.is_voided == False)\
                 .all()
 
             seen_student_ids = set()
             for grade in at_risk_grades:
                 try:
+                    # Check if grade has required relationships
+                    if not grade.assignment or not grade.student:
+                        continue
+                    
+                    # Check if assignment has due_date
+                    if not grade.assignment.due_date:
+                        continue
+                    
                     grade_data = json.loads(grade.grade_data)
                     score = grade_data.get('score')
-                    if score is None or score <= 69:
+                    is_overdue = grade.assignment.due_date < datetime.utcnow()
+                    
+                    # Only alert for truly at-risk: missing (overdue with no score) OR failing (score <= 69)
+                    # Don't include passing overdue assignments (70+) - they're not at-risk
+                    is_at_risk = False
+                    alert_reason = None
+                    
+                    if score is None and is_overdue:
+                        # Missing assignment that's overdue
+                        is_at_risk = True
+                        alert_reason = "overdue"
+                    elif score is not None and score <= 69:
+                        # Failing assignment
+                        is_at_risk = True
+                        if is_overdue:
+                            alert_reason = "overdue and failing"
+                        else:
+                            alert_reason = "failing"
+                    
+                    if is_at_risk:
                         if grade.student.id not in seen_student_ids:
-                            # Determine alert reason
-                            if score is None:
-                                alert_reason = 'Missing'
-                            elif score <= 69:
-                                alert_reason = 'Overdue And Failing'
-                            else:
-                                alert_reason = 'At Risk'
+                            # Safely get class name
+                            class_name = grade.assignment.class_info.name if grade.assignment.class_info else 'Unknown Class'
                             
                             at_risk_alerts.append({
                                 'student_name': f"{grade.student.first_name} {grade.student.last_name}",
-                                'student_user_id': grade.student.id,  # This is the student ID
-                                'class_name': grade.assignment.class_info.name,
+                                'student_user_id': grade.student.id,  # Use student ID instead of user_id
+                                'class_name': class_name,
                                 'assignment_name': grade.assignment.title,
-                                'alert_reason': alert_reason
+                                'alert_reason': alert_reason,
+                                'score': score,
+                                'due_date': grade.assignment.due_date
                             })
                             seen_student_ids.add(grade.student.id)
-                except (json.JSONDecodeError, TypeError) as e:
-                    print(f"Error processing grade {grade.id}: {e}")
+                except (json.JSONDecodeError, TypeError, AttributeError) as e:
+                    current_app.logger.warning(f"Error processing grade {grade.id}: {e}")
                     continue
         except Exception as e:
-            print(f"Error in alert processing: {e}")
+            current_app.logger.warning(f"Error in alert processing: {e}")
             at_risk_alerts = []  # Ensure it's still a list even if there's an error
         # --- END ALERTS ---
         
@@ -249,38 +174,86 @@ def management_dashboard():
         print(f"--- Debug Dashboard Alerts ---")
         print(f"Checking alerts for user: {current_user.username}, Role: {current_user.role}")
         print(f"Raw at-risk grades query result count: {len(at_risk_grades)}")
-        print(f"Number of at-risk alerts created: {len(at_risk_alerts)}")
-        if at_risk_alerts:
-            print(f"First alert sample: {at_risk_alerts[0]}")
+        print(f"Formatted alerts list being sent to template: {at_risk_alerts}")
         print(f"--- End Debug ---")
         # --- End Debugging ---
         
         return render_template('management/role_dashboard.html', 
-                             classes=classes,
-                             students=students,
-                             teachers=teachers,
-                             recent_assignments=recent_assignments,
-                             recent_activity=recent_activity,
-                             notifications=notifications,
                              stats=stats,
-                             section='dashboard',
-                             active_tab='dashboard',
+                             monthly_stats=monthly_stats,
+                             weekly_stats=weekly_stats,
+                             section='home',
+                             active_tab='home',
                              at_risk_alerts=at_risk_alerts)
-        
     except Exception as e:
-        print(f"Error in management dashboard: {e}")
-        flash("An error occurred while loading the dashboard.", "danger")
+        current_app.logger.error(f"Error in management_dashboard: {e}")
+        import traceback
+        error_trace = traceback.format_exc()
+        current_app.logger.error(error_trace)
+        flash(f"Error loading dashboard: {str(e)}", 'danger')
+        # Return minimal dashboard with error
         return render_template('management/role_dashboard.html', 
-                             classes=[], 
-                             students=[],
-                             teachers=[], 
-                             recent_assignments=[], 
-                             recent_activity=[], 
-                             notifications=[], 
-                             stats={},
-                             section='dashboard',
-                             active_tab='dashboard',
-                             at_risk_alerts=[])  # Always pass at_risk_alerts as empty list
+                             stats={'students': 0, 'teachers': 0, 'classes': 0, 'assignments': 0},
+                             monthly_stats={},
+                             weekly_stats={},
+                             section='home',
+                             active_tab='home',
+                             at_risk_alerts=[])
 
+# Routes for managing students, teachers, classes etc.
+# Example: Add Student
+
+
+# ============================================================
+# Route: /redo-dashboard
+# Function: redo_dashboard
+# ============================================================
+
+@bp.route('/redo-dashboard')
+@login_required
+def redo_dashboard():
+    """Dashboard showing all active redo opportunities"""
+    from datetime import datetime
+    
+    # Authorization check
+    if current_user.role == 'Teacher':
+        if not current_user.teacher_staff_id:
+            flash('Teacher record not found.', 'danger')
+            return redirect(url_for('teacher.teacher_dashboard'))
+        teacher = TeacherStaff.query.get(current_user.teacher_staff_id)
+        # Get redos for teacher's classes only
+        redos = AssignmentRedo.query.join(Assignment).join(Class).filter(
+            Class.teacher_id == teacher.id
+        ).order_by(AssignmentRedo.redo_deadline.asc()).all()
+        classes = Class.query.filter_by(teacher_id=teacher.id).all()
+    else:
+        # Directors and School Administrators see all redos
+        redos = AssignmentRedo.query.order_by(AssignmentRedo.redo_deadline.asc()).all()
+        classes = Class.query.all()
+    
+    # Calculate statistics
+    active_redos = len([r for r in redos if not r.is_used and not r.final_grade])
+    completed_redos = len([r for r in redos if r.final_grade])
+    now = datetime.utcnow()
+    overdue_redos = len([r for r in redos if not r.is_used and r.redo_deadline < now])
+    
+    # Calculate average improvement
+    improvements = []
+    for redo in redos:
+        if redo.original_grade and redo.final_grade:
+            improvement = redo.final_grade - redo.original_grade
+            if improvement > 0:
+                improvements.append(improvement)
+    
+    improvement_rate = round(sum(improvements) / len(improvements), 1) if improvements else 0
+    
+    return render_template('management/redo_dashboard.html',
+                         redos=redos,
+                         classes=classes,
+                         active_redos=active_redos,
+                         completed_redos=completed_redos,
+                         improvement_rate=improvement_rate,
+                         overdue_redos=overdue_redos,
+                         now=now)
 
 

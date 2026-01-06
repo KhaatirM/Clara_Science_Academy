@@ -55,8 +55,8 @@
 .hero-content {
     text-align: center;
     background: rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(40px) saturate(200%);
-    -webkit-backdrop-filter: blur(40px) saturate(200%);
+    backdrop-filter: blur(20px) saturate(150%);
+    -webkit-backdrop-filter: blur(20px) saturate(150%);
     border-radius: 2.5rem;
     box-shadow: 
         0 30px 80px rgba(0, 0, 0, 0.25),
@@ -65,9 +65,11 @@
     padding: 4rem 3rem;
     max-width: 1100px;
     border: 2px solid rgba(255, 255, 255, 0.3);
-    animation: slideInUp 1s ease-out, glow 3s ease-in-out infinite alternate;
+    animation: slideInUp 0.8s ease-out, glow 3s ease-in-out infinite alternate;
     position: relative;
     overflow: hidden;
+    will-change: transform, opacity;
+    contain: layout style paint;
 }
 
 .hero-content::before {
@@ -78,7 +80,8 @@
     width: 200%;
     height: 200%;
     background: radial-gradient(circle, rgba(102, 126, 234, 0.1) 0%, transparent 50%);
-    animation: rotate 20s linear infinite;
+    animation: rotate 30s linear infinite;
+    will-change: transform;
 }
 
 @keyframes rotate {
@@ -151,12 +154,15 @@
     text-align: center;
     padding: 2.5rem 2rem;
     background: rgba(255, 255, 255, 0.12);
-    backdrop-filter: blur(15px);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     border-radius: 1.5rem;
     border: 2px solid rgba(255, 255, 255, 0.4);
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: transform 0.3s ease, opacity 0.3s ease, box-shadow 0.3s ease;
     position: relative;
     overflow: hidden;
+    will-change: transform;
+    contain: layout style;
 }
 
 .hero-feature::before {
@@ -1944,6 +1950,31 @@
     }
 }
 
+/* ===== MOBILE PERFORMANCE OPTIMIZATIONS ===== */
+@media (max-width: 768px) {
+    /* Disable expensive backdrop-filter on mobile */
+    .hero-content,
+    .hero-feature {
+        backdrop-filter: blur(8px) !important;
+        -webkit-backdrop-filter: blur(8px) !important;
+    }
+    
+    /* Reduce animation complexity on mobile */
+    .hero-content::before {
+        animation: none !important;
+    }
+    
+    /* Disable particle animations on mobile */
+    .particles-container {
+        display: none;
+    }
+    
+    /* Simplify shadows on mobile */
+    .hero-content {
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2) !important;
+    }
+}
+
 /* ===== TOUCH DEVICE FIXES ===== */
 /* Prevent hero section from blocking interactions when scrolled on touch devices */
 @media (hover: none) and (pointer: coarse) {
@@ -1955,6 +1986,13 @@
     .hero-content {
         /* Reset transform on touch devices to prevent overlap issues */
         transform: none !important;
+        backdrop-filter: blur(8px) !important;
+        -webkit-backdrop-filter: blur(8px) !important;
+    }
+    
+    /* Disable particles on touch devices */
+    .particles-container {
+        display: none;
     }
     
     /* Ensure sections below hero can receive touch events */

@@ -221,6 +221,10 @@ class TeacherStaff(db.Model):
     employment_type = db.Column(db.String(20), nullable=True)  # Full Time, Part Time
     grades_taught = db.Column(db.Text, nullable=True)  # JSON string of grades taught
     
+    # Temporary access fields
+    is_temporary = db.Column(db.Boolean, default=False, nullable=False)  # Is this a temporary staff member?
+    access_expires_at = db.Column(db.DateTime, nullable=True)  # When temporary access expires
+    
     # File uploads
     resume_filename = db.Column(db.String(255), nullable=True)
     other_document_filename = db.Column(db.String(255), nullable=True)
@@ -390,7 +394,7 @@ class Class(db.Model):
     subject = db.Column(db.String(100), nullable=False)
     teacher_id = db.Column(db.Integer, db.ForeignKey('teacher_staff.id'), nullable=False)  # Primary teacher
     school_year_id = db.Column(db.Integer, db.ForeignKey('school_year.id'), nullable=False)
-    # grade_levels = db.Column(db.String(100), nullable=True)  # Temporarily commented out until migration is applied
+    grade_levels = db.Column(db.String(200), nullable=True)  # JSON string of grade level integers, e.g., "[6,7,8]"
     
     # Class metadata
     room_number = db.Column(db.String(20), nullable=True)
@@ -422,18 +426,102 @@ class Class(db.Model):
 
     def get_grade_levels(self):
         """Return grade levels as a list of integers"""
-        # Temporarily return empty list until migration is applied
-        return []
+        # Handle case where column might not exist yet
+        if not hasattr(self, 'grade_levels') or not self.grade_levels:
+            return []
+        try:
+            import json
+            grade_list = json.loads(self.grade_levels)
+            # Ensure all are integers and sorted
+            return sorted([int(g) for g in grade_list if str(g).isdigit()])
+        except (json.JSONDecodeError, ValueError, TypeError):
+            # Try parsing as comma-separated string
+            try:
+                grade_list = [int(g.strip()) for g in self.grade_levels.split(',') if g.strip().isdigit()]
+                return sorted(grade_list)
+            except (ValueError, AttributeError):
+                return []
     
     def set_grade_levels(self, grade_list):
         """Set grade levels from a list of integers"""
-        # Temporarily do nothing until migration is applied
-        pass
+        # Handle case where column might not exist yet
+        if not hasattr(self, 'grade_levels'):
+            return
+        if not grade_list:
+            self.grade_levels = None
+            return
+        try:
+            import json
+            # Ensure all are integers and sorted
+            grade_list = sorted([int(g) for g in grade_list if str(g).isdigit()])
+            self.grade_levels = json.dumps(grade_list)
+        except (ValueError, TypeError):
+            self.grade_levels = None
     
     def get_grade_levels_display(self):
-        """Return grade levels as a formatted string for display"""
-        # Temporarily return "Not specified" until migration is applied
-        return "Not specified"
+        """Return grade levels as a formatted string for display.
+        
+        Formats:
+        - Consecutive grades (e.g., 6, 7, 8) -> "6th - 8th"
+        - Non-consecutive grades (e.g., 2, 5, 8) -> "2nd, 5th, and 8th"
+        - Mixed: consecutive ranges and individual grades
+        """
+        grade_list = self.get_grade_levels()
+        if not grade_list:
+            return None
+        
+        def get_ordinal_suffix(n):
+            """Get ordinal suffix (st, nd, rd, th)"""
+            if 10 <= n % 100 <= 20:
+                return 'th'
+            return {1: 'st', 2: 'nd', 3: 'rd'}.get(n % 10, 'th')
+        
+        def format_grade(n):
+            """Format a grade number with ordinal suffix"""
+            return f"{n}{get_ordinal_suffix(n)}"
+        
+        if len(grade_list) == 1:
+            return format_grade(grade_list[0])
+        
+        # Group consecutive grades into ranges
+        ranges = []
+        current_range_start = grade_list[0]
+        current_range_end = grade_list[0]
+        
+        for i in range(1, len(grade_list)):
+            if grade_list[i] == current_range_end + 1:
+                # Continue the range
+                current_range_end = grade_list[i]
+            else:
+                # End current range and start a new one
+                if current_range_start == current_range_end:
+                    ranges.append((current_range_start, None))  # Single grade
+                else:
+                    ranges.append((current_range_start, current_range_end))  # Range
+                current_range_start = grade_list[i]
+                current_range_end = grade_list[i]
+        
+        # Add the last range
+        if current_range_start == current_range_end:
+            ranges.append((current_range_start, None))  # Single grade
+        else:
+            ranges.append((current_range_start, current_range_end))  # Range
+        
+        # Format the ranges
+        formatted_parts = []
+        for start, end in ranges:
+            if end is None:
+                formatted_parts.append(format_grade(start))
+            else:
+                formatted_parts.append(f"{format_grade(start)} - {format_grade(end)}")
+        
+        # Join with commas and "and" for the last item
+        if len(formatted_parts) == 1:
+            return formatted_parts[0]
+        elif len(formatted_parts) == 2:
+            return f"{formatted_parts[0]} and {formatted_parts[1]}"
+        else:
+            return f"{', '.join(formatted_parts[:-1])}, and {formatted_parts[-1]}"
 
     def __repr__(self):
         return f"Class('{self.name}', Subject: '{self.subject}')"
@@ -481,6 +569,8 @@ class Assignment(db.Model):
     description = db.Column(db.Text, nullable=True)
     class_id = db.Column(db.Integer, db.ForeignKey('class.id'), nullable=False)
     due_date = db.Column(db.DateTime, nullable=False)
+    open_date = db.Column(db.DateTime, nullable=True)  # When assignment becomes available (NULL = available immediately)
+    close_date = db.Column(db.DateTime, nullable=True)  # When assignment closes (NULL = closes at due_date)
     quarter = db.Column(db.String(10), nullable=False)
     semester = db.Column(db.String(10), nullable=True)  # S1 or S2
     academic_period_id = db.Column(db.Integer, db.ForeignKey('academic_period.id'), nullable=True)
@@ -1571,6 +1661,31 @@ class AssignmentExtension(db.Model):
     
     def __repr__(self):
         return f"AssignmentExtension(Assignment: {self.assignment_id}, Student: {self.student_id}, New Due: {self.extended_due_date})"
+
+
+class ExtensionRequest(db.Model):
+    """
+    Model for tracking extension requests from students.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    assignment_id = db.Column(db.Integer, db.ForeignKey('assignment.id'), nullable=False)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
+    requested_due_date = db.Column(db.DateTime, nullable=False)  # The new due date the student is requesting
+    reason = db.Column(db.Text, nullable=True)  # Student's reason for requesting extension
+    status = db.Column(db.String(20), default='Pending', nullable=False)  # Pending, Approved, Rejected
+    requested_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    reviewed_at = db.Column(db.DateTime, nullable=True)
+    reviewed_by = db.Column(db.Integer, db.ForeignKey('teacher_staff.id'), nullable=True)
+    review_notes = db.Column(db.Text, nullable=True)  # Teacher's notes (optional)
+    
+    # Relationships
+    assignment = db.relationship('Assignment', backref='extension_requests')
+    student = db.relationship('Student', backref='extension_requests')
+    reviewer = db.relationship('TeacherStaff', backref='reviewed_extension_requests')
+    
+    def __repr__(self):
+        return f"ExtensionRequest(Assignment: {self.assignment_id}, Student: {self.student_id}, Status: {self.status})"
+
 
 class AssignmentRubric(db.Model):
     """

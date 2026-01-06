@@ -1,5 +1,5 @@
 # Standard library imports
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 
 # Core Flask imports
@@ -13,8 +13,11 @@ from models import User, TeacherStaff, db, MaintenanceMode, BugReport
 # Authentication and decorators
 from decorators import is_teacher_role
 
-# Application imports
-from app import log_activity
+# Application imports - lazy import to avoid circular dependency
+def get_log_activity():
+    """Lazy import of log_activity to avoid circular dependency."""
+    from app import log_activity
+    return log_activity
 
 # Werkzeug utilities
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -43,8 +46,8 @@ def login():
         # Table might not exist yet, continue without maintenance mode
         pass
     
-    if maintenance and maintenance.end_time > datetime.now():
-        # Allow tech users to login during maintenance
+    if maintenance and maintenance.end_time > datetime.now(timezone.utc):
+        # Allow tech users and administrators to login during maintenance
         if request.method == 'POST':
             username = request.form.get('username')
             password = request.form.get('password')
@@ -58,11 +61,11 @@ def login():
             
             user = User.query.filter_by(username=username).first()
             if user and password and check_password_hash(user.password_hash, password):
-                # Tech users can access during maintenance
-                if user.role in ['Tech', 'IT Support'] and maintenance.allow_tech_access:
+                # Tech users and administrators can access during maintenance
+                if user.role in ['Tech', 'IT Support', 'Director', 'School Administrator'] and maintenance.allow_tech_access:
                     login_user(user)
                     # Log successful tech login during maintenance
-                    log_activity(
+                    get_log_activity()(
                         user_id=user.id,
                         action='login_maintenance',
                         details={'role': user.role, 'maintenance_mode': True},
@@ -73,7 +76,7 @@ def login():
                     return redirect(url_for('auth.dashboard'))
                 else:
                     # Log failed login attempt during maintenance
-                    log_activity(
+                    get_log_activity()(
                         user_id=user.id if user else None,
                         action='login_failed_maintenance',
                         details={'username': username, 'role': user.role if user else 'unknown', 'reason': 'access_denied'},
@@ -82,11 +85,11 @@ def login():
                         success=False,
                         error_message='Access denied during maintenance'
                     )
-                    flash('Access denied during maintenance. Only technical staff can login.', 'warning')
+                    flash('Access denied during maintenance. Only technical staff and administrators can login.', 'warning')
                     return redirect(url_for('auth.login'))
             else:
                 # Log failed login attempt during maintenance
-                log_activity(
+                get_log_activity()(
                     user_id=None,
                     action='login_failed_maintenance',
                     details={'username': username, 'role': user.role if user else 'unknown'},
@@ -98,9 +101,9 @@ def login():
                 flash('System is currently under maintenance. Please try again later.', 'warning')
                 return redirect(url_for('auth.login'))
         
-        # Show maintenance page for non-tech users
+        # Show maintenance page for non-tech/admin users
         total_duration = (maintenance.end_time - maintenance.start_time).total_seconds()
-        elapsed = (datetime.now() - maintenance.start_time).total_seconds()
+        elapsed = (datetime.now(timezone.utc) - maintenance.start_time).total_seconds()
         progress_percentage = min(100, max(0, int((elapsed / total_duration) * 100)))
         
         return render_template('shared/maintenance.html', 
@@ -128,6 +131,34 @@ def login():
                 print(f"DEBUG: User details - ID: {user.id}, Role: {user.role}, Password hash exists: {bool(user.password_hash)}")
             
             if user and check_password_hash(user.password_hash, password):
+                # Check if user has expired temporary access
+                if user.teacher_staff_id:
+                    from models import TeacherStaff
+                    from datetime import datetime, timezone
+                    teacher_staff = TeacherStaff.query.get(user.teacher_staff_id)
+                    if teacher_staff and teacher_staff.is_temporary and teacher_staff.access_expires_at:
+                        # Handle both naive and aware datetimes
+                        expires_at = teacher_staff.access_expires_at
+                        now = datetime.now(timezone.utc)
+                        
+                        # If expires_at is naive, make it timezone-aware (assume UTC)
+                        if expires_at.tzinfo is None:
+                            expires_at = expires_at.replace(tzinfo=timezone.utc)
+                        
+                        if expires_at < now:
+                            flash('Your temporary access has expired. Please contact an administrator.', 'danger')
+                            # Log expired access attempt
+                            get_log_activity()(
+                                user_id=user.id,
+                                action='login_failed',
+                                details={'username': username, 'reason': 'temporary_access_expired'},
+                                ip_address=request.remote_addr,
+                                user_agent=request.headers.get('User-Agent'),
+                                success=False,
+                                error_message='Temporary access expired'
+                            )
+                            return render_template('shared/login.html')
+                
                 # Convert remember to boolean
                 remember = bool(request.form.get('remember'))
                 login_user(user, remember=remember)
@@ -137,7 +168,7 @@ def login():
                 db.session.commit()
                 
                 # Log successful login
-                log_activity(
+                get_log_activity()(
                     user_id=user.id,
                     action='login',
                     details={'role': user.role, 'remember': remember, 'login_count': user.login_count},
@@ -155,7 +186,7 @@ def login():
             else:
                 print(f"DEBUG: Login failed - User: {user}, Password check: {user and check_password_hash(user.password_hash, password) if user else 'No user found'}")
                 # Log failed login attempt - invalid credentials
-                log_activity(
+                get_log_activity()(
                     user_id=None,
                     action='login_failed',
                     details={'username': username, 'reason': 'invalid_credentials'},
@@ -175,7 +206,7 @@ def login():
 @login_required
 def logout():
     # Log logout activity
-    log_activity(
+    get_log_activity()(
         user_id=current_user.id,
         action='logout',
         details={'role': current_user.role},
@@ -254,7 +285,7 @@ def change_password_popup():
         print(f"DEBUG: After change - is_temporary_password: {current_user.is_temporary_password}, login_count: {current_user.login_count}")
         
         # Log password change
-        log_activity(
+        get_log_activity()(
             user_id=current_user.id,
             action='password_changed_popup',
             details={'role': current_user.role, 'login_count': current_user.login_count},
@@ -323,7 +354,7 @@ def submit_bug_report():
         db.session.commit()
         
         # Log the bug report submission
-        log_activity(
+        get_log_activity()(
             current_user.id,
             'bug_report_submitted',
             {
@@ -344,7 +375,7 @@ def submit_bug_report():
         return jsonify({'success': False, 'message': 'Invalid request. Please try again.'})
     except Exception as e:
         db.session.rollback()
-        log_activity(
+        get_log_activity()(
             current_user.id,
             'bug_report_failed',
             {'error': str(e)},
@@ -394,7 +425,7 @@ def update_bug_report_status(report_id):
         db.session.commit()
         
         # Log the status update
-        log_activity(
+        get_log_activity()(
             current_user.id,
             'bug_report_status_updated',
             {
@@ -454,7 +485,7 @@ def change_password():
             db.session.commit()
             
             # Log the password change
-            log_activity(
+            get_log_activity()(
                 current_user.id,
                 'password_changed',
                 {'role': current_user.role},
@@ -470,7 +501,7 @@ def change_password():
             return redirect(url_for('auth.change_password'))
         except Exception as e:
             db.session.rollback()
-            log_activity(
+            get_log_activity()(
                 current_user.id,
                 'password_change_failed',
                 {'error': str(e)},
@@ -540,7 +571,7 @@ def change_password_ajax():
         db.session.commit()
         
         # Log the password change
-        log_activity(
+        get_log_activity()(
             current_user.id,
             'password_changed_from_temporary',
             {'user_id': current_user.id, 'username': current_user.username},
@@ -568,7 +599,7 @@ def change_password_ajax():
         
     except Exception as e:
         db.session.rollback()
-        log_activity(
+        get_log_activity()(
             current_user.id,
             'password_change_ajax_failed',
             {'error': str(e)},
@@ -669,7 +700,7 @@ def google_login():
         session['oauth_state'] = state
         
         # Log the Google login initiation
-        log_activity(
+        get_log_activity()(
             user_id=None,
             action='google_login_initiated',
             details={'redirect_uri': url_for('auth.google_callback', _external=True)},
@@ -685,7 +716,7 @@ def google_login():
         return redirect(url_for('auth.login'))
     except Exception as e:
         current_app.logger.error(f"Error initiating Google login: {str(e)}")
-        log_activity(
+        get_log_activity()(
             user_id=None,
             action='google_login_failed',
             details={'error': str(e)},
@@ -796,7 +827,7 @@ def google_callback():
             db.session.commit()
             
             # Log successful Google login
-            log_activity(
+            get_log_activity()(
                 user_id=user.id,
                 action='google_login_success',
                 details={
@@ -820,7 +851,7 @@ def google_callback():
             current_app.logger.warning(f"Google login attempted with unregistered email: {google_email}")
             
             # Log failed Google login attempt
-            log_activity(
+            get_log_activity()(
                 user_id=None,
                 action='google_login_failed',
                 details={
@@ -855,7 +886,7 @@ def google_callback():
         
         # Log the error
         try:
-            log_activity(
+            get_log_activity()(
                 user_id=user_id,
                 action='google_callback_error',
                 details={'error': str(e), 'url': request.url},

@@ -795,7 +795,7 @@ function handleExtensionSubmit(event) {
     const selectedStudents = Array.from(document.querySelectorAll('.student-checkbox:checked')).map(cb => cb.value);
     
     if (selectedStudents.length === 0) {
-        alert('Please select at least one student.');
+        showToast('warning', 'Please select at least one student.');
         return;
     }
     
@@ -812,9 +812,9 @@ function handleExtensionSubmit(event) {
     
     // Determine the URL based on user role
     {% if current_user.role in ['Director', 'School Administrator'] %}
-        const extensionUrl = '{{ url_for("management.grant_extensions") }}';
+        const extensionUrl = '{{ url_for("management.admin_grant_extensions", assignment_id=assignment.id) }}';
     {% else %}
-        const extensionUrl = '{{ url_for("teacher.assignments.grant_extensions") }}';
+        const extensionUrl = '{{ url_for("teacher.assignments.grant_extensions", assignment_id=assignment.id) }}';
     {% endif %}
     
     fetch(extensionUrl, {
@@ -832,7 +832,7 @@ function handleExtensionSubmit(event) {
     })
     .then(data => {
         if (data.success) {
-            alert(data.message || `Successfully granted extensions to ${data.granted_count || selectedStudents.length} student(s).`);
+            showToast('success', data.message || `Successfully granted extensions to ${data.granted_count || selectedStudents.length} student(s).`);
             // Close the modal
             bootstrap.Modal.getInstance(document.getElementById('extensionModal')).hide();
             // Reload the page to show updated extension info
@@ -840,7 +840,7 @@ function handleExtensionSubmit(event) {
                 location.reload();
             }, 500);
         } else {
-            alert('Error granting extensions: ' + (data.message || 'Unknown error'));
+            showToast('danger', 'Error granting extensions: ' + (data.message || 'Unknown error'));
             // Reset button state
             grantBtn.disabled = false;
             grantBtn.innerHTML = originalBtnText;
@@ -848,10 +848,43 @@ function handleExtensionSubmit(event) {
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Error granting extensions. Please try again.');
+        showToast('danger', 'Error granting extensions. Please try again.');
         // Reset button state
         grantBtn.disabled = false;
         grantBtn.innerHTML = originalBtnText;
+    });
+}
+
+function showToast(type, message) {
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-white bg-${type} border-0`;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">${message}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
+    
+    // Get or create toast container
+    let toastContainer = document.getElementById('toastContainer');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toastContainer';
+        toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+        toastContainer.style.zIndex = '9999';
+        document.body.appendChild(toastContainer);
+    }
+    
+    toastContainer.appendChild(toast);
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+    
+    toast.addEventListener('hidden.bs.toast', () => {
+        toast.remove();
     });
 }
 
@@ -910,7 +943,7 @@ function handleDeleteSubmit(event) {
         const redirectUrl = `{{ url_for('management.assignments_and_grades') }}`;
     {% else %}
         const deleteUrl = `/teacher/assignment/remove/${assignmentId}`;
-        const redirectUrl = `{{ url_for('teacher.dashboard.my_assignments') }}`;
+        const redirectUrl = `{{ url_for('teacher.dashboard.assignments_and_grades') }}`;
     {% endif %}
     
     fetch(deleteUrl, {
@@ -1027,7 +1060,7 @@ function goBack() {
         {% if current_user.role in ['Director', 'School Administrator'] %}
             window.location.href = "{{ url_for('management.assignments_and_grades') }}";
         {% else %}
-            window.location.href = "{{ url_for('teacher.dashboard.my_assignments') }}";
+            window.location.href = "{{ url_for('teacher.dashboard.assignments_and_grades') }}";
         {% endif %}
     }
 }

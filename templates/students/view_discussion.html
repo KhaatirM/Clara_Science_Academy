@@ -1,0 +1,314 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/discussion.css') }}">
+<style>
+    .discussion-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+    }
+    
+    .discussion-prompt {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 10px;
+        border-left: 4px solid #667eea;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .participation-tracker {
+        background: #f8f9fa;
+        border: 2px solid #dee2e6;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .thread-card {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .thread-card:hover {
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+    
+    .thread-card.pinned {
+        border-left: 4px solid #ffc107;
+        background: #fff9e6;
+    }
+    
+    .thread-card.locked {
+        opacity: 0.7;
+    }
+    
+    .thread-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 1rem;
+    }
+    
+    .thread-meta {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    
+    .thread-badges {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .reply-count {
+        background: #e7f3ff;
+        color: #0066cc;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+    }
+    
+    .post-content {
+        color: #495057;
+        line-height: 1.6;
+        margin-top: 0.5rem;
+    }
+    
+    .post-author {
+        font-weight: 600;
+        color: #212529;
+    }
+    
+    .create-thread-btn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .create-thread-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+    
+    .modal-content {
+        border-radius: 15px;
+        border: none;
+    }
+    
+    .modal-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px 15px 0 0;
+    }
+</style>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-3 px-md-4 px-lg-5">
+    <!-- Discussion Header -->
+    <div class="discussion-header">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+            <div>
+                <h2 class="mb-2">
+                    <i class="bi bi-chat-dots me-2"></i>{{ assignment.title }}
+                </h2>
+                <p class="mb-0 opacity-90">
+                    <i class="bi bi-calendar me-2"></i>Due: {{ assignment.due_date.strftime('%B %d, %Y at %I:%M %p') if assignment.due_date else 'No due date' }}
+                </p>
+            </div>
+            <div>
+                <a href="{{ url_for('student.student_assignments') }}" class="btn btn-light">
+                    <i class="bi bi-arrow-left me-2"></i>Back to Assignments
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Discussion Prompt -->
+    <div class="discussion-prompt">
+        <h5 class="mb-3">
+            <i class="bi bi-question-circle me-2 text-primary"></i>Discussion Prompt
+        </h5>
+        <div class="prompt-content">
+            {{ assignment.description.split('**Discussion Prompt:**')[1].split('**Instructions:**')[0].strip() if '**Discussion Prompt:**' in assignment.description else assignment.description }}
+        </div>
+    </div>
+
+    <!-- Participation Tracker -->
+    <div class="participation-tracker">
+        <h5 class="mb-3">
+            <i class="bi bi-clipboard-check me-2 text-success"></i>Your Participation
+        </h5>
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <div class="d-flex align-items-center">
+                    <div class="bg-primary bg-opacity-10 rounded-circle p-3 me-3">
+                        <i class="bi bi-chat-left-text text-primary fs-4"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-0">Initial Posts</h6>
+                        <p class="mb-0 text-muted">
+                            <strong class="text-primary">{{ student_threads|length }}</strong> / {{ min_initial_posts }} required
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="d-flex align-items-center">
+                    <div class="bg-success bg-opacity-10 rounded-circle p-3 me-3">
+                        <i class="bi bi-reply text-success fs-4"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-0">Replies</h6>
+                        <p class="mb-0 text-muted">
+                            <strong class="text-success">{{ student_replies|length }}</strong> / {{ min_replies }} required
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="d-flex align-items-center">
+                    <div class="bg-info bg-opacity-10 rounded-circle p-3 me-3">
+                        <i class="bi bi-check-circle text-info fs-4"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-0">Status</h6>
+                        <p class="mb-0">
+                            {% if student_threads|length >= min_initial_posts and student_replies|length >= min_replies %}
+                                <span class="badge bg-success">Complete</span>
+                            {% else %}
+                                <span class="badge bg-warning">In Progress</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <div>
+            <h4 class="mb-0">
+                <i class="bi bi-chat-square-text me-2"></i>Discussion Threads
+                <span class="badge bg-primary ms-2">{{ threads|length }}</span>
+            </h4>
+        </div>
+        {% if allow_student_threads and assignment.status == 'Active' %}
+        <button type="button" class="btn create-thread-btn" data-bs-toggle="modal" data-bs-target="#createThreadModal">
+            <i class="bi bi-plus-circle me-2"></i>Create New Thread
+        </button>
+        {% endif %}
+    </div>
+
+    <!-- Discussion Threads -->
+    {% if threads %}
+        {% for thread in threads %}
+        <div class="thread-card {% if thread.is_pinned %}pinned{% endif %} {% if thread.is_locked %}locked{% endif %}" 
+             onclick="{% if not thread.is_locked %}viewThread({{ thread.id }}){% endif %}">
+            <div class="thread-header">
+                <div class="flex-grow-1">
+                    <h5 class="mb-2">
+                        {{ thread.title }}
+                        {% if thread.is_pinned %}
+                            <i class="bi bi-pin-fill text-warning ms-2" title="Pinned"></i>
+                        {% endif %}
+                        {% if thread.is_locked %}
+                            <i class="bi bi-lock-fill text-danger ms-2" title="Locked"></i>
+                        {% endif %}
+                    </h5>
+                    <div class="thread-meta">
+                        <span class="post-author">
+                            <i class="bi bi-person-circle me-1"></i>{{ thread.student.first_name }} {{ thread.student.last_name }}
+                        </span>
+                        <span>
+                            <i class="bi bi-clock me-1"></i>{{ thread.created_at.strftime('%B %d, %Y at %I:%M %p') }}
+                        </span>
+                        <span class="reply-count">
+                            <i class="bi bi-chat-dots me-1"></i>{{ thread.posts|length }} {{ 'reply' if thread.posts|length == 1 else 'replies' }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="post-content">
+                {{ thread.content[:200] }}{% if thread.content|length > 200 %}...{% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-chat-square-text display-1 text-muted mb-3"></i>
+            <h5 class="text-muted">No Discussion Threads Yet</h5>
+            <p class="text-muted">Be the first to start a discussion!</p>
+            {% if allow_student_threads and assignment.status == 'Active' %}
+            <button type="button" class="btn create-thread-btn mt-3" data-bs-toggle="modal" data-bs-target="#createThreadModal">
+                <i class="bi bi-plus-circle me-2"></i>Create First Thread
+            </button>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+
+<!-- Create Thread Modal -->
+<div class="modal fade" id="createThreadModal" tabindex="-1" aria-labelledby="createThreadModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createThreadModalLabel">
+                    <i class="bi bi-plus-circle me-2"></i>Create New Discussion Thread
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="createThreadForm" method="POST" action="{{ url_for('student.create_discussion_thread', assignment_id=assignment.id) }}">
+                <div class="modal-body">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-3">
+                        <label for="thread_title" class="form-label fw-semibold">Thread Title <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="thread_title" name="thread_title" 
+                               placeholder="Enter a clear, descriptive title for your discussion thread..." required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="thread_content" class="form-label fw-semibold">Your Post <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="thread_content" name="thread_content" rows="8" 
+                                  placeholder="Share your thoughts, ideas, or questions about the discussion topic..." required></textarea>
+                        <div class="form-text">Be thoughtful and respectful in your response.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-send me-2"></i>Create Thread
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function viewThread(threadId) {
+    window.location.href = "{{ url_for('student.view_discussion_thread', thread_id=0) }}".replace('0', threadId);
+}
+</script>
+{% endblock %}
+
+
+
+
+

@@ -1,0 +1,442 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/assignments.css') }}">
+<style>
+.extension-request-card {
+    border: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+    margin-bottom: 1rem;
+}
+
+.extension-request-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.status-badge {
+    font-size: 0.875rem;
+    padding: 0.5rem 1rem;
+}
+
+.request-info {
+    background: #f8f9fa;
+    border-radius: 0.5rem;
+    padding: 1rem;
+}
+
+.student-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #212529;
+}
+
+.assignment-title {
+    color: #495057;
+    font-size: 0.95rem;
+}
+
+.request-date {
+    color: #6c757d;
+    font-size: 0.85rem;
+}
+
+.reason-text {
+    background: white;
+    border-left: 3px solid #ffc107;
+    padding: 0.75rem;
+    border-radius: 0.25rem;
+    margin-top: 0.5rem;
+}
+</style>
+{% endblock %}
+
+{% block title %}Extension Requests{% endblock %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-3 px-md-4 px-lg-5">
+    <!-- Header -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4">
+        <div>
+            <h2 class="mb-2 mb-md-0">
+                <i class="bi bi-clock-history me-2 text-warning"></i>Extension Requests
+            </h2>
+            <p class="text-muted mb-0">Review and manage student extension requests for assignments</p>
+        </div>
+        <div class="d-flex gap-2 mt-3 mt-md-0">
+            <a href="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.assignments_and_grades') }}{% else %}{{ url_for('teacher.dashboard.assignments_and_grades') }}{% endif %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>Back to Assignments
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card bg-warning bg-opacity-10 border-warning">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <i class="bi bi-hourglass-split fs-1 text-warning"></i>
+                        </div>
+                        <div>
+                            <h6 class="text-muted mb-1">Pending</h6>
+                            <h3 class="mb-0">{{ pending_requests|length }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-success bg-opacity-10 border-success">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <i class="bi bi-check-circle fs-1 text-success"></i>
+                        </div>
+                        <div>
+                            <h6 class="text-muted mb-1">Approved</h6>
+                            <h3 class="mb-0">{{ approved_requests|length }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-danger bg-opacity-10 border-danger">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <i class="bi bi-x-circle fs-1 text-danger"></i>
+                        </div>
+                        <div>
+                            <h6 class="text-muted mb-1">Rejected</h6>
+                            <h3 class="mb-0">{{ rejected_requests|length }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pending Requests -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-warning bg-opacity-10 border-0">
+            <h5 class="mb-0">
+                <i class="bi bi-hourglass-split me-2 text-warning"></i>Pending Requests
+                <span class="badge bg-warning text-dark ms-2">{{ pending_requests|length }}</span>
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if pending_requests %}
+                {% for request in pending_requests %}
+                <div class="extension-request-card card mb-3">
+                    <div class="card-body">
+                        <div class="row align-items-start">
+                            <div class="col-md-8">
+                                <div class="request-info mb-3">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <div>
+                                            <div class="student-name">
+                                                <i class="bi bi-person-circle me-2"></i>{{ request.student.first_name }} {{ request.student.last_name }}
+                                            </div>
+                                            <div class="assignment-title mt-1">
+                                                <i class="bi bi-journal-text me-2"></i><strong>{{ request.assignment.title }}</strong>
+                                            </div>
+                                            <div class="assignment-title mt-1">
+                                                <i class="bi bi-book me-2"></i>{{ request.assignment.class_info.name }}
+                                            </div>
+                                        </div>
+                                        <span class="badge bg-warning status-badge">Pending</span>
+                                    </div>
+                                    
+                                    <div class="row g-3 mt-2">
+                                        <div class="col-md-6">
+                                            <small class="text-muted d-block">Current Due Date:</small>
+                                            <strong>{{ request.assignment.due_date.strftime('%B %d, %Y at %I:%M %p') if request.assignment.due_date else 'N/A' }}</strong>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <small class="text-muted d-block">Requested Due Date:</small>
+                                            <strong class="text-warning">{{ request.requested_due_date.strftime('%B %d, %Y at %I:%M %p') }}</strong>
+                                        </div>
+                                        <div class="col-12">
+                                            <small class="text-muted d-block">Requested On:</small>
+                                            <span class="request-date">{{ request.requested_at.strftime('%B %d, %Y at %I:%M %p') }}</span>
+                                        </div>
+                                    </div>
+                                    
+                                    {% if request.reason %}
+                                    <div class="reason-text mt-2">
+                                        <small class="text-muted d-block mb-1"><strong>Reason:</strong></small>
+                                        <p class="mb-0">{{ request.reason }}</p>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="d-grid gap-2">
+                                    <button type="button" class="btn btn-success" onclick="reviewExtensionRequest({{ request.id }}, 'approve')">
+                                        <i class="bi bi-check-circle me-2"></i>Approve
+                                    </button>
+                                    <button type="button" class="btn btn-danger" onclick="reviewExtensionRequest({{ request.id }}, 'reject')">
+                                        <i class="bi bi-x-circle me-2"></i>Reject
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="viewRequestDetails({{ request.id }})">
+                                        <i class="bi bi-eye me-1"></i>View Details
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+                    <p class="text-muted mt-3 mb-0">No pending extension requests</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Approved Requests -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-success bg-opacity-10 border-0">
+            <h5 class="mb-0">
+                <i class="bi bi-check-circle me-2 text-success"></i>Approved Requests
+                <span class="badge bg-success ms-2">{{ approved_requests|length }}</span>
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if approved_requests %}
+                {% for request in approved_requests %}
+                <div class="extension-request-card card mb-3 border-success border-opacity-25">
+                    <div class="card-body">
+                        <div class="row align-items-start">
+                            <div class="col-md-10">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div>
+                                        <div class="student-name">
+                                            <i class="bi bi-person-circle me-2"></i>{{ request.student.first_name }} {{ request.student.last_name }}
+                                        </div>
+                                        <div class="assignment-title mt-1">
+                                            <i class="bi bi-journal-text me-2"></i><strong>{{ request.assignment.title }}</strong>
+                                        </div>
+                                        <div class="row g-3 mt-2">
+                                            <div class="col-md-6">
+                                                <small class="text-muted d-block">Original Due Date:</small>
+                                                <span>{{ request.assignment.due_date.strftime('%B %d, %Y at %I:%M %p') if request.assignment.due_date else 'N/A' }}</span>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <small class="text-muted d-block">Extended Due Date:</small>
+                                                <strong class="text-success">{{ request.requested_due_date.strftime('%B %d, %Y at %I:%M %p') }}</strong>
+                                            </div>
+                                            <div class="col-12">
+                                                <small class="text-muted d-block">Approved On:</small>
+                                                <span class="request-date">{{ request.reviewed_at.strftime('%B %d, %Y at %I:%M %p') if request.reviewed_at else 'N/A' }}</span>
+                                            </div>
+                                        </div>
+                                        {% if request.review_notes %}
+                                        <div class="reason-text mt-2" style="border-left-color: #28a745;">
+                                            <small class="text-muted d-block mb-1"><strong>Teacher Notes:</strong></small>
+                                            <p class="mb-0">{{ request.review_notes }}</p>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <span class="badge bg-success status-badge">Approved</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+                    <p class="text-muted mt-3 mb-0">No approved extension requests</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Rejected Requests -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-danger bg-opacity-10 border-0">
+            <h5 class="mb-0">
+                <i class="bi bi-x-circle me-2 text-danger"></i>Rejected Requests
+                <span class="badge bg-danger ms-2">{{ rejected_requests|length }}</span>
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if rejected_requests %}
+                {% for request in rejected_requests %}
+                <div class="extension-request-card card mb-3 border-danger border-opacity-25">
+                    <div class="card-body">
+                        <div class="row align-items-start">
+                            <div class="col-md-10">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div>
+                                        <div class="student-name">
+                                            <i class="bi bi-person-circle me-2"></i>{{ request.student.first_name }} {{ request.student.last_name }}
+                                        </div>
+                                        <div class="assignment-title mt-1">
+                                            <i class="bi bi-journal-text me-2"></i><strong>{{ request.assignment.title }}</strong>
+                                        </div>
+                                        <div class="row g-3 mt-2">
+                                            <div class="col-md-6">
+                                                <small class="text-muted d-block">Original Due Date:</small>
+                                                <span>{{ request.assignment.due_date.strftime('%B %d, %Y at %I:%M %p') if request.assignment.due_date else 'N/A' }}</span>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <small class="text-muted d-block">Requested Due Date:</small>
+                                                <span>{{ request.requested_due_date.strftime('%B %d, %Y at %I:%M %p') }}</span>
+                                            </div>
+                                            <div class="col-12">
+                                                <small class="text-muted d-block">Rejected On:</small>
+                                                <span class="request-date">{{ request.reviewed_at.strftime('%B %d, %Y at %I:%M %p') if request.reviewed_at else 'N/A' }}</span>
+                                            </div>
+                                        </div>
+                                        {% if request.review_notes %}
+                                        <div class="reason-text mt-2" style="border-left-color: #dc3545;">
+                                            <small class="text-muted d-block mb-1"><strong>Teacher Notes:</strong></small>
+                                            <p class="mb-0">{{ request.review_notes }}</p>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <span class="badge bg-danger status-badge">Rejected</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+                    <p class="text-muted mt-3 mb-0">No rejected extension requests</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Review Extension Request Modal -->
+<div class="modal fade" id="reviewExtensionModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" id="reviewModalHeader">
+                <h5 class="modal-title" id="reviewModalTitle">Review Extension Request</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="reviewExtensionForm">
+                    <input type="hidden" id="reviewRequestId" name="request_id">
+                    <input type="hidden" id="reviewAction" name="action">
+                    
+                    <div class="mb-3">
+                        <label for="reviewNotes" class="form-label">Review Notes <span class="text-muted">(Optional)</span></label>
+                        <textarea class="form-control" id="reviewNotes" name="review_notes" rows="4" 
+                                  placeholder="Add any notes or comments about your decision..."></textarea>
+                        <div class="form-text">These notes will be visible to the student</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn" id="reviewSubmitBtn" onclick="submitReview()">
+                    <i class="bi bi-check-circle me-1"></i>Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentReviewRequestId = null;
+let currentReviewAction = null;
+
+function reviewExtensionRequest(requestId, action) {
+    currentReviewRequestId = requestId;
+    currentReviewAction = action;
+    
+    const modal = document.getElementById('reviewExtensionModal');
+    const header = document.getElementById('reviewModalHeader');
+    const title = document.getElementById('reviewModalTitle');
+    const submitBtn = document.getElementById('reviewSubmitBtn');
+    
+    document.getElementById('reviewRequestId').value = requestId;
+    document.getElementById('reviewAction').value = action;
+    document.getElementById('reviewNotes').value = '';
+    
+    if (action === 'approve') {
+        header.className = 'modal-header bg-success text-white';
+        title.textContent = 'Approve Extension Request';
+        submitBtn.className = 'btn btn-success';
+        submitBtn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Approve';
+    } else {
+        header.className = 'modal-header bg-danger text-white';
+        title.textContent = 'Reject Extension Request';
+        submitBtn.className = 'btn btn-danger';
+        submitBtn.innerHTML = '<i class="bi bi-x-circle me-1"></i>Reject';
+    }
+    
+    const bootstrapModal = new bootstrap.Modal(modal);
+    bootstrapModal.show();
+}
+
+function submitReview() {
+    const requestId = document.getElementById('reviewRequestId').value;
+    const action = document.getElementById('reviewAction').value;
+    const notes = document.getElementById('reviewNotes').value;
+    
+    const formData = new FormData();
+    formData.append('action', action);
+    formData.append('review_notes', notes);
+    formData.append('csrf_token', '{{ csrf_token() }}');
+    
+    const submitBtn = document.getElementById('reviewSubmitBtn');
+    const originalHTML = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Processing...';
+    
+    fetch(`/teacher/extension-request/${requestId}/review`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('reviewExtensionModal'));
+            modal.hide();
+            alert(data.message);
+            window.location.reload();
+        } else {
+            alert(data.message || 'Error processing request');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalHTML;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred. Please try again.');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalHTML;
+    });
+}
+
+function viewRequestDetails(requestId) {
+    // Could open a detailed view modal or scroll to the request
+    // For now, just scroll to it
+    const element = document.querySelector(`[data-request-id="${requestId}"]`);
+    if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+</script>
+{% endblock %}
+
+
+
+
+

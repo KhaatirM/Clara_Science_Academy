@@ -2,34 +2,28 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/tech_dashboard.css') }}">
-<style>
-    .dashboard-content-wrapper {
-        position: relative;
-        z-index: 1;
-    }
-</style>
 {% endblock %}
 
 {% block dashboard_content %}
-<div class="tech-dashboard-wrapper">
-<div class="container-fluid px-2 px-md-4 dashboard-content-wrapper py-4">
-    <div class="row g-3 g-md-4">
-        <div class="col-12">
-            <div class="tech-card tech-header mb-4">
-                <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
-                    <div>
-                        <h1 class="mb-1"><i class="bi bi-exclamation-triangle-fill me-2"></i>Error/Bug Log</h1>
-                        <p class="mb-0" style="color: rgba(255, 255, 255, 0.9);">Monitor system errors and user-submitted bug reports</p>
-                    </div>
-                    <div class="btn-group">
-                        <button class="tech-btn tech-btn-secondary" onclick="exportLog()">
-                            <i class="bi bi-download me-1"></i>Export
-                        </button>
-                        <button class="tech-btn tech-btn-danger" onclick="acknowledgeAll()">
-                            <i class="bi bi-check-all me-1"></i>Acknowledge All
-                        </button>
-                    </div>
-                </div>
+<div class="container-fluid px-2 px-md-4">
+    <!-- Modern Header -->
+    <div class="tech-dashboard-header mb-4">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                <h2 class="tech-dashboard-title mb-1">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Error/Bug Log
+                </h2>
+                <p class="tech-dashboard-subtitle mb-0">
+                    <i class="bi bi-shield-exclamation me-2"></i>View system errors and user-submitted bug reports
+                </p>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-light" onclick="exportLog()">
+                    <i class="bi bi-download me-1"></i> Export
+                </button>
+                <button class="btn btn-light" onclick="acknowledgeAll()">
+                    <i class="bi bi-check-all me-1"></i> Acknowledge All
+                </button>
             </div>
         </div>
     </div>
@@ -37,23 +31,23 @@
     <!-- Combined Statistics -->
     <div class="row g-3 g-md-4 mb-4">
         <div class="col-12">
-            <div class="tech-card">
-                <div class="tech-header">
-                    <h5 class="mb-0"><i class="bi bi-graph-up-arrow me-2"></i>Log Statistics</h5>
+            <div class="tech-quick-actions">
+                <div class="tech-quick-actions-header">
+                    <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Log Statistics</h5>
                 </div>
-                <div class="p-3">
+                <div class="tech-quick-actions-body">
                     <div class="row g-3">
                         <!-- Error Statistics -->
                         <div class="col-12 col-md-6">
-                            <h6 style="color: rgba(255, 255, 255, 0.9); margin-bottom: 1rem;">
-                                <i class="bi bi-exclamation-triangle-fill me-2" style="color: #f45c43;"></i>System Errors
-                            </h6>
+                            <h6 class="text-danger"><i class="bi bi-exclamation-triangle me-2"></i> System Errors</h6>
                             <div class="row g-2">
                                 {% for stat in error_stats %}
                                 <div class="col-6">
-                                    <div class="tech-stat-card" style="border-color: rgba(244, 92, 67, 0.5);">
-                                        <div class="tech-stat-number" style="color: #f45c43;">{{ stat.count }}</div>
-                                        <div class="tech-stat-label">{{ stat.action }}</div>
+                                    <div class="card border-danger">
+                                        <div class="card-body text-center">
+                                            <h4 class="text-danger">{{ stat.count }}</h4>
+                                            <small class="text-muted">{{ stat.action }}</small>
+                                        </div>
                                     </div>
                                 </div>
                                 {% endfor %}
@@ -62,15 +56,15 @@
                         
                         <!-- Bug Report Statistics -->
                         <div class="col-12 col-md-6">
-                            <h6 style="color: rgba(255, 255, 255, 0.9); margin-bottom: 1rem;">
-                                <i class="bi bi-bug-fill me-2" style="color: #f5576c;"></i>Bug Reports
-                            </h6>
+                            <h6 class="text-warning"><i class="bi bi-bug me-2"></i> Bug Reports</h6>
                             <div class="row g-2">
                                 {% for stat in bug_stats %}
                                 <div class="col-6">
-                                    <div class="tech-stat-card" style="border-color: rgba(245, 87, 108, 0.5);">
-                                        <div class="tech-stat-number" style="color: #f5576c;">{{ stat.count }}</div>
-                                        <div class="tech-stat-label">{{ stat.status|title }}</div>
+                                    <div class="card border-warning">
+                                        <div class="card-body text-center">
+                                            <h4 class="text-warning">{{ stat.count }}</h4>
+                                            <small class="text-muted">{{ stat.status|title }}</small>
+                                        </div>
                                     </div>
                                 </div>
                                 {% endfor %}
@@ -83,59 +77,65 @@
     </div>
 
     <!-- Enhanced Filters -->
-    <div class="tech-filters mb-4">
-        <h5 class="mb-3" style="color: white;">
-            <i class="bi bi-funnel-fill me-2"></i>Filters
-        </h5>
-        <form method="GET" class="row g-3">
-            <div class="col-12 col-sm-6 col-md-3">
-                <label for="type_filter" class="tech-form-label">Type</label>
-                <select class="tech-form-control form-select" name="type_filter" id="type_filter">
-                    <option value="All" {% if type_filter == 'All' %}selected{% endif %}>All Entries</option>
-                    <option value="Errors" {% if type_filter == 'Errors' %}selected{% endif %}>System Errors Only</option>
-                    <option value="Bugs" {% if type_filter == 'Bugs' %}selected{% endif %}>Bug Reports Only</option>
-                </select>
+    <div class="row g-3 g-md-4 mb-4">
+        <div class="col-12">
+            <div class="tech-quick-actions">
+                <div class="tech-quick-actions-header">
+                    <h5 class="mb-0"><i class="bi bi-funnel me-2"></i>Filters</h5>
+                </div>
+                <div class="tech-quick-actions-body">
+                    <form method="GET" class="row g-3">
+                        <div class="col-12 col-sm-6 col-md-3">
+                            <label for="type_filter" class="form-label">Type</label>
+                            <select class="form-select" name="type_filter" id="type_filter">
+                                <option value="All" {% if type_filter == 'All' %}selected{% endif %}>All Entries</option>
+                                <option value="Errors" {% if type_filter == 'Errors' %}selected{% endif %}>System Errors Only</option>
+                                <option value="Bugs" {% if type_filter == 'Bugs' %}selected{% endif %}>Bug Reports Only</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-sm-6 col-md-3">
+                            <label for="status_filter" class="form-label">Bug Status</label>
+                            <select class="form-select" name="status_filter" id="status_filter">
+                                <option value="All" {% if status_filter == 'All' %}selected{% endif %}>All Statuses</option>
+                                <option value="open" {% if status_filter == 'open' %}selected{% endif %}>Open</option>
+                                <option value="in_progress" {% if status_filter == 'in_progress' %}selected{% endif %}>In Progress</option>
+                                <option value="resolved" {% if status_filter == 'resolved' %}selected{% endif %}>Resolved</option>
+                                <option value="closed" {% if status_filter == 'closed' %}selected{% endif %}>Closed</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-sm-6 col-md-3">
+                            <label for="date_filter" class="form-label">Time Period</label>
+                            <select class="form-select" name="date_filter" id="date_filter">
+                                <option value="24h" {% if date_filter == '24h' %}selected{% endif %}>Last 24 Hours</option>
+                                <option value="7d" {% if date_filter == '7d' %}selected{% endif %}>Last 7 Days</option>
+                                <option value="30d" {% if date_filter == '30d' %}selected{% endif %}>Last 30 Days</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-sm-6 col-md-3 d-flex align-items-end gap-2">
+                            <button type="submit" class="btn btn-primary flex-fill">
+                                <i class="bi bi-search me-1"></i> Filter
+                            </button>
+                            <a href="{{ url_for('tech.error_reports') }}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle me-1"></i> Clear
+                            </a>
+                        </div>
+                    </form>
+                </div>
             </div>
-            <div class="col-12 col-sm-6 col-md-3">
-                <label for="status_filter" class="tech-form-label">Bug Status</label>
-                <select class="tech-form-control form-select" name="status_filter" id="status_filter">
-                    <option value="All" {% if status_filter == 'All' %}selected{% endif %}>All Statuses</option>
-                    <option value="open" {% if status_filter == 'open' %}selected{% endif %}>Open</option>
-                    <option value="in_progress" {% if status_filter == 'in_progress' %}selected{% endif %}>In Progress</option>
-                    <option value="resolved" {% if status_filter == 'resolved' %}selected{% endif %}>Resolved</option>
-                    <option value="closed" {% if status_filter == 'closed' %}selected{% endif %}>Closed</option>
-                </select>
-            </div>
-            <div class="col-12 col-sm-6 col-md-3">
-                <label for="date_filter" class="tech-form-label">Time Period</label>
-                <select class="tech-form-control form-select" name="date_filter" id="date_filter">
-                    <option value="24h" {% if date_filter == '24h' %}selected{% endif %}>Last 24 Hours</option>
-                    <option value="7d" {% if date_filter == '7d' %}selected{% endif %}>Last 7 Days</option>
-                    <option value="30d" {% if date_filter == '30d' %}selected{% endif %}>Last 30 Days</option>
-                </select>
-            </div>
-            <div class="col-12 col-sm-6 col-md-3 d-flex align-items-end gap-2">
-                <button type="submit" class="tech-btn tech-btn-primary flex-fill">
-                    <i class="bi bi-search me-1"></i>Filter
-                </button>
-                <a href="{{ url_for('tech.error_reports') }}" class="tech-btn tech-btn-secondary">
-                    <i class="bi bi-x-circle me-1"></i>Clear
-                </a>
-            </div>
-        </form>
+        </div>
     </div>
 
     <!-- Unified Log Table -->
     <div class="row g-3 g-md-4">
         <div class="col-12">
-            <div class="tech-card">
-                <div class="tech-header">
-                    <h5 class="mb-0"><i class="bi bi-table me-2"></i>Combined Log Entries</h5>
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-table me-2"></i> Combined Log Entries</h5>
                 </div>
-                <div class="p-0">
+                <div class="card-body">
                     {% if all_entries %}
                     <div class="table-responsive">
-                        <table class="tech-table table">
+                        <table class="table table-striped table-hover">
                             <thead>
                                 <tr>
                                     <th>Timestamp</th>
@@ -155,25 +155,25 @@
                                     </td>
                                     <td>
                                         {% if entry.type == 'error' %}
-                                            <span class="tech-badge tech-badge-danger"><i class="bi bi-exclamation-triangle me-1"></i>Error</span>
+                                            <span class="badge bg-danger"><i class="bi bi-exclamation-triangle me-1"></i> Error</span>
                                         {% else %}
-                                            <span class="tech-badge tech-badge-warning"><i class="bi bi-bug me-1"></i>Bug</span>
+                                            <span class="badge bg-warning text-dark"><i class="bi bi-bug me-1"></i> Bug</span>
                                         {% endif %}
                                     </td>
                                     <td>
                                         {% if entry.type == 'error' %}
                                             {% if entry.data.user %}
-                                            <span class="tech-badge tech-badge-primary">{{ entry.data.user.username }}</span>
-                                            <small style="color: rgba(255, 255, 255, 0.7); display: block; margin-top: 0.25rem;">{{ entry.data.user.role }}</small>
+                                            <span class="badge bg-primary">{{ entry.data.user.username }}</span>
+                                            <small class="text-muted">{{ entry.data.user.role }}</small>
                                             {% else %}
-                                            <span style="color: rgba(255, 255, 255, 0.7);">Unknown</span>
+                                            <span class="text-muted">Unknown</span>
                                             {% endif %}
                                         {% else %}
                                             {% if entry.data.reporter %}
-                                            <span class="tech-badge tech-badge-info">{{ entry.data.reporter.username }}</span>
-                                            <small style="color: rgba(255, 255, 255, 0.7); display: block; margin-top: 0.25rem;">{{ entry.data.reporter.role }}</small>
+                                            <span class="badge bg-info">{{ entry.data.reporter.username }}</span>
+                                            <small class="text-muted">{{ entry.data.reporter.role }}</small>
                                             {% else %}
-                                            <span style="color: rgba(255, 255, 255, 0.7);">Unknown</span>
+                                            <span class="text-muted">Unknown</span>
                                             {% endif %}
                                         {% endif %}
                                     </td>
@@ -190,64 +190,66 @@
                                     </td>
                                     <td>
                                         {% if entry.type == 'error' %}
-                                            <span class="tech-badge tech-badge-danger">System Error</span>
+                                            <span class="badge bg-danger">System Error</span>
                                         {% else %}
                                             {% if entry.data.severity == 'critical' %}
-                                                <span class="tech-badge tech-badge-danger">Critical</span>
+                                                <span class="badge bg-danger">Critical</span>
                                             {% elif entry.data.severity == 'high' %}
-                                                <span class="tech-badge tech-badge-warning">High</span>
+                                                <span class="badge bg-warning text-dark">High</span>
                                             {% elif entry.data.severity == 'medium' %}
-                                                <span class="tech-badge tech-badge-info">Medium</span>
+                                                <span class="badge bg-info">Medium</span>
                                             {% else %}
-                                                <span class="tech-badge tech-badge-secondary">Low</span>
+                                                <span class="badge bg-secondary">Low</span>
                                             {% endif %}
                                             <br>
-                                            <small style="margin-top: 0.5rem; display: inline-block;">
+                                            <small class="text-muted">
                                                 {% if entry.data.status == 'open' %}
-                                                    <span class="tech-badge tech-badge-warning">Open</span>
+                                                    <span class="badge bg-warning text-dark">Open</span>
                                                 {% elif entry.data.status == 'in_progress' %}
-                                                    <span class="tech-badge tech-badge-info">In Progress</span>
+                                                    <span class="badge bg-info">In Progress</span>
                                                 {% elif entry.data.status == 'resolved' %}
-                                                    <span class="tech-badge tech-badge-success">Resolved</span>
+                                                    <span class="badge bg-success">Resolved</span>
                                                 {% else %}
-                                                    <span class="tech-badge tech-badge-secondary">Closed</span>
+                                                    <span class="badge bg-secondary">Closed</span>
                                                 {% endif %}
                                             </small>
                                         {% endif %}
                                     </td>
                                     <td>
-                                        <small style="color: rgba(255, 255, 255, 0.7);">
-                                            {{ entry.data.ip_address or 'N/A' }}
+                                        <small class="text-muted">
+                                            {% if entry.type == 'error' %}
+                                                {{ entry.data.ip_address or 'N/A' }}
+                                            {% else %}
+                                                {{ entry.data.ip_address or 'N/A' }}
+                                            {% endif %}
                                         </small>
                                     </td>
                                     <td>
-                                        <div class="d-flex gap-1 flex-wrap">
-                                            {% if entry.type == 'error' %}
-                                                {% if entry.data.details %}
-                                                <button class="tech-btn tech-btn-info" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;" onclick="showDetails('{{ entry.data.id }}', 'error')">
-                                                    <i class="bi bi-eye"></i>Details
-                                                </button>
-                                                {% endif %}
-                                                {% if entry.data.error_message %}
-                                                <button class="tech-btn tech-btn-danger" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;" onclick="showError('{{ entry.data.id }}')">
-                                                    <i class="bi bi-exclamation-triangle"></i>Error
-                                                </button>
-                                                {% endif %}
-                                                <button class="tech-btn tech-btn-success" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;" onclick="acknowledgeError('{{ entry.data.id }}')">
-                                                    <i class="bi bi-check"></i>Acknowledge
-                                                </button>
-                                            {% else %}
-                                                <button class="tech-btn tech-btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;" onclick="viewBugReport('{{ entry.data.id }}')">
-                                                    <i class="bi bi-eye"></i>View
-                                                </button>
-                                                <button class="tech-btn tech-btn-success" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;" onclick="updateBugStatus('{{ entry.data.id }}', 'in_progress')">
-                                                    <i class="bi bi-play"></i>Start
-                                                </button>
-                                                <button class="tech-btn tech-btn-info" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;" onclick="updateBugStatus('{{ entry.data.id }}', 'resolved')">
-                                                    <i class="bi bi-check"></i>Resolve
-                                                </button>
+                                        {% if entry.type == 'error' %}
+                                            {% if entry.data.details %}
+                                            <button class="btn btn-sm btn-outline-info" onclick="showDetails('{{ entry.data.id }}', 'error')">
+                                                <i class="bi bi-eye"></i> Details
+                                            </button>
                                             {% endif %}
-                                        </div>
+                                            {% if entry.data.error_message %}
+                                            <button class="btn btn-sm btn-outline-danger" onclick="showError('{{ entry.data.id }}')">
+                                                <i class="bi bi-exclamation-triangle"></i> Full Error
+                                            </button>
+                                            {% endif %}
+                                            <button class="btn btn-sm btn-success" onclick="acknowledgeError('{{ entry.data.id }}')">
+                                                <i class="bi bi-check"></i> Acknowledge
+                                            </button>
+                                        {% else %}
+                                            <button class="btn btn-sm btn-outline-primary" onclick="viewBugReport('{{ entry.data.id }}')">
+                                                <i class="bi bi-eye"></i> View
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-success" onclick="updateBugStatus('{{ entry.data.id }}', 'in_progress')">
+                                                <i class="bi bi-play"></i> Start
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-info" onclick="updateBugStatus('{{ entry.data.id }}', 'resolved')">
+                                                <i class="bi bi-check"></i> Resolve
+                                            </button>
+                                        {% endif %}
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -255,17 +257,16 @@
                         </table>
                     </div>
                     {% else %}
-                    <div class="tech-empty-state">
-                        <i class="bi bi-check-circle d-block mb-3"></i>
-                        <h5>No entries found</h5>
-                        <p>Great! No errors or bug reports found in the selected time period.</p>
+                    <div class="text-center py-4">
+                        <i class="bi bi-check-circle display-1 text-success"></i>
+                        <h5 class="text-success">No entries found</h5>
+                        <p class="text-muted">Great! No errors or bug reports found in the selected time period.</p>
                     </div>
                     {% endif %}
                 </div>
             </div>
         </div>
     </div>
-</div>
 </div>
 
 <!-- Details Modal -->

@@ -9,17 +9,12 @@
 {% endblock extra_css %}
 
 {% block content %}
-<!-- Slideshow Background -->
+<!-- Slideshow Background - Optimized: Reduced from 9 to 4 images -->
 <div class="slideshow-container">
-    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image1.png');"></div>
-    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image2.png');"></div>
-    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image3.png');"></div>
-    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image4.png');"></div>
-    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image5.png');"></div>
-    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image6.png');"></div>
-    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image7.png');"></div>
-    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image8.png');"></div>
-    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image9.png');"></div>
+    <div class="slideshow-image active" style="background-image: url('/static/img/backimg/image1.png');" loading="eager"></div>
+    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image2.png');" loading="lazy"></div>
+    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image3.png');" loading="lazy"></div>
+    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image4.png');" loading="lazy"></div>
     <div class="slideshow-overlay"></div>
 </div>
 
@@ -699,85 +694,81 @@
                     </div>
                     <div>
                         <h6 class="updates-intro-title mb-2">
-                            <i class="fas fa-calendar-alt me-2"></i>Latest System Update - December 31, 2025
+                            <i class="fas fa-calendar-alt me-2"></i>Latest System Update - January 5, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>Complete Tech Dashboard Redesign & Communication System Overhaul!</strong> Massive design improvements across all tech pages, communication system enhancements with event-based polling, homepage visual upgrades, and critical bug fixes for better performance and user experience!</p>
+                        <p class="updates-intro-text mb-0"><strong>Comprehensive Assignment System Overhaul & User Experience Enhancements!</strong> Fixed critical auto-grading issues, enhanced extension request system, improved discussion assignments, replaced browser prompts with modern modals, and streamlined assignment management workflows!</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
-                    <!-- December 31, 2025 - Complete Tech Dashboard Redesign & System Updates -->
+                    <!-- January 5, 2026 - Major Assignment System Updates -->
                     <div class="update-section mb-4">
-                        <h6 class="text-primary mb-3" style="background: linear-gradient(135deg, #4c63d2 0%, #5a3d91 20%, #c850c0 40%, #3d8bfd 70%, #0066cc 90%, #0073e6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
-                            <i class="fas fa-palette me-2"></i>🎨 Complete Tech Dashboard Redesign & System Enhancements - December 31, 2025
+                        <h6 class="text-primary mb-3" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+                            <i class="fas fa-tasks me-2"></i>📋 Assignment System Overhaul - January 5, 2026
                         </h6>
                         <ul class="list-unstyled">
                             <li class="mb-2">
                                 <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Tech Dashboard Complete Visual Overhaul:</strong> Redesigned all tech dashboard pages (Dashboard, Message Logs, Error/Bug Reports, Activity Log, Bug Reports, System Status & Config, User Management, Maintenance) with modern card-based layouts, glassmorphism effects, vibrant gradient color schemes, and enhanced visual hierarchy. All pages now use white backgrounds with dark text for optimal readability and contrast.
+                                <strong>Fixed Auto-Grading Bug:</strong> Resolved critical issue where assignments were incorrectly showing as "graded" immediately after creation. The system now only marks assignments as completed when they have a <code>graded_at</code> timestamp, ensuring accurate status display for students and teachers
                             </li>
                             <li class="mb-2">
                                 <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Activity Log Critical Fixes:</strong> Fixed text visibility issues by changing all text from white/transparent to dark colors (#333, #666) on white backgrounds. Resolved Action column readability with dark gray gradient badges. Fixed severe performance lag by disabling heavy animations, removing backdrop-filter, adding eager database loading with `joinedload`, implementing pagination, and optimizing filter queries.
+                                <strong>Universal Extension Request System:</strong> Extension request functionality is now available for ALL assignment types! Students can request extensions for PDF/Paper assignments, Quiz assignments, and Discussion assignments. The extension request button appears consistently across all assignment views
                             </li>
                             <li class="mb-2">
                                 <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Activity Log Title Enhancement:</strong> Applied darker, more vibrant gradient to "Activity Log" heading with increased font size (2.25rem) and weight (800) for better visibility. Enhanced gradient includes deeper blues and purples with improved contrast.
+                                <strong>Discussion Assignment Enhancements:</strong> Created dedicated view and grading pages for discussion assignments. Management and teachers can now see all participants, their posts, participation statistics, and grade discussions with a streamlined interface that displays student posts alongside grading controls
                             </li>
                             <li class="mb-2">
                                 <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>System Status & Configuration Merge:</strong> Combined System Status and System Config into a single, unified tabbed interface for better organization and user experience. Implemented smooth tab navigation with hash-based routing.
+                                <strong>Modern Modal System:</strong> Replaced all browser-native prompts, confirms, and alerts with beautiful Bootstrap modals. Status changes, delete confirmations, and void operations now use professional modal dialogs with proper styling, loading states, and toast notifications for feedback
                             </li>
                             <li class="mb-2">
                                 <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Performance Cards Complete Redesign:</strong> Redesigned CPU, Memory, Disk, and Uptime performance cards with elegant new design featuring enhanced headers with larger icons and subtle pulse animations, redesigned progress bars with larger height, multi-stop gradient backgrounds, shimmer animations, 3D effects, and white text with text shadows. Improved typography and spacing throughout.
+                                <strong>Void Button Restoration:</strong> Restored the void assignment button to discussion assignment views. Teachers and administrators can now void assignments for all students or specific students directly from the assignment view page with a comprehensive modal interface
                             </li>
                             <li class="mb-2">
                                 <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>System Status Alert Visibility Improvements:</strong> Enhanced alert boxes with better backgrounds (white/off-white), stronger borders for definition, improved text contrast with darker colors, and better shadows for visual hierarchy.
+                                <strong>Extension Management Fixes:</strong> Fixed critical error where extension management page couldn't load students. Resolved <code>Class.students</code> attribute error by using proper <code>Enrollment</code> queries. Extension granting now works seamlessly for all assignment types
                             </li>
                             <li class="mb-2">
                                 <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>User Management & Maintenance Pages Redesign:</strong> Complete visual overhaul of User Management and Maintenance Control pages with gradient page titles, modern card layouts, enhanced table styling, improved form controls, and better badges and modal designs matching the tech dashboard design system.
+                                <strong>Group Assignment View Fixes:</strong> Fixed 500 errors when viewing group assignments. The system now properly detects assignment types and redirects to appropriate views. Non-group assignments no longer cause errors when accessed through group assignment routes
                             </li>
                             <li class="mb-2">
                                 <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Communication System Polling Overhaul:</strong> Removed constant 5-second interval polling in favor of event-based polling. Messages now poll only when someone sends or edits a message. Each channel polls independently when activity occurs, eliminating unnecessary background polling and significantly improving performance and reducing server load.
+                                <strong>Route Access Improvements:</strong> Verified and fixed all route access issues. All routes are properly protected with appropriate decorators (<code>@login_required</code>, <code>@student_required</code>, <code>@teacher_required</code>, <code>@management_required</code>). No unauthorized access or 403 errors for legitimate users
                             </li>
                             <li class="mb-2">
                                 <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Leave/Delete Group Functionality:</strong> Students can now leave student-created groups (except creators who must delete). Group creators have the option to delete their groups. Backend routes and API endpoints fully implemented with proper frontend UI buttons and conditional rendering based on user role and group creator status.
+                                <strong>Student Assignment Status Logic:</strong> Enhanced assignment status determination to prevent false "completed" status. Assignments now correctly show as "Un-Submitted", "Submitted or Awaiting Grade", "Past Due", or "Completed" based on actual submission and grading status
                             </li>
                             <li class="mb-2">
                                 <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Direct Message (DM) Persistence:</strong> DMs now appear as "virtual channels" in the sidebar and persist across sessions. Enhanced `get_dm_conversations` function with improved querying logic for better DM channel visibility and user experience.
+                                <strong>Assignment Type Badge System:</strong> All assignment cards now display clear type badges (Quiz, Discussion, PDF/Paper) with color-coded styling. Status badges show "Active", "Inactive", "Upcoming", "Voided", "Graded", or "Autograde" based on assignment state
                             </li>
                             <li class="mb-2">
                                 <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Administrator Communications Hub:</strong> Replaced "Under Development" placeholder with full communications hub functionality for administrators, matching the functionality available to students and teachers. Added proper imports and backend logic.
+                                <strong>Quick Actions Enhancement:</strong> Discussion assignment view now includes comprehensive Quick Actions section with Edit, Grade, Extensions, Void, Status, Remove, and Back buttons. All actions use modern modals instead of browser prompts
                             </li>
                             <li class="mb-2">
                                 <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Homepage Complete Visual Enhancement:</strong> Enhanced hero section with multi-layered text shadows and vibrant glow effects. Improved section titles with deeper, more vibrant colors and multi-layered glow effects. Enhanced all buttons with multi-color animated gradients. Improved feature cards, program cards, and CTA section with enhanced gradients, better hover effects, and improved visual impact.
+                                <strong>Toast Notification System:</strong> Implemented Bootstrap toast notifications throughout the application. Success, error, and warning messages now appear as elegant toast notifications instead of browser alerts, providing better user experience
                             </li>
                             <li class="mb-2">
                                 <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Tech Dashboard 500 Error Fix:</strong> Fixed critical 500 error preventing tech users from logging in by updating `tech_dashboard.html` to use the new `tech.system_status_config` endpoint instead of the old merged `tech.system_status` endpoint.
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Performance Optimizations:</strong> Disabled heavy animations on data-heavy pages, removed backdrop-filter for better rendering performance, added eager loading for database queries, implemented pagination where needed, and optimized CSS for better rendering across all tech dashboard pages.
+                                <strong>Code Quality Improvements:</strong> Cleaned up debug statements, fixed URL routing issues, and ensured all endpoints are properly registered. The codebase is now more maintainable with consistent error handling and proper route organization
                             </li>
                         </ul>
-                        <div class="alert alert-info mt-3" style="background: linear-gradient(135deg, rgba(76, 99, 210, 0.1) 0%, rgba(200, 80, 192, 0.1) 100%); border-color: #4c63d2;">
-                            <p class="mb-0"><strong>🎯 Key Improvements:</strong> This update brings Clara Science Academy's interface to a new level of polish, performance, and user experience. All changes maintain existing functionality while significantly enhancing visual design, performance, and usability. The event-based polling system reduces server load while providing immediate updates on user actions!</p>
+                        <div class="alert alert-success mt-3" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 100%); border-color: #10b981;">
+                            <p class="mb-0"><strong>💡 Impact:</strong> These updates ensure accurate assignment status tracking, provide consistent extension request functionality across all assignment types, improve the discussion assignment workflow, and enhance overall user experience with modern UI components. All assignment types now work seamlessly with proper status tracking and management tools!</p>
                         </div>
                     </div>
 
                     <!-- Latest Updates - Quiz & Report Card Improvements -->
                     <div class="update-section mb-4">
                         <h6 class="text-primary mb-3" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
-                            <i class="fas fa-bug me-2"></i>🔧 Latest Updates & Bug Fixes - Recent
+                            <i class="fas fa-bug me-2"></i>🔧 Previous Updates & Bug Fixes - Recent
                         </h6>
                         <ul class="list-unstyled">
                             <li class="mb-2">
@@ -1491,20 +1482,29 @@
 <script>
 // ===== PREMIUM HOMEPAGE FUNCTIONALITY =====
 document.addEventListener('DOMContentLoaded', function() {
-    // ===== CREATE FLOATING PARTICLES =====
+    // ===== CREATE FLOATING PARTICLES - Optimized: Reduced from 50 to 18 =====
     function createParticles() {
         const container = document.getElementById('particlesContainer');
         if (!container) return;
         
-        const particleCount = 50;
-        for (let i = 0; i < particleCount; i++) {
+        // Reduce particles for better performance
+        const particleCount = 18;
+        // Use requestAnimationFrame for smoother creation
+        let created = 0;
+        function createParticle() {
+            if (created >= particleCount) return;
             const particle = document.createElement('div');
             particle.className = 'particle';
             particle.style.left = Math.random() * 100 + '%';
             particle.style.animationDelay = Math.random() * 20 + 's';
             particle.style.animationDuration = (15 + Math.random() * 10) + 's';
             container.appendChild(particle);
+            created++;
+            if (created < particleCount) {
+                requestAnimationFrame(createParticle);
+            }
         }
+        createParticle();
     }
     createParticles();
     
@@ -1592,10 +1592,10 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // ===== ADVANCED SCROLL ANIMATIONS =====
+    // ===== ADVANCED SCROLL ANIMATIONS - Optimized with larger threshold =====
     const observerOptions = {
-        threshold: 0.15,
-        rootMargin: '0px 0px -100px 0px'
+        threshold: 0.25, // Increased from 0.15 for better performance
+        rootMargin: '0px 0px -50px 0px' // Reduced margin for earlier triggering
     };
 
     const observer = new IntersectionObserver(function(entries) {
@@ -1604,14 +1604,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 entry.target.style.opacity = '1';
                 entry.target.style.transform = 'translateY(0) scale(1)';
                 
-                // Add stagger effect for cards
+                // Add stagger effect for cards - optimized with requestAnimationFrame
                 const cards = entry.target.querySelectorAll('.feature-card, .program-card, .modern-testimonial, .modern-contact');
                 cards.forEach((card, index) => {
-                    setTimeout(() => {
-                        card.style.opacity = '1';
-                        card.style.transform = 'translateY(0) scale(1)';
-                    }, index * 100);
+                    requestAnimationFrame(() => {
+                        setTimeout(() => {
+                            card.style.opacity = '1';
+                            card.style.transform = 'translateY(0) scale(1)';
+                        }, index * 50); // Reduced delay from 100ms to 50ms
+                    });
                 });
+                // Unobserve after animation to reduce observer overhead
+                observer.unobserve(entry.target);
             }
         });
     }, observerOptions);
@@ -1632,29 +1636,41 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // ===== PARALLAX EFFECT ON SCROLL =====
-    let ticking = false;
-    window.addEventListener('scroll', function() {
-        if (!ticking) {
-            window.requestAnimationFrame(function() {
-                const scrolled = window.pageYOffset;
-                const parallaxElements = document.querySelectorAll('.hero-content');
-                parallaxElements.forEach(el => {
-                    el.style.transform = `translateY(${scrolled * 0.3}px)`;
+    // ===== PARALLAX EFFECT ON SCROLL - Optimized with debouncing =====
+    // Disable parallax on mobile for better performance
+    const isMobile = window.innerWidth <= 768 || 'ontouchstart' in window;
+    if (!isMobile) {
+        let ticking = false;
+        let lastScrollY = 0;
+        // Debounce scroll handler (200ms)
+        function handleParallax() {
+            if (!ticking) {
+                window.requestAnimationFrame(function() {
+                    const scrolled = window.pageYOffset;
+                    // Only update if scroll changed significantly (performance optimization)
+                    if (Math.abs(scrolled - lastScrollY) > 5) {
+                        const parallaxElements = document.querySelectorAll('.hero-content');
+                        parallaxElements.forEach(el => {
+                            el.style.transform = `translateY(${scrolled * 0.2}px)`;
+                        });
+                        lastScrollY = scrolled;
+                    }
+                    ticking = false;
                 });
-                ticking = false;
-            });
-            ticking = true;
+                ticking = true;
+            }
         }
-    });
+        // Use passive listener for better scroll performance
+        window.addEventListener('scroll', handleParallax, { passive: true });
+    }
     
     // ===== SHOW UPDATE MODAL =====
-    if (!sessionStorage.getItem('updateModalShownDec31_2025')) {
+    if (!sessionStorage.getItem('updateModalShownDec14_2025')) {
         const updateModalElement = document.getElementById('updateModal');
         if (updateModalElement) {
             const updateModal = new bootstrap.Modal(updateModalElement);
             updateModal.show();
-            sessionStorage.setItem('updateModalShownDec31_2025', 'true');
+            sessionStorage.setItem('updateModalShownDec14_2025', 'true');
         }
     }
     
@@ -1668,23 +1684,31 @@ document.addEventListener('DOMContentLoaded', function() {
         const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
         
         if (!isTouchDevice) {
-            // Only enable mouse follow on non-touch devices
+            // Only enable mouse follow on non-touch devices - optimized with throttling
+            let mouseTicking = false;
             document.addEventListener('mousemove', (e) => {
-                const rect = heroContent.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                
-                const centerX = rect.width / 2;
-                const centerY = rect.height / 2;
-                
-                const deltaX = (x - centerX) / centerX;
-                const deltaY = (y - centerY) / centerY;
-                
-                const tiltX = deltaY * 5;
-                const tiltY = -deltaX * 5;
-                
-                heroContent.style.transform = `perspective(1000px) rotateX(${tiltX}deg) rotateY(${tiltY}deg)`;
-            });
+                if (!mouseTicking) {
+                    requestAnimationFrame(() => {
+                        const rect = heroContent.getBoundingClientRect();
+                        const x = e.clientX - rect.left;
+                        const y = e.clientY - rect.top;
+                        
+                        const centerX = rect.width / 2;
+                        const centerY = rect.height / 2;
+                        
+                        const deltaX = (x - centerX) / centerX;
+                        const deltaY = (y - centerY) / centerY;
+                        
+                        // Reduced tilt intensity for better performance
+                        const tiltX = deltaY * 3;
+                        const tiltY = -deltaX * 3;
+                        
+                        heroContent.style.transform = `perspective(1000px) rotateX(${tiltX}deg) rotateY(${tiltY}deg)`;
+                        mouseTicking = false;
+                    });
+                    mouseTicking = true;
+                }
+            }, { passive: true });
             
             heroContent.addEventListener('mouseleave', () => {
                 heroContent.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg)';

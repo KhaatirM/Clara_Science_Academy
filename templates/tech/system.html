@@ -1,0 +1,520 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tech_dashboard.css') }}">
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+    <!-- Modern Header -->
+    <div class="tech-dashboard-header mb-4">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                <h2 class="tech-dashboard-title mb-1">
+                    <i class="bi bi-gear-fill me-2"></i>System Management
+                </h2>
+                <p class="tech-dashboard-subtitle mb-0">
+                    <i class="bi bi-cpu me-2"></i>System status, configuration, and maintenance control
+                </p>
+            </div>
+            <button class="btn btn-light" onclick="refreshData()">
+                <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+            </button>
+        </div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <ul class="nav nav-tabs mb-4" id="systemTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="status-tab" data-bs-toggle="tab" data-bs-target="#status" type="button" role="tab">
+                <i class="bi bi-activity me-2"></i>System Status
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="config-tab" data-bs-toggle="tab" data-bs-target="#config" type="button" role="tab">
+                <i class="bi bi-sliders me-2"></i>Configuration
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="maintenance-tab" data-bs-toggle="tab" data-bs-target="#maintenance" type="button" role="tab">
+                <i class="bi bi-tools me-2"></i>Maintenance
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content" id="systemTabContent">
+        <!-- System Status Tab -->
+        <div class="tab-pane fade show active" id="status" role="tabpanel">
+            <div class="alert alert-info d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h5 class="mb-1">System Health Overview</h5>
+                    <p class="mb-0">Live system status and performance metrics.</p>
+                </div>
+                <span class="badge bg-success" id="last-update">
+                    Last updated: {{ now.strftime('%H:%M:%S') }}
+                </span>
+            </div>
+            
+            <!-- System Performance Cards -->
+            <div class="row g-4 mb-4">
+                <div class="col-12 col-md-3">
+                    <div class="tech-card tech-card-primary">
+                        <div class="tech-card-icon">
+                            <i class="bi bi-cpu"></i>
+                        </div>
+                        <div class="tech-card-content">
+                            <h5 class="tech-card-title">CPU Usage</h5>
+                            <div class="progress mb-2" style="height: 20px;">
+                                <div class="progress-bar {% if cpu_percent != 'N/A' and cpu_percent > 80 %}bg-danger{% elif cpu_percent != 'N/A' and cpu_percent > 60 %}bg-warning{% else %}bg-success{% endif %}" 
+                                     style="width: {{ cpu_percent if cpu_percent != 'N/A' else 0 }}%">
+                                    {{ cpu_percent if cpu_percent != 'N/A' else 'N/A' }}%
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-12 col-md-3">
+                    <div class="tech-card tech-card-info">
+                        <div class="tech-card-icon">
+                            <i class="bi bi-memory"></i>
+                        </div>
+                        <div class="tech-card-content">
+                            <h5 class="tech-card-title">Memory Usage</h5>
+                            <div class="progress mb-2" style="height: 20px;">
+                                <div class="progress-bar {% if memory_percent != 'N/A' and memory_percent > 80 %}bg-danger{% elif memory_percent != 'N/A' and memory_percent > 60 %}bg-warning{% else %}bg-success{% endif %}" 
+                                     style="width: {{ memory_percent if memory_percent != 'N/A' else 0 }}%">
+                                    {{ memory_percent if memory_percent != 'N/A' else 'N/A' }}%
+                                </div>
+                            </div>
+                            <small class="text-muted">{{ memory_used_gb if memory_used_gb != 'N/A' else 'N/A' }} GB / {{ memory_total_gb if memory_total_gb != 'N/A' else 'N/A' }} GB</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-12 col-md-3">
+                    <div class="tech-card tech-card-warning">
+                        <div class="tech-card-icon">
+                            <i class="bi bi-hdd"></i>
+                        </div>
+                        <div class="tech-card-content">
+                            <h5 class="tech-card-title">Disk Usage</h5>
+                            <div class="progress mb-2" style="height: 20px;">
+                                <div class="progress-bar {% if disk_percent != 'N/A' and disk_percent > 80 %}bg-danger{% elif disk_percent != 'N/A' and disk_percent > 60 %}bg-warning{% else %}bg-success{% endif %}" 
+                                     style="width: {{ disk_percent if disk_percent != 'N/A' else 0 }}%">
+                                    {{ disk_percent if disk_percent != 'N/A' else 'N/A' }}%
+                                </div>
+                            </div>
+                            <small class="text-muted">{{ disk_used_gb if disk_used_gb != 'N/A' else 'N/A' }} GB / {{ disk_total_gb if disk_total_gb != 'N/A' else 'N/A' }} GB</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-12 col-md-3">
+                    <div class="tech-card tech-card-success">
+                        <div class="tech-card-icon">
+                            <i class="bi bi-clock-history"></i>
+                        </div>
+                        <div class="tech-card-content">
+                            <h5 class="tech-card-title">System Uptime</h5>
+                            <h4 class="mb-0">
+                                {% if uptime != 'N/A' %}
+                                    {{ uptime.days }}d {{ uptime.seconds // 3600 }}h
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Statistics Cards -->
+            <div class="row g-4 mb-4">
+                <div class="col-12 col-md-4">
+                    <div class="tech-quick-actions">
+                        <div class="tech-quick-actions-header">
+                            <h5 class="mb-0"><i class="bi bi-people me-2"></i>User Statistics</h5>
+                        </div>
+                        <div class="tech-quick-actions-body">
+                            <div class="row text-center">
+                                <div class="col-6">
+                                    <h4 class="text-primary">{{ total_users }}</h4>
+                                    <small class="text-muted">Total Users</small>
+                                </div>
+                                <div class="col-6">
+                                    <h4 class="text-success">{{ active_sessions }}</h4>
+                                    <small class="text-muted">Active Sessions</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-12 col-md-4">
+                    <div class="tech-quick-actions">
+                        <div class="tech-quick-actions-header">
+                            <h5 class="mb-0"><i class="bi bi-mortarboard me-2"></i>Student Statistics</h5>
+                        </div>
+                        <div class="tech-quick-actions-body">
+                            <div class="row text-center">
+                                <div class="col-12">
+                                    <h4 class="text-info">{{ total_students }}</h4>
+                                    <small class="text-muted">Total Students</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-12 col-md-4">
+                    <div class="tech-quick-actions">
+                        <div class="tech-quick-actions-header">
+                            <h5 class="mb-0"><i class="bi bi-person-badge me-2"></i>Staff Statistics</h5>
+                        </div>
+                        <div class="tech-quick-actions-body">
+                            <div class="row text-center">
+                                <div class="col-12">
+                                    <h4 class="text-warning">{{ total_teachers }}</h4>
+                                    <small class="text-muted">Total Teachers</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- System Status Info -->
+            <div class="row g-4">
+                <div class="col-12 col-md-6">
+                    <div class="tech-quick-actions">
+                        <div class="tech-quick-actions-header">
+                            <h5 class="mb-0"><i class="bi bi-shield-check me-2"></i>System Status</h5>
+                        </div>
+                        <div class="tech-quick-actions-body">
+                            <div class="row g-3">
+                                <div class="col-6">
+                                    <strong>Database:</strong>
+                                    <span class="badge bg-success ms-2">Online</span>
+                                </div>
+                                <div class="col-6">
+                                    <strong>Application:</strong>
+                                    <span class="badge bg-success ms-2">Running</span>
+                                </div>
+                                <div class="col-6">
+                                    <strong>Maintenance:</strong>
+                                    <span class="badge {% if is_maintenance_mode %}bg-warning{% else %}bg-success{% endif %} ms-2">
+                                        {% if is_maintenance_mode %}Active{% else %}Inactive{% endif %}
+                                    </span>
+                                </div>
+                                <div class="col-6">
+                                    <strong>Errors (24h):</strong>
+                                    <span class="badge {% if recent_errors > 10 %}bg-danger{% elif recent_errors > 5 %}bg-warning{% else %}bg-success{% endif %} ms-2">
+                                        {{ recent_errors }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-12 col-md-6">
+                    <div class="tech-quick-actions">
+                        <div class="tech-quick-actions-header">
+                            <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Activity & Network</h5>
+                        </div>
+                        <div class="tech-quick-actions-body">
+                            <div class="row g-3">
+                                <div class="col-6">
+                                    <strong>Activities (24h):</strong>
+                                    <span class="text-primary ms-2">{{ recent_activities }}</span>
+                                </div>
+                                <div class="col-6">
+                                    <strong>Open Bugs:</strong>
+                                    <span class="badge {% if open_bugs > 5 %}bg-danger{% elif open_bugs > 2 %}bg-warning{% else %}bg-success{% endif %} ms-2">
+                                        {{ open_bugs }} / {{ total_bugs }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Configuration Tab -->
+        <div class="tab-pane fade" id="config" role="tabpanel">
+            <div class="row g-4">
+                <div class="col-12 col-lg-8">
+                    <div class="tech-quick-actions">
+                        <div class="tech-quick-actions-header">
+                            <h5 class="mb-0"><i class="bi bi-sliders me-2"></i>System Configuration</h5>
+                        </div>
+                        <div class="tech-quick-actions-body">
+                            <form method="POST" action="{{ url_for('tech.update_system_config') }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                <div class="row g-3">
+                                    <div class="col-12 col-md-6">
+                                        <div class="mb-3">
+                                            <label for="debug_mode" class="form-label">Debug Mode</label>
+                                            <select class="form-select" id="debug_mode" name="debug_mode">
+                                                <option value="Development Server" {% if config.debug_mode == 'Development Server' %}selected{% endif %}>Development Server</option>
+                                                <option value="Production Server" {% if config.debug_mode == 'Production Server' %}selected{% endif %}>Production Server</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="max_upload_size" class="form-label">Max Upload Size</label>
+                                            <select class="form-select" id="max_upload_size" name="max_upload_size">
+                                                <option value="8 MB" {% if config.max_upload_size == '8 MB' %}selected{% endif %}>8 MB</option>
+                                                <option value="16 MB" {% if config.max_upload_size == '16 MB' %}selected{% endif %}>16 MB</option>
+                                                <option value="32 MB" {% if config.max_upload_size == '32 MB' %}selected{% endif %}>32 MB</option>
+                                                <option value="64 MB" {% if config.max_upload_size == '64 MB' %}selected{% endif %}>64 MB</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="session_timeout" class="form-label">Session Timeout</label>
+                                            <select class="form-select" id="session_timeout" name="session_timeout">
+                                                <option value="1 hour" {% if config.session_timeout == '1 hour' %}selected{% endif %}>1 hour</option>
+                                                <option value="4 hours" {% if config.session_timeout == '4 hours' %}selected{% endif %}>4 hours</option>
+                                                <option value="8 hours" {% if config.session_timeout == '8 hours' %}selected{% endif %}>8 hours</option>
+                                                <option value="24 hours" {% if config.session_timeout == '24 hours' %}selected{% endif %}>24 hours</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <div class="mb-3">
+                                            <label for="backup_location" class="form-label">Backup Location</label>
+                                            <input type="text" class="form-control" id="backup_location" name="backup_location" value="{{ config.backup_location }}">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="log_level" class="form-label">Log Level</label>
+                                            <select class="form-select" id="log_level" name="log_level">
+                                                <option value="DEBUG" {% if config.log_level == 'DEBUG' %}selected{% endif %}>DEBUG</option>
+                                                <option value="INFO" {% if config.log_level == 'INFO' %}selected{% endif %}>INFO</option>
+                                                <option value="WARNING" {% if config.log_level == 'WARNING' %}selected{% endif %}>WARNING</option>
+                                                <option value="ERROR" {% if config.log_level == 'ERROR' %}selected{% endif %}>ERROR</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="database_path" class="form-label">Database Path</label>
+                                            <input type="text" class="form-control" id="database_path" name="database_path" value="{{ config.database_path }}" readonly>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-end mt-3">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-save me-1"></i>Save Configuration
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-lg-4">
+                    <div class="tech-quick-actions">
+                        <div class="tech-quick-actions-header">
+                            <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>System Information</h5>
+                        </div>
+                        <div class="tech-quick-actions-body">
+                            <div class="mb-3">
+                                <strong>Python Version:</strong>
+                                <span class="badge bg-info ms-2">{{ system_info.python_version }}</span>
+                            </div>
+                            <div class="mb-3">
+                                <strong>Flask Version:</strong>
+                                <span class="badge bg-info ms-2">{{ system_info.flask_version }}</span>
+                            </div>
+                            <div class="mb-3">
+                                <strong>Database:</strong>
+                                <span class="badge bg-success ms-2">{{ system_info.database }}</span>
+                            </div>
+                            <div class="mb-3">
+                                <strong>Server:</strong>
+                                <span class="badge {% if system_info.server == 'Development' %}bg-warning{% else %}bg-success{% endif %} ms-2">{{ system_info.server }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="tech-quick-actions mt-4">
+                        <div class="tech-quick-actions-header">
+                            <h5 class="mb-0"><i class="bi bi-lightning me-2"></i>Quick Actions</h5>
+                        </div>
+                        <div class="tech-quick-actions-body">
+                            <div class="d-grid gap-2">
+                                <form method="POST" action="{{ url_for('tech.restart_server') }}" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <button type="submit" class="tech-action-link w-100 text-start" onclick="return confirm('Are you sure you want to restart the server?')">
+                                        <i class="bi bi-arrow-clockwise me-2"></i>Restart Server
+                                    </button>
+                                </form>
+                                <a href="{{ url_for('tech.view_system_logs') }}" class="tech-action-link">
+                                    <i class="bi bi-file-text me-2"></i>View Logs
+                                </a>
+                                <form method="POST" action="{{ url_for('tech.clear_cache') }}" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <button type="submit" class="tech-action-link w-100 text-start" onclick="return confirm('Clear all caches?')">
+                                        <i class="bi bi-trash me-2"></i>Clear Cache
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Maintenance Tab -->
+        <div class="tab-pane fade" id="maintenance" role="tabpanel">
+            {% if maintenance %}
+            <div class="alert alert-warning tech-maintenance-alert mb-4">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-exclamation-triangle-fill me-3 fs-4"></i>
+                    <div class="flex-grow-1">
+                        <h5 class="mb-1">Maintenance Mode Active</h5>
+                        <p class="mb-1"><strong>Start:</strong> {{ maintenance.start_time.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                        <p class="mb-1"><strong>End:</strong> {{ maintenance.end_time.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                        <p class="mb-1"><strong>Reason:</strong> {{ maintenance.reason }}</p>
+                        <p class="mb-0"><strong>Message:</strong> {{ maintenance.maintenance_message }}</p>
+                    </div>
+                    <form method="POST" action="{{ url_for('tech.stop_maintenance') }}" class="d-inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <button type="submit" class="btn btn-success" onclick="return confirm('Stop maintenance mode?')">
+                            <i class="bi bi-play-circle me-1"></i>Stop Maintenance
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+            
+            <div class="row g-4">
+                <div class="col-12 col-lg-8">
+                    <div class="tech-quick-actions">
+                        <div class="tech-quick-actions-header">
+                            <h5 class="mb-0"><i class="bi bi-tools me-2"></i>Start Maintenance Mode</h5>
+                        </div>
+                        <div class="tech-quick-actions-body">
+                            <form method="POST" action="{{ url_for('tech.start_maintenance') }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                <div class="row g-3">
+                                    <div class="col-12 col-md-6">
+                                        <div class="mb-3">
+                                            <label for="duration_type" class="form-label">Maintenance Duration</label>
+                                            <select class="form-select" id="duration_type" name="duration_type" required onchange="toggleCustomDuration()">
+                                                <option value="30">30 minutes</option>
+                                                <option value="60" selected>1 hour</option>
+                                                <option value="120">2 hours</option>
+                                                <option value="240">4 hours</option>
+                                                <option value="480">8 hours</option>
+                                                <option value="1440">24 hours</option>
+                                                <option value="4320">3 days</option>
+                                                <option value="7200">5 days</option>
+                                                <option value="custom">Custom (max 7 days)</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3" id="custom_duration_group" style="display: none;">
+                                            <label for="custom_duration" class="form-label">Custom Duration (hours)</label>
+                                            <input type="number" class="form-control" id="custom_duration" name="custom_duration" min="1" max="168">
+                                            <div class="form-text">Maximum 168 hours (7 days)</div>
+                                        </div>
+                                        <input type="hidden" id="duration_minutes" name="duration_minutes" value="60">
+                                        <div class="mb-3">
+                                            <label for="reason" class="form-label">Reason</label>
+                                            <select class="form-select" id="reason" name="reason" required>
+                                                <option value="Scheduled maintenance">Scheduled maintenance</option>
+                                                <option value="System updates">System updates</option>
+                                                <option value="Database maintenance">Database maintenance</option>
+                                                <option value="Security updates">Security updates</option>
+                                                <option value="Emergency maintenance">Emergency maintenance</option>
+                                                <option value="Other">Other</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <div class="mb-3">
+                                            <label for="maintenance_message" class="form-label">Message to Display</label>
+                                            <textarea class="form-control" id="maintenance_message" name="maintenance_message" rows="5" required>System is under maintenance. Please check back later.</textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-end mt-3">
+                                    <button type="submit" class="btn btn-warning" onclick="return confirm('Start maintenance mode?')">
+                                        <i class="bi bi-tools me-1"></i>Start Maintenance Mode
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-lg-4">
+                    <div class="tech-quick-actions">
+                        <div class="tech-quick-actions-header">
+                            <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Maintenance Info</h5>
+                        </div>
+                        <div class="tech-quick-actions-body">
+                            <div class="alert alert-info">
+                                <h6><i class="bi bi-info-circle"></i> What happens?</h6>
+                                <ul class="mb-0 small">
+                                    <li>Home page remains accessible</li>
+                                    <li>Login disabled for regular users</li>
+                                    <li><strong>Tech users always have access</strong></li>
+                                    <li>Maintenance message displayed</li>
+                                    <li>Auto-end based on duration</li>
+                                    <li>Maximum: 7 days</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function refreshData() {
+    location.reload();
+}
+
+function toggleCustomDuration() {
+    const durationType = document.getElementById('duration_type');
+    const customDurationGroup = document.getElementById('custom_duration_group');
+    const durationMinutes = document.getElementById('duration_minutes');
+    const customDuration = document.getElementById('custom_duration');
+    
+    if (durationType.value === 'custom') {
+        customDurationGroup.style.display = 'block';
+        customDuration.required = true;
+    } else {
+        customDurationGroup.style.display = 'none';
+        customDuration.required = false;
+        durationMinutes.value = durationType.value;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const durationType = document.getElementById('duration_type');
+    const customDuration = document.getElementById('custom_duration');
+    
+    if (durationType) {
+        durationType.addEventListener('change', toggleCustomDuration);
+    }
+    
+    if (customDuration) {
+        customDuration.addEventListener('input', function() {
+            const hours = parseInt(this.value);
+            if (hours && hours > 0 && hours <= 168) {
+                document.getElementById('duration_minutes').value = hours * 60;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
+
+
+
+
+
+
+

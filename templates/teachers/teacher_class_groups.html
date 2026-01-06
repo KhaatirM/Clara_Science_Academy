@@ -13,7 +13,7 @@
         <div class="col-12">
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{{ url_for('management.view_class', class_id=class_obj.id) }}" class="text-decoration-none"><i class="bi bi-arrow-left me-1"></i>Back to Class</a></li>
+                    <li class="breadcrumb-item"><a href="{% if role_prefix %}{{ url_for('management.view_class', class_id=class_obj.id) }}{% else %}{{ url_for('teacher.dashboard.view_class', class_id=class_obj.id) }}{% endif %}" class="text-decoration-none"><i class="bi bi-arrow-left me-1"></i>Back to Class</a></li>
                     <li class="breadcrumb-item active">Manage Groups</li>
                 </ol>
             </nav>
@@ -117,10 +117,12 @@
                                         <i class="bi bi-star-fill me-1"></i>Leader
                                     </span>
                                     {% else %}
-                                    <form method="POST" action="{{ url_for('management.admin_manage_group', group_id=group.id) }}" 
+                                    <form method="POST" action="{% if role_prefix %}{{ url_for('management.admin_manage_group', group_id=group.id) }}{% else %}{{ url_for('teacher.groups.set_leader', group_id=group.id) }}{% endif %}" 
                                           style="display: inline;" 
                                           class="ms-2">
+                                        {% if role_prefix %}
                                         <input type="hidden" name="action" value="set_leader">
+                                        {% endif %}
                                         <input type="hidden" name="student_id" value="{{ member.id }}">
                                         <button type="submit" class="btn btn-sm btn-outline-warning" 
                                                 title="Set as Group Leader"
@@ -130,11 +132,13 @@
                                     </form>
                                     {% endif %}
                                 </div>
-                                <form method="POST" action="{{ url_for('management.admin_manage_group', group_id=group.id) }}" 
+                                <form method="POST" action="{% if role_prefix %}{{ url_for('management.admin_manage_group', group_id=group.id) }}{% else %}{{ url_for('teacher.groups.remove_member', group_id=group.id, student_id=member.id) }}{% endif %}" 
                                       style="display: inline;" 
                                       onsubmit="return confirm('Remove {{ member.first_name }} from the group?');">
+                                    {% if role_prefix %}
                                     <input type="hidden" name="action" value="remove_student">
                                     <input type="hidden" name="student_id" value="{{ member.id }}">
+                                    {% endif %}
                                     <button type="submit" class="btn-remove-member">
                                         <i class="bi bi-x-lg"></i>
                                     </button>
@@ -162,7 +166,7 @@
                                 data-bs-target="#editGroupModal{{ group.id }}">
                             <i class="bi bi-pencil me-2"></i>Edit
                         </button>
-                        <form method="POST" action="{{ url_for('management.admin_delete_group', group_id=group.id) }}" 
+                        <form method="POST" action="{% if role_prefix %}{{ url_for('management.admin_delete_group', group_id=group.id) }}{% else %}{{ url_for('teacher.groups.delete_group', group_id=group.id) }}{% endif %}" 
                               onsubmit="return confirm('Are you sure you want to delete {{ group.name }}?');"
                               style="flex: 1;">
                             <button type="submit" class="btn-action btn-action-delete w-100">
@@ -182,8 +186,10 @@
                         <h5 class="modal-title">Add Members to {{ group.name }}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
-                    <form method="POST" action="{{ url_for('management.admin_manage_group', group_id=group.id) }}">
+                    <form method="POST" action="{% if role_prefix %}{{ url_for('management.admin_manage_group', group_id=group.id) }}{% else %}{{ url_for('teacher.groups.add_member', group_id=group.id) }}{% endif %}">
+                        {% if role_prefix %}
                         <input type="hidden" name="action" value="add_student">
+                        {% endif %}
                         <div class="modal-body">
                             <div class="mb-3">
                                 <label class="form-label">Select Students (You can select multiple)</label>
@@ -247,8 +253,10 @@
                         <h5 class="modal-title">Edit Group: {{ group.name }}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
-                    <form method="POST" action="{{ url_for('management.admin_manage_group', group_id=group.id) }}">
+                    <form method="POST" action="{% if role_prefix %}{{ url_for('management.admin_manage_group', group_id=group.id) }}{% else %}{{ url_for('teacher.groups.edit_group', group_id=group.id) }}{% endif %}">
+                        {% if role_prefix %}
                         <input type="hidden" name="action" value="edit_group">
+                        {% endif %}
                         <div class="modal-body">
                             <div class="mb-3">
                                 <label for="edit_name{{ group.id }}" class="form-label">Group Name <span class="text-danger">*</span></label>
@@ -301,7 +309,7 @@
                 <h5 class="modal-title">Create New Group</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" action="{{ url_for('management.admin_create_student_group', class_id=class_obj.id) }}">
+            <form method="POST" action="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.admin_create_student_group', class_id=class_obj.id) }}{% else %}{{ url_for('teacher.groups.create_group', class_id=class_obj.id) }}{% endif %}">
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="name" class="form-label">Group Name <span class="text-danger">*</span></label>

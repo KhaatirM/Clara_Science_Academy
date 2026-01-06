@@ -25,7 +25,7 @@ def grade_assignment(assignment_id):
     # Check authorization for this assignment's class
     if not is_authorized_for_class(assignment.class_info):
         flash("You are not authorized to grade this assignment.", "danger")
-        return redirect(url_for('teacher.dashboard.my_assignments'))
+        return redirect(url_for('teacher.dashboard.assignments_and_grades'))
     
     if request.method == 'POST':
         # Handle quiz per-question grading or regular assignment grading
@@ -277,8 +277,48 @@ def grade_assignment(assignment_id):
             ).all()
             quiz_answers_by_student[student.id] = {answer.question_id: answer for answer in answers}
     
-    # Use specialized quiz grading template if it's a quiz with open-ended questions, otherwise use regular template
-    template_name = 'teachers/teacher_grade_quiz.html' if (assignment.assignment_type == 'quiz' and has_open_ended_questions) else 'teachers/teacher_grade_assignment.html'
+    # For discussion assignments, get threads and posts
+    discussion_threads_by_student = {}
+    discussion_posts_by_student = {}
+    min_initial_posts = 1
+    min_replies = 2
+    
+    if assignment.assignment_type == 'discussion':
+        from models import DiscussionThread, DiscussionPost
+        import re
+        
+        # Extract participation requirements from assignment description
+        if assignment.description:
+            initial_posts_match = re.search(r'Minimum (\d+) initial post', assignment.description)
+            if initial_posts_match:
+                min_initial_posts = int(initial_posts_match.group(1))
+            replies_match = re.search(r'Minimum (\d+) reply/replies', assignment.description)
+            if replies_match:
+                min_replies = int(replies_match.group(1))
+        
+        # Get all threads and posts for this assignment
+        all_threads = DiscussionThread.query.filter_by(assignment_id=assignment_id).all()
+        all_posts = DiscussionPost.query.filter(
+            DiscussionPost.thread_id.in_([t.id for t in all_threads])
+        ).all()
+        
+        # Organize by student
+        for student in students:
+            # Count threads created by this student
+            student_threads = [t for t in all_threads if t.student_id == student.id]
+            discussion_threads_by_student[student.id] = student_threads
+            
+            # Count replies by this student
+            student_posts = [p for p in all_posts if p.student_id == student.id]
+            discussion_posts_by_student[student.id] = student_posts
+    
+    # Use specialized template based on assignment type
+    if assignment.assignment_type == 'discussion':
+        template_name = 'management/grade_discussion_assignment.html'
+    elif assignment.assignment_type == 'quiz' and has_open_ended_questions:
+        template_name = 'teachers/teacher_grade_quiz.html'
+    else:
+        template_name = 'teachers/teacher_grade_assignment.html'
     
     return render_template(template_name, 
                          assignment=assignment,
@@ -287,9 +327,14 @@ def grade_assignment(assignment_id):
                          grades=grades_dict,
                          submissions=submissions_dict,
                          extensions=extensions_dict,
+                         role_prefix='teacher',
                          total_points=assignment_total_points,
                          quiz_questions=quiz_questions,
-                         quiz_answers_by_student=quiz_answers_by_student)
+                         quiz_answers_by_student=quiz_answers_by_student,
+                         discussion_threads_by_student=discussion_threads_by_student,
+                         discussion_posts_by_student=discussion_posts_by_student,
+                         min_initial_posts=min_initial_posts,
+                         min_replies=min_replies)
 
 @bp.route('/grades/statistics/<int:assignment_id>')
 @login_required
@@ -301,7 +346,7 @@ def grade_statistics(assignment_id):
     # Check authorization
     if not is_authorized_for_class(assignment.class_info):
         flash("You are not authorized to view statistics for this assignment.", "danger")
-        return redirect(url_for('teacher.dashboard.my_assignments'))
+        return redirect(url_for('teacher.dashboard.assignments_and_grades'))
     
     # Get all grades for this assignment
     grades = Grade.query.filter_by(assignment_id=assignment_id, is_voided=False).all()
@@ -431,7 +476,7 @@ def grade_history(grade_id):
     # Check authorization
     if not is_authorized_for_class(assignment.class_info):
         flash("You are not authorized to view this grade history.", "danger")
-        return redirect(url_for('teacher.dashboard.my_assignments'))
+        return redirect(url_for('teacher.dashboard.assignments_and_grades'))
     
     # Get all history entries for this grade
     history_entries = GradeHistory.query.filter_by(grade_id=grade_id).order_by(GradeHistory.changed_at.desc()).all()

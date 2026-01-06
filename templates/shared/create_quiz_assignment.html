@@ -94,6 +94,29 @@
                                 </select>
                             </div>
                         </div>
+                        
+                        <!-- Assignment Availability Section -->
+                        <div class="row g-3 mt-3">
+                            <div class="col-12">
+                                <h6 class="fw-semibold text-muted mb-3">
+                                    <i class="bi bi-clock-history me-2"></i>Assignment Availability
+                                </h6>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="open_date" class="form-label fw-semibold">
+                                    <i class="bi bi-unlock me-1 text-success"></i>Open Date & Time
+                                </label>
+                                <input type="datetime-local" class="form-control form-control-lg" id="open_date" name="open_date">
+                                <div class="form-text">When students can start this quiz (leave empty for immediate availability)</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="close_date" class="form-label fw-semibold">
+                                    <i class="bi bi-lock me-1 text-danger"></i>Close Date & Time
+                                </label>
+                                <input type="datetime-local" class="form-control form-control-lg" id="close_date" name="close_date">
+                                <div class="form-text">When this quiz closes (leave empty to close at due date)</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -563,6 +586,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Show the appropriate options for the default question type
         const questionType = actualQuestionElement.querySelector('.question-type');
+        // Initialize with the default question type (multiple_choice)
         toggleQuestionOptions(actualQuestionElement, questionType.value);
         
         updateQuizPreview();
@@ -681,9 +705,15 @@ document.addEventListener('DOMContentLoaded', function() {
             // Remove required from option text inputs when hidden
             const optionInputs = multipleChoice.querySelectorAll('input[name*="option_text"]');
             optionInputs.forEach(input => input.removeAttribute('required'));
+            // Remove required from radio buttons when hidden
+            const radioButtons = multipleChoice.querySelectorAll('input[type="radio"][name*="correct_answer"]');
+            radioButtons.forEach(radio => radio.removeAttribute('required'));
         }
         if (trueFalse) {
             trueFalse.style.display = 'none';
+            // Remove required from radio buttons when hidden
+            const radioButtons = trueFalse.querySelectorAll('input[type="radio"][name*="correct_answer"]');
+            radioButtons.forEach(radio => radio.removeAttribute('required'));
         }
         if (textAnswer) {
             textAnswer.style.display = 'none';
@@ -703,11 +733,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Add required back to option text inputs when visible
                     const optionInputs = multipleChoice.querySelectorAll('input[name*="option_text"]');
                     optionInputs.forEach(input => input.setAttribute('required', 'required'));
+                    // Add required back to radio buttons when visible (at least one must be selected)
+                    const radioButtons = multipleChoice.querySelectorAll('input[type="radio"][name*="correct_answer"]');
+                    radioButtons.forEach(radio => radio.setAttribute('required', 'required'));
                 }
                 break;
             case 'true_false':
                 if (trueFalse) {
                     trueFalse.style.display = 'block';
+                    // Add required back to radio buttons when visible
+                    const radioButtons = trueFalse.querySelectorAll('input[type="radio"][name*="correct_answer"]');
+                    radioButtons.forEach(radio => radio.setAttribute('required', 'required'));
                 }
                 break;
             case 'short_answer':
@@ -925,6 +961,15 @@ document.addEventListener('DOMContentLoaded', function() {
         const questions = questionsContainer.querySelectorAll('.question-item');
         console.log(`Found ${questions.length} questions`);
         
+        // Remove required attribute from all hidden radio buttons to prevent browser validation errors
+        questions.forEach(question => {
+            const hiddenContainers = question.querySelectorAll('.multiple-choice-options[style*="display: none"], .true-false-options[style*="display: none"]');
+            hiddenContainers.forEach(container => {
+                const hiddenRadios = container.querySelectorAll('input[type="radio"][name*="correct_answer"]');
+                hiddenRadios.forEach(radio => radio.removeAttribute('required'));
+            });
+        });
+        
         // Check if linking Google Form
         const linkGoogleForm = document.getElementById('link_google_form')?.checked;
         const googleFormUrl = document.getElementById('google_form_url')?.value?.trim();
@@ -945,15 +990,20 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Validate questions
         let isValid = true;
-        questions.forEach((question, index) => {
-            const questionText = question.querySelector('.question-text').value.trim();
+        let validationError = '';
+        
+        for (let index = 0; index < questions.length; index++) {
+            const question = questions[index];
+            const questionText = question.querySelector('.question-text')?.value.trim();
+            
             if (!questionText) {
                 isValid = false;
-                alert(`Question ${index + 1} needs text.`);
-                return;
+                validationError = `Question ${index + 1} needs text.`;
+                break;
             }
             
-            const questionType = question.querySelector('.question-type').value;
+            const questionType = question.querySelector('.question-type')?.value;
+            
             if (questionType === 'multiple_choice') {
                 const options = question.querySelectorAll('.options-container input[name*="option_text"]');
                 const hasValidOptions = Array.from(options).some(option => option.value.trim());
@@ -961,40 +1011,50 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 if (!hasValidOptions) {
                     isValid = false;
-                    alert(`Question ${index + 1}: Please provide at least one option text.`);
-                    return;
+                    validationError = `Question ${index + 1}: Please provide at least one option text.`;
+                    break;
                 }
                 
                 if (!hasCorrectAnswer) {
                     isValid = false;
-                    alert(`Question ${index + 1}: Please select the correct answer.`);
-                    return;
+                    validationError = `Question ${index + 1}: Please select the correct answer.`;
+                    break;
                 }
             } else if (questionType === 'true_false') {
                 const hasCorrectAnswer = question.querySelector('input[name*="correct_answer"]:checked');
                 if (!hasCorrectAnswer) {
                     isValid = false;
-                    alert(`Question ${index + 1}: Please select True or False as the correct answer.`);
-                    return;
+                    validationError = `Question ${index + 1}: Please select True or False as the correct answer.`;
+                    break;
                 }
             }
-        });
+            // short_answer and essay questions don't need correct answers, so we skip validation for those
+        }
         
         if (!isValid) {
             e.preventDefault();
-            console.log('Form validation failed');
+            console.log('Form validation failed:', validationError);
+            if (validationError) {
+                alert(validationError);
+            }
             return;
         }
         
         console.log('Form validation passed, submitting...');
         // Show loading state
         const submitBtn = document.getElementById('createQuizBtn');
-        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Creating Quiz...';
-        submitBtn.disabled = true;
-        submitBtn.style.opacity = '0.7';
-        submitBtn.style.cursor = 'not-allowed';
+        if (submitBtn) {
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Creating Quiz...';
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = '0.7';
+            submitBtn.style.cursor = 'not-allowed';
+        }
+        
+        // Allow form to submit naturally
+        // Form will submit to the backend route
     });
 });
 </script>
 {% endblock %}
+
 

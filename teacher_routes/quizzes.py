@@ -33,6 +33,38 @@ def create_quiz_assignment():
         try:
             due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
             
+            # Parse open_date and close_date if provided
+            open_date_str = request.form.get('open_date', '').strip()
+            close_date_str = request.form.get('close_date', '').strip()
+            open_date = None
+            close_date = None
+            
+            if open_date_str:
+                try:
+                    open_date = datetime.strptime(open_date_str, '%Y-%m-%dT%H:%M')
+                except ValueError:
+                    pass
+            
+            if close_date_str:
+                try:
+                    close_date = datetime.strptime(close_date_str, '%Y-%m-%dT%H:%M')
+                except ValueError:
+                    pass
+            
+            # If close_date not provided, default to due_date
+            if not close_date:
+                close_date = due_date
+            
+            # Calculate status based on dates
+            from teacher_routes.assignment_utils import calculate_assignment_status
+            temp_assignment = type('obj', (object,), {
+                'status': 'Active',
+                'open_date': open_date,
+                'close_date': close_date,
+                'due_date': due_date
+            })
+            calculated_status = calculate_assignment_status(temp_assignment)
+            
             # Get the active school year
             current_school_year = SchoolYear.query.filter_by(is_active=True).first()
             if not current_school_year:
@@ -45,17 +77,19 @@ def create_quiz_assignment():
                 flash("You are not authorized to create assignments for this class.", "danger")
                 return redirect(url_for('teacher.create_quiz_assignment'))
             
-            # Create the quiz assignment
+            # Create the quiz assignment (total_points will be calculated from questions)
             new_assignment = Assignment(
                 title=title,
                 description=description,
                 due_date=due_date,
-                points=100,  # Will be calculated from questions
+                open_date=open_date,
+                close_date=close_date,
+                total_points=100.0,  # Will be calculated from questions
                 quarter=quarter,
                 class_id=class_id,
                 school_year_id=current_school_year.id,
                 assignment_type='quiz',
-                status='Active',
+                status=calculated_status,
                 created_by=current_user.id
             )
             
@@ -127,13 +161,13 @@ def create_quiz_assignment():
                     
                     question_count += 1
             
-            # Update assignment points to total from questions
-            new_assignment.points = total_points
+            # Update assignment total_points to total from questions
+            new_assignment.total_points = total_points if total_points > 0 else 100.0
             
             print(f"DEBUG: Successfully processed {question_count} questions")
             db.session.commit()
             flash('Quiz assignment created successfully!', 'success')
-            return redirect(url_for('teacher.dashboard.my_assignments'))
+            return redirect(url_for('teacher.dashboard.assignments_and_grades'))
             
         except Exception as e:
             db.session.rollback()
@@ -162,44 +196,122 @@ def create_quiz_assignment():
 @teacher_required
 def create_discussion_assignment():
     """Create a discussion assignment"""
+    from teacher_routes.assignment_utils import calculate_assignment_status
+    from .utils import get_teacher_or_admin, is_authorized_for_class
+    from datetime import timezone
+    
+    # Get classes for dropdown
+    teacher = get_teacher_or_admin()
+    if teacher:
+        classes = Class.query.filter_by(teacher_id=teacher.id, is_active=True).order_by(Class.name).all()
+    else:
+        classes = []
+    
+    # Check if coming from a specific class
+    class_id_param = request.args.get('class_id', type=int)
+    class_obj = None
+    if class_id_param:
+        class_obj = Class.query.get(class_id_param)
+        if class_obj and not is_authorized_for_class(class_obj):
+            flash("You are not authorized to access this class.", "danger")
+            return redirect(url_for('teacher.dashboard.assignments_and_grades'))
+    
     if request.method == 'POST':
         # Handle discussion assignment creation
-        title = request.form.get('title')
+        title = request.form.get('title', '').strip()
         class_id = request.form.get('class_id', type=int)
-        description = request.form.get('description', '')
-        due_date_str = request.form.get('due_date')
-        quarter = request.form.get('quarter')
+        discussion_prompt = request.form.get('discussion_prompt', '').strip()
+        description = request.form.get('description', '').strip()
+        due_date_str = request.form.get('due_date', '').strip()
+        quarter = request.form.get('quarter', '').strip()
+        total_points = request.form.get('total_points', type=float) or 100.0
+        assignment_context = request.form.get('assignment_context', 'homework')
         
-        if not all([title, class_id, due_date_str, quarter]):
+        # Participation requirements
+        min_initial_posts = request.form.get('min_initial_posts', type=int) or 1
+        min_replies = request.form.get('min_replies', type=int) or 2
+        require_peer_response = request.form.get('require_peer_response') == 'on'
+        allow_student_threads = request.form.get('allow_student_threads') == 'on'
+        
+        # Rubric (optional)
+        use_rubric = request.form.get('use_rubric') == 'on'
+        rubric_criteria = request.form.get('rubric_criteria', '').strip() if use_rubric else None
+        
+        # Open/close dates
+        open_date_str = request.form.get('open_date', '').strip()
+        close_date_str = request.form.get('close_date', '').strip()
+        
+        if not all([title, class_id, discussion_prompt, due_date_str, quarter]):
             flash("Please fill in all required fields.", "danger")
-            return redirect(url_for('teacher.create_discussion_assignment'))
+            return render_template('shared/create_discussion_assignment.html', classes=classes, class_obj=class_obj)
+        
+        # Check authorization
+        class_obj = Class.query.get(class_id)
+        if not class_obj or not is_authorized_for_class(class_obj):
+            flash("You are not authorized to create assignments for this class.", "danger")
+            return render_template('shared/create_discussion_assignment.html', classes=classes, class_obj=None)
         
         try:
             due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
+            due_date = due_date.replace(tzinfo=timezone.utc)  # Make due_date timezone-aware
+            open_date = None
+            close_date = None
+            
+            if open_date_str:
+                try:
+                    open_date = datetime.strptime(open_date_str, '%Y-%m-%dT%H:%M')
+                    open_date = open_date.replace(tzinfo=timezone.utc)
+                except ValueError:
+                    pass
+            
+            if close_date_str:
+                try:
+                    close_date = datetime.strptime(close_date_str, '%Y-%m-%dT%H:%M')
+                    close_date = close_date.replace(tzinfo=timezone.utc)
+                except ValueError:
+                    pass
+            
+            # If close_date not provided, default to due_date
+            if not close_date:
+                close_date = due_date
             
             # Get the active school year
             current_school_year = SchoolYear.query.filter_by(is_active=True).first()
             if not current_school_year:
                 flash("Cannot create assignment: No active school year.", "danger")
-                return redirect(url_for('teacher.create_discussion_assignment'))
+                return render_template('shared/create_discussion_assignment.html', classes=classes, class_obj=class_obj)
             
-            # Check if user is authorized for this class
-            class_obj = Class.query.get(class_id)
-            if not is_authorized_for_class(class_obj):
-                flash("You are not authorized to create assignments for this class.", "danger")
-                return redirect(url_for('teacher.create_discussion_assignment'))
+            # Build description with prompt and instructions
+            full_description = f"**Discussion Prompt:**\n{discussion_prompt}\n\n"
+            if description:
+                full_description += f"**Instructions:**\n{description}\n\n"
+            if rubric_criteria:
+                full_description += f"**Rubric:**\n{rubric_criteria}\n\n"
+            full_description += f"**Participation Requirements:**\n- Minimum {min_initial_posts} initial post(s)\n- Minimum {min_replies} reply/replies to classmates"
+            
+            # Calculate status based on dates
+            temp_assignment = type('obj', (object,), {
+                'status': 'Active',
+                'open_date': open_date,
+                'close_date': close_date,
+                'due_date': due_date
+            })
+            calculated_status = calculate_assignment_status(temp_assignment)
             
             # Create the discussion assignment
             new_assignment = Assignment(
                 title=title,
-                description=description,
+                description=full_description,
                 due_date=due_date,
-                points=100,  # Default points for discussion
-                quarter=quarter,
+                open_date=open_date,
+                close_date=close_date,
+                quarter=str(quarter),
                 class_id=class_id,
                 school_year_id=current_school_year.id,
                 assignment_type='discussion',
-                status='Active',
+                status=calculated_status,
+                assignment_context=assignment_context,
+                total_points=total_points,
                 created_by=current_user.id
             )
             
@@ -207,7 +319,7 @@ def create_discussion_assignment():
             db.session.commit()
             
             flash('Discussion assignment created successfully!', 'success')
-            return redirect(url_for('teacher.dashboard.my_assignments'))
+            return redirect(url_for('teacher.dashboard.assignments_and_grades'))
             
         except Exception as e:
             db.session.rollback()

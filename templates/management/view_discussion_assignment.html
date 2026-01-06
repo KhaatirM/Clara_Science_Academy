@@ -1,0 +1,703 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/view_assignment.css') }}">
+<style>
+    .discussion-header {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+    }
+    
+    .participant-card {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .participant-card:hover {
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+    
+    .thread-card {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .thread-card:hover {
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    
+    .thread-card.pinned {
+        border-left: 4px solid #ffc107;
+        background: #fff9e6;
+    }
+    
+    .compact-action-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 1rem;
+    }
+    
+    .btn-compact {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        border-radius: 10px;
+        border: 2px solid;
+        background: white;
+        color: #212529;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        min-height: 100px;
+    }
+    
+    .btn-compact i {
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .btn-compact:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .btn-compact-edit {
+        border-color: #0d6efd;
+        color: #0d6efd;
+    }
+    
+    .btn-compact-edit:hover {
+        background: #0d6efd;
+        color: white;
+    }
+    
+    .btn-compact-grade {
+        border-color: #198754;
+        color: #198754;
+    }
+    
+    .btn-compact-grade:hover {
+        background: #198754;
+        color: white;
+    }
+    
+    .btn-compact-extension {
+        border-color: #ffc107;
+        color: #ffc107;
+    }
+    
+    .btn-compact-extension:hover {
+        background: #ffc107;
+        color: #212529;
+    }
+    
+    .btn-compact-void {
+        border-color: #dc3545;
+        color: #dc3545;
+    }
+    
+    .btn-compact-void:hover {
+        background: #dc3545;
+        color: white;
+    }
+    
+    .btn-compact-status {
+        border-color: #6c757d;
+        color: #6c757d;
+    }
+    
+    .btn-compact-status:hover {
+        background: #6c757d;
+        color: white;
+    }
+    
+    .btn-compact-remove {
+        border-color: #dc3545;
+        color: #dc3545;
+    }
+    
+    .btn-compact-remove:hover {
+        background: #dc3545;
+        color: white;
+    }
+    
+    .btn-compact-back {
+        border-color: #6c757d;
+        color: #6c757d;
+    }
+    
+    .btn-compact-back:hover {
+        background: #6c757d;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+    <!-- Header Section -->
+    <div class="discussion-header">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+            <div>
+                <h2 class="mb-2">
+                    <i class="bi bi-chat-dots me-2"></i>{{ assignment.title }}
+                </h2>
+                <div class="assignment-header-meta">
+                    <span class="meta-badge meta-class">
+                        <i class="bi bi-book me-1"></i>{{ class_info.name if class_info else 'Unknown Class' }}
+                    </span>
+                    <span class="meta-badge meta-teacher">
+                        <i class="bi bi-person me-1"></i>{{ teacher.first_name if teacher else 'Unknown' }} {{ teacher.last_name if teacher else '' }}
+                    </span>
+                    <span class="badge bg-light text-dark ms-2">
+                        <i class="bi bi-calendar me-1"></i>Due: {{ assignment.due_date.strftime('%B %d, %Y at %I:%M %p') if assignment.due_date else 'No due date' }}
+                    </span>
+                </div>
+            </div>
+            <div>
+                <span class="view-status-badge badge-{{ assignment.status.lower() if assignment.status else 'active' }}">
+                    {{ assignment.status.upper() if assignment.status else 'ACTIVE' }}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions Section -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+            <h5 class="mb-3"><i class="bi bi-lightning-fill me-2"></i>Quick Actions</h5>
+            <div class="compact-action-grid">
+                {% if current_user.role in ['Director', 'School Administrator'] %}
+                <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" 
+                   class="btn btn-compact btn-compact-edit">
+                    <i class="bi bi-pencil-square"></i>
+                    <span>Edit</span>
+                </a>
+                {% endif %}
+                
+                <a href="{{ url_for('management.grade_assignment', assignment_id=assignment.id) }}" 
+                   class="btn btn-compact btn-compact-grade">
+                    <i class="bi bi-check-circle-fill"></i>
+                    <span>Grade</span>
+                </a>
+                
+                {% if current_user.role in ['Director', 'School Administrator'] %}
+                <a href="{{ url_for('management.admin_grant_extensions', assignment_id=assignment.id) }}" 
+                   class="btn btn-compact btn-compact-extension">
+                    <i class="bi bi-clock-history"></i>
+                    <span>Extensions</span>
+                </a>
+                
+                {% set has_voided_grades = assignment.grades|selectattr('is_voided', 'equalto', True)|list|length > 0 if assignment.grades else False %}
+                {% if has_voided_grades %}
+                <button class="btn btn-compact btn-compact-unvoid" 
+                        data-bs-toggle="modal" 
+                        data-bs-target="#unvoidModal">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                    <span>Unvoid</span>
+                </button>
+                {% endif %}
+                
+                <button class="btn btn-compact btn-compact-void" 
+                        data-bs-toggle="modal" 
+                        data-bs-target="#voidModal"
+                        onclick="openVoidModal({{ assignment.id }}, '{{ assignment.title }}', 'individual', {{ assignment.class_id }})">
+                    <i class="bi bi-slash-circle"></i>
+                    <span>Void</span>
+                </button>
+                
+                <button class="btn btn-compact btn-compact-status" 
+                        data-bs-toggle="modal" 
+                        data-bs-target="#statusChangeModal"
+                        onclick="openStatusChangeModal({{ assignment.id }}, '{{ assignment.status }}')">
+                    <i class="bi bi-gear"></i>
+                    <span>Status</span>
+                </button>
+                
+                <button class="btn btn-compact btn-compact-remove" 
+                        data-bs-toggle="modal" 
+                        data-bs-target="#deleteAssignmentModal"
+                        onclick="openDeleteModal('{{ assignment.title }}', {{ assignment.id }})">
+                    <i class="bi bi-trash"></i>
+                    <span>Remove</span>
+                </button>
+                {% endif %}
+                
+                <button onclick="goBack()" class="btn btn-compact btn-compact-back">
+                    <i class="bi bi-arrow-left-circle"></i>
+                    <span>Back</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 g-md-4">
+        <!-- Left Column: Participants -->
+        <div class="col-12 col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-people-fill me-2"></i>Participants
+                        <span class="badge bg-light text-dark ms-2">{{ participants|length }}</span>
+                    </h5>
+                </div>
+                <div class="card-body" style="max-height: 600px; overflow-y: auto;">
+                    {% if participants %}
+                        {% for participant in participants %}
+                        <div class="participant-card">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <h6 class="mb-1">
+                                        <i class="bi bi-person-circle me-1"></i>
+                                        {{ participant.student.first_name }} {{ participant.student.last_name }}
+                                    </h6>
+                                    <small class="text-muted">
+                                        Grade {{ participant.student.grade_level }}
+                                    </small>
+                                </div>
+                                {% if participant.student.id in grades %}
+                                <span class="badge bg-success">
+                                    <i class="bi bi-check-circle me-1"></i>Graded
+                                </span>
+                                {% else %}
+                                <span class="badge bg-warning">
+                                    <i class="bi bi-hourglass me-1"></i>Pending
+                                </span>
+                                {% endif %}
+                            </div>
+                            <div class="d-flex gap-3">
+                                <small class="text-muted">
+                                    <i class="bi bi-chat-left-text me-1"></i>{{ participant.threads }} thread{{ 's' if participant.threads != 1 else '' }}
+                                </small>
+                                <small class="text-muted">
+                                    <i class="bi bi-reply me-1"></i>{{ participant.replies }} repl{{ 'ies' if participant.replies != 1 else 'y' }}
+                                </small>
+                                <small class="text-muted">
+                                    <i class="bi bi-file-text me-1"></i>{{ participant.total_posts }} total
+                                </small>
+                            </div>
+                            <div class="mt-2">
+                                {% set student_threads = participant.threads %}
+                                {% set student_replies = participant.replies %}
+                                {% if student_threads >= min_initial_posts and student_replies >= min_replies %}
+                                    <span class="badge bg-success">Requirements Met</span>
+                                {% else %}
+                                    <span class="badge bg-warning">
+                                        Needs {{ min_initial_posts - student_threads if student_threads < min_initial_posts else 0 }} more thread{{ 's' if (min_initial_posts - student_threads) != 1 else '' }}, 
+                                        {{ min_replies - student_replies if student_replies < min_replies else 0 }} more repl{{ 'ies' if (min_replies - student_replies) != 1 else 'y' }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="bi bi-people display-4 text-muted mb-3"></i>
+                            <p class="text-muted">No participants yet</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Discussion Threads -->
+        <div class="col-12 col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-chat-square-text me-2"></i>Discussion Threads
+                        <span class="badge bg-light text-dark ms-2">{{ threads|length }}</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if threads %}
+                        {% for thread in threads %}
+                        <div class="thread-card {% if thread.is_pinned %}pinned{% endif %}">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">
+                                        {{ thread.title }}
+                                        {% if thread.is_pinned %}
+                                            <i class="bi bi-pin-fill text-warning ms-2" title="Pinned"></i>
+                                        {% endif %}
+                                        {% if thread.is_locked %}
+                                            <i class="bi bi-lock-fill text-danger ms-2" title="Locked"></i>
+                                        {% endif %}
+                                    </h6>
+                                    <small class="text-muted">
+                                        <i class="bi bi-person-circle me-1"></i>
+                                        {{ thread.student.first_name }} {{ thread.student.last_name }}
+                                        <span class="ms-2">
+                                            <i class="bi bi-clock me-1"></i>
+                                            {{ thread.created_at.strftime('%B %d, %Y at %I:%M %p') }}
+                                        </span>
+                                    </small>
+                                </div>
+                                <span class="badge bg-info">
+                                    <i class="bi bi-chat-dots me-1"></i>{{ thread.posts|length }} {{ 'replies' if thread.posts|length != 1 else 'reply' }}
+                                </span>
+                            </div>
+                            <p class="mb-2">{{ thread.content[:200] }}{% if thread.content|length > 200 %}...{% endif %}</p>
+                            <div class="mt-2">
+                                <button class="btn btn-sm btn-outline-primary" onclick="viewThread({{ thread.id }})">
+                                    <i class="bi bi-eye me-1"></i>View Thread
+                                </button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="bi bi-chat-square-text display-1 text-muted mb-3"></i>
+                            <h5 class="text-muted">No Discussion Threads Yet</h5>
+                            <p class="text-muted">Students haven't started any discussion threads yet.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Status Change Modal -->
+<div class="modal fade" id="statusChangeModal" tabindex="-1" aria-labelledby="statusChangeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="statusChangeModalLabel">
+                    <i class="bi bi-gear me-2"></i>Change Assignment Status
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Current Status:</label>
+                    <p class="mb-0">
+                        <span class="badge bg-info fs-6" id="currentStatusDisplay">Active</span>
+                    </p>
+                </div>
+                <div class="mb-3">
+                    <label for="newStatusSelect" class="form-label fw-bold">New Status:</label>
+                    <select class="form-select" id="newStatusSelect">
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                        <option value="Voided">Voided</option>
+                        <option value="Upcoming">Upcoming</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="statusChangeSubmitBtn" onclick="submitStatusChange()">
+                    <i class="bi bi-check-circle me-2"></i>Update Status
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Void Assignment Modal -->
+<div class="modal fade" id="voidModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-slash-circle me-2"></i>Void Assignment
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.students.void_assignment_for_students', assignment_id=0) }}{% else %}{{ url_for('teacher.assignments.void_assignment', assignment_id=0) }}{% endif %}" id="voidForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <strong>Warning:</strong> Voiding will exclude this assignment from grade calculations. Quarter grades will be recalculated immediately.
+                    </div>
+                    
+                    <h6 class="fw-bold mb-3" id="voidAssignmentTitle"></h6>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Void for:</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="void_scope" id="void_all_students" value="all" checked>
+                            <label class="form-check-label" for="void_all_students">
+                                <strong>All Students</strong>
+                                <small class="text-muted d-block">Void this assignment for every student in the class</small>
+                            </label>
+                        </div>
+                        <div class="form-check mt-2">
+                            <input class="form-check-input" type="radio" name="void_scope" id="void_specific_students" value="specific">
+                            <label class="form-check-label" for="void_specific_students">
+                                <strong>Specific Students</strong>
+                                <small class="text-muted d-block">Choose which students to void this assignment for</small>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div id="student_selection" style="display: none;" class="mb-3">
+                        <label class="form-label fw-bold">Select Students:</label>
+                        <div class="border rounded p-3" style="max-height: 250px; overflow-y: auto;" id="void_students_list">
+                            <div class="text-center"><span class="spinner-border spinner-border-sm"></span> Loading...</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="void_reason" class="form-label fw-bold">Reason for Voiding:</label>
+                        <textarea class="form-control" id="void_reason" name="reason" rows="3" placeholder="Enter reason (e.g., 'Assignment canceled', 'Late enrollment', etc.)"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-slash-circle me-1"></i>Void Assignment
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Assignment Modal -->
+<div class="modal fade" id="deleteAssignmentModal" tabindex="-1" aria-labelledby="deleteAssignmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteAssignmentModalLabel">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Remove Assignment
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Warning:</strong> This action cannot be undone.
+                </div>
+                <p>Are you sure you want to remove the assignment:</p>
+                <p class="fw-bold fs-5" id="deleteAssignmentTitle"></p>
+                <p class="text-muted">All associated data will be permanently deleted.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="deleteAssignmentConfirmBtn" onclick="confirmDeleteAssignment()">
+                    <i class="bi bi-trash me-2"></i>Remove Assignment
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function goBack() {
+    {% if current_user.role in ['Director', 'School Administrator'] %}
+    window.location.href = "{{ url_for('management.assignments_and_grades') }}";
+    {% else %}
+    window.location.href = "{{ url_for('teacher.dashboard.assignments_and_grades') }}";
+    {% endif %}
+}
+
+function viewThread(threadId) {
+    window.location.href = "{{ url_for('student.view_discussion_thread', thread_id=0) }}".replace('0', threadId);
+}
+
+let currentAssignmentId = null;
+let currentAssignmentTitle = null;
+let currentVoidAssignmentId = null;
+let currentVoidAssignmentType = 'individual';
+
+function openVoidModal(assignmentId, assignmentTitle, assignmentType, classId) {
+    currentVoidAssignmentId = assignmentId;
+    currentVoidAssignmentType = assignmentType;
+    
+    document.getElementById('voidAssignmentTitle').textContent = `Assignment: ${assignmentTitle}`;
+    document.getElementById('void_reason').value = '';
+    
+    // Update form action URL
+    const form = document.getElementById('voidForm');
+    const actionUrl = form.action.replace(/assignment_id=\d+/, `assignment_id=${assignmentId}`);
+    form.action = actionUrl.replace(/\/void-assignment\/\d+/, `/void-assignment/${assignmentId}`);
+    
+    // Load students for this class
+    if (classId) {
+        loadStudentsForVoid(classId);
+    }
+}
+
+function loadStudentsForVoid(classId) {
+    const studentsContainer = document.getElementById('void_students_list');
+    studentsContainer.innerHTML = '<div class="text-center"><span class="spinner-border spinner-border-sm"></span> Loading students...</div>';
+    
+    fetch(`/management/class/${classId}/enrolled-students-json`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.students && data.students.length > 0) {
+                let html = '';
+                data.students.forEach(student => {
+                    html += `
+                        <div class="form-check">
+                            <input class="form-check-input void-student-checkbox" type="checkbox" value="${student.id}" id="void_student_${student.id}" name="student_ids">
+                            <label class="form-check-label" for="void_student_${student.id}">
+                                ${student.first_name} ${student.last_name} (Grade ${student.grade_level})
+                            </label>
+                        </div>
+                    `;
+                });
+                studentsContainer.innerHTML = html;
+            } else {
+                studentsContainer.innerHTML = '<p class="text-muted">No students enrolled</p>';
+            }
+        })
+        .catch(error => {
+            studentsContainer.innerHTML = '<p class="text-danger">Error loading students</p>';
+        });
+}
+
+// Toggle student selection visibility
+document.addEventListener('DOMContentLoaded', function() {
+    const voidModal = document.getElementById('voidModal');
+    if (voidModal) {
+        voidModal.addEventListener('shown.bs.modal', function() {
+            document.querySelectorAll('input[name="void_scope"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    if (this.value === 'specific') {
+                        document.getElementById('student_selection').style.display = 'block';
+                    } else {
+                        document.getElementById('student_selection').style.display = 'none';
+                    }
+                });
+            });
+        });
+    }
+});
+
+function openStatusChangeModal(assignmentId, currentStatus) {
+    currentAssignmentId = assignmentId;
+    document.getElementById('currentStatusDisplay').textContent = currentStatus;
+    document.getElementById('newStatusSelect').value = currentStatus;
+}
+
+function submitStatusChange() {
+    const newStatus = document.getElementById('newStatusSelect').value;
+    if (!newStatus || newStatus === document.getElementById('currentStatusDisplay').textContent) {
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('status', newStatus);
+    formData.append('csrf_token', '{{ csrf_token() }}');
+    
+    const submitBtn = document.getElementById('statusChangeSubmitBtn');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Updating...';
+    
+    fetch(`/management/assignment/change-status/${currentAssignmentId}`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('statusChangeModal')).hide();
+            showToast('success', 'Status updated successfully!');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showToast('danger', 'Error: ' + data.message);
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('danger', 'An error occurred while updating the assignment status.');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+    });
+}
+
+function openDeleteModal(title, assignmentId) {
+    currentAssignmentId = assignmentId;
+    currentAssignmentTitle = title;
+    document.getElementById('deleteAssignmentTitle').textContent = title;
+}
+
+function confirmDeleteAssignment() {
+    const formData = new FormData();
+    formData.append('csrf_token', '{{ csrf_token() }}');
+    
+    const deleteBtn = document.getElementById('deleteAssignmentConfirmBtn');
+    const originalText = deleteBtn.innerHTML;
+    deleteBtn.disabled = true;
+    deleteBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Removing...';
+    
+    fetch(`/management/remove-assignment/${currentAssignmentId}`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (response.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('deleteAssignmentModal')).hide();
+            showToast('success', 'Assignment removed successfully!');
+            setTimeout(() => {
+                window.location.href = "{{ url_for('management.assignments_and_grades') }}";
+            }, 1000);
+        } else {
+            showToast('danger', 'Error removing assignment.');
+            deleteBtn.disabled = false;
+            deleteBtn.innerHTML = originalText;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('danger', 'An error occurred while removing the assignment.');
+        deleteBtn.disabled = false;
+        deleteBtn.innerHTML = originalText;
+    });
+}
+
+function showToast(type, message) {
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-white bg-${type} border-0`;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">${message}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
+    
+    // Get or create toast container
+    let toastContainer = document.getElementById('toastContainer');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toastContainer';
+        toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+        toastContainer.style.zIndex = '9999';
+        document.body.appendChild(toastContainer);
+    }
+    
+    toastContainer.appendChild(toast);
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+    
+    toast.addEventListener('hidden.bs.toast', () => {
+        toast.remove();
+    });
+}
+</script>
+{% endblock %}
+

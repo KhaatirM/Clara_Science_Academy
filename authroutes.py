@@ -1,5 +1,5 @@
 # Standard library imports
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 
 # Core Flask imports
@@ -46,8 +46,8 @@ def login():
         # Table might not exist yet, continue without maintenance mode
         pass
     
-    if maintenance and maintenance.end_time > datetime.now():
-        # Allow tech users to login during maintenance
+    if maintenance and maintenance.end_time > datetime.now(timezone.utc):
+        # Allow tech users and administrators to login during maintenance
         if request.method == 'POST':
             username = request.form.get('username')
             password = request.form.get('password')
@@ -61,8 +61,8 @@ def login():
             
             user = User.query.filter_by(username=username).first()
             if user and password and check_password_hash(user.password_hash, password):
-                # Tech users can access during maintenance
-                if user.role in ['Tech', 'IT Support'] and maintenance.allow_tech_access:
+                # Tech users and administrators can access during maintenance
+                if user.role in ['Tech', 'IT Support', 'Director', 'School Administrator'] and maintenance.allow_tech_access:
                     login_user(user)
                     # Log successful tech login during maintenance
                     get_log_activity()(
@@ -85,7 +85,7 @@ def login():
                         success=False,
                         error_message='Access denied during maintenance'
                     )
-                    flash('Access denied during maintenance. Only technical staff can login.', 'warning')
+                    flash('Access denied during maintenance. Only technical staff and administrators can login.', 'warning')
                     return redirect(url_for('auth.login'))
             else:
                 # Log failed login attempt during maintenance
@@ -101,9 +101,9 @@ def login():
                 flash('System is currently under maintenance. Please try again later.', 'warning')
                 return redirect(url_for('auth.login'))
         
-        # Show maintenance page for non-tech users
+        # Show maintenance page for non-tech/admin users
         total_duration = (maintenance.end_time - maintenance.start_time).total_seconds()
-        elapsed = (datetime.now() - maintenance.start_time).total_seconds()
+        elapsed = (datetime.now(timezone.utc) - maintenance.start_time).total_seconds()
         progress_percentage = min(100, max(0, int((elapsed / total_duration) * 100)))
         
         return render_template('shared/maintenance.html', 
@@ -131,6 +131,34 @@ def login():
                 print(f"DEBUG: User details - ID: {user.id}, Role: {user.role}, Password hash exists: {bool(user.password_hash)}")
             
             if user and check_password_hash(user.password_hash, password):
+                # Check if user has expired temporary access
+                if user.teacher_staff_id:
+                    from models import TeacherStaff
+                    from datetime import datetime, timezone
+                    teacher_staff = TeacherStaff.query.get(user.teacher_staff_id)
+                    if teacher_staff and teacher_staff.is_temporary and teacher_staff.access_expires_at:
+                        # Handle both naive and aware datetimes
+                        expires_at = teacher_staff.access_expires_at
+                        now = datetime.now(timezone.utc)
+                        
+                        # If expires_at is naive, make it timezone-aware (assume UTC)
+                        if expires_at.tzinfo is None:
+                            expires_at = expires_at.replace(tzinfo=timezone.utc)
+                        
+                        if expires_at < now:
+                            flash('Your temporary access has expired. Please contact an administrator.', 'danger')
+                            # Log expired access attempt
+                            get_log_activity()(
+                                user_id=user.id,
+                                action='login_failed',
+                                details={'username': username, 'reason': 'temporary_access_expired'},
+                                ip_address=request.remote_addr,
+                                user_agent=request.headers.get('User-Agent'),
+                                success=False,
+                                error_message='Temporary access expired'
+                            )
+                            return render_template('shared/login.html')
+                
                 # Convert remember to boolean
                 remember = bool(request.form.get('remember'))
                 login_user(user, remember=remember)

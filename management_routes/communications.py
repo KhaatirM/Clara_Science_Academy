@@ -37,7 +37,7 @@ def communications():
     groups = [mg.group for mg in user_groups if mg.group and mg.group.is_active]
     
     # Get all announcements
-    announcements = Announcement.query.order_by(Announcement.created_at.desc()).limit(20).all()
+    announcements = Announcement.query.order_by(Announcement.timestamp.desc()).limit(20).all()
     
     # Get scheduled announcements
     scheduled = ScheduledAnnouncement.query.filter_by(sender_id=current_user.id).order_by(ScheduledAnnouncement.scheduled_for.desc()).all()
@@ -582,25 +582,63 @@ def admin_manage_group(group_id):
             action = request.form.get('action')
             
             if action == 'add_student':
-                student_id = request.form.get('student_id')
-                if student_id:
-                    # Check if student is already in the group
-                    existing_member = StudentGroupMember.query.filter_by(
-                        group_id=group_id,
-                        student_id=int(student_id)
-                    ).first()
+                # Handle multiple student_ids (from checkboxes) or single student_id
+                student_ids = request.form.getlist('student_ids')
+                if not student_ids:
+                    student_id = request.form.get('student_id')
+                    if student_id:
+                        student_ids = [student_id]
+                
+                leader_id = request.form.get('leader_id', type=int)
+                
+                if student_ids:
+                    added_count = 0
+                    skipped_count = 0
                     
-                    if not existing_member:
-                        member = StudentGroupMember(
+                    for student_id_str in student_ids:
+                        student_id = int(student_id_str)
+                        
+                        # Check if student is already in the group
+                        existing_member = StudentGroupMember.query.filter_by(
                             group_id=group_id,
-                            student_id=int(student_id)
-                        )
-                        db.session.add(member)
-                        db.session.commit()
-                        flash('Student added to group successfully!', 'success')
-                        return redirect(url_for('management.admin_manage_group', group_id=group_id))
-                    else:
-                        flash('Student is already in this group.', 'warning')
+                            student_id=student_id
+                        ).first()
+                        
+                        if not existing_member:
+                            # Determine if this student should be leader
+                            is_leader = (leader_id == student_id)
+                            
+                            member = StudentGroupMember(
+                                group_id=group_id,
+                                student_id=student_id,
+                                is_leader=is_leader
+                            )
+                            db.session.add(member)
+                            added_count += 1
+                        else:
+                            # Update leader status if this student is the selected leader
+                            if leader_id == student_id and not existing_member.is_leader:
+                                existing_member.is_leader = True
+                                added_count += 1
+                            else:
+                                skipped_count += 1
+                    
+                    # If a leader was selected, ensure only one leader exists
+                    if leader_id:
+                        StudentGroupMember.query.filter_by(group_id=group_id).filter(
+                            StudentGroupMember.student_id != leader_id
+                        ).update({'is_leader': False}, synchronize_session=False)
+                    
+                    db.session.commit()
+                    
+                    if added_count > 0:
+                        flash(f'{added_count} student(s) added to group successfully!', 'success')
+                    if skipped_count > 0:
+                        flash(f'{skipped_count} student(s) were already in the group.', 'info')
+                    
+                    return redirect(url_for('management.admin_class_groups', class_id=class_obj.id))
+                else:
+                    flash('Please select at least one student.', 'warning')
             
             elif action == 'remove_student':
                 student_id = request.form.get('student_id')

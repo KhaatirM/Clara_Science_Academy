@@ -1602,3 +1602,139 @@
     font-size: 4rem;
     color: #cbd5e0;
 }
+
+/* ========== STUDENT SCHEDULE TAB STYLES ========== */
+.student-schedule-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 2rem;
+    border-radius: 15px;
+    color: white;
+    box-shadow: 0 5px 20px rgba(102, 126, 234, 0.3);
+}
+
+.student-schedule-title {
+    color: white;
+    font-weight: 700;
+    font-size: 2rem;
+}
+
+.student-schedule-subtitle {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1.1rem;
+}
+
+.schedule-container {
+    margin-top: 2rem;
+}
+
+.schedule-day-card {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+    overflow: hidden;
+    height: 100%;
+    border: 2px solid transparent;
+}
+
+.schedule-day-card:hover {
+    box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+    transform: translateY(-5px);
+}
+
+.schedule-day-card.today {
+    border-color: #667eea;
+    box-shadow: 0 5px 25px rgba(102, 126, 234, 0.3);
+}
+
+.schedule-day-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.schedule-day-header h5 {
+    color: white;
+    font-weight: 700;
+    margin: 0;
+}
+
+.schedule-day-body {
+    padding: 1.5rem;
+    min-height: 200px;
+}
+
+.schedule-item {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    border-left: 4px solid #667eea;
+    transition: all 0.3s ease;
+}
+
+.schedule-item:last-child {
+    margin-bottom: 0;
+}
+
+.schedule-item:hover {
+    background: #e9ecef;
+    transform: translateX(5px);
+}
+
+.schedule-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.schedule-item-header h6 {
+    color: #2d3748;
+    font-weight: 700;
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.schedule-item-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.schedule-detail {
+    display: flex;
+    align-items: center;
+    color: #4a5568;
+    font-size: 0.95rem;
+}
+
+.schedule-detail i {
+    color: #667eea;
+    width: 20px;
+}
+
+.schedule-empty {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: #a0aec0;
+    font-style: italic;
+}
+
+.schedule-empty i {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .student-schedule-title {
+        font-size: 1.5rem;
+    }
+    
+    .schedule-day-card {
+        margin-bottom: 1.5rem;
+    }
+}

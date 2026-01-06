@@ -17,8 +17,38 @@ bp = Blueprint('communications', __name__)
 @teacher_required
 def communications_hub():
     """Main communications hub for teachers."""
-    flash("Communications features are currently under development. Check back soon!", "info")
-    return redirect(url_for('teacher.dashboard.teacher_dashboard'))
+    # Get all messages for the teacher (both sent and received)
+    messages = Message.query.filter(
+        (Message.recipient_id == current_user.id) |
+        (Message.sender_id == current_user.id)
+    ).order_by(Message.created_at.desc()).limit(50).all()
+    
+    # Get user's groups
+    from models import MessageGroupMember, MessageGroup
+    user_groups = MessageGroupMember.query.filter_by(user_id=current_user.id).all()
+    groups = [mg.group for mg in user_groups if mg.group and mg.group.is_active]
+    
+    # Get announcements
+    # Teachers can see announcements for their classes or all announcements
+    teacher = get_teacher_or_admin()
+    class_ids = []
+    if teacher and not is_admin():
+        classes = Class.query.filter_by(teacher_id=teacher.id).all()
+        class_ids = [c.id for c in classes]
+    
+    if is_admin():
+        announcements = Announcement.query.order_by(Announcement.timestamp.desc()).limit(20).all()
+    else:
+        announcements = Announcement.query.filter(
+            (Announcement.target_group.in_(['all', 'all_teachers', 'all_staff'])) |
+            ((Announcement.target_group == 'class') & (Announcement.class_id.in_(class_ids)))
+        ).order_by(Announcement.timestamp.desc()).limit(20).all()
+    
+    return render_template('teachers/teacher_communications.html',
+                         messages=messages,
+                         groups=groups,
+                         announcements=announcements,
+                         teacher=teacher)
 
 # 360° Feedback routes have been moved to teacher_routes/feedback360.py
 # The route is now handled by teacher.feedback360.class_feedback360

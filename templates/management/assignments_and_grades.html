@@ -47,6 +47,12 @@
                         <i class="bi bi-arrow-repeat me-2"></i>Redo Dashboard
                     </a>
                 {% endif %}
+                <a href="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.view_extension_requests') }}{% else %}{{ url_for('teacher.view_extension_requests') }}{% endif %}" class="btn btn-outline-warning">
+                    <i class="bi bi-clock-history me-2"></i>Extension Requests
+                    {% if extension_request_count and extension_request_count > 0 %}
+                    <span class="badge bg-warning text-dark ms-1">{{ extension_request_count }}</span>
+                    {% endif %}
+                </a>
                 <button onclick="createAssignment()" class="btn btn-assignments-add">
                     <i class="bi bi-plus-circle me-2"></i>New Assignment
                 </button>
@@ -273,23 +279,49 @@
                                 <h6 class="mb-0">{{ assignment.title }}</h6>
                                 {% set grade_info = assignment_grades.get(assignment.id, {}) %}
                                 {% set has_grades = grade_info.get('graded_count', 0) > 0 %}
-                                {% set is_past_due = assignment.due_date.date() < today %}
-                                {% if has_grades %}
+                                {% set is_autogradeable = grade_info.get('is_autogradeable', False) %}
+                                {% set current_status = assignment.status %}
+                                {% if current_status == 'Voided' %}
+                                    <span class="badge bg-secondary">
+                                        <i class="bi bi-slash-circle me-1"></i>Voided
+                                    </span>
+                                {% elif current_status == 'Upcoming' %}
                                     <span class="badge bg-info">
-                                        <i class="bi bi-check-circle me-1"></i>Graded
+                                        <i class="bi bi-clock me-1"></i>Upcoming
                                     </span>
-                                {% elif assignment.status == 'Active' or (assignment.status != 'Inactive' and not is_past_due) %}
-                                    <span class="badge bg-success">
-                                        <i class="bi bi-check-circle me-1"></i>Active
-                                    </span>
-                                {% else %}
+                                {% elif current_status == 'Inactive' %}
                                     <span class="badge bg-warning">
                                         <i class="bi bi-pause-circle me-1"></i>Inactive
+                                    </span>
+                                {% elif has_grades %}
+                                    {% if assignment.assignment_type == 'quiz' and is_autogradeable %}
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-robot me-1"></i>Autograde
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-info">
+                                            <i class="bi bi-check-circle me-1"></i>Graded
+                                        </span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-check-circle me-1"></i>Active
                                     </span>
                                 {% endif %}
                             </div>
                             <div class="card-body">
-                                <div class="mb-2">
+                                <div class="mb-2 d-flex gap-2 flex-wrap">
+                                    <!-- Assignment Type Badge -->
+                                    {% if assignment.assignment_type == 'quiz' %}
+                                        <span class="badge bg-primary"><i class="bi bi-question-circle me-1"></i>Quiz</span>
+                                    {% elif assignment.assignment_type == 'discussion' %}
+                                        <span class="badge bg-info"><i class="bi bi-chat-dots me-1"></i>Discussion</span>
+                                    {% elif assignment.assignment_type == 'project' %}
+                                        <span class="badge bg-warning text-dark"><i class="bi bi-folder me-1"></i>Project</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary"><i class="bi bi-file-earmark-pdf me-1"></i>PDF/Paper</span>
+                                    {% endif %}
+                                    <!-- Context Badge -->
                                     {% if assignment.assignment_context %}
                                         {% set context_lower = assignment.assignment_context.lower() %}
                                         {% if 'in-class' in context_lower or 'in_class' in context_lower or 'inclass' in context_lower or context_lower.startswith('in-') or context_lower.startswith('in_') %}
@@ -411,7 +443,7 @@
                                 </div>
                                 <div class="card-footer bg-light">
                                     <div class="d-grid gap-2">
-                                        <a href="{{ url_for('management.admin_view_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-primary btn-sm">
+                                        <a href="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.admin_view_group_assignment', assignment_id=group_assignment.id) }}{% else %}{{ url_for('teacher.assignments.view_group_assignment', assignment_id=group_assignment.id) }}{% endif %}" class="btn btn-primary btn-sm">
                                             <i class="fas fa-eye me-2"></i>View Assignment
                                         </a>
                                         <a href="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.view_class', class_id=group_assignment.class_id) }}{% else %}{{ url_for('teacher.dashboard.view_class', class_id=group_assignment.class_id) }}{% endif %}" class="btn btn-outline-primary btn-sm">
@@ -704,12 +736,14 @@
                                             </td>
                                             <td>
                                                 <div class="d-flex flex-wrap gap-1">
-                                                    <a href="{{ url_for('management.admin_view_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-outline-primary btn-sm" title="View Group Assignment Details">
+                                                    <a href="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.admin_view_group_assignment', assignment_id=group_assignment.id) }}{% else %}{{ url_for('teacher.assignments.view_group_assignment', assignment_id=group_assignment.id) }}{% endif %}" class="btn btn-outline-primary btn-sm" title="View Group Assignment Details">
                                                         <i class="fas fa-eye me-1"></i>View Assignment
                                                     </a>
+                                                    {% if current_user.role in ['Director', 'School Administrator'] %}
                                                     <a href="{{ url_for('management.admin_grade_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-outline-success btn-sm" title="Grade Group Submissions">
                                                         <i class="fas fa-edit me-1"></i>Grade
                                                     </a>
+                                                    {% endif %}
                                                     <a href="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.view_class', class_id=group_assignment.class_id) }}{% else %}{{ url_for('teacher.dashboard.view_class', class_id=group_assignment.class_id) }}{% endif %}" class="btn btn-outline-primary btn-sm" title="View Class">
                                                         <i class="fas fa-users me-1"></i>View Class
                                                     </a>

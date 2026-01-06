@@ -106,12 +106,15 @@
                                 <select class="form-select form-select-lg" id="status" name="status" required>
                                     <option value="Active" {% if assignment.status == 'Active' %}selected{% endif %}>Active</option>
                                     <option value="Inactive" {% if assignment.status == 'Inactive' %}selected{% endif %}>Inactive</option>
+                                    <option value="Upcoming" {% if assignment.status == 'Upcoming' %}selected{% endif %}>Upcoming</option>
                                     <option value="Voided" {% if assignment.status == 'Voided' %}selected{% endif %}>Voided</option>
                                 </select>
                                 <div class="form-text">
-                                    <strong>Active:</strong> Students can submit work<br>
-                                    <strong>Inactive:</strong> Students cannot submit work<br>
-                                    <strong>Voided:</strong> Assignment doesn't affect grades (0/0 for all students)
+                                    <strong>Active:</strong> Assignment is currently open for submission<br>
+                                    <strong>Inactive:</strong> Assignment is closed (past close date)<br>
+                                    <strong>Upcoming:</strong> Assignment is not yet open (before open date)<br>
+                                    <strong>Voided:</strong> Assignment doesn't affect grades (0/0 for all students)<br>
+                                    <small class="text-muted">Note: Status is automatically calculated based on open/close dates unless set to Voided</small>
                                 </div>
                             </div>
                             
@@ -155,6 +158,31 @@
                                 </select>
                                 <input type="hidden" name="school_year_id" value="{{ assignment.school_year_id }}">
                                 <div class="form-text">School year cannot be changed after assignment creation</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Assignment Availability Section -->
+                        <div class="row g-3 mt-2">
+                            <div class="col-12">
+                                <h6 class="fw-semibold text-muted mb-3">
+                                    <i class="bi bi-clock-history me-2"></i>Assignment Availability
+                                </h6>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label for="open_date" class="form-label fw-semibold">
+                                    <i class="bi bi-unlock me-1 text-success"></i>Open Date & Time
+                                </label>
+                                <input type="datetime-local" class="form-control form-control-lg" id="open_date" name="open_date" 
+                                       value="{% if assignment.open_date %}{{ assignment.open_date.strftime('%Y-%m-%dT%H:%M') }}{% endif %}">
+                                <div class="form-text">When students can start this assignment (leave empty for immediate availability)</div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label for="close_date" class="form-label fw-semibold">
+                                    <i class="bi bi-lock me-1 text-danger"></i>Close Date & Time
+                                </label>
+                                <input type="datetime-local" class="form-control form-control-lg" id="close_date" name="close_date" 
+                                       value="{% if assignment.close_date %}{{ assignment.close_date.strftime('%Y-%m-%dT%H:%M') }}{% else %}{% if assignment.due_date %}{{ assignment.due_date.strftime('%Y-%m-%dT%H:%M') }}{% endif %}{% endif %}">
+                                <div class="form-text">When this assignment closes (defaults to due date if not set)</div>
                             </div>
                         </div>
                         

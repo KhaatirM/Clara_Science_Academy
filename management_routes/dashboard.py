@@ -118,6 +118,14 @@ def management_dashboard():
             seen_student_ids = set()
             for grade in at_risk_grades:
                 try:
+                    # Check if grade has required relationships
+                    if not grade.assignment or not grade.student:
+                        continue
+                    
+                    # Check if assignment has due_date
+                    if not grade.assignment.due_date:
+                        continue
+                    
                     grade_data = json.loads(grade.grade_data)
                     score = grade_data.get('score')
                     is_overdue = grade.assignment.due_date < datetime.utcnow()
@@ -141,17 +149,20 @@ def management_dashboard():
                     
                     if is_at_risk:
                         if grade.student.id not in seen_student_ids:
+                            # Safely get class name
+                            class_name = grade.assignment.class_info.name if grade.assignment.class_info else 'Unknown Class'
+                            
                             at_risk_alerts.append({
                                 'student_name': f"{grade.student.first_name} {grade.student.last_name}",
                                 'student_user_id': grade.student.id,  # Use student ID instead of user_id
-                                'class_name': grade.assignment.class_info.name,
+                                'class_name': class_name,
                                 'assignment_name': grade.assignment.title,
                                 'alert_reason': alert_reason,
                                 'score': score,
                                 'due_date': grade.assignment.due_date
                             })
                             seen_student_ids.add(grade.student.id)
-                except (json.JSONDecodeError, TypeError) as e:
+                except (json.JSONDecodeError, TypeError, AttributeError) as e:
                     current_app.logger.warning(f"Error processing grade {grade.id}: {e}")
                     continue
         except Exception as e:
@@ -175,19 +186,6 @@ def management_dashboard():
                              active_tab='home',
                              at_risk_alerts=at_risk_alerts)
     except Exception as e:
-        current_app.logger.error(f"Error in management_dashboard: {e}")
-        import traceback
-        error_trace = traceback.format_exc()
-        current_app.logger.error(error_trace)
-        flash(f"Error loading dashboard: {str(e)}", 'danger')
-        # Return minimal dashboard with error
-        return render_template('management/role_dashboard.html', 
-                             stats={'students': 0, 'teachers': 0, 'classes': 0, 'assignments': 0},
-                             monthly_stats={},
-                             weekly_stats={},
-                             section='home',
-                             active_tab='home',
-                             at_risk_alerts=[])
         current_app.logger.error(f"Error in management_dashboard: {e}")
         import traceback
         error_trace = traceback.format_exc()

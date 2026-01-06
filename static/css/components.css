@@ -5383,6 +5383,19 @@
     box-shadow: 0 4px 12px rgba(232, 62, 140, 0.3);
 }
 
+.btn-compact-submissions {
+    background: white;
+    border-color: #212529;
+    color: #212529;
+}
+
+.btn-compact-submissions:hover {
+    background: #212529;
+    color: white;
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(33, 37, 41, 0.3);
+}
+
 /* Compact Stats */
 .compact-stats-row {
     display: grid;

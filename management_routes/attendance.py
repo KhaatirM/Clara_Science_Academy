@@ -5,7 +5,7 @@ Attendance routes for management users.
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, Response, abort, jsonify
 from flask_login import login_required, current_user
 from decorators import management_required
-from models import db
+from models import db, Student, SchoolDayAttendance, Class, Enrollment, Attendance
 
 
 bp = Blueprint('attendance', __name__)

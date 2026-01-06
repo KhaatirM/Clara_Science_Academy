@@ -240,6 +240,51 @@
                 {% endfor %}
                  <div class="invalid-feedback d-block">Please select employment type.</div>
             </div>
+            
+            <!-- Temporary Access Section -->
+            <div class="col-12 mt-3">
+                <div class="card border-info">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-clock-history me-2"></i>Temporary Access Settings
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="is_temporary" name="is_temporary" 
+                                   {% if staff_data and staff_data.is_temporary %}checked{% endif %}
+                                   onchange="toggleTemporaryAccess()">
+                            <label class="form-check-label" for="is_temporary">
+                                <strong>This is a temporary staff member</strong>
+                            </label>
+                            <div class="form-text">Enable this for temporary staff who need time-limited access.</div>
+                        </div>
+                        
+                        <div id="temporaryAccessFields" style="display: none;">
+                            <div class="row g-3">
+                                <div class="col-12 col-md-6">
+                                    <label for="access_expires_at" class="form-label">
+                                        <i class="bi bi-calendar-x me-1"></i>Access Expires On <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="datetime-local" class="form-control" id="access_expires_at" name="access_expires_at"
+                                           {% if staff_data and staff_data.access_expires_at %}
+                                           value="{{ staff_data.access_expires_at.strftime('%Y-%m-%dT%H:%M') }}"
+                                           {% endif %}>
+                                    <div class="form-text">Access will automatically expire at this date and time.</div>
+                                    <div class="invalid-feedback">Expiration date is required for temporary staff.</div>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <div class="alert alert-warning mb-0">
+                                        <i class="bi bi-exclamation-triangle me-2"></i>
+                                        <strong>Note:</strong> Temporary staff accounts will be automatically disabled after the expiration date. 
+                                        They will not be able to log in after this time.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <div class="col-12 col-md-6">
                 <label for="resume" class="form-label">Resume (PDF, DOC, DOCX)</label>
@@ -292,8 +337,38 @@
     <script>
     (function () { 'use strict'; var forms = document.querySelectorAll('.needs-validation'); Array.prototype.slice.call(forms).forEach(function (form) { form.addEventListener('submit', function (event) { if (!form.checkValidity()) { event.preventDefault(); event.stopPropagation(); } form.classList.add('was-validated'); }, false); }); })();
     
+    // Toggle temporary access fields
+    function toggleTemporaryAccess() {
+        const isTemporary = document.getElementById('is_temporary').checked;
+        const tempFields = document.getElementById('temporaryAccessFields');
+        const expiresInput = document.getElementById('access_expires_at');
+        
+        if (isTemporary) {
+            tempFields.style.display = 'block';
+            expiresInput.required = true;
+            // Set default expiration to 2 weeks from now if not already set
+            if (!expiresInput.value) {
+                const now = new Date();
+                now.setDate(now.getDate() + 14); // 2 weeks from now
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const day = String(now.getDate()).padStart(2, '0');
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                expiresInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+            }
+        } else {
+            tempFields.style.display = 'none';
+            expiresInput.required = false;
+            expiresInput.value = '';
+        }
+    }
+    
     // Auto-assign role and department for Tech users
     document.addEventListener('DOMContentLoaded', function() {
+        // Initialize temporary access toggle on page load
+        toggleTemporaryAccess();
+        
         // Check if current user is Tech role
                        const isTechUser = {{ 'true' if current_user.role in ['Tech', 'IT Support'] else 'false' }};
         

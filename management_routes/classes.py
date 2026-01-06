@@ -5,7 +5,8 @@ Classes routes for management users.
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, Response, abort, jsonify
 from flask_login import login_required, current_user
 from decorators import management_required
-from models import db
+from models import db, Class, TeacherStaff, Student, Enrollment, Assignment, Attendance, Grade, StudentGroup, StudentGroupMember, GroupAssignment, GroupConflict, GroupGrade
+from datetime import datetime
 
 
 bp = Blueprint('classes', __name__)
@@ -23,7 +24,6 @@ def management_api_class_groups(class_id):
     """API endpoint to get groups for a class - Management access."""
     try:
         print(f"DEBUG: Management API called for class {class_id}")
-        from models import StudentGroup
         
         # Verify management has access to this class
         class_obj = Class.query.get_or_404(class_id)
@@ -122,6 +122,12 @@ def add_class():
             
             db.session.add(new_class)
             db.session.flush()  # Get the ID for the new class
+            
+            # Handle grade levels
+            grade_level_ids = request.form.getlist('grade_levels')
+            if grade_level_ids:
+                grade_levels = [int(g) for g in grade_level_ids if g and str(g).isdigit()]
+                new_class.set_grade_levels(grade_levels)
             
             # Handle multi-teacher assignments
             # Add substitute teachers
@@ -266,6 +272,14 @@ def edit_class(class_id):
             class_obj.max_students = request.form.get('max_students', 30, type=int)
             class_obj.description = request.form.get('description', '').strip() or None
             class_obj.is_active = 'is_active' in request.form
+            
+            # Handle grade levels
+            grade_level_ids = request.form.getlist('grade_levels')
+            if grade_level_ids:
+                grade_levels = [int(g) for g in grade_level_ids if g and str(g).isdigit()]
+                class_obj.set_grade_levels(grade_levels)
+            else:
+                class_obj.set_grade_levels([])
             
             # Handle multi-teacher assignments
             # Clear existing relationships (proper way for dynamic relationships)
@@ -635,7 +649,6 @@ def admin_class_group_assignments(class_id):
         group_assignments = []
     
     # Calculate graded status for each assignment
-    from models import GroupGrade, StudentGroup
     for assignment in group_assignments:
         # Check if assignment has any grades
         group_grades = GroupGrade.query.filter_by(group_assignment_id=assignment.id, is_voided=False).all()
@@ -838,8 +851,6 @@ def admin_class_reflection_journals(class_id):
 @management_required
 def admin_class_conflicts(class_id):
     """View conflicts for a specific class - Management view."""
-    from models import GroupConflict, StudentGroup
-    
     class_obj = Class.query.get_or_404(class_id)
     
     # Get conflicts - GroupConflict doesn't have class_id, so we need to get it through groups
@@ -939,7 +950,6 @@ def class_grades(class_id):
                 }
     
     # Get group grades for students (group assignments)
-    from models import GroupGrade
     
     for student in enrolled_students:
         for group_assignment in group_assignments:
@@ -1468,7 +1478,6 @@ def view_class(class_id):
     assignments = Assignment.query.filter_by(class_id=class_id).order_by(Assignment.due_date.desc()).all()
     
     # Get group assignments for this class
-    from models import GroupAssignment
     try:
         group_assignments = GroupAssignment.query.filter_by(class_id=class_id).order_by(GroupAssignment.due_date.desc()).all()
     except Exception as e:

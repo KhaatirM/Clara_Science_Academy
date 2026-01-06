@@ -1,19 +1,29 @@
 {% extends "shared/dashboard_layout.html" %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tech_dashboard.css') }}">
+{% endblock %}
+
 {% block dashboard_content %}
 <div class="container-fluid px-2 px-md-4">
-    <div class="row g-3 g-md-4">
-        <div class="col-12">
-            <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
-                <h1 class="mb-2 mb-md-0"><i class="bi bi-exclamation-triangle me-2"></i> Error/Bug Log</h1>
-                <div class="btn-group">
-                    <button class="btn btn-outline-secondary" onclick="exportLog()">
-                        <i class="bi bi-download me-1"></i> Export
-                    </button>
-                    <button class="btn btn-outline-danger" onclick="acknowledgeAll()">
-                        <i class="bi bi-check-all me-1"></i> Acknowledge All
-                    </button>
-                </div>
+    <!-- Modern Header -->
+    <div class="tech-dashboard-header mb-4">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                <h2 class="tech-dashboard-title mb-1">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Error/Bug Log
+                </h2>
+                <p class="tech-dashboard-subtitle mb-0">
+                    <i class="bi bi-shield-exclamation me-2"></i>View system errors and user-submitted bug reports
+                </p>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-light" onclick="exportLog()">
+                    <i class="bi bi-download me-1"></i> Export
+                </button>
+                <button class="btn btn-light" onclick="acknowledgeAll()">
+                    <i class="bi bi-check-all me-1"></i> Acknowledge All
+                </button>
             </div>
         </div>
     </div>
@@ -21,11 +31,11 @@
     <!-- Combined Statistics -->
     <div class="row g-3 g-md-4 mb-4">
         <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i> Log Statistics</h5>
+            <div class="tech-quick-actions">
+                <div class="tech-quick-actions-header">
+                    <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Log Statistics</h5>
                 </div>
-                <div class="card-body">
+                <div class="tech-quick-actions-body">
                     <div class="row g-3">
                         <!-- Error Statistics -->
                         <div class="col-12 col-md-6">
@@ -69,11 +79,11 @@
     <!-- Enhanced Filters -->
     <div class="row g-3 g-md-4 mb-4">
         <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="bi bi-funnel me-2"></i> Filters</h5>
+            <div class="tech-quick-actions">
+                <div class="tech-quick-actions-header">
+                    <h5 class="mb-0"><i class="bi bi-funnel me-2"></i>Filters</h5>
                 </div>
-                <div class="card-body">
+                <div class="tech-quick-actions-body">
                     <form method="GET" class="row g-3">
                         <div class="col-12 col-sm-6 col-md-3">
                             <label for="type_filter" class="form-label">Type</label>

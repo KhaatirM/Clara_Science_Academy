@@ -7,14 +7,15 @@ from flask_login import login_required, current_user
 from decorators import management_required
 from models import (
     db, Assignment, Grade, Submission, Student, Class, Enrollment, AssignmentExtension,
-    AssignmentRedo, QuizQuestion, QuizOption, QuizAnswer, DiscussionThread, DiscussionPost
+    AssignmentRedo, QuizQuestion, QuizOption, QuizAnswer, DiscussionThread, DiscussionPost,
+    GroupAssignment, TeacherStaff, SchoolYear, ExtensionRequest
 )
 from werkzeug.utils import secure_filename
 from sqlalchemy import or_, and_, func
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import os
 import json
-from .utils import allowed_file, update_assignment_statuses
+from .utils import allowed_file, update_assignment_statuses, get_current_quarter
 
 bp = Blueprint('assignments', __name__)
 
@@ -73,6 +74,38 @@ def create_quiz_assignment():
         try:
             due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
             
+            # Parse open_date and close_date if provided
+            open_date_str = request.form.get('open_date', '').strip()
+            close_date_str = request.form.get('close_date', '').strip()
+            open_date = None
+            close_date = None
+            
+            if open_date_str:
+                try:
+                    open_date = datetime.strptime(open_date_str, '%Y-%m-%dT%H:%M')
+                except ValueError:
+                    pass
+            
+            if close_date_str:
+                try:
+                    close_date = datetime.strptime(close_date_str, '%Y-%m-%dT%H:%M')
+                except ValueError:
+                    pass
+            
+            # If close_date not provided, default to due_date
+            if not close_date:
+                close_date = due_date
+            
+            # Calculate status based on dates
+            from teacher_routes.assignment_utils import calculate_assignment_status
+            temp_assignment = type('obj', (object,), {
+                'status': 'Active',
+                'open_date': open_date,
+                'close_date': close_date,
+                'due_date': due_date
+            })
+            calculated_status = calculate_assignment_status(temp_assignment)
+            
             # Get the active school year
             current_school_year = SchoolYear.query.filter_by(is_active=True).first()
             if not current_school_year:
@@ -111,15 +144,17 @@ def create_quiz_assignment():
             # Get assignment context from form or query parameter
             assignment_context = request.form.get('assignment_context', 'homework')
             
-            # Create the assignment
+            # Create the assignment (status already calculated above)
             new_assignment = Assignment(
                 title=title,
                 description=description,
                 due_date=due_date,
+                open_date=open_date,
+                close_date=close_date,
                 quarter=str(quarter),
                 class_id=class_id,
                 school_year_id=current_school_year.id,
-                status='Active',
+                status=calculated_status,
                 assignment_type='quiz',
                 allow_save_and_continue=allow_save_and_continue,
                 max_save_attempts=max_save_attempts,
@@ -243,46 +278,118 @@ def create_quiz_assignment():
 @management_required
 def create_discussion_assignment():
     """Create a discussion assignment - management version"""
+    from teacher_routes.assignment_utils import calculate_assignment_status
+    
+    # Get classes for dropdown
+    if current_user.role in ['Director', 'School Administrator']:
+        classes = Class.query.filter_by(is_active=True).order_by(Class.name).all()
+    else:
+        # For teachers, get their classes
+        teacher = TeacherStaff.query.filter_by(user_id=current_user.id).first()
+        if teacher:
+            classes = Class.query.filter_by(teacher_id=teacher.id, is_active=True).order_by(Class.name).all()
+        else:
+            classes = []
+    
     if request.method == 'POST':
         # Handle discussion assignment creation
-        title = request.form.get('title')
+        title = request.form.get('title', '').strip()
         class_id = request.form.get('class_id', type=int)
-        discussion_topic = request.form.get('discussion_topic')
-        description = request.form.get('description', '')
-        due_date_str = request.form.get('due_date')
-        quarter = request.form.get('quarter')
+        discussion_prompt = request.form.get('discussion_prompt', '').strip()
+        description = request.form.get('description', '').strip()
+        due_date_str = request.form.get('due_date', '').strip()
+        quarter = request.form.get('quarter', '').strip()
+        total_points = request.form.get('total_points', type=float) or 100.0
+        assignment_context = request.form.get('assignment_context', 'homework')
         
-        if not all([title, class_id, discussion_topic, due_date_str, quarter]):
+        # Participation requirements
+        min_initial_posts = request.form.get('min_initial_posts', type=int) or 1
+        min_replies = request.form.get('min_replies', type=int) or 2
+        require_peer_response = request.form.get('require_peer_response') == 'on'
+        allow_student_threads = request.form.get('allow_student_threads') == 'on'
+        
+        # Rubric (optional)
+        use_rubric = request.form.get('use_rubric') == 'on'
+        rubric_criteria = request.form.get('rubric_criteria', '').strip() if use_rubric else None
+        
+        # Open/close dates
+        open_date_str = request.form.get('open_date', '').strip()
+        close_date_str = request.form.get('close_date', '').strip()
+        
+        if not all([title, class_id, discussion_prompt, due_date_str, quarter]):
             flash("Please fill in all required fields.", "danger")
-            return redirect(url_for('management.create_discussion_assignment'))
+            return render_template('shared/create_discussion_assignment.html', classes=classes)
         
         try:
             due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
+            due_date = due_date.replace(tzinfo=timezone.utc)  # Make due_date timezone-aware
+            open_date = None
+            close_date = None
+            
+            if open_date_str:
+                try:
+                    open_date = datetime.strptime(open_date_str, '%Y-%m-%dT%H:%M')
+                    open_date = open_date.replace(tzinfo=timezone.utc)
+                except ValueError:
+                    pass
+            
+            if close_date_str:
+                try:
+                    close_date = datetime.strptime(close_date_str, '%Y-%m-%dT%H:%M')
+                    close_date = close_date.replace(tzinfo=timezone.utc)
+                except ValueError:
+                    pass
+            
+            # If close_date not provided, default to due_date
+            if not close_date:
+                close_date = due_date
             
             # Get the active school year
             current_school_year = SchoolYear.query.filter_by(is_active=True).first()
             if not current_school_year:
                 flash("Cannot create assignment: No active school year.", "danger")
-                return redirect(url_for('management.create_discussion_assignment'))
+                return render_template('shared/create_discussion_assignment.html', classes=classes)
             
-            # Get assignment context from form or query parameter
-            assignment_context = request.form.get('assignment_context', 'homework')
+            # Build description with prompt and instructions
+            full_description = f"**Discussion Prompt:**\n{discussion_prompt}\n\n"
+            if description:
+                full_description += f"**Instructions:**\n{description}\n\n"
+            if rubric_criteria:
+                full_description += f"**Rubric:**\n{rubric_criteria}\n\n"
+            full_description += f"**Participation Requirements:**\n- Minimum {min_initial_posts} initial post(s)\n- Minimum {min_replies} reply/replies to classmates"
+            
+            # Calculate status based on dates
+            temp_assignment = type('obj', (object,), {
+                'status': 'Active',
+                'open_date': open_date,
+                'close_date': close_date,
+                'due_date': due_date
+            })
+            calculated_status = calculate_assignment_status(temp_assignment)
             
             # Create the assignment
             new_assignment = Assignment(
                 title=title,
-                description=f"{discussion_topic}\n\n{description}",
+                description=full_description,
                 due_date=due_date,
+                open_date=open_date,
+                close_date=close_date,
                 quarter=str(quarter),
                 class_id=class_id,
                 school_year_id=current_school_year.id,
-                status='Active',
+                status=calculated_status,
                 assignment_type='discussion',
                 assignment_context=assignment_context,
+                total_points=total_points,
                 created_by=current_user.id
             )
             
             db.session.add(new_assignment)
+            db.session.flush()
+            
+            # Store discussion-specific settings in a JSON field (we'll add this to Assignment model if needed)
+            # For now, we'll store it in description or create a separate table later
+            
             db.session.commit()
             
             # TODO: Save discussion settings, rubric, and prompts
@@ -301,6 +408,110 @@ def create_discussion_assignment():
     return render_template('shared/create_discussion_assignment.html', classes=classes, current_quarter=current_quarter)
 
 
+
+# ============================================================
+# Route: /extension-requests
+# Function: view_extension_requests
+# ============================================================
+
+@bp.route('/extension-requests')
+@login_required
+@management_required
+def view_extension_requests():
+    """View all extension requests for assignments"""
+    from datetime import datetime
+    
+    # Administrators see all extension requests
+    extension_requests = ExtensionRequest.query.order_by(ExtensionRequest.requested_at.desc()).all()
+    
+    # Group requests by status
+    pending_requests = [req for req in extension_requests if req.status == 'Pending']
+    approved_requests = [req for req in extension_requests if req.status == 'Approved']
+    rejected_requests = [req for req in extension_requests if req.status == 'Rejected']
+    
+    return render_template('teachers/extension_requests.html',
+                         pending_requests=pending_requests,
+                         approved_requests=approved_requests,
+                         rejected_requests=rejected_requests,
+                         total_count=len(extension_requests))
+
+# ============================================================
+# Route: /extension-request/<int:request_id>/review
+# Function: review_extension_request
+# ============================================================
+
+@bp.route('/extension-request/<int:request_id>/review', methods=['POST'])
+@login_required
+@management_required
+def review_extension_request(request_id):
+    """Approve or reject an extension request"""
+    from models import AssignmentExtension
+    from datetime import datetime
+    
+    extension_request = ExtensionRequest.query.get_or_404(request_id)
+    assignment = extension_request.assignment
+    
+    action = request.form.get('action')  # 'approve' or 'reject'
+    review_notes = request.form.get('review_notes', '').strip()
+    
+    if action not in ['approve', 'reject']:
+        return jsonify({'success': False, 'message': 'Invalid action'}), 400
+    
+    try:
+        # Get teacher_staff_id for administrators (use current user if available)
+        teacher_staff_id = None
+        if current_user.role in ['Director', 'School Administrator']:
+            # Try to get teacher_staff_id from current_user
+            if hasattr(current_user, 'teacher_staff_id') and current_user.teacher_staff_id:
+                teacher_staff_id = current_user.teacher_staff_id
+        
+        if action == 'approve':
+            # Update extension request status
+            extension_request.status = 'Approved'
+            extension_request.reviewed_at = datetime.utcnow()
+            extension_request.reviewed_by = teacher_staff_id
+            extension_request.review_notes = review_notes if review_notes else None
+            
+            # Create or update AssignmentExtension
+            existing_extension = AssignmentExtension.query.filter_by(
+                assignment_id=assignment.id,
+                student_id=extension_request.student_id,
+                is_active=True
+            ).first()
+            
+            if existing_extension:
+                # Update existing extension
+                existing_extension.extended_due_date = extension_request.requested_due_date
+                existing_extension.reason = review_notes if review_notes else 'Extension granted'
+            else:
+                # Create new extension
+                new_extension = AssignmentExtension(
+                    assignment_id=assignment.id,
+                    student_id=extension_request.student_id,
+                    extended_due_date=extension_request.requested_due_date,
+                    reason=review_notes if review_notes else 'Extension granted',
+                    granted_by=teacher_staff_id,
+                    is_active=True
+                )
+                db.session.add(new_extension)
+            
+            message = f'Extension request approved. New due date: {extension_request.requested_due_date.strftime("%Y-%m-%d %I:%M %p")}'
+        else:
+            # Reject extension request
+            extension_request.status = 'Rejected'
+            extension_request.reviewed_at = datetime.utcnow()
+            extension_request.reviewed_by = teacher_staff_id
+            extension_request.review_notes = review_notes if review_notes else 'Extension request rejected'
+            
+            message = 'Extension request rejected'
+        
+        db.session.commit()
+        return jsonify({'success': True, 'message': message})
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error reviewing extension request: {str(e)}")
+        return jsonify({'success': False, 'message': f'Error processing request: {str(e)}'}), 500
 
 # ============================================================
 # Route: /assignments-and-grades
@@ -383,6 +594,9 @@ def assignments_and_grades():
                             unique_student_ids.add(enrollment.student_id)
             unique_student_count = len(unique_student_ids)
             
+            # Get pending extension request count
+            pending_extension_count = ExtensionRequest.query.filter_by(status='Pending').count()
+            
             return render_template('management/assignments_and_grades.html',
                                  accessible_classes=accessible_classes,
                                  class_assignments=class_assignments,
@@ -394,7 +608,8 @@ def assignments_and_grades():
                                  sort_order=sort_order,
                                  view_mode=view_mode,
                                  user_role=user_role,
-                                 show_class_selection=True)
+                                 show_class_selection=True,
+                                 extension_request_count=pending_extension_count)
         
         # Get assignment counts and grade data for each class
         class_data = {}
@@ -528,12 +743,23 @@ def assignments_and_grades():
                                 # Skip invalid grade data
                                 continue
                     
+                    # Check if quiz is auto-gradeable (all questions are multiple_choice or true_false)
+                    is_autogradeable = False
+                    if assignment.assignment_type == 'quiz':
+                        from models import QuizQuestion
+                        quiz_questions = QuizQuestion.query.filter_by(assignment_id=assignment.id).all()
+                        if quiz_questions:
+                            # Check if all questions are auto-gradeable
+                            auto_gradeable_types = ['multiple_choice', 'true_false']
+                            is_autogradeable = all(q.question_type in auto_gradeable_types for q in quiz_questions)
+                    
                     assignment_grades[assignment.id] = {
                         'grades': grades,
                         'total_submissions': len(grades),
                         'graded_count': len(graded_grades),
                         'average_score': round(total_score / len(graded_grades), 1) if graded_grades else 0,
-                        'type': 'individual'
+                        'type': 'individual',
+                        'is_autogradeable': is_autogradeable
                     }
                 
                 # Get grade data for each group assignment
@@ -583,6 +809,9 @@ def assignments_and_grades():
             group_assignments = []
         
         from datetime import date
+        # Get pending extension request count
+        pending_extension_count = ExtensionRequest.query.filter_by(status='Pending').count()
+        
         return render_template('management/assignments_and_grades.html',
                              accessible_classes=accessible_classes,
                              class_data=class_data,
@@ -596,7 +825,8 @@ def assignments_and_grades():
                              view_mode=view_mode,
                              user_role=user_role,
                              show_class_selection=False,
-                             today=date.today())
+                             today=date.today(),
+                             extension_request_count=pending_extension_count)
     
     except Exception as e:
         print(f"Error in assignments_and_grades: {e}")
@@ -859,16 +1089,44 @@ def add_assignment():
             return redirect(request.url)
         
         print(f"DEBUG: Validation passed, proceeding to create assignment")
-        
-        # Validate status
-        valid_statuses = ['Active', 'Inactive', 'Voided']
-        if status not in valid_statuses:
-            flash('Invalid assignment status.', 'danger')
-            return redirect(request.url)
 
         # Type assertion for due_date_str
         assert due_date_str is not None
         due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
+        
+        # Parse open_date and close_date if provided
+        open_date_str = request.form.get('open_date', '').strip()
+        close_date_str = request.form.get('close_date', '').strip()
+        open_date = None
+        close_date = None
+        
+        if open_date_str:
+            try:
+                open_date = datetime.strptime(open_date_str, '%Y-%m-%dT%H:%M')
+            except ValueError:
+                pass
+        
+        if close_date_str:
+            try:
+                close_date = datetime.strptime(close_date_str, '%Y-%m-%dT%H:%M')
+            except ValueError:
+                pass
+        
+        # If close_date not provided, default to due_date
+        if not close_date:
+            close_date = due_date
+        
+        # Calculate status based on dates if status not explicitly set to Voided
+        from teacher_routes.assignment_utils import calculate_assignment_status
+        if status != 'Voided':
+            temp_assignment = type('obj', (object,), {
+                'status': 'Active',
+                'open_date': open_date,
+                'close_date': close_date,
+                'due_date': due_date
+            })
+            calculated_status = calculate_assignment_status(temp_assignment)
+            status = calculated_status
         
         current_school_year = SchoolYear.query.filter_by(is_active=True).first()
         if not current_school_year:
@@ -883,6 +1141,8 @@ def add_assignment():
         new_assignment.title = title
         new_assignment.description = description
         new_assignment.due_date = due_date
+        new_assignment.open_date = open_date
+        new_assignment.close_date = close_date
         new_assignment.class_id = class_id
         new_assignment.school_year_id = current_school_year.id
         new_assignment.quarter = str(quarter)
@@ -1266,8 +1526,48 @@ def grade_assignment(assignment_id):
                 ).all()
                 quiz_answers_by_student[student.id] = {answer.question_id: answer for answer in answers}
         
-        # Use specialized quiz grading template if it's a quiz with open-ended questions, otherwise use regular template
-        template_name = 'teachers/teacher_grade_quiz.html' if (assignment.assignment_type == 'quiz' and has_open_ended_questions) else 'teachers/teacher_grade_assignment.html'
+        # For discussion assignments, get threads and posts
+        discussion_threads_by_student = {}
+        discussion_posts_by_student = {}
+        min_initial_posts = 1
+        min_replies = 2
+        
+        if assignment.assignment_type == 'discussion':
+            from models import DiscussionThread, DiscussionPost
+            import re
+            
+            # Extract participation requirements from assignment description
+            if assignment.description:
+                initial_posts_match = re.search(r'Minimum (\d+) initial post', assignment.description)
+                if initial_posts_match:
+                    min_initial_posts = int(initial_posts_match.group(1))
+                replies_match = re.search(r'Minimum (\d+) reply/replies', assignment.description)
+                if replies_match:
+                    min_replies = int(replies_match.group(1))
+            
+            # Get all threads and posts for this assignment
+            all_threads = DiscussionThread.query.filter_by(assignment_id=assignment_id).all()
+            all_posts = DiscussionPost.query.filter(
+                DiscussionPost.thread_id.in_([t.id for t in all_threads])
+            ).all()
+            
+            # Organize by student
+            for student in students:
+                # Count threads created by this student
+                student_threads = [t for t in all_threads if t.student_id == student.id]
+                discussion_threads_by_student[student.id] = student_threads
+                
+                # Count replies by this student
+                student_posts = [p for p in all_posts if p.student_id == student.id]
+                discussion_posts_by_student[student.id] = student_posts
+        
+        # Use specialized template based on assignment type
+        if assignment.assignment_type == 'discussion':
+            template_name = 'management/grade_discussion_assignment.html'
+        elif assignment.assignment_type == 'quiz' and has_open_ended_questions:
+            template_name = 'teachers/teacher_grade_quiz.html'
+        else:
+            template_name = 'teachers/teacher_grade_assignment.html'
         
         return render_template(template_name, 
                              assignment=assignment, 
@@ -1279,7 +1579,11 @@ def grade_assignment(assignment_id):
                              role_prefix='management',
                              total_points=assignment_total_points,
                              quiz_questions=quiz_questions,
-                             quiz_answers_by_student=quiz_answers_by_student)
+                             quiz_answers_by_student=quiz_answers_by_student,
+                             discussion_threads_by_student=discussion_threads_by_student,
+                             discussion_posts_by_student=discussion_posts_by_student,
+                             min_initial_posts=min_initial_posts,
+                             min_replies=min_replies)
     
     except Exception as e:
         current_app.logger.error(f"Error in grade_assignment route: {str(e)}")
@@ -1495,6 +1799,103 @@ def view_assignment(assignment_id):
     """View assignment details"""
     try:
         assignment = Assignment.query.get_or_404(assignment_id)
+        
+        # For discussion assignments, use specialized view
+        if assignment.assignment_type == 'discussion':
+            from models import DiscussionThread, DiscussionPost, Enrollment, Student
+            from collections import defaultdict
+            
+            # Get class information
+            class_info = Class.query.get(assignment.class_id) if assignment.class_id else None
+            teacher = None
+            if class_info and class_info.teacher_id:
+                teacher = TeacherStaff.query.get(class_info.teacher_id)
+            
+            # Get all threads for this assignment
+            threads = DiscussionThread.query.filter_by(assignment_id=assignment_id).order_by(
+                DiscussionThread.is_pinned.desc(),
+                DiscussionThread.created_at.desc()
+            ).all()
+            
+            # Get all posts
+            all_posts = DiscussionPost.query.filter(
+                DiscussionPost.thread_id.in_([t.id for t in threads])
+            ).all()
+            
+            # Get all participants (students who posted)
+            participant_ids = set()
+            for thread in threads:
+                participant_ids.add(thread.student_id)
+            for post in all_posts:
+                participant_ids.add(post.student_id)
+            
+            # Get enrolled students
+            enrolled_students = []
+            if class_info:
+                enrollments = Enrollment.query.filter_by(class_id=class_info.id, is_active=True).all()
+                enrolled_students = [e.student for e in enrollments if e.student]
+            
+            # Get participant details
+            participants = []
+            participant_stats = defaultdict(lambda: {'threads': 0, 'replies': 0})
+            
+            for student_id in participant_ids:
+                student = Student.query.get(student_id)
+                if student:
+                    # Count threads and replies for this student
+                    threads_count = sum(1 for t in threads if t.student_id == student_id)
+                    replies_count = sum(1 for p in all_posts if p.student_id == student_id)
+                    
+                    participant_stats[student_id] = {
+                        'threads': threads_count,
+                        'replies': replies_count
+                    }
+                    
+                    participants.append({
+                        'student': student,
+                        'threads': threads_count,
+                        'replies': replies_count,
+                        'total_posts': threads_count + replies_count
+                    })
+            
+            # Sort participants by total posts (descending)
+            participants.sort(key=lambda x: x['total_posts'], reverse=True)
+            
+            # Get grades for this assignment
+            from models import Grade
+            grades = {}
+            grade_records = Grade.query.filter_by(assignment_id=assignment_id).all()
+            for g in grade_records:
+                try:
+                    if g.grade_data:
+                        grade_data = json.loads(g.grade_data)
+                        grades[g.student_id] = grade_data
+                except (json.JSONDecodeError, TypeError):
+                    pass
+            
+            # Extract participation requirements from assignment description
+            min_initial_posts = 1
+            min_replies = 2
+            import re
+            if assignment.description:
+                initial_posts_match = re.search(r'Minimum (\d+) initial post', assignment.description)
+                if initial_posts_match:
+                    min_initial_posts = int(initial_posts_match.group(1))
+                replies_match = re.search(r'Minimum (\d+) reply/replies', assignment.description)
+                if replies_match:
+                    min_replies = int(replies_match.group(1))
+            
+            return render_template('management/view_discussion_assignment.html',
+                                 assignment=assignment,
+                                 class_info=class_info,
+                                 teacher=teacher,
+                                 threads=threads,
+                                 participants=participants,
+                                 enrolled_students=enrolled_students,
+                                 grades=grades,
+                                 min_initial_posts=min_initial_posts,
+                                 min_replies=min_replies,
+                                 role_prefix='management')
         
         # Get class information
         class_info = Class.query.get(assignment.class_id) if assignment.class_id else None
@@ -2173,6 +2574,234 @@ def void_group_grade(grade_id):
     return redirect(request.referrer or url_for('management.assignments_and_grades'))
 
 
+# ============================================================
+# Route: /group-assignment/<int:assignment_id>/void', methods=['POST']
+# Function: void_group_assignment
+# ============================================================
+
+@bp.route('/group-assignment/<int:assignment_id>/void', methods=['POST'])
+@login_required
+@management_required
+def void_group_assignment(assignment_id):
+    """Void a group assignment for all groups, specific groups, or specific students."""
+    from datetime import datetime
+    from models import GroupAssignment, GroupGrade, StudentGroup, StudentGroupMember
+    import json
+    
+    try:
+        group_assignment = GroupAssignment.query.get_or_404(assignment_id)
+        void_scope = request.form.get('void_scope', 'all_groups')
+        reason = request.form.get('reason', 'Voided by administrator')
+        group_ids = request.form.getlist('group_ids')
+        student_ids = request.form.getlist('student_ids')
+        
+        voided_count = 0
+        
+        if void_scope == 'all_groups':
+            # Void for all groups and all students
+            groups = StudentGroup.query.filter_by(class_id=group_assignment.class_id, is_active=True).all()
+            for group in groups:
+                members = StudentGroupMember.query.filter_by(group_id=group.id).all()
+                for member in members:
+                    group_grade = GroupGrade.query.filter_by(
+                        group_assignment_id=assignment_id,
+                        student_id=member.student_id
+                    ).first()
+                    
+                    if group_grade:
+                        if not group_grade.is_voided:
+                            group_grade.is_voided = True
+                            group_grade.voided_by = current_user.id
+                            group_grade.voided_at = datetime.utcnow()
+                            group_grade.voided_reason = reason
+                            voided_count += 1
+                    else:
+                        # Create voided grade placeholder
+                        new_grade = GroupGrade(
+                            student_id=member.student_id,
+                            group_assignment_id=assignment_id,
+                            student_group_id=group.id,
+                            grade_data=json.dumps({'score': 'N/A', 'comments': ''}),
+                            is_voided=True,
+                            voided_by=current_user.id,
+                            voided_at=datetime.utcnow(),
+                            voided_reason=reason
+                        )
+                        db.session.add(new_grade)
+                        voided_count += 1
+            
+            flash(f'Voided assignment for all groups ({voided_count} students).', 'success')
+            
+        elif void_scope == 'specific_groups':
+            # Void for specific groups
+            if not group_ids:
+                flash('Please select at least one group.', 'warning')
+                return redirect(request.referrer or url_for('management.admin_view_group_assignment', assignment_id=assignment_id))
+            
+            for group_id in group_ids:
+                group = StudentGroup.query.get(int(group_id))
+                if group:
+                    members = StudentGroupMember.query.filter_by(group_id=group.id).all()
+                    for member in members:
+                        group_grade = GroupGrade.query.filter_by(
+                            group_assignment_id=assignment_id,
+                            student_id=member.student_id
+                        ).first()
+                        
+                        if group_grade:
+                            if not group_grade.is_voided:
+                                group_grade.is_voided = True
+                                group_grade.voided_by = current_user.id
+                                group_grade.voided_at = datetime.utcnow()
+                                group_grade.voided_reason = reason
+                                voided_count += 1
+                        else:
+                            new_grade = GroupGrade(
+                                student_id=member.student_id,
+                                group_assignment_id=assignment_id,
+                                student_group_id=group.id,
+                                grade_data=json.dumps({'score': 'N/A', 'comments': ''}),
+                                is_voided=True,
+                                voided_by=current_user.id,
+                                voided_at=datetime.utcnow(),
+                                voided_reason=reason
+                            )
+                            db.session.add(new_grade)
+                            voided_count += 1
+            
+            flash(f'Voided assignment for selected groups ({voided_count} students).', 'success')
+            
+        elif void_scope == 'specific_students':
+            # Void for specific students
+            if not student_ids:
+                flash('Please select at least one student.', 'warning')
+                return redirect(request.referrer or url_for('management.admin_view_group_assignment', assignment_id=assignment_id))
+            
+            for student_id in student_ids:
+                # Find student's group
+                member = StudentGroupMember.query.filter_by(
+                    student_id=int(student_id),
+                    group_id=StudentGroup.query.filter_by(class_id=group_assignment.class_id).subquery().c.id
+                ).first()
+                
+                # Alternative: find by checking all groups
+                groups = StudentGroup.query.filter_by(class_id=group_assignment.class_id, is_active=True).all()
+                student_group = None
+                for group in groups:
+                    member_check = StudentGroupMember.query.filter_by(group_id=group.id, student_id=int(student_id)).first()
+                    if member_check:
+                        student_group = group
+                        break
+                
+                if student_group:
+                    group_grade = GroupGrade.query.filter_by(
+                        group_assignment_id=assignment_id,
+                        student_id=int(student_id)
+                    ).first()
+                    
+                    if group_grade:
+                        if not group_grade.is_voided:
+                            group_grade.is_voided = True
+                            group_grade.voided_by = current_user.id
+                            group_grade.voided_at = datetime.utcnow()
+                            group_grade.voided_reason = reason
+                            voided_count += 1
+                    else:
+                        new_grade = GroupGrade(
+                            student_id=int(student_id),
+                            group_assignment_id=assignment_id,
+                            student_group_id=student_group.id,
+                            grade_data=json.dumps({'score': 'N/A', 'comments': ''}),
+                            is_voided=True,
+                            voided_by=current_user.id,
+                            voided_at=datetime.utcnow(),
+                            voided_reason=reason
+                        )
+                        db.session.add(new_grade)
+                        voided_count += 1
+            
+            flash(f'Voided assignment for selected students ({voided_count} students).', 'success')
+        
+        db.session.commit()
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error voiding group assignment: {str(e)}', 'danger')
+        print(f"Error voiding group assignment: {e}")
+    
+    return redirect(request.referrer or url_for('management.admin_view_group_assignment', assignment_id=assignment_id))
+
+
+# ============================================================
+# Route: /group-assignment/<int:assignment_id>/unvoid', methods=['POST']
+# Function: unvoid_group_assignment
+# ============================================================
+
+@bp.route('/group-assignment/<int:assignment_id>/unvoid', methods=['POST'])
+@login_required
+@management_required
+def unvoid_group_assignment(assignment_id):
+    """Unvoid a group assignment - restore all voided grades."""
+    from models import GroupAssignment, GroupGrade
+    
+    try:
+        group_assignment = GroupAssignment.query.get_or_404(assignment_id)
+        unvoid_scope = request.form.get('unvoid_scope', 'all')
+        
+        voided_grades = GroupGrade.query.filter_by(
+            group_assignment_id=assignment_id,
+            is_voided=True
+        ).all()
+        
+        unvoided_count = 0
+        for grade in voided_grades:
+            grade.is_voided = False
+            grade.voided_by = None
+            grade.voided_at = None
+            grade.voided_reason = None
+            unvoided_count += 1
+        
+        db.session.commit()
+        flash(f'Restored assignment for {unvoided_count} students.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error restoring group assignment: {str(e)}', 'danger')
+        print(f"Error unvoiding group assignment: {e}")
+    
+    return redirect(request.referrer or url_for('management.admin_view_group_assignment', assignment_id=assignment_id))
+
+
+# ============================================================
+# Route: /group-assignment/<int:assignment_id>/change-status', methods=['POST']
+# Function: admin_change_group_assignment_status
+# ============================================================
+
+@bp.route('/group-assignment/<int:assignment_id>/change-status', methods=['POST'])
+@login_required
+@management_required
+def admin_change_group_assignment_status(assignment_id):
+    """Change the status of a group assignment."""
+    from models import GroupAssignment
+    
+    try:
+        group_assignment = GroupAssignment.query.get_or_404(assignment_id)
+        new_status = request.form.get('status')
+        
+        if new_status in ['Active', 'Inactive', 'Upcoming', 'Voided']:
+            group_assignment.status = new_status
+            db.session.commit()
+            flash(f'Assignment status changed to {new_status}.', 'success')
+        else:
+            flash('Invalid status.', 'danger')
+            
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error changing assignment status: {str(e)}', 'danger')
+    
+    return redirect(request.referrer or url_for('management.admin_view_group_assignment', assignment_id=assignment_id))
+
+
 # ============================================================================
 # ASSIGNMENT REDO SYSTEM
 # ============================================================================
@@ -2543,11 +3172,16 @@ def grant_extensions():
 @management_required
 def admin_view_group_assignment(assignment_id):
     """View details of a specific group assignment - Management view."""
-    from models import GroupAssignment, GroupSubmission, StudentGroup, AssignmentExtension
+    from models import GroupAssignment, GroupSubmission, StudentGroup, AssignmentExtension, Assignment
     import json
     
     try:
-        group_assignment = GroupAssignment.query.get_or_404(assignment_id)
+        # First check if this is actually a group assignment
+        group_assignment = GroupAssignment.query.get(assignment_id)
+        if not group_assignment:
+            # Not a group assignment - redirect to regular assignment view
+            flash('This is not a group assignment.', 'info')
+            return redirect(url_for('management.view_assignment', assignment_id=assignment_id))
         
         # Get submissions for this assignment
         submissions = GroupSubmission.query.filter_by(group_assignment_id=assignment_id).all()
@@ -2580,9 +3214,10 @@ def admin_view_group_assignment(assignment_id):
         from models import GroupGrade
         from datetime import datetime, timedelta
         
-        # Get graded count
-        group_grades = GroupGrade.query.filter_by(group_assignment_id=assignment_id, is_voided=False).all()
-        graded_count = len(group_grades)
+        # Get all group grades (including voided ones for the unvoid button check)
+        all_group_grades = GroupGrade.query.filter_by(group_assignment_id=assignment_id).all()
+        non_voided_grades = [g for g in all_group_grades if not g.is_voided]  # Non-voided for graded count
+        graded_count = len(non_voided_grades)
         
         # Calculate total students in groups
         total_students = sum(len(group.members) for group in groups)
@@ -2641,6 +3276,7 @@ def admin_view_group_assignment(assignment_id):
                              submissions=submissions,
                              groups=groups,
                              extensions=extensions,
+                             group_grades=all_group_grades,  # Pass all grades (including voided) for void check
                              graded_count=graded_count,
                              total_students=total_students,
                              submission_count=submission_count,
@@ -2664,14 +3300,21 @@ def admin_view_group_assignment(assignment_id):
 
 @bp.route('/group-assignment/<int:assignment_id>/grade', methods=['GET', 'POST'])
 @login_required
-@management_required
 def admin_grade_group_assignment(assignment_id):
-    """Grade a group assignment - Management view."""
-    from models import GroupAssignment, StudentGroup, GroupGrade, AssignmentExtension
+    """Grade a group assignment - Allows teachers and administrators."""
+    from models import GroupAssignment, StudentGroup, GroupGrade, AssignmentExtension, TeacherStaff
+    from teacher_routes.utils import is_authorized_for_class
     import json
     
     try:
         group_assignment = GroupAssignment.query.get_or_404(assignment_id)
+        
+        # Authorization check - Teachers can grade assignments for their classes, Admins can grade any
+        if current_user.role not in ['Director', 'School Administrator']:
+            # Check if teacher is authorized for this class
+            if not is_authorized_for_class(group_assignment.class_info):
+                flash("You are not authorized to grade this assignment.", "danger")
+                return redirect(url_for('teacher.dashboard.assignments_and_grades'))
         
         # Get groups for this class - filter by selected groups if specified
         if group_assignment.selected_group_ids:
@@ -2979,7 +3622,7 @@ def admin_edit_group_assignment(assignment_id):
 def admin_grant_extensions(assignment_id):
     """View and manage extensions for an assignment - Management view."""
     try:
-        from models import Assignment, AssignmentExtension, Class, Student
+        from models import Assignment, AssignmentExtension, Class, Student, Enrollment
         
         assignment = Assignment.query.get_or_404(assignment_id)
         class_obj = Class.query.get_or_404(assignment.class_id)
@@ -2987,8 +3630,9 @@ def admin_grant_extensions(assignment_id):
         # Get existing extensions for this assignment
         extensions = AssignmentExtension.query.filter_by(assignment_id=assignment_id).all()
         
-        # Get students in this class for granting new extensions
-        students = Student.query.join(Class.students).filter(Class.id == assignment.class_id).all()
+        # Get students in this class for granting new extensions (using Enrollment, not Class.students)
+        enrollments = Enrollment.query.filter_by(class_id=assignment.class_id, is_active=True).all()
+        students = [e.student for e in enrollments if e.student]
         
         return render_template('management/admin_grant_extensions.html',
                              assignment=assignment,
@@ -2997,6 +3641,8 @@ def admin_grant_extensions(assignment_id):
                              students=students)
     except Exception as e:
         print(f"Error viewing extensions: {e}")
+        import traceback
+        traceback.print_exc()
         flash('Error accessing extensions management.', 'error')
-        return redirect(url_for('management.admin_view_group_assignment', assignment_id=assignment_id))
+        return redirect(url_for('management.view_assignment', assignment_id=assignment_id))
 

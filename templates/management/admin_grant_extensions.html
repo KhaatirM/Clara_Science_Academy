@@ -36,7 +36,7 @@
           <h5 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Grant New Extensions</h5>
         </div>
         <div class="card-body">
-          <form method="POST" action="{{ url_for('management.grant_extensions') }}">
+          <form method="POST" action="/management/assignment/grant-extensions">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <input type="hidden" name="assignment_id" value="{{ assignment.id }}">
             <input type="hidden" name="class_id" value="{{ class_obj.id }}">

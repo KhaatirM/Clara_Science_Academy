@@ -16,7 +16,7 @@ from models import (
     # Academic structure
     Class, SchoolYear, AcademicPeriod, Enrollment, ClassSchedule,
     # Assignment system
-    Assignment, AssignmentRedo, Submission, Grade, StudentGoal,
+    Assignment, AssignmentRedo, Submission, Grade, StudentGoal, ExtensionRequest,
     # Group assignment system
     GroupAssignment, GroupGrade, StudentGroup, GroupSubmission, StudentGroupMember,
     # Quiz system
@@ -108,8 +108,31 @@ def get_student_assignment_status(assignment, submission, grade, student_id=None
                     return 'Past Due'
     
     # Check if assignment has been graded - this takes priority over due date
+    # Only return 'completed' if grade exists AND has meaningful grade data AND was actually graded
     if grade:
-        return 'completed'
+        # CRITICAL: Only consider it graded if graded_at is set (indicates actual grading occurred)
+        # This prevents assignments from being marked as "graded" when they're first created
+        if grade.graded_at is None:
+            # No graded_at timestamp means it hasn't been graded yet
+            # Continue to check submission and due date status
+            pass
+        else:
+            # Has graded_at timestamp - check if grade has actual data
+            if grade.grade_data:
+                try:
+                    import json
+                    grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
+                    # If graded_at exists, it means the assignment was actually graded (even if score is 0)
+                    # This covers both teacher-graded assignments and auto-graded quizzes
+                    return 'completed'
+                except (json.JSONDecodeError, TypeError, AttributeError):
+                    # Invalid grade data, but has graded_at, so it was graded
+                    return 'completed'
+            else:
+                # Has graded_at but no grade_data - still consider it graded (edge case)
+                return 'completed'
+        # Grade record exists but has no graded_at - don't treat as completed
+        # Continue to check submission and due date status
     
     # Check if assignment has been submitted
     if submission:
@@ -537,7 +560,7 @@ def student_dashboard():
     assignments = Assignment.query.filter(
         Assignment.class_id.in_(class_ids),
         Assignment.school_year_id == current_school_year.id,
-        Assignment.status == 'Active'  # Only show Active assignments to students
+        Assignment.status.in_(['Active', 'Upcoming'])  # Show Active and Upcoming assignments to students
     ).all()
     
     past_due_assignments = []
@@ -639,7 +662,7 @@ def student_assignments():
     query = Assignment.query.filter(
         Assignment.class_id.in_(class_ids),
         Assignment.school_year_id == current_school_year.id,
-        Assignment.status.in_(['Active', 'Inactive', 'Voided'])  # Show Active, Inactive, and Voided assignments
+        Assignment.status.in_(['Active', 'Inactive', 'Upcoming', 'Voided'])  # Show Active, Inactive, Upcoming, and Voided assignments
     )
     
     # Apply class filter
@@ -647,7 +670,7 @@ def student_assignments():
         query = query.filter(Assignment.class_id == filter_class_id)
     
     # Apply status filter (only if a specific status is selected, not empty)
-    if filter_status and filter_status in ['Active', 'Inactive', 'Voided']:
+    if filter_status and filter_status in ['Active', 'Inactive', 'Upcoming', 'Voided']:
         query = query.filter(Assignment.status == filter_status)
     
     # Apply date range filter
@@ -686,12 +709,10 @@ def student_assignments():
         Assignment.assignment_type.in_(['PDF', 'Paper', 'pdf', 'paper'])
     ).all()
     
-    # Separate assignments into Active, Inactive, and Voided
-    active_assignments = []
-    inactive_assignments = []
-    voided_assignments = []
-    past_due_assignments = []
-    upcoming_assignments = []
+    # Separate assignments into 3 categories: Inactive, Active, and Upcoming
+    inactive_assignments = []  # Assignments with status='Inactive' - students can't turn them in
+    active_assignments = []  # Assignments with status='Active' - students can submit
+    upcoming_assignments = []  # Placeholder for future feature
     today = datetime.now().date()
     
     for assignment in assignments:
@@ -703,34 +724,29 @@ def student_assignments():
         
         assignment_data = (assignment, submission, student_status)
         
-        # Group by Active/Inactive/Voided status
-        if assignment.status == 'Voided':
-            voided_assignments.append(assignment_data)
-        elif assignment.status == 'Active':
-            active_assignments.append(assignment_data)
-        else:
-            inactive_assignments.append(assignment_data)
+        # Skip voided assignments
+        if assignment.status == 'Voided' or student_status == 'Voided':
+            continue
         
-        # Categorize assignments for alerts (only if not completed)
-        if assignment.due_date and student_status not in ['completed', 'Voided']:
-            # Convert due_date to date if it's a datetime
-            due_date = assignment.due_date.date() if hasattr(assignment.due_date, 'date') else assignment.due_date
-            
-            if due_date < today:
-                past_due_assignments.append(assignment)
-            elif due_date <= today + timedelta(days=7):
-                upcoming_assignments.append(assignment)
+        # Categorize by assignment status set by teacher
+        if assignment.status == 'Inactive':
+            # Inactive assignments - students can view but can't turn them in
+            inactive_assignments.append(assignment_data)
+        elif assignment.status == 'Upcoming':
+            # Upcoming assignments - not yet open
+            upcoming_assignments.append(assignment_data)
+        elif assignment.status == 'Active':
+            # Active assignments - students can submit
+            active_assignments.append(assignment_data)
     
     return render_template('students/role_student_dashboard.html', 
                          **create_template_context(student, 'assignments', 'assignments',
-                             active_assignments=active_assignments,
                              inactive_assignments=inactive_assignments,
-                             voided_assignments=voided_assignments,
+                             active_assignments=active_assignments,
+                             upcoming_assignments=upcoming_assignments,
                              grades=grades_dict,
                              today=today,
                              classes=classes,
-                             past_due_assignments=past_due_assignments,
-                             upcoming_assignments=upcoming_assignments,
                              redo_opportunities=redo_opportunities,
                              filter_class_id=filter_class_id,
                              filter_status=filter_status,
@@ -1233,8 +1249,52 @@ def student_grades():
 @student_required
 def student_schedule():
     student = Student.query.get_or_404(current_user.student_id)
+    
+    # Get student's enrolled classes
+    enrollments = Enrollment.query.filter_by(
+        student_id=student.id,
+        is_active=True
+    ).all()
+    classes = [enrollment.class_info for enrollment in enrollments if enrollment.class_info]
+    
+    # Get full weekly schedule (Monday=0 to Sunday=6)
+    weekly_schedule = {}
+    day_names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    
+    for day_num in range(7):
+        day_schedules = []
+        for class_obj in classes:
+            schedule = ClassSchedule.query.filter_by(
+                class_id=class_obj.id,
+                day_of_week=day_num
+            ).first()
+            
+            if schedule:
+                day_schedules.append({
+                    'class': class_obj,
+                    'start_time': schedule.start_time,
+                    'end_time': schedule.end_time,
+                    'time_str': f"{schedule.start_time.strftime('%I:%M %p')} - {schedule.end_time.strftime('%I:%M %p')}",
+                    'room': schedule.room or 'TBD',
+                    'teacher': class_obj.teacher.first_name + ' ' + class_obj.teacher.last_name if class_obj.teacher else 'TBD'
+                })
+        
+        # Sort by start time
+        day_schedules.sort(key=lambda x: x['start_time'])
+        weekly_schedule[day_num] = {
+            'day_name': day_names[day_num],
+            'schedules': day_schedules
+        }
+    
+    # Get today's weekday for highlighting
+    today = datetime.now()
+    today_weekday = today.weekday()
+    
     return render_template('students/role_student_dashboard.html', 
-                         **create_template_context(student, 'schedule', 'schedule'))
+                         **create_template_context(student, 'schedule', 'schedule',
+                             weekly_schedule=weekly_schedule,
+                             today_weekday=today_weekday,
+                             classes=classes))
 
 @student_blueprint.route('/school-calendar')
 @login_required
@@ -1944,6 +2004,12 @@ def submit_quiz(assignment_id):
         flash("This is not a quiz assignment.", "danger")
         return redirect(url_for('student.student_assignments'))
     
+    # Check if assignment is open for this student (considering extensions)
+    from teacher_routes.assignment_utils import is_assignment_open_for_student
+    if not is_assignment_open_for_student(assignment, student.id):
+        flash("This quiz is not currently open for submission.", "warning")
+        return redirect(url_for('student.student_assignments'))
+    
     # Check number of attempts
     submissions_count = Submission.query.filter_by(
         student_id=student.id,
@@ -2112,111 +2178,7 @@ def get_quiz_details(assignment_id):
         'has_submission': submissions_count > 0
     })
 
-@student_blueprint.route('/discussion/<int:assignment_id>')
-@login_required
-@student_required
-def join_discussion(assignment_id):
-    """Join a discussion assignment"""
-    student = Student.query.get_or_404(current_user.student_id)
-    assignment = Assignment.query.get_or_404(assignment_id)
-    
-    # Check if assignment is a discussion
-    if assignment.assignment_type != 'discussion':
-        flash("This is not a discussion assignment.", "danger")
-        return redirect(url_for('student.student_assignments'))
-    
-    # Check if student is enrolled in the class
-    enrollment = Enrollment.query.filter_by(
-        student_id=student.id,
-        class_id=assignment.class_id,
-        is_active=True
-    ).first()
-    
-    if not enrollment:
-        flash("You are not enrolled in this class.", "danger")
-        return redirect(url_for('student.student_assignments'))
-    
-    # Check if assignment is still active
-    if assignment.status not in ['Active', 'Inactive']:
-        flash("This assignment is no longer available.", "danger")
-        return redirect(url_for('student.student_assignments'))
-    
-    # Load discussion threads
-    threads = DiscussionThread.query.filter_by(assignment_id=assignment_id).order_by(DiscussionThread.is_pinned.desc(), DiscussionThread.created_at.desc()).all()
-    
-    return render_template('shared/discussion.html', 
-                         assignment=assignment,
-                         student=student,
-                         threads=threads)
-
-@student_blueprint.route('/create-thread/<int:assignment_id>', methods=['POST'])
-@login_required
-@student_required
-def create_discussion_thread(assignment_id):
-    """Create a new discussion thread"""
-    student = Student.query.get_or_404(current_user.student_id)
-    assignment = Assignment.query.get_or_404(assignment_id)
-    
-    # Check if assignment is a discussion
-    if assignment.assignment_type != 'discussion':
-        flash("This is not a discussion assignment.", "danger")
-        return redirect(url_for('student.student_assignments'))
-    
-    title = request.form.get('title', '').strip()
-    content = request.form.get('content', '').strip()
-    
-    if not title or not content:
-        flash("Please provide both title and content.", "danger")
-        return redirect(url_for('student.join_discussion', assignment_id=assignment_id))
-    
-    try:
-        thread = DiscussionThread(
-            assignment_id=assignment_id,
-            student_id=student.id,
-            title=title,
-            content=content
-        )
-        db.session.add(thread)
-        db.session.commit()
-        
-        flash('Discussion thread created successfully!', 'success')
-        return redirect(url_for('student.join_discussion', assignment_id=assignment_id))
-        
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Error creating thread: {str(e)}', 'danger')
-        return redirect(url_for('student.join_discussion', assignment_id=assignment_id))
-
-@student_blueprint.route('/reply-to-thread/<int:thread_id>', methods=['POST'])
-@login_required
-@student_required
-def reply_to_thread(thread_id):
-    """Reply to a discussion thread"""
-    student = Student.query.get_or_404(current_user.student_id)
-    thread = DiscussionThread.query.get_or_404(thread_id)
-    
-    content = request.form.get('content', '').strip()
-    
-    if not content:
-        flash("Please provide content for your reply.", "danger")
-        return redirect(url_for('student.join_discussion', assignment_id=thread.assignment_id))
-    
-    try:
-        post = DiscussionPost(
-            thread_id=thread_id,
-            student_id=student.id,
-            content=content
-        )
-        db.session.add(post)
-        db.session.commit()
-        
-        flash('Reply posted successfully!', 'success')
-        return redirect(url_for('student.join_discussion', assignment_id=thread.assignment_id))
-        
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Error posting reply: {str(e)}', 'danger')
-        return redirect(url_for('student.join_discussion', assignment_id=thread.assignment_id))
+# Removed duplicate routes - using view_discussion, create_discussion_thread, and reply_to_thread from below instead
 
 @student_blueprint.route('/class/<int:class_id>/teacher')
 @login_required
@@ -2237,12 +2199,288 @@ def view_class_teacher(class_id):
                          teacher=teacher,
                          show_teacher=True)
 
+@student_blueprint.route('/request-extension', methods=['POST'])
+@login_required
+@student_required
+def request_extension():
+    """Student submits an extension request for an assignment."""
+    try:
+        student = Student.query.get_or_404(current_user.student_id)
+        assignment_id = request.form.get('assignment_id', type=int)
+        reason = request.form.get('reason', '').strip()
+        requested_due_date_str = request.form.get('requested_due_date')
+
+        if not all([assignment_id, reason, requested_due_date_str]):
+            return jsonify({'success': False, 'message': 'Missing required fields.'}), 400
+
+        assignment = Assignment.query.get_or_404(assignment_id)
+
+        try:
+            requested_due_date = datetime.strptime(requested_due_date_str, '%Y-%m-%d')
+            # Ensure the requested date is not in the past
+            if requested_due_date.date() < datetime.now().date():
+                return jsonify({'success': False, 'message': 'Requested due date cannot be in the past.'}), 400
+        except ValueError:
+            return jsonify({'success': False, 'message': 'Invalid date format.'}), 400
+
+        # Check for existing pending or approved requests for this assignment by this student
+        existing_request = ExtensionRequest.query.filter_by(
+            assignment_id=assignment_id,
+            student_id=student.id
+        ).filter(
+            ExtensionRequest.status.in_(['Pending', 'Approved'])
+        ).first()
+
+        if existing_request:
+            return jsonify({'success': False, 'message': 'You already have a pending or approved extension request for this assignment.'}), 409
+
+        new_request = ExtensionRequest(
+            assignment_id=assignment_id,
+            student_id=student.id,
+            requested_due_date=requested_due_date,
+            reason=reason,
+            status='Pending'
+        )
+        db.session.add(new_request)
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Extension request submitted successfully!'}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error submitting extension request for student {student.id if 'student' in locals() else 'unknown'}, assignment {assignment_id if 'assignment_id' in locals() else 'unknown'}: {e}")
+        return jsonify({'success': False, 'message': f'An unexpected error occurred: {str(e)}'}), 500
+
+
+@student_blueprint.route('/discussion/<int:assignment_id>')
+@login_required
+@student_required
+def view_discussion(assignment_id):
+    """View a discussion assignment"""
+    student = Student.query.get_or_404(current_user.student_id)
+    assignment = Assignment.query.get_or_404(assignment_id)
+    
+    # Check if assignment is a discussion
+    if assignment.assignment_type != 'discussion':
+        flash("This is not a discussion assignment.", "danger")
+        return redirect(url_for('student.student_assignments'))
+    
+    # Check if student is enrolled in the class
+    enrollment = Enrollment.query.filter_by(
+        student_id=student.id,
+        class_id=assignment.class_id,
+        is_active=True
+    ).first()
+    
+    if not enrollment:
+        flash("You are not enrolled in this class.", "danger")
+        return redirect(url_for('student.student_assignments'))
+    
+    # Get all threads for this assignment (pinned first, then by date)
+    threads = DiscussionThread.query.filter_by(assignment_id=assignment_id).order_by(
+        DiscussionThread.is_pinned.desc(),
+        DiscussionThread.created_at.desc()
+    ).all()
+    
+    # Get student's threads and replies
+    student_threads = DiscussionThread.query.filter_by(
+        assignment_id=assignment_id,
+        student_id=student.id
+    ).all()
+    
+    student_replies = DiscussionPost.query.join(DiscussionThread).filter(
+        DiscussionThread.assignment_id == assignment_id,
+        DiscussionPost.student_id == student.id
+    ).all()
+    
+    # Parse participation requirements from description
+    min_initial_posts = 1
+    min_replies = 2
+    allow_student_threads = True
+    
+    if '**Participation Requirements:**' in assignment.description:
+        reqs_text = assignment.description.split('**Participation Requirements:**')[1]
+        if 'Minimum' in reqs_text:
+            import re
+            initial_match = re.search(r'Minimum (\d+) initial post', reqs_text)
+            replies_match = re.search(r'Minimum (\d+) reply', reqs_text)
+            if initial_match:
+                min_initial_posts = int(initial_match.group(1))
+            if replies_match:
+                min_replies = int(replies_match.group(1))
+    
+    return render_template('students/view_discussion.html',
+                         **create_template_context(student, 'assignments', 'assignments'),
+                         assignment=assignment,
+                         threads=threads,
+                         student_threads=student_threads,
+                         student_replies=student_replies,
+                         min_initial_posts=min_initial_posts,
+                         min_replies=min_replies,
+                         allow_student_threads=allow_student_threads)
+
+
+@student_blueprint.route('/discussion/<int:assignment_id>/create-thread', methods=['POST'], endpoint='create_discussion_thread')
+@login_required
+@student_required
+def create_discussion_thread(assignment_id):
+    """Create a new discussion thread"""
+    student = Student.query.get_or_404(current_user.student_id)
+    assignment = Assignment.query.get_or_404(assignment_id)
+    
+    # Check if assignment is a discussion
+    if assignment.assignment_type != 'discussion':
+        flash("This is not a discussion assignment.", "danger")
+        return redirect(url_for('student.student_assignments'))
+    
+    # Check if assignment is active
+    if assignment.status != 'Active':
+        flash("This discussion is not currently active.", "danger")
+        return redirect(url_for('student.view_discussion', assignment_id=assignment_id))
+    
+    # Check if student is enrolled
+    enrollment = Enrollment.query.filter_by(
+        student_id=student.id,
+        class_id=assignment.class_id,
+        is_active=True
+    ).first()
+    
+    if not enrollment:
+        flash("You are not enrolled in this class.", "danger")
+        return redirect(url_for('student.student_assignments'))
+    
+    # Get form data
+    thread_title = request.form.get('thread_title', '').strip()
+    thread_content = request.form.get('thread_content', '').strip()
+    
+    if not thread_title or not thread_content:
+        flash("Please provide both a title and content for your thread.", "danger")
+        return redirect(url_for('student.view_discussion', assignment_id=assignment_id))
+    
+    try:
+        # Create new thread
+        new_thread = DiscussionThread(
+            assignment_id=assignment_id,
+            student_id=student.id,
+            title=thread_title,
+            content=thread_content,
+            is_pinned=False,
+            is_locked=False
+        )
+        
+        db.session.add(new_thread)
+        db.session.commit()
+        
+        flash('Discussion thread created successfully!', 'success')
+        return redirect(url_for('student.view_discussion_thread', thread_id=new_thread.id))
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error creating discussion thread: {e}")
+        flash(f'Error creating thread: {str(e)}', 'danger')
+        return redirect(url_for('student.view_discussion', assignment_id=assignment_id))
+
+
+@student_blueprint.route('/discussion/thread/<int:thread_id>')
+@login_required
+@student_required
+def view_discussion_thread(thread_id):
+    """View a specific discussion thread with all replies"""
+    student = Student.query.get_or_404(current_user.student_id)
+    thread = DiscussionThread.query.get_or_404(thread_id)
+    assignment = thread.assignment
+    
+    # Check if student is enrolled
+    enrollment = Enrollment.query.filter_by(
+        student_id=student.id,
+        class_id=assignment.class_id,
+        is_active=True
+    ).first()
+    
+    if not enrollment:
+        flash("You are not enrolled in this class.", "danger")
+        return redirect(url_for('student.student_assignments'))
+    
+    # Get all posts for this thread (ordered by date)
+    posts = DiscussionPost.query.filter_by(thread_id=thread_id).order_by(
+        DiscussionPost.created_at.asc()
+    ).all()
+    
+    return render_template('students/view_discussion_thread.html',
+                         **create_template_context(student, 'assignments', 'assignments'),
+                         assignment=assignment,
+                         thread=thread,
+                         posts=posts)
+
+
+@student_blueprint.route('/discussion/thread/<int:thread_id>/reply', methods=['POST'], endpoint='reply_to_discussion_thread')
+@login_required
+@student_required
+def reply_to_thread(thread_id):
+    """Post a reply to a discussion thread"""
+    student = Student.query.get_or_404(current_user.student_id)
+    thread = DiscussionThread.query.get_or_404(thread_id)
+    assignment = thread.assignment
+    
+    # Check if thread is locked
+    if thread.is_locked:
+        flash("This thread is locked and no longer accepts replies.", "warning")
+        return redirect(url_for('student.view_discussion_thread', thread_id=thread_id))
+    
+    # Check if assignment is active
+    if assignment.status != 'Active':
+        flash("This discussion is not currently active.", "danger")
+        return redirect(url_for('student.view_discussion_thread', thread_id=thread_id))
+    
+    # Check if student is enrolled
+    enrollment = Enrollment.query.filter_by(
+        student_id=student.id,
+        class_id=assignment.class_id,
+        is_active=True
+    ).first()
+    
+    if not enrollment:
+        flash("You are not enrolled in this class.", "danger")
+        return redirect(url_for('student.student_assignments'))
+    
+    # Get form data
+    reply_content = request.form.get('reply_content', '').strip()
+    
+    if not reply_content:
+        flash("Please provide content for your reply.", "danger")
+        return redirect(url_for('student.view_discussion_thread', thread_id=thread_id))
+    
+    try:
+        # Create new post
+        new_post = DiscussionPost(
+            thread_id=thread_id,
+            student_id=student.id,
+            content=reply_content,
+            is_teacher_post=False
+        )
+        
+        db.session.add(new_post)
+        db.session.commit()
+        
+        flash('Reply posted successfully!', 'success')
+        return redirect(url_for('student.view_discussion_thread', thread_id=thread_id))
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error posting reply: {e}")
+        flash(f'Error posting reply: {str(e)}', 'danger')
+        return redirect(url_for('student.view_discussion_thread', thread_id=thread_id))
+
 @student_blueprint.route('/submit/<int:assignment_id>', methods=['POST'])
 @login_required
 @student_required
 def submit_assignment(assignment_id):
     student = Student.query.get_or_404(current_user.student_id)
     assignment = Assignment.query.get_or_404(assignment_id)
+
+    # Check if assignment is open for this student (considering extensions)
+    from teacher_routes.assignment_utils import is_assignment_open_for_student
+    if not is_assignment_open_for_student(assignment, student.id):
+        return jsonify({'success': False, 'message': 'This assignment is not currently open for submission.'}), 403
 
     # Check if this is a redo submission
     is_redo = request.args.get('is_redo', '0') == '1' or request.form.get('is_redo', '0') == '1'
@@ -2561,10 +2799,33 @@ def delete_goal(goal_id):
 @login_required
 @student_required
 def student_communications():
-    """Communications tab - Under Development."""
-    return render_template('shared/under_development.html',
-                         section='communications',
-                         active_tab='communications')
+    """Communications hub for students."""
+    student = Student.query.get_or_404(current_user.student_id)
+    
+    # Get all messages for the student (both sent and received)
+    messages = Message.query.filter(
+        (Message.recipient_id == current_user.id) |
+        (Message.sender_id == current_user.id)
+    ).order_by(Message.created_at.desc()).limit(50).all()
+    
+    # Get user's groups
+    user_groups = MessageGroupMember.query.filter_by(user_id=current_user.id).all()
+    groups = [mg.group for mg in user_groups if mg.group and mg.group.is_active]
+    
+    # Get announcements for student (all students, all, or for their classes)
+    enrollments = Enrollment.query.filter_by(student_id=student.id, is_active=True).all()
+    class_ids = [e.class_id for e in enrollments]
+    
+    announcements = Announcement.query.filter(
+        (Announcement.target_group.in_(['all_students', 'all'])) |
+        ((Announcement.target_group == 'class') & (Announcement.class_id.in_(class_ids)))
+    ).order_by(Announcement.timestamp.desc()).limit(20).all()
+    
+    return render_template('students/role_student_dashboard.html',
+                         **create_template_context(student, 'communications', 'communications',
+                             messages=messages,
+                             groups=groups,
+                             announcements=announcements))
 
 @student_blueprint.route('/communications/messages')
 @login_required

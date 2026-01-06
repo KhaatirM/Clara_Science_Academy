@@ -1,0 +1,324 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/teacher_grade_assignment.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/teachers_teacher_grade_assignment.css') }}">
+<style>
+    .student-posts-section {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    .thread-item {
+        background: white;
+        border-left: 3px solid #0d6efd;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-radius: 5px;
+    }
+    
+    .post-item {
+        background: #f8f9fa;
+        border-left: 3px solid #6c757d;
+        padding: 0.75rem;
+        margin-bottom: 0.75rem;
+        margin-left: 1rem;
+        border-radius: 5px;
+    }
+    
+    .participation-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    
+    .badge-met {
+        background: #d1e7dd;
+        color: #0f5132;
+    }
+    
+    .badge-not-met {
+        background: #fff3cd;
+        color: #856404;
+    }
+</style>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+    <!-- Enhanced Header -->
+    <div class="grading-header mb-4">
+        <div class="grading-header-content">
+            <div class="grading-header-icon">
+                <i class="bi bi-chat-dots"></i>
+            </div>
+            <div class="grading-header-info">
+                <h2 class="grading-header-title">{{ assignment.title }}</h2>
+                <p class="grading-header-subtitle">{{ class_obj.name }} • {{ assignment.quarter }}</p>
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            {% if role_prefix == 'management' or request.endpoint and 'management' in request.endpoint %}
+                <a href="{{ url_for('management.admin_grade_statistics', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-info">
+                    <i class="bi bi-bar-chart-fill me-1"></i>Statistics
+                </a>
+            {% else %}
+                <a href="{{ url_for('teacher.grading.grade_statistics', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-info">
+                    <i class="bi bi-bar-chart-fill me-1"></i>Statistics
+                </a>
+            {% endif %}
+            <button type="button" class="btn btn-sm btn-outline-primary" onclick="exportGradesCSV()">
+                <i class="bi bi-download me-1"></i>Export CSV
+            </button>
+            <button onclick="goBack()" class="btn-grading-back">
+                <i class="bi bi-arrow-left me-2"></i>Back
+            </button>
+        </div>
+    </div>
+
+    <!-- Assignment Stats Bar -->
+    <div class="grading-stats-bar mb-4">
+        <div class="grading-stat-card stat-total">
+            <div class="stat-icon"><i class="bi bi-people-fill"></i></div>
+            <div class="stat-content">
+                <div class="stat-value">{{ students|length }}</div>
+                <div class="stat-label">Total Students</div>
+            </div>
+        </div>
+        <div class="grading-stat-card stat-graded">
+            <div class="stat-icon"><i class="bi bi-star-fill"></i></div>
+            <div class="stat-content">
+                <div class="stat-value" id="gradedStatCount">{{ grades|length }}</div>
+                <div class="stat-label">Graded</div>
+            </div>
+        </div>
+        <div class="grading-stat-card stat-pending">
+            <div class="stat-icon"><i class="bi bi-hourglass-split"></i></div>
+            <div class="stat-content">
+                <div class="stat-value" id="pendingStatCount">{{ students|length - grades|length }}</div>
+                <div class="stat-label">Pending</div>
+            </div>
+        </div>
+        <div class="grading-stat-card stat-average">
+            <div class="stat-icon"><i class="bi bi-graph-up"></i></div>
+            <div class="stat-content">
+                <div class="stat-value" id="averageStatValue">
+                    {% set total_score = 0 %}
+                    {% set count = 0 %}
+                    {% for student_id, grade_data in grades.items() %}
+                        {% if grade_data.score %}
+                            {% set total_score = total_score + grade_data.score %}
+                            {% set count = count + 1 %}
+                        {% endif %}
+                    {% endfor %}
+                    {{ (total_score / count)|round(1) if count > 0 else '--' }}%
+                </div>
+                <div class="stat-label">Average</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grading Form -->
+    <form method="POST" action="{{ url_for('management.grade_assignment', assignment_id=assignment.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-pencil-square me-2"></i>Grade Discussion Assignment
+                </h5>
+            </div>
+            <div class="card-body">
+                {% for student in students %}
+                <div class="student-grading-card mb-4 p-4 border rounded">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h5 class="mb-1">
+                                <i class="bi bi-person-circle me-2"></i>
+                                {{ student.first_name }} {{ student.last_name }}
+                            </h5>
+                            <small class="text-muted">Grade {{ student.grade_level }}</small>
+                        </div>
+                        <div>
+                            {% set student_threads = discussion_threads_by_student.get(student.id, [])|length %}
+                            {% set student_replies = discussion_posts_by_student.get(student.id, [])|length %}
+                            {% set requirements_met = student_threads >= min_initial_posts and student_replies >= min_replies %}
+                            
+                            <span class="participation-badge {% if requirements_met %}badge-met{% else %}badge-not-met{% endif %}">
+                                {% if requirements_met %}
+                                    <i class="bi bi-check-circle me-1"></i>Requirements Met
+                                {% else %}
+                                    <i class="bi bi-exclamation-triangle me-1"></i>Needs More Participation
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Participation Summary -->
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <div class="text-center p-2 bg-light rounded">
+                                <div class="fw-bold text-primary">{{ student_threads }}</div>
+                                <small class="text-muted">Initial Post{{ 's' if student_threads != 1 else '' }}</small>
+                                <div class="mt-1">
+                                    {% if student_threads >= min_initial_posts %}
+                                        <span class="badge bg-success">✓ Met ({{ min_initial_posts }} required)</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">Needs {{ min_initial_posts - student_threads }} more</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center p-2 bg-light rounded">
+                                <div class="fw-bold text-success">{{ student_replies }}</div>
+                                <small class="text-muted">Repl{{ 'ies' if student_replies != 1 else 'y' }}</small>
+                                <div class="mt-1">
+                                    {% if student_replies >= min_replies %}
+                                        <span class="badge bg-success">✓ Met ({{ min_replies }} required)</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">Needs {{ min_replies - student_replies }} more</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center p-2 bg-light rounded">
+                                <div class="fw-bold text-info">{{ student_threads + student_replies }}</div>
+                                <small class="text-muted">Total Posts</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Student Posts -->
+                    <div class="student-posts-section mb-3">
+                        <h6 class="mb-3">
+                            <i class="bi bi-chat-square-text me-2"></i>Student's Posts
+                        </h6>
+                        
+                        <!-- Threads -->
+                        {% if discussion_threads_by_student.get(student.id) %}
+                            {% for thread in discussion_threads_by_student.get(student.id, []) %}
+                            <div class="thread-item">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div>
+                                        <strong class="text-primary">
+                                            <i class="bi bi-chat-left-text me-1"></i>{{ thread.title }}
+                                        </strong>
+                                        {% if thread.is_pinned %}
+                                            <span class="badge bg-warning ms-2">Pinned</span>
+                                        {% endif %}
+                                    </div>
+                                    <small class="text-muted">{{ thread.created_at.strftime('%m/%d/%Y %I:%M %p') }}</small>
+                                </div>
+                                <p class="mb-0">{{ thread.content }}</p>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted mb-0">No initial posts yet.</p>
+                        {% endif %}
+                        
+                        <!-- Replies -->
+                        {% if discussion_posts_by_student.get(student.id) %}
+                            {% for post in discussion_posts_by_student.get(student.id, []) %}
+                            <div class="post-item">
+                                <div class="d-flex justify-content-between align-items-start mb-1">
+                                    <strong class="text-secondary">
+                                        <i class="bi bi-reply me-1"></i>Reply to Thread
+                                    </strong>
+                                    <small class="text-muted">{{ post.created_at.strftime('%m/%d/%Y %I:%M %p') }}</small>
+                                </div>
+                                <p class="mb-0">{{ post.content }}</p>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted mb-0 ms-4">No replies yet.</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Grading Input -->
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="score_{{ student.id }}" class="form-label fw-semibold">
+                                <i class="bi bi-star me-1"></i>Score (out of {{ total_points }})
+                            </label>
+                            <input type="number" 
+                                   class="form-control" 
+                                   id="score_{{ student.id }}" 
+                                   name="score_{{ student.id }}" 
+                                   step="0.01" 
+                                   min="0" 
+                                   max="{{ total_points }}"
+                                   value="{% if student.id in grades %}{{ grades[student.id].get('score', grades[student.id].get('points_earned', '')) }}{% endif %}"
+                                   onchange="updateGradeDisplay({{ student.id }})">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-percent me-1"></i>Percentage
+                            </label>
+                            <div class="form-control" id="percentage_{{ student.id }}" style="background: #f8f9fa;">
+                                {% if student.id in grades %}
+                                    {{ grades[student.id].get('percentage', 0)|round(2) }}%
+                                {% else %}
+                                    0%
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label for="comment_{{ student.id }}" class="form-label fw-semibold">
+                                <i class="bi bi-chat-left-text me-1"></i>Feedback/Comment
+                            </label>
+                            <textarea class="form-control" 
+                                      id="comment_{{ student.id }}" 
+                                      name="comment_{{ student.id }}" 
+                                      rows="3"
+                                      placeholder="Provide feedback on the student's participation...">{% if student.id in grades %}{{ grades[student.id].get('comment', '') }}{% endif %}</textarea>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="card-footer bg-light">
+                <div class="d-flex justify-content-between">
+                    <button type="button" class="btn btn-secondary" onclick="goBack()">
+                        <i class="bi bi-x-circle me-2"></i>Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save me-2"></i>Save All Grades
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+function goBack() {
+    {% if role_prefix == 'management' or request.endpoint and 'management' in request.endpoint %}
+    window.location.href = "{{ url_for('management.view_assignment', assignment_id=assignment.id) }}";
+    {% else %}
+    window.location.href = "{{ url_for('teacher.assignments.view_assignment', assignment_id=assignment.id) }}";
+    {% endif %}
+}
+
+function updateGradeDisplay(studentId) {
+    const scoreInput = document.getElementById(`score_${studentId}`);
+    const percentageDisplay = document.getElementById(`percentage_${studentId}`);
+    const score = parseFloat(scoreInput.value) || 0;
+    const totalPoints = {{ total_points }};
+    const percentage = totalPoints > 0 ? ((score / totalPoints) * 100).toFixed(2) : 0;
+    percentageDisplay.textContent = `${percentage}%`;
+}
+
+function exportGradesCSV() {
+    alert('CSV export functionality will be implemented soon.');
+}
+</script>
+{% endblock %}
+

@@ -8,7 +8,7 @@ from decorators import teacher_required
 from .utils import get_teacher_or_admin, is_admin, is_authorized_for_class, get_current_quarter
 from models import (
     db, Class, Assignment, SchoolYear, Enrollment, TeacherStaff, AssignmentExtension,
-    Grade, GroupAssignment, GroupGrade, GradeHistory,
+    Grade, GroupAssignment, GroupGrade, GradeHistory, GroupSubmission, StudentGroup,
     class_additional_teachers, class_substitute_teachers
 )
 from sqlalchemy import or_
@@ -113,6 +113,29 @@ def add_assignment_for_class(class_id):
             except ValueError:
                 due_date = datetime.strptime(due_date_str, '%Y-%m-%d')
             
+            # Parse open_date and close_date if provided
+            # IMPORTANT: close_date should default to due_date if not provided
+            open_date_str = request.form.get('open_date', '').strip()
+            close_date_str = request.form.get('close_date', '').strip()
+            open_date = None
+            close_date = None
+            
+            if open_date_str:
+                try:
+                    open_date = datetime.strptime(open_date_str, '%Y-%m-%dT%H:%M')
+                except ValueError:
+                    pass
+            
+            if close_date_str:
+                try:
+                    close_date = datetime.strptime(close_date_str, '%Y-%m-%dT%H:%M')
+                except ValueError:
+                    pass
+            
+            # If close_date not provided, default to due_date
+            if not close_date:
+                close_date = due_date
+            
             current_school_year = SchoolYear.query.filter_by(is_active=True).first()
             if not current_school_year:
                 flash("Cannot create assignment: No active school year.", "danger")
@@ -125,6 +148,8 @@ def add_assignment_for_class(class_id):
                 title=title,
                 description=description,
                 due_date=due_date,
+                open_date=open_date,
+                close_date=close_date,
                 quarter=quarter,
                 class_id=class_id,
                 school_year_id=current_school_year.id,
@@ -192,11 +217,11 @@ def edit_assignment(assignment_id):
     
     if not class_obj:
         flash("Assignment class information not found.", "danger")
-        return redirect(url_for('teacher.dashboard.my_assignments'))
+        return redirect(url_for('teacher.dashboard.assignments_and_grades'))
     
     if not is_authorized_for_class(class_obj):
         flash("You are not authorized to edit this assignment.", "danger")
-        return redirect(url_for('teacher.dashboard.my_assignments'))
+        return redirect(url_for('teacher.dashboard.assignments_and_grades'))
     
     if request.method == 'POST':
         try:
@@ -220,13 +245,47 @@ def edit_assignment(assignment_id):
             except ValueError:
                 due_date = datetime.strptime(due_date_str, '%Y-%m-%d')
             
+            # Parse open_date and close_date if provided
+            # IMPORTANT: close_date should default to due_date if not provided
+            open_date_str = request.form.get('open_date', '').strip()
+            close_date_str = request.form.get('close_date', '').strip()
+            open_date = None
+            close_date = None
+            
+            if open_date_str:
+                try:
+                    open_date = datetime.strptime(open_date_str, '%Y-%m-%dT%H:%M')
+                except ValueError:
+                    pass
+            
+            if close_date_str:
+                try:
+                    close_date = datetime.strptime(close_date_str, '%Y-%m-%dT%H:%M')
+                except ValueError:
+                    pass
+            
+            # If close_date not provided, default to due_date
+            if not close_date:
+                close_date = due_date
+            
             assignment.title = title
             assignment.description = description
             assignment.due_date = due_date
+            assignment.open_date = open_date
+            assignment.close_date = close_date
             assignment.quarter = quarter
-            assignment.status = status
             assignment.assignment_context = assignment_context
             assignment.total_points = total_points
+            
+            # Calculate status based on dates if status not explicitly set to Voided
+            from teacher_routes.assignment_utils import calculate_assignment_status
+            if status != 'Voided':
+                # Calculate status based on dates
+                calculated_status = calculate_assignment_status(assignment)
+                assignment.status = calculated_status
+            else:
+                # Keep Voided status if explicitly set
+                assignment.status = status
             
             if 'assignment_file' in request.files:
                 file = request.files['assignment_file']
@@ -488,11 +547,94 @@ def view_assignment(assignment_id):
     
     if not class_obj:
         flash("Assignment class information not found.", "danger")
-        return redirect(url_for('teacher.dashboard.my_assignments'))
+        return redirect(url_for('teacher.dashboard.assignments_and_grades'))
     
     if not is_authorized_for_class(class_obj):
         flash("You are not authorized to view this assignment.", "danger")
-        return redirect(url_for('teacher.dashboard.my_assignments'))
+        return redirect(url_for('teacher.dashboard.assignments_and_grades'))
+    
+    # For discussion assignments, use specialized view
+    if assignment.assignment_type == 'discussion':
+        from models import DiscussionThread, DiscussionPost, Student
+        from collections import defaultdict
+        
+        teacher = get_teacher_or_admin()
+        
+        # Get all threads for this assignment
+        threads = DiscussionThread.query.filter_by(assignment_id=assignment_id).order_by(
+            DiscussionThread.is_pinned.desc(),
+            DiscussionThread.created_at.desc()
+        ).all()
+        
+        # Get all posts
+        all_posts = DiscussionPost.query.filter(
+            DiscussionPost.thread_id.in_([t.id for t in threads])
+        ).all()
+        
+        # Get all participants (students who posted)
+        participant_ids = set()
+        for thread in threads:
+            participant_ids.add(thread.student_id)
+        for post in all_posts:
+            participant_ids.add(post.student_id)
+        
+        # Get enrolled students
+        enrollments = Enrollment.query.filter_by(class_id=class_obj.id, is_active=True).all()
+        enrolled_students = [e.student for e in enrollments if e.student]
+        
+        # Get participant details
+        participants = []
+        for student_id in participant_ids:
+            student = Student.query.get(student_id)
+            if student:
+                threads_count = sum(1 for t in threads if t.student_id == student_id)
+                replies_count = sum(1 for p in all_posts if p.student_id == student_id)
+                
+                participants.append({
+                    'student': student,
+                    'threads': threads_count,
+                    'replies': replies_count,
+                    'total_posts': threads_count + replies_count
+                })
+        
+        # Sort participants by total posts (descending)
+        participants.sort(key=lambda x: x['total_posts'], reverse=True)
+        
+        # Get grades for this assignment
+        grades = {}
+        grade_records = Grade.query.filter_by(assignment_id=assignment_id).all()
+        for g in grade_records:
+            try:
+                if g.grade_data:
+                    import json
+                    grade_data = json.loads(g.grade_data) if isinstance(g.grade_data, str) else g.grade_data
+                    grades[g.student_id] = grade_data
+            except (json.JSONDecodeError, TypeError):
+                pass
+        
+        # Extract participation requirements from assignment description
+        min_initial_posts = 1
+        min_replies = 2
+        import re
+        if assignment.description:
+            initial_posts_match = re.search(r'Minimum (\d+) initial post', assignment.description)
+            if initial_posts_match:
+                min_initial_posts = int(initial_posts_match.group(1))
+            replies_match = re.search(r'Minimum (\d+) reply/replies', assignment.description)
+            if replies_match:
+                min_replies = int(replies_match.group(1))
+        
+        return render_template('management/view_discussion_assignment.html',
+                             assignment=assignment,
+                             class_info=class_obj,
+                             teacher=teacher,
+                             threads=threads,
+                             participants=participants,
+                             enrolled_students=enrolled_students,
+                             grades=grades,
+                             min_initial_posts=min_initial_posts,
+                             min_replies=min_replies,
+                             role_prefix='teacher')
     
     teacher = get_teacher_or_admin()
     today = date.today()
@@ -838,6 +980,117 @@ def unvoid_assignment_for_students(assignment_id):
             else:
                 return redirect(url_for('teacher.dashboard.assignments_and_grades'))
 
+@bp.route('/extension-requests')
+@login_required
+@teacher_required
+def view_extension_requests():
+    """View all extension requests for teacher's assignments"""
+    from models import ExtensionRequest, Class
+    from datetime import datetime
+    
+    teacher = get_teacher_or_admin()
+    
+    if is_admin():
+        # Administrators see all extension requests
+        extension_requests = ExtensionRequest.query.order_by(ExtensionRequest.requested_at.desc()).all()
+    else:
+        # Teachers see extension requests for their classes only
+        if teacher is None:
+            extension_requests = []
+        else:
+            classes = Class.query.filter_by(teacher_id=teacher.id).all()
+            class_ids = [c.id for c in classes]
+            assignments = Assignment.query.filter(Assignment.class_id.in_(class_ids)).all()
+            assignment_ids = [a.id for a in assignments]
+            extension_requests = ExtensionRequest.query.filter(
+                ExtensionRequest.assignment_id.in_(assignment_ids)
+            ).order_by(ExtensionRequest.requested_at.desc()).all()
+    
+    # Group requests by status
+    pending_requests = [req for req in extension_requests if req.status == 'Pending']
+    approved_requests = [req for req in extension_requests if req.status == 'Approved']
+    rejected_requests = [req for req in extension_requests if req.status == 'Rejected']
+    
+    return render_template('teachers/extension_requests.html',
+                         pending_requests=pending_requests,
+                         approved_requests=approved_requests,
+                         rejected_requests=rejected_requests,
+                         total_count=len(extension_requests))
+
+@bp.route('/extension-request/<int:request_id>/review', methods=['POST'])
+@login_required
+@teacher_required
+def review_extension_request(request_id):
+    """Approve or reject an extension request"""
+    from models import ExtensionRequest, AssignmentExtension
+    from datetime import datetime
+    
+    extension_request = ExtensionRequest.query.get_or_404(request_id)
+    assignment = extension_request.assignment
+    
+    # Authorization check
+    teacher = get_teacher_or_admin()
+    if not is_admin():
+        if teacher is None:
+            return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+        if assignment.class_info.teacher_id != teacher.id:
+            return jsonify({'success': False, 'message': 'You are not authorized to review this request'}), 403
+    
+    action = request.form.get('action')  # 'approve' or 'reject'
+    review_notes = request.form.get('review_notes', '').strip()
+    
+    if action not in ['approve', 'reject']:
+        return jsonify({'success': False, 'message': 'Invalid action'}), 400
+    
+    try:
+        if action == 'approve':
+            # Update extension request status
+            extension_request.status = 'Approved'
+            extension_request.reviewed_at = datetime.utcnow()
+            extension_request.reviewed_by = teacher.id if teacher else None
+            extension_request.review_notes = review_notes if review_notes else None
+            
+            # Create or update AssignmentExtension
+            existing_extension = AssignmentExtension.query.filter_by(
+                assignment_id=assignment.id,
+                student_id=extension_request.student_id,
+                is_active=True
+            ).first()
+            
+            if existing_extension:
+                # Update existing extension
+                existing_extension.extended_due_date = extension_request.requested_due_date
+                existing_extension.reason = review_notes if review_notes else 'Extension granted'
+            else:
+                # Create new extension
+                new_extension = AssignmentExtension(
+                    assignment_id=assignment.id,
+                    student_id=extension_request.student_id,
+                    extended_due_date=extension_request.requested_due_date,
+                    reason=review_notes if review_notes else 'Extension granted',
+                    granted_by=teacher.id if teacher else None,
+                    is_active=True
+                )
+                db.session.add(new_extension)
+            
+            message = f'Extension request approved. New due date: {extension_request.requested_due_date.strftime("%Y-%m-%d %I:%M %p")}'
+        else:
+            # Reject extension request
+            extension_request.status = 'Rejected'
+            extension_request.reviewed_at = datetime.utcnow()
+            extension_request.reviewed_by = teacher.id if teacher else None
+            extension_request.review_notes = review_notes if review_notes else 'Extension request rejected'
+            
+            message = 'Extension request rejected'
+        
+        db.session.commit()
+        return jsonify({'success': True, 'message': message})
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error reviewing extension request: {str(e)}")
+        return jsonify({'success': False, 'message': f'Error processing request: {str(e)}'}), 500
+
 @bp.route('/assignment/grant-extensions', methods=['POST'])
 @login_required
 @teacher_required
@@ -932,22 +1185,22 @@ def change_assignment_status(assignment_id):
     
     if not class_obj:
         flash("Assignment class information not found.", "danger")
-        return redirect(url_for('teacher.dashboard.my_assignments'))
+        return redirect(url_for('teacher.dashboard.assignments_and_grades'))
     
     if not is_authorized_for_class(class_obj):
         flash("You are not authorized to change the status of this assignment.", "danger")
-        return redirect(url_for('teacher.dashboard.my_assignments'))
+        return redirect(url_for('teacher.dashboard.assignments_and_grades'))
     
     new_status = request.form.get('status')
     if not new_status:
         flash("Status is required.", "danger")
-        return redirect(url_for('teacher.dashboard.my_assignments'))
+        return redirect(url_for('teacher.dashboard.assignments_and_grades'))
     
     # Validate status value
-    valid_statuses = ['Active', 'Inactive', 'Voided', 'Overdue']
+    valid_statuses = ['Active', 'Inactive', 'Upcoming', 'Voided', 'Overdue']
     if new_status not in valid_statuses:
         flash(f"Invalid status: {new_status}. Must be one of {', '.join(valid_statuses)}", "danger")
-        return redirect(url_for('teacher.dashboard.my_assignments'))
+        return redirect(url_for('teacher.dashboard.assignments_and_grades'))
     
     try:
         assignment.status = new_status
@@ -958,7 +1211,7 @@ def change_assignment_status(assignment_id):
         current_app.logger.error(f"Error changing assignment status: {str(e)}")
         flash(f'Error changing assignment status: {str(e)}', 'danger')
     
-    return redirect(url_for('teacher.dashboard.my_assignments'))
+    return redirect(url_for('teacher.dashboard.assignments_and_grades'))
 
 @bp.route('/assignment/<int:assignment_id>/submissions')
 @login_required
@@ -973,11 +1226,11 @@ def view_assignment_submissions(assignment_id):
     
     if not class_obj:
         flash("Assignment class information not found.", "danger")
-        return redirect(url_for('teacher.dashboard.my_assignments'))
+        return redirect(url_for('teacher.dashboard.assignments_and_grades'))
     
     if not is_authorized_for_class(class_obj):
         flash("You are not authorized to view submissions for this assignment.", "danger")
-        return redirect(url_for('teacher.dashboard.my_assignments'))
+        return redirect(url_for('teacher.dashboard.assignments_and_grades'))
     
     # Get all enrolled students
     enrollments = Enrollment.query.filter_by(
@@ -1104,7 +1357,7 @@ def download_submission(assignment_id, submission_id):
     class_obj = assignment.class_info
     if not class_obj or not is_authorized_for_class(class_obj):
         flash("You are not authorized to download this submission.", "danger")
-        return redirect(url_for('teacher.dashboard.my_assignments'))
+        return redirect(url_for('teacher.dashboard.assignments_and_grades'))
     
     # Get file path
     if not submission.file_path:
@@ -1145,7 +1398,7 @@ def remove_assignment(assignment_id):
             if is_ajax:
                 return jsonify({'success': False, 'message': error_msg}), 400
             flash(error_msg, "danger")
-            return redirect(url_for('teacher.dashboard.my_assignments'))
+            return redirect(url_for('teacher.dashboard.assignments_and_grades'))
         
         # Check authorization
         if not is_authorized_for_class(class_obj):
@@ -1154,7 +1407,7 @@ def remove_assignment(assignment_id):
             if is_ajax:
                 return jsonify({'success': False, 'message': error_msg}), 403
             flash(error_msg, "danger")
-            return redirect(url_for('teacher.dashboard.my_assignments'))
+            return redirect(url_for('teacher.dashboard.assignments_and_grades'))
         
         # Delete associated extensions first
         from models import AssignmentExtension
@@ -1199,7 +1452,7 @@ def remove_assignment(assignment_id):
             return jsonify({'success': True, 'message': 'Assignment removed successfully.'})
         
         flash('Assignment removed successfully.', 'success')
-        return redirect(url_for('teacher.dashboard.my_assignments'))
+        return redirect(url_for('teacher.dashboard.assignments_and_grades'))
         
     except Exception as e:
         db.session.rollback()
@@ -1212,4 +1465,134 @@ def remove_assignment(assignment_id):
             return jsonify({'success': False, 'message': error_message}), 500
         
         flash(error_message, 'danger')
-        return redirect(url_for('teacher.dashboard.my_assignments'))
+        return redirect(url_for('teacher.dashboard.assignments_and_grades'))
+
+
+@bp.route('/group-assignment/<int:assignment_id>/view')
+@login_required
+@teacher_required
+def view_group_assignment(assignment_id):
+    """View details of a specific group assignment - Teacher view."""
+    import json
+    from datetime import datetime, timedelta
+    
+    try:
+        group_assignment = GroupAssignment.query.get_or_404(assignment_id)
+        
+        # Check authorization - teacher must be authorized for this class
+        if not is_authorized_for_class(group_assignment.class_info):
+            flash("You are not authorized to view this group assignment.", "danger")
+            return redirect(url_for('teacher.dashboard.assignments_and_grades'))
+        
+        # Get submissions for this assignment
+        submissions = GroupSubmission.query.filter_by(group_assignment_id=assignment_id).all()
+        
+        # Get groups for this class - filter by selected groups if specified
+        if group_assignment.selected_group_ids:
+            # Parse the selected group IDs
+            try:
+                selected_ids = json.loads(group_assignment.selected_group_ids) if isinstance(group_assignment.selected_group_ids, str) else group_assignment.selected_group_ids
+                # Filter to only selected groups
+                groups = StudentGroup.query.filter(
+                    StudentGroup.class_id == group_assignment.class_id,
+                    StudentGroup.is_active == True,
+                    StudentGroup.id.in_(selected_ids)
+                ).all()
+            except:
+                # If parsing fails, get all groups
+                groups = StudentGroup.query.filter_by(class_id=group_assignment.class_id, is_active=True).all()
+        else:
+            # If no specific groups selected, get all groups
+            groups = StudentGroup.query.filter_by(class_id=group_assignment.class_id, is_active=True).all()
+        
+        # Get extensions for this assignment
+        try:
+            extensions = AssignmentExtension.query.filter_by(assignment_id=assignment_id).all()
+        except:
+            extensions = []
+        
+        # Calculate enhanced statistics
+        # Get all group grades (including voided ones for the unvoid button check)
+        all_group_grades = GroupGrade.query.filter_by(group_assignment_id=assignment_id).all()
+        non_voided_grades = [g for g in all_group_grades if not g.is_voided]  # Non-voided for graded count
+        graded_count = len(non_voided_grades)
+        
+        # Calculate total students in groups
+        from models import StudentGroupMember
+        total_students = 0
+        for group in groups:
+            members = StudentGroupMember.query.filter_by(group_id=group.id).all()
+            total_students += len(members)
+        
+        # Calculate submission statistics
+        submission_count = len(submissions)
+        late_submissions = len([s for s in submissions if s.is_late])
+        on_time_submissions = submission_count - late_submissions
+        
+        # Calculate submission rate
+        submission_rate = (submission_count / len(groups) * 100) if groups else 0
+        
+        # Calculate time remaining/overdue
+        now = datetime.utcnow()
+        time_info = {}
+        if group_assignment.due_date:
+            if group_assignment.due_date > now:
+                time_diff = group_assignment.due_date - now
+                days_remaining = time_diff.days
+                hours_remaining = time_diff.seconds // 3600
+                time_info = {
+                    'status': 'upcoming',
+                    'days': days_remaining,
+                    'hours': hours_remaining,
+                    'is_overdue': False
+                }
+            else:
+                time_diff = now - group_assignment.due_date
+                days_overdue = time_diff.days
+                hours_overdue = time_diff.seconds // 3600
+                time_info = {
+                    'status': 'overdue',
+                    'days': days_overdue,
+                    'hours': hours_overdue,
+                    'is_overdue': True
+                }
+        else:
+            time_info = {
+                'status': 'no_due_date',
+                'is_overdue': False
+            }
+        
+        # Determine assignment status badge
+        if non_voided_grades and len(non_voided_grades) > 0:
+            assignment_status = 'Graded'
+            status_class = 'success'
+        elif group_assignment.status == 'Inactive':
+            assignment_status = 'Inactive'
+            status_class = 'secondary'
+        else:
+            assignment_status = 'Active'
+            status_class = 'primary'
+        
+        return render_template('teachers/teacher_view_group_assignment.html',
+                             group_assignment=group_assignment,
+                             submissions=submissions,
+                             groups=groups,
+                             extensions=extensions,
+                             group_grades=all_group_grades,  # Pass all grades (including voided) for void check
+                             graded_count=graded_count,
+                             total_students=total_students,
+                             submission_count=submission_count,
+                             late_submissions=late_submissions,
+                             on_time_submissions=on_time_submissions,
+                             submission_rate=submission_rate,
+                             time_info=time_info,
+                             assignment_status=assignment_status,
+                             status_class=status_class,
+                             admin_view=False)
+    except Exception as e:
+        print(f"Error viewing group assignment: {e}")
+        flash('Error accessing group assignment details.', 'error')
+        try:
+            return redirect(url_for('teacher.dashboard.assignments_and_grades'))
+        except:
+            return redirect(url_for('teacher.dashboard.teacher_dashboard'))

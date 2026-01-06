@@ -102,6 +102,160 @@ def activity_log():
                              'limit': limit
                          })
 
+@tech_blueprint.route('/system')
+@login_required
+@tech_required
+def system():
+    """Unified System page combining Status, Config, and Maintenance."""
+    import psutil
+    from models import User, Student, TeacherStaff, ActivityLog, BugReport, MaintenanceMode, SystemConfig
+    import sys
+    import flask
+    
+    now = datetime.now()
+    
+    # Get live system statistics (from system_status)
+    try:
+        cpu_percent = psutil.cpu_percent(interval=1)
+        memory = psutil.virtual_memory()
+        memory_percent = memory.percent
+        memory_used_gb = round(memory.used / (1024**3), 2)
+        memory_total_gb = round(memory.total / (1024**3), 2)
+        
+        try:
+            if os.name == 'nt':
+                disk = psutil.disk_usage('C:\\')
+            else:
+                disk = psutil.disk_usage('/')
+            disk_percent = disk.percent
+            disk_used_gb = round(disk.used / (1024**3), 2)
+            disk_total_gb = round(disk.total / (1024**3), 2)
+        except Exception:
+            disk_percent = 'N/A'
+            disk_used_gb = 'N/A'
+            disk_total_gb = 'N/A'
+        
+        try:
+            network = psutil.net_io_counters()
+            network_bytes_sent = network.bytes_sent
+            network_bytes_recv = network.bytes_recv
+        except Exception:
+            network_bytes_sent = 'N/A'
+            network_bytes_recv = 'N/A'
+        
+        try:
+            boot_time = datetime.fromtimestamp(psutil.boot_time())
+            uptime = now - boot_time
+        except Exception:
+            uptime = 'N/A'
+        
+        total_users = User.query.count()
+        total_students = Student.query.count()
+        total_teachers = TeacherStaff.query.count()
+        
+        yesterday = now - timedelta(days=1)
+        recent_activities = ActivityLog.query.filter(
+            ActivityLog.timestamp >= yesterday
+        ).count()
+        
+        recent_errors = ActivityLog.query.filter(
+            ActivityLog.timestamp >= yesterday,
+            ActivityLog.success == False
+        ).count()
+        
+        open_bugs = BugReport.query.filter(BugReport.status == 'open').count()
+        total_bugs = BugReport.query.count()
+        
+        maintenance_mode = MaintenanceMode.query.filter(MaintenanceMode.is_active == True).first()
+        is_maintenance_mode = maintenance_mode is not None
+        
+        active_sessions = ActivityLog.query.filter(
+            ActivityLog.timestamp >= now - timedelta(minutes=30)
+        ).distinct(ActivityLog.user_id).count()
+        
+        system_data = {
+            'cpu_percent': cpu_percent,
+            'memory_percent': memory_percent,
+            'memory_used_gb': memory_used_gb,
+            'memory_total_gb': memory_total_gb,
+            'disk_percent': disk_percent,
+            'disk_used_gb': disk_used_gb,
+            'disk_total_gb': disk_total_gb,
+            'network_bytes_sent': network_bytes_sent,
+            'network_bytes_recv': network_bytes_recv,
+            'uptime': uptime,
+            'total_users': total_users,
+            'total_students': total_students,
+            'total_teachers': total_teachers,
+            'recent_activities': recent_activities,
+            'recent_errors': recent_errors,
+            'open_bugs': open_bugs,
+            'total_bugs': total_bugs,
+            'is_maintenance_mode': is_maintenance_mode,
+            'active_sessions': active_sessions,
+            'now': now,
+            'timedelta': timedelta
+        }
+        
+    except Exception as e:
+        system_data = {
+            'cpu_percent': 'N/A',
+            'memory_percent': 'N/A',
+            'memory_used_gb': 'N/A',
+            'memory_total_gb': 'N/A',
+            'disk_percent': 'N/A',
+            'disk_used_gb': 'N/A',
+            'disk_total_gb': 'N/A',
+            'network_bytes_sent': 'N/A',
+            'network_bytes_recv': 'N/A',
+            'uptime': 'N/A',
+            'total_users': User.query.count(),
+            'total_students': Student.query.count(),
+            'total_teachers': TeacherStaff.query.count(),
+            'recent_activities': ActivityLog.query.filter(
+                ActivityLog.timestamp >= now - timedelta(days=1)
+            ).count(),
+            'recent_errors': ActivityLog.query.filter(
+                ActivityLog.timestamp >= now - timedelta(days=1),
+                ActivityLog.success == False
+            ).count(),
+            'open_bugs': BugReport.query.filter(BugReport.status == 'open').count(),
+            'total_bugs': BugReport.query.count(),
+            'is_maintenance_mode': MaintenanceMode.query.filter(MaintenanceMode.is_active == True).first() is not None,
+            'active_sessions': ActivityLog.query.filter(
+                ActivityLog.timestamp >= now - timedelta(minutes=30)
+            ).distinct(ActivityLog.user_id).count(),
+            'now': now,
+            'timedelta': timedelta,
+            'error': str(e)
+        }
+    
+    # Get system configuration (from system_config)
+    config_info = {
+        'debug_mode': SystemConfig.get_value('debug_mode', 'Development Server'),
+        'database_path': SystemConfig.get_value('database_path', 'instance/app.db'),
+        'max_upload_size': SystemConfig.get_value('max_upload_size', '16 MB'),
+        'session_timeout': SystemConfig.get_value('session_timeout', '24 hours'),
+        'backup_location': SystemConfig.get_value('backup_location', 'backups/'),
+        'log_level': SystemConfig.get_value('log_level', 'INFO')
+    }
+    
+    system_info = {
+        'python_version': sys.version.split()[0],
+        'flask_version': flask.__version__,
+        'database': 'SQLite',
+        'server': 'Development' if config_info['debug_mode'] == 'Development Server' else 'Production'
+    }
+    
+    # Get maintenance mode (from maintenance_control)
+    maintenance = MaintenanceMode.query.filter_by(is_active=True).first()
+    
+    return render_template('tech/system.html', 
+                         **system_data,
+                         config=config_info,
+                         system_info=system_info,
+                         maintenance=maintenance)
+
 @tech_blueprint.route('/system/status')
 @login_required
 @tech_required
@@ -489,7 +643,7 @@ def restart_server():
     except Exception as e:
         flash(f'Error restarting server: {str(e)}', 'danger')
     
-    return redirect(url_for('tech.system_config'))
+    return redirect(url_for('tech.system'))
 
 @tech_blueprint.route('/system/view-logs')
 @login_required
@@ -772,7 +926,7 @@ def update_system_config():
     except Exception as e:
         flash(f'Error updating configuration: {str(e)}', 'danger')
     
-    return redirect(url_for('tech.system_config'))
+    return redirect(url_for('tech.system'))
 
 @tech_blueprint.route('/user/management', methods=['GET', 'POST'])
 @login_required
@@ -865,7 +1019,7 @@ def start_maintenance():
         max_duration = 7 * 24 * 60  # 7 days in minutes
         if duration_minutes > max_duration:
             flash(f'Error: Maximum maintenance duration is 7 days ({max_duration} minutes).', 'danger')
-            return redirect(url_for('tech.maintenance_control'))
+            return redirect(url_for('tech.system'))
         
         # Deactivate any existing maintenance sessions
         MaintenanceMode.query.update({'is_active': False})
@@ -911,7 +1065,7 @@ def start_maintenance():
     except Exception as e:
         flash(f'Error starting maintenance mode: {str(e)}', 'danger')
     
-    return redirect(url_for('tech.maintenance_control'))
+    return redirect(url_for('tech.system'))
 
 @tech_blueprint.route('/maintenance/stop', methods=['POST'])
 @login_required
@@ -926,7 +1080,7 @@ def stop_maintenance():
     except Exception as e:
         flash(f'Error stopping maintenance mode: {str(e)}', 'danger')
     
-    return redirect(url_for('tech.maintenance_control'))
+    return redirect(url_for('tech.system'))
 
 @tech_blueprint.route('/user/impersonate/<int:user_id>')
 @login_required

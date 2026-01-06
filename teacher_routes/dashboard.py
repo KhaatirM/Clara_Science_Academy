@@ -654,64 +654,12 @@ def send_reminder(assignment_id):
 @login_required
 @teacher_required
 def my_assignments():
-    """Display all assignments for the current teacher."""
-    # Get teacher object or None for administrators
-    teacher = get_teacher_or_admin()
-    
-    # Get filter parameters
-    selected_class_id = request.args.get('class_id', '')
-    sort_by = request.args.get('sort', 'due_date')
-    sort_order = request.args.get('order', 'desc')
-    
-    # Ensure selected_class_id is a string for template comparison
-    selected_class_id = str(selected_class_id) if selected_class_id else ''
-    
-    # Directors and School Administrators see all assignments, teachers only see their assigned classes
-    if is_admin():
-        assignments_query = Assignment.query
-        classes = Class.query.all()
-    else:
-        # Check if teacher object exists
-        if teacher is None:
-            # If user is a Teacher but has no teacher_staff_id, show empty assignments list
-            assignments_query = Assignment.query.none()
-            classes = []
-        else:
-            # Get classes for this teacher
-            classes = Class.query.filter_by(teacher_id=teacher.id).all()
-            class_ids = [c.id for c in classes]
-            assignments_query = Assignment.query.filter(Assignment.class_id.in_(class_ids))
-    
-    # Apply class filter if selected
-    if selected_class_id:
-        assignments_query = assignments_query.filter(Assignment.class_id == selected_class_id)
-    
-    # Apply sorting
-    if sort_by == 'due_date':
-        if sort_order == 'asc':
-            assignments_query = assignments_query.order_by(Assignment.due_date.asc())
-        else:
-            assignments_query = assignments_query.order_by(Assignment.due_date.desc())
-    elif sort_by == 'title':
-        if sort_order == 'asc':
-            assignments_query = assignments_query.order_by(Assignment.title.asc())
-        else:
-            assignments_query = assignments_query.order_by(Assignment.title.desc())
-    elif sort_by == 'class':
-        if sort_order == 'asc':
-            assignments_query = assignments_query.join(Class).order_by(Class.name.asc())
-        else:
-            assignments_query = assignments_query.join(Class).order_by(Class.name.desc())
-    
-    assignments = assignments_query.all()
-    
-    return render_template('shared/assignments_list.html', 
-                         assignments=assignments, 
-                         teacher=teacher,
-                         classes=classes,
-                         selected_class_id=selected_class_id,
-                         sort_by=sort_by,
-                         sort_order=sort_order)
+    """Redirect to assignments and grades page."""
+    # Preserve query parameters when redirecting
+    query_string = request.query_string.decode('utf-8')
+    if query_string:
+        return redirect(url_for('teacher.dashboard.assignments_and_grades') + '?' + query_string)
+    return redirect(url_for('teacher.dashboard.assignments_and_grades'))
 
 @bp.route('/students')
 @login_required
@@ -823,6 +771,22 @@ def assignments_and_grades():
                             unique_student_ids.add(enrollment.student_id)
             unique_student_count = len(unique_student_ids)
             
+            # Get pending extension request count for teacher's classes
+            from models import ExtensionRequest
+            if is_admin():
+                pending_extension_count = ExtensionRequest.query.filter_by(status='Pending').count()
+            else:
+                if teacher is None:
+                    pending_extension_count = 0
+                else:
+                    class_ids = [c.id for c in accessible_classes]
+                    assignments = Assignment.query.filter(Assignment.class_id.in_(class_ids)).all()
+                    assignment_ids = [a.id for a in assignments]
+                    pending_extension_count = ExtensionRequest.query.filter(
+                        ExtensionRequest.assignment_id.in_(assignment_ids),
+                        ExtensionRequest.status == 'Pending'
+                    ).count()
+            
             return render_template('management/assignments_and_grades.html',
                                  accessible_classes=accessible_classes,
                                  class_assignments=class_assignments,
@@ -834,7 +798,8 @@ def assignments_and_grades():
                                  sort_order=sort_order,
                                  view_mode=view_mode,
                                  user_role=current_user.role if hasattr(current_user, 'role') else 'Teacher',
-                                 show_class_selection=True)
+                                 show_class_selection=True,
+                                 extension_request_count=pending_extension_count)
         
         # Handle class filter
         selected_class = None
@@ -933,6 +898,16 @@ def assignments_and_grades():
                         grades = Grade.query.filter_by(assignment_id=assignment.id).all()
                         graded_count = sum(1 for g in grades if g.grade_data)
                         
+                        # Check if quiz is auto-gradeable (all questions are multiple_choice or true_false)
+                        is_autogradeable = False
+                        if assignment.assignment_type == 'quiz':
+                            from models import QuizQuestion
+                            quiz_questions = QuizQuestion.query.filter_by(assignment_id=assignment.id).all()
+                            if quiz_questions:
+                                # Check if all questions are auto-gradeable
+                                auto_gradeable_types = ['multiple_choice', 'true_false']
+                                is_autogradeable = all(q.question_type in auto_gradeable_types for q in quiz_questions)
+                        
                         # Calculate average
                         total_score = 0
                         graded_with_score = 0
@@ -957,7 +932,8 @@ def assignments_and_grades():
                         assignment_grades[assignment.id] = {
                             'total_submissions': len(grades),
                             'graded_count': graded_count,
-                            'average_score': average_score
+                            'average_score': average_score,
+                            'is_autogradeable': is_autogradeable
                         }
                     
                     # Get grade data for group assignments
@@ -1199,6 +1175,22 @@ def assignments_and_grades():
                 else:
                     table_student_averages[student_id] = 'N/A'
         
+        # Get pending extension request count for teacher's classes
+        from models import ExtensionRequest
+        if is_admin():
+            pending_extension_count = ExtensionRequest.query.filter_by(status='Pending').count()
+        else:
+            if teacher is None:
+                pending_extension_count = 0
+            else:
+                class_ids = [c.id for c in accessible_classes]
+                assignments = Assignment.query.filter(Assignment.class_id.in_(class_ids)).all()
+                assignment_ids = [a.id for a in assignments]
+                pending_extension_count = ExtensionRequest.query.filter(
+                    ExtensionRequest.assignment_id.in_(assignment_ids),
+                    ExtensionRequest.status == 'Pending'
+                ).count()
+        
         return render_template('management/assignments_and_grades.html',
                              accessible_classes=accessible_classes,
                              classes=accessible_classes,  # For dropdown filter
@@ -1215,6 +1207,7 @@ def assignments_and_grades():
                              show_class_selection=not selected_class,
                              class_filter=class_filter if selected_class else '',
                              today=today,
+                             extension_request_count=pending_extension_count,
                              # Table view data
                              enrolled_students=enrolled_students if view_mode == 'table' else [],
                              student_grades=table_student_grades if view_mode == 'table' else {},
@@ -1307,6 +1300,86 @@ def calendar():
                          year=year,
                          assignments=assignments, 
                          classes=classes, 
+                         teacher=teacher)
+
+@bp.route('/schedule')
+@login_required
+@teacher_required
+def teacher_schedule():
+    """Display teacher's weekly class schedule."""
+    from models import ClassSchedule
+    
+    # Get teacher object or None for administrators
+    teacher = get_teacher_or_admin()
+    
+    # Get classes assigned to teacher
+    if is_admin():
+        classes = Class.query.all()
+    else:
+        if teacher is None:
+            classes = []
+        else:
+            # Get classes where teacher is primary, additional, or substitute
+            classes = Class.query.filter_by(teacher_id=teacher.id).all()
+            # Also get classes where teacher is additional or substitute
+            from models import class_additional_teachers, class_substitute_teachers
+            additional_classes = db.session.query(Class).join(
+                class_additional_teachers
+            ).filter(class_additional_teachers.c.teacher_id == teacher.id).all()
+            substitute_classes = db.session.query(Class).join(
+                class_substitute_teachers
+            ).filter(class_substitute_teachers.c.teacher_id == teacher.id).all()
+            # Combine all classes
+            all_class_ids = {c.id for c in classes}
+            for c in additional_classes + substitute_classes:
+                if c.id not in all_class_ids:
+                    classes.append(c)
+                    all_class_ids.add(c.id)
+    
+    # Get full weekly schedule (Monday=0 to Sunday=6)
+    weekly_schedule = {}
+    day_names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    
+    for day_num in range(7):
+        day_schedules = []
+        for class_obj in classes:
+            schedule = ClassSchedule.query.filter_by(
+                class_id=class_obj.id,
+                day_of_week=day_num
+            ).first()
+            
+            if schedule:
+                # Count enrolled students
+                from models import Enrollment
+                student_count = Enrollment.query.filter_by(
+                    class_id=class_obj.id,
+                    is_active=True
+                ).count()
+                
+                day_schedules.append({
+                    'class': class_obj,
+                    'start_time': schedule.start_time,
+                    'end_time': schedule.end_time,
+                    'time_str': f"{schedule.start_time.strftime('%I:%M %p')} - {schedule.end_time.strftime('%I:%M %p')}",
+                    'room': schedule.room or 'TBD',
+                    'student_count': student_count
+                })
+        
+        # Sort by start time
+        day_schedules.sort(key=lambda x: x['start_time'])
+        weekly_schedule[day_num] = {
+            'day_name': day_names[day_num],
+            'schedules': day_schedules
+        }
+    
+    # Get today's weekday for highlighting
+    today = datetime.now()
+    today_weekday = today.weekday()
+    
+    return render_template('teachers/teacher_schedule.html',
+                         weekly_schedule=weekly_schedule,
+                         today_weekday=today_weekday,
+                         classes=classes,
                          teacher=teacher)
 
 

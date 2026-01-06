@@ -5,20 +5,28 @@ Teachers routes for management users.
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, Response, abort, jsonify
 from flask_login import login_required, current_user
 from decorators import management_required
-from models import db
+from models import db, TeacherStaff, User
+from werkzeug.security import generate_password_hash
+import json
 
 
 bp = Blueprint('teachers', __name__)
+
+# Note: The /add-teacher-staff route is registered in management_routes/__init__.py
+# to ensure the endpoint name is 'management.add_teacher_staff' for backward compatibility
 
 
 # ============================================================
 # Route: /add-teacher-staff', methods=['GET', 'POST']
 # Function: add_teacher_staff
+# NOTE: This route is registered in management_routes/__init__.py with endpoint 'add_teacher_staff'
+# to maintain backward compatibility. The function implementation remains here.
 # ============================================================
 
-@bp.route('/add-teacher-staff', methods=['GET', 'POST'])
-@login_required
-@management_required
+# Route removed - now registered in management_routes/__init__.py
+# @bp.route('/add-teacher-staff', methods=['GET', 'POST'])
+# @login_required
+# @management_required
 def add_teacher_staff():
     """Add a new teacher or staff member"""
     if request.method == 'POST':
@@ -125,6 +133,29 @@ def add_teacher_staff():
             teacher_staff.employment_type = employment_type
             teacher_staff.grades_taught = grades_taught_json
             
+            # Temporary access fields
+            is_temporary = request.form.get('is_temporary') == 'on'
+            teacher_staff.is_temporary = is_temporary
+            
+            if is_temporary:
+                access_expires_str = request.form.get('access_expires_at', '').strip()
+                if access_expires_str:
+                    try:
+                        from datetime import datetime, timezone
+                        # Parse the datetime string (naive datetime from form)
+                        access_expires_at = datetime.strptime(access_expires_str, '%Y-%m-%dT%H:%M')
+                        # Make it timezone-aware (UTC) for consistent storage
+                        access_expires_at = access_expires_at.replace(tzinfo=timezone.utc)
+                        teacher_staff.access_expires_at = access_expires_at
+                    except ValueError:
+                        flash('Invalid expiration date format. Please use the date picker.', 'warning')
+                        return redirect(request.url)
+                else:
+                    flash('Expiration date is required for temporary staff.', 'danger')
+                    return redirect(request.url)
+            else:
+                teacher_staff.access_expires_at = None
+            
             # Address fields
             teacher_staff.street = street
             teacher_staff.apt_unit = apt_unit
@@ -182,6 +213,10 @@ def add_teacher_staff():
             if generated_workspace_email:
                 success_msg += f' Google Workspace Email: {generated_workspace_email}.'
             success_msg += ' User will be required to change password on first login.'
+            if is_temporary and teacher_staff.access_expires_at:
+                from datetime import datetime
+                expires_str = teacher_staff.access_expires_at.strftime('%Y-%m-%d %I:%M %p')
+                success_msg += f' TEMPORARY ACCESS: Access will expire on {expires_str}.'
             flash(success_msg, 'success')
             return redirect(url_for('management.teachers'))
             
@@ -409,9 +444,11 @@ def api_teachers():
 # Function: teacher_work_days
 # ============================================================
 
-@bp.route('/calendar/teacher-work-days')
-@login_required
-@management_required
+# NOTE: This route is now registered in management_routes/__init__.py with endpoint 'teacher_work_days'
+# to maintain backward compatibility. The route decorator is commented out here to avoid conflicts.
+# @bp.route('/calendar/teacher-work-days')
+# @login_required
+# @management_required
 def teacher_work_days():
     """View and manage teacher work days"""
     # Get active school year

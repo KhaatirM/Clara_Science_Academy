@@ -161,6 +161,7 @@
 // Global assignment view modal function - MUST be loaded first
 window.openAssignmentViewModal = function(assignmentId, assignmentTitle, assignmentDescription, assignmentDueDate, assignmentQuarter, assignmentAttachment, hasSubmission, hasGrade, assignmentType) {
     console.log('openAssignmentViewModal called with:', {assignmentId, assignmentTitle, assignmentAttachment, assignmentType});
+    
     const modalElement = document.getElementById('assignmentViewModal');
     
     if (!modalElement) {
@@ -510,15 +511,25 @@ window.openAssignmentViewModal = function(assignmentId, assignmentTitle, assignm
                             onclick="takeQuiz(${assignmentId}, '${assignmentTitle}')">
                         <i class="bi bi-play-circle-fill me-2"></i>Start Quiz
                     </button>
-                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="showQuizHelp()">
-                        <i class="bi bi-question-circle me-1"></i>Quiz Help
-                    </button>
+                    <div class="d-grid gap-2 mt-2">
+                        <button type="button" class="btn btn-outline-warning btn-sm" onclick="openExtensionRequestModal(${assignmentId}, '${assignmentTitle.replace(/'/g, "\\'")}', '${assignmentDueDate}')">
+                            <i class="bi bi-clock-history me-1"></i>Request Extension
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="showQuizHelp()">
+                            <i class="bi bi-question-circle me-1"></i>Quiz Help
+                        </button>
+                    </div>
                 `;
             } else if (!hasGrade) {
                 actionButtonsElement.innerHTML += `
                     <div class="alert alert-warning border-0 mb-2" style="background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);">
                         <i class="bi bi-hourglass-split me-2"></i><strong>Quiz Submitted!</strong><br>
                         <small>Your quiz is being reviewed by your teacher.</small>
+                    </div>
+                    <div class="d-grid gap-2 mt-2">
+                        <button type="button" class="btn btn-outline-warning btn-sm" onclick="openExtensionRequestModal(${assignmentId}, '${assignmentTitle.replace(/'/g, "\\'")}', '${assignmentDueDate}')">
+                            <i class="bi bi-clock-history me-1"></i>Request Extension
+                        </button>
                     </div>
                 `;
             } else {
@@ -534,12 +545,17 @@ window.openAssignmentViewModal = function(assignmentId, assignmentTitle, assignm
             actionButtonsElement.innerHTML += `
                 <button type="button" class="btn btn-lg text-white shadow" 
                         style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);"
-                        onclick="joinDiscussion(${assignmentId}, '${assignmentTitle}')">
+                        onclick="window.joinDiscussion(${assignmentId}, '${assignmentTitle.replace(/'/g, "\\'")}')">
                     <i class="bi bi-chat-dots-fill me-2"></i>Join Discussion
                 </button>
-                <button type="button" class="btn btn-outline-info btn-sm" onclick="showDiscussionHelp()">
-                    <i class="bi bi-people me-1"></i>Discussion Tips
-                </button>
+                <div class="d-grid gap-2 mt-2">
+                    <button type="button" class="btn btn-outline-warning btn-sm" onclick="openExtensionRequestModal(${assignmentId}, '${assignmentTitle.replace(/'/g, "\\'")}', '${assignmentDueDate}')">
+                        <i class="bi bi-clock-history me-1"></i>Request Extension
+                    </button>
+                    <button type="button" class="btn btn-outline-info btn-sm" onclick="showDiscussionHelp()">
+                        <i class="bi bi-people me-1"></i>Discussion Tips
+                    </button>
+                </div>
             `;
         } else {
             // PDF/Paper assignment buttons with enhanced styling
@@ -550,9 +566,14 @@ window.openAssignmentViewModal = function(assignmentId, assignmentTitle, assignm
                             onclick="switchToSubmissionModal(${assignmentId}, '${assignmentTitle}', false)">
                         <i class="bi bi-upload me-2"></i>Submit Assignment
                     </button>
-                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="showSubmissionHelp()">
-                        <i class="bi bi-info-circle me-1"></i>Submission Help
-                    </button>
+                    <div class="d-grid gap-2 mt-2">
+                        <button type="button" class="btn btn-outline-warning btn-sm" onclick="openExtensionRequestModal(${assignmentId}, '${assignmentTitle.replace(/'/g, "\\'")}', '${assignmentDueDate}')">
+                            <i class="bi bi-clock-history me-1"></i>Request Extension
+                        </button>
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="showSubmissionHelp()">
+                            <i class="bi bi-info-circle me-1"></i>Submission Help
+                        </button>
+                    </div>
                 `;
             } else if (!hasGrade) {
                 actionButtonsElement.innerHTML += `
@@ -561,6 +582,11 @@ window.openAssignmentViewModal = function(assignmentId, assignmentTitle, assignm
                             onclick="switchToSubmissionModal(${assignmentId}, '${assignmentTitle}', true)">
                         <i class="bi bi-pencil-square me-2"></i>Resubmit Assignment
                     </button>
+                    <div class="d-grid gap-2 mt-2">
+                        <button type="button" class="btn btn-outline-warning btn-sm" onclick="openExtensionRequestModal(${assignmentId}, '${assignmentTitle.replace(/'/g, "\\'")}', '${assignmentDueDate}')">
+                            <i class="bi bi-clock-history me-1"></i>Request Extension
+                        </button>
+                    </div>
                     <div class="alert alert-info border-0 mt-2" style="background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);">
                         <i class="bi bi-clock-history me-2"></i><small>Your submission is being reviewed.</small>
                     </div>
@@ -913,12 +939,32 @@ function displayQuizDetailsInCard(quizData) {
     }
 }
 
+// Helper function to get data from button element
+function viewAssignmentFromButton(button) {
+    const assignmentId = parseInt(button.dataset.assignmentId);
+    const assignmentTitle = button.dataset.assignmentTitle || '';
+    const assignmentDescription = button.dataset.assignmentDescription || '';
+    const assignmentDueDate = button.dataset.assignmentDueDate || '';
+    const assignmentQuarter = button.dataset.assignmentQuarter || 'N/A';
+    const assignmentAttachment = button.dataset.assignmentAttachment || '';
+    const hasSubmission = button.dataset.hasSubmission === 'true';
+    const hasGrade = button.dataset.hasGrade === 'true';
+    const assignmentType = button.dataset.assignmentType || 'pdf';
+    
+    window.viewAssignment(assignmentId, assignmentTitle, assignmentDescription, assignmentDueDate, assignmentQuarter, assignmentAttachment, hasSubmission, hasGrade, assignmentType);
+}
+
 // Global view assignment function - called by View button
 window.viewAssignment = function(assignmentId, assignmentTitle, assignmentDescription, assignmentDueDate, assignmentQuarter, assignmentAttachment, hasSubmission, hasGrade, assignmentType) {
-    console.log('viewAssignment function called with:', arguments);
+    console.log('viewAssignment function called with:', {assignmentId, assignmentTitle, assignmentType});
     try {
-        // Show the view modal for all assignment types (including quizzes)
-        openAssignmentViewModal(assignmentId, assignmentTitle, assignmentDescription, assignmentDueDate, assignmentQuarter, assignmentAttachment, hasSubmission, hasGrade, assignmentType);
+        // For all assignment types (quiz, pdf, paper, discussion), show the view modal
+        if (typeof openAssignmentViewModal === 'function') {
+            openAssignmentViewModal(assignmentId, assignmentTitle, assignmentDescription, assignmentDueDate, assignmentQuarter, assignmentAttachment, hasSubmission, hasGrade, assignmentType);
+        } else {
+            console.error('openAssignmentViewModal function not found');
+            alert('Error: Assignment view modal not available. Please refresh the page.');
+        }
     } catch (error) {
         console.error('Error in viewAssignment function:', error);
         alert('Error opening assignment view. Please try again.');
@@ -1454,17 +1500,20 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
 
     {% elif section == 'classes' %}
         <!-- Modern Classes View -->
-        <div class="student-classes-header mb-4">
+        <div class="student-classes-header mb-4" style="background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%); padding: 2rem; border-radius: 0.75rem; color: white;">
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-                <div>
-                    <h2 class="student-classes-title mb-1">
-                        <i class="bi bi-house-door-fill me-2"></i>My Classes
-                    </h2>
-                    <p class="student-classes-subtitle mb-0">
-                        <i class="bi bi-calendar3 me-2"></i>View your enrolled classes and access course materials
-                    </p>
+                <div class="d-flex align-items-center gap-3">
+                    <div style="font-size: 3rem;">
+                        <i class="bi bi-journal-bookmark-fill"></i>
+                    </div>
+                    <div>
+                        <h2 class="mb-1" style="color: white; font-size: 2rem; font-weight: 700;">My Classes</h2>
+                        <p class="mb-0" style="color: rgba(255,255,255,0.9);">
+                            View your enrolled classes and access course materials
+                        </p>
+                    </div>
                 </div>
-                <div class="badge badge-student-classes">
+                <div class="badge bg-white text-primary px-3 py-2" style="font-size: 1.1rem; font-weight: 600;">
                     {{ my_classes|length }} {% if my_classes|length == 1 %}Class{% else %}Classes{% endif %}
                 </div>
             </div>
@@ -1474,41 +1523,44 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
         <div class="row g-3">
             {% for class in my_classes %}
                 <div class="col-12 col-md-6 col-lg-4">
-                    <div class="student-class-card">
-                        <!-- Card Header -->
-                        <div class="student-class-card-header">
-                            <div class="student-class-icon">
-                                <i class="bi bi-book-fill"></i>
+                    <div class="card border-0 shadow-sm h-100">
+                        <!-- Card Header - Blue -->
+                        <div class="card-header bg-primary text-white" style="border-radius: 0.5rem 0.5rem 0 0;">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-book-fill" style="font-size: 1.5rem;"></i>
+                                    <h6 class="mb-0">{{ class.name }}</h6>
+                                </div>
+                                <span class="badge bg-white text-dark">Grade {{ class.get_grade_levels_display() if class.get_grade_levels_display() else (class.grade_level or 'N/A') }}</span>
                             </div>
-                            <span class="student-class-grade-badge">Grade {{ class.grade_level or 'N/A' }}</span>
                         </div>
 
-                        <!-- Card Body -->
-                        <div class="student-class-card-body">
-                            <h5 class="student-class-card-title">{{ class.name }}</h5>
-                            <p class="student-class-card-subject">
-                                <i class="bi bi-journals me-1"></i>{{ class.subject or 'General' }}
+                        <!-- Card Body - White -->
+                        <div class="card-body">
+                            <p class="mb-2">
+                                <strong>Subject:</strong> {{ class.subject or 'General' }}
                             </p>
-                            <div class="student-class-card-teacher">
-                                <i class="bi bi-person-circle me-1"></i>
-                                <span>{{ class.teacher.first_name }} {{ class.teacher.last_name if class.teacher else 'N/A' }}</span>
-                            </div>
-                            {% if class.room_number %}
-                            <div class="student-class-card-room">
-                                <i class="bi bi-geo-alt me-1"></i>
-                                <span>Room {{ class.room_number }}</span>
-                            </div>
+                            <p class="mb-2">
+                                <strong>Teacher:</strong> {{ class.teacher.first_name }} {{ class.teacher.last_name if class.teacher else 'N/A' }}
+                            </p>
+                            {% if grades.get(class.name) %}
+                            <p class="mb-3">
+                                <strong>Current Average:</strong> 
+                                <span class="text-primary fw-bold">{{ "%.1f"|format(grades[class.name]) }}%</span>
+                            </p>
                             {% endif %}
                         </div>
 
                         <!-- Card Footer -->
-                        <div class="student-class-card-footer">
-                            <a href="{{ url_for('student.view_class', class_id=class.id) }}" class="btn btn-sm btn-student-class-primary">
-                                <i class="bi bi-box-arrow-up-right me-1"></i>Open
-                            </a>
-                            <button type="button" class="btn btn-sm btn-student-class-secondary" onclick="openClassAssignmentsModal({{ class.id }}, '{{ class.name }}')">
-                                <i class="bi bi-journal-text me-1"></i>Assignments
-                            </button>
+                        <div class="card-footer bg-white border-top">
+                            <div class="d-grid gap-2">
+                                <a href="{{ url_for('student.view_class', class_id=class.id) }}" class="btn btn-primary btn-sm">
+                                    Open Class
+                                </a>
+                                <a href="{{ url_for('student.class_assignments', class_id=class.id) }}" class="btn btn-outline-primary btn-sm">
+                                    Assignments
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -2497,19 +2549,37 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
             </div>
         </div>
 
+        <!-- Upcoming Assignments Section -->
+        <div class="mb-5">
+            <div class="d-flex align-items-center mb-3">
+                <div class="flex-grow-1">
+                    <h3 class="mb-0">
+                        <i class="bi bi-calendar-event text-info me-2"></i>Upcoming Assignments
+                    </h3>
+                    <small class="text-muted">Feature coming soon</small>
+                </div>
+            </div>
+            <div class="border-top border-info border-3 pt-3"></div>
+            
+            <div class="text-center py-4 mt-3">
+                <i class="bi bi-calendar-x text-muted" style="font-size: 3rem;"></i>
+                <p class="text-muted mt-3 mb-0">Upcoming assignments feature will be available soon.</p>
+            </div>
+        </div>
+
         <!-- Active Assignments Section -->
-        {% if active_assignments %}
         <div class="mb-5">
             <div class="d-flex align-items-center mb-3">
                 <div class="flex-grow-1">
                     <h3 class="mb-0">
                         <i class="bi bi-check-circle-fill text-success me-2"></i>Active Assignments
                     </h3>
-                    <small class="text-muted">{{ active_assignments|length }} assignment(s)</small>
+                    <small class="text-muted">{{ active_assignments|length if active_assignments else 0 }} assignment(s)</small>
                 </div>
             </div>
             <div class="border-top border-success border-3 pt-3"></div>
             
+            {% if active_assignments %}
             <div class="row g-3 mt-3" id="activeAssignmentsTable">
                 {% for assignment, submission, student_status in active_assignments %}
                 <div class="col-12 col-md-6 col-lg-4 assignment-card-wrapper" 
@@ -2640,7 +2710,17 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
 
                         <!-- Card Footer -->
                         <div class="student-assignment-card-footer">
-                            <button type="button" class="btn btn-sm btn-student-view" onclick="viewAssignment({{ assignment.id }}, '{{ assignment.title }}', '{{ assignment.description or '' }}', '{{ assignment.due_date.strftime('%Y-%m-%d') if assignment.due_date else 'No due date' }}', '{{ assignment.quarter or 'N/A' }}', '{{ assignment.attachment_filename or '' }}', {{ 'true' if submission else 'false' }}, {{ 'true' if grades.get(assignment.id) else 'false' }}, '{{ assignment.assignment_type }}')">
+                            <button type="button" class="btn btn-sm btn-student-view" 
+                                    data-assignment-id="{{ assignment.id }}"
+                                    data-assignment-title="{{ assignment.title|replace("'", "\\'") }}"
+                                    data-assignment-description="{{ (assignment.description or '')|replace("'", "\\'") }}"
+                                    data-assignment-due-date="{{ assignment.due_date.strftime('%Y-%m-%d') if assignment.due_date else 'No due date' }}"
+                                    data-assignment-quarter="{{ assignment.quarter or 'N/A' }}"
+                                    data-assignment-attachment="{{ assignment.attachment_filename or '' }}"
+                                    data-has-submission="{{ 'true' if submission else 'false' }}"
+                                    data-has-grade="{{ 'true' if grades.get(assignment.id) else 'false' }}"
+                                    data-assignment-type="{{ assignment.assignment_type }}"
+                                    onclick="viewAssignmentFromButton(this)">
                                 <i class="bi bi-eye me-1"></i>View
                             </button>
                             {% if assignment.assignment_type == 'quiz' %}
@@ -2648,7 +2728,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                     <i class="bi bi-play-fill me-1"></i>Take Quiz
                                 </button>
                             {% elif assignment.assignment_type == 'discussion' %}
-                                <button type="button" class="btn btn-sm btn-student-action" onclick="joinDiscussion({{ assignment.id }}, '{{ assignment.title }}')">
+                                <button type="button" class="btn btn-sm btn-student-action" onclick="window.joinDiscussion({{ assignment.id }}, '{{ assignment.title|replace("'", "\\'") }}')">
                                     <i class="bi bi-chat-fill me-1"></i>Discuss
                                 </button>
                             {% else %}
@@ -2661,22 +2741,27 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                 </div>
                 {% endfor %}
             </div>
+            {% else %}
+            <div class="text-center py-4 mt-3">
+                <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+                <p class="text-muted mt-3 mb-0">No active assignments at this time.</p>
+            </div>
+            {% endif %}
         </div>
-        {% endif %}
         
         <!-- Inactive Assignments Section -->
-        {% if inactive_assignments %}
         <div class="mb-5">
             <div class="d-flex align-items-center mb-3">
                 <div class="flex-grow-1">
                     <h3 class="mb-0">
-                        <i class="bi bi-pause-circle-fill text-secondary me-2"></i>Inactive Assignments
+                        <i class="bi bi-pause-circle text-secondary me-2"></i>Inactive Assignments
                     </h3>
-                    <small class="text-muted">{{ inactive_assignments|length }} assignment(s)</small>
+                    <small class="text-muted">{{ inactive_assignments|length if inactive_assignments else 0 }} assignment(s) - No longer active</small>
                 </div>
             </div>
             <div class="border-top border-secondary border-3 pt-3"></div>
             
+            {% if inactive_assignments %}
             <div class="row g-3 mt-3" id="inactiveAssignmentsTable">
                 {% for assignment, submission, student_status in inactive_assignments %}
                 <div class="col-12 col-md-6 col-lg-4 assignment-card-wrapper" 
@@ -2685,7 +2770,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                      data-due="{{ assignment.due_date.strftime('%Y-%m-%d') if assignment.due_date else '9999-12-31' }}"
                      data-title="{{ assignment.title }}"
                      data-class="{{ assignment.class_info.name if assignment.class_info else 'Unknown' }}"
-                     style="opacity: 0.7;">
+                     style="opacity: 0.6; filter: grayscale(30%);">
                     <div class="student-assignment-card">
                         <!-- Card Header -->
                         <div class="student-assignment-card-header">
@@ -2722,17 +2807,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                 {# Use percentage for letter grade calculation (it's the percentage score) #}
                                 {% set grade_percentage = percentage if percentage is not none else score %}
                                 
-                                {# Check if student has an active extension #}
-                                {% set has_extension = student_status == 'Extended' %}
-                                
-                                {% if student_status == 'Voided' %}
-                                    <span class="badge bg-secondary">Voided</span>
-                                {% elif has_extension and not grade_percentage %}
-                                    {# Show Extension badge if extension granted and not yet graded #}
-                                    <span class="badge badge-extension">
-                                        <i class="bi bi-clock-history me-1"></i>Extension
-                                    </span>
-                                {% elif grade_percentage is not none and grade_percentage > 0 %}
+                                {% if grade_percentage is not none and grade_percentage > 0 %}
                                     {# Show letter grade if graded with percentage > 0 #}
                                     {% if grade_percentage >= 97 %}
                                         <span class="badge grade-badge grade-a-plus">A+</span>
@@ -2762,17 +2837,9 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                         <span class="badge grade-badge grade-f">F</span>
                                     {% endif %}
                                 {% elif grade_percentage is not none and grade_percentage == 0 %}
-                                    {# Show Overdue if graded with 0 #}
-                                    <span class="badge bg-danger">Overdue</span>
-                                {% elif student_status == 'completed' %}
-                                    {# Fallback: No grade data but marked completed #}
-                                    <span class="badge bg-danger">Overdue</span>
+                                    <span class="badge bg-danger">Graded</span>
                                 {% elif student_status == 'Submitted or Awaiting Grade' %}
                                     <span class="badge bg-info">Awaiting Grade</span>
-                                {% elif student_status == 'Past Due' %}
-                                    <span class="badge bg-danger">Overdue</span>
-                                {% elif student_status == 'Extended' %}
-                                    <span class="badge bg-warning">Extended</span>
                                 {% else %}
                                     <span class="badge bg-secondary">Inactive</span>
                                 {% endif %}
@@ -2808,140 +2875,32 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
 
                         <!-- Card Footer -->
                         <div class="student-assignment-card-footer">
-                            <button type="button" class="btn btn-sm btn-student-view" onclick="viewAssignment({{ assignment.id }}, '{{ assignment.title }}', '{{ assignment.description or '' }}', '{{ assignment.due_date.strftime('%Y-%m-%d') if assignment.due_date else 'No due date' }}', '{{ assignment.quarter or 'N/A' }}', '{{ assignment.attachment_filename or '' }}', {{ 'true' if submission else 'false' }}, {{ 'true' if grades.get(assignment.id) else 'false' }}, '{{ assignment.assignment_type }}')">
+                            <button type="button" class="btn btn-sm btn-student-view" 
+                                    data-assignment-id="{{ assignment.id }}"
+                                    data-assignment-title="{{ assignment.title|replace("'", "\\'") }}"
+                                    data-assignment-description="{{ (assignment.description or '')|replace("'", "\\'") }}"
+                                    data-assignment-due-date="{{ assignment.due_date.strftime('%Y-%m-%d') if assignment.due_date else 'No due date' }}"
+                                    data-assignment-quarter="{{ assignment.quarter or 'N/A' }}"
+                                    data-assignment-attachment="{{ assignment.attachment_filename or '' }}"
+                                    data-has-submission="{{ 'true' if submission else 'false' }}"
+                                    data-has-grade="{{ 'true' if grades.get(assignment.id) else 'false' }}"
+                                    data-assignment-type="{{ assignment.assignment_type }}"
+                                    onclick="viewAssignmentFromButton(this)">
                                 <i class="bi bi-eye me-1"></i>View
                             </button>
-                            {% if assignment.assignment_type == 'quiz' %}
-                                <button type="button" class="btn btn-sm btn-student-action" disabled style="opacity: 0.5; cursor: not-allowed;" title="Assignment is inactive">
-                                    <i class="bi bi-play-fill me-1"></i>Take Quiz
-                                </button>
-                            {% elif assignment.assignment_type == 'discussion' %}
-                                <button type="button" class="btn btn-sm btn-student-action" disabled style="opacity: 0.5; cursor: not-allowed;" title="Assignment is inactive">
-                                    <i class="bi bi-chat-fill me-1"></i>Discuss
-                                </button>
-                            {% else %}
-                                <button type="button" class="btn btn-sm btn-student-action" disabled style="opacity: 0.5; cursor: not-allowed;" title="Assignment is inactive - submission closed">
-                                    <i class="bi bi-upload me-1"></i>Submit
-                                </button>
-                            {% endif %}
+                            {# No submit buttons for inactive assignments - students can't turn them in #}
                         </div>
                     </div>
                 </div>
                 {% endfor %}
             </div>
-        </div>
-        {% endif %}
-        
-        <!-- Voided Assignments Section -->
-        {% if voided_assignments %}
-        <div class="mb-5">
-            <div class="d-flex align-items-center mb-3">
-                <div class="flex-grow-1">
-                    <h3 class="mb-0">
-                        <i class="bi bi-x-circle-fill text-dark me-2"></i>Voided Assignments
-                    </h3>
-                    <small class="text-muted">{{ voided_assignments|length }} assignment(s)</small>
-                </div>
+            {% else %}
+            <div class="text-center py-4 mt-3">
+                <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+                <p class="text-muted mt-3 mb-0">No inactive assignments at this time.</p>
             </div>
-            <div class="border-top border-dark border-3 pt-3"></div>
-            
-            <div class="row g-3 mt-3" id="voidedAssignmentsTable">
-                {% for assignment, submission, student_status in voided_assignments %}
-                <div class="col-12 col-md-6 col-lg-4 assignment-card-wrapper" 
-                     data-status="{{ student_status }}" 
-                     data-type="{{ assignment.assignment_type or 'pdf' }}" 
-                     data-due="{{ assignment.due_date.strftime('%Y-%m-%d') if assignment.due_date else '9999-12-31' }}"
-                     data-title="{{ assignment.title }}"
-                     data-class="{{ assignment.class_info.name if assignment.class_info else 'Unknown' }}"
-                     style="opacity: 0.6;">
-                    <div class="student-assignment-card">
-                        <!-- Card Header -->
-                        <div class="student-assignment-card-header">
-                            <div class="student-assignment-type-icon
-                                {% if assignment.assignment_type == 'quiz' %}type-quiz
-                                {% elif assignment.assignment_type == 'discussion' %}type-discussion
-                                {% else %}type-pdf{% endif %}">
-                                {% if assignment.assignment_type == 'quiz' %}
-                                    <i class="bi bi-question-circle-fill"></i>
-                                {% elif assignment.assignment_type == 'discussion' %}
-                                    <i class="bi bi-chat-dots-fill"></i>
-                                {% else %}
-                                    <i class="bi bi-file-earmark-text-fill"></i>
-                                {% endif %}
-                            </div>
-                            <div class="student-assignment-status-badge">
-                                <span class="badge bg-dark">Voided</span>
-                            </div>
-                        </div>
-
-                        <!-- Card Body -->
-                        <div class="student-assignment-card-body">
-                            <h5 class="student-assignment-card-title">{{ assignment.title }}</h5>
-                            <p class="student-assignment-card-class">
-                                <i class="bi bi-book me-1"></i>{{ assignment.class_info.name if assignment.class_info else 'Unknown Class' }}
-                            </p>
-                            <div class="student-assignment-card-meta">
-                                <span class="meta-item">
-                                    <i class="bi bi-calendar3 me-1"></i>
-                                    Due: {{ assignment.due_date.strftime('%b %d, %Y') if assignment.due_date else 'No due date' }}
-                                </span>
-                                {% if assignment.quarter %}
-                                <span class="meta-item">
-                                    <i class="bi bi-calendar-range me-1"></i>Q{{ assignment.quarter }}
-                                </span>
-                                {% endif %}
-                            </div>
-                            {% if assignment.attachment_filename %}
-                            <div class="student-assignment-attachment">
-                                <i class="bi bi-paperclip me-1"></i>
-                                <a href="{{ url_for('student.download_assignment_file', assignment_id=assignment.id) }}" class="text-decoration-none">
-                                    {{ assignment.attachment_original_filename or assignment.attachment_filename }}
-                                </a>
-                            </div>
-                            {% endif %}
-                        </div>
-
-                        <!-- Card Footer -->
-                        <div class="student-assignment-card-footer">
-                            <button type="button" class="btn btn-sm btn-student-view" onclick="viewAssignment({{ assignment.id }}, '{{ assignment.title }}', '{{ assignment.description or '' }}', '{{ assignment.due_date.strftime('%Y-%m-%d') if assignment.due_date else 'No due date' }}', '{{ assignment.quarter or 'N/A' }}', '{{ assignment.attachment_filename or '' }}', {{ 'true' if submission else 'false' }}, {{ 'true' if grades.get(assignment.id) else 'false' }}, '{{ assignment.assignment_type }}')">
-                                <i class="bi bi-eye me-1"></i>View
-                            </button>
-                            {% if assignment.assignment_type == 'quiz' %}
-                                <button type="button" class="btn btn-sm btn-student-action" disabled style="opacity: 0.5; cursor: not-allowed;" title="Assignment is voided">
-                                    <i class="bi bi-play-fill me-1"></i>Take Quiz
-                                </button>
-                            {% elif assignment.assignment_type == 'discussion' %}
-                                <button type="button" class="btn btn-sm btn-student-action" disabled style="opacity: 0.5; cursor: not-allowed;" title="Assignment is voided">
-                                    <i class="bi bi-chat-fill me-1"></i>Discuss
-                                </button>
-                            {% else %}
-                                <button type="button" class="btn btn-sm btn-student-action" disabled style="opacity: 0.5; cursor: not-allowed;" title="Assignment is voided - submission closed">
-                                    <i class="bi bi-upload me-1"></i>Submit
-                                </button>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
+            {% endif %}
         </div>
-        {% endif %}
-        
-        <!-- Empty State -->
-        {% if not active_assignments and not inactive_assignments and not voided_assignments %}
-        <div class="row g-3">
-            <div class="col-12">
-                <div class="student-assignments-empty">
-                    <i class="bi bi-inbox"></i>
-                    <h4>No Assignments Found</h4>
-                    <p>No assignments match your current filters. Try adjusting your search criteria.</p>
-                    <a href="{{ url_for('student.student_assignments') }}" class="btn btn-primary mt-2">
-                        <i class="bi bi-arrow-clockwise me-1"></i>Clear Filters
-                    </a>
-                </div>
-            </div>
-        </div>
-        {% endif %}
         
         <!-- Assignment Modal Functions (moved outside conditional for global access) -->
         <script>
@@ -2974,12 +2933,114 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
         </script>
 
     {% elif section == 'schedule' %}
-        <!-- Schedule View -->
-        <h2 class="mb-4">My Schedule</h2>
-        
-        <div class="alert alert-info">
-            <h5><i class="bi bi-calendar-week-fill me-2"></i>Class Schedule</h5>
-            <p>Your class schedule will be displayed here. This feature is currently under development.</p>
+        <!-- Schedule View - Table Format -->
+        <div class="student-schedule-header mb-4" style="background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%); padding: 2rem; border-radius: 0.75rem; color: white;">
+            <div class="d-flex align-items-center gap-3">
+                <div style="font-size: 3rem;">
+                    <i class="bi bi-calendar3"></i>
+                </div>
+                <div>
+                    <h2 class="mb-1" style="color: white; font-size: 2rem; font-weight: 700;">My Schedule</h2>
+                    <p class="mb-0" style="color: rgba(255,255,255,0.9);">
+                        <i class="bi bi-calendar3 me-2"></i>Weekly class schedule
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <h5 class="mb-3">
+                    <i class="bi bi-calendar3 text-primary me-2"></i>Weekly Schedule
+                </h5>
+                
+                {% if weekly_schedule %}
+                {% set all_schedules = [] %}
+                {% for day_num in range(7) %}
+                    {% set day_data = weekly_schedule[day_num] %}
+                    {% for schedule_item in day_data.schedules %}
+                        {% set _ = all_schedules.append({
+                            'day': day_num,
+                            'start_time': schedule_item.start_time,
+                            'end_time': schedule_item.end_time,
+                            'class': schedule_item.class,
+                            'room': schedule_item.room,
+                            'time_str': schedule_item.time_str
+                        }) %}
+                    {% endfor %}
+                {% endfor %}
+                
+                {% if all_schedules %}
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 150px; font-weight: 600;">Time</th>
+                                <th style="font-weight: 600;">Monday</th>
+                                <th style="font-weight: 600;">Tuesday</th>
+                                <th style="font-weight: 600;">Wednesday</th>
+                                <th style="font-weight: 600;">Thursday</th>
+                                <th style="font-weight: 600;">Friday</th>
+                                <th style="font-weight: 600; background-color: #6c757d; color: #fff; opacity: 0.7;">Saturday</th>
+                                <th style="font-weight: 600; background-color: #6c757d; color: #fff; opacity: 0.7;">Sunday</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% set unique_times = [] %}
+                            {% for sched in all_schedules %}
+                                {% set time_key = sched.time_str %}
+                                {% if time_key and time_key not in unique_times %}
+                                    {% set _ = unique_times.append(time_key) %}
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% for time_slot in unique_times|sort %}
+                                {% set time_display = none %}
+                                {% for sched in all_schedules %}
+                                    {% if sched.time_str == time_slot %}
+                                        {% set time_display = sched.time_str %}
+                                    {% endif %}
+                                {% endfor %}
+                                <tr>
+                                    <td style="font-weight: 600; background-color: #f8f9fa; vertical-align: middle;">
+                                        {{ time_display or time_slot }}
+                                    </td>
+                                    {% for day_num in range(7) %}
+                                        {% set found_schedule = none %}
+                                        {% for sched in all_schedules %}
+                                            {% if sched.day == day_num and sched.time_str == time_slot %}
+                                                {% set found_schedule = sched %}
+                                            {% endif %}
+                                        {% endfor %}
+                                        <td {% if day_num >= 5 %}style="background-color: #6c757d; opacity: 0.3;"{% endif %}>
+                                            {% if found_schedule %}
+                                                <div>
+                                                    <strong>{{ found_schedule.class.name }}</strong><br>
+                                                    <small class="text-muted">{{ found_schedule.room or 'TBD' }}</small>
+                                                </div>
+                                            {% endif %}
+                                        </td>
+                                    {% endfor %}
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-calendar-x" style="font-size: 4rem; color: #6c757d; opacity: 0.5;"></i>
+                    <h5 class="mt-3 text-muted">No schedule has been set for your classes yet.</h5>
+                    <p class="text-muted">Contact your school administrator to set up your class schedule.</p>
+                </div>
+                {% endif %}
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-calendar-x" style="font-size: 4rem; color: #6c757d; opacity: 0.5;"></i>
+                    <h5 class="mt-3 text-muted">No schedule has been set for your classes yet.</h5>
+                    <p class="text-muted">Contact your school administrator to set up your class schedule.</p>
+                </div>
+                {% endif %}
+            </div>
         </div>
 
     {% elif section == 'school-calendar' %}
@@ -5373,6 +5434,20 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                 return;
             }
             
+            const assignmentType = button.dataset.assignmentType || 'pdf';
+            
+            // If it's a discussion assignment, redirect to discussion view
+            if (assignmentType === 'discussion') {
+                window.location.href = "{{ url_for('student.view_discussion', assignment_id=0) }}".replace('0', assignmentId);
+                return;
+            }
+            
+            // For quiz assignments, redirect to quiz view
+            if (assignmentType === 'quiz') {
+                window.location.href = "{{ url_for('student.take_quiz', assignment_id=0) }}".replace('0', assignmentId);
+                return;
+            }
+            
             const assignmentTitle = button.dataset.assignmentTitle;
             const assignmentDescription = button.dataset.assignmentDescription;
             const assignmentDueDate = button.dataset.assignmentDueDate;
@@ -5380,7 +5455,6 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
             const assignmentAttachment = button.dataset.assignmentAttachment;
             const hasSubmission = button.dataset.hasSubmission === 'true';
             const hasGrade = button.dataset.hasGrade === 'true';
-            const assignmentType = button.dataset.assignmentType || 'pdf';
             
             openAssignmentViewModal(assignmentId, assignmentTitle, assignmentDescription, assignmentDueDate, assignmentQuarter, assignmentAttachment, hasSubmission, hasGrade, assignmentType);
         }
@@ -5487,9 +5561,134 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
         window.location.href = `/student/take-quiz/${assignmentId}`;
     }
     
-    function joinDiscussion(assignmentId, assignmentTitle) {
+    // Make joinDiscussion globally accessible
+    window.joinDiscussion = function(assignmentId, assignmentTitle) {
+        console.log('joinDiscussion called with:', assignmentId, assignmentTitle);
         // Redirect to discussion interface
-        window.location.href = `/student/discussion/${assignmentId}`;
+        if (assignmentId) {
+            window.location.href = `/student/discussion/${assignmentId}`;
+        } else {
+            console.error('Invalid assignment ID:', assignmentId);
+            alert('Error: Invalid assignment ID. Please try again.');
+        }
+    };
+
+    // Extension Request Modal Function
+    function openExtensionRequestModal(assignmentId, assignmentTitle, assignmentDueDate) {
+        console.log('Opening extension request modal:', assignmentId, assignmentTitle);
+        
+        // First, close the assignment view modal if it's open
+        const assignmentViewModal = document.getElementById('assignmentViewModal');
+        if (assignmentViewModal) {
+            if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                const existingModal = bootstrap.Modal.getInstance(assignmentViewModal);
+                if (existingModal) {
+                    existingModal.hide();
+                }
+            }
+        }
+        
+        // Wait a bit for the modal to close, then open the extension request modal
+        setTimeout(() => {
+            const modal = document.getElementById('extensionRequestModal');
+            if (!modal) {
+                console.error('Extension request modal not found!');
+                alert('Extension request modal not found. Please refresh the page.');
+                return;
+            }
+            
+            const modalTitle = document.getElementById('extensionRequestTitle');
+            const modalBody = document.getElementById('extensionRequestBody');
+            
+            if (modalTitle) {
+                modalTitle.textContent = `Request Extension - ${assignmentTitle}`;
+            }
+            
+            if (modalBody) {
+                modalBody.innerHTML = `
+                    <form id="extensionRequestForm">
+                        <input type="hidden" name="assignment_id" value="${assignmentId}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="mb-3">
+                            <label for="extensionReason" class="form-label">Reason for Extension</label>
+                            <textarea class="form-control" id="extensionReason" name="reason" rows="3" 
+                                      placeholder="Please explain why you need an extension..." required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="requestedDate" class="form-label">Requested New Due Date</label>
+                            <input type="date" class="form-control" id="requestedDate" name="requested_due_date" required>
+                        </div>
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Your extension request will be sent to your teacher for approval.
+                        </div>
+                    </form>
+                `;
+            }
+            
+            // Show modal using Bootstrap 5
+            if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                // Remove any existing backdrops
+                const existingBackdrops = document.querySelectorAll('.modal-backdrop');
+                existingBackdrops.forEach(backdrop => backdrop.remove());
+                document.body.classList.remove('modal-open');
+                
+                const bootstrapModal = new bootstrap.Modal(modal, {
+                    backdrop: true,
+                    keyboard: true,
+                    focus: true
+                });
+                bootstrapModal.show();
+                
+                // Add form submit handler - use event delegation on the modal itself
+                modal.addEventListener('click', function(e) {
+                    if (e.target && e.target.closest('button[type="submit"]')) {
+                        e.preventDefault();
+                        const submitBtn = e.target.closest('button[type="submit"]');
+                        const form = document.getElementById('extensionRequestForm');
+                        if (!form) return;
+                        
+                        const originalBtnText = submitBtn.innerHTML;
+                        submitBtn.disabled = true;
+                        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Submitting...';
+                        
+                        const formData = new FormData(form);
+                        
+                        fetch('/student/request-extension', {
+                            method: 'POST',
+                            body: formData
+                        })
+                        .then(response => {
+                            if (!response.ok) {
+                                return response.json().catch(() => {
+                                    throw new Error(`HTTP error! status: ${response.status}`);
+                                });
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            if (data.success) {
+                                alert('Extension request submitted successfully!');
+                                bootstrapModal.hide();
+                                location.reload();
+                            } else {
+                                alert('Error submitting request: ' + (data.message || 'Unknown error'));
+                                submitBtn.disabled = false;
+                                submitBtn.innerHTML = originalBtnText;
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            alert('An error occurred while submitting the request: ' + error.message);
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = originalBtnText;
+                        });
+                    }
+                });
+            } else {
+                alert('Bootstrap is not loaded. Please refresh the page.');
+            }
+        }, 300); // Wait 300ms for the assignment view modal to close
     }
 
     </script>
@@ -5524,6 +5723,29 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                 <div class="modal-footer bg-light border-0">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                         <i class="bi bi-x-circle me-1"></i>Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Extension Request Modal -->
+    <div class="modal fade" id="extensionRequestModal" tabindex="-1" aria-labelledby="extensionRequestModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title" id="extensionRequestModalLabel">
+                        <i class="bi bi-calendar-plus me-2"></i><span id="extensionRequestTitle">Request Extension</span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="extensionRequestBody">
+                    <!-- Form will be injected here by JavaScript -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" form="extensionRequestForm" class="btn btn-info">
+                        <i class="bi bi-send me-1"></i>Submit Request
                     </button>
                 </div>
             </div>

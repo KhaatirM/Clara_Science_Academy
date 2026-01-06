@@ -518,7 +518,26 @@ def create_app(config_class=None):
     # User loader function for Flask-Login
     @login_manager.user_loader
     def load_user(user_id):
-        return User.query.get(int(user_id))
+        user = User.query.get(int(user_id))
+        if user:
+            # Check if user has expired temporary access
+            if user.teacher_staff_id:
+                from models import TeacherStaff
+                from datetime import datetime, timezone
+                teacher_staff = TeacherStaff.query.get(user.teacher_staff_id)
+                if teacher_staff and teacher_staff.is_temporary and teacher_staff.access_expires_at:
+                    # Handle both naive and aware datetimes
+                    expires_at = teacher_staff.access_expires_at
+                    now = datetime.now(timezone.utc)
+                    
+                    # If expires_at is naive, make it timezone-aware (assume UTC)
+                    if expires_at.tzinfo is None:
+                        expires_at = expires_at.replace(tzinfo=timezone.utc)
+                    
+                    if expires_at < now:
+                        # Access has expired - return None to prevent login
+                        return None
+        return user
 
     # Import and register blueprints
     from authroutes import auth_blueprint
@@ -646,9 +665,9 @@ def create_app(config_class=None):
             else:
                 print("User not authenticated")
             
-            # Allow tech users to bypass maintenance mode (always allowed)
-            if current_user.is_authenticated and current_user.role in ['Tech', 'IT Support', 'Director']:
-                print("Tech user bypassing maintenance mode")
+            # Allow tech users and administrators to bypass maintenance mode (always allowed)
+            if current_user.is_authenticated and current_user.role in ['Tech', 'IT Support', 'Director', 'School Administrator']:
+                print("Tech/Admin user bypassing maintenance mode")
                 return render_template('shared/home.html')
             
             # Calculate progress percentage using UTC time

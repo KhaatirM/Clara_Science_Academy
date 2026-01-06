@@ -1,47 +1,100 @@
 {% extends "shared/dashboard_layout.html" %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/view_assignment.css') }}">
+{% endblock %}
+
 {% block dashboard_content %}
 <div class="container-fluid px-2 px-md-4">
-  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
-    <h3 class="mb-2 mb-md-0"><i class="bi bi-eye me-2"></i>{{ group_assignment.title }}</h3>
-    <div class="d-flex gap-2 flex-wrap">
-      {% if admin_view %}
-        <a href="{{ url_for('management.admin_class_group_assignments', class_id=group_assignment.class_id) }}" class="btn btn-outline-secondary btn-sm">
-          <i class="bi bi-arrow-left me-1"></i>Back to Group Assignments
+  <!-- Header Section -->
+  <div class="view-assignment-header mb-4">
+    <div class="d-flex justify-content-between align-items-start">
+      <div>
+        <h2 class="mb-2">
+          <i class="bi bi-people-fill me-2 text-primary"></i>{{ group_assignment.title }}
+        </h2>
+        <div class="assignment-header-meta">
+          <span class="meta-badge meta-class">
+            <i class="bi bi-book me-1"></i>{{ group_assignment.class_info.name if group_assignment.class_info else 'Unknown Class' }}
+          </span>
+          <span class="meta-badge meta-teacher">
+            <i class="bi bi-person me-1"></i>{{ group_assignment.class_info.teacher.first_name if group_assignment.class_info and group_assignment.class_info.teacher else 'Unknown' }}
+          </span>
+        </div>
+      </div>
+      <div class="d-flex gap-2 flex-wrap align-items-start">
+        <span class="view-status-badge badge-{{ group_assignment.status.lower() if group_assignment.status else 'active' }}">{{ group_assignment.status.upper() if group_assignment.status else 'ACTIVE' }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Actions Section -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-4">
+      <h5 class="mb-3"><i class="bi bi-lightning-fill me-2"></i>Quick Actions</h5>
+      <div class="compact-action-grid">
+        {% if current_user.role in ['Director', 'School Administrator'] %}
+          <a href="{{ url_for('management.admin_edit_group_assignment', assignment_id=group_assignment.id) }}" 
+             class="btn btn-compact btn-compact-edit">
+            <i class="bi bi-pencil-square"></i>
+            <span>Edit</span>
+          </a>
+        {% endif %}
+        
+        <button class="btn btn-compact btn-compact-submissions" 
+                onclick="scrollToSubmissions()">
+          <i class="bi bi-file-earmark-arrow-up"></i>
+          <span>Submissions</span>
+        </button>
+        
+        <a href="{{ url_for('management.admin_grade_group_assignment', assignment_id=group_assignment.id) }}" 
+           class="btn btn-compact btn-compact-grade">
+          <i class="bi bi-check-circle-fill"></i>
+          <span>Grade</span>
         </a>
-      {% else %}
-        <a href="{{ url_for('teacher.assignments.class_group_assignments', class_id=group_assignment.class_id) }}" class="btn btn-outline-secondary btn-sm">
-          <i class="bi bi-arrow-left me-1"></i>Back to Assignments
-        </a>
-      {% endif %}
-      <a href="{{ url_for('teacher.grading.grade_group_assignment', assignment_id=group_assignment.id) }}{% if admin_view %}?admin_view=true{% endif %}" class="btn btn-success btn-sm">
-        <i class="bi bi-check-circle me-1"></i>Grade Assignment
-      </a>
-      <a href="{{ url_for('management.grant_extensions', assignment_id=group_assignment.id) }}" class="btn btn-primary btn-sm">
-        <i class="bi bi-clock me-1"></i>Extensions
-      </a>
-      <button type="button" class="btn btn-danger btn-sm" 
-              onclick="confirmDeleteAssignment({{ group_assignment.id }}, '{{ group_assignment.title }}')">
-        <i class="bi bi-trash me-1"></i>Delete Assignment
-      </button>
-      {% comment %}
-      <!-- These features are not yet implemented -->
-      <a href="{{ url_for('teacher.create_assignment_rubric', assignment_id=group_assignment.id) }}{% if admin_view %}?admin_view=true{% endif %}" class="btn btn-info btn-sm">
-        <i class="bi bi-list-check me-1"></i>Create Rubric
-      </a>
-      <a href="{{ url_for('teacher.view_peer_evaluations', assignment_id=group_assignment.id) }}{% if admin_view %}?admin_view=true{% endif %}" class="btn btn-warning btn-sm">
-        <i class="bi bi-people me-1"></i>Peer Evaluations
-      </a>
-      <a href="{{ url_for('teacher.view_group_progress', assignment_id=group_assignment.id) }}{% if admin_view %}?admin_view=true{% endif %}" class="btn btn-secondary btn-sm">
-        <i class="bi bi-graph-up me-1"></i>Progress
-      </a>
-      <a href="{{ url_for('teacher.view_peer_reviews', assignment_id=group_assignment.id) }}{% if admin_view %}?admin_view=true{% endif %}" class="btn btn-dark btn-sm">
-        <i class="bi bi-eye me-1"></i>Peer Reviews
-      </a>
-      <a href="{{ url_for('teacher.view_draft_submissions', assignment_id=group_assignment.id) }}{% if admin_view %}?admin_view=true{% endif %}" class="btn btn-light btn-sm">
-        <i class="bi bi-file-earmark-text me-1"></i>Draft Submissions
-      </a>
-      {% endcomment %}
+        
+        {% if current_user.role in ['Director', 'School Administrator'] %}
+          <a href="{{ url_for('management.admin_grant_extensions', assignment_id=group_assignment.id) }}" 
+             class="btn btn-compact btn-compact-extension">
+            <i class="bi bi-clock-history"></i>
+            <span>Extensions</span>
+          </a>
+          
+          {% set has_voided_grades = group_grades|selectattr('is_voided', 'equalto', True)|list|length > 0 if group_grades else False %}
+          {% if has_voided_grades %}
+          <button class="btn btn-compact btn-compact-unvoid" 
+                  data-bs-toggle="modal" 
+                  data-bs-target="#unvoidGroupModal">
+            <i class="bi bi-arrow-counterclockwise"></i>
+            <span>Unvoid</span>
+          </button>
+          {% endif %}
+          
+          <button class="btn btn-compact btn-compact-void" 
+                  data-bs-toggle="modal" 
+                  data-bs-target="#voidGroupModal">
+            <i class="bi bi-slash-circle"></i>
+            <span>Void</span>
+          </button>
+          
+          <button class="btn btn-compact btn-compact-status" 
+                  onclick="changeGroupAssignmentStatus({{ group_assignment.id }}, '{{ group_assignment.status }}')">
+            <i class="bi bi-gear"></i>
+            <span>Status</span>
+          </button>
+          
+          <button class="btn btn-compact btn-compact-remove" 
+                  onclick="confirmDeleteGroupAssignment('{{ group_assignment.title }}', {{ group_assignment.id }})">
+            <i class="bi bi-trash"></i>
+            <span>Remove</span>
+          </button>
+        {% endif %}
+        
+        <button onclick="goBack()" class="btn btn-compact btn-compact-back">
+          <i class="bi bi-arrow-left-circle"></i>
+          <span>Back</span>
+        </button>
+      </div>
     </div>
   </div>
 
@@ -181,9 +234,15 @@
                         <small class="text-muted">{{ group.description[:50] }}{% if group.description|length > 50 %}...{% endif %}</small>
                       {% endif %}
                     </div>
-                    <a href="{{ url_for('teacher.assignments.manage_group', group_id=group.id) }}{% if admin_view %}?admin_view=true{% endif %}" class="btn btn-outline-primary btn-sm">
+                    {% if admin_view %}
+                    <a href="{{ url_for('management.admin_manage_group', group_id=group.id) }}" class="btn btn-outline-primary btn-sm">
                       <i class="bi bi-gear"></i>
                     </a>
+                    {% else %}
+                    <a href="{{ url_for('teacher.groups.class_groups', class_id=group_assignment.class_id) }}" class="btn btn-outline-primary btn-sm">
+                      <i class="bi bi-gear"></i>
+                    </a>
+                    {% endif %}
                   </div>
                 </div>
               {% endfor %}
@@ -197,7 +256,7 @@
                   <i class="bi bi-plus-circle me-1"></i>Create Groups
                 </a>
               {% else %}
-                <a href="{{ url_for('teacher.assignments.class_groups', class_id=group_assignment.class_id) }}" class="btn btn-primary btn-sm mt-2">
+                <a href="{{ url_for('teacher.groups.class_groups', class_id=group_assignment.class_id) }}" class="btn btn-primary btn-sm mt-2">
                   <i class="bi bi-plus-circle me-1"></i>Create Groups
                 </a>
               {% endif %}
@@ -223,8 +282,7 @@
             </div>
             <div class="col-6">
               <h4 class="text-warning">
-                {% set total_students = groups|map(attribute='members')|map('length')|sum %}
-                {{ total_students }}
+                {{ total_students or 0 }}
               </h4>
               <small class="text-muted">Students in Groups</small>
             </div>
@@ -274,18 +332,297 @@
   </div>
 </div>
 
-<!-- Hidden delete form -->
-<form id="deleteAssignmentForm" method="POST" style="display: none;">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-</form>
+{% if current_user.role in ['Director', 'School Administrator'] %}
+<!-- Void Group Assignment Modal -->
+<div class="modal fade" id="voidGroupModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content modal-modern">
+      <div class="modal-header-void">
+        <div class="modal-icon-void">
+          <i class="bi bi-slash-circle"></i>
+        </div>
+        <div class="flex-grow-1">
+          <h5 class="modal-title-void">Void Group Assignment</h5>
+          <p class="modal-subtitle-void">Exclude from grade calculations</p>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="{{ url_for('management.void_group_assignment', assignment_id=group_assignment.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <div class="modal-body modal-body-enhanced">
+          <div class="alert-modern alert-void">
+            <div class="alert-icon">
+              <i class="bi bi-exclamation-triangle"></i>
+            </div>
+            <div>
+              <div class="alert-title">Important Notice</div>
+              <p class="alert-text">Voiding a group assignment excludes it from grade calculations. Students will see <strong>0/0 points</strong> (does not affect GPA).</p>
+            </div>
+          </div>
+          
+          <div class="void-options-section">
+            <label class="section-label">
+              <i class="bi bi-gear me-2"></i>Void Options
+            </label>
+            
+            <div class="option-card option-card-active" onclick="selectGroupVoidOption('all_groups')">
+              <input class="form-check-input" type="radio" name="void_scope" id="voidAllGroups" value="all_groups" checked onchange="toggleGroupVoidSelection()">
+              <label class="option-card-label" for="voidAllGroups">
+                <div class="option-icon bg-danger">
+                  <i class="bi bi-people-fill"></i>
+                </div>
+                <div class="option-content">
+                  <div class="option-title">Void for All Groups</div>
+                  <div class="option-description">All groups and all students will have this assignment voided</div>
+                </div>
+              </label>
+            </div>
+            
+            <div class="option-card" onclick="selectGroupVoidOption('specific_groups')">
+              <input class="form-check-input" type="radio" name="void_scope" id="voidSpecificGroups" value="specific_groups" onchange="toggleGroupVoidSelection()">
+              <label class="option-card-label" for="voidSpecificGroups">
+                <div class="option-icon bg-warning">
+                  <i class="bi bi-people"></i>
+                </div>
+                <div class="option-content">
+                  <div class="option-title">Void for Specific Groups</div>
+                  <div class="option-description">Choose specific groups to void for</div>
+                </div>
+              </label>
+            </div>
+            
+            <div class="option-card" onclick="selectGroupVoidOption('specific_students')">
+              <input class="form-check-input" type="radio" name="void_scope" id="voidSpecificStudents" value="specific_students" onchange="toggleGroupVoidSelection()">
+              <label class="option-card-label" for="voidSpecificStudents">
+                <div class="option-icon bg-info">
+                  <i class="bi bi-person-check-fill"></i>
+                </div>
+                <div class="option-content">
+                  <div class="option-title">Void for Specific Students</div>
+                  <div class="option-description">Choose specific students from any group</div>
+                </div>
+              </label>
+            </div>
+          </div>
+          
+          <div id="groupSelectionDiv" class="student-selection-section" style="display: none;">
+            <div class="selection-header">
+              <i class="bi bi-people me-2"></i>Select Groups
+            </div>
+            <div class="select-all-card">
+              <input class="form-check-input" type="checkbox" id="selectAllGroups" onclick="toggleAllGroups(this)">
+              <label class="select-all-label" for="selectAllGroups">
+                <i class="bi bi-check-all me-2"></i>Select All Groups
+              </label>
+            </div>
+            <div class="students-grid">
+              {% for group in groups %}
+              <div class="student-select-card">
+                <input class="form-check-input void-group-checkbox" type="checkbox" name="group_ids" value="{{ group.id }}" id="voidgroup{{ group.id }}">
+                <label class="student-select-label" for="voidgroup{{ group.id }}">
+                  <div class="student-avatar-mini bg-primary">
+                    <i class="bi bi-people"></i>
+                  </div>
+                  <span>{{ group.name }} ({{ group.members|length }} members)</span>
+                </label>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          
+          <div id="studentSelectionDiv" class="student-selection-section" style="display: none;">
+            <div class="selection-header">
+              <i class="bi bi-people me-2"></i>Select Students
+            </div>
+            <div class="select-all-card">
+              <input class="form-check-input" type="checkbox" id="selectAllVoidStudents" onclick="toggleAllVoidStudents(this)">
+              <label class="select-all-label" for="selectAllVoidStudents">
+                <i class="bi bi-check-all me-2"></i>Select All Students
+              </label>
+            </div>
+            <div class="students-grid" style="max-height: 300px; overflow-y: auto;">
+              {% for group in groups %}
+                {% for member in group.members %}
+                <div class="student-select-card">
+                  <input class="form-check-input void-student-checkbox" type="checkbox" name="student_ids" value="{{ member.student_id }}" id="voidstudent{{ member.student_id }}">
+                  <label class="student-select-label" for="voidstudent{{ member.student_id }}">
+                    <div class="student-avatar-mini">
+                      {{ member.student.first_name[0] if member.student else '?' }}{{ member.student.last_name[0] if member.student else '?' }}
+                    </div>
+                    <span>{{ member.student.first_name if member.student else 'Unknown' }} {{ member.student.last_name if member.student else '' }} ({{ group.name }})</span>
+                  </label>
+                </div>
+                {% endfor %}
+              {% endfor %}
+            </div>
+          </div>
+          
+          <div class="reason-section">
+            <label for="void_reason" class="section-label">
+              <i class="bi bi-chat-text me-2"></i>Reason for Voiding <span class="text-muted">(Optional)</span>
+            </label>
+            <textarea class="form-control form-control-modern" id="void_reason" name="reason" rows="3" placeholder="Snow day, technical issues, curriculum change..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer modal-footer-enhanced">
+          <button type="button" class="btn btn-cancel" data-bs-dismiss="modal">
+            <i class="bi bi-x-circle me-2"></i>Cancel
+          </button>
+          <button type="submit" class="btn btn-void">
+            <i class="bi bi-slash-circle me-2"></i>Void Assignment
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Unvoid Group Assignment Modal -->
+<div class="modal fade" id="unvoidGroupModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content modal-modern">
+      <div class="modal-header-unvoid">
+        <div class="modal-icon-unvoid">
+          <i class="bi bi-arrow-counterclockwise"></i>
+        </div>
+        <div class="flex-grow-1">
+          <h5 class="modal-title-unvoid">Restore Group Assignment</h5>
+          <p class="modal-subtitle-unvoid">Include back in grade calculations</p>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="{{ url_for('management.unvoid_group_assignment', assignment_id=group_assignment.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <div class="modal-body modal-body-enhanced">
+          <div class="alert-modern alert-unvoid">
+            <div class="alert-icon">
+              <i class="bi bi-info-circle"></i>
+            </div>
+            <div>
+              <div class="alert-title">Restore Assignment</div>
+              <p class="alert-text">Restoring will include this assignment back in grade calculations. Original grades will be restored if available.</p>
+            </div>
+          </div>
+          <div class="void-options-section">
+            <label class="section-label">
+              <i class="bi bi-gear me-2"></i>Restore Options
+            </label>
+            <div class="option-card option-card-active">
+              <input class="form-check-input" type="radio" name="unvoid_scope" id="unvoidAll" value="all" checked>
+              <label class="option-card-label" for="unvoidAll">
+                <div class="option-icon bg-success">
+                  <i class="bi bi-people-fill"></i>
+                </div>
+                <div class="option-content">
+                  <div class="option-title">Restore for All</div>
+                  <div class="option-description">Restore all voided grades for this assignment</div>
+                </div>
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer modal-footer-enhanced">
+          <button type="button" class="btn btn-cancel" data-bs-dismiss="modal">
+            <i class="bi bi-x-circle me-2"></i>Cancel
+          </button>
+          <button type="submit" class="btn btn-unvoid">
+            <i class="bi bi-arrow-counterclockwise me-2"></i>Restore Assignment
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
 
 <script>
-function confirmDeleteAssignment(assignmentId, assignmentTitle) {
-    if (confirm(`Are you sure you want to delete the assignment "${assignmentTitle}"?\n\nThis action cannot be undone and will delete all grades and submissions for this assignment.`)) {
-        const form = document.getElementById('deleteAssignmentForm');
-        form.action = "{{ url_for('teacher.delete_group_assignment', assignment_id=0) }}".replace('0', assignmentId);
-        form.submit();
+function scrollToSubmissions() {
+  document.querySelector('.card-header.bg-success').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function goBack() {
+  {% if admin_view %}
+    window.location.href = "{{ url_for('management.admin_class_group_assignments', class_id=group_assignment.class_id) }}";
+  {% else %}
+    window.location.href = "{{ url_for('teacher.dashboard.assignments_and_grades', class_id=group_assignment.class_id) }}";
+  {% endif %}
+}
+
+function changeGroupAssignmentStatus(assignmentId, currentStatus) {
+  const newStatus = prompt(`Current status: ${currentStatus}\n\nEnter new status (Active, Inactive, Voided):`, currentStatus);
+  if (newStatus && newStatus !== currentStatus) {
+    if (confirm(`Change status from "${currentStatus}" to "${newStatus}"?`)) {
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = "{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.admin_change_group_assignment_status', assignment_id=0) }}{% else %}#{% endif %}".replace('0', assignmentId);
+      
+      const csrfInput = document.createElement('input');
+      csrfInput.type = 'hidden';
+      csrfInput.name = 'csrf_token';
+      csrfInput.value = '{{ csrf_token() }}';
+      form.appendChild(csrfInput);
+      
+      const statusInput = document.createElement('input');
+      statusInput.type = 'hidden';
+      statusInput.name = 'status';
+      statusInput.value = newStatus;
+      form.appendChild(statusInput);
+      
+      document.body.appendChild(form);
+      form.submit();
     }
+  }
+}
+
+function confirmDeleteGroupAssignment(title, assignmentId) {
+  if (confirm(`Are you sure you want to delete the group assignment "${title}"?\n\nThis action cannot be undone and will delete all grades and submissions for this assignment.`)) {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = "{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.admin_delete_group_assignment', assignment_id=0) }}{% else %}#{% endif %}".replace('0', assignmentId);
+    
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrf_token';
+    csrfInput.value = '{{ csrf_token() }}';
+    form.appendChild(csrfInput);
+    
+    document.body.appendChild(form);
+    form.submit();
+  }
+}
+
+function selectGroupVoidOption(option) {
+  document.querySelectorAll('.option-card').forEach(card => card.classList.remove('option-card-active'));
+  event.currentTarget.closest('.option-card').classList.add('option-card-active');
+}
+
+function toggleGroupVoidSelection() {
+  const voidScope = document.querySelector('input[name="void_scope"]:checked').value;
+  const groupDiv = document.getElementById('groupSelectionDiv');
+  const studentDiv = document.getElementById('studentSelectionDiv');
+  
+  if (voidScope === 'specific_groups') {
+    groupDiv.style.display = 'block';
+    studentDiv.style.display = 'none';
+  } else if (voidScope === 'specific_students') {
+    groupDiv.style.display = 'none';
+    studentDiv.style.display = 'block';
+  } else {
+    groupDiv.style.display = 'none';
+    studentDiv.style.display = 'none';
+  }
+}
+
+function toggleAllGroups(checkbox) {
+  document.querySelectorAll('.void-group-checkbox').forEach(cb => {
+    cb.checked = checkbox.checked;
+  });
+}
+
+function toggleAllVoidStudents(checkbox) {
+  document.querySelectorAll('.void-student-checkbox').forEach(cb => {
+    cb.checked = checkbox.checked;
+  });
 }
 </script>
 {% endblock %}

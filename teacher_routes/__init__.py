@@ -64,3 +64,38 @@ def group_assignment_type_selector(class_id):
     return render_template('shared/group_assignment_type_selector.html', 
                          class_obj=class_obj)
 
+# Add route alias for assignment_type_selector for backward compatibility
+@teacher_blueprint.route('/assignment/type-selector', endpoint='assignment_type_selector')
+@login_required
+@teacher_required
+def assignment_type_selector():
+    """Assignment type selector route - delegates to assignments module"""
+    from .assignments import assignment_type_selector as assignment_type_selector_func
+    return assignment_type_selector_func()
+
+# Add route alias for create_quiz_assignment for backward compatibility
+@teacher_blueprint.route('/assignment/create/quiz', methods=['GET', 'POST'], endpoint='create_quiz_assignment')
+@login_required
+@teacher_required
+def create_quiz_assignment():
+    """Create quiz assignment route - delegates to quizzes module"""
+    from .quizzes import create_quiz_assignment as create_quiz_func
+    return create_quiz_func()
+
+# Add route aliases for extension requests
+@teacher_blueprint.route('/extension-requests', endpoint='view_extension_requests')
+@login_required
+@teacher_required
+def view_extension_requests():
+    """View extension requests route - delegates to assignments module"""
+    from .assignments import view_extension_requests as view_extension_requests_func
+    return view_extension_requests_func()
+
+@teacher_blueprint.route('/extension-request/<int:request_id>/review', methods=['POST'], endpoint='review_extension_request')
+@login_required
+@teacher_required
+def review_extension_request(request_id):
+    """Review extension request route - delegates to assignments module"""
+    from .assignments import review_extension_request as review_extension_request_func
+    return review_extension_request_func(request_id)
+

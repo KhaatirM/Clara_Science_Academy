@@ -16,7 +16,7 @@
                     <li class="breadcrumb-item"><a href="{{ url_for('management.management_dashboard') }}">Dashboard</a></li>
                     <li class="breadcrumb-item"><a href="{{ url_for('management.admin_class_group_assignments', class_id=class_item.id) }}">Group Assignments</a></li>
                     {% else %}
-                    <li class="breadcrumb-item"><a href="{{ url_for('teacher.dashboard.my_assignments') }}">Assignments</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('teacher.dashboard.assignments_and_grades') }}">Assignments & Grades</a></li>
                     <li class="breadcrumb-item"><a href="{{ url_for('teacher.groups.group_assignment_select_class') }}">Select Class</a></li>
                     {% endif %}
                     <li class="breadcrumb-item active">Create Group Assignment</li>
@@ -34,7 +34,7 @@
                     <h5 class="mb-0"><i class="bi bi-file-text me-2"></i>Assignment Details</h5>
                 </div>
                 <div class="card-body">
-                    <form method="POST" action="{{ url_for('teacher.groups.save_group_assignment', class_id=class_item.id, admin_view=request.args.get('admin_view')) }}">
+                    <form method="POST" action="{{ url_for('teacher.groups.save_group_assignment', class_id=class_item.id, admin_view=request.args.get('admin_view')) }}" enctype="multipart/form-data">
                         <div class="mb-3">
                             <label for="title" class="form-label">Assignment Title <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="title" name="title" required>
@@ -58,6 +58,52 @@
                             <div class="col-md-6 mb-3">
                                 <label for="total_points" class="form-label">Total Points</label>
                                 <input type="number" class="form-control" id="total_points" name="total_points" value="100" min="0">
+                            </div>
+                        </div>
+
+                        <!-- File Upload Section -->
+                        <div class="mb-4">
+                            <div class="card border-success shadow-sm">
+                                <div class="card-header bg-success text-white">
+                                    <h6 class="mb-0 fw-bold"><i class="bi bi-cloud-upload me-2"></i>Assignment Document (Optional)</h6>
+                                </div>
+                                <div class="card-body">
+                                    <label for="assignment_file" class="form-label fw-semibold">
+                                        <i class="bi bi-paperclip me-1 text-success"></i>Upload PDF/Paper Document
+                                    </label>
+                                    <div class="file-upload-area border-2 border-dashed border-success rounded p-4 text-center" 
+                                         id="fileUploadArea" style="cursor: pointer; transition: all 0.3s ease;">
+                                        <i class="bi bi-cloud-upload text-success mb-2" style="font-size: 2rem;"></i>
+                                        <p class="mb-2 fw-semibold">Click to upload or drag and drop</p>
+                                        <p class="text-muted small mb-0">PDF, DOC(X), TXT, JPG, PNG, GIF, XLS(X), PPT(X)</p>
+                                        <p class="text-muted small">Maximum file size: 16 MB</p>
+                                        <input type="file" class="d-none" id="assignment_file" name="assignment_file" 
+                                               accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.xls,.xlsx,.ppt,.pptx">
+                                    </div>
+                                    <!-- File Preview -->
+                                    <div id="filePreview" class="mt-3" style="display: none;">
+                                        <div class="card border-success">
+                                            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                                                <h6 class="mb-0"><i class="bi bi-file-earmark me-2"></i>File Preview</h6>
+                                                <button type="button" class="btn btn-light btn-sm" id="removeFile">
+                                                    <i class="bi bi-x-circle"></i>
+                                                </button>
+                                            </div>
+                                            <div class="card-body">
+                                                <div id="fileInfo">
+                                                    <div class="d-flex align-items-center">
+                                                        <i class="bi bi-file-earmark-text text-success me-3" style="font-size: 2rem;"></i>
+                                                        <div>
+                                                            <p class="mb-1 fw-semibold"><span id="fileName"></span></p>
+                                                            <p class="mb-1 text-muted"><strong>Size:</strong> <span id="fileSize"></span></p>
+                                                            <p class="mb-0 text-muted"><strong>Type:</strong> <span id="fileType"></span></p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -109,7 +155,7 @@
                                 <i class="bi bi-x-circle me-2"></i>Cancel
                             </a>
                             {% else %}
-                            <a href="{{ url_for('teacher.dashboard.my_assignments') }}" class="btn btn-secondary">
+                            <a href="{{ url_for('teacher.dashboard.assignments_and_grades') }}" class="btn btn-secondary">
                                 <i class="bi bi-x-circle me-2"></i>Cancel
                             </a>
                             {% endif %}
@@ -166,6 +212,65 @@ document.addEventListener('DOMContentLoaded', function() {
     const now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
     document.getElementById('due_date').min = now.toISOString().slice(0, 16);
+    
+    // File upload functionality
+    const fileInput = document.getElementById('assignment_file');
+    const fileUploadArea = document.getElementById('fileUploadArea');
+    const filePreview = document.getElementById('filePreview');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+    const fileType = document.getElementById('fileType');
+    const removeFileBtn = document.getElementById('removeFile');
+    
+    if (fileInput && fileUploadArea) {
+        // Click to upload
+        fileUploadArea.addEventListener('click', () => fileInput.click());
+        
+        // File input change
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                fileName.textContent = file.name;
+                fileSize.textContent = fileSizeMB + ' MB';
+                fileType.textContent = file.type || 'Unknown';
+                filePreview.style.display = 'block';
+                fileUploadArea.style.borderColor = '#28a745';
+                fileUploadArea.style.backgroundColor = '#f8f9fa';
+            }
+        });
+        
+        // Remove file
+        if (removeFileBtn) {
+            removeFileBtn.addEventListener('click', function() {
+                fileInput.value = '';
+                filePreview.style.display = 'none';
+                fileUploadArea.style.borderColor = '#28a745';
+                fileUploadArea.style.backgroundColor = 'transparent';
+            });
+        }
+        
+        // Drag and drop
+        fileUploadArea.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            fileUploadArea.style.backgroundColor = '#e8f5e9';
+        });
+        
+        fileUploadArea.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            fileUploadArea.style.backgroundColor = 'transparent';
+        });
+        
+        fileUploadArea.addEventListener('drop', function(e) {
+            e.preventDefault();
+            fileUploadArea.style.backgroundColor = 'transparent';
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                fileInput.dispatchEvent(new Event('change'));
+            }
+        });
+    }
 });
 </script>
 {% endblock %}

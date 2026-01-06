@@ -336,12 +336,15 @@ def run_production_database_fix():
     Run production database fix to add missing columns.
     Only runs in production environment when DATABASE_URL is available.
     """
-    # Check if we're in production environment
-    if not os.getenv('DATABASE_URL'):
+    # Check if we're in production environment (PostgreSQL database)
+    database_url = os.getenv('DATABASE_URL')
+    if not database_url:
+        print("No DATABASE_URL found, skipping production database fix")
         return
     
-    # Check if we're running on Render (production)
-    if not os.getenv('RENDER'):
+    # Check if it's PostgreSQL (production) vs SQLite (local)
+    if 'postgres' not in database_url.lower() and 'postgresql' not in database_url.lower():
+        print("Not a PostgreSQL database, skipping production database fix")
         return
     
     print("Running production database fix...")
@@ -350,22 +353,23 @@ def run_production_database_fix():
         import psycopg2
         from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
         
-        # Get database URL
-        database_url = os.getenv('DATABASE_URL')
+        # Get database URL (already retrieved above)
         if database_url.startswith('postgresql://'):
             database_url = database_url.replace('postgresql://', 'postgres://')
         
         # Connect to database
+        print(f"Connecting to database...")
         conn = psycopg2.connect(database_url)
         conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cursor = conn.cursor()
+        print("Database connection established")
         
         # Check if columns already exist for assignment table
         cursor.execute("""
             SELECT column_name 
             FROM information_schema.columns 
             WHERE table_name = 'assignment' 
-            AND column_name IN ('allow_save_and_continue', 'max_save_attempts', 'save_timeout_minutes', 'created_by')
+            AND column_name IN ('allow_save_and_continue', 'max_save_attempts', 'save_timeout_minutes', 'created_by', 'open_date', 'close_date')
         """)
         
         existing_columns = [row[0] for row in cursor.fetchall()]
@@ -384,6 +388,12 @@ def run_production_database_fix():
             
         if 'created_by' not in existing_columns:
             columns_to_add.append("created_by INTEGER")
+        
+        if 'open_date' not in existing_columns:
+            columns_to_add.append("open_date TIMESTAMP")
+            
+        if 'close_date' not in existing_columns:
+            columns_to_add.append("close_date TIMESTAMP")
         
         # Add missing columns to assignment table
         for column_def in columns_to_add:
@@ -446,10 +456,27 @@ def run_production_database_fix():
         conn.close()
         print("Production database fix completed successfully!")
         
+        # Refresh SQLAlchemy metadata to recognize new columns
+        try:
+            from sqlalchemy import inspect
+            from models import Assignment, Class, TeacherStaff
+            # Invalidate the table cache so SQLAlchemy will reload the schema
+            Assignment.__table__.c  # Access columns to trigger reload
+            Class.__table__.c
+            TeacherStaff.__table__.c
+            print("SQLAlchemy metadata refreshed")
+        except Exception as refresh_error:
+            print(f"Warning: Could not refresh SQLAlchemy metadata: {refresh_error}")
+            # This is not critical - SQLAlchemy will reload on next query
+        
     except ImportError:
         print("psycopg2 not available, skipping database fix")
     except Exception as e:
         print(f"Database fix failed: {e}")
+        import traceback
+        traceback.print_exc()
+        # Don't raise - allow app to continue even if migration fails
+        # The columns will be added on next deployment
 
 def create_app(config_class=None):
     """
@@ -570,11 +597,15 @@ def create_app(config_class=None):
             print(f"FATAL DATABASE ERROR DURING INITIALIZATION: {e}")
             raise e  # <- CRITICAL: Re-raises the error to kill the process and dump the traceback.
         
-        # Run production database fix if needed
+        # Run production database fix if needed - MUST run before any model queries
         try:
+            print("Checking for production database migrations...")
             run_production_database_fix()
+            print("Production database migrations completed.")
         except Exception as e:
             print(f"Production database fix failed: {e}")
+            import traceback
+            traceback.print_exc()
 
     # User loader function for Flask-Login
     @login_manager.user_loader

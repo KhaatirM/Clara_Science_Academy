@@ -46,9 +46,20 @@ def login():
         # Table might not exist yet, continue without maintenance mode
         pass
     
-    if maintenance and maintenance.end_time > datetime.now(timezone.utc):
-        # Allow tech users and administrators to login during maintenance
-        if request.method == 'POST':
+    # Helper function to ensure timezone-aware datetime
+    def ensure_aware(dt):
+        if dt is None:
+            return None
+        if dt.tzinfo is None:
+            return dt.replace(tzinfo=timezone.utc)
+        return dt
+    
+    if maintenance:
+        end_time = ensure_aware(maintenance.end_time)
+        now = datetime.now(timezone.utc)
+        if end_time and end_time > now:
+            # Allow tech users and administrators to login during maintenance
+            if request.method == 'POST':
             username = request.form.get('username')
             password = request.form.get('password')
             
@@ -100,15 +111,18 @@ def login():
                 )
                 flash('System is currently under maintenance. Please try again later.', 'warning')
                 return redirect(url_for('auth.login'))
-        
-        # Show maintenance page for non-tech/admin users
-        total_duration = (maintenance.end_time - maintenance.start_time).total_seconds()
-        elapsed = (datetime.now(timezone.utc) - maintenance.start_time).total_seconds()
-        progress_percentage = min(100, max(0, int((elapsed / total_duration) * 100)))
-        
-        return render_template('shared/maintenance.html', 
-                             maintenance=maintenance, 
-                             progress_percentage=progress_percentage)
+            
+            # Show maintenance page for non-tech/admin users
+            start_time = ensure_aware(maintenance.start_time)
+            end_time = ensure_aware(maintenance.end_time)
+            now = datetime.now(timezone.utc)
+            total_duration = (end_time - start_time).total_seconds()
+            elapsed = (now - start_time).total_seconds()
+            progress_percentage = min(100, max(0, int((elapsed / total_duration) * 100)))
+            
+            return render_template('shared/maintenance.html', 
+                                 maintenance=maintenance, 
+                                 progress_percentage=progress_percentage)
     
     if request.method == 'POST':
         try:
@@ -678,9 +692,20 @@ def google_login():
         except:
             pass
         
-        if maintenance and maintenance.end_time > datetime.now(timezone.utc):
-            flash('System is currently under maintenance. Please try again later.', 'warning')
-            return redirect(url_for('auth.login'))
+        # Helper function to ensure timezone-aware datetime
+        def ensure_aware(dt):
+            if dt is None:
+                return None
+            if dt.tzinfo is None:
+                return dt.replace(tzinfo=timezone.utc)
+            return dt
+        
+        if maintenance:
+            end_time = ensure_aware(maintenance.end_time)
+            now = datetime.now(timezone.utc)
+            if end_time and end_time > now:
+                flash('System is currently under maintenance. Please try again later.', 'warning')
+                return redirect(url_for('auth.login'))
         
         # Create OAuth flow
         flow = get_google_oauth_flow()

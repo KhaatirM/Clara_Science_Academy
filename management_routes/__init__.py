@@ -53,7 +53,8 @@ from .teachers import (
     teacher_work_days as teacher_work_days_func, 
     add_teacher_work_days as add_teacher_work_days_func,
     edit_teacher_staff as edit_teacher_staff_func,
-    remove_teacher_staff as remove_teacher_staff_func
+    remove_teacher_staff as remove_teacher_staff_func,
+    view_teacher as view_teacher_func
 )
 from .classes import (
     classes as classes_func, 
@@ -688,6 +689,13 @@ def edit_teacher_staff_route(staff_id):
 def remove_teacher_staff_route(staff_id):
     """Remove teacher staff route - delegates to teachers module"""
     return remove_teacher_staff_func(staff_id)
+
+@management_blueprint.route('/view-teacher/<int:teacher_id>', endpoint='view_teacher')
+@login_required
+@management_required
+def view_teacher_route(teacher_id):
+    """View teacher staff route - delegates to teachers module"""
+    return view_teacher_func(teacher_id)
 
 # Add aliases for group assignment admin routes
 @management_blueprint.route('/group-assignment/<int:assignment_id>/view', endpoint='admin_view_group_assignment')

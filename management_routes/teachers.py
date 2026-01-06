@@ -234,12 +234,122 @@ def add_teacher_staff():
 # Function: edit_teacher_staff
 # ============================================================
 
-@bp.route('/edit-teacher-staff/<int:staff_id>')
+@bp.route('/edit-teacher-staff/<int:staff_id>', methods=['GET', 'POST'])
 @login_required
 @management_required
 def edit_teacher_staff(staff_id):
     """Edit a teacher or staff member"""
     teacher_staff = TeacherStaff.query.get_or_404(staff_id)
+    
+    if request.method == 'POST':
+        # Get form data
+        first_name = request.form.get('first_name', '').strip()
+        middle_initial = request.form.get('middle_initial', '').strip()
+        last_name = request.form.get('last_name', '').strip()
+        email = request.form.get('email', '').strip()
+        dob = request.form.get('dob', '').strip()
+        staff_ssn = request.form.get('staff_ssn', '').strip()
+        phone = request.form.get('phone', '').strip()
+        
+        # Professional information
+        assigned_role = request.form.get('assigned_role', 'Teacher').strip()
+        hire_date = request.form.get('hire_date', '').strip()
+        # Handle multiple department selections
+        departments = request.form.getlist('department')
+        department = ', '.join(departments) if departments else ''
+        position = request.form.get('position', '').strip()
+        subject = request.form.get('subject', '').strip()
+        employment_type = request.form.get('employment_type', '').strip()
+        
+        # Handle multiple grades taught selections
+        grades_taught = request.form.getlist('grades_taught')
+        grades_taught_json = json.dumps(grades_taught) if grades_taught else ''
+        
+        # Validate required fields
+        if not all([first_name, last_name, email]):
+            flash('First name, last name, and email are required.', 'danger')
+            return render_template('management/add_teacher_staff.html', teacher_staff=teacher_staff, editing=True)
+        
+        # Validate email format
+        if '@' not in email or '.' not in email:
+            flash('Please enter a valid email address.', 'danger')
+            return render_template('management/add_teacher_staff.html', teacher_staff=teacher_staff, editing=True)
+        
+        # Check if email already exists (excluding current staff)
+        existing_staff = TeacherStaff.query.filter_by(email=email).first()
+        if existing_staff and existing_staff.id != staff_id:
+            flash('A teacher/staff member with this email already exists.', 'danger')
+            return render_template('management/add_teacher_staff.html', teacher_staff=teacher_staff, editing=True)
+        
+        try:
+            # Update teacher/staff record
+            teacher_staff.first_name = first_name
+            teacher_staff.middle_initial = middle_initial
+            teacher_staff.last_name = last_name
+            teacher_staff.email = email
+            teacher_staff.dob = dob
+            teacher_staff.staff_ssn = staff_ssn
+            teacher_staff.phone = phone
+            
+            # Professional information
+            teacher_staff.assigned_role = assigned_role
+            teacher_staff.hire_date = hire_date
+            teacher_staff.department = department
+            teacher_staff.position = position
+            teacher_staff.subject = subject
+            teacher_staff.employment_type = employment_type
+            teacher_staff.grades_taught = grades_taught_json
+            
+            # Temporary access fields
+            is_temporary = request.form.get('is_temporary') == 'on'
+            teacher_staff.is_temporary = is_temporary
+            
+            if is_temporary:
+                access_expires_str = request.form.get('access_expires_at', '').strip()
+                if access_expires_str:
+                    try:
+                        from datetime import datetime, timezone
+                        access_expires_at = datetime.strptime(access_expires_str, '%Y-%m-%dT%H:%M')
+                        access_expires_at = access_expires_at.replace(tzinfo=timezone.utc)
+                        teacher_staff.access_expires_at = access_expires_at
+                    except ValueError:
+                        flash('Invalid expiration date format. Please use the date picker.', 'warning')
+                        return render_template('management/add_teacher_staff.html', teacher_staff=teacher_staff, editing=True)
+                else:
+                    flash('Expiration date is required for temporary staff.', 'danger')
+                    return render_template('management/add_teacher_staff.html', teacher_staff=teacher_staff, editing=True)
+            else:
+                teacher_staff.access_expires_at = None
+            
+            # Address fields
+            teacher_staff.street = request.form.get('street_address', '').strip()
+            teacher_staff.apt_unit = request.form.get('apt_unit_suite', '').strip()
+            teacher_staff.city = request.form.get('city', '').strip()
+            teacher_staff.state = request.form.get('state', '').strip()
+            teacher_staff.zip_code = request.form.get('zip_code', '').strip()
+            
+            # Emergency contact fields
+            teacher_staff.emergency_first_name = request.form.get('emergency_contact_name', '').strip()
+            teacher_staff.emergency_last_name = request.form.get('emergency_contact_last_name', '').strip()
+            teacher_staff.emergency_email = request.form.get('emergency_contact_email', '').strip()
+            teacher_staff.emergency_phone = request.form.get('emergency_contact_phone', '').strip()
+            teacher_staff.emergency_relationship = request.form.get('emergency_contact_relationship', '').strip()
+            
+            # Update user account if it exists
+            user = User.query.filter_by(teacher_staff_id=staff_id).first()
+            if user:
+                user.email = email
+                user.role = assigned_role
+            
+            db.session.commit()
+            flash(f'{assigned_role} updated successfully!', 'success')
+            return redirect(url_for('management.teachers'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error updating {assigned_role.lower()}: {str(e)}', 'danger')
+            return render_template('management/add_teacher_staff.html', teacher_staff=teacher_staff, editing=True)
+    
     return render_template('management/add_teacher_staff.html', teacher_staff=teacher_staff, editing=True)
 
 

@@ -7,9 +7,53 @@ from flask_login import login_required, current_user
 from decorators import management_required
 from models import db, Class, TeacherStaff, Student, Enrollment, Assignment, Attendance, Grade, StudentGroup, StudentGroupMember, GroupAssignment, GroupConflict, GroupGrade
 from datetime import datetime
+import json
 
 
 bp = Blueprint('classes', __name__)
+
+
+def calculate_assignment_graded_status(assignment):
+    """Calculate graded status for an assignment - returns dict with graded_count and total_students"""
+    # Get enrolled students for this class
+    enrolled_count = Enrollment.query.filter_by(
+        class_id=assignment.class_id,
+        is_active=True
+    ).count()
+    
+    # Get all grades for this assignment
+    grades = Grade.query.filter_by(assignment_id=assignment.id).all()
+    
+    # Count how many are actually graded (have graded_at timestamp)
+    graded_count = sum(1 for g in grades if g.graded_at is not None and not g.is_voided)
+    
+    return {
+        'graded_count': graded_count,
+        'total_students': enrolled_count,
+        'submitted_count': len([g for g in grades if g.submission_id is not None])
+    }
+
+
+def calculate_group_assignment_graded_status(group_assignment):
+    """Calculate graded status for a group assignment - returns dict with graded_count and total_students"""
+    # Get enrolled students for this class
+    enrolled_count = Enrollment.query.filter_by(
+        class_id=group_assignment.class_id,
+        is_active=True
+    ).count()
+    
+    # Get all group grades for this assignment
+    from models import GroupGrade
+    group_grades = GroupGrade.query.filter_by(group_assignment_id=group_assignment.id).all()
+    
+    # Count how many are actually graded (have grade_data and not voided)
+    graded_count = sum(1 for g in group_grades if g.grade_data and not g.is_voided)
+    
+    return {
+        'graded_count': graded_count,
+        'total_students': enrolled_count,
+        'submitted_count': len([g for g in group_grades if g.grade_data])
+    }
 
 
 # ============================================================

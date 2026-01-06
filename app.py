@@ -407,6 +407,41 @@ def run_production_database_fix():
             cursor.execute("ALTER TABLE group_assignment ADD COLUMN created_by INTEGER")
             print("Added column: created_by")
         
+        # Check if grade_levels column exists for class table
+        cursor.execute("""
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'class' 
+            AND column_name = 'grade_levels'
+        """)
+        
+        class_existing = [row[0] for row in cursor.fetchall()]
+        
+        if 'grade_levels' not in class_existing:
+            print("Adding column to class table: grade_levels")
+            cursor.execute("ALTER TABLE class ADD COLUMN grade_levels VARCHAR(200)")
+            print("Added column: grade_levels")
+        
+        # Check if temporary access columns exist for teacher_staff table
+        cursor.execute("""
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'teacher_staff' 
+            AND column_name IN ('is_temporary', 'access_expires_at')
+        """)
+        
+        teacher_existing = [row[0] for row in cursor.fetchall()]
+        
+        if 'is_temporary' not in teacher_existing:
+            print("Adding column to teacher_staff table: is_temporary")
+            cursor.execute("ALTER TABLE teacher_staff ADD COLUMN is_temporary BOOLEAN DEFAULT FALSE NOT NULL")
+            print("Added column: is_temporary")
+        
+        if 'access_expires_at' not in teacher_existing:
+            print("Adding column to teacher_staff table: access_expires_at")
+            cursor.execute("ALTER TABLE teacher_staff ADD COLUMN access_expires_at TIMESTAMP")
+            print("Added column: access_expires_at")
+        
         cursor.close()
         conn.close()
         print("Production database fix completed successfully!")
@@ -548,21 +583,28 @@ def create_app(config_class=None):
         if user:
             # Check if user has expired temporary access
             if user.teacher_staff_id:
-                from models import TeacherStaff
-                from datetime import datetime, timezone
-                teacher_staff = TeacherStaff.query.get(user.teacher_staff_id)
-                if teacher_staff and teacher_staff.is_temporary and teacher_staff.access_expires_at:
-                    # Handle both naive and aware datetimes
-                    expires_at = teacher_staff.access_expires_at
-                    now = datetime.now(timezone.utc)
-                    
-                    # If expires_at is naive, make it timezone-aware (assume UTC)
-                    if expires_at.tzinfo is None:
-                        expires_at = expires_at.replace(tzinfo=timezone.utc)
-                    
-                    if expires_at < now:
-                        # Access has expired - return None to prevent login
-                        return None
+                try:
+                    from models import TeacherStaff
+                    from datetime import datetime, timezone
+                    teacher_staff = TeacherStaff.query.get(user.teacher_staff_id)
+                    # Check if columns exist before accessing them
+                    if teacher_staff and hasattr(teacher_staff, 'is_temporary') and hasattr(teacher_staff, 'access_expires_at'):
+                        if teacher_staff.is_temporary and teacher_staff.access_expires_at:
+                            # Handle both naive and aware datetimes
+                            expires_at = teacher_staff.access_expires_at
+                            now = datetime.now(timezone.utc)
+                            
+                            # If expires_at is naive, make it timezone-aware (assume UTC)
+                            if expires_at.tzinfo is None:
+                                expires_at = expires_at.replace(tzinfo=timezone.utc)
+                            
+                            if expires_at < now:
+                                # Access has expired - return None to prevent login
+                                return None
+                except Exception as e:
+                    # If there's an error accessing temporary access fields (e.g., column doesn't exist yet),
+                    # just continue and return the user - migration will fix it on next startup
+                    print(f"Warning: Could not check temporary access: {e}")
         return user
 
     # Import and register blueprints

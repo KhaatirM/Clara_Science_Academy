@@ -732,7 +732,16 @@ def student_assignments():
         # Determine student-facing status
         student_status = get_student_assignment_status(assignment, submission, grade, student.id)
         
-        assignment_data = (assignment, submission, student_status)
+        # Calculate attempts remaining for quiz assignments
+        attempts_remaining = None
+        if assignment.assignment_type == 'quiz' and assignment.max_attempts:
+            submissions_count = Submission.query.filter_by(
+                student_id=student.id,
+                assignment_id=assignment.id
+            ).count()
+            attempts_remaining = max(0, assignment.max_attempts - submissions_count)
+        
+        assignment_data = (assignment, submission, student_status, attempts_remaining)
         
         # Skip voided assignments
         if assignment.status == 'Voided' or student_status == 'Voided':
@@ -1304,7 +1313,7 @@ def student_schedule():
                     'start_time': schedule.start_time,
                     'end_time': schedule.end_time,
                     'time_str': f"{schedule.start_time.strftime('%I:%M %p')} - {schedule.end_time.strftime('%I:%M %p')}",
-                    'room': schedule.room or 'TBD',
+                    'room': schedule.room or class_obj.room_number or 'TBD',
                     'teacher': class_obj.teacher.first_name + ' ' + class_obj.teacher.last_name if class_obj.teacher else 'TBD'
                 })
         
@@ -1611,13 +1620,26 @@ def view_class(class_id):
     # Get submissions and grades for this student (excluding voided grades and voided assignments)
     all_grades = Grade.query.filter_by(student_id=student.id).all()
     student_grades = {}
+    grades_dict = {}  # Store Grade objects for status checking
     for g in all_grades:
         # Skip voided grades and voided assignments
         # Check if assignment exists and is not voided
         if g.assignment and not g.is_voided and g.assignment.status != 'Voided':
             student_grades[g.assignment_id] = json.loads(g.grade_data)
+            grades_dict[g.assignment_id] = g
     
     student_submissions = {s.assignment_id: s for s in Submission.query.filter_by(student_id=student.id).all()}
+    
+    # Create assignments with status for template
+    assignments_with_status = []
+    for assignment in assignments:
+        submission = student_submissions.get(assignment.id)
+        grade = grades_dict.get(assignment.id)
+        
+        # Determine student-facing status
+        student_status = get_student_assignment_status(assignment, submission, grade, student.id)
+        
+        assignments_with_status.append((assignment, submission, student_status))
     
     # Get announcements for this class
     announcements = Announcement.query.filter_by(class_id=class_id).order_by(Announcement.timestamp.desc()).limit(5).all()
@@ -1661,6 +1683,7 @@ def view_class(class_id):
                          **create_template_context(student, 'classes', 'classes', 
                                                 grades=student_grades,
                                                 assignments=assignments,
+                                                assignments_with_status=assignments_with_status,
                                                 submissions=student_submissions,
                                                 announcements=announcements),
                          class_obj=class_obj,
@@ -1855,10 +1878,17 @@ def take_quiz(assignment_id):
         assignment_id=assignment_id
     ).count()
     
-    # Check max attempts
+    # Check max attempts - only block if they've reached the limit
+    # If they have attempts remaining, allow them to retake (they'll see the retake button)
     if assignment.max_attempts and submissions_count >= assignment.max_attempts:
-        flash(f"You have reached the maximum number of attempts ({assignment.max_attempts}) for this quiz.", "warning")
-        return redirect(url_for('student.student_assignments'))
+        # Only redirect if they're trying to take a new quiz, not viewing results
+        # Allow viewing results even if max attempts reached
+        if not submission and not grade:
+            flash(f"You have reached the maximum number of attempts ({assignment.max_attempts}) for this quiz.", "warning")
+            return redirect(url_for('student.student_assignments'))
+    
+    # Check if this is a retake request
+    is_retake = request.args.get('retake', 'false').lower() == 'true'
     
     # Get the most recent submission (if any)
     submission = Submission.query.filter_by(
@@ -1872,6 +1902,16 @@ def take_quiz(assignment_id):
         assignment_id=assignment_id
     ).first()
     
+    # Calculate attempts remaining
+    attempts_remaining = None
+    if assignment.max_attempts:
+        attempts_remaining = max(0, assignment.max_attempts - submissions_count)
+    
+    # If retaking and has attempts remaining, allow new attempt (don't show submission)
+    if is_retake and attempts_remaining and attempts_remaining > 0:
+        submission = None  # Clear submission to allow new attempt
+        grade = None  # Clear grade view to allow new attempt
+    
     # Load quiz questions
     questions = QuizQuestion.query.filter_by(assignment_id=assignment_id).order_by(QuizQuestion.order).all()
     
@@ -1882,9 +1922,9 @@ def take_quiz(assignment_id):
         questions = list(questions)
         random.shuffle(questions)
     
-    # Load student's existing answers if any
+    # Load student's existing answers if any (only for viewing, not for retaking)
     existing_answers = {}
-    if submission:
+    if submission and not is_retake:
         answers = QuizAnswer.query.join(QuizQuestion).filter(
             QuizAnswer.student_id == student.id,
             QuizQuestion.assignment_id == assignment_id
@@ -1899,11 +1939,6 @@ def take_quiz(assignment_id):
         for question in questions:
             options = QuizOption.query.filter_by(question_id=question.id).all()
             quiz_options_by_question[question.id] = options
-    
-    # Calculate attempts remaining
-    attempts_remaining = None
-    if assignment.max_attempts:
-        attempts_remaining = max(0, assignment.max_attempts - submissions_count)
     
     return render_template('shared/take_quiz.html', 
                          assignment=assignment,

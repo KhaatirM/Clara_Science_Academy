@@ -2820,19 +2820,19 @@
     <!-- Student/Teacher View Modal -->
     <div class="modal fade" id="profileViewModal" tabindex="-1" aria-labelledby="profileViewModalLabel" aria-hidden="true">
       <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-          <div class="modal-header bg-primary text-white">
-            <h5 class="modal-title" id="profileViewModalLabel">
-              <i class="bi bi-person-circle me-2"></i>Profile Details
+        <div class="modal-content" style="border: none; border-radius: 1rem; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
+          <div class="modal-header text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; padding: 1.5rem;">
+            <h5 class="modal-title" id="profileViewModalLabel" style="font-weight: 700; font-size: 1.5rem;">
+              <i class="bi bi-person-circle me-2"></i>Staff Profile
             </h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" style="opacity: 0.9;"></button>
           </div>
-          <div class="modal-body max-height-70vh" id="profileViewModalBody">
+          <div class="modal-body max-height-70vh" id="profileViewModalBody" style="padding: 2rem; background: #f8f9fa;">
             <!-- Content will be loaded by JS -->
           </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-              <i class="bi bi-x-circle me-1"></i>Close
+          <div class="modal-footer" style="background: #f8f9fa; border-top: 1px solid #dee2e6; padding: 1rem 2rem;">
+            <button type="button" class="btn btn-lg" data-bs-dismiss="modal" style="background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%); color: white; border: none; padding: 0.75rem 2rem; border-radius: 0.5rem; font-weight: 600; box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);">
+              <i class="bi bi-x-circle me-2"></i>Close
             </button>
           </div>
         </div>
@@ -2841,23 +2841,23 @@
     <!-- Student/Teacher Edit Modal -->
     <div class="modal fade" id="profileEditModal" tabindex="-1" aria-labelledby="profileEditModalLabel" aria-hidden="true">
       <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-          <div class="modal-header bg-primary text-white">
-            <h5 class="modal-title" id="profileEditModalLabel">
-              <i class="bi bi-pencil-square me-2"></i>Edit Profile
+        <div class="modal-content" style="border: none; border-radius: 1rem; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
+          <div class="modal-header text-white" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border: none; padding: 1.5rem;">
+            <h5 class="modal-title" id="profileEditModalLabel" style="font-weight: 700; font-size: 1.5rem;">
+              <i class="bi bi-pencil-square me-2"></i>Edit Staff Information
             </h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" style="opacity: 0.9;"></button>
           </div>
           <form id="profileEditForm">
-            <div class="modal-body max-height-70vh" id="profileEditModalBody">
+            <div class="modal-body max-height-70vh" id="profileEditModalBody" style="padding: 2rem; background: #f8f9fa;">
               <!-- Form fields will be loaded by JS -->
             </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                <i class="bi bi-x-circle me-1"></i>Cancel
+            <div class="modal-footer" style="background: #f8f9fa; border-top: 1px solid #dee2e6; padding: 1rem 2rem;">
+              <button type="button" class="btn btn-lg" data-bs-dismiss="modal" style="background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%); color: white; border: none; padding: 0.75rem 2rem; border-radius: 0.5rem; font-weight: 600; box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);">
+                <i class="bi bi-x-circle me-2"></i>Cancel
               </button>
-              <button type="submit" class="btn btn-primary">
-                <i class="bi bi-check-circle me-1"></i>Save Changes
+              <button type="submit" class="btn btn-lg" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; border: none; padding: 0.75rem 2rem; border-radius: 0.5rem; font-weight: 600; box-shadow: 0 4px 12px rgba(17, 153, 142, 0.4);">
+                <i class="bi bi-check-circle me-2"></i>Save Changes
               </button>
             </div>
           </form>
@@ -3215,123 +3215,235 @@
                 const safeData = {
                     first_name: data.first_name || 'N/A',
                     last_name: data.last_name || 'N/A',
+                    middle_initial: data.middle_initial || '',
                     age: data.age || 'N/A',
                     dob: data.dob || 'N/A',
                     id: data.id || 'N/A',
                     role: data.role || 'N/A',
-                    total_students: data.total_students || 'N/A',
+                    assigned_role: data.assigned_role || data.position || 'N/A',
+                    total_students: data.total_students || 0,
                     username: data.username || 'N/A',
+                    google_workspace_email: data.google_workspace_email || null,
                     emergency_contact: data.emergency_contact || 'N/A',
+                    emergency_first_name: data.emergency_first_name || '',
+                    emergency_last_name: data.emergency_last_name || '',
+                    emergency_email: data.emergency_email || '',
+                    emergency_phone: data.emergency_phone || '',
+                    emergency_relationship: data.emergency_relationship || '',
                     assigned_classes: data.assigned_classes || [],
                     staff_id: data.staff_id || 'N/A',
                     department: data.department || 'N/A',
                     position: data.position || 'N/A',
+                    subject: data.subject || 'N/A',
+                    employment_type: data.employment_type || 'N/A',
                     hire_date: data.hire_date || 'N/A',
                     email: data.email || 'N/A',
                     phone: data.phone || 'N/A',
-                    address: data.address || 'N/A'
+                    address: data.address || 'N/A',
+                    street: data.street || '',
+                    city: data.city || '',
+                    state: data.state || '',
+                    zip_code: data.zip_code || '',
+                    is_temporary: data.is_temporary || false,
+                    access_expires_at: data.access_expires_at || null
                 };
                 
                 let classes = safeData.assigned_classes.length > 0 
-                    ? safeData.assigned_classes.map(c => `<li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span><i class="bi bi-book me-2"></i>${c.name || 'Unknown'}</span>
-                        <span class="badge bg-primary rounded-pill">${c.subject || 'Unknown'}</span>
-                      </li>`).join('')
-                    : '<li class="list-group-item text-muted"><i class="bi bi-info-circle me-2"></i>No classes assigned</li>';
+                    ? safeData.assigned_classes.map(c => `
+                        <div class="list-group-item d-flex justify-content-between align-items-center" style="border: none; border-bottom: 1px solid #e9ecef; padding: 1rem; background: #f8f9fa; transition: all 0.2s ease;">
+                            <div class="d-flex align-items-center">
+                                <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; margin-right: 1rem;">
+                                    <i class="bi bi-book text-white"></i>
+                                </div>
+                                <div>
+                                    <div style="font-weight: 600; color: #212529; margin-bottom: 0.25rem;">${c.name || 'Unknown'}</div>
+                                    <small style="color: #6c757d; font-size: 0.85rem;">Class Details</small>
+                                </div>
+                            </div>
+                            <span class="badge" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 0.5rem 1rem; border-radius: 0.5rem; font-weight: 600;">${c.subject || 'Unknown'}</span>
+                        </div>
+                      `).join('')
+                    : `<div class="list-group-item text-center py-4" style="border: none; background: #f8f9fa; border-radius: 0.5rem;">
+                            <i class="bi bi-info-circle me-2" style="font-size: 1.5rem; color: #6c757d;"></i>
+                            <div style="color: #6c757d; font-weight: 500; margin-top: 0.5rem;">No classes assigned</div>
+                        </div>`;
                     
                 let html = `
-                    <div class="container-fluid">
-                        <!-- Header Section -->
+                    <div class="container-fluid px-0">
+                        <!-- Enhanced Header Section with Gradient -->
                         <div class="row mb-4">
-                            <div class="col-12 text-center">
-                                <div class="position-relative d-inline-block">
-                                    <i class="bi bi-person-circle text-primary" style="font-size: 4rem;"></i>
-                                    <div class="position-absolute top-0 start-100 translate-middle">
-                                        <span class="badge bg-success rounded-pill">Active</span>
+                            <div class="col-12">
+                                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 1rem; padding: 2rem; color: white; text-align: center; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+                                    <div class="position-relative d-inline-block mb-3">
+                                        <div style="width: 120px; height: 120px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 4px solid rgba(255,255,255,0.3);">
+                                            <i class="bi bi-person-circle" style="font-size: 5rem; color: white;"></i>
+                                        </div>
+                                        <div class="position-absolute top-0 start-100 translate-middle">
+                                            <span class="badge" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); border: 2px solid white; font-size: 0.75rem; padding: 0.4rem 0.6rem; border-radius: 50px; font-weight: 600;">Active</span>
+                                        </div>
                                     </div>
+                                    <h3 class="mb-2" style="font-weight: 700; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">${safeData.first_name} ${safeData.middle_initial ? safeData.middle_initial + '. ' : ''}${safeData.last_name}</h3>
+                                    <p class="mb-1" style="font-size: 1.1rem; opacity: 0.95; font-weight: 600;">${safeData.assigned_role || safeData.position || 'Staff Member'}</p>
+                                    ${safeData.subject && safeData.subject !== 'N/A' ? `<p class="mb-0" style="font-size: 0.95rem; opacity: 0.85;"><i class="bi bi-book me-1"></i>${safeData.subject}</p>` : ''}
                                 </div>
-                                <h4 class="mt-2 mb-0">${safeData.first_name} ${safeData.last_name}</h4>
-                                <p class="text-muted mb-0">${safeData.position || 'Staff Member'}</p>
                             </div>
                         </div>
 
-                        <!-- Basic Information Section -->
-                        <div class="row mb-4">
-                            <div class="col-12">
-                                <h6 class="border-bottom pb-2 mb-3">
-                                    <i class="bi bi-info-circle me-2 text-primary"></i>Basic Information
+                        <!-- Quick Stats Cards -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4">
+                                <div class="card border-0 shadow-sm h-100" style="border-radius: 0.75rem; overflow: hidden;">
+                                    <div class="card-body text-center" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1.5rem;">
+                                        <i class="bi bi-people" style="font-size: 2.5rem; margin-bottom: 0.5rem; opacity: 0.9;"></i>
+                                        <h4 class="mb-1" style="font-weight: 700; font-size: 2rem;">${safeData.total_students}</h4>
+                                        <small style="opacity: 0.9; font-size: 0.9rem;">Total Students</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card border-0 shadow-sm h-100" style="border-radius: 0.75rem; overflow: hidden;">
+                                    <div class="card-body text-center" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; padding: 1.5rem;">
+                                        <i class="bi bi-book" style="font-size: 2.5rem; margin-bottom: 0.5rem; opacity: 0.9;"></i>
+                                        <h4 class="mb-1" style="font-weight: 700; font-size: 2rem;">${safeData.assigned_classes.length}</h4>
+                                        <small style="opacity: 0.9; font-size: 0.9rem;">Assigned Classes</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card border-0 shadow-sm h-100" style="border-radius: 0.75rem; overflow: hidden;">
+                                    <div class="card-body text-center" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; padding: 1.5rem;">
+                                        <i class="bi bi-person-badge" style="font-size: 2.5rem; margin-bottom: 0.5rem; opacity: 0.9;"></i>
+                                        <h6 class="mb-1" style="font-weight: 600; font-size: 1rem; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.9;">Role</h6>
+                                        <p class="mb-0" style="font-weight: 600; font-size: 1.1rem;">${safeData.role}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Basic Information Card -->
+                        <div class="card border-0 shadow-sm mb-4" style="border-radius: 0.75rem; overflow: hidden;">
+                            <div class="card-header text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; padding: 1.25rem;">
+                                <h6 class="mb-0" style="font-weight: 600; font-size: 1.1rem;">
+                                    <i class="bi bi-info-circle me-2"></i>Basic Information
                                 </h6>
+                            </div>
+                            <div class="card-body" style="padding: 1.5rem;">
                                 <div class="row g-3">
                                     <div class="col-md-6">
-                                        <div class="d-flex align-items-center">
-                                            <i class="bi bi-card-text me-2 text-muted"></i>
-                                            <strong>Staff ID:</strong>
-                                            <span class="ms-2 badge bg-secondary">${safeData.staff_id}</span>
+                                        <div class="d-flex align-items-center p-3" style="background: #f8f9fa; border-radius: 0.5rem;">
+                                            <div style="width: 45px; height: 45px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; margin-right: 1rem; flex-shrink: 0;">
+                                                <i class="bi bi-card-text text-white"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <div style="font-size: 0.85rem; color: #6c757d; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.25rem;">Staff ID</div>
+                                                <div style="font-weight: 600; color: #212529;">${safeData.staff_id}</div>
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
-                                        <div class="d-flex align-items-center">
-                                            <i class="bi bi-person-badge me-2 text-muted"></i>
-                                            <strong>Role:</strong>
-                                            <span class="ms-2 badge bg-info">${safeData.role}</span>
+                                        <div class="d-flex align-items-center p-3" style="background: #f8f9fa; border-radius: 0.5rem;">
+                                            <div style="width: 45px; height: 45px; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; margin-right: 1rem; flex-shrink: 0;">
+                                                <i class="bi bi-person-badge text-white"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <div style="font-size: 0.85rem; color: #6c757d; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.25rem;">Role</div>
+                                                <div><span class="badge" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; padding: 0.35rem 0.75rem; border-radius: 0.5rem; font-weight: 600;">${safeData.role}</span></div>
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
-                                        <div class="d-flex align-items-start">
-                                            <i class="bi bi-building me-2 text-muted mt-1"></i>
-                                            <div>
-                                                <strong>Department(s):</strong>
-                                                <div class="ms-2" id="department-badges">
+                                        <div class="d-flex align-items-start p-3" style="background: #f8f9fa; border-radius: 0.5rem;">
+                                            <div style="width: 45px; height: 45px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; margin-right: 1rem; flex-shrink: 0; margin-top: 0.25rem;">
+                                                <i class="bi bi-building text-white"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <div style="font-size: 0.85rem; color: #6c757d; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.25rem;">Department(s)</div>
+                                                <div id="department-badges">
                                                     ${safeData.department || 'N/A'}
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
-                                        <div class="d-flex align-items-center">
-                                            <i class="bi bi-calendar-event me-2 text-muted"></i>
-                                            <strong>Hire Date:</strong>
-                                            <span class="ms-2">${safeData.hire_date}</span>
+                                        <div class="d-flex align-items-center p-3" style="background: #f8f9fa; border-radius: 0.5rem;">
+                                            <div style="width: 45px; height: 45px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; margin-right: 1rem; flex-shrink: 0;">
+                                                <i class="bi bi-calendar-event text-white"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <div style="font-size: 0.85rem; color: #6c757d; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.25rem;">Hire Date</div>
+                                                <div style="font-weight: 600; color: #212529;">${safeData.hire_date}</div>
+                                                ${safeData.employment_type && safeData.employment_type !== 'N/A' ? `<div style="font-size: 0.85rem; color: #6c757d; margin-top: 0.25rem;"><span class="badge" style="background: #e9ecef; color: #495057; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-weight: 500;">${safeData.employment_type}</span></div>` : ''}
+                                            </div>
                                         </div>
                                     </div>
+                                    ${safeData.subject && safeData.subject !== 'N/A' ? `
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center p-3" style="background: #f8f9fa; border-radius: 0.5rem;">
+                                            <div style="width: 45px; height: 45px; background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%); border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; margin-right: 1rem; flex-shrink: 0;">
+                                                <i class="bi bi-book text-white"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <div style="font-size: 0.85rem; color: #6c757d; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.25rem;">Subject</div>
+                                                <div style="font-weight: 600; color: #212529;">${safeData.subject}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    ` : ''}
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Contact Information Section -->
-                        <div class="row mb-4">
-                            <div class="col-12">
-                                <h6 class="border-bottom pb-2 mb-3">
-                                    <i class="bi bi-envelope me-2 text-primary"></i>Contact Information
+                        <!-- Contact Information Card -->
+                        <div class="card border-0 shadow-sm mb-4" style="border-radius: 0.75rem; overflow: hidden;">
+                            <div class="card-header text-white" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border: none; padding: 1.25rem;">
+                                <h6 class="mb-0" style="font-weight: 600; font-size: 1.1rem;">
+                                    <i class="bi bi-envelope me-2"></i>Contact Information
                                 </h6>
+                            </div>
+                            <div class="card-body" style="padding: 1.5rem;">
                                 <div class="row g-3">
                                     <div class="col-md-6">
-                                        <div class="d-flex align-items-center">
-                                            <i class="bi bi-envelope me-2 text-muted"></i>
-                                            <strong>Email:</strong>
-                                            <span class="ms-2">${safeData.email}</span>
+                                        <div class="d-flex align-items-center p-3" style="background: #f8f9fa; border-radius: 0.5rem;">
+                                            <div style="width: 45px; height: 45px; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; margin-right: 1rem; flex-shrink: 0;">
+                                                <i class="bi bi-envelope text-white"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <div style="font-size: 0.85rem; color: #6c757d; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.25rem;">Email</div>
+                                                <div style="font-weight: 600; color: #212529; word-break: break-word;">${safeData.email}</div>
+                                                ${safeData.google_workspace_email ? `<div style="font-size: 0.85rem; color: #6c757d; margin-top: 0.25rem;"><i class="bi bi-google me-1"></i>${safeData.google_workspace_email}</div>` : ''}
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
-                                        <div class="d-flex align-items-center">
-                                            <i class="bi bi-telephone me-2 text-muted"></i>
-                                            <strong>Phone:</strong>
-                                            <span class="ms-2">${safeData.phone}</span>
+                                        <div class="d-flex align-items-center p-3" style="background: #f8f9fa; border-radius: 0.5rem;">
+                                            <div style="width: 45px; height: 45px; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; margin-right: 1rem; flex-shrink: 0;">
+                                                <i class="bi bi-telephone text-white"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <div style="font-size: 0.85rem; color: #6c757d; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.25rem;">Phone</div>
+                                                <div style="font-weight: 600; color: #212529;">${safeData.phone}</div>
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
-                                        <div class="d-flex align-items-center">
-                                            <i class="bi bi-person me-2 text-muted"></i>
-                                            <strong>Username:</strong>
-                                            <span class="ms-2 badge bg-light text-dark">${safeData.username}</span>
+                                        <div class="d-flex align-items-center p-3" style="background: #f8f9fa; border-radius: 0.5rem;">
+                                            <div style="width: 45px; height: 45px; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; margin-right: 1rem; flex-shrink: 0;">
+                                                <i class="bi bi-person text-white"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <div style="font-size: 0.85rem; color: #6c757d; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.25rem;">Username</div>
+                                                <div><span class="badge" style="background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%); color: white; padding: 0.35rem 0.75rem; border-radius: 0.5rem; font-weight: 600;">${safeData.username}</span></div>
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="col-12">
-                                        <div class="d-flex align-items-start">
-                                            <i class="bi bi-geo-alt me-2 text-muted mt-1"></i>
-                                            <div>
-                                                <strong>Address:</strong>
-                                                <div class="ms-2">${safeData.address}</div>
+                                        <div class="d-flex align-items-start p-3" style="background: #f8f9fa; border-radius: 0.5rem;">
+                                            <div style="width: 45px; height: 45px; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; margin-right: 1rem; flex-shrink: 0; margin-top: 0.25rem;">
+                                                <i class="bi bi-geo-alt text-white"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <div style="font-size: 0.85rem; color: #6c757d; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.25rem;">Address</div>
+                                                <div style="font-weight: 600; color: #212529;">${safeData.address}</div>
                                             </div>
                                         </div>
                                     </div>
@@ -3339,43 +3451,108 @@
                             </div>
                         </div>
 
-                        <!-- Emergency Contact Section -->
-                        <div class="row mb-4">
-                            <div class="col-12">
-                                <h6 class="border-bottom pb-2 mb-3">
-                                    <i class="bi bi-exclamation-triangle me-2 text-warning"></i>Emergency Contact
+                        <!-- Emergency Contact Card -->
+                        <div class="card border-0 shadow-sm mb-4" style="border-radius: 0.75rem; overflow: hidden;">
+                            <div class="card-header text-white" style="background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%); border: none; padding: 1.25rem;">
+                                <h6 class="mb-0" style="font-weight: 600; font-size: 1.1rem;">
+                                    <i class="bi bi-exclamation-triangle me-2"></i>Emergency Contact
                                 </h6>
-                                <div class="alert alert-info mb-0">
-                                    <i class="bi bi-person-heart me-2"></i>
-                                    ${safeData.emergency_contact}
+                            </div>
+                            <div class="card-body" style="padding: 1.5rem;">
+                                ${safeData.emergency_contact && safeData.emergency_contact !== 'N/A' ? `
+                                <div class="p-4" style="background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%); border-radius: 0.5rem; border-left: 4px solid #ffc107;">
+                                    <div class="row g-3">
+                                        <div class="col-12">
+                                            <div class="d-flex align-items-center mb-2">
+                                                <i class="bi bi-person-heart me-3" style="font-size: 2rem; color: #ff9800;"></i>
+                                                <div>
+                                                    <div style="font-weight: 700; color: #856404; font-size: 1.1rem; margin-bottom: 0.25rem;">
+                                                        ${safeData.emergency_first_name || ''} ${safeData.emergency_last_name || ''}
+                                                    </div>
+                                                    ${safeData.emergency_relationship ? `<div style="font-size: 0.9rem; color: #856404; opacity: 0.8;"><i class="bi bi-diagram-3 me-1"></i>${safeData.emergency_relationship}</div>` : ''}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        ${safeData.emergency_phone ? `
+                                        <div class="col-md-6">
+                                            <div class="d-flex align-items-center">
+                                                <i class="bi bi-telephone me-2" style="color: #856404;"></i>
+                                                <div style="font-weight: 600; color: #856404;">${safeData.emergency_phone}</div>
+                                            </div>
+                                        </div>
+                                        ` : ''}
+                                        ${safeData.emergency_email ? `
+                                        <div class="col-md-6">
+                                            <div class="d-flex align-items-center">
+                                                <i class="bi bi-envelope me-2" style="color: #856404;"></i>
+                                                <div style="font-weight: 600; color: #856404; word-break: break-word;">${safeData.emergency_email}</div>
+                                            </div>
+                                        </div>
+                                        ` : ''}
+                                    </div>
                                 </div>
+                                ` : `
+                                <div class="p-4 text-center" style="background: #f8f9fa; border-radius: 0.5rem;">
+                                    <i class="bi bi-info-circle me-2" style="font-size: 1.5rem; color: #6c757d;"></i>
+                                    <div style="color: #6c757d; font-weight: 500; margin-top: 0.5rem;">No emergency contact information available</div>
+                                </div>
+                                `}
                             </div>
                         </div>
 
-                        <!-- Professional Information Section -->
-                        <div class="row mb-4">
-                            <div class="col-12">
-                                <h6 class="border-bottom pb-2 mb-3">
-                                    <i class="bi bi-briefcase me-2 text-primary"></i>Professional Information
+                        <!-- Access Status Card -->
+                        ${safeData.is_temporary ? `
+                        <div class="card border-0 shadow-sm mb-4" style="border-radius: 0.75rem; overflow: hidden; border-left: 4px solid #ffc107;">
+                            <div class="card-header text-white" style="background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%); border: none; padding: 1.25rem;">
+                                <h6 class="mb-0" style="font-weight: 600; font-size: 1.1rem;">
+                                    <i class="bi bi-clock-history me-2"></i>Access Status
                                 </h6>
-                                <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <div class="d-flex align-items-center">
-                                            <i class="bi bi-people me-2 text-muted"></i>
-                                            <strong>Students:</strong>
-                                            <span class="ms-2 badge bg-success">${safeData.total_students}</span>
-                                        </div>
-                                    </div>
-                                    <div class="col-12">
-                                        <div class="d-flex align-items-start">
-                                            <i class="bi bi-book me-2 text-muted mt-1"></i>
-                                            <div>
-                                                <strong>Assigned Classes:</strong>
-                                                <ul class="list-group list-group-flush mt-2">
-                                                    ${classes}
-                                                </ul>
+                            </div>
+                            <div class="card-body" style="padding: 1.5rem;">
+                                <div class="p-3" style="background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%); border-radius: 0.5rem; border-left: 4px solid #ffc107;">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="bi bi-exclamation-triangle me-3" style="font-size: 2rem; color: #ff9800;"></i>
+                                        <div>
+                                            <div style="font-weight: 700; color: #856404; font-size: 1.1rem; margin-bottom: 0.25rem;">
+                                                Temporary Access Account
+                                            </div>
+                                            <div style="font-size: 0.9rem; color: #856404; opacity: 0.8;">
+                                                <i class="bi bi-calendar-x me-1"></i>Access expires: ${safeData.access_expires_at || 'Not set'}
                                             </div>
                                         </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        ` : ''}
+
+                        <!-- Professional Information Card -->
+                        <div class="card border-0 shadow-sm mb-4" style="border-radius: 0.75rem; overflow: hidden;">
+                            <div class="card-header text-white" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border: none; padding: 1.25rem;">
+                                <h6 class="mb-0" style="font-weight: 600; font-size: 1.1rem;">
+                                    <i class="bi bi-briefcase me-2"></i>Professional Information
+                                </h6>
+                            </div>
+                            <div class="card-body" style="padding: 1.5rem;">
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center p-3" style="background: #f8f9fa; border-radius: 0.5rem;">
+                                            <div style="width: 45px; height: 45px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; margin-right: 1rem; flex-shrink: 0;">
+                                                <i class="bi bi-people text-white"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <div style="font-size: 0.85rem; color: #6c757d; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.25rem;">Total Students</div>
+                                                <div><span class="badge" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; padding: 0.5rem 1rem; border-radius: 0.5rem; font-weight: 700; font-size: 1.1rem;">${safeData.total_students}</span></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.85rem; color: #6c757d; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.75rem;">
+                                        <i class="bi bi-book me-2"></i>Assigned Classes
+                                    </div>
+                                    <div class="list-group" style="border-radius: 0.5rem; overflow: hidden;">
+                                        ${classes}
                                     </div>
                                 </div>
                             </div>
@@ -3393,7 +3570,7 @@
                     if (departmentBadges && safeData.department && safeData.department !== 'N/A') {
                         const departments = safeData.department.split(', ');
                         const badgeHtml = departments.map(dept => 
-                            `<span class="badge bg-primary me-1 mb-1">${dept.trim()}</span>`
+                            `<span class="badge me-1 mb-1" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; padding: 0.4rem 0.75rem; border-radius: 0.5rem; font-weight: 600;">${dept.trim()}</span>`
                         ).join('');
                         departmentBadges.innerHTML = badgeHtml;
                     }
@@ -3594,65 +3771,82 @@
                 let form = document.getElementById('profileEditForm');
                 let body = document.getElementById('profileEditModalBody');
                 body.innerHTML = `
-                    <div class="container-fluid">
-                        <!-- Basic Information Section -->
-                        <div class="row mb-4">
-                            <div class="col-12">
-                                <h6 class="border-bottom pb-2 mb-3">
-                                    <i class="bi bi-info-circle me-2 text-primary"></i>Basic Information
+                    <div class="container-fluid px-0">
+                        <!-- Basic Information Card -->
+                        <div class="card border-0 shadow-sm mb-4" style="border-radius: 0.75rem; overflow: hidden;">
+                            <div class="card-header text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; padding: 1.25rem;">
+                                <h6 class="mb-0" style="font-weight: 600; font-size: 1.1rem;">
+                                    <i class="bi bi-info-circle me-2"></i>Basic Information
                                 </h6>
+                            </div>
+                            <div class="card-body" style="padding: 1.5rem;">
                                 <div class="row g-3">
                                     <div class="col-md-4">
-                                        <label class="form-label">First Name <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" name="first_name" value="${data.first_name || ''}" required>
+                                        <label class="form-label fw-bold" style="color: #495057; margin-bottom: 0.5rem;">
+                                            <i class="bi bi-person me-1 text-primary"></i>First Name <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="text" class="form-control" name="first_name" value="${data.first_name || ''}" required style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;">
                                     </div>
                                     <div class="col-md-2">
-                                        <label class="form-label">M.I.</label>
-                                        <input type="text" class="form-control" name="middle_initial" value="${data.middle_initial || ''}" maxlength="1">
+                                        <label class="form-label fw-bold" style="color: #495057; margin-bottom: 0.5rem;">M.I.</label>
+                                        <input type="text" class="form-control" name="middle_initial" value="${data.middle_initial || ''}" maxlength="1" style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem; text-align: center;">
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">Last Name <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" name="last_name" value="${data.last_name || ''}" required>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label">Date of Birth</label>
-                                        <input type="date" class="form-control" name="dob" value="${data.dob || ''}">
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label">SSN</label>
-                                        <input type="text" class="form-control" name="staff_ssn" value="${data.staff_ssn || ''}" placeholder="XXX-XX-XXXX">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Personal Email <span class="text-danger">*</span></label>
-                                        <input type="email" class="form-control" name="email" value="${data.email || ''}" required>
-                                        <small class="text-muted">For personal communications</small>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">
-                                            Google Workspace Email
-                                            <i class="bi bi-google text-primary ms-1" title="For Google Sign-In"></i>
+                                        <label class="form-label fw-bold" style="color: #495057; margin-bottom: 0.5rem;">
+                                            <i class="bi bi-person me-1 text-primary"></i>Last Name <span class="text-danger">*</span>
                                         </label>
-                                        <input type="email" class="form-control" name="google_workspace_email" value="${data.google_workspace_email || ''}" placeholder="teacher@clarascienceacademy.org">
-                                        <small class="text-muted">For Google Sign-In authentication</small>
+                                        <input type="text" class="form-control" name="last_name" value="${data.last_name || ''}" required style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-bold" style="color: #495057; margin-bottom: 0.5rem;">
+                                            <i class="bi bi-calendar me-1 text-primary"></i>Date of Birth
+                                        </label>
+                                        <input type="date" class="form-control" name="dob" value="${data.dob || ''}" style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-bold" style="color: #495057; margin-bottom: 0.5rem;">
+                                            <i class="bi bi-shield-lock me-1 text-primary"></i>SSN
+                                        </label>
+                                        <input type="text" class="form-control" name="staff_ssn" value="${data.staff_ssn || ''}" placeholder="XXX-XX-XXXX" style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-bold" style="color: #495057; margin-bottom: 0.5rem;">
+                                            <i class="bi bi-telephone me-1 text-primary"></i>Phone Number
+                                        </label>
+                                        <input type="tel" class="form-control" name="phone" value="${data.phone || ''}" placeholder="e.g., 555-123-4567" style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;">
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">Phone Number</label>
-                                        <input type="tel" class="form-control" name="phone" value="${data.phone || ''}" placeholder="e.g., 555-123-4567">
+                                        <label class="form-label fw-bold" style="color: #495057; margin-bottom: 0.5rem;">
+                                            <i class="bi bi-envelope me-1 text-primary"></i>Personal Email <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="email" class="form-control" name="email" value="${data.email || ''}" required style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;">
+                                        <small class="text-muted" style="font-size: 0.8rem; margin-top: 0.25rem; display: block;"><i class="bi bi-info-circle me-1"></i>For personal communications</small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold" style="color: #495057; margin-bottom: 0.5rem;">
+                                            <i class="bi bi-google me-1" style="color: #4285f4;"></i>Google Workspace Email
+                                        </label>
+                                        <input type="email" class="form-control" name="google_workspace_email" value="${data.google_workspace_email || ''}" placeholder="teacher@clarascienceacademy.org" style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;">
+                                        <small class="text-muted" style="font-size: 0.8rem; margin-top: 0.25rem; display: block;"><i class="bi bi-info-circle me-1"></i>For Google Sign-In authentication</small>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Professional Information Section -->
-                        <div class="row mb-4">
-                            <div class="col-12">
-                                <h6 class="border-bottom pb-2 mb-3">
-                                    <i class="bi bi-briefcase me-2 text-primary"></i>Professional Information
+                        <!-- Professional Information Card -->
+                        <div class="card border-0 shadow-sm mb-4" style="border-radius: 0.75rem; overflow: hidden;">
+                            <div class="card-header text-white" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border: none; padding: 1.25rem;">
+                                <h6 class="mb-0" style="font-weight: 600; font-size: 1.1rem;">
+                                    <i class="bi bi-briefcase me-2"></i>Professional Information
                                 </h6>
+                            </div>
+                            <div class="card-body" style="padding: 1.5rem;">
                                 <div class="row g-3">
                                     <div class="col-md-6">
-                                        <label class="form-label">Assigned Role <span class="text-danger">*</span></label>
-                                        <select class="form-select" name="assigned_role" required>
+                                        <label class="form-label fw-bold" style="color: #495057; margin-bottom: 0.5rem;">
+                                            <i class="bi bi-person-badge me-1 text-primary"></i>Assigned Role <span class="text-danger">*</span>
+                                        </label>
+                                        <select class="form-select" name="assigned_role" required style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;">
                                             <option value="">Choose role...</option>
                                             <option value="Director" ${(data.assigned_role || '') === 'Director' ? 'selected' : ''}>Director</option>
                                             <option value="School Administrator" ${(data.assigned_role || '') === 'School Administrator' ? 'selected' : ''}>School Administrator</option>
@@ -3668,193 +3862,203 @@
                                         </select>
                                     </div>
                                     <div class="col-12">
-                                        <label class="form-label d-block">Department(s) <span class="text-danger">*</span></label>
-                                        <div class="row g-3 px-2">
+                                        <label class="form-label fw-bold d-block mb-3" style="color: #495057;">
+                                            <i class="bi bi-building me-1 text-primary"></i>Department(s) <span class="text-danger">*</span>
+                                        </label>
+                                        <div class="row g-3 px-2" style="background: #f8f9fa; padding: 1rem; border-radius: 0.5rem;">
                                             <div class="col-6 col-sm-4 col-md-3">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" name="department" value="Mathematics" id="dept_math_edit" ${(data.department || '').includes('Mathematics') ? 'checked' : ''}>
-                                                    <label class="form-check-label" for="dept_math_edit">Mathematics</label>
+                                                <div class="form-check p-2" style="background: white; border-radius: 0.5rem; border: 2px solid #e9ecef; transition: all 0.2s ease;">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="Mathematics" id="dept_math_edit" ${(data.department || '').includes('Mathematics') ? 'checked' : ''} style="cursor: pointer;">
+                                                    <label class="form-check-label" for="dept_math_edit" style="cursor: pointer; font-weight: 500;">Mathematics</label>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" name="department" value="Science" id="dept_science_edit" ${(data.department || '').includes('Science') ? 'checked' : ''}>
-                                                    <label class="form-check-label" for="dept_science_edit">Science</label>
+                                                <div class="form-check p-2" style="background: white; border-radius: 0.5rem; border: 2px solid #e9ecef; transition: all 0.2s ease;">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="Science" id="dept_science_edit" ${(data.department || '').includes('Science') ? 'checked' : ''} style="cursor: pointer;">
+                                                    <label class="form-check-label" for="dept_science_edit" style="cursor: pointer; font-weight: 500;">Science</label>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" name="department" value="English" id="dept_english_edit" ${(data.department || '').includes('English') ? 'checked' : ''}>
-                                                    <label class="form-check-label" for="dept_english_edit">English</label>
+                                                <div class="form-check p-2" style="background: white; border-radius: 0.5rem; border: 2px solid #e9ecef; transition: all 0.2s ease;">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="English" id="dept_english_edit" ${(data.department || '').includes('English') ? 'checked' : ''} style="cursor: pointer;">
+                                                    <label class="form-check-label" for="dept_english_edit" style="cursor: pointer; font-weight: 500;">English</label>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" name="department" value="History & Social Studies" id="dept_history_edit" ${(data.department || '').includes('History & Social Studies') ? 'checked' : ''}>
-                                                    <label class="form-check-label" for="dept_history_edit">History & Social Studies</label>
+                                                <div class="form-check p-2" style="background: white; border-radius: 0.5rem; border: 2px solid #e9ecef; transition: all 0.2s ease;">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="History & Social Studies" id="dept_history_edit" ${(data.department || '').includes('History & Social Studies') ? 'checked' : ''} style="cursor: pointer;">
+                                                    <label class="form-check-label" for="dept_history_edit" style="cursor: pointer; font-weight: 500;">History & Social Studies</label>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" name="department" value="Physical Education & Health" id="dept_pe_edit" ${(data.department || '').includes('Physical Education & Health') ? 'checked' : ''}>
-                                                    <label class="form-check-label" for="dept_pe_edit">Physical Education & Health</label>
+                                                <div class="form-check p-2" style="background: white; border-radius: 0.5rem; border: 2px solid #e9ecef; transition: all 0.2s ease;">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="Physical Education & Health" id="dept_pe_edit" ${(data.department || '').includes('Physical Education & Health') ? 'checked' : ''} style="cursor: pointer;">
+                                                    <label class="form-check-label" for="dept_pe_edit" style="cursor: pointer; font-weight: 500;">Physical Education & Health</label>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" name="department" value="Music & Arts" id="dept_arts_edit" ${(data.department || '').includes('Music & Arts') ? 'checked' : ''}>
-                                                    <label class="form-check-label" for="dept_arts_edit">Music & Arts</label>
+                                                <div class="form-check p-2" style="background: white; border-radius: 0.5rem; border: 2px solid #e9ecef; transition: all 0.2s ease;">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="Music & Arts" id="dept_arts_edit" ${(data.department || '').includes('Music & Arts') ? 'checked' : ''} style="cursor: pointer;">
+                                                    <label class="form-check-label" for="dept_arts_edit" style="cursor: pointer; font-weight: 500;">Music & Arts</label>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" name="department" value="Computer Science & Technology" id="dept_tech_edit" ${(data.department || '').includes('Computer Science & Technology') ? 'checked' : ''}>
-                                                    <label class="form-check-label" for="dept_tech_edit">Computer Science & Technology</label>
+                                                <div class="form-check p-2" style="background: white; border-radius: 0.5rem; border: 2px solid #e9ecef; transition: all 0.2s ease;">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="Computer Science & Technology" id="dept_tech_edit" ${(data.department || '').includes('Computer Science & Technology') ? 'checked' : ''} style="cursor: pointer;">
+                                                    <label class="form-check-label" for="dept_tech_edit" style="cursor: pointer; font-weight: 500;">Computer Science & Technology</label>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" name="department" value="Administration" id="dept_admin_edit" ${(data.department || '').includes('Administration') ? 'checked' : ''}>
-                                                    <label class="form-check-label" for="dept_admin_edit">Administration</label>
+                                                <div class="form-check p-2" style="background: white; border-radius: 0.5rem; border: 2px solid #e9ecef; transition: all 0.2s ease;">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="Administration" id="dept_admin_edit" ${(data.department || '').includes('Administration') ? 'checked' : ''} style="cursor: pointer;">
+                                                    <label class="form-check-label" for="dept_admin_edit" style="cursor: pointer; font-weight: 500;">Administration</label>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" name="department" value="Counseling" id="dept_counsel_edit" ${(data.department || '').includes('Counseling') ? 'checked' : ''}>
-                                                    <label class="form-check-label" for="dept_counsel_edit">Counseling</label>
+                                                <div class="form-check p-2" style="background: white; border-radius: 0.5rem; border: 2px solid #e9ecef; transition: all 0.2s ease;">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="Counseling" id="dept_counsel_edit" ${(data.department || '').includes('Counseling') ? 'checked' : ''} style="cursor: pointer;">
+                                                    <label class="form-check-label" for="dept_counsel_edit" style="cursor: pointer; font-weight: 500;">Counseling</label>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" name="department" value="Special Education" id="dept_sped_edit" ${(data.department || '').includes('Special Education') ? 'checked' : ''}>
-                                                    <label class="form-check-label" for="dept_sped_edit">Special Education</label>
+                                                <div class="form-check p-2" style="background: white; border-radius: 0.5rem; border: 2px solid #e9ecef; transition: all 0.2s ease;">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="Special Education" id="dept_sped_edit" ${(data.department || '').includes('Special Education') ? 'checked' : ''} style="cursor: pointer;">
+                                                    <label class="form-check-label" for="dept_sped_edit" style="cursor: pointer; font-weight: 500;">Special Education</label>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" name="department" value="Foreign Language" id="dept_lang_edit" ${(data.department || '').includes('Foreign Language') ? 'checked' : ''}>
-                                                    <label class="form-check-label" for="dept_lang_edit">Foreign Language</label>
+                                                <div class="form-check p-2" style="background: white; border-radius: 0.5rem; border: 2px solid #e9ecef; transition: all 0.2s ease;">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="Foreign Language" id="dept_lang_edit" ${(data.department || '').includes('Foreign Language') ? 'checked' : ''} style="cursor: pointer;">
+                                                    <label class="form-check-label" for="dept_lang_edit" style="cursor: pointer; font-weight: 500;">Foreign Language</label>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" name="department" value="Business" id="dept_business_edit" ${(data.department || '').includes('Business') ? 'checked' : ''}>
-                                                    <label class="form-check-label" for="dept_business_edit">Business</label>
+                                                <div class="form-check p-2" style="background: white; border-radius: 0.5rem; border: 2px solid #e9ecef; transition: all 0.2s ease;">
+                                                    <input class="form-check-input" type="checkbox" name="department" value="Business" id="dept_business_edit" ${(data.department || '').includes('Business') ? 'checked' : ''} style="cursor: pointer;">
+                                                    <label class="form-check-label" for="dept_business_edit" style="cursor: pointer; font-weight: 500;">Business</label>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">Position</label>
-                                        <input type="text" class="form-control" name="position" value="${data.position || ''}" placeholder="e.g., Lead Teacher, Assistant Principal">
+                                        <label class="form-label fw-bold" style="color: #495057; margin-bottom: 0.5rem;">
+                                            <i class="bi bi-briefcase me-1 text-primary"></i>Position
+                                        </label>
+                                        <input type="text" class="form-control" name="position" value="${data.position || ''}" placeholder="e.g., Lead Teacher, Assistant Principal" style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;">
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">Primary Subject(s) Taught</label>
-                                        <input type="text" class="form-control" name="subject" value="${data.subject || ''}" placeholder="e.g., Algebra I, Chemistry">
-                                </div>
+                                        <label class="form-label fw-bold" style="color: #495057; margin-bottom: 0.5rem;">
+                                            <i class="bi bi-book me-1 text-primary"></i>Primary Subject(s) Taught
+                                        </label>
+                                        <input type="text" class="form-control" name="subject" value="${data.subject || ''}" placeholder="e.g., Algebra I, Chemistry" style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;">
+                                    </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">Employment Type</label>
-                                        <select class="form-select" name="employment_type">
+                                        <label class="form-label fw-bold" style="color: #495057; margin-bottom: 0.5rem;">
+                                            <i class="bi bi-clock me-1 text-primary"></i>Employment Type
+                                        </label>
+                                        <select class="form-select" name="employment_type" style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;">
                                             <option value="">Choose...</option>
                                             <option value="Full Time" ${(data.employment_type || '') === 'Full Time' ? 'selected' : ''}>Full Time</option>
                                             <option value="Part Time" ${(data.employment_type || '') === 'Part Time' ? 'selected' : ''}>Part Time</option>
                                         </select>
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">Hire Date</label>
-                                        <input type="date" class="form-control" name="hire_date" value="${data.hire_date || ''}">
+                                        <label class="form-label fw-bold" style="color: #495057; margin-bottom: 0.5rem;">
+                                            <i class="bi bi-calendar-event me-1 text-primary"></i>Hire Date
+                                        </label>
+                                        <input type="date" class="form-control" name="hire_date" value="${data.hire_date || ''}" style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;">
                                     </div>
                                 </div>
                                 
                                 <!-- Grades Taught Section -->
-                                <div class="row mb-4">
+                                <div class="row mt-4">
                                     <div class="col-12">
-                                        <h6 class="border-bottom pb-2 mb-3">
-                                            <i class="bi bi-mortarboard me-2 text-primary"></i>Grades Taught
-                                        </h6>
-                                        <div class="row g-2 px-2">
+                                        <label class="form-label fw-bold d-block mb-3" style="color: #495057;">
+                                            <i class="bi bi-mortarboard me-1 text-primary"></i>Grades Taught
+                                        </label>
+                                        <div class="row g-2 px-2" style="background: #f8f9fa; padding: 1rem; border-radius: 0.5rem;">
                                             <div class="col-6 col-sm-4 col-md-3">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" name="grades_taught" value="Kindergarten" id="grade_k_edit" ${(data.grades_taught || '').includes('Kindergarten') ? 'checked' : ''}>
-                                                    <label class="form-check-label" for="grade_k_edit">Kindergarten</label>
+                                                <div class="grade-checkbox-box p-2" data-grade="Kindergarten" style="background: ${(data.grades_taught || '').includes('Kindergarten') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${(data.grades_taught || '').includes('Kindergarten') ? 'white' : '#212529'}; border-radius: 0.5rem; border: 2px solid ${(data.grades_taught || '').includes('Kindergarten') ? '#667eea' : '#e9ecef'}; transition: all 0.2s ease; cursor: pointer; font-weight: 500; text-align: center;">
+                                                    <input type="checkbox" name="grades_taught" value="Kindergarten" id="grade_k_edit" ${(data.grades_taught || '').includes('Kindergarten') ? 'checked' : ''} style="display: none;">
+                                                    <span>Kindergarten</span>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" name="grades_taught" value="1st" id="grade_1_edit" ${(data.grades_taught || '').includes('1st') ? 'checked' : ''}>
-                                                    <label class="form-check-label" for="grade_1_edit">1st</label>
+                                                <div class="grade-checkbox-box p-2" data-grade="1st" style="background: ${(data.grades_taught || '').includes('1st') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${(data.grades_taught || '').includes('1st') ? 'white' : '#212529'}; border-radius: 0.5rem; border: 2px solid ${(data.grades_taught || '').includes('1st') ? '#667eea' : '#e9ecef'}; transition: all 0.2s ease; cursor: pointer; font-weight: 500; text-align: center;">
+                                                    <input type="checkbox" name="grades_taught" value="1st" id="grade_1_edit" ${(data.grades_taught || '').includes('1st') ? 'checked' : ''} style="display: none;">
+                                                    <span>1st</span>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" name="grades_taught" value="2nd" id="grade_2_edit" ${(data.grades_taught || '').includes('2nd') ? 'checked' : ''}>
-                                                    <label class="form-check-label" for="grade_2_edit">2nd</label>
+                                                <div class="grade-checkbox-box p-2" data-grade="2nd" style="background: ${(data.grades_taught || '').includes('2nd') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${(data.grades_taught || '').includes('2nd') ? 'white' : '#212529'}; border-radius: 0.5rem; border: 2px solid ${(data.grades_taught || '').includes('2nd') ? '#667eea' : '#e9ecef'}; transition: all 0.2s ease; cursor: pointer; font-weight: 500; text-align: center;">
+                                                    <input type="checkbox" name="grades_taught" value="2nd" id="grade_2_edit" ${(data.grades_taught || '').includes('2nd') ? 'checked' : ''} style="display: none;">
+                                                    <span>2nd</span>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" name="grades_taught" value="3rd" id="grade_3_edit" ${(data.grades_taught || '').includes('3rd') ? 'checked' : ''}>
-                                                    <label class="form-check-label" for="grade_3_edit">3rd</label>
+                                                <div class="grade-checkbox-box p-2" data-grade="3rd" style="background: ${(data.grades_taught || '').includes('3rd') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${(data.grades_taught || '').includes('3rd') ? 'white' : '#212529'}; border-radius: 0.5rem; border: 2px solid ${(data.grades_taught || '').includes('3rd') ? '#667eea' : '#e9ecef'}; transition: all 0.2s ease; cursor: pointer; font-weight: 500; text-align: center;">
+                                                    <input type="checkbox" name="grades_taught" value="3rd" id="grade_3_edit" ${(data.grades_taught || '').includes('3rd') ? 'checked' : ''} style="display: none;">
+                                                    <span>3rd</span>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" name="grades_taught" value="4th" id="grade_4_edit" ${(data.grades_taught || '').includes('4th') ? 'checked' : ''}>
-                                                    <label class="form-check-label" for="grade_4_edit">4th</label>
+                                                <div class="grade-checkbox-box p-2" data-grade="4th" style="background: ${(data.grades_taught || '').includes('4th') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${(data.grades_taught || '').includes('4th') ? 'white' : '#212529'}; border-radius: 0.5rem; border: 2px solid ${(data.grades_taught || '').includes('4th') ? '#667eea' : '#e9ecef'}; transition: all 0.2s ease; cursor: pointer; font-weight: 500; text-align: center;">
+                                                    <input type="checkbox" name="grades_taught" value="4th" id="grade_4_edit" ${(data.grades_taught || '').includes('4th') ? 'checked' : ''} style="display: none;">
+                                                    <span>4th</span>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" name="grades_taught" value="5th" id="grade_5_edit" ${(data.grades_taught || '').includes('5th') ? 'checked' : ''}>
-                                                    <label class="form-check-label" for="grade_5_edit">5th</label>
+                                                <div class="grade-checkbox-box p-2" data-grade="5th" style="background: ${(data.grades_taught || '').includes('5th') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${(data.grades_taught || '').includes('5th') ? 'white' : '#212529'}; border-radius: 0.5rem; border: 2px solid ${(data.grades_taught || '').includes('5th') ? '#667eea' : '#e9ecef'}; transition: all 0.2s ease; cursor: pointer; font-weight: 500; text-align: center;">
+                                                    <input type="checkbox" name="grades_taught" value="5th" id="grade_5_edit" ${(data.grades_taught || '').includes('5th') ? 'checked' : ''} style="display: none;">
+                                                    <span>5th</span>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" name="grades_taught" value="6th" id="grade_6_edit" ${(data.grades_taught || '').includes('6th') ? 'checked' : ''}>
-                                                    <label class="form-check-label" for="grade_6_edit">6th</label>
+                                                <div class="grade-checkbox-box p-2" data-grade="6th" style="background: ${(data.grades_taught || '').includes('6th') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${(data.grades_taught || '').includes('6th') ? 'white' : '#212529'}; border-radius: 0.5rem; border: 2px solid ${(data.grades_taught || '').includes('6th') ? '#667eea' : '#e9ecef'}; transition: all 0.2s ease; cursor: pointer; font-weight: 500; text-align: center;">
+                                                    <input type="checkbox" name="grades_taught" value="6th" id="grade_6_edit" ${(data.grades_taught || '').includes('6th') ? 'checked' : ''} style="display: none;">
+                                                    <span>6th</span>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" name="grades_taught" value="7th" id="grade_7_edit" ${(data.grades_taught || '').includes('7th') ? 'checked' : ''}>
-                                                    <label class="form-check-label" for="grade_7_edit">7th</label>
+                                                <div class="grade-checkbox-box p-2" data-grade="7th" style="background: ${(data.grades_taught || '').includes('7th') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${(data.grades_taught || '').includes('7th') ? 'white' : '#212529'}; border-radius: 0.5rem; border: 2px solid ${(data.grades_taught || '').includes('7th') ? '#667eea' : '#e9ecef'}; transition: all 0.2s ease; cursor: pointer; font-weight: 500; text-align: center;">
+                                                    <input type="checkbox" name="grades_taught" value="7th" id="grade_7_edit" ${(data.grades_taught || '').includes('7th') ? 'checked' : ''} style="display: none;">
+                                                    <span>7th</span>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" name="grades_taught" value="8th" id="grade_8_edit" ${(data.grades_taught || '').includes('8th') ? 'checked' : ''}>
-                                                    <label class="form-check-label" for="grade_8_edit">8th</label>
+                                                <div class="grade-checkbox-box p-2" data-grade="8th" style="background: ${(data.grades_taught || '').includes('8th') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${(data.grades_taught || '').includes('8th') ? 'white' : '#212529'}; border-radius: 0.5rem; border: 2px solid ${(data.grades_taught || '').includes('8th') ? '#667eea' : '#e9ecef'}; transition: all 0.2s ease; cursor: pointer; font-weight: 500; text-align: center;">
+                                                    <input type="checkbox" name="grades_taught" value="8th" id="grade_8_edit" ${(data.grades_taught || '').includes('8th') ? 'checked' : ''} style="display: none;">
+                                                    <span>8th</span>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" name="grades_taught" value="9th" id="grade_9_edit" ${(data.grades_taught || '').includes('9th') ? 'checked' : ''}>
-                                                    <label class="form-check-label" for="grade_9_edit">9th</label>
+                                                <div class="grade-checkbox-box p-2" data-grade="9th" style="background: ${(data.grades_taught || '').includes('9th') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${(data.grades_taught || '').includes('9th') ? 'white' : '#212529'}; border-radius: 0.5rem; border: 2px solid ${(data.grades_taught || '').includes('9th') ? '#667eea' : '#e9ecef'}; transition: all 0.2s ease; cursor: pointer; font-weight: 500; text-align: center;">
+                                                    <input type="checkbox" name="grades_taught" value="9th" id="grade_9_edit" ${(data.grades_taught || '').includes('9th') ? 'checked' : ''} style="display: none;">
+                                                    <span>9th</span>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" name="grades_taught" value="10th" id="grade_10_edit" ${(data.grades_taught || '').includes('10th') ? 'checked' : ''}>
-                                                    <label class="form-check-label" for="grade_10_edit">10th</label>
+                                                <div class="grade-checkbox-box p-2" data-grade="10th" style="background: ${(data.grades_taught || '').includes('10th') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${(data.grades_taught || '').includes('10th') ? 'white' : '#212529'}; border-radius: 0.5rem; border: 2px solid ${(data.grades_taught || '').includes('10th') ? '#667eea' : '#e9ecef'}; transition: all 0.2s ease; cursor: pointer; font-weight: 500; text-align: center;">
+                                                    <input type="checkbox" name="grades_taught" value="10th" id="grade_10_edit" ${(data.grades_taught || '').includes('10th') ? 'checked' : ''} style="display: none;">
+                                                    <span>10th</span>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" name="grades_taught" value="11th" id="grade_11_edit" ${(data.grades_taught || '').includes('11th') ? 'checked' : ''}>
-                                                    <label class="form-check-label" for="grade_11_edit">11th</label>
+                                                <div class="grade-checkbox-box p-2" data-grade="11th" style="background: ${(data.grades_taught || '').includes('11th') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${(data.grades_taught || '').includes('11th') ? 'white' : '#212529'}; border-radius: 0.5rem; border: 2px solid ${(data.grades_taught || '').includes('11th') ? '#667eea' : '#e9ecef'}; transition: all 0.2s ease; cursor: pointer; font-weight: 500; text-align: center;">
+                                                    <input type="checkbox" name="grades_taught" value="11th" id="grade_11_edit" ${(data.grades_taught || '').includes('11th') ? 'checked' : ''} style="display: none;">
+                                                    <span>11th</span>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" name="grades_taught" value="12th" id="grade_12_edit" ${(data.grades_taught || '').includes('12th') ? 'checked' : ''}>
-                                                    <label class="form-check-label" for="grade_12_edit">12th</label>
+                                                <div class="grade-checkbox-box p-2" data-grade="12th" style="background: ${(data.grades_taught || '').includes('12th') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${(data.grades_taught || '').includes('12th') ? 'white' : '#212529'}; border-radius: 0.5rem; border: 2px solid ${(data.grades_taught || '').includes('12th') ? '#667eea' : '#e9ecef'}; transition: all 0.2s ease; cursor: pointer; font-weight: 500; text-align: center;">
+                                                    <input type="checkbox" name="grades_taught" value="12th" id="grade_12_edit" ${(data.grades_taught || '').includes('12th') ? 'checked' : ''} style="display: none;">
+                                                    <span>12th</span>
                                                 </div>
                                             </div>
                                             <div class="col-6 col-sm-4 col-md-3">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" name="grades_taught" value="N/A - Staff" id="grade_na_edit" ${(data.grades_taught || '').includes('N/A - Staff') ? 'checked' : ''}>
-                                                    <label class="form-check-label" for="grade_na_edit">N/A - Staff</label>
+                                                <div class="grade-checkbox-box p-2" data-grade="N/A - Staff" style="background: ${(data.grades_taught || '').includes('N/A - Staff') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${(data.grades_taught || '').includes('N/A - Staff') ? 'white' : '#212529'}; border-radius: 0.5rem; border: 2px solid ${(data.grades_taught || '').includes('N/A - Staff') ? '#667eea' : '#e9ecef'}; transition: all 0.2s ease; cursor: pointer; font-weight: 500; text-align: center;">
+                                                    <input type="checkbox" name="grades_taught" value="N/A - Staff" id="grade_na_edit" ${(data.grades_taught || '').includes('N/A - Staff') ? 'checked' : ''} style="display: none;">
+                                                    <span>N/A - Staff</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -3863,28 +4067,38 @@
                             </div>
                         </div>
 
-                        <!-- Address Information Section -->
-                        <div class="row mb-4">
-                            <div class="col-12">
-                                <h6 class="border-bottom pb-2 mb-3">
-                                    <i class="bi bi-geo-alt me-2 text-primary"></i>Address Information
+                        <!-- Address Information Card -->
+                        <div class="card border-0 shadow-sm mb-4" style="border-radius: 0.75rem; overflow: hidden;">
+                            <div class="card-header text-white" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border: none; padding: 1.25rem;">
+                                <h6 class="mb-0" style="font-weight: 600; font-size: 1.1rem;">
+                                    <i class="bi bi-geo-alt me-2"></i>Address Information
                                 </h6>
+                            </div>
+                            <div class="card-body" style="padding: 1.5rem;">
                                 <div class="row g-3">
                                     <div class="col-12">
-                                        <label class="form-label">Street Address</label>
-                                        <input type="text" class="form-control" name="street_address" value="${data.street || ''}" placeholder="123 Main Street">
+                                        <label class="form-label fw-bold" style="color: #495057; margin-bottom: 0.5rem;">
+                                            <i class="bi bi-house me-1 text-primary"></i>Street Address
+                                        </label>
+                                        <input type="text" class="form-control" name="street_address" value="${data.street || ''}" placeholder="123 Main Street" style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;">
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">Apt, Unit, Suite, etc.</label>
-                                        <input type="text" class="form-control" name="apt_unit_suite" value="${data.apt_unit || ''}" placeholder="Apt 4B">
+                                        <label class="form-label fw-bold" style="color: #495057; margin-bottom: 0.5rem;">
+                                            <i class="bi bi-building me-1 text-primary"></i>Apt, Unit, Suite, etc.
+                                        </label>
+                                        <input type="text" class="form-control" name="apt_unit_suite" value="${data.apt_unit || ''}" placeholder="Apt 4B" style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;">
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">City</label>
-                                        <input type="text" class="form-control" name="city" value="${data.city || ''}" placeholder="Springfield">
+                                        <label class="form-label fw-bold" style="color: #495057; margin-bottom: 0.5rem;">
+                                            <i class="bi bi-geo-alt me-1 text-primary"></i>City
+                                        </label>
+                                        <input type="text" class="form-control" name="city" value="${data.city || ''}" placeholder="Springfield" style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;">
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">State</label>
-                                        <select class="form-select" name="state">
+                                        <label class="form-label fw-bold" style="color: #495057; margin-bottom: 0.5rem;">
+                                            <i class="bi bi-map me-1 text-primary"></i>State
+                                        </label>
+                                        <select class="form-select" name="state" style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;">
                                             <option value="">Choose state...</option>
                                             <option value="AL" ${(data.state || '') === 'AL' ? 'selected' : ''}>Alabama</option>
                                             <option value="AK" ${(data.state || '') === 'AK' ? 'selected' : ''}>Alaska</option>
@@ -3940,31 +4154,41 @@
                                         </select>
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">Zip Code</label>
-                                        <input type="text" class="form-control" name="zip_code" value="${data.zip_code || ''}" placeholder="62701">
+                                        <label class="form-label fw-bold" style="color: #495057; margin-bottom: 0.5rem;">
+                                            <i class="bi bi-mailbox me-1 text-primary"></i>Zip Code
+                                        </label>
+                                        <input type="text" class="form-control" name="zip_code" value="${data.zip_code || ''}" placeholder="62701" style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;">
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Emergency Contact Section -->
-                        <div class="row mb-4">
-                            <div class="col-12">
-                                <h6 class="border-bottom pb-2 mb-3">
-                                    <i class="bi bi-exclamation-triangle me-2 text-warning"></i>Emergency Contact
+                        <!-- Emergency Contact Card -->
+                        <div class="card border-0 shadow-sm mb-4" style="border-radius: 0.75rem; overflow: hidden;">
+                            <div class="card-header text-white" style="background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%); border: none; padding: 1.25rem;">
+                                <h6 class="mb-0" style="font-weight: 600; font-size: 1.1rem;">
+                                    <i class="bi bi-exclamation-triangle me-2"></i>Emergency Contact
                                 </h6>
+                            </div>
+                            <div class="card-body" style="padding: 1.5rem;">
                                 <div class="row g-3">
                                     <div class="col-md-6">
-                                        <label class="form-label">First Name <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" name="emergency_contact_name" value="${data.emergency_first_name || ''}" required>
+                                        <label class="form-label fw-bold" style="color: #495057; margin-bottom: 0.5rem;">
+                                            <i class="bi bi-person me-1 text-primary"></i>First Name <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="text" class="form-control" name="emergency_contact_name" value="${data.emergency_first_name || ''}" required style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;">
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">Last Name <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" name="emergency_contact_last_name" value="${data.emergency_last_name || ''}" required>
+                                        <label class="form-label fw-bold" style="color: #495057; margin-bottom: 0.5rem;">
+                                            <i class="bi bi-person me-1 text-primary"></i>Last Name <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="text" class="form-control" name="emergency_contact_last_name" value="${data.emergency_last_name || ''}" required style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;">
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">Relationship</label>
-                                        <select class="form-select" name="emergency_contact_relationship">
+                                        <label class="form-label fw-bold" style="color: #495057; margin-bottom: 0.5rem;">
+                                            <i class="bi bi-diagram-3 me-1 text-primary"></i>Relationship
+                                        </label>
+                                        <select class="form-select" name="emergency_contact_relationship" style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;">
                                             <option value="">Choose relationship...</option>
                                             <option value="Spouse" ${(data.emergency_relationship || '') === 'Spouse' ? 'selected' : ''}>Spouse</option>
                                             <option value="Parent" ${(data.emergency_relationship || '') === 'Parent' ? 'selected' : ''}>Parent</option>
@@ -3975,13 +4199,70 @@
                                         </select>
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">Phone Number <span class="text-danger">*</span></label>
-                                        <input type="tel" class="form-control" name="emergency_contact_phone" value="${data.emergency_phone || ''}" required placeholder="e.g., 555-123-4567">
+                                        <label class="form-label fw-bold" style="color: #495057; margin-bottom: 0.5rem;">
+                                            <i class="bi bi-telephone me-1 text-primary"></i>Phone Number <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="tel" class="form-control" name="emergency_contact_phone" value="${data.emergency_phone || ''}" required placeholder="e.g., 555-123-4567" style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;">
                                     </div>
                                     <div class="col-md-12">
-                                        <label class="form-label">Email</label>
-                                        <input type="email" class="form-control" name="emergency_contact_email" value="${data.emergency_email || ''}" placeholder="emergency@example.com">
+                                        <label class="form-label fw-bold" style="color: #495057; margin-bottom: 0.5rem;">
+                                            <i class="bi bi-envelope me-1 text-primary"></i>Email
+                                        </label>
+                                        <input type="email" class="form-control" name="emergency_contact_email" value="${data.emergency_email || ''}" placeholder="emergency@example.com" style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;">
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Temporary Access Management Card -->
+                        <div class="card border-0 shadow-sm mb-4" style="border-radius: 0.75rem; overflow: hidden; border-left: 4px solid #ffc107;">
+                            <div class="card-header text-white" style="background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%); border: none; padding: 1.25rem;">
+                                <h6 class="mb-0" style="font-weight: 600; font-size: 1.1rem;">
+                                    <i class="bi bi-clock-history me-2"></i>Temporary Access Management
+                                </h6>
+                            </div>
+                            <div class="card-body" style="padding: 1.5rem;">
+                                <div class="form-check mb-3 p-3" style="background: ${data.is_temporary ? '#fff3cd' : '#f8f9fa'}; border-radius: 0.5rem; border: 2px solid ${data.is_temporary ? '#ffc107' : '#e9ecef'};">
+                                    <input class="form-check-input" type="checkbox" id="is_temporary_edit" name="is_temporary" 
+                                           ${data.is_temporary ? 'checked' : ''}
+                                           onchange="toggleTemporaryAccessEdit()" style="cursor: pointer; width: 1.25rem; height: 1.25rem;">
+                                    <label class="form-check-label fw-bold" for="is_temporary_edit" style="cursor: pointer; font-size: 1.05rem; color: ${data.is_temporary ? '#856404' : '#495057'};">
+                                        This is a temporary staff member
+                                    </label>
+                                    <div class="form-text mt-2" style="color: ${data.is_temporary ? '#856404' : '#6c757d'};">
+                                        <i class="bi bi-info-circle me-1"></i>Enable this for temporary staff who need time-limited access.
+                                    </div>
+                                </div>
+                                
+                                <div id="temporaryAccessFieldsEdit" style="display: ${data.is_temporary ? 'block' : 'none'};">
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-bold" style="color: #495057; margin-bottom: 0.5rem;">
+                                                <i class="bi bi-calendar-x me-1 text-primary"></i>Access Expires On <span class="text-danger">*</span>
+                                            </label>
+                                            <input type="datetime-local" class="form-control" id="access_expires_at_edit" name="access_expires_at" 
+                                                   value="${data.access_expires_at ? (new Date(data.access_expires_at).toISOString().slice(0, 16)) : ''}" 
+                                                   style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;">
+                                            <div class="form-text mt-2"><i class="bi bi-info-circle me-1"></i>Access will automatically expire at this date and time.</div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="d-flex flex-column gap-2">
+                                                <button type="button" class="btn" onclick="makePermanentAccess()" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border: none; padding: 0.75rem; border-radius: 0.5rem; font-weight: 600;">
+                                                    <i class="bi bi-check-circle me-2"></i>Make Permanent Access
+                                                </button>
+                                                <button type="button" class="btn" onclick="extendAccess()" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 0.75rem; border-radius: 0.5rem; font-weight: 600;">
+                                                    <i class="bi bi-calendar-plus me-2"></i>Extend Access (30 Days)
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    ${data.is_temporary ? `
+                                    <div class="alert alert-warning mt-3 mb-0" style="border-radius: 0.5rem; border-left: 4px solid #ffc107;">
+                                        <i class="bi bi-exclamation-triangle me-2"></i>
+                                        <strong>Note:</strong> Temporary staff accounts will be automatically disabled after the expiration date. 
+                                        They will not be able to log in after this time.
+                                    </div>
+                                    ` : ''}
                                 </div>
                             </div>
                         </div>
@@ -4009,6 +4290,63 @@
                 };
                 var modal = new bootstrap.Modal(document.getElementById('profileEditModal'));
                 modal.show();
+                
+                // Add click handlers for grade checkbox boxes
+                setTimeout(() => {
+                    document.querySelectorAll('.grade-checkbox-box').forEach(box => {
+                        box.addEventListener('click', function() {
+                            const checkbox = this.querySelector('input[type="checkbox"]');
+                            checkbox.checked = !checkbox.checked;
+                            
+                            if (checkbox.checked) {
+                                this.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                                this.style.color = 'white';
+                                this.style.borderColor = '#667eea';
+                            } else {
+                                this.style.background = 'white';
+                                this.style.color = '#212529';
+                                this.style.borderColor = '#e9ecef';
+                            }
+                        });
+                    });
+                }, 100);
+                
+                // Temporary access management functions
+                window.toggleTemporaryAccessEdit = function() {
+                    const isTemporary = document.getElementById('is_temporary_edit').checked;
+                    const tempFields = document.getElementById('temporaryAccessFieldsEdit');
+                    const expiresInput = document.getElementById('access_expires_at_edit');
+                    
+                    if (isTemporary) {
+                        tempFields.style.display = 'block';
+                        if (expiresInput) expiresInput.required = true;
+                        if (!expiresInput.value) {
+                            const now = new Date();
+                            now.setDate(now.getDate() + 14);
+                            expiresInput.value = now.toISOString().slice(0, 16);
+                        }
+                    } else {
+                        tempFields.style.display = 'none';
+                        if (expiresInput) {
+                            expiresInput.required = false;
+                            expiresInput.value = '';
+                        }
+                    }
+                };
+                
+                window.makePermanentAccess = function() {
+                    document.getElementById('is_temporary_edit').checked = false;
+                    toggleTemporaryAccessEdit();
+                };
+                
+                window.extendAccess = function() {
+                    const expiresInput = document.getElementById('access_expires_at_edit');
+                    if (expiresInput) {
+                        const currentDate = expiresInput.value ? new Date(expiresInput.value) : new Date();
+                        currentDate.setDate(currentDate.getDate() + 30);
+                        expiresInput.value = currentDate.toISOString().slice(0, 16);
+                    }
+                };
             })
             .catch(() => alert('Could not load teacher details.'));
     }

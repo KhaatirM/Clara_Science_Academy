@@ -158,7 +158,8 @@
                     </thead>
                     <tbody id="redoTableBody">
                         {% for redo in redos %}
-                        <tr class="redo-row" data-class-id="{{ redo.assignment.class_id }}" 
+                        {% if redo.assignment and redo.student %}
+                        <tr class="redo-row" data-class-id="{{ redo.assignment.class_id if redo.assignment else '' }}" 
                             data-student-name="{{ redo.student.first_name }} {{ redo.student.last_name }}"
                             data-status="{{ 'graded' if redo.final_grade else ('submitted' if redo.is_used else ('overdue' if redo.redo_deadline < now else 'pending')) }}">
                             <td>
@@ -166,10 +167,10 @@
                                 <br><small class="text-muted">Grade {{ redo.student.grade_level | display_grade }}</small>
                             </td>
                             <td>
-                                {{ redo.assignment.title }}
+                                {{ redo.assignment.title if redo.assignment else 'Unknown Assignment' }}
                                 <br><small class="text-muted">{{ redo.reason or 'No reason' }}</small>
                             </td>
-                            <td>{{ redo.assignment.class_info.name }}</td>
+                            <td>{{ redo.assignment.class_info.name if (redo.assignment and redo.assignment.class_info) else 'Unknown Class' }}</td>
                             <td>
                                 {% if redo.original_grade %}
                                     <span class="badge bg-danger">{{ redo.original_grade }}%</span>
@@ -209,10 +210,12 @@
                             </td>
                             <td>
                                 <div class="btn-group btn-group-sm">
+                                    {% if redo.assignment %}
                                     <a href="{{ url_for('management.grade_assignment', assignment_id=redo.assignment_id) }}" 
                                        class="btn btn-outline-primary" title="Grade">
                                         <i class="bi bi-pencil"></i>
                                     </a>
+                                    {% endif %}
                                     {% if not redo.is_used %}
                                     <button class="btn btn-outline-danger" onclick="revokeRedo({{ redo.id }})" title="Revoke">
                                         <i class="bi bi-x-circle"></i>
@@ -221,6 +224,7 @@
                                 </div>
                             </td>
                         </tr>
+                        {% endif %}
                         {% endfor %}
                     </tbody>
                 </table>

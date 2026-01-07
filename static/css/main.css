@@ -18,7 +18,7 @@
 @import url('layout.css');
 @import url('components.css');
 @import url('assignments.css');
-@import url('view-assignment.css');
+@import url('view_assignment.css');
 @import url('home-page.css');
 
 /* Additional global styles that don't fit in other categories */

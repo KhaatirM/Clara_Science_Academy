@@ -1,0 +1,284 @@
+/* Modern Quiz Page Styling */
+
+/* Background and container */
+.container-fluid {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+/* Card enhancements */
+.card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Question cards */
+.question-card {
+    animation: fadeIn 0.3s ease-in;
+    transition: all 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Option items with enhanced hover effects */
+.option-item {
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.option-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.1), transparent);
+    transition: left 0.5s ease;
+}
+
+.option-item:hover::before {
+    left: 100%;
+}
+
+.option-item input[type="radio"]:checked + label {
+    color: #667eea;
+    font-weight: 600;
+}
+
+/* Progress bar animation */
+.progress-bar {
+    transition: width 0.6s ease;
+}
+
+/* Button hover effects */
+.btn {
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.btn:hover::before {
+    width: 300px;
+    height: 300px;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2) !important;
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+/* Timer display enhancements */
+#quizTimer {
+    transition: all 0.3s ease;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+/* Badge enhancements */
+.badge {
+    transition: all 0.2s ease;
+}
+
+.badge:hover {
+    transform: scale(1.05);
+}
+
+/* Form input focus effects */
+.form-control:focus,
+.form-control-lg:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    transform: translateY(-1px);
+}
+
+textarea.form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+/* Review summary enhancements */
+.review-summary .card {
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Keyboard shortcuts help */
+.keyboard-shortcuts-help {
+    animation: slideDown 0.3s ease-out;
+}
+
+/* Answer status list items */
+#answerStatusList > div {
+    transition: all 0.2s ease;
+}
+
+#answerStatusList > div:hover {
+    transform: translateX(5px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Quick navigation buttons */
+#quickNavButtons button {
+    transition: all 0.2s ease;
+    min-width: 45px;
+}
+
+#quickNavButtons button:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Question navigation */
+.question-navigation {
+    transition: all 0.3s ease;
+}
+
+/* Disabled button styling */
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed !important;
+}
+
+.btn:disabled:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+/* Alert enhancements */
+.alert {
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Options review styling */
+.options-review .mb-3 {
+    transition: all 0.3s ease;
+}
+
+.options-review .mb-3:hover {
+    transform: translateX(5px);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .card-header h2,
+    .card-header h4 {
+        font-size: 1.5rem !important;
+    }
+    
+    .question-card {
+        padding: 1.5rem !important;
+    }
+    
+    .btn-lg {
+        padding: 0.75rem 1.5rem !important;
+        font-size: 1rem !important;
+    }
+}
+
+/* Loading states */
+.btn.loading {
+    position: relative;
+    color: transparent !important;
+}
+
+.btn.loading::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: 50%;
+    left: 50%;
+    margin-left: -8px;
+    margin-top: -8px;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Smooth scrolling */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Focus visible for accessibility */
+.btn:focus-visible,
+.form-control:focus-visible,
+input[type="radio"]:focus-visible {
+    outline: 2px solid #667eea;
+    outline-offset: 2px;
+}
+
+/* Print styles */
+@media print {
+    .btn,
+    .question-navigation,
+    #reviewSummary,
+    #keyboardShortcutsHelp {
+        display: none !important;
+    }
+    
+    .question-card {
+        display: block !important;
+        page-break-inside: avoid;
+    }
+}
+

@@ -5,76 +5,75 @@
 {% endblock %}
 
 {% block dashboard_content %}
-<div class="container-fluid px-2 px-md-4">
-    <!-- Enhanced Header Section -->
+<div class="container-fluid px-2 px-md-4" style="background: #f8f9fa; min-height: 100vh; padding: 2rem 0;">
+    <!-- Modern Header Section -->
     <div class="row mb-4">
         <div class="col-12">
-            <div class="card border-0 shadow-sm bg-gradient-primary text-white">
-                <div class="card-body p-4">
-                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
-                        <div class="mb-3 mb-md-0">
-                            <h2 class="mb-2 fw-bold">
-                                <i class="fas fa-calendar-alt me-3 text-warning"></i>
-                                School Calendar - {{ month_name }} {{ year }}
-                            </h2>
-                            <p class="mb-0 opacity-75">
-                                <i class="fas fa-chalkboard-teacher me-2"></i>
-                                {% if current_user.role in ['Director', 'School Administrator'] %}
-                                    Manage and view school calendar events
-                                {% elif 'Teacher' in current_user.role %}
-                                    View school calendar and important dates
-                                {% else %}
-                                    View school calendar and holidays
-                                {% endif %}
-                            </p>
-                        </div>
-                        <div class="d-flex flex-wrap gap-2">
-                            <!-- Navigation buttons -->
-                            <div class="btn-group" role="group">
-                                {% if 'Teacher' in current_user.role %}
-                                    <a href="{{ url_for('teacher.calendar', month=prev_month.month, year=prev_month.year) }}" class="btn btn-outline-light">
-                                        <i class="fas fa-chevron-left me-1"></i>Previous
-                                    </a>
-                                    <a href="{{ url_for('teacher.calendar', month=next_month.month, year=next_month.year) }}" class="btn btn-outline-light">
-                                        Next<i class="fas fa-chevron-right ms-1"></i>
-                                    </a>
-                                {% elif current_user.role == 'Student' %}
-                                    <a href="{{ url_for('student.student_school_calendar', month=prev_month.month, year=prev_month.year) }}" class="btn btn-outline-light">
-                                        <i class="fas fa-chevron-left me-1"></i>Previous
-                                    </a>
-                                    <a href="{{ url_for('student.student_school_calendar', month=next_month.month, year=next_month.year) }}" class="btn btn-outline-light">
-                                        Next<i class="fas fa-chevron-right ms-1"></i>
-                                    </a>
-                                {% else %}
-                                    <a href="{{ url_for('management.calendar', month=prev_month.month, year=prev_month.year) }}" class="btn btn-outline-light">
-                                        <i class="fas fa-chevron-left me-1"></i>Previous
-                                    </a>
-                                    <a href="{{ url_for('management.calendar', month=next_month.month, year=next_month.year) }}" class="btn btn-outline-light">
-                                        Next<i class="fas fa-chevron-right ms-1"></i>
-                                    </a>
-                                {% endif %}
-                            </div>
-                            
-                            <!-- Management-only buttons -->
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 1rem; padding: 2rem; color: white; box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3); margin-bottom: 2rem;">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+                    <div>
+                        <h1 class="mb-2" style="font-weight: 700; font-size: 2.5rem;">
+                            <i class="bi bi-calendar3 me-3"></i>{{ month_name }} {{ year }}
+                        </h1>
+                        <p class="mb-0" style="opacity: 0.95; font-size: 1.1rem;">
+                            <i class="bi bi-info-circle me-2"></i>
                             {% if current_user.role in ['Director', 'School Administrator'] %}
-                                <div class="btn-group" role="group">
-                                    <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#addEventModal">
-                                        <i class="fas fa-plus me-1"></i>Add Event
-                                    </button>
-                                    <a href="{{ url_for('management.teacher_work_days') }}" class="btn btn-outline-light">
-                                        <i class="fas fa-user-tie me-1"></i>Teacher Work Days
-                                    </a>
-                                    <a href="{{ url_for('management.school_breaks') }}" class="btn btn-outline-light">
-                                        <i class="fas fa-calendar-times me-1"></i>School Breaks
-                                    </a>
-                                </div>
+                                Manage and view school calendar events
+                            {% elif 'Teacher' in current_user.role %}
+                                View school calendar and important dates
+                            {% else %}
+                                View school calendar and holidays
                             {% endif %}
-                            
-                            <!-- Back button -->
-                            <button class="btn btn-secondary" onclick="window.history.back()">
-                                <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
-                            </button>
+                        </p>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                        <!-- Quick Navigation -->
+                        <div class="btn-group" role="group">
+                            {% if 'Teacher' in current_user.role %}
+                                <a href="{{ url_for('teacher.calendar', month=prev_month.month, year=prev_month.year) }}" class="btn btn-light" style="border-radius: 0.5rem 0 0 0.5rem;">
+                                    <i class="bi bi-chevron-left me-1"></i>Previous
+                                </a>
+                                <a href="{{ url_for('teacher.calendar') }}" class="btn btn-light" style="border-radius: 0;">
+                                    <i class="bi bi-calendar-check me-1"></i>Today
+                                </a>
+                                <a href="{{ url_for('teacher.calendar', month=next_month.month, year=next_month.year) }}" class="btn btn-light" style="border-radius: 0 0.5rem 0.5rem 0;">
+                                    Next<i class="bi bi-chevron-right ms-1"></i>
+                                </a>
+                            {% elif current_user.role == 'Student' %}
+                                <a href="{{ url_for('student.student_school_calendar', month=prev_month.month, year=prev_month.year) }}" class="btn btn-light" style="border-radius: 0.5rem 0 0 0.5rem;">
+                                    <i class="bi bi-chevron-left me-1"></i>Previous
+                                </a>
+                                <a href="{{ url_for('student.student_school_calendar') }}" class="btn btn-light" style="border-radius: 0;">
+                                    <i class="bi bi-calendar-check me-1"></i>Today
+                                </a>
+                                <a href="{{ url_for('student.student_school_calendar', month=next_month.month, year=next_month.year) }}" class="btn btn-light" style="border-radius: 0 0.5rem 0.5rem 0;">
+                                    Next<i class="bi bi-chevron-right ms-1"></i>
+                                </a>
+                            {% else %}
+                                <a href="{{ url_for('management.calendar', month=prev_month.month, year=prev_month.year) }}" class="btn btn-light" style="border-radius: 0.5rem 0 0 0.5rem;">
+                                    <i class="bi bi-chevron-left me-1"></i>Previous
+                                </a>
+                                <a href="{{ url_for('management.calendar') }}" class="btn btn-light" style="border-radius: 0;">
+                                    <i class="bi bi-calendar-check me-1"></i>Today
+                                </a>
+                                <a href="{{ url_for('management.calendar', month=next_month.month, year=next_month.year) }}" class="btn btn-light" style="border-radius: 0 0.5rem 0.5rem 0;">
+                                    Next<i class="bi bi-chevron-right ms-1"></i>
+                                </a>
+                            {% endif %}
                         </div>
+                        
+                        <!-- Management-only buttons -->
+                        {% if current_user.role in ['Director', 'School Administrator'] %}
+                            <button class="btn btn-warning fw-bold" data-bs-toggle="modal" data-bs-target="#addEventModal" style="border-radius: 0.5rem; box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4);">
+                                <i class="bi bi-plus-circle me-2"></i>Add Event
+                            </button>
+                            <a href="{{ url_for('management.teacher_work_days') }}" class="btn btn-light fw-bold" style="border-radius: 0.5rem;">
+                                <i class="bi bi-person-badge me-2"></i>Teacher Work Days
+                            </a>
+                            <a href="{{ url_for('management.school_breaks') }}" class="btn btn-light fw-bold" style="border-radius: 0.5rem;">
+                                <i class="bi bi-calendar-x me-2"></i>School Breaks
+                            </a>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -84,19 +83,33 @@
     <!-- Calendar Grid -->
     <div class="row">
         <div class="col-12">
-            <div class="card shadow-lg">
+            <div class="card border-0 shadow-lg" style="border-radius: 1rem; overflow: hidden;">
                 <div class="card-body p-0">
                     <div class="calendar-container">
                         <!-- Calendar Header -->
-                        <div class="calendar-header bg-light border-bottom">
-                            <div class="row text-center fw-bold">
-                                <div class="col calendar-day-header py-3">Mon</div>
-                                <div class="col calendar-day-header py-3">Tue</div>
-                                <div class="col calendar-day-header py-3">Wed</div>
-                                <div class="col calendar-day-header py-3">Thu</div>
-                                <div class="col calendar-day-header py-3">Fri</div>
-                                <div class="col calendar-day-header py-3">Sat</div>
-                                <div class="col calendar-day-header py-3">Sun</div>
+                        <div class="calendar-header" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-bottom: 3px solid #667eea;">
+                            <div class="row text-center fw-bold g-0">
+                                <div class="col calendar-day-header py-3" style="font-size: 1rem; color: #495057; text-transform: uppercase; letter-spacing: 1px;">
+                                    <i class="bi bi-calendar-week me-1"></i>Mon
+                                </div>
+                                <div class="col calendar-day-header py-3" style="font-size: 1rem; color: #495057; text-transform: uppercase; letter-spacing: 1px;">
+                                    <i class="bi bi-calendar-week me-1"></i>Tue
+                                </div>
+                                <div class="col calendar-day-header py-3" style="font-size: 1rem; color: #495057; text-transform: uppercase; letter-spacing: 1px;">
+                                    <i class="bi bi-calendar-week me-1"></i>Wed
+                                </div>
+                                <div class="col calendar-day-header py-3" style="font-size: 1rem; color: #495057; text-transform: uppercase; letter-spacing: 1px;">
+                                    <i class="bi bi-calendar-week me-1"></i>Thu
+                                </div>
+                                <div class="col calendar-day-header py-3" style="font-size: 1rem; color: #495057; text-transform: uppercase; letter-spacing: 1px;">
+                                    <i class="bi bi-calendar-week me-1"></i>Fri
+                                </div>
+                                <div class="col calendar-day-header py-3 weekend-header" style="font-size: 1rem; color: #495057; text-transform: uppercase; letter-spacing: 1px;">
+                                    <i class="bi bi-calendar-week me-1"></i>Sat
+                                </div>
+                                <div class="col calendar-day-header py-3 weekend-header" style="font-size: 1rem; color: #495057; text-transform: uppercase; letter-spacing: 1px;">
+                                    <i class="bi bi-calendar-week me-1"></i>Sun
+                                </div>
                             </div>
                         </div>
                         
@@ -104,30 +117,54 @@
                         <div class="calendar-body">
                             {% if calendar_data and calendar_data.weeks %}
                                 {% for week in calendar_data.weeks %}
-                                    <div class="row calendar-week border-bottom">
+                                    <div class="row calendar-week g-0 border-bottom">
                                         {% for day in week %}
-                                            <div class="col calendar-day {% if not day.is_current_month %}calendar-day-other-month{% endif %} {% if day.is_today %}calendar-day-today{% endif %}" style="min-height: 120px;">
+                                            <div class="col calendar-day {% if not day.is_current_month %}calendar-day-other-month{% endif %} {% if day.is_today %}calendar-day-today{% endif %}"
+                                                 style="min-height: 140px; position: relative; transition: all 0.2s ease; display: flex; flex-direction: column;">
                                                 {% if day.is_current_month %}
-                                                    <div class="day-number fw-bold p-2">{{ day.day_num }}</div>
-                                                    <div class="day-events px-2 pb-2">
-                                                        {% for event in day.events %}
-                                                            <div class="calendar-event event-{{ event.type if event.type else 'default' }}" title="{{ event.title }} - {{ event.category if event.category else 'Event' }}">
-                                                                <small class="event-title text-white px-1 py-1 rounded d-block">{{ event.title }}</small>
-                                                            </div>
-                                                        {% endfor %}
+                                                    <div class="day-number fw-bold p-2" style="font-size: 1.2rem; color: {% if day.is_today %}#667eea{% else %}#212529{% endif %}; flex-shrink: 0;">
+                                                        {% if day.is_today %}
+                                                            <span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 0.25rem 0.5rem; border-radius: 50%; display: inline-block; min-width: 2rem; text-align: center;">
+                                                                {{ day.day_num }}
+                                                            </span>
+                                                        {% else %}
+                                                            {{ day.day_num }}
+                                                        {% endif %}
+                                                    </div>
+                                                    <div class="day-events px-2 pb-2" style="flex: 1; overflow: hidden; display: flex; flex-direction: column; gap: 0.25rem;">
+                                                        {% if day.events %}
+                                                            {% for event in day.events %}
+                                                                {% set event_type = event.type if event.type else 'default' %}
+                                                                {# Normalize event types to match CSS classes #}
+                                                                {% if event_type == 'other' or event_type == 'other_event' %}
+                                                                    {% set event_type = 'other_event' %}
+                                                                {% elif event_type == 'break' or event_type == 'school_break' %}
+                                                                    {% set event_type = 'school_break_start' %}
+                                                                {% elif event_type == 'professional_development' or event_type == 'pd' %}
+                                                                    {% set event_type = 'professional_development' %}
+                                                                {% elif event_type not in ['quarter_start', 'quarter_end', 'semester_start', 'semester_end', 'teacher_work_day', 'school_break_start', 'school_break_end', 'holiday', 'professional_development', 'other_event'] %}
+                                                                    {% set event_type = 'other_event' %}
+                                                                {% endif %}
+                                                                <div class="calendar-event event-{{ event_type }} mb-0" 
+                                                                     onclick="showEventDetails('{{ event.title|e }}', '{{ event.category if event.category else 'Event'|e }}', '{{ event.description if event.description else 'No additional details available for this event.'|e }}')"
+                                                                     style="cursor: pointer; border-radius: 0.375rem; padding: 0.375rem 0.5rem; font-size: 0.75rem; font-weight: 500; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1); flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; min-height: 24px; max-height: 24px;">
+                                                                    <i class="bi bi-circle-fill me-1" style="font-size: 0.5rem; flex-shrink: 0;"></i>
+                                                                    <span class="event-title text-white" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ event.title }}</span>
+                                                                </div>
+                                                            {% endfor %}
+                                                        {% endif %}
                                                     </div>
                                                 {% else %}
-                                                    <div class="day-number text-muted p-2">{{ day.day_num }}</div>
+                                                    <div class="day-number text-muted p-2" style="font-size: 1rem; opacity: 0.4; flex-shrink: 0;">{{ day.day_num }}</div>
                                                 {% endif %}
                                             </div>
                                         {% endfor %}
                                     </div>
                                 {% endfor %}
                             {% else %}
-                                <!-- Fallback if no calendar data -->
                                 <div class="text-center py-5">
-                                    <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
-                                    <h5 class="text-muted">No calendar data available</h5>
+                                    <i class="bi bi-calendar-x" style="font-size: 4rem; color: #dee2e6;"></i>
+                                    <h5 class="text-muted mt-3">No calendar data available</h5>
                                     <p class="text-muted">Calendar data is not available for this month.</p>
                                 </div>
                             {% endif %}
@@ -138,66 +175,66 @@
         </div>
     </div>
 
-    <!-- Calendar Legend -->
+    <!-- Enhanced Calendar Legend -->
     <div class="row mt-4">
         <div class="col-12">
-            <div class="card shadow-sm">
-                <div class="card-header bg-light">
-                    <h6 class="mb-0">
-                        <i class="fas fa-info-circle me-2"></i>Calendar Legend
-                    </h6>
+            <div class="card border-0 shadow-sm" style="border-radius: 1rem; overflow: hidden;">
+                <div class="card-header text-white" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border: none; padding: 1.25rem;">
+                    <h5 class="mb-0" style="font-weight: 600; font-size: 1.25rem;">
+                        <i class="bi bi-info-circle me-2"></i>Calendar Legend
+                    </h5>
                 </div>
-                <div class="card-body">
+                <div class="card-body" style="padding: 1.5rem; background: #f8f9fa;">
                     <div class="row g-3">
                         <div class="col-md-6">
                             <div class="d-flex flex-wrap gap-3">
-                                <div class="d-flex align-items-center">
+                                <div class="d-flex align-items-center p-2" style="background: white; border-radius: 0.5rem; border: 2px solid #e9ecef;">
                                     <span class="calendar-legend-item event-quarter_start me-2"></span>
-                                    <small>Quarter Start</small>
+                                    <small class="fw-bold">Quarter Start</small>
                                 </div>
-                                <div class="d-flex align-items-center">
+                                <div class="d-flex align-items-center p-2" style="background: white; border-radius: 0.5rem; border: 2px solid #e9ecef;">
                                     <span class="calendar-legend-item event-quarter_end me-2"></span>
-                                    <small>Quarter End</small>
+                                    <small class="fw-bold">Quarter End</small>
                                 </div>
-                                <div class="d-flex align-items-center">
+                                <div class="d-flex align-items-center p-2" style="background: white; border-radius: 0.5rem; border: 2px solid #e9ecef;">
                                     <span class="calendar-legend-item event-semester_start me-2"></span>
-                                    <small>Semester Start</small>
+                                    <small class="fw-bold">Semester Start</small>
                                 </div>
-                                <div class="d-flex align-items-center">
+                                <div class="d-flex align-items-center p-2" style="background: white; border-radius: 0.5rem; border: 2px solid #e9ecef;">
                                     <span class="calendar-legend-item event-semester_end me-2"></span>
-                                    <small>Semester End</small>
+                                    <small class="fw-bold">Semester End</small>
                                 </div>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="d-flex flex-wrap gap-3">
-                                <div class="d-flex align-items-center">
+                                <div class="d-flex align-items-center p-2" style="background: white; border-radius: 0.5rem; border: 2px solid #e9ecef;">
                                     <span class="calendar-legend-item event-teacher_work_day me-2"></span>
-                                    <small>Teacher Work Day</small>
+                                    <small class="fw-bold">Teacher Work Day</small>
                                 </div>
-                                <div class="d-flex align-items-center">
+                                <div class="d-flex align-items-center p-2" style="background: white; border-radius: 0.5rem; border: 2px solid #e9ecef;">
                                     <span class="calendar-legend-item event-school_break_start me-2"></span>
-                                    <small>School Break Start</small>
+                                    <small class="fw-bold">School Break Start</small>
                                 </div>
-                                <div class="d-flex align-items-center">
+                                <div class="d-flex align-items-center p-2" style="background: white; border-radius: 0.5rem; border: 2px solid #e9ecef;">
                                     <span class="calendar-legend-item event-school_break_end me-2"></span>
-                                    <small>School Break End</small>
+                                    <small class="fw-bold">School Break End</small>
                                 </div>
-                                <div class="d-flex align-items-center">
+                                <div class="d-flex align-items-center p-2" style="background: white; border-radius: 0.5rem; border: 2px solid #e9ecef;">
                                     <span class="calendar-legend-item event-holiday me-2"></span>
-                                    <small>Holiday</small>
+                                    <small class="fw-bold">Holiday</small>
                                 </div>
                             </div>
                         </div>
                         <div class="col-md-12 mt-2">
                             <div class="d-flex flex-wrap gap-3">
-                                <div class="d-flex align-items-center">
+                                <div class="d-flex align-items-center p-2" style="background: white; border-radius: 0.5rem; border: 2px solid #e9ecef;">
                                     <span class="calendar-legend-item event-professional_development me-2"></span>
-                                    <small>Professional Development</small>
+                                    <small class="fw-bold">Professional Development</small>
                                 </div>
-                                <div class="d-flex align-items-center">
+                                <div class="d-flex align-items-center p-2" style="background: white; border-radius: 0.5rem; border: 2px solid #e9ecef;">
                                     <span class="calendar-legend-item event-other_event me-2"></span>
-                                    <small>Other Events</small>
+                                    <small class="fw-bold">Other Events</small>
                                 </div>
                             </div>
                         </div>
@@ -208,31 +245,61 @@
     </div>
 </div>
 
-<!-- Add Event Modal (Management only) -->
-{% if current_user.role in ['Director', 'School Administrator'] %}
-<div class="modal fade" id="addEventModal" tabindex="-1" aria-labelledby="addEventModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="addEventModalLabel">
-                    <i class="fas fa-plus-circle me-2"></i>Add Calendar Event
+<!-- Event Details Modal -->
+<div class="modal fade" id="eventDetailsModal" tabindex="-1" aria-labelledby="eventDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 1rem; border: none; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
+            <div class="modal-header text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 1rem 1rem 0 0; border: none; padding: 1.5rem;">
+                <h5 class="modal-title fw-bold" id="eventDetailsModalLabel">
+                    <i class="bi bi-calendar-event me-2"></i>Event Details
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body" style="padding: 1.5rem;">
+                <div id="eventDetailsContent">
+                    <!-- Content will be populated by JavaScript -->
+                </div>
+            </div>
+            <div class="modal-footer" style="border: none; padding: 1rem 1.5rem;">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 0.5rem;">
+                    <i class="bi bi-x-circle me-2"></i>Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Event Modal (Management only) -->
+{% if current_user.role in ['Director', 'School Administrator'] %}
+<div class="modal fade" id="addEventModal" tabindex="-1" aria-labelledby="addEventModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 1rem; border: none; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
+            <div class="modal-header text-white" style="background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%); border-radius: 1rem 1rem 0 0; border: none; padding: 1.5rem;">
+                <h5 class="modal-title fw-bold" id="addEventModalLabel">
+                    <i class="bi bi-plus-circle me-2"></i>Add Calendar Event
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" style="padding: 1.5rem;">
                 <form method="POST" action="{{ url_for('management.add_calendar_event') }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     <div class="mb-3">
-                        <label for="event_title" class="form-label">Event Title <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="event_title" name="event_title" required>
+                        <label for="event_title" class="form-label fw-bold" style="color: #495057;">
+                            <i class="bi bi-tag me-1 text-primary"></i>Event Title <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="event_title" name="event_title" required style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;">
                     </div>
                     <div class="mb-3">
-                        <label for="event_date" class="form-label">Event Date <span class="text-danger">*</span></label>
-                        <input type="date" class="form-control" id="event_date" name="event_date" required>
+                        <label for="event_date" class="form-label fw-bold" style="color: #495057;">
+                            <i class="bi bi-calendar me-1 text-primary"></i>Event Date <span class="text-danger">*</span>
+                        </label>
+                        <input type="date" class="form-control" id="event_date" name="event_date" required style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;">
                     </div>
                     <div class="mb-3">
-                        <label for="event_category" class="form-label">Event Category</label>
-                        <select class="form-select" id="event_category" name="event_category">
+                        <label for="event_category" class="form-label fw-bold" style="color: #495057;">
+                            <i class="bi bi-folder me-1 text-primary"></i>Event Category
+                        </label>
+                        <select class="form-select" id="event_category" name="event_category" style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;">
                             <option value="quarter_start">Quarter Start</option>
                             <option value="quarter_end">Quarter End</option>
                             <option value="semester_start">Semester Start</option>
@@ -241,17 +308,22 @@
                             <option value="school_break_start">School Break Start</option>
                             <option value="school_break_end">School Break End</option>
                             <option value="holiday">Holiday</option>
+                            <option value="professional_development">Professional Development</option>
                             <option value="other">Other</option>
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label for="event_description" class="form-label">Description</label>
-                        <textarea class="form-control" id="event_description" name="event_description" rows="3" placeholder="Optional description for this event"></textarea>
+                        <label for="event_description" class="form-label fw-bold" style="color: #495057;">
+                            <i class="bi bi-text-paragraph me-1 text-primary"></i>Description
+                        </label>
+                        <textarea class="form-control" id="event_description" name="event_description" rows="3" placeholder="Optional description for this event" style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;"></textarea>
                     </div>
                     <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-plus me-2"></i>Add Event
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 0.5rem; flex: 1;">
+                            <i class="bi bi-x-circle me-2"></i>Cancel
+                        </button>
+                        <button type="submit" class="btn text-white fw-bold" style="background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%); border: none; border-radius: 0.5rem; flex: 1; box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4);">
+                            <i class="bi bi-plus-circle me-2"></i>Add Event
                         </button>
                     </div>
                 </form>
@@ -261,71 +333,56 @@
 </div>
 {% endif %}
 
-<!-- Calendar Styling -->
-
-
 <script>
-// Initialize Bootstrap tooltips if available
-document.addEventListener('DOMContentLoaded', function() {
-    // Add any calendar-specific JavaScript here
-    console.log('Calendar page loaded for {{ current_user.role }}');
+// Show event details modal
+function showEventDetails(title, category, description) {
+    const modal = new bootstrap.Modal(document.getElementById('eventDetailsModal'));
+    const content = document.getElementById('eventDetailsContent');
     
-    // Handle event clicks if needed
-    document.querySelectorAll('.calendar-event').forEach(event => {
-        event.addEventListener('click', function() {
-            // Could add event detail modal or other interactions here
-            console.log('Event clicked:', this.title);
+    content.innerHTML = `
+        <div class="mb-3">
+            <h6 class="fw-bold text-primary mb-2">
+                <i class="bi bi-tag me-2"></i>Event Title
+            </h6>
+            <p class="mb-0" style="font-size: 1.1rem;">${title}</p>
+        </div>
+        <div class="mb-3">
+            <h6 class="fw-bold text-primary mb-2">
+                <i class="bi bi-folder me-2"></i>Category
+            </h6>
+            <p class="mb-0">
+                <span class="badge" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 0.5rem 1rem; border-radius: 0.5rem;">
+                    ${category}
+                </span>
+            </p>
+        </div>
+        <div>
+            <h6 class="fw-bold text-primary mb-2">
+                <i class="bi bi-text-paragraph me-2"></i>Description
+            </h6>
+            <p class="mb-0" style="color: #6c757d;">${description}</p>
+        </div>
+    `;
+    
+    modal.show();
+}
+
+// Initialize calendar interactions
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Modern calendar page loaded for {{ current_user.role }}');
+    
+    // Add smooth scroll behavior
+    document.querySelectorAll('.calendar-day').forEach(day => {
+        day.addEventListener('mouseenter', function() {
+            if (this.classList.contains('calendar-day-today')) {
+                this.style.transform = 'scale(1.02)';
+            }
+        });
+        day.addEventListener('mouseleave', function() {
+            this.style.transform = 'scale(1)';
         });
     });
-    
-    // Show calendar notice modal on page load (only once per session)
-    if (!sessionStorage.getItem('calendarNoticeShown')) {
-        const modal = new bootstrap.Modal(document.getElementById('calendarNoticeModal'));
-        modal.show();
-        sessionStorage.setItem('calendarNoticeShown', 'true');
-    }
 });
 </script>
-
-<!-- Calendar Notice Modal -->
-<div class="modal fade" id="calendarNoticeModal" tabindex="-1" aria-labelledby="calendarNoticeModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-warning text-dark">
-                <h5 class="modal-title" id="calendarNoticeModalLabel">
-                    <i class="fas fa-exclamation-triangle me-2"></i>Calendar Notice
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="alert alert-warning">
-                    <h6 class="alert-heading"><i class="fas fa-info-circle me-2"></i>Minor Issues Notice</h6>
-                    <p class="mb-2">We're aware of some minor issues with the calendar display:</p>
-                </div>
-                
-                <ul class="list-unstyled">
-                    <li class="mb-2"><i class="fas fa-exclamation-circle text-warning me-2"></i><strong>Color Coordination:</strong> Some date colors may not perfectly match their corresponding days</li>
-                    <li class="mb-2"><i class="fas fa-exclamation-circle text-warning me-2"></i><strong>Visual Alignment:</strong> Minor display inconsistencies between different calendar views</li>
-                    <li class="mb-0"><i class="fas fa-exclamation-circle text-warning me-2"></i><strong>Event Highlighting:</strong> Some events may not highlight with the intended colors</li>
-                </ul>
-                
-                <div class="alert alert-info mt-3">
-                    <h6 class="alert-heading"><i class="fas fa-tools me-2"></i>Working on It!</h6>
-                    <p class="mb-0">Our development team is actively working to resolve these visual issues. These are cosmetic problems and don't affect the functionality of the calendar or your ability to view important dates and events.</p>
-                </div>
-                
-                <div class="alert alert-success">
-                    <h6 class="alert-heading"><i class="fas fa-check-circle me-2"></i>What Works Perfectly</h6>
-                    <p class="mb-0">All calendar functionality including navigation, event viewing, date selection, and event management is working correctly. Only the visual styling needs refinement.</p>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
-                    <i class="fas fa-check me-1"></i>Got It, Continue
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 
 {% endblock %}

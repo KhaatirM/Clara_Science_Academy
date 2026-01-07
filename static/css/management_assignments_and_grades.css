@@ -20,6 +20,40 @@
     border-color: white;
 }
 
+/* Extension Requests Button - Enhanced Modern Design */
+.btn-extension-requests {
+    background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+    color: white;
+    border: 2px solid #ffc107;
+    padding: 0.75rem 1.5rem;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+}
+
+.btn-extension-requests:hover {
+    background: linear-gradient(135deg, #ff9800 0%, #ffc107 100%);
+    color: white;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(255, 193, 7, 0.5);
+    border-color: #ffc107;
+}
+
+.btn-extension-requests:active {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(255, 193, 7, 0.4);
+}
+
+.btn-extension-requests i {
+    font-size: 1.1rem;
+}
+
 /* Assignment Context Badges - Enhanced with higher specificity */
 .card.assignment-card .card-body .badge.bg-primary,
 .card.assignment-card .card-body .badge.bg-secondary,

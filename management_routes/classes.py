@@ -252,7 +252,7 @@ def add_class():
             return redirect(url_for('management.add_class'))
     
     # GET request - show form
-    teachers = TeacherStaff.query.all()
+    teachers = TeacherStaff.query.filter(TeacherStaff.is_deleted == False).all()
     return render_template('management/add_class.html', available_teachers=teachers)
 
 
@@ -279,7 +279,7 @@ def manage_class(class_id):
     enrolled_students = [enrollment.student for enrollment in enrollments if enrollment.student]
     
     # Get available teachers for assignment
-    available_teachers = TeacherStaff.query.all()
+    available_teachers = TeacherStaff.query.filter(TeacherStaff.is_deleted == False).all()
     
     # Get today's date for age calculations
     today = date.today()
@@ -312,10 +312,97 @@ def edit_class(class_id):
             class_obj.subject = request.form.get('subject', '').strip()
             class_obj.teacher_id = request.form.get('teacher_id', type=int)
             class_obj.room_number = request.form.get('room_number', '').strip() or None
-            class_obj.schedule = request.form.get('schedule', '').strip() or None
+            schedule_text = request.form.get('schedule', '').strip() or None
+            class_obj.schedule = schedule_text
             class_obj.max_students = request.form.get('max_students', 30, type=int)
             class_obj.description = request.form.get('description', '').strip() or None
             class_obj.is_active = 'is_active' in request.form
+            
+            # Handle schedule - Parse and create ClassSchedule records
+            from models import ClassSchedule
+            from datetime import datetime, time
+            
+            # Delete existing schedules for this class
+            existing_schedules = ClassSchedule.query.filter_by(class_id=class_id).all()
+            for schedule in existing_schedules:
+                db.session.delete(schedule)
+            
+            # Parse and create new schedules if schedule text is provided
+            if schedule_text:
+                # Parse schedule format: "Mon 9:00 AM-10:00 AM, Tue 10:00 AM-11:00 AM"
+                # Day abbreviations: Mon, Tue, Wed, Thu, Fri, Sat, Sun
+                day_mapping = {
+                    'mon': 0, 'monday': 0,
+                    'tue': 1, 'tuesday': 1,
+                    'wed': 2, 'wednesday': 2,
+                    'thu': 3, 'thursday': 3,
+                    'fri': 4, 'friday': 4,
+                    'sat': 5, 'saturday': 5,
+                    'sun': 6, 'sunday': 6
+                }
+                
+                # Split by comma to get individual schedule entries
+                schedule_entries = [s.strip() for s in schedule_text.split(',')]
+                
+                for entry in schedule_entries:
+                    if not entry:
+                        continue
+                    
+                    try:
+                        # Parse format: "Mon 9:00 AM-10:00 AM" or "Mon 9:00 AM"
+                        parts = entry.split()
+                        if len(parts) < 2:
+                            continue
+                        
+                        day_str = parts[0].lower()
+                        day_of_week = day_mapping.get(day_str)
+                        
+                        if day_of_week is None:
+                            continue
+                        
+                        # Parse time(s)
+                        time_str = ' '.join(parts[1:])  # "9:00 AM-10:00 AM" or "9:00 AM"
+                        
+                        if '-' in time_str:
+                            # Has start and end time
+                            start_str, end_str = time_str.split('-', 1)
+                            start_str = start_str.strip()
+                            end_str = end_str.strip()
+                        else:
+                            # Only start time, assume 1 hour duration
+                            start_str = time_str.strip()
+                            # Parse start time and add 1 hour for end time
+                            try:
+                                start_time_obj = datetime.strptime(start_str, '%I:%M %p').time()
+                                from datetime import timedelta
+                                start_datetime = datetime.combine(datetime.today(), start_time_obj)
+                                end_datetime = start_datetime + timedelta(hours=1)
+                                end_str = end_datetime.strftime('%I:%M %p')
+                            except:
+                                continue
+                        
+                        # Parse time strings to time objects
+                        try:
+                            start_time = datetime.strptime(start_str, '%I:%M %p').time()
+                            end_time = datetime.strptime(end_str, '%I:%M %p').time()
+                            
+                            # Create ClassSchedule record
+                            schedule = ClassSchedule(
+                                class_id=class_id,
+                                day_of_week=day_of_week,
+                                start_time=start_time,
+                                end_time=end_time,
+                                room=class_obj.room_number
+                            )
+                            db.session.add(schedule)
+                        except ValueError as e:
+                            # Skip invalid time format
+                            current_app.logger.warning(f"Invalid time format in schedule entry '{entry}': {e}")
+                            continue
+                    except Exception as e:
+                        # Skip entries that can't be parsed
+                        current_app.logger.warning(f"Error parsing schedule entry '{entry}': {e}")
+                        continue
             
             # Handle grade levels
             grade_level_ids = request.form.getlist('grade_levels')
@@ -356,7 +443,7 @@ def edit_class(class_id):
             return redirect(url_for('management.edit_class', class_id=class_id))
     
     # GET request - show edit form
-    teachers = TeacherStaff.query.all()
+    teachers = TeacherStaff.query.filter(TeacherStaff.is_deleted == False).all()
     return render_template('management/edit_class.html', class_info=class_obj, available_teachers=teachers)
 
 
@@ -459,7 +546,7 @@ def class_roster(class_id):
             enrolled_students.append(student)
     
     # Get available teachers for assignment
-    available_teachers = TeacherStaff.query.all()
+    available_teachers = TeacherStaff.query.filter(TeacherStaff.is_deleted == False).all()
     
     # Get today's date for age calculations
     today = date.today()
@@ -1708,7 +1795,7 @@ def manage_class_roster(class_id):
             enrolled_students.append(student)
     
     # Get all teachers for the summary display
-    available_teachers = TeacherStaff.query.all()
+    available_teachers = TeacherStaff.query.filter(TeacherStaff.is_deleted == False).all()
     
     return render_template('management/manage_class_roster.html', 
                          class_info=class_info,

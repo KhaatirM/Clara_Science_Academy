@@ -2442,6 +2442,55 @@
     min-height: 200px;
   }
   
+  /* Enhanced Edit Modal Form Styles */
+  #profileEditModal .form-control:focus,
+  #profileEditModal .form-select:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    outline: none;
+  }
+
+  #profileEditModal .form-check:hover {
+    border-color: #667eea !important;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+    transform: translateY(-2px);
+  }
+
+  #profileEditModal .form-check-input:checked {
+    background-color: #667eea;
+    border-color: #667eea;
+  }
+
+  #profileEditModal .form-check-input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+  }
+
+  #profileEditModal .card {
+    transition: all 0.3s ease;
+  }
+
+  #profileEditModal .card:hover {
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+  }
+
+  /* Grade Checkbox Box Styles */
+  #profileEditModal .grade-checkbox-box {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+  }
+
+  #profileEditModal .grade-checkbox-box:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+  }
+
+  #profileEditModal .grade-checkbox-box:active {
+    transform: translateY(0);
+  }
+
   @keyframes fadeOutRight {
     from {
       opacity: 1;

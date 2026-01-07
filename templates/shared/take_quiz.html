@@ -1,86 +1,107 @@
 {% extends "shared/dashboard_layout.html" %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/take_quiz.css') }}">
+{% endblock %}
+
 {% block dashboard_content %}
-<div class="container-fluid">
+<div class="container-fluid px-2 px-md-4" style="background: #f8f9fa; min-height: 100vh; padding: 2rem 0;">
     <div class="row">
         <div class="col-12">
-            <!-- Quiz Header -->
-            <div class="card shadow-lg mb-4 border-0" style="border-radius: 15px; overflow: hidden;">
-                <div class="card-header text-white" style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); padding: 1.5rem;">
-                    <div class="d-flex justify-content-between align-items-center flex-wrap">
-                        <h4 class="mb-0">
-                            <i class="bi bi-question-circle-fill me-2" style="font-size: 1.5rem;"></i>{{ assignment.title }}
-                        </h4>
-                        <div class="d-flex gap-2 mt-2 mt-md-0">
-                            <span class="badge bg-white text-primary px-3 py-2" style="font-size: 0.9rem;">
-                                <i class="bi bi-journal-text me-1"></i>Quiz Assignment
-                            </span>
+            <!-- Modern Quiz Header -->
+            <div class="card border-0 shadow-lg mb-4" style="border-radius: 1rem; overflow: hidden;">
+                <div class="card-header text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; padding: 2rem;">
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+                        <div>
+                            <h2 class="mb-2" style="font-weight: 700; font-size: 2rem;">
+                                <i class="bi bi-question-circle-fill me-3"></i>{{ assignment.title }}
+                            </h2>
+                            <p class="mb-0" style="opacity: 0.95; font-size: 1.1rem;">
+                                <i class="bi bi-journal-text me-2"></i>Quiz Assignment
+                            </p>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2">
                             {% if submission %}
-                                <span class="badge bg-success px-3 py-2" style="font-size: 0.9rem;">
+                                <span class="badge px-3 py-2" style="background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); font-size: 0.9rem; border: 1px solid rgba(255,255,255,0.3);">
                                     <i class="bi bi-check-circle me-1"></i>Submitted
                                 </span>
                             {% elif grade %}
-                                <span class="badge bg-info px-3 py-2" style="font-size: 0.9rem;">
+                                <span class="badge px-3 py-2" style="background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); font-size: 0.9rem; border: 1px solid rgba(255,255,255,0.3);">
                                     <i class="bi bi-star-fill me-1"></i>Graded
                                 </span>
                             {% else %}
-                                <span class="badge bg-warning text-dark px-3 py-2" style="font-size: 0.9rem;">
+                                <span class="badge px-3 py-2" style="background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); font-size: 0.9rem; border: 1px solid rgba(255,255,255,0.3);">
                                     <i class="bi bi-clock me-1"></i>Not Submitted
                                 </span>
                             {% endif %}
                         </div>
                     </div>
                 </div>
-                <div class="card-body p-4">
-                    <div class="row g-3">
+                <div class="card-body p-4" style="background: white;">
+                    <div class="row g-4">
                         <div class="col-md-6">
-                            <div class="d-flex align-items-center mb-3">
-                                <i class="bi bi-book-fill text-primary me-3" style="font-size: 1.2rem;"></i>
-                                <div>
-                                    <small class="text-muted d-block">Class</small>
-                                    <strong>{{ assignment.class_info.name }}</strong>
+                            <div class="d-flex align-items-center p-3" style="background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%); border-radius: 0.75rem; border-left: 4px solid #667eea;">
+                                <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; margin-right: 1rem; flex-shrink: 0;">
+                                    <i class="bi bi-book-fill text-white" style="font-size: 1.5rem;"></i>
                                 </div>
-                            </div>
-                            <div class="d-flex align-items-center mb-3">
-                                <i class="bi bi-calendar-event text-danger me-3" style="font-size: 1.2rem;"></i>
                                 <div>
-                                    <small class="text-muted d-block">Due Date</small>
-                                    <strong>{{ assignment.due_date.strftime('%B %d, %Y at %I:%M %p') if assignment.due_date else 'No due date' }}</strong>
+                                    <small class="text-muted d-block mb-1" style="font-weight: 600; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.5px;">Class</small>
+                                    <strong style="font-size: 1.1rem; color: #212529;">{{ assignment.class_info.name }}</strong>
                                 </div>
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <div class="d-flex align-items-center mb-3">
-                                <i class="bi bi-calendar3 text-info me-3" style="font-size: 1.2rem;"></i>
+                            <div class="d-flex align-items-center p-3" style="background: linear-gradient(135deg, #fff5f5 0%, #ffe5e5 100%); border-radius: 0.75rem; border-left: 4px solid #dc3545;">
+                                <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; margin-right: 1rem; flex-shrink: 0;">
+                                    <i class="bi bi-calendar-event text-white" style="font-size: 1.5rem;"></i>
+                                </div>
                                 <div>
-                                    <small class="text-muted d-block">Quarter</small>
-                                    <strong>{{ assignment.quarter }}</strong>
+                                    <small class="text-muted d-block mb-1" style="font-weight: 600; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.5px;">Due Date</small>
+                                    <strong style="font-size: 1.1rem; color: #212529;">{{ assignment.due_date.strftime('%B %d, %Y at %I:%M %p') if assignment.due_date else 'No due date' }}</strong>
                                 </div>
                             </div>
-                            <div class="d-flex align-items-center mb-3">
-                                <i class="bi bi-activity text-success me-3" style="font-size: 1.2rem;"></i>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center p-3" style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); border-radius: 0.75rem; border-left: 4px solid #17a2b8;">
+                                <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; margin-right: 1rem; flex-shrink: 0;">
+                                    <i class="bi bi-calendar3 text-white" style="font-size: 1.5rem;"></i>
+                                </div>
                                 <div>
-                                    <small class="text-muted d-block">Status</small>
-                                    <strong>
-                                {% if assignment.status == 'Active' %}
-                                    <span class="text-success">Active</span>
-                                {% elif assignment.status == 'Inactive' %}
-                                    <span class="text-warning">Inactive</span>
-                                {% else %}
-                                    <span class="text-secondary">{{ assignment.status }}</span>
-                                {% endif %}
+                                    <small class="text-muted d-block mb-1" style="font-weight: 600; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.5px;">Quarter</small>
+                                    <strong style="font-size: 1.1rem; color: #212529;">{{ assignment.quarter }}</strong>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center p-3" style="background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); border-radius: 0.75rem; border-left: 4px solid #28a745;">
+                                <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; margin-right: 1rem; flex-shrink: 0;">
+                                    <i class="bi bi-activity text-white" style="font-size: 1.5rem;"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block mb-1" style="font-weight: 600; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.5px;">Status</small>
+                                    <strong style="font-size: 1.1rem;">
+                                        {% if assignment.status == 'Active' %}
+                                            <span class="text-success">Active</span>
+                                        {% elif assignment.status == 'Inactive' %}
+                                            <span class="text-warning">Inactive</span>
+                                        {% else %}
+                                            <span class="text-secondary">{{ assignment.status }}</span>
+                                        {% endif %}
                                     </strong>
                                 </div>
                             </div>
                         </div>
                     </div>
                     {% if assignment.description %}
-                        <div class="mt-4 pt-3 border-top">
-                            <h6 class="mb-3">
-                                <i class="bi bi-info-circle-fill text-primary me-2"></i>Instructions:
-                            </h6>
-                            <div class="p-3 bg-light rounded-3 border-start border-primary border-4">
-                                <p class="mb-0 text-dark">{{ assignment.description }}</p>
+                        <div class="mt-4 pt-4 border-top">
+                            <div class="d-flex align-items-center mb-3">
+                                <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; margin-right: 1rem;">
+                                    <i class="bi bi-info-circle-fill text-white"></i>
+                                </div>
+                                <h5 class="mb-0 fw-bold" style="color: #495057;">Instructions</h5>
+                            </div>
+                            <div class="p-4" style="background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%); border-radius: 0.75rem; border-left: 4px solid #667eea;">
+                                <p class="mb-0" style="color: #495057; font-size: 1.05rem; line-height: 1.6;">{{ assignment.description }}</p>
                             </div>
                         </div>
                     {% endif %}
@@ -88,52 +109,60 @@
             </div>
 
             {% if grade %}
-                <!-- Already Graded -->
-                <div class="card shadow-lg mb-4 border-0" style="border-radius: 15px; overflow: hidden;">
-                    <div class="card-header text-white" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); padding: 1.5rem;">
-                        <div class="d-flex align-items-center justify-content-between">
-                        <h5 class="mb-0">
-                                <i class="bi bi-check-circle-fill me-2" style="font-size: 1.5rem;"></i>Quiz Completed and Graded
-                        </h5>
-                            <span class="badge bg-white text-success px-3 py-2" style="font-size: 1rem;">
+                <!-- Already Graded Section -->
+                <div class="card border-0 shadow-lg mb-4" style="border-radius: 1rem; overflow: hidden;">
+                    <div class="card-header text-white" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); border: none; padding: 2rem;">
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                            <h4 class="mb-0" style="font-weight: 700; font-size: 1.75rem;">
+                                <i class="bi bi-check-circle-fill me-3"></i>Quiz Completed and Graded
+                            </h4>
+                            <span class="badge px-3 py-2" style="background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); font-size: 1rem; border: 1px solid rgba(255,255,255,0.3);">
                                 <i class="bi bi-trophy-fill me-1"></i>Graded
                             </span>
-                    </div>
                         </div>
-                    <div class="card-body p-4">
+                    </div>
+                    <div class="card-body p-4" style="background: white;">
                         <!-- Grade Display Card -->
-                        <div class="alert alert-success border-0 shadow-sm mb-4" style="border-radius: 12px; background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);">
-                            <div class="d-flex align-items-center justify-content-between flex-wrap">
+                        <div class="alert border-0 shadow-sm mb-4" style="border-radius: 1rem; background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); border-left: 4px solid #28a745;">
+                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
                                 <div>
-                                    <h4 class="mb-1 fw-bold text-success">
+                                    <h3 class="mb-2 fw-bold" style="color: #155724; font-size: 2rem;">
                                         <i class="bi bi-star-fill me-2"></i>Your Grade: {{ grade.grade_percentage }}%
-                                    </h4>
-                                    <p class="mb-0 text-muted">This quiz has been graded.{% if show_correct_answers %} Review your answers below.{% endif %}</p>
+                                    </h3>
+                                    <p class="mb-0" style="color: #155724; opacity: 0.8;">This quiz has been graded.{% if show_correct_answers %} Review your answers below.{% endif %}</p>
                                 </div>
-                                <div class="text-center mt-2 mt-md-0">
+                                <div class="text-center">
                                     {% set correct_count = existing_answers.values()|selectattr('is_correct', 'equalto', True)|list|length %}
                                     {% set total_questions = questions|length %}
-                                    <div class="badge bg-success px-3 py-2" style="font-size: 0.9rem;">
-                                        {{ correct_count }} / {{ total_questions }} Correct
+                                    <div class="badge px-4 py-3" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; font-size: 1.1rem; border-radius: 0.75rem; box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);">
+                                        <i class="bi bi-check-circle me-2"></i>{{ correct_count }} / {{ total_questions }} Correct
                                     </div>
                                 </div>
                             </div>
                         </div>
                         
-                        <div class="d-flex gap-2 mb-4">
-                            <a href="{{ url_for('student.student_assignments') }}" class="btn btn-primary px-4">
-                                <i class="bi bi-arrow-left me-1"></i>Back to Assignments
+                        <div class="d-flex gap-2 mb-4 flex-wrap">
+                            <a href="{{ url_for('student.student_assignments') }}" class="btn btn-lg px-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 0.5rem; font-weight: 600; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);">
+                                <i class="bi bi-arrow-left me-2"></i>Back to Assignments
                             </a>
+                            {% if attempts_remaining and attempts_remaining > 0 %}
+                                <a href="{{ url_for('student.take_quiz', assignment_id=assignment.id, retake='true') }}" class="btn btn-lg px-4" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border: none; border-radius: 0.5rem; font-weight: 600; box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);">
+                                    <i class="bi bi-arrow-repeat me-2"></i>Retake Quiz ({{ attempts_remaining }} attempt{{ 's' if attempts_remaining > 1 else '' }} remaining)
+                                </a>
+                            {% endif %}
                         </div>
                         
                         {% if show_correct_answers and questions %}
                             <!-- Show Answers with Correct Answers Highlighted -->
                             <div class="mt-4">
                                 <div class="d-flex align-items-center mb-4">
+                                    <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; margin-right: 1rem;">
+                                        <i class="bi bi-clipboard-check-fill text-white" style="font-size: 1.5rem;"></i>
+                                    </div>
                                     <div class="flex-grow-1">
-                                        <h5 class="mb-1 fw-bold">
-                                            <i class="bi bi-clipboard-check-fill me-2 text-primary"></i>Question Review
-                                        </h5>
+                                        <h4 class="mb-1 fw-bold" style="color: #495057;">
+                                            Question Review
+                                        </h4>
                                         <p class="text-muted mb-0">Review your answers and see which ones were correct</p>
                                     </div>
                                 </div>
@@ -141,60 +170,60 @@
                                 {% for question in questions %}
                                     {% set student_answer = existing_answers.get(question.id) %}
                                     {% set is_correct = student_answer and student_answer.is_correct %}
-                                    <div class="card mb-4 shadow-sm border-0" style="border-radius: 12px; {% if is_correct %}border-left: 4px solid #28a745 !important;{% else %}border-left: 4px solid #dc3545 !important;{% endif %}">
+                                    <div class="card mb-4 border-0 shadow-sm" style="border-radius: 1rem; overflow: hidden; {% if is_correct %}border-left: 4px solid #28a745 !important;{% else %}border-left: 4px solid #dc3545 !important;{% endif %}">
                                         <div class="card-body p-4">
                                             <div class="d-flex justify-content-between align-items-start mb-3">
                                                 <div class="d-flex align-items-center">
-                                                    <span class="badge {% if is_correct %}bg-success{% else %}bg-danger{% endif %} me-2 px-3 py-2" style="font-size: 0.9rem;">
+                                                    <span class="badge px-3 py-2 me-3" style="background: {% if is_correct %}linear-gradient(135deg, #28a745 0%, #20c997 100%){% else %}linear-gradient(135deg, #dc3545 0%, #c82333 100%){% endif %}; color: white; font-size: 0.9rem; border-radius: 0.5rem;">
                                                         Question {{ loop.index }}
                                                     </span>
                                                     {% if is_correct %}
-                                                        <i class="bi bi-check-circle-fill text-success me-2" style="font-size: 1.2rem;"></i>
-                                                        <span class="text-success fw-bold">Correct</span>
+                                                        <i class="bi bi-check-circle-fill text-success me-2" style="font-size: 1.5rem;"></i>
+                                                        <span class="text-success fw-bold" style="font-size: 1.1rem;">Correct</span>
                                                     {% else %}
-                                                        <i class="bi bi-x-circle-fill text-danger me-2" style="font-size: 1.2rem;"></i>
-                                                        <span class="text-danger fw-bold">Incorrect</span>
+                                                        <i class="bi bi-x-circle-fill text-danger me-2" style="font-size: 1.5rem;"></i>
+                                                        <span class="text-danger fw-bold" style="font-size: 1.1rem;">Incorrect</span>
                                                     {% endif %}
                                                 </div>
                                                 <div class="text-end">
-                                                    <span class="badge bg-primary px-3 py-2">{{ question.points }} point{{ 's' if question.points != 1 else '' }}</span>
+                                                    <span class="badge px-3 py-2" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 0.5rem;">{{ question.points }} point{{ 's' if question.points != 1 else '' }}</span>
                                                     {% if student_answer %}
-                                                        <div class="mt-1">
-                                                            <small class="text-muted">Points Earned: <strong>{{ student_answer.points_earned }}</strong></small>
+                                                        <div class="mt-2">
+                                                            <small class="text-muted">Points Earned: <strong style="color: #495057;">{{ student_answer.points_earned }}</strong></small>
                                                         </div>
                                                     {% endif %}
                                                 </div>
                                             </div>
                                             
-                                            <p class="fw-bold mb-4 fs-5" style="color: #2c3e50;">{{ question.question_text }}</p>
+                                            <p class="fw-bold mb-4" style="color: #2c3e50; font-size: 1.2rem; line-height: 1.6;">{{ question.question_text }}</p>
                                             
                                             {% if question.question_type == 'multiple_choice' %}
                                                 <div class="options-review">
                                                     {% for option in quiz_options_by_question.get(question.id, []) %}
-                                                        <div class="mb-3 p-3 rounded-3 {% if option.is_correct %}bg-success bg-opacity-10 border border-success border-2{% elif student_answer and student_answer.selected_option_id == option.id and not option.is_correct %}bg-danger bg-opacity-10 border border-danger border-2{% else %}bg-light border{% endif %}" style="transition: all 0.3s ease;">
+                                                        <div class="mb-3 p-3 rounded-3 {% if option.is_correct %}bg-success bg-opacity-10 border border-success border-2{% elif student_answer and student_answer.selected_option_id == option.id and not option.is_correct %}bg-danger bg-opacity-10 border border-danger border-2{% else %}bg-light border{% endif %}" style="transition: all 0.3s ease; border-radius: 0.75rem;">
                                                             <div class="d-flex align-items-center">
                                                                 <div class="flex-shrink-0 me-3">
                                                                     {% if option.is_correct %}
-                                                                        <i class="bi bi-check-circle-fill text-success" style="font-size: 1.5rem;"></i>
+                                                                        <i class="bi bi-check-circle-fill text-success" style="font-size: 1.75rem;"></i>
                                                                     {% elif student_answer and student_answer.selected_option_id == option.id and not option.is_correct %}
-                                                                        <i class="bi bi-x-circle-fill text-danger" style="font-size: 1.5rem;"></i>
+                                                                        <i class="bi bi-x-circle-fill text-danger" style="font-size: 1.75rem;"></i>
                                                                     {% else %}
-                                                                        <i class="bi bi-circle text-muted" style="font-size: 1.5rem;"></i>
+                                                                        <i class="bi bi-circle text-muted" style="font-size: 1.75rem;"></i>
                                                                     {% endif %}
                                                                 </div>
                                                                 <div class="flex-grow-1">
                                                                     <div class="d-flex align-items-center">
-                                                                        <span class="fw-bold me-2" style="color: #495057;">{{ loop.index0|string|replace('0', 'A')|replace('1', 'B')|replace('2', 'C')|replace('3', 'D')|replace('4', 'E')|replace('5', 'F') }}:</span>
-                                                                        <span class="flex-grow-1">{{ option.option_text }}</span>
+                                                                        <span class="fw-bold me-2" style="color: #495057; font-size: 1.1rem;">{{ loop.index0|string|replace('0', 'A')|replace('1', 'B')|replace('2', 'C')|replace('3', 'D')|replace('4', 'E')|replace('5', 'F') }}:</span>
+                                                                        <span class="flex-grow-1" style="font-size: 1.05rem;">{{ option.option_text }}</span>
                                                                     </div>
                                                                 </div>
                                                                 <div class="flex-shrink-0 ms-3">
                                                                     {% if option.is_correct %}
-                                                                        <span class="badge bg-success px-3 py-2">
+                                                                        <span class="badge px-3 py-2" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border-radius: 0.5rem;">
                                                                             <i class="bi bi-check me-1"></i>Correct Answer
                                                                         </span>
                                                                     {% elif student_answer and student_answer.selected_option_id == option.id %}
-                                                                        <span class="badge bg-danger px-3 py-2">
+                                                                        <span class="badge px-3 py-2" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; border-radius: 0.5rem;">
                                                                             <i class="bi bi-x me-1"></i>Your Answer
                                                                         </span>
                                                                     {% endif %}
@@ -207,27 +236,27 @@
                                             {% elif question.question_type == 'true_false' %}
                                                 <div class="options-review">
                                                     {% for option in quiz_options_by_question.get(question.id, []) %}
-                                                        <div class="mb-3 p-3 rounded-3 {% if option.is_correct %}bg-success bg-opacity-10 border border-success border-2{% elif student_answer and student_answer.selected_option_id == option.id and not option.is_correct %}bg-danger bg-opacity-10 border border-danger border-2{% else %}bg-light border{% endif %}" style="transition: all 0.3s ease;">
+                                                        <div class="mb-3 p-3 rounded-3 {% if option.is_correct %}bg-success bg-opacity-10 border border-success border-2{% elif student_answer and student_answer.selected_option_id == option.id and not option.is_correct %}bg-danger bg-opacity-10 border border-danger border-2{% else %}bg-light border{% endif %}" style="transition: all 0.3s ease; border-radius: 0.75rem;">
                                                             <div class="d-flex align-items-center">
                                                                 <div class="flex-shrink-0 me-3">
                                                                     {% if option.is_correct %}
-                                                                        <i class="bi bi-check-circle-fill text-success" style="font-size: 1.5rem;"></i>
+                                                                        <i class="bi bi-check-circle-fill text-success" style="font-size: 1.75rem;"></i>
                                                                     {% elif student_answer and student_answer.selected_option_id == option.id and not option.is_correct %}
-                                                                        <i class="bi bi-x-circle-fill text-danger" style="font-size: 1.5rem;"></i>
+                                                                        <i class="bi bi-x-circle-fill text-danger" style="font-size: 1.75rem;"></i>
                                                                     {% else %}
-                                                                        <i class="bi bi-circle text-muted" style="font-size: 1.5rem;"></i>
+                                                                        <i class="bi bi-circle text-muted" style="font-size: 1.75rem;"></i>
                                                                     {% endif %}
                                                                 </div>
                                                                 <div class="flex-grow-1">
-                                                                    <span>{{ option.option_text }}</span>
+                                                                    <span style="font-size: 1.05rem;">{{ option.option_text }}</span>
                                                                 </div>
                                                                 <div class="flex-shrink-0 ms-3">
                                                                     {% if option.is_correct %}
-                                                                        <span class="badge bg-success px-3 py-2">
+                                                                        <span class="badge px-3 py-2" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border-radius: 0.5rem;">
                                                                             <i class="bi bi-check me-1"></i>Correct Answer
                                                                         </span>
                                                                     {% elif student_answer and student_answer.selected_option_id == option.id %}
-                                                                        <span class="badge bg-danger px-3 py-2">
+                                                                        <span class="badge px-3 py-2" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; border-radius: 0.5rem;">
                                                                             <i class="bi bi-x me-1"></i>Your Answer
                                                                         </span>
                                                                     {% endif %}
@@ -239,15 +268,15 @@
                                                 
                                             {% elif question.question_type in ['short_answer', 'essay'] %}
                                                 <div class="mb-3">
-                                                    <div class="p-3 bg-light rounded-3 border">
-                                                        <strong class="d-block mb-2 text-primary">
-                                                            <i class="bi bi-pencil-square me-1"></i>Your Answer:
+                                                    <div class="p-4" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 0.75rem; border-left: 4px solid #667eea;">
+                                                        <strong class="d-block mb-3" style="color: #667eea; font-size: 1.1rem;">
+                                                            <i class="bi bi-pencil-square me-2"></i>Your Answer:
                                                         </strong>
-                                                        <div class="p-3 bg-white rounded border">
+                                                        <div class="p-3" style="background: white; border-radius: 0.5rem; border: 2px solid #e9ecef;">
                                                             {{ student_answer.answer_text if student_answer and student_answer.answer_text else '(No answer provided)' }}
                                                         </div>
                                                     </div>
-                                                    <div class="alert alert-info mt-2 mb-0 border-0" style="background-color: #e7f3ff;">
+                                                    <div class="alert border-0 mt-3 mb-0" style="background: linear-gradient(135deg, #e7f3ff 0%, #d1ecf1 100%); border-radius: 0.5rem; border-left: 4px solid #17a2b8;">
                                                         <i class="bi bi-info-circle me-2"></i>
                                                         <small>Short answer and essay questions require manual grading by your teacher.</small>
                                                     </div>
@@ -261,48 +290,56 @@
                     </div>
                 </div>
             {% elif submission %}
-                <!-- Already Submitted -->
-                <div class="card shadow-lg mb-4 border-0" style="border-radius: 15px; overflow: hidden;">
-                    <div class="card-header text-white" style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); padding: 1.5rem;">
-                        <div class="d-flex align-items-center justify-content-between">
-                        <h5 class="mb-0">
-                                <i class="bi bi-hourglass-split me-2" style="font-size: 1.5rem;"></i>Quiz Submitted
-                        </h5>
-                            <span class="badge bg-white text-info px-3 py-2" style="font-size: 1rem;">
+                <!-- Already Submitted Section -->
+                <div class="card border-0 shadow-lg mb-4" style="border-radius: 1rem; overflow: hidden;">
+                    <div class="card-header text-white" style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); border: none; padding: 2rem;">
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                            <h4 class="mb-0" style="font-weight: 700; font-size: 1.75rem;">
+                                <i class="bi bi-hourglass-split me-3"></i>Quiz Submitted
+                            </h4>
+                            <span class="badge px-3 py-2" style="background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); font-size: 1rem; border: 1px solid rgba(255,255,255,0.3);">
                                 <i class="bi bi-check-circle me-1"></i>Submitted
                             </span>
+                        </div>
                     </div>
-                    </div>
-                    <div class="card-body p-4">
-                        <div class="alert alert-info border-0 shadow-sm mb-4" style="border-radius: 12px; background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);">
+                    <div class="card-body p-4" style="background: white;">
+                        <div class="alert border-0 shadow-sm mb-4" style="border-radius: 1rem; background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%); border-left: 4px solid #17a2b8;">
                             <div class="d-flex align-items-start">
-                                <i class="bi bi-info-circle-fill me-3" style="font-size: 1.5rem; margin-top: 0.2rem;"></i>
+                                <i class="bi bi-info-circle-fill me-3" style="font-size: 2rem; color: #17a2b8; margin-top: 0.2rem;"></i>
                                 <div class="flex-grow-1">
-                                    <h6 class="fw-bold mb-2">Submission Status</h6>
-                            <p class="mb-0">Your quiz has been submitted{% if not show_correct_answers %} and is awaiting grading by your teacher{% endif %}.</p>
-                            {% if show_correct_answers %}
-                                        <p class="mb-0 mt-2">
+                                    <h5 class="fw-bold mb-2" style="color: #0c5460;">Submission Status</h5>
+                                    <p class="mb-0" style="color: #0c5460; font-size: 1.05rem;">Your quiz has been submitted{% if not show_correct_answers %} and is awaiting grading by your teacher{% endif %}.</p>
+                                    {% if show_correct_answers %}
+                                        <p class="mb-0 mt-2" style="color: #0c5460; font-size: 1.05rem;">
                                             <strong><i class="bi bi-check-circle me-1"></i>Review your answers below. Correct answers are highlighted in green.</strong>
                                         </p>
-                            {% endif %}
-                        </div>
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
                         
-                        <div class="d-flex gap-2 mb-4">
-                            <a href="{{ url_for('student.student_assignments') }}" class="btn btn-primary px-4">
-                                <i class="bi bi-arrow-left me-1"></i>Back to Assignments
+                        <div class="d-flex gap-2 mb-4 flex-wrap">
+                            <a href="{{ url_for('student.student_assignments') }}" class="btn btn-lg px-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 0.5rem; font-weight: 600; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);">
+                                <i class="bi bi-arrow-left me-2"></i>Back to Assignments
                             </a>
+                            {% if attempts_remaining and attempts_remaining > 0 %}
+                                <a href="{{ url_for('student.take_quiz', assignment_id=assignment.id, retake='true') }}" class="btn btn-lg px-4" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border: none; border-radius: 0.5rem; font-weight: 600; box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);">
+                                    <i class="bi bi-arrow-repeat me-2"></i>Retake Quiz ({{ attempts_remaining }} attempt{{ 's' if attempts_remaining > 1 else '' }} remaining)
+                                </a>
+                            {% endif %}
                         </div>
                         
                         {% if show_correct_answers and questions %}
                             <!-- Show Answers with Correct Answers Highlighted -->
                             <div class="mt-4">
                                 <div class="d-flex align-items-center mb-4">
+                                    <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; margin-right: 1rem;">
+                                        <i class="bi bi-clipboard-check-fill text-white" style="font-size: 1.5rem;"></i>
+                                    </div>
                                     <div class="flex-grow-1">
-                                        <h5 class="mb-1 fw-bold">
-                                            <i class="bi bi-clipboard-check-fill me-2 text-primary"></i>Question Review
-                                        </h5>
+                                        <h4 class="mb-1 fw-bold" style="color: #495057;">
+                                            Question Review
+                                        </h4>
                                         <p class="text-muted mb-0">Review your answers and see which ones were correct</p>
                                     </div>
                                 </div>
@@ -310,60 +347,60 @@
                                 {% for question in questions %}
                                     {% set student_answer = existing_answers.get(question.id) %}
                                     {% set is_correct = student_answer and student_answer.is_correct %}
-                                    <div class="card mb-4 shadow-sm border-0" style="border-radius: 12px; {% if is_correct %}border-left: 4px solid #28a745 !important;{% else %}border-left: 4px solid #dc3545 !important;{% endif %}">
+                                    <div class="card mb-4 border-0 shadow-sm" style="border-radius: 1rem; overflow: hidden; {% if is_correct %}border-left: 4px solid #28a745 !important;{% else %}border-left: 4px solid #dc3545 !important;{% endif %}">
                                         <div class="card-body p-4">
                                             <div class="d-flex justify-content-between align-items-start mb-3">
                                                 <div class="d-flex align-items-center">
-                                                    <span class="badge {% if is_correct %}bg-success{% else %}bg-danger{% endif %} me-2 px-3 py-2" style="font-size: 0.9rem;">
-                                                    Question {{ loop.index }}
+                                                    <span class="badge px-3 py-2 me-3" style="background: {% if is_correct %}linear-gradient(135deg, #28a745 0%, #20c997 100%){% else %}linear-gradient(135deg, #dc3545 0%, #c82333 100%){% endif %}; color: white; font-size: 0.9rem; border-radius: 0.5rem;">
+                                                        Question {{ loop.index }}
                                                     </span>
                                                     {% if is_correct %}
-                                                        <i class="bi bi-check-circle-fill text-success me-2" style="font-size: 1.2rem;"></i>
-                                                        <span class="text-success fw-bold">Correct</span>
+                                                        <i class="bi bi-check-circle-fill text-success me-2" style="font-size: 1.5rem;"></i>
+                                                        <span class="text-success fw-bold" style="font-size: 1.1rem;">Correct</span>
                                                     {% else %}
-                                                        <i class="bi bi-x-circle-fill text-danger me-2" style="font-size: 1.2rem;"></i>
-                                                        <span class="text-danger fw-bold">Incorrect</span>
+                                                        <i class="bi bi-x-circle-fill text-danger me-2" style="font-size: 1.5rem;"></i>
+                                                        <span class="text-danger fw-bold" style="font-size: 1.1rem;">Incorrect</span>
                                                     {% endif %}
                                             </div>
                                                 <div class="text-end">
-                                                    <span class="badge bg-primary px-3 py-2">{{ question.points }} point{{ 's' if question.points != 1 else '' }}</span>
+                                                    <span class="badge px-3 py-2" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 0.5rem;">{{ question.points }} point{{ 's' if question.points != 1 else '' }}</span>
                                                     {% if student_answer %}
-                                                        <div class="mt-1">
-                                                            <small class="text-muted">Points Earned: <strong>{{ student_answer.points_earned }}</strong></small>
+                                                        <div class="mt-2">
+                                                            <small class="text-muted">Points Earned: <strong style="color: #495057;">{{ student_answer.points_earned }}</strong></small>
                                                         </div>
                                                     {% endif %}
                                                 </div>
                                             </div>
                                             
-                                            <p class="fw-bold mb-4 fs-5" style="color: #2c3e50;">{{ question.question_text }}</p>
+                                            <p class="fw-bold mb-4" style="color: #2c3e50; font-size: 1.2rem; line-height: 1.6;">{{ question.question_text }}</p>
                                             
                                             {% if question.question_type == 'multiple_choice' %}
                                                 <div class="options-review">
                                                 {% for option in quiz_options_by_question.get(question.id, []) %}
-                                                        <div class="mb-3 p-3 rounded-3 {% if option.is_correct %}bg-success bg-opacity-10 border border-success border-2{% elif student_answer and student_answer.selected_option_id == option.id and not option.is_correct %}bg-danger bg-opacity-10 border border-danger border-2{% else %}bg-light border{% endif %}" style="transition: all 0.3s ease;">
+                                                        <div class="mb-3 p-3 rounded-3 {% if option.is_correct %}bg-success bg-opacity-10 border border-success border-2{% elif student_answer and student_answer.selected_option_id == option.id and not option.is_correct %}bg-danger bg-opacity-10 border border-danger border-2{% else %}bg-light border{% endif %}" style="transition: all 0.3s ease; border-radius: 0.75rem;">
                                                         <div class="d-flex align-items-center">
                                                                 <div class="flex-shrink-0 me-3">
                                                             {% if option.is_correct %}
-                                                                        <i class="bi bi-check-circle-fill text-success" style="font-size: 1.5rem;"></i>
+                                                                        <i class="bi bi-check-circle-fill text-success" style="font-size: 1.75rem;"></i>
                                                             {% elif student_answer and student_answer.selected_option_id == option.id and not option.is_correct %}
-                                                                        <i class="bi bi-x-circle-fill text-danger" style="font-size: 1.5rem;"></i>
+                                                                        <i class="bi bi-x-circle-fill text-danger" style="font-size: 1.75rem;"></i>
                                                             {% else %}
-                                                                        <i class="bi bi-circle text-muted" style="font-size: 1.5rem;"></i>
+                                                                        <i class="bi bi-circle text-muted" style="font-size: 1.75rem;"></i>
                                                             {% endif %}
                                                                 </div>
                                                                 <div class="flex-grow-1">
                                                                     <div class="d-flex align-items-center">
-                                                                        <span class="fw-bold me-2" style="color: #495057;">{{ loop.index0|string|replace('0', 'A')|replace('1', 'B')|replace('2', 'C')|replace('3', 'D')|replace('4', 'E')|replace('5', 'F') }}:</span>
-                                                                        <span class="flex-grow-1">{{ option.option_text }}</span>
+                                                                        <span class="fw-bold me-2" style="color: #495057; font-size: 1.1rem;">{{ loop.index0|string|replace('0', 'A')|replace('1', 'B')|replace('2', 'C')|replace('3', 'D')|replace('4', 'E')|replace('5', 'F') }}:</span>
+                                                                        <span class="flex-grow-1" style="font-size: 1.05rem;">{{ option.option_text }}</span>
                                                                     </div>
                                                                 </div>
                                                                 <div class="flex-shrink-0 ms-3">
                                                             {% if option.is_correct %}
-                                                                        <span class="badge bg-success px-3 py-2">
+                                                                        <span class="badge px-3 py-2" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border-radius: 0.5rem;">
                                                                             <i class="bi bi-check me-1"></i>Correct Answer
                                                                         </span>
                                                             {% elif student_answer and student_answer.selected_option_id == option.id %}
-                                                                        <span class="badge bg-danger px-3 py-2">
+                                                                        <span class="badge px-3 py-2" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; border-radius: 0.5rem;">
                                                                             <i class="bi bi-x me-1"></i>Your Answer
                                                                         </span>
                                                             {% endif %}
@@ -376,27 +413,27 @@
                                             {% elif question.question_type == 'true_false' %}
                                                 <div class="options-review">
                                                 {% for option in quiz_options_by_question.get(question.id, []) %}
-                                                        <div class="mb-3 p-3 rounded-3 {% if option.is_correct %}bg-success bg-opacity-10 border border-success border-2{% elif student_answer and student_answer.selected_option_id == option.id and not option.is_correct %}bg-danger bg-opacity-10 border border-danger border-2{% else %}bg-light border{% endif %}" style="transition: all 0.3s ease;">
+                                                        <div class="mb-3 p-3 rounded-3 {% if option.is_correct %}bg-success bg-opacity-10 border border-success border-2{% elif student_answer and student_answer.selected_option_id == option.id and not option.is_correct %}bg-danger bg-opacity-10 border border-danger border-2{% else %}bg-light border{% endif %}" style="transition: all 0.3s ease; border-radius: 0.75rem;">
                                                         <div class="d-flex align-items-center">
                                                                 <div class="flex-shrink-0 me-3">
                                                             {% if option.is_correct %}
-                                                                        <i class="bi bi-check-circle-fill text-success" style="font-size: 1.5rem;"></i>
+                                                                        <i class="bi bi-check-circle-fill text-success" style="font-size: 1.75rem;"></i>
                                                             {% elif student_answer and student_answer.selected_option_id == option.id and not option.is_correct %}
-                                                                        <i class="bi bi-x-circle-fill text-danger" style="font-size: 1.5rem;"></i>
+                                                                        <i class="bi bi-x-circle-fill text-danger" style="font-size: 1.75rem;"></i>
                                                             {% else %}
-                                                                        <i class="bi bi-circle text-muted" style="font-size: 1.5rem;"></i>
+                                                                        <i class="bi bi-circle text-muted" style="font-size: 1.75rem;"></i>
                                                             {% endif %}
                                                                 </div>
                                                                 <div class="flex-grow-1">
-                                                            <span>{{ option.option_text }}</span>
+                                                            <span style="font-size: 1.05rem;">{{ option.option_text }}</span>
                                                                 </div>
                                                                 <div class="flex-shrink-0 ms-3">
                                                             {% if option.is_correct %}
-                                                                        <span class="badge bg-success px-3 py-2">
+                                                                        <span class="badge px-3 py-2" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border-radius: 0.5rem;">
                                                                             <i class="bi bi-check me-1"></i>Correct Answer
                                                                         </span>
                                                             {% elif student_answer and student_answer.selected_option_id == option.id %}
-                                                                        <span class="badge bg-danger px-3 py-2">
+                                                                        <span class="badge px-3 py-2" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; border-radius: 0.5rem;">
                                                                             <i class="bi bi-x me-1"></i>Your Answer
                                                                         </span>
                                                             {% endif %}
@@ -408,15 +445,15 @@
                                                 
                                             {% elif question.question_type in ['short_answer', 'essay'] %}
                                                 <div class="mb-3">
-                                                    <div class="p-3 bg-light rounded-3 border">
-                                                        <strong class="d-block mb-2 text-primary">
-                                                            <i class="bi bi-pencil-square me-1"></i>Your Answer:
+                                                    <div class="p-4" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 0.75rem; border-left: 4px solid #667eea;">
+                                                        <strong class="d-block mb-3" style="color: #667eea; font-size: 1.1rem;">
+                                                            <i class="bi bi-pencil-square me-2"></i>Your Answer:
                                                         </strong>
-                                                        <div class="p-3 bg-white rounded border">
+                                                        <div class="p-3" style="background: white; border-radius: 0.5rem; border: 2px solid #e9ecef;">
                                                         {{ student_answer.answer_text if student_answer and student_answer.answer_text else '(No answer provided)' }}
                                                     </div>
                                                     </div>
-                                                    <div class="alert alert-info mt-2 mb-0 border-0" style="background-color: #e7f3ff;">
+                                                    <div class="alert border-0 mt-3 mb-0" style="background: linear-gradient(135deg, #e7f3ff 0%, #d1ecf1 100%); border-radius: 0.5rem; border-left: 4px solid #17a2b8;">
                                                         <i class="bi bi-info-circle me-2"></i>
                                                         <small>Short answer and essay questions require manual grading by your teacher.</small>
                                                     </div>
@@ -431,78 +468,84 @@
                 </div>
             {% else %}
                 <!-- Quiz Taking Interface -->
-                <div class="card shadow-sm">
-                    <div class="card-header bg-warning text-dark">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h5 class="mb-0">
-                                <i class="bi bi-pencil-square me-2"></i>Quiz Questions
-                            </h5>
-                            <div class="d-flex gap-2 align-items-center">
-                                <!-- Attempts Remaining -->
-                                {% if assignment.max_attempts and attempts_remaining is not none %}
-                                    <div class="badge bg-info">
-                                        <i class="bi bi-arrow-repeat me-1"></i>
-                                        Attempt {{ submissions_count + 1 }} of {{ assignment.max_attempts }}
-                                        {% if attempts_remaining > 0 %}
-                                            ({{ attempts_remaining }} remaining)
-                                        {% endif %}
-                                    </div>
-                                {% elif submissions_count > 0 %}
-                                    <div class="badge bg-secondary">
-                                        <i class="bi bi-arrow-repeat me-1"></i>
-                                        Attempt {{ submissions_count + 1 }}
-                                    </div>
-                                {% endif %}
-                                
-                                <!-- Quiz Timer -->
-                                {% if assignment.time_limit_minutes %}
-                                    <div class="timer-display" id="quizTimer">
-                                        <i class="bi bi-clock me-1"></i>
-                                        <span id="timeRemaining">{{ assignment.time_limit_minutes }}:00</span>
-                                    </div>
-                                {% endif %}
-                                
+                <div class="card border-0 shadow-lg" style="border-radius: 1rem; overflow: hidden;">
+                    <div class="card-header text-white" style="background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%); border: none; padding: 1.5rem;">
+                        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+                            <div>
+                                <h4 class="mb-2" style="font-weight: 700; font-size: 1.75rem;">
+                                    <i class="bi bi-pencil-square me-3"></i>Quiz Questions
+                                </h4>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <!-- Attempts Remaining -->
+                                    {% if assignment.max_attempts and attempts_remaining is not none %}
+                                        <span class="badge px-3 py-2" style="background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); font-size: 0.9rem; border: 1px solid rgba(255,255,255,0.3);">
+                                            <i class="bi bi-arrow-repeat me-1"></i>
+                                            Attempt {{ submissions_count + 1 }} of {{ assignment.max_attempts }}
+                                            {% if attempts_remaining > 0 %}
+                                                ({{ attempts_remaining }} remaining)
+                                            {% endif %}
+                                        </span>
+                                    {% elif submissions_count > 0 %}
+                                        <span class="badge px-3 py-2" style="background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); font-size: 0.9rem; border: 1px solid rgba(255,255,255,0.3);">
+                                            <i class="bi bi-arrow-repeat me-1"></i>
+                                            Attempt {{ submissions_count + 1 }}
+                                        </span>
+                                    {% endif %}
+                                    
+                                    <!-- Quiz Timer -->
+                                    {% if assignment.time_limit_minutes %}
+                                        <span class="badge px-3 py-2" id="quizTimer" style="background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); font-size: 0.9rem; border: 1px solid rgba(255,255,255,0.3);">
+                                            <i class="bi bi-clock me-1"></i>
+                                            <span id="timeRemaining">{{ assignment.time_limit_minutes }}:00</span>
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="d-flex flex-wrap gap-2">
                                 {% if assignment.allow_save_and_continue %}
-                                    <button type="button" class="btn btn-sm btn-outline-light" id="saveProgressBtn">
+                                    <button type="button" class="btn px-3 py-2" id="saveProgressBtn" style="background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 0.5rem; font-weight: 600;">
                                         <i class="bi bi-save me-1"></i>Save Progress
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-outline-light" id="loadProgressBtn" style="display: none;">
+                                    <button type="button" class="btn px-3 py-2" id="loadProgressBtn" style="display: none; background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 0.5rem; font-weight: 600;">
                                         <i class="bi bi-arrow-clockwise me-1"></i>Load Saved
                                     </button>
                                 {% endif %}
                                 
                                 <!-- Review Mode Toggle -->
-                                <button type="button" class="btn btn-sm btn-outline-light" id="reviewModeBtn">
+                                <button type="button" class="btn px-3 py-2" id="reviewModeBtn" style="background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 0.5rem; font-weight: 600;">
                                     <i class="bi bi-eye me-1"></i>Review
                                 </button>
                                 
                                 <!-- Keyboard Shortcuts Help -->
-                                <button type="button" class="btn btn-sm btn-outline-light" id="shortcutsHelpBtn" title="Keyboard Shortcuts">
+                                <button type="button" class="btn px-3 py-2" id="shortcutsHelpBtn" title="Keyboard Shortcuts" style="background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 0.5rem; font-weight: 600;">
                                     <i class="bi bi-keyboard me-1"></i>Shortcuts
                                 </button>
                             </div>
                         </div>
                         {% if assignment.allow_save_and_continue %}
-                            <div class="mt-2">
-                                <div class="progress" style="height: 8px;">
-                                    <div class="progress-bar bg-success" id="quizProgressBar" role="progressbar" style="width: 0%"></div>
+                            <div class="mt-3 pt-3 border-top border-white border-opacity-25">
+                                <div class="progress" style="height: 10px; background: rgba(255,255,255,0.2); border-radius: 0.5rem;">
+                                    <div class="progress-bar" id="quizProgressBar" role="progressbar" style="width: 0%; background: white; border-radius: 0.5rem; transition: width 0.3s ease;"></div>
                                 </div>
-                                <small class="text-muted mt-1 d-block" id="quizProgressText">Progress: 0% (0 of {{ questions|length }} questions answered)</small>
+                                <small class="text-white mt-2 d-block" id="quizProgressText" style="opacity: 0.9;">Progress: 0% (0 of {{ questions|length }} questions answered)</small>
                             </div>
                         {% endif %}
                     </div>
-                    <div class="card-body">
+                    <div class="card-body p-4" style="background: white;">
                         {% if questions %}
-                            <!-- Question Navigation -->
-                            <div class="question-navigation mb-4" id="questionNavigation">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <button type="button" class="btn btn-outline-primary" id="prevQuestionBtn" disabled>
+                            <!-- Enhanced Question Navigation -->
+                            <div class="question-navigation mb-4 p-3" id="questionNavigation" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 0.75rem; border: 2px solid #e9ecef;">
+                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                                    <button type="button" class="btn px-4 py-2" id="prevQuestionBtn" disabled style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 0.5rem; font-weight: 600; opacity: 0.5; cursor: not-allowed;">
                                         <i class="bi bi-chevron-left me-1"></i>Previous
                                     </button>
-                                    <div class="question-counter">
-                                        <span id="currentQuestionNumber">1</span> of <span id="totalQuestions">{{ questions|length }}</span>
+                                    <div class="question-counter text-center">
+                                        <div class="badge px-4 py-2" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-size: 1.1rem; border-radius: 0.5rem;">
+                                            <i class="bi bi-list-ol me-2"></i>
+                                            <span id="currentQuestionNumber">1</span> of <span id="totalQuestions">{{ questions|length }}</span>
+                                        </div>
                                     </div>
-                                    <button type="button" class="btn btn-outline-primary" id="nextQuestionBtn">
+                                    <button type="button" class="btn px-4 py-2" id="nextQuestionBtn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 0.5rem; font-weight: 600;">
                                         Next<i class="bi bi-chevron-right ms-1"></i>
                                     </button>
                                 </div>
@@ -511,26 +554,28 @@
                             <form id="quizForm" method="POST" action="{{ url_for('student.submit_quiz', assignment_id=assignment.id) }}">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                 {% for question in questions %}
-                                    <div class="mb-4 p-4 border rounded shadow-sm question-card" data-question-id="{{ question.id }}" data-question-number="{{ loop.index }}" style="display: {{ 'block' if loop.index == 1 else 'none' }};">
-                                        <div class="d-flex justify-content-between align-items-start mb-3">
-                                            <h6 class="mb-0 fw-bold">
-                                                <span class="badge bg-primary me-2">{{ loop.index }}</span>
-                                                Question {{ loop.index }}
-                                            </h6>
-                                            <span class="badge bg-success">{{ question.points }} point{{ 's' if question.points != 1 else '' }}</span>
+                                    <div class="mb-4 p-4 border-0 rounded question-card shadow-sm" data-question-id="{{ question.id }}" data-question-number="{{ loop.index }}" style="display: {{ 'block' if loop.index == 1 else 'none' }}; background: white; border-radius: 1rem; border-left: 4px solid #667eea;">
+                                        <div class="d-flex justify-content-between align-items-start mb-4">
+                                            <div class="d-flex align-items-center">
+                                                <span class="badge px-3 py-2 me-3" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-size: 1rem; border-radius: 0.5rem;">
+                                                    Question {{ loop.index }}
+                                                </span>
+                                            </div>
+                                            <span class="badge px-3 py-2" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border-radius: 0.5rem;">{{ question.points }} point{{ 's' if question.points != 1 else '' }}</span>
                                         </div>
-                                        <p class="mb-4 fs-5">{{ question.question_text }}</p>
+                                        <p class="mb-4 fw-bold" style="color: #2c3e50; font-size: 1.3rem; line-height: 1.7;">{{ question.question_text }}</p>
                                         
                                         {% if question.question_type == 'multiple_choice' %}
                                             <div class="options-container">
                                                 {% for option in question.options %}
-                                                    <div class="form-check mb-3 p-3 border rounded option-item">
+                                                    <div class="form-check mb-3 p-3 border rounded option-item" style="background: white; border-radius: 0.75rem; border: 2px solid #e9ecef; transition: all 0.2s ease; cursor: pointer;" onmouseover="this.style.borderColor='#667eea'; this.style.background='#f8f9ff';" onmouseout="this.style.borderColor='#e9ecef'; this.style.background='white';">
                                                         <input class="form-check-input" type="radio" name="question_{{ question.id }}" 
                                                                id="option_{{ option.id }}" value="{{ option.id }}"
-                                                               {% if existing_answers.get(question.id) and existing_answers[question.id].selected_option_id == option.id %}checked{% endif %}>
-                                                        <label class="form-check-label w-100" for="option_{{ option.id }}">
-                                                            <span class="option-letter me-2">{{ loop.index0|string|replace('0', 'A')|replace('1', 'B')|replace('2', 'C')|replace('3', 'D')|replace('4', 'E')|replace('5', 'F') }}</span>
-                                                            {{ option.option_text }}
+                                                               {% if existing_answers.get(question.id) and existing_answers[question.id].selected_option_id == option.id %}checked{% endif %}
+                                                               style="cursor: pointer; width: 1.25rem; height: 1.25rem; margin-top: 0.3rem;">
+                                                        <label class="form-check-label w-100" for="option_{{ option.id }}" style="cursor: pointer; padding-left: 0.5rem;">
+                                                            <span class="badge me-3 px-2 py-1" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 0.375rem; font-weight: 600; min-width: 2rem; text-align: center;">{{ loop.index0|string|replace('0', 'A')|replace('1', 'B')|replace('2', 'C')|replace('3', 'D')|replace('4', 'E')|replace('5', 'F') }}</span>
+                                                            <span style="font-size: 1.05rem; color: #495057;">{{ option.option_text }}</span>
                                                         </label>
                                                     </div>
                                                 {% endfor %}
@@ -539,13 +584,14 @@
                                         {% elif question.question_type == 'true_false' %}
                                             <div class="options-container">
                                                 {% for option in question.options %}
-                                                    <div class="form-check mb-3 p-3 border rounded option-item">
+                                                    <div class="form-check mb-3 p-3 border rounded option-item" style="background: white; border-radius: 0.75rem; border: 2px solid #e9ecef; transition: all 0.2s ease; cursor: pointer;" onmouseover="this.style.borderColor='#667eea'; this.style.background='#f8f9ff';" onmouseout="this.style.borderColor='#e9ecef'; this.style.background='white';">
                                                         <input class="form-check-input" type="radio" name="question_{{ question.id }}" 
                                                                id="option_{{ option.id }}" value="{{ option.id }}"
-                                                               {% if existing_answers.get(question.id) and existing_answers[question.id].selected_option_id == option.id %}checked{% endif %}>
-                                                        <label class="form-check-label w-100" for="option_{{ option.id }}">
-                                                            <i class="bi {% if 'true' in option.option_text.lower() %}bi-check-circle text-success{% else %}bi-x-circle text-danger{% endif %} me-2"></i>
-                                                            {{ option.option_text }}
+                                                               {% if existing_answers.get(question.id) and existing_answers[question.id].selected_option_id == option.id %}checked{% endif %}
+                                                               style="cursor: pointer; width: 1.25rem; height: 1.25rem; margin-top: 0.3rem;">
+                                                        <label class="form-check-label w-100" for="option_{{ option.id }}" style="cursor: pointer; padding-left: 0.5rem;">
+                                                            <i class="bi {% if 'true' in option.option_text.lower() %}bi-check-circle text-success{% else %}bi-x-circle text-danger{% endif %} me-2" style="font-size: 1.25rem;"></i>
+                                                            <span style="font-size: 1.05rem; color: #495057;">{{ option.option_text }}</span>
                                                         </label>
                                                     </div>
                                                 {% endfor %}
@@ -555,15 +601,25 @@
                                             <div class="form-group">
                                                 <input type="text" class="form-control form-control-lg" name="question_{{ question.id }}" 
                                                        placeholder="Enter your answer here..." 
-                                                       value="{% if existing_answers.get(question.id) %}{{ existing_answers[question.id].answer_text }}{% endif %}">
-                                                <div class="form-text">Provide a brief, clear answer</div>
+                                                       value="{% if existing_answers.get(question.id) %}{{ existing_answers[question.id].answer_text }}{% endif %}"
+                                                       style="border-radius: 0.75rem; border: 2px solid #e9ecef; padding: 1rem; font-size: 1.1rem; transition: all 0.2s ease;"
+                                                       onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 0.2rem rgba(102, 126, 234, 0.25)';"
+                                                       onblur="this.style.borderColor='#e9ecef'; this.style.boxShadow='none';">
+                                                <div class="form-text mt-2" style="color: #6c757d;">
+                                                    <i class="bi bi-info-circle me-1"></i>Provide a brief, clear answer
+                                                </div>
                                             </div>
                                             
                                         {% elif question.question_type == 'essay' %}
                                             <div class="form-group">
-                                                <textarea class="form-control" name="question_{{ question.id }}" rows="6" 
-                                                          placeholder="Enter your detailed answer here...">{% if existing_answers.get(question.id) %}{{ existing_answers[question.id].answer_text }}{% endif %}</textarea>
-                                                <div class="form-text">Provide a comprehensive, well-structured answer</div>
+                                                <textarea class="form-control" name="question_{{ question.id }}" rows="8" 
+                                                          placeholder="Enter your detailed answer here..."
+                                                          style="border-radius: 0.75rem; border: 2px solid #e9ecef; padding: 1rem; font-size: 1.05rem; transition: all 0.2s ease; resize: vertical;"
+                                                          onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 0.2rem rgba(102, 126, 234, 0.25)';"
+                                                          onblur="this.style.borderColor='#e9ecef'; this.style.boxShadow='none';">{% if existing_answers.get(question.id) %}{{ existing_answers[question.id].answer_text }}{% endif %}</textarea>
+                                                <div class="form-text mt-2" style="color: #6c757d;">
+                                                    <i class="bi bi-info-circle me-1"></i>Provide a comprehensive, well-structured answer
+                                                </div>
                                             </div>
                                         {% endif %}
                                     </div>
@@ -571,21 +627,27 @@
                                 
                                 <!-- Review Mode Summary -->
                                 <div class="review-summary" id="reviewSummary" style="display: none;">
-                                    <div class="card border-info">
-                                        <div class="card-header bg-info text-white">
-                                            <h6 class="mb-0"><i class="bi bi-eye me-2"></i>Quiz Review Summary</h6>
+                                    <div class="card border-0 shadow-sm" style="border-radius: 1rem; overflow: hidden; border-left: 4px solid #17a2b8;">
+                                        <div class="card-header text-white" style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); border: none; padding: 1.25rem;">
+                                            <h5 class="mb-0 fw-bold">
+                                                <i class="bi bi-eye me-2"></i>Quiz Review Summary
+                                            </h5>
                                         </div>
-                                        <div class="card-body">
-                                            <div class="row">
+                                        <div class="card-body p-4" style="background: white;">
+                                            <div class="row g-4">
                                                 <div class="col-md-6">
-                                                    <h6>Answer Status:</h6>
+                                                    <h6 class="fw-bold mb-3" style="color: #495057;">
+                                                        <i class="bi bi-list-check me-2 text-primary"></i>Answer Status:
+                                                    </h6>
                                                     <div id="answerStatusList">
                                                         <!-- Will be populated by JavaScript -->
                                                     </div>
                                                 </div>
                                                 <div class="col-md-6">
-                                                    <h6>Quick Navigation:</h6>
-                                                    <div id="quickNavButtons" class="d-flex flex-wrap gap-1">
+                                                    <h6 class="fw-bold mb-3" style="color: #495057;">
+                                                        <i class="bi bi-arrow-left-right me-2 text-primary"></i>Quick Navigation:
+                                                    </h6>
+                                                    <div id="quickNavButtons" class="d-flex flex-wrap gap-2">
                                                         <!-- Will be populated by JavaScript -->
                                                     </div>
                                                 </div>
@@ -594,37 +656,61 @@
                                     </div>
                                 </div>
                                 
-                                <div class="d-flex gap-2">
-                                    <button type="submit" class="btn btn-success" id="submitQuizBtn" onclick="return confirm('Are you sure you want to submit this quiz? You cannot change your answers after submission.')">
-                                        <i class="bi bi-check-circle me-1"></i>Submit Quiz
+                                <div class="d-flex gap-3 mt-4 flex-wrap">
+                                    <button type="submit" class="btn btn-lg px-5" id="submitQuizBtn" onclick="return confirm('Are you sure you want to submit this quiz? You cannot change your answers after submission.')" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border: none; border-radius: 0.5rem; font-weight: 700; box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4); font-size: 1.1rem;">
+                                        <i class="bi bi-check-circle me-2"></i>Submit Quiz
                                     </button>
-                                    <a href="{{ url_for('student.student_assignments') }}" class="btn btn-outline-secondary">
-                                        <i class="bi bi-arrow-left me-1"></i>Back to Assignments
+                                    <a href="{{ url_for('student.student_assignments') }}" class="btn btn-lg px-5" style="background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%); color: white; border: none; border-radius: 0.5rem; font-weight: 600; box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3); text-decoration: none; font-size: 1.1rem;">
+                                        <i class="bi bi-arrow-left me-2"></i>Back to Assignments
                                     </a>
                                 </div>
                                 
                                 <!-- Keyboard Shortcuts Help Modal -->
-                                <div class="keyboard-shortcuts-help mt-3" id="keyboardShortcutsHelp" style="display: none;">
-                                    <div class="card border-secondary">
-                                        <div class="card-header bg-secondary text-white">
-                                            <h6 class="mb-0"><i class="bi bi-keyboard me-2"></i>Keyboard Shortcuts</h6>
+                                <div class="keyboard-shortcuts-help mt-4" id="keyboardShortcutsHelp" style="display: none;">
+                                    <div class="card border-0 shadow-sm" style="border-radius: 1rem; overflow: hidden; border-left: 4px solid #6c757d;">
+                                        <div class="card-header text-white" style="background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%); border: none; padding: 1.25rem;">
+                                            <h5 class="mb-0 fw-bold">
+                                                <i class="bi bi-keyboard me-2"></i>Keyboard Shortcuts
+                                            </h5>
                                         </div>
-                                        <div class="card-body">
-                                            <div class="row">
+                                        <div class="card-body p-4" style="background: white;">
+                                            <div class="row g-4">
                                                 <div class="col-md-6">
-                                                    <h6>Navigation:</h6>
+                                                    <h6 class="fw-bold mb-3" style="color: #495057;">
+                                                        <i class="bi bi-arrow-left-right me-2 text-primary"></i>Navigation:
+                                                    </h6>
                                                     <ul class="list-unstyled">
-                                                        <li><kbd>←</kbd> Previous question</li>
-                                                        <li><kbd>→</kbd> Next question</li>
-                                                        <li><kbd>R</kbd> Toggle review mode</li>
+                                                        <li class="mb-2 d-flex align-items-center">
+                                                            <kbd class="px-2 py-1 me-2" style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 0.25rem; font-weight: 600;">←</kbd>
+                                                            <span>Previous question</span>
+                                                        </li>
+                                                        <li class="mb-2 d-flex align-items-center">
+                                                            <kbd class="px-2 py-1 me-2" style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 0.25rem; font-weight: 600;">→</kbd>
+                                                            <span>Next question</span>
+                                                        </li>
+                                                        <li class="mb-2 d-flex align-items-center">
+                                                            <kbd class="px-2 py-1 me-2" style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 0.25rem; font-weight: 600;">R</kbd>
+                                                            <span>Toggle review mode</span>
+                                                        </li>
                                                     </ul>
                                                 </div>
                                                 <div class="col-md-6">
-                                                    <h6>Actions:</h6>
+                                                    <h6 class="fw-bold mb-3" style="color: #495057;">
+                                                        <i class="bi bi-gear me-2 text-primary"></i>Actions:
+                                                    </h6>
                                                     <ul class="list-unstyled">
-                                                        <li><kbd>Ctrl+S</kbd> Save progress</li>
-                                                        <li><kbd>Tab</kbd> Navigate options</li>
-                                                        <li><kbd>Space</kbd> Select option</li>
+                                                        <li class="mb-2 d-flex align-items-center">
+                                                            <kbd class="px-2 py-1 me-2" style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 0.25rem; font-weight: 600;">Ctrl+S</kbd>
+                                                            <span>Save progress</span>
+                                                        </li>
+                                                        <li class="mb-2 d-flex align-items-center">
+                                                            <kbd class="px-2 py-1 me-2" style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 0.25rem; font-weight: 600;">Tab</kbd>
+                                                            <span>Navigate options</span>
+                                                        </li>
+                                                        <li class="mb-2 d-flex align-items-center">
+                                                            <kbd class="px-2 py-1 me-2" style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 0.25rem; font-weight: 600;">Space</kbd>
+                                                            <span>Select option</span>
+                                                        </li>
                                                     </ul>
                                                 </div>
                                             </div>
@@ -633,13 +719,18 @@
                                 </div>
                             </form>
                         {% else %}
-                            <div class="alert alert-warning">
-                                <i class="bi bi-exclamation-triangle me-2"></i>
-                                <strong>No questions found!</strong> This quiz doesn't have any questions yet.
+                            <div class="alert border-0 shadow-sm" style="background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%); border-radius: 1rem; border-left: 4px solid #ffc107;">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-exclamation-triangle me-3" style="font-size: 2rem; color: #ffc107;"></i>
+                                    <div>
+                                        <h5 class="fw-bold mb-1" style="color: #856404;">No questions found!</h5>
+                                        <p class="mb-0" style="color: #856404;">This quiz doesn't have any questions yet.</p>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="d-flex gap-2">
-                                <a href="{{ url_for('student.student_assignments') }}" class="btn btn-primary">
-                                    <i class="bi bi-arrow-left me-1"></i>Back to Assignments
+                            <div class="d-flex gap-2 mt-4">
+                                <a href="{{ url_for('student.student_assignments') }}" class="btn btn-lg px-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 0.5rem; font-weight: 600; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);">
+                                    <i class="bi bi-arrow-left me-2"></i>Back to Assignments
                                 </a>
                             </div>
                         {% endif %}
@@ -725,6 +816,39 @@ document.addEventListener('DOMContentLoaded', function() {
         // Auto-save every 30 seconds
         setInterval(saveQuizProgress, 30000);
     }
+    
+    // Add visual feedback for selected options
+    document.querySelectorAll('input[type="radio"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            // Remove selected styling from all options in this question
+            const questionId = this.name;
+            document.querySelectorAll(`input[name="${questionId}"]`).forEach(opt => {
+                const optionItem = opt.closest('.option-item');
+                if (optionItem) {
+                    optionItem.style.borderColor = '#e9ecef';
+                    optionItem.style.background = 'white';
+                }
+            });
+            
+            // Add selected styling to this option
+            const optionItem = this.closest('.option-item');
+            if (optionItem) {
+                optionItem.style.borderColor = '#667eea';
+                optionItem.style.background = 'linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%)';
+                optionItem.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.2)';
+            }
+        });
+        
+        // Apply initial styling if checked
+        if (radio.checked) {
+            const optionItem = radio.closest('.option-item');
+            if (optionItem) {
+                optionItem.style.borderColor = '#667eea';
+                optionItem.style.background = 'linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%)';
+                optionItem.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.2)';
+            }
+        }
+    });
 });
 
 function updateProgress() {
@@ -763,11 +887,11 @@ function updateProgressDisplay() {
         
         // Change color based on progress
         if (percentage === 100) {
-            progressBar.className = 'progress-bar bg-success';
+            progressBar.style.background = 'white';
         } else if (percentage >= 50) {
-            progressBar.className = 'progress-bar bg-warning';
+            progressBar.style.background = 'rgba(255, 255, 255, 0.9)';
         } else {
-            progressBar.className = 'progress-bar bg-info';
+            progressBar.style.background = 'rgba(255, 255, 255, 0.8)';
         }
     }
 }
@@ -846,6 +970,8 @@ function loadQuizProgress() {
                         const optionInput = document.querySelector(`input[name="question_${questionId}"][value="${data.progress.answers[questionId]}"]`);
                         if (optionInput) {
                             optionInput.checked = true;
+                            // Trigger change event to update styling
+                            optionInput.dispatchEvent(new Event('change'));
                         }
                     } else {
                         input.value = data.progress.answers[questionId];
@@ -904,11 +1030,11 @@ function updateTimerDisplay() {
         const timerDisplay = document.getElementById('quizTimer');
         if (timerDisplay) {
             if (quizState.timeRemaining <= 60) {
-                timerDisplay.className = 'timer-display text-danger';
+                timerDisplay.style.background = 'rgba(220, 53, 69, 0.3)';
+                timerDisplay.style.borderColor = 'rgba(220, 53, 69, 0.5)';
             } else if (quizState.timeRemaining <= 300) {
-                timerDisplay.className = 'timer-display text-warning';
-            } else {
-                timerDisplay.className = 'timer-display text-dark';
+                timerDisplay.style.background = 'rgba(255, 193, 7, 0.3)';
+                timerDisplay.style.borderColor = 'rgba(255, 193, 7, 0.5)';
             }
         }
     }
@@ -942,10 +1068,26 @@ function updateNavigationButtons() {
     const nextBtn = document.getElementById('nextQuestionBtn');
     
     if (prevBtn) {
-        prevBtn.disabled = quizState.currentQuestion === 1;
+        const isDisabled = quizState.currentQuestion === 1;
+        prevBtn.disabled = isDisabled;
+        if (isDisabled) {
+            prevBtn.style.opacity = '0.5';
+            prevBtn.style.cursor = 'not-allowed';
+        } else {
+            prevBtn.style.opacity = '1';
+            prevBtn.style.cursor = 'pointer';
+        }
     }
     if (nextBtn) {
-        nextBtn.disabled = quizState.currentQuestion === quizState.totalQuestions;
+        const isDisabled = quizState.currentQuestion === quizState.totalQuestions;
+        nextBtn.disabled = isDisabled;
+        if (isDisabled) {
+            nextBtn.style.opacity = '0.5';
+            nextBtn.style.cursor = 'not-allowed';
+        } else {
+            nextBtn.style.opacity = '1';
+            nextBtn.style.cursor = 'pointer';
+        }
     }
 }
 
@@ -968,7 +1110,7 @@ function toggleReviewMode() {
         // Enter review mode
         if (reviewBtn) {
             reviewBtn.innerHTML = '<i class="bi bi-pencil-square me-1"></i>Exit Review';
-            reviewBtn.className = 'btn btn-sm btn-warning';
+            reviewBtn.style.background = 'rgba(255,255,255,0.3)';
         }
         if (reviewSummary) {
             reviewSummary.style.display = 'block';
@@ -987,7 +1129,7 @@ function toggleReviewMode() {
         // Exit review mode
         if (reviewBtn) {
             reviewBtn.innerHTML = '<i class="bi bi-eye me-1"></i>Review';
-            reviewBtn.className = 'btn btn-sm btn-outline-light';
+            reviewBtn.style.background = 'rgba(255,255,255,0.2)';
         }
         if (reviewSummary) {
             reviewSummary.style.display = 'none';
@@ -1038,14 +1180,14 @@ function generateReviewSummary() {
         
         // Add to status list
         const statusIcon = isAnswered ? 'bi-check-circle text-success' : 'bi-circle text-muted';
-        statusHTML += `<div class="d-flex align-items-center mb-1">
-            <i class="bi ${statusIcon} me-2"></i>
-            <span>Question ${i}: ${isAnswered ? 'Answered' : 'Not Answered'}</span>
+        statusHTML += `<div class="d-flex align-items-center mb-2 p-2" style="background: ${isAnswered ? '#d4edda' : '#f8f9fa'}; border-radius: 0.5rem;">
+            <i class="bi ${statusIcon} me-2" style="font-size: 1.25rem;"></i>
+            <span style="font-weight: 500;">Question ${i}: ${isAnswered ? 'Answered' : 'Not Answered'}</span>
         </div>`;
         
         // Add to quick navigation
         const buttonClass = isAnswered ? 'btn-success' : 'btn-outline-secondary';
-        navHTML += `<button type="button" class="btn btn-sm ${buttonClass}" onclick="jumpToQuestion(${i})">${i}</button>`;
+        navHTML += `<button type="button" class="btn btn-sm ${buttonClass} px-3 py-2" onclick="jumpToQuestion(${i})" style="border-radius: 0.5rem; font-weight: 600;">${i}</button>`;
     }
     
     answerStatusList.innerHTML = statusHTML;

@@ -1499,6 +1499,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
         </div>
 
     {% elif section == 'classes' %}
+        {% if not show_class_details %}
         <!-- Modern Classes View -->
         <div class="student-classes-header mb-4" style="background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%); padding: 2rem; border-radius: 0.75rem; color: white;">
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
@@ -1514,13 +1515,14 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                     </div>
                 </div>
                 <div class="badge bg-white text-primary px-3 py-2" style="font-size: 1.1rem; font-weight: 600;">
-                    {{ my_classes|length }} {% if my_classes|length == 1 %}Class{% else %}Classes{% endif %}
+                    {{ my_classes|length if my_classes else 0 }} {% if (my_classes|length if my_classes else 0) == 1 %}Class{% else %}Classes{% endif %}
                 </div>
             </div>
         </div>
 
         <!-- Classes Grid -->
         <div class="row g-3">
+            {% if my_classes and my_classes|length > 0 %}
             {% for class in my_classes %}
                 <div class="col-12 col-md-6 col-lg-4">
                     <div class="card border-0 shadow-sm h-100">
@@ -1564,6 +1566,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                         </div>
                     </div>
                 </div>
+                {% endfor %}
             {% else %}
                 <div class="col-12">
                     <div class="student-classes-empty">
@@ -1572,8 +1575,9 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                         <p>You are not currently enrolled in any classes. Contact your school administrator for assistance.</p>
                     </div>
                 </div>
-            {% endfor %}
+            {% endif %}
         </div>
+        {% endif %}
 
         <!-- Class Assignments View (when show_assignments is True) -->
         {% if show_assignments and class_obj %}
@@ -1784,43 +1788,53 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
 
         <!-- Comprehensive Class Details View (when show_class_details is True) -->
         {% if show_class_details and class_obj %}
-        <div class="row mt-4">
-            <div class="col-12">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h2 class="mb-0">
-                        <i class="bi bi-house-door text-primary me-2"></i>
-                        {{ class_obj.name }} - Class Details
-                    </h2>
-                    <a href="{{ url_for('student.student_classes') }}" class="btn btn-outline-secondary btn-sm">
-                        <i class="bi bi-arrow-left me-1"></i>Back to Classes
-                    </a>
+        <!-- Enhanced Class Header -->
+        <div class="class-detail-header mb-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 2.5rem; border-radius: 1rem; color: white; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div style="font-size: 3.5rem; opacity: 0.9;">
+                        <i class="bi bi-journal-bookmark-fill"></i>
+                    </div>
+                    <div>
+                        <h1 class="mb-2" style="color: white; font-size: 2.5rem; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                            {{ class_obj.name }}
+                        </h1>
+                        <p class="mb-0" style="color: rgba(255,255,255,0.95); font-size: 1.1rem;">
+                            <i class="bi bi-book me-2"></i>{{ class_obj.subject or 'General' }} • Grade {{ class_obj.grade_level }}
+                        </p>
+                    </div>
+                </div>
+                <a href="{{ url_for('student.student_classes') }}" class="btn btn-light btn-lg shadow-sm" style="border-radius: 0.5rem;">
+                    <i class="bi bi-arrow-left me-2"></i>Back to Classes
+                </a>
+            </div>
                 </div>
 
                 <!-- Class Overview Cards -->
-                <div class="row g-3 mb-4">
+        <div class="row g-4 mb-4">
                     <!-- Class Info Card -->
                     <div class="col-md-6 col-lg-3">
-                        <div class="card bg-primary text-white h-100">
-                            <div class="card-body text-center">
-                                <i class="bi bi-info-circle fs-1 mb-2"></i>
-                                <h6 class="card-title">Class Information</h6>
-                                <p class="card-text mb-1">{{ class_obj.subject }}</p>
-                                <p class="card-text small">Grade {{ class_obj.grade_level }}</p>
+                <div class="card border-0 shadow-sm h-100" style="border-radius: 0.75rem; overflow: hidden;">
+                    <div class="card-body text-center" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2rem;">
+                        <i class="bi bi-info-circle" style="font-size: 2.5rem; margin-bottom: 1rem;"></i>
+                        <h6 class="card-title mb-2" style="font-weight: 600; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px;">Class Information</h6>
+                        <p class="card-text mb-1" style="font-size: 1.1rem; font-weight: 600;">{{ class_obj.subject }}</p>
+                        <p class="card-text small" style="opacity: 0.9;">Grade {{ class_obj.grade_level }}</p>
                             </div>
                         </div>
                     </div>
 
                     <!-- Teacher Info Card -->
                     <div class="col-md-6 col-lg-3">
-                        <div class="card bg-success text-white h-100">
-                            <div class="card-body text-center">
-                                <i class="bi bi-person-badge fs-1 mb-2"></i>
-                                <h6 class="card-title">Teacher</h6>
+                <div class="card border-0 shadow-sm h-100" style="border-radius: 0.75rem; overflow: hidden;">
+                    <div class="card-body text-center" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; padding: 2rem;">
+                        <i class="bi bi-person-badge" style="font-size: 2.5rem; margin-bottom: 1rem;"></i>
+                        <h6 class="card-title mb-2" style="font-weight: 600; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px;">Teacher</h6>
                                 {% if teacher %}
-                                    <p class="card-text mb-1">{{ teacher.first_name }} {{ teacher.last_name }}</p>
-                                    <p class="card-text small">{{ teacher.position or 'Teacher' }}</p>
+                            <p class="card-text mb-1" style="font-size: 1.1rem; font-weight: 600;">{{ teacher.first_name }} {{ teacher.last_name }}</p>
+                            <p class="card-text small" style="opacity: 0.9;">{{ teacher.position or 'Teacher' }}</p>
                                 {% else %}
-                                    <p class="card-text mb-1">Not Assigned</p>
+                            <p class="card-text mb-1" style="font-size: 1.1rem; font-weight: 600;">Not Assigned</p>
                                 {% endif %}
                             </div>
                         </div>
@@ -1828,24 +1842,24 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
 
                     <!-- Students Count Card -->
                     <div class="col-md-6 col-lg-3">
-                        <div class="card bg-info text-white h-100">
-                            <div class="card-body text-center">
-                                <i class="bi bi-people fs-1 mb-2"></i>
-                                <h6 class="card-title">Students</h6>
-                                <p class="card-text mb-1">{{ enrolled_students|length }}</p>
-                                <p class="card-text small">Enrolled</p>
+                <div class="card border-0 shadow-sm h-100" style="border-radius: 0.75rem; overflow: hidden;">
+                    <div class="card-body text-center" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; padding: 2rem;">
+                        <i class="bi bi-people" style="font-size: 2.5rem; margin-bottom: 1rem;"></i>
+                        <h6 class="card-title mb-2" style="font-weight: 600; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px;">Students</h6>
+                        <p class="card-text mb-1" style="font-size: 2rem; font-weight: 700;">{{ enrolled_students|length }}</p>
+                        <p class="card-text small" style="opacity: 0.9;">Enrolled</p>
                             </div>
                         </div>
                     </div>
 
                     <!-- Class GPA Card -->
                     <div class="col-md-6 col-lg-3">
-                        <div class="card {% if class_gpa >= 3.5 %}bg-success{% elif class_gpa >= 3.0 %}bg-primary{% elif class_gpa >= 2.0 %}bg-warning{% else %}bg-danger{% endif %} text-white h-100">
-                            <div class="card-body text-center">
-                                <i class="bi bi-graph-up fs-1 mb-2"></i>
-                                <h6 class="card-title">Your GPA</h6>
-                                <p class="card-text mb-1">{{ "%.2f"|format(class_gpa) }}</p>
-                                <p class="card-text small">In This Class</p>
+                <div class="card border-0 shadow-sm h-100" style="border-radius: 0.75rem; overflow: hidden;">
+                    <div class="card-body text-center" style="background: linear-gradient(135deg, {% if class_gpa >= 3.5 %}#11998e 0%, #38ef7d 100%{% elif class_gpa >= 3.0 %}#667eea 0%, #764ba2 100%{% elif class_gpa >= 2.0 %}#f093fb 0%, #f5576c 100%{% else %}#fa709a 0%, #fee140 100%{% endif %}); color: white; padding: 2rem;">
+                        <i class="bi bi-graph-up" style="font-size: 2.5rem; margin-bottom: 1rem;"></i>
+                        <h6 class="card-title mb-2" style="font-weight: 600; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px;">Your GPA</h6>
+                        <p class="card-text mb-1" style="font-size: 2rem; font-weight: 700;">{{ "%.2f"|format(class_gpa) }}</p>
+                        <p class="card-text small" style="opacity: 0.9;">In This Class</p>
                             </div>
                         </div>
                     </div>
@@ -1857,40 +1871,51 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                     <div class="col-lg-4">
                         <!-- Teacher Information -->
                         {% if teacher %}
-                        <div class="card shadow-sm mb-4">
-                            <div class="card-header bg-success text-white">
-                                <h5 class="mb-0">
+                        <div class="card border-0 shadow-sm mb-4" style="border-radius: 0.75rem; overflow: hidden;">
+                            <div class="card-header text-white" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border: none; padding: 1.25rem;">
+                                <h5 class="mb-0" style="font-weight: 600;">
                                     <i class="bi bi-person-circle me-2"></i>
                                     Teacher Information
                                 </h5>
                             </div>
-                            <div class="card-body">
-                                <div class="text-center mb-3">
-                                    <i class="bi bi-person-circle fs-1 text-success"></i>
-                                    <h6 class="mt-2">{{ teacher.first_name }} {{ teacher.last_name }}</h6>
-                                    <p class="text-muted mb-0">{{ teacher.position or 'Teacher' }}</p>
+                            <div class="card-body" style="padding: 1.5rem;">
+                                <div class="text-center mb-3 pb-3" style="border-bottom: 2px solid #f0f0f0;">
+                                    <div style="width: 80px; height: 80px; margin: 0 auto 1rem; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                        <i class="bi bi-person-circle text-white" style="font-size: 3rem;"></i>
                                 </div>
-                                <hr>
-                                <div class="row g-2">
+                                    <h5 class="mt-2 mb-1" style="font-weight: 600;">{{ teacher.first_name }} {{ teacher.last_name }}</h5>
+                                    <p class="text-muted mb-0 small">{{ teacher.position or 'Teacher' }}</p>
+                                </div>
+                                <div class="row g-3">
                                     <div class="col-12">
-                                        <strong>Email:</strong> 
+                                        <div class="d-flex align-items-start">
+                                            <i class="bi bi-envelope text-success me-2 mt-1"></i>
+                                            <div>
+                                                <strong class="d-block mb-1" style="font-size: 0.85rem; color: #6c757d;">Email</strong>
                                         {% if teacher.email %}
-                                            <a href="mailto:{{ teacher.email }}" class="text-decoration-none">
+                                                    <a href="mailto:{{ teacher.email }}" class="text-decoration-none text-dark">
                                                 {{ teacher.email }}
                                             </a>
                                         {% else %}
                                             <span class="text-muted">Not available</span>
                                         {% endif %}
+                                            </div>
+                                        </div>
                                     </div>
                                     <div class="col-12">
-                                        <strong>Phone:</strong> 
+                                        <div class="d-flex align-items-start">
+                                            <i class="bi bi-telephone text-success me-2 mt-1"></i>
+                                            <div>
+                                                <strong class="d-block mb-1" style="font-size: 0.85rem; color: #6c757d;">Phone</strong>
                                         {% if teacher.phone %}
-                                            <a href="tel:{{ teacher.phone }}" class="text-decoration-none">
+                                                    <a href="tel:{{ teacher.phone }}" class="text-decoration-none text-dark">
                                                 {{ teacher.phone }}
                                             </a>
                                         {% else %}
                                             <span class="text-muted">Not available</span>
                                         {% endif %}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1898,40 +1923,63 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                         {% endif %}
 
                         <!-- Class Information -->
-                        <div class="card shadow-sm mb-4">
-                            <div class="card-header bg-primary text-white">
-                                <h5 class="mb-0">
+                        <div class="card border-0 shadow-sm mb-4" style="border-radius: 0.75rem; overflow: hidden;">
+                            <div class="card-header text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; padding: 1.25rem;">
+                                <h5 class="mb-0" style="font-weight: 600;">
                                     <i class="bi bi-info-circle me-2"></i>
                                     Class Details
                                 </h5>
                             </div>
-                            <div class="card-body">
-                                <div class="row g-2">
+                            <div class="card-body" style="padding: 1.5rem;">
+                                <div class="row g-3">
                                     <div class="col-12">
-                                        <strong>Class Name:</strong> {{ class_obj.name }}
+                                        <div class="d-flex align-items-start">
+                                            <i class="bi bi-book text-primary me-2 mt-1"></i>
+                                            <div>
+                                                <strong class="d-block mb-1" style="font-size: 0.85rem; color: #6c757d;">Class Name</strong>
+                                                <span>{{ class_obj.name }}</span>
+                                            </div>
+                                        </div>
                                     </div>
                                     <div class="col-12">
-                                        <strong>Subject:</strong> {{ class_obj.subject }}
+                                        <div class="d-flex align-items-start">
+                                            <i class="bi bi-journal-text text-primary me-2 mt-1"></i>
+                                            <div>
+                                                <strong class="d-block mb-1" style="font-size: 0.85rem; color: #6c757d;">Subject</strong>
+                                                <span>{{ class_obj.subject }}</span>
+                                            </div>
+                                        </div>
                                     </div>
                                     <div class="col-12">
-                                        <strong>Grade Level:</strong> {{ class_obj.grade_level }}
+                                        <div class="d-flex align-items-start">
+                                            <i class="bi bi-mortarboard text-primary me-2 mt-1"></i>
+                                            <div>
+                                                <strong class="d-block mb-1" style="font-size: 0.85rem; color: #6c757d;">Grade Level</strong>
+                                                <span>{{ class_obj.grade_level }}</span>
+                                            </div>
+                                        </div>
                                     </div>
                                     <div class="col-12">
-                                        <strong>School Year:</strong> 
+                                        <div class="d-flex align-items-start">
+                                            <i class="bi bi-calendar-year text-primary me-2 mt-1"></i>
+                                            <div>
+                                                <strong class="d-block mb-1" style="font-size: 0.85rem; color: #6c757d;">School Year</strong>
                                         {% if class_obj.school_year %}
-                                            {{ class_obj.school_year.name }}
+                                                    <span>{{ class_obj.school_year.name }}</span>
                                         {% else %}
                                             <span class="text-muted">Not specified</span>
                                         {% endif %}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Enrolled Students -->
-                        <div class="card shadow-sm">
-                            <div class="card-header bg-info text-white">
-                                <h5 class="mb-0">
+                        <div class="card border-0 shadow-sm" style="border-radius: 0.75rem; overflow: hidden;">
+                            <div class="card-header text-white" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border: none; padding: 1.25rem;">
+                                <h5 class="mb-0" style="font-weight: 600;">
                                     <i class="bi bi-people me-2"></i>
                                     Class Roster
                                 </h5>
@@ -1940,12 +1988,14 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                 <div style="max-height: 300px; overflow-y: auto;">
                                     <div class="list-group list-group-flush">
                                         {% for student in enrolled_students %}
-                                        <div class="list-group-item d-flex align-items-center">
-                                            <i class="bi bi-person-circle text-primary me-2"></i>
+                                        <div class="list-group-item d-flex align-items-center" style="border: none; border-bottom: 1px solid #f0f0f0; padding: 1rem 1.5rem;">
+                                            <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 1rem;">
+                                                <i class="bi bi-person text-white"></i>
+                                            </div>
                                             <div class="flex-grow-1">
                                                 <strong>{{ student.first_name }} {{ student.last_name }}</strong>
                                                 {% if student.id == current_user.student_id %}
-                                                    <span class="badge bg-success ms-2">You</span>
+                                                    <span class="badge bg-success ms-2" style="font-size: 0.75rem;">You</span>
                                                 {% endif %}
                                             </div>
                                         </div>
@@ -1959,29 +2009,38 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                     <!-- Right Column: Assignments & Announcements -->
                     <div class="col-lg-8">
                         <!-- Recent Assignments -->
-                        <div class="card shadow-sm mb-4">
-                            <div class="card-header bg-warning text-dark">
-                                <h5 class="mb-0">
+                        <div class="card border-0 shadow-sm mb-4" style="border-radius: 0.75rem; overflow: hidden;">
+                            <div class="card-header text-white" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border: none; padding: 1.25rem;">
+                                <h5 class="mb-0" style="font-weight: 600;">
                                     <i class="bi bi-journal-text me-2"></i>
                                     Recent Assignments
                                 </h5>
                             </div>
-                            <div class="card-body">
+                            <div class="card-body" style="padding: 1.5rem;">
                                 {% if assignments %}
                                     <div class="row g-3">
                                         {% for assignment in assignments[:6] %}
                                         <div class="col-md-6">
-                                            <div class="card border-0 bg-light h-100">
-                                                <div class="card-body">
-                                                    <h6 class="card-title">{{ assignment.title }}</h6>
-                                                    <p class="card-text small text-muted">
-                                                        {{ assignment.description or 'No description provided.' }}
-                                                    </p>
+                                            <div class="card border h-100" style="border-radius: 0.5rem; border-color: #e9ecef; transition: all 0.3s ease;">
+                                                <div class="card-body" style="padding: 1.25rem;">
+                                                    <div class="d-flex align-items-start mb-2">
+                                                        <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; margin-right: 0.75rem; flex-shrink: 0;">
+                                                            <i class="bi bi-file-text text-white"></i>
+                                                        </div>
+                                                        <div class="flex-grow-1">
+                                                            <h6 class="card-title mb-1" style="font-weight: 600; font-size: 1rem;">{{ assignment.title }}</h6>
+                                                            <p class="card-text small text-muted mb-2" style="font-size: 0.85rem; line-height: 1.4;">
+                                                                {{ (assignment.description or 'No description provided.')[:80] }}{% if assignment.description and assignment.description|length > 80 %}...{% endif %}
+                                                            </p>
+                                                        </div>
+                                                    </div>
                                                     
                                                     <div class="mb-2">
-                                                        <strong>Due:</strong> 
+                                                        <div class="d-flex align-items-center mb-1">
+                                                            <i class="bi bi-calendar-event text-muted me-2" style="font-size: 0.85rem;"></i>
+                                                            <small class="text-muted">
                                                         {% if assignment.due_date %}
-                                                            {{ assignment.due_date.strftime('%B %d, %Y') }}
+                                                                    <strong>Due:</strong> {{ assignment.due_date.strftime('%B %d, %Y') }}
                                                             {% set due_date = assignment.due_date.date() if assignment.due_date.date else assignment.due_date %}
                                                             {% set days_remaining = (due_date - today).days %}
                                                             
@@ -1994,34 +2053,42 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                                             {% endfor %}
                                                             
                                                             {% if assignment_status == 'completed' %}
-                                                                <span class="badge bg-success ms-2">Completed</span>
+                                                                        <span class="badge bg-success ms-2" style="font-size: 0.7rem;">Completed</span>
                                                             {% elif days_remaining > 0 %}
-                                                                <span class="badge bg-success ms-2">{{ days_remaining }} days</span>
+                                                                        <span class="badge bg-success ms-2" style="font-size: 0.7rem;">{{ days_remaining }} days</span>
                                                             {% elif days_remaining == 0 %}
-                                                                <span class="badge bg-warning ms-2">Due today</span>
+                                                                        <span class="badge bg-warning ms-2" style="font-size: 0.7rem;">Due today</span>
                                                             {% else %}
-                                                                <span class="badge bg-danger ms-2">{{ (days_remaining * -1) }} overdue</span>
+                                                                        <span class="badge bg-danger ms-2" style="font-size: 0.7rem;">{{ (days_remaining * -1) }} overdue</span>
                                                             {% endif %}
                                                         {% else %}
                                                             <span class="text-muted">No due date</span>
                                                         {% endif %}
+                                                            </small>
                                                     </div>
-                                                    
-                                                    <div class="mb-2">
-                                                        <strong>Quarter:</strong> Q{{ assignment.quarter }}
+                                                        <div class="d-flex align-items-center">
+                                                            <i class="bi bi-bookmark text-muted me-2" style="font-size: 0.85rem;"></i>
+                                                            <small class="text-muted"><strong>Quarter:</strong> Q{{ assignment.quarter }}</small>
+                                                        </div>
                                                     </div>
                                                     
                                                     <!-- Submission Status -->
                                                     {% set submission = submissions.get(assignment.id) %}
                                                     {% set grade = grades.get(assignment.id) %}
-                                                    <div class="mt-2">
+                                                    <div class="mt-3 pt-2" style="border-top: 1px solid #e9ecef;">
                                                         {% if submission %}
-                                                            <span class="badge bg-success">Submitted</span>
+                                                            <span class="badge bg-success" style="font-size: 0.75rem; padding: 0.35rem 0.65rem;">
+                                                                <i class="bi bi-check-circle me-1"></i>Submitted
+                                                            </span>
                                                             {% if grade %}
-                                                                <span class="badge bg-info ms-1">{{ grade.score }}%</span>
+                                                                <span class="badge bg-info ms-1" style="font-size: 0.75rem; padding: 0.35rem 0.65rem;">
+                                                                    <i class="bi bi-star me-1"></i>{{ grade.score }}%
+                                                                </span>
                                                             {% endif %}
                                                         {% else %}
-                                                            <span class="badge bg-warning">Not Submitted</span>
+                                                            <span class="badge bg-warning" style="font-size: 0.75rem; padding: 0.35rem 0.65rem;">
+                                                                <i class="bi bi-clock me-1"></i>Not Submitted
+                                                            </span>
                                                         {% endif %}
                                                     </div>
                                                 </div>
@@ -2037,18 +2104,21 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                     </div>
                                     {% endif %}
                                 {% else %}
-                                    <div class="alert alert-info">
-                                        <i class="bi bi-info-circle me-2"></i>
-                                        No assignments have been posted for this class yet.
+                                    <div class="text-center py-5">
+                                        <div style="width: 80px; height: 80px; margin: 0 auto 1.5rem; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                            <i class="bi bi-journal-text text-white" style="font-size: 2.5rem;"></i>
+                                        </div>
+                                        <h6 class="text-muted mb-2" style="font-weight: 600;">No Assignments Yet</h6>
+                                        <p class="text-muted mb-0" style="font-size: 0.9rem;">No assignments have been posted for this class yet.</p>
                                     </div>
                                 {% endif %}
                             </div>
                         </div>
 
                         <!-- Recent Announcements -->
-                        <div class="card shadow-sm">
-                            <div class="card-header bg-secondary text-white">
-                                <h5 class="mb-0">
+                        <div class="card border-0 shadow-sm" style="border-radius: 0.75rem; overflow: hidden;">
+                            <div class="card-header text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; padding: 1.25rem;">
+                                <h5 class="mb-0" style="font-weight: 600;">
                                     <i class="bi bi-megaphone me-2"></i>
                                     Recent Announcements
                                 </h5>
@@ -2563,7 +2633,11 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
             
             {% if upcoming_assignments %}
             <div class="row g-3 mt-3" id="upcomingAssignmentsTable">
-                {% for assignment, submission, student_status in upcoming_assignments %}
+                {% for assignment_data in upcoming_assignments %}
+                {% set assignment = assignment_data[0] %}
+                {% set submission = assignment_data[1] %}
+                {% set student_status = assignment_data[2] %}
+                {% set attempts_remaining = assignment_data[3] if assignment_data|length > 3 else None %}
                 <div class="col-12 col-md-6 col-lg-4 assignment-card-wrapper" 
                      data-status="{{ student_status }}" 
                      data-type="{{ assignment.assignment_type or 'pdf' }}" 
@@ -2659,7 +2733,11 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
             
             {% if active_assignments %}
             <div class="row g-3 mt-3" id="activeAssignmentsTable">
-                {% for assignment, submission, student_status in active_assignments %}
+                {% for assignment_data in active_assignments %}
+                {% set assignment = assignment_data[0] %}
+                {% set submission = assignment_data[1] %}
+                {% set student_status = assignment_data[2] %}
+                {% set attempts_remaining = assignment_data[3] if assignment_data|length > 3 else None %}
                 <div class="col-12 col-md-6 col-lg-4 assignment-card-wrapper" 
                      data-status="{{ student_status }}" 
                      data-type="{{ assignment.assignment_type or 'pdf' }}" 
@@ -2802,9 +2880,15 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                 <i class="bi bi-eye me-1"></i>View
                             </button>
                             {% if assignment.assignment_type == 'quiz' %}
-                                <button type="button" class="btn btn-sm btn-student-action" onclick="takeQuiz({{ assignment.id }}, '{{ assignment.title }}')">
-                                    <i class="bi bi-play-fill me-1"></i>Take Quiz
-                                </button>
+                                {% if submission and attempts_remaining and attempts_remaining > 0 %}
+                                    <button type="button" class="btn btn-sm btn-student-action" onclick="takeQuiz({{ assignment.id }}, '{{ assignment.title }}', true)" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); border: none; color: white; box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);">
+                                        <i class="bi bi-arrow-repeat me-1"></i>Retake Quiz ({{ attempts_remaining }} left)
+                                    </button>
+                                {% else %}
+                                    <button type="button" class="btn btn-sm btn-student-action" onclick="takeQuiz({{ assignment.id }}, '{{ assignment.title }}')">
+                                        <i class="bi bi-play-fill me-1"></i>Take Quiz
+                                    </button>
+                                {% endif %}
                             {% elif assignment.assignment_type == 'discussion' %}
                                 <button type="button" class="btn btn-sm btn-student-action" onclick="window.joinDiscussion({{ assignment.id }}, '{{ assignment.title|replace("'", "\\'") }}')">
                                     <i class="bi bi-chat-fill me-1"></i>Discuss
@@ -2841,7 +2925,11 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
             
             {% if inactive_assignments %}
             <div class="row g-3 mt-3" id="inactiveAssignmentsTable">
-                {% for assignment, submission, student_status in inactive_assignments %}
+                {% for assignment_data in inactive_assignments %}
+                {% set assignment = assignment_data[0] %}
+                {% set submission = assignment_data[1] %}
+                {% set student_status = assignment_data[2] %}
+                {% set attempts_remaining = assignment_data[3] if assignment_data|length > 3 else None %}
                 <div class="col-12 col-md-6 col-lg-4 assignment-card-wrapper" 
                      data-status="{{ student_status }}" 
                      data-type="{{ assignment.assignment_type or 'pdf' }}" 
@@ -5634,9 +5722,13 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
     });
     
     // New assignment type specific functions
-    function takeQuiz(assignmentId, assignmentTitle) {
+    function takeQuiz(assignmentId, assignmentTitle, isRetake = false) {
         // Redirect to quiz taking interface
-        window.location.href = `/student/take-quiz/${assignmentId}`;
+        let url = `/student/take-quiz/${assignmentId}`;
+        if (isRetake) {
+            url += '?retake=true';
+        }
+        window.location.href = url;
     }
     
     // Make joinDiscussion globally accessible

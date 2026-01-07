@@ -383,11 +383,47 @@ def edit_teacher_staff(staff_id):
 @login_required
 @management_required
 def remove_teacher_staff(staff_id):
-    """Remove a teacher or staff member"""
+    """
+    Soft delete a teacher or staff member.
+    - Marks the teacher as deleted (preserves all data they created)
+    - Deletes the associated user account
+    - All assignments, grades, and other data remain intact with the deleted teacher's ID
+    """
+    from models import User
+    from datetime import datetime
+    
     teacher_staff = TeacherStaff.query.get_or_404(staff_id)
-    db.session.delete(teacher_staff)
-    db.session.commit()
-    flash('Teacher/Staff member removed successfully.', 'success')
+    
+    # Check if already deleted
+    if teacher_staff.is_deleted:
+        flash('This teacher/staff member has already been deleted.', 'warning')
+        return redirect(url_for('management.teachers'))
+    
+    try:
+        # Soft delete: Mark teacher as deleted instead of actually deleting
+        teacher_staff.is_deleted = True
+        teacher_staff.deleted_at = datetime.utcnow()
+        
+        # Store the teacher's name for display purposes (in case needed)
+        # The name fields remain intact, just marked as deleted
+        
+        # Delete associated User account(s) - this removes login access
+        user_accounts = User.query.filter_by(teacher_staff_id=staff_id).all()
+        for user in user_accounts:
+            db.session.delete(user)
+        
+        # IMPORTANT: Do NOT modify class assignments, assignments, grades, or any other data
+        # All foreign key references to this teacher remain intact
+        # This preserves the historical record of who created/graded what
+        # The teacher will simply not appear in active teacher lists due to is_deleted flag
+        
+        db.session.commit()
+        flash(f'Teacher/Staff member "{teacher_staff.first_name} {teacher_staff.last_name}" has been removed. Their account has been deleted, but all their work (assignments, grades, etc.) has been preserved.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error deleting teacher/staff: {str(e)}")
+        flash(f'Error removing teacher/staff member: {str(e)}', 'danger')
+    
     return redirect(url_for('management.teachers'))
 
 # Report Card Generation - API endpoint to get classes for a student
@@ -411,8 +447,8 @@ def teachers():
     sort_by = request.args.get('sort', 'name')
     sort_order = request.args.get('order', 'asc')
     
-    # Build the query
-    query = TeacherStaff.query
+    # Build the query - exclude deleted teachers
+    query = TeacherStaff.query.filter(TeacherStaff.is_deleted == False)
     
     # Apply search filter if query exists
     if search_query:
@@ -559,7 +595,7 @@ def teachers():
 @management_required
 def api_teachers():
     """API endpoint to get teachers for dropdowns."""
-    teachers = TeacherStaff.query.all()
+    teachers = TeacherStaff.query.filter(TeacherStaff.is_deleted == False).all()
     return jsonify([{
         'id': teacher.id,
         'first_name': teacher.first_name,
@@ -823,7 +859,9 @@ def view_teacher(teacher_id):
             'emergency_relationship': getattr(teacher, 'emergency_relationship', None),
             'grades_taught': grades_taught_str or '',
             'assigned_classes': [{'id': c.id, 'name': c.name, 'subject': c.subject} for c in assigned_classes],
-            'total_students': total_students
+            'total_students': total_students,
+            'is_temporary': getattr(teacher, 'is_temporary', False),
+            'access_expires_at': _fmt_date(getattr(teacher, 'access_expires_at', None))
         })
     except Exception as e:
         current_app.logger.error(f"Error serializing teacher data {teacher_id}: {str(e)}")
@@ -885,6 +923,23 @@ def edit_teacher(teacher_id):
         teacher.emergency_email = request.form.get('emergency_contact_email', teacher.emergency_email)
         teacher.emergency_phone = request.form.get('emergency_contact_phone', teacher.emergency_phone)
         teacher.emergency_relationship = request.form.get('emergency_contact_relationship', teacher.emergency_relationship)
+        
+        # Temporary access fields
+        is_temporary = request.form.get('is_temporary') == 'on'
+        teacher.is_temporary = is_temporary
+        
+        if is_temporary:
+            access_expires_str = request.form.get('access_expires_at', '').strip()
+            if access_expires_str:
+                try:
+                    from datetime import datetime, timezone
+                    access_expires_at = datetime.strptime(access_expires_str, '%Y-%m-%dT%H:%M')
+                    access_expires_at = access_expires_at.replace(tzinfo=timezone.utc)
+                    teacher.access_expires_at = access_expires_at
+                except ValueError:
+                    return jsonify({'success': False, 'message': 'Invalid expiration date format.'}), 400
+        else:
+            teacher.access_expires_at = None
         
         # Update user role if user account exists
         if teacher.user:

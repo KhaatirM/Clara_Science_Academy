@@ -6,9 +6,10 @@ from flask import Blueprint, render_template, request, flash, redirect, url_for,
 from flask_login import login_required, current_user
 from decorators import management_required
 from models import (
-    db, Student, TeacherStaff, Class, Assignment, Grade, Submission, Notification, Enrollment, Attendance
+    db, Student, TeacherStaff, Class, Assignment, Grade, Submission, Notification, Enrollment, Attendance, AssignmentRedo
 )
 from sqlalchemy import or_, and_
+from sqlalchemy.orm import joinedload
 from datetime import datetime, timedelta
 import json
 from .utils import update_assignment_statuses
@@ -224,12 +225,21 @@ def redo_dashboard():
         # Get redos for teacher's classes only
         redos = AssignmentRedo.query.join(Assignment).join(Class).filter(
             Class.teacher_id == teacher.id
+        ).options(
+            joinedload(AssignmentRedo.assignment).joinedload(Assignment.class_info),
+            joinedload(AssignmentRedo.student)
         ).order_by(AssignmentRedo.redo_deadline.asc()).all()
         classes = Class.query.filter_by(teacher_id=teacher.id).all()
     else:
         # Directors and School Administrators see all redos
-        redos = AssignmentRedo.query.order_by(AssignmentRedo.redo_deadline.asc()).all()
+        redos = AssignmentRedo.query.options(
+            joinedload(AssignmentRedo.assignment).joinedload(Assignment.class_info),
+            joinedload(AssignmentRedo.student)
+        ).order_by(AssignmentRedo.redo_deadline.asc()).all()
         classes = Class.query.all()
+    
+    # Filter out redos with missing assignments or students (data integrity check)
+    redos = [r for r in redos if r.assignment and r.student]
     
     # Calculate statistics
     active_redos = len([r for r in redos if not r.is_used and not r.final_grade])

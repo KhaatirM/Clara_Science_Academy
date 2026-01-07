@@ -225,6 +225,10 @@ class TeacherStaff(db.Model):
     is_temporary = db.Column(db.Boolean, default=False, nullable=False)  # Is this a temporary staff member?
     access_expires_at = db.Column(db.DateTime, nullable=True)  # When temporary access expires
     
+    # Deletion tracking
+    is_deleted = db.Column(db.Boolean, default=False, nullable=False)  # Soft delete flag - marks teacher as deleted while preserving data
+    deleted_at = db.Column(db.DateTime, nullable=True)  # When the teacher was deleted
+    
     # File uploads
     resume_filename = db.Column(db.String(255), nullable=True)
     other_document_filename = db.Column(db.String(255), nullable=True)

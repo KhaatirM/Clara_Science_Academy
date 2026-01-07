@@ -1,12 +1,27 @@
 {% extends "shared/dashboard_layout.html" %}
 
 {% block dashboard_content %}
-<div class="container-fluid px-2 px-md-4">
-    <h3 class="mb-4">{% if edit_mode %}Update Teacher/Staff Information{% else %}Add New Teacher/Staff Member{% endif %}</h3>
+<div class="container-fluid px-2 px-md-4" style="background: #f8f9fa; min-height: 100vh; padding: 2rem 0;">
+    <div class="mb-4">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 1rem; padding: 2rem; color: white; box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);">
+            <h2 class="mb-2" style="font-weight: 700; font-size: 2rem;">
+                <i class="bi bi-person-plus me-2"></i>{% if edit_mode %}Update Teacher/Staff Information{% else %}Add New Teacher/Staff Member{% endif %}
+            </h2>
+            <p class="mb-0" style="opacity: 0.95; font-size: 1.1rem;">{% if edit_mode %}Update existing staff member details{% else %}Complete the form below to add a new staff member to the system{% endif %}</p>
+        </div>
+    </div>
 
     <form method="POST" action="{{ url_for('management.add_teacher_staff') }}" enctype="multipart/form-data" class="needs-validation" novalidate>
-        <div class="row g-3">
-            <h4 class="mt-4 mb-3 border-bottom pb-2">Personal Information</h4>
+        <div class="row g-4">
+            <!-- Personal Information Card -->
+            <div class="col-12">
+                <div class="card border-0 shadow-sm" style="border-radius: 0.75rem; overflow: hidden;">
+                    <div class="card-header text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; padding: 1.25rem;">
+                        <h5 class="mb-0" style="font-weight: 600; font-size: 1.25rem;">
+                            <i class="bi bi-person me-2"></i>Personal Information
+                        </h5>
+                    </div>
+                    <div class="card-body" style="padding: 1.5rem;">
             <div class="col-12 col-md-5">
                 <label for="first_name" class="form-label">First Name <span class="text-danger">*</span></label>
                 <input type="text" class="form-control" id="first_name" name="first_name"
@@ -45,12 +60,25 @@
             </div>
 
             <div class="col-12">
-                <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
-                <input type="email" class="form-control" id="email" name="email" placeholder="you@example.com" value="{{ staff_data.email if staff_data else '' }}" required>
+                <label for="email" class="form-label fw-bold" style="color: #495057;">
+                    <i class="bi bi-envelope me-1 text-primary"></i>Email <span class="text-danger">*</span>
+                </label>
+                <input type="email" class="form-control" id="email" name="email" placeholder="you@example.com" value="{{ staff_data.email if staff_data else '' }}" required style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;">
                  <div class="invalid-feedback">A valid email address is required.</div>
             </div>
+                    </div>
+                </div>
+            </div>
             
-            <h5 class="mt-4 mb-2 border-bottom pb-1">Address</h5>
+            <!-- Address Card -->
+            <div class="col-12">
+                <div class="card border-0 shadow-sm" style="border-radius: 0.75rem; overflow: hidden;">
+                    <div class="card-header text-white" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border: none; padding: 1.25rem;">
+                        <h5 class="mb-0" style="font-weight: 600; font-size: 1.25rem;">
+                            <i class="bi bi-geo-alt me-2"></i>Address
+                        </h5>
+                    </div>
+                    <div class="card-body" style="padding: 1.5rem;">
             <div class="col-12">
                 <label for="street_address" class="form-label">Street Address <span class="text-danger">*</span></label>
                 <input type="text" class="form-control" id="street_address" name="street_address" placeholder="1234 Main St" value="{{ staff_data.street_address if staff_data else '' }}" required>
@@ -129,7 +157,19 @@
                 <div class="invalid-feedback">Zip code is required.</div>
             </div>
 
-            <h5 class="mt-4 mb-2 border-bottom pb-1">Emergency Contact</h5>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Emergency Contact Card -->
+            <div class="col-12">
+                <div class="card border-0 shadow-sm" style="border-radius: 0.75rem; overflow: hidden;">
+                    <div class="card-header text-white" style="background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%); border: none; padding: 1.25rem;">
+                        <h5 class="mb-0" style="font-weight: 600; font-size: 1.25rem;">
+                            <i class="bi bi-exclamation-triangle me-2"></i>Emergency Contact
+                        </h5>
+                    </div>
+                    <div class="card-body" style="padding: 1.5rem;">
             <div class="col-12 col-md-5">
                 <label for="emergency_contact_name" class="form-label">First Name <span class="text-danger">*</span></label>
                 <input type="text" class="form-control" id="emergency_contact_name" name="emergency_contact_name"
@@ -166,18 +206,31 @@
             </div>
 
             <div class="col-12 col-md-6 mt-3">
-                <label for="staff_image" class="form-label">Image Upload</label>
-                <input class="form-control" type="file" id="staff_image" name="staff_image" accept="image/*">
+                <label for="staff_image" class="form-label fw-bold" style="color: #495057;">
+                    <i class="bi bi-image me-1 text-primary"></i>Image Upload
+                </label>
+                <input class="form-control" type="file" id="staff_image" name="staff_image" accept="image/*" style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;">
                  {% if edit_mode and staff_data and staff_data.image and staff_data.image not in ['teacher_default_m.jpg', 'teacher_default_f.jpg'] %}
                     <div class="form-text mt-1">Current image: <strong>{{ staff_data.image }}</strong>. Upload new to replace.</div>
-                    <img src="{{ url_for('static', filename='uploads/' + staff_data.image) }}" alt="Current Staff Image" class="img-thumbnail mt-2 max-width-100" style="max-height: 100px;">
+                    <img src="{{ url_for('static', filename='uploads/' + staff_data.image) }}" alt="Current Staff Image" class="img-thumbnail mt-2 max-width-100" style="max-height: 100px; border-radius: 0.5rem;">
                 {% elif edit_mode and staff_data and staff_data.image %}
                      <div class="form-text mt-1">Currently using: <strong>{{ staff_data.image }}</strong>. Upload new to replace.</div>
-                     <img src="{{ url_for('static', filename='uploads/' + staff_data.image) }}" alt="Staff Image" class="img-thumbnail mt-2 max-width-100" style="max-height: 100px;">
+                     <img src="{{ url_for('static', filename='uploads/' + staff_data.image) }}" alt="Staff Image" class="img-thumbnail mt-2 max-width-100" style="max-height: 100px; border-radius: 0.5rem;">
                 {% endif %}
             </div>
+                    </div>
+                </div>
+            </div>
             
-            <h4 class="mt-5 mb-3 border-bottom pb-2">Professional Information</h4>
+            <!-- Professional Information Card -->
+            <div class="col-12">
+                <div class="card border-0 shadow-sm" style="border-radius: 0.75rem; overflow: hidden;">
+                    <div class="card-header text-white" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border: none; padding: 1.25rem;">
+                        <h5 class="mb-0" style="font-weight: 600; font-size: 1.25rem;">
+                            <i class="bi bi-briefcase me-2"></i>Professional Information
+                        </h5>
+                    </div>
+                    <div class="card-body" style="padding: 1.5rem;">
             <div class="col-12 col-md-6">
                 <label for="assigned_role" class="form-label">Assigned Role <span class="text-danger">*</span></label>
                 <select class="form-select" id="assigned_role" name="assigned_role" required>
@@ -197,21 +250,23 @@
             </div>
             
             <div class="col-12">
-                <label class="form-label d-block">Department(s) <span class="text-danger">*</span></label>
-                <div class="row g-3 px-2">
+                <label class="form-label fw-bold d-block mb-3" style="color: #495057;">
+                    <i class="bi bi-building me-1 text-primary"></i>Department(s) <span class="text-danger">*</span>
+                </label>
+                <div class="row g-3 px-2" style="background: #f8f9fa; padding: 1rem; border-radius: 0.5rem;">
                     {% set departments = ["Mathematics", "Science", "English", "History & Social Studies", "Physical Education & Health", "Music & Arts", "Computer Science & Technology", "Administration", "Counseling", "Special Education", "Foreign Language", "Business"] %}
                     {% for dept in departments %}
                     <div class="col-6 col-sm-4 col-md-3">
-                        <div class="form-check">
+                        <div class="form-check p-2" style="background: white; border-radius: 0.5rem; border: 2px solid #e9ecef; transition: all 0.2s ease;">
                             <input class="form-check-input" type="checkbox" name="department" value="{{ dept }}"
                                    id="dept_{{ dept|replace(' ', '_')|replace('&', 'and')|replace('(', '')|replace(')', '')|replace('/', '_') }}"
-                                   {% if staff_data and staff_data.department and dept in staff_data.department.split(', ') %}checked{% endif %}>
-                            <label class="form-check-label" for="dept_{{ dept|replace(' ', '_')|replace('&', 'and')|replace('(', '')|replace(')', '')|replace('/', '_') }}">{{ dept }}</label>
+                                   {% if staff_data and staff_data.department and dept in staff_data.department.split(', ') %}checked{% endif %} style="cursor: pointer;">
+                            <label class="form-check-label" for="dept_{{ dept|replace(' ', '_')|replace('&', 'and')|replace('(', '')|replace(')', '')|replace('/', '_') }}" style="cursor: pointer; font-weight: 500;">{{ dept }}</label>
                         </div>
                     </div>
                     {% endfor %}
                 </div>
-                <div class="form-text">Select all applicable departments</div>
+                <div class="form-text mt-2"><i class="bi bi-info-circle me-1"></i>Select all applicable departments</div>
                 <div class="invalid-feedback">Please select at least one department.</div>
             </div>
             <div class="col-12 col-md-6">
@@ -242,39 +297,39 @@
             </div>
             
             <!-- Temporary Access Section -->
-            <div class="col-12 mt-3">
-                <div class="card border-info">
-                    <div class="card-header bg-info text-white">
-                        <h5 class="mb-0">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm" style="border-radius: 0.75rem; overflow: hidden; border-left: 4px solid #ffc107 !important;">
+                    <div class="card-header text-white" style="background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%); border: none; padding: 1.25rem;">
+                        <h5 class="mb-0" style="font-weight: 600; font-size: 1.25rem;">
                             <i class="bi bi-clock-history me-2"></i>Temporary Access Settings
                         </h5>
                     </div>
-                    <div class="card-body">
-                        <div class="form-check mb-3">
+                    <div class="card-body" style="padding: 1.5rem;">
+                        <div class="form-check mb-3 p-3" style="background: #fff3cd; border-radius: 0.5rem; border: 2px solid #ffc107;">
                             <input class="form-check-input" type="checkbox" id="is_temporary" name="is_temporary" 
                                    {% if staff_data and staff_data.is_temporary %}checked{% endif %}
-                                   onchange="toggleTemporaryAccess()">
-                            <label class="form-check-label" for="is_temporary">
-                                <strong>This is a temporary staff member</strong>
+                                   onchange="toggleTemporaryAccess()" style="cursor: pointer; width: 1.25rem; height: 1.25rem;">
+                            <label class="form-check-label fw-bold" for="is_temporary" style="cursor: pointer; font-size: 1.05rem; color: #856404;">
+                                This is a temporary staff member
                             </label>
-                            <div class="form-text">Enable this for temporary staff who need time-limited access.</div>
+                            <div class="form-text mt-2" style="color: #856404;"><i class="bi bi-info-circle me-1"></i>Enable this for temporary staff who need time-limited access.</div>
                         </div>
                         
                         <div id="temporaryAccessFields" style="display: none;">
                             <div class="row g-3">
                                 <div class="col-12 col-md-6">
-                                    <label for="access_expires_at" class="form-label">
-                                        <i class="bi bi-calendar-x me-1"></i>Access Expires On <span class="text-danger">*</span>
+                                    <label for="access_expires_at" class="form-label fw-bold" style="color: #495057;">
+                                        <i class="bi bi-calendar-x me-1 text-primary"></i>Access Expires On <span class="text-danger">*</span>
                                     </label>
                                     <input type="datetime-local" class="form-control" id="access_expires_at" name="access_expires_at"
                                            {% if staff_data and staff_data.access_expires_at %}
                                            value="{{ staff_data.access_expires_at.strftime('%Y-%m-%dT%H:%M') }}"
-                                           {% endif %}>
-                                    <div class="form-text">Access will automatically expire at this date and time.</div>
+                                           {% endif %} style="border-radius: 0.5rem; border: 2px solid #e9ecef; padding: 0.75rem;">
+                                    <div class="form-text mt-2"><i class="bi bi-info-circle me-1"></i>Access will automatically expire at this date and time.</div>
                                     <div class="invalid-feedback">Expiration date is required for temporary staff.</div>
                                 </div>
                                 <div class="col-12 col-md-6">
-                                    <div class="alert alert-warning mb-0">
+                                    <div class="alert alert-warning mb-0" style="border-radius: 0.5rem; border-left: 4px solid #ffc107;">
                                         <i class="bi bi-exclamation-triangle me-2"></i>
                                         <strong>Note:</strong> Temporary staff accounts will be automatically disabled after the expiration date. 
                                         They will not be able to log in after this time.
@@ -295,21 +350,26 @@
             </div>
             
             <div class="col-12">
-                <label class="form-label d-block">Grade(s) Taught/Overseeing</label>
-                <div class="row g-2 px-2">
+                <label class="form-label fw-bold d-block mb-3" style="color: #495057;">
+                    <i class="bi bi-mortarboard me-1 text-primary"></i>Grade(s) Taught/Overseeing
+                </label>
+                <div class="row g-2 px-2" style="background: #f8f9fa; padding: 1rem; border-radius: 0.5rem;">
                     {% set grades = ["Kindergarten", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th", "11th", "12th", "N/A - Staff"] %}
                     {% for grade_option in grades %}
                     <div class="col-6 col-sm-4 col-md-3">
-                        <div class="form-check">
+                        <div class="form-check p-2" style="background: white; border-radius: 0.5rem; border: 2px solid #e9ecef; transition: all 0.2s ease;">
                             <input class="form-check-input" type="checkbox" name="grades_taught" value="{{ grade_option }}"
                                    id="grade_teach_{{ grade_option|replace(' ', '_')|replace('(', '')|replace(')', '')|replace('/', '_') }}"
-                                   {% if staff_data and staff_data.grade_taught and grade_option in staff_data.grade_taught %}checked{% endif %}>
-                            <label class="form-check-label" for="grade_teach_{{ grade_option|replace(' ', '_')|replace('(', '')|replace(')', '')|replace('/', '_') }}">{{ grade_option }}</label>
+                                   {% if staff_data and staff_data.grade_taught and grade_option in staff_data.grade_taught %}checked{% endif %} style="cursor: pointer;">
+                            <label class="form-check-label" for="grade_teach_{{ grade_option|replace(' ', '_')|replace('(', '')|replace(')', '')|replace('/', '_') }}" style="cursor: pointer; font-weight: 500;">{{ grade_option }}</label>
                         </div>
                     </div>
                     {% endfor %}
                 </div>
-                <div class="form-text">Select all applicable grades. Select "N/A - Staff" for non-teaching roles.</div>
+                <div class="form-text mt-2"><i class="bi bi-info-circle me-1"></i>Select all applicable grades. Select "N/A - Staff" for non-teaching roles.</div>
+            </div>
+                    </div>
+                </div>
             </div>
 
             <div class="col-12 mt-3">
@@ -322,14 +382,12 @@
             </div>
             </div>
 
-        <hr class="my-4">
-
-        <div class="d-flex flex-column flex-md-row gap-2">
-            <button class="btn btn-primary btn-lg" type="submit">
-                {% if edit_mode %}Update{% else %}Add Teacher/Staff{% endif %}
+        <div class="d-flex flex-column flex-md-row gap-3 mt-4">
+            <button class="btn btn-lg" type="submit" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; border: none; padding: 0.75rem 2rem; border-radius: 0.5rem; font-weight: 600; box-shadow: 0 4px 12px rgba(17, 153, 142, 0.4);">
+                <i class="bi bi-check-circle me-2"></i>{% if edit_mode %}Update{% else %}Add Teacher/Staff{% endif %}
             </button>
-            <a href="{{ url_for('management.teachers') }}" class="btn btn-secondary btn-lg">
-                {% if edit_mode %}Cancel{% else %}Discard{% endif %}
+            <a href="{{ url_for('management.teachers') }}" class="btn btn-lg" style="background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%); color: white; border: none; padding: 0.75rem 2rem; border-radius: 0.5rem; font-weight: 600; box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3); text-decoration: none;">
+                <i class="bi bi-x-circle me-2"></i>{% if edit_mode %}Cancel{% else %}Discard{% endif %}
             </a>
         </div>
     </form>

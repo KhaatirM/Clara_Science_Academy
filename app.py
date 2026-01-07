@@ -432,12 +432,12 @@ def run_production_database_fix():
             cursor.execute("ALTER TABLE class ADD COLUMN grade_levels VARCHAR(200)")
             print("Added column: grade_levels")
         
-        # Check if temporary access columns exist for teacher_staff table
+        # Check if temporary access and soft delete columns exist for teacher_staff table
         cursor.execute("""
             SELECT column_name 
             FROM information_schema.columns 
             WHERE table_name = 'teacher_staff' 
-            AND column_name IN ('is_temporary', 'access_expires_at')
+            AND column_name IN ('is_temporary', 'access_expires_at', 'is_deleted', 'deleted_at')
         """)
         
         teacher_existing = [row[0] for row in cursor.fetchall()]
@@ -451,6 +451,16 @@ def run_production_database_fix():
             print("Adding column to teacher_staff table: access_expires_at")
             cursor.execute("ALTER TABLE teacher_staff ADD COLUMN access_expires_at TIMESTAMP")
             print("Added column: access_expires_at")
+        
+        if 'is_deleted' not in teacher_existing:
+            print("Adding column to teacher_staff table: is_deleted")
+            cursor.execute("ALTER TABLE teacher_staff ADD COLUMN is_deleted BOOLEAN DEFAULT FALSE NOT NULL")
+            print("Added column: is_deleted")
+        
+        if 'deleted_at' not in teacher_existing:
+            print("Adding column to teacher_staff table: deleted_at")
+            cursor.execute("ALTER TABLE teacher_staff ADD COLUMN deleted_at TIMESTAMP")
+            print("Added column: deleted_at")
         
         cursor.close()
         conn.close()

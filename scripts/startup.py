@@ -32,15 +32,23 @@ def run_database_fix():
                 'fix_school_day_attendance_table.py',
                 'fix_bug_report_table_schema.py',
                 'fix_class_table_schema.py',
-                'fix_production_voided_fields.py'
+                'fix_production_voided_fields.py',
+                'fix_production_teacher_staff_deleted_fields.py'
             ]
+            
+            # Get the maintenance_scripts directory path
+            script_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'maintenance_scripts')
             
             all_success = True
             for script in scripts_to_run:
+                script_path = os.path.join(script_dir, script)
+                if not os.path.exists(script_path):
+                    print(f"⚠️  Script not found: {script_path}, skipping...")
+                    continue
                 print(f"🔧 Running {script}...")
                 result = subprocess.run([
                     sys.executable, 
-                    script
+                    script_path
                 ], capture_output=True, text=True, timeout=60)
                 
                 if result.returncode == 0:

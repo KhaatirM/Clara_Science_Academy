@@ -5,7 +5,7 @@ Classes routes for management users.
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, Response, abort, jsonify
 from flask_login import login_required, current_user
 from decorators import management_required
-from models import db, Class, TeacherStaff, Student, Enrollment, Assignment, Attendance, Grade, StudentGroup, StudentGroupMember, GroupAssignment, GroupConflict, GroupGrade, SchoolDayAttendance
+from models import db, Class, TeacherStaff, Student, Enrollment, Assignment, Attendance, Grade, Submission, StudentGroup, StudentGroupMember, GroupAssignment, GroupConflict, GroupGrade, SchoolDayAttendance
 from datetime import datetime
 import json
 
@@ -27,10 +27,14 @@ def calculate_assignment_graded_status(assignment):
     # Count how many are actually graded (have graded_at timestamp)
     graded_count = sum(1 for g in grades if g.graded_at is not None and not g.is_voided)
     
+    # Get all submissions for this assignment to count submitted
+    submissions = Submission.query.filter_by(assignment_id=assignment.id).all()
+    submitted_count = len(submissions)
+    
     return {
         'graded_count': graded_count,
         'total_students': enrolled_count,
-        'submitted_count': len([g for g in grades if g.submission_id is not None])
+        'submitted_count': submitted_count
     }
 
 

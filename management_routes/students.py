@@ -2388,7 +2388,8 @@ def view_student_details_data(student_id):
                         'title': g.assignment.title,
                         'due_date': g.assignment.due_date.strftime('%Y-%m-%d') if g.assignment.due_date else 'No due date',
                         'status': status,
-                        'score': score if score is not None else 'N/A'
+                        'score': score if score is not None else 'N/A',
+                        'assignment_type': g.assignment.assignment_type
                     })
                         
             except Exception as e:

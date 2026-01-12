@@ -696,7 +696,7 @@
                         <h6 class="updates-intro-title mb-2">
                             <i class="fas fa-calendar-alt me-2"></i>Latest System Update - January 7, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>Major UI/UX Overhaul & Feature Enhancements!</strong> Complete redesign of quiz interface, calendar system, and teacher/staff management. Added quiz retake functionality, enhanced calendar with modern design, improved staff management with temporary access controls, and fixed critical dashboard issues!</p>
+                        <p class="updates-intro-text mb-0"><strong>Major UI/UX Overhaul & Feature Enhancements!</strong> Complete redesign of quiz interface, calendar system, and teacher/staff management. Added quiz retake functionality, enhanced calendar with modern design, improved staff management with temporary access controls, fixed critical dashboard issues, improved academic alerts system, and added HTTPS security fixes for production deployment!</p>
                     </div>
                 </div>
                 
@@ -747,9 +747,21 @@
                                 <i class="fas fa-check-circle text-success me-2"></i>
                                 <strong>Responsive Design Improvements:</strong> All redesigned components are fully responsive with proper mobile and tablet layouts. Enhanced touch interactions and improved spacing for smaller screens
                             </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Quiz Retake Experience Improvements:</strong> Removed intrusive "Progress loaded successfully!" notification pop-up. Fixed retake functionality to properly preserve quiz progress and only reshuffle questions when explicitly enabled. Retakes now start fresh without resetting progress unexpectedly, providing a smoother experience for students
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Enhanced Academic Alerts System:</strong> Completely redesigned the academic alerts modal for teachers with modern design, improved visual hierarchy, and comprehensive student information display. Academic alerts now show assignment types (Quiz, PDF, Discussion, Group) with appropriate icons and badges. Enhanced alert data structure includes all assignment types and missing assignments for complete student performance tracking
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>HTTPS & Security Improvements:</strong> Added ProxyFix middleware to properly handle HTTPS requests behind Render's load balancer. Fixed secure cookie issues and redirect loops in production by correctly reading X-Forwarded-Proto headers. The application now properly recognizes HTTPS connections and sets secure session cookies correctly
+                            </li>
                         </ul>
                         <div class="alert alert-info mt-3" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%); border-color: #667eea; border-left: 4px solid #667eea;">
-                            <p class="mb-0"><strong>💡 Impact:</strong> These updates provide a significantly improved user experience with modern, professional design throughout the application. Students can now retake quizzes, enjoy a beautiful calendar interface, and teachers benefit from enhanced staff management tools. All improvements maintain existing functionality while elevating the visual design and user experience!</p>
+                            <p class="mb-0"><strong>💡 Impact:</strong> These updates provide a significantly improved user experience with modern, professional design throughout the application. Students can now retake quizzes smoothly, enjoy a beautiful calendar interface, and teachers benefit from enhanced staff management tools and improved academic alerts. Production deployment is now more secure with proper HTTPS handling. All improvements maintain existing functionality while elevating the visual design and user experience!</p>
                         </div>
                     </div>
 

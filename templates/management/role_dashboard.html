@@ -4732,6 +4732,12 @@
                       <i class="bi bi-{{ 'exclamation-octagon' if 'failing' in alert.alert_reason.lower() else 'exclamation-triangle' }}-fill me-1"></i>
                       {{ alert.alert_reason|title }}
                     </span>
+                    {% if alert.assignment_type %}
+                    <span class="academic-concern-badge badge-info" title="Assignment Type">
+                      <i class="bi bi-{{ 'question-circle' if alert.assignment_type.lower() == 'quiz' else 'chat-dots' if alert.assignment_type.lower() == 'discussion' else 'file-earmark' }} me-1"></i>
+                      {{ alert.assignment_type.upper() if alert.assignment_type.startswith('group_') else alert.assignment_type.upper() }}
+                    </span>
+                    {% endif %}
                   </div>
                 </div>
                 <button class="btn-dismiss-student" 
@@ -4909,6 +4915,23 @@
                           html += '</div>';
           
           html += '<div class="assignment-concern-footer">';
+          // Assignment type badge
+          if (assignment.assignment_type) {
+            const typeLabels = {
+              'pdf': 'PDF',
+              'quiz': 'Quiz',
+              'discussion': 'Discussion',
+              'paper': 'Paper',
+              'group_pdf': 'Group PDF',
+              'group_quiz': 'Group Quiz',
+              'group_discussion': 'Group Discussion'
+            };
+            const typeLabel = typeLabels[assignment.assignment_type.toLowerCase()] || assignment.assignment_type.toUpperCase();
+            html += `<span class="assignment-type-badge" title="Assignment Type">`;
+            html += `<i class="bi bi-${assignment.assignment_type.toLowerCase() === 'quiz' ? 'question-circle' : assignment.assignment_type.toLowerCase() === 'discussion' ? 'chat-dots' : 'file-earmark'}"></i>`;
+            html += `${typeLabel}`;
+            html += '</span>';
+          }
           if (assignment.status) {
             html += `<span class="assignment-status-pill status-${assignment.status}">`;
             html += `<i class="bi bi-${assignment.status === 'missing' ? 'dash-circle' : 'exclamation-triangle'}-fill"></i>`;

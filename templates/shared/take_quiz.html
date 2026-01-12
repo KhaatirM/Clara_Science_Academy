@@ -797,8 +797,12 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('keydown', handleKeyboardShortcuts);
     
     if (saveBtn && loadBtn && progressBar && progressText) {
-        // Load any existing progress
-        loadQuizProgress();
+        // Load any existing progress (but not on retake - retake starts fresh)
+        const urlParams = new URLSearchParams(window.location.search);
+        const isRetake = urlParams.get('retake') === 'true';
+        if (!isRetake) {
+            loadQuizProgress();
+        }
         
         // Set up event listeners for form inputs
         const formInputs = document.querySelectorAll('#quizForm input, #quizForm textarea');
@@ -982,10 +986,8 @@ function loadQuizProgress() {
             // Update progress display
             quizProgress.answers = data.progress.answers;
             updateProgress();
-            
-            alert('Progress loaded successfully!');
         } else {
-            alert('No saved progress found.');
+            // No saved progress found - this is normal for new attempts
         }
         
         if (loadBtn) {

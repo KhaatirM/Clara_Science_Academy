@@ -115,8 +115,77 @@ def management_dashboard():
                 .filter(Student.id.in_(student_ids))\
                 .filter(Grade.is_voided == False)\
                 .all()
+            
+            # Get group assignments and group grades
+            from models import GroupAssignment, GroupGrade, StudentGroup, StudentGroupMember, Enrollment
+            group_assignments = GroupAssignment.query.all()
+            
+            # Get group grades for all students
+            group_grades = []
+            if group_assignments:
+                group_assignment_ids = [ga.id for ga in group_assignments]
+                # Get all groups
+                groups = StudentGroup.query.all()
+                group_ids = [g.id for g in groups]
+                
+                # Get group members for our students
+                if group_ids and student_ids:
+                    group_members = StudentGroupMember.query.filter(
+                        StudentGroupMember.group_id.in_(group_ids),
+                        StudentGroupMember.student_id.in_(student_ids)
+                    ).all()
+                    
+                    # Get group grades for these groups
+                    if group_members:
+                        member_group_ids = [gm.group_id for gm in group_members]
+                        group_grades = GroupGrade.query.filter(
+                            GroupGrade.group_assignment_id.in_(group_assignment_ids)
+                        ).join(StudentGroup).filter(
+                            StudentGroup.id.in_(member_group_ids)
+                        ).all()
+            
+            # Check for missing assignments (assignments with no grade record)
+            missing_assignments = []
+            # Get all active assignments
+            all_assignments = Assignment.query.filter(
+                Assignment.status == 'Active',
+                Assignment.due_date.isnot(None)
+            ).all()
+            
+            # For each assignment, check if each enrolled student has a grade
+            for assignment in all_assignments:
+                if assignment.due_date < datetime.utcnow():  # Only check overdue assignments
+                    # Get students enrolled in this class
+                    class_enrollments = Enrollment.query.filter_by(
+                        class_id=assignment.class_id,
+                        is_active=True
+                    ).all()
+                    class_student_ids = [e.student_id for e in class_enrollments if e.student_id in student_ids]
+                    
+                    for student_id in class_student_ids:
+                        # Check if grade exists
+                        existing_grade = Grade.query.filter_by(
+                            student_id=student_id,
+                            assignment_id=assignment.id
+                        ).first()
+                        
+                        if not existing_grade:
+                            # Missing assignment - no grade record exists
+                            student = Student.query.get(student_id)
+                            if student:
+                                missing_assignments.append({
+                                    'student_id': student_id,
+                                    'student_name': f"{student.first_name} {student.last_name}",
+                                    'assignment': assignment,
+                                    'class_name': assignment.class_info.name if assignment.class_info else 'Unknown Class',
+                                    'assignment_name': assignment.title,
+                                    'assignment_type': assignment.assignment_type,
+                                    'due_date': assignment.due_date
+                                })
 
             seen_student_ids = set()
+            
+            # Process individual assignment grades
             for grade in at_risk_grades:
                 try:
                     # Check if grade has required relationships
@@ -158,6 +227,7 @@ def management_dashboard():
                                 'student_user_id': grade.student.id,  # Use student ID instead of user_id
                                 'class_name': class_name,
                                 'assignment_name': grade.assignment.title,
+                                'assignment_type': grade.assignment.assignment_type,
                                 'alert_reason': alert_reason,
                                 'score': score,
                                 'due_date': grade.assignment.due_date
@@ -166,6 +236,69 @@ def management_dashboard():
                 except (json.JSONDecodeError, TypeError, AttributeError) as e:
                     current_app.logger.warning(f"Error processing grade {grade.id}: {e}")
                     continue
+            
+            # Process group assignment grades
+            for group_grade in group_grades:
+                try:
+                    if not group_grade.group_assignment or not group_grade.group:
+                        continue
+                        
+                    grade_data = json.loads(group_grade.grade_data) if group_grade.grade_data else {}
+                    score = grade_data.get('score') if grade_data else None
+                    is_overdue = group_grade.group_assignment.due_date < datetime.utcnow()
+                    
+                    is_at_risk = False
+                    alert_reason = None
+                    
+                    if score is None and is_overdue:
+                        is_at_risk = True
+                        alert_reason = "overdue"
+                    elif score is not None and score <= 69:
+                        is_at_risk = True
+                        if is_overdue:
+                            alert_reason = "overdue and failing"
+                        else:
+                            alert_reason = "failing"
+                    
+                    if is_at_risk:
+                        # Get all students in this group
+                        group_members = StudentGroupMember.query.filter_by(
+                            group_id=group_grade.group_id
+                        ).all()
+                        
+                        for member in group_members:
+                            if member.student_id not in seen_student_ids:
+                                student = Student.query.get(member.student_id)
+                                if student:
+                                    at_risk_alerts.append({
+                                        'student_name': f"{student.first_name} {student.last_name}",
+                                        'student_user_id': student.id,
+                                        'class_name': group_grade.group_assignment.class_info.name if group_grade.group_assignment.class_info else 'Unknown Class',
+                                        'assignment_name': group_grade.group_assignment.title,
+                                        'assignment_type': f"group_{group_grade.group_assignment.assignment_type}",
+                                        'alert_reason': alert_reason,
+                                        'score': score,
+                                        'due_date': group_grade.group_assignment.due_date
+                                    })
+                                    seen_student_ids.add(student.id)
+                except (json.JSONDecodeError, TypeError, AttributeError) as e:
+                    current_app.logger.warning(f"Error processing group grade {group_grade.id}: {e}")
+                    continue
+            
+            # Process missing assignments (no grade record exists)
+            for missing in missing_assignments:
+                if missing['student_id'] not in seen_student_ids:
+                    at_risk_alerts.append({
+                        'student_name': missing['student_name'],
+                        'student_user_id': missing['student_id'],
+                        'class_name': missing['class_name'],
+                        'assignment_name': missing['assignment_name'],
+                        'assignment_type': missing['assignment_type'],
+                        'alert_reason': 'overdue',
+                        'score': None,
+                        'due_date': missing['due_date']
+                    })
+                    seen_student_ids.add(missing['student_id'])
         except Exception as e:
             current_app.logger.warning(f"Error in alert processing: {e}")
             at_risk_alerts = []  # Ensure it's still a list even if there's an error

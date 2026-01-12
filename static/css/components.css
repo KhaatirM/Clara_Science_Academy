@@ -4438,6 +4438,27 @@
     color: white;
 }
 
+.assignment-type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.85rem;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.academic-concern-badge.badge-info {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow: 0 3px 10px rgba(102, 126, 234, 0.3);
+}
+
 /* No Concerns Message */
 .no-concerns-message {
     text-align: center;
@@ -6243,6 +6264,116 @@
 .no-concerns-filtered p {
     color: #6c757d;
     margin-bottom: 1.5rem;
+}
+
+/* Academic Alerts Summary Stats */
+.academic-alerts-summary {
+    margin-bottom: 2rem;
+}
+
+.summary-stat-card {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    border: 2px solid #e9ecef;
+    height: 100%;
+}
+
+.summary-stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.summary-stat-icon {
+    width: 65px;
+    height: 65px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.75rem;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.summary-stat-icon.bg-warning {
+    background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+}
+
+.summary-stat-icon.bg-danger {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+}
+
+.summary-stat-icon.bg-info {
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+}
+
+.summary-stat-content {
+    flex: 1;
+}
+
+.summary-stat-value {
+    font-size: 2.25rem;
+    font-weight: 800;
+    color: #2c3e50;
+    line-height: 1;
+    margin-bottom: 0.25rem;
+}
+
+.summary-stat-label {
+    font-size: 0.875rem;
+    color: #6c757d;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Academic Concern Meta */
+.academic-concern-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    color: #6c757d;
+    margin-bottom: 0.75rem;
+}
+
+.academic-concern-meta i {
+    color: #667eea;
+}
+
+/* Academic Details Container */
+.academic-details-container {
+    padding: 0;
+}
+
+/* No Assignments Message */
+.no-assignments-message {
+    text-align: center;
+    padding: 3rem 2rem;
+    background: linear-gradient(135deg, rgba(40, 167, 69, 0.1) 0%, rgba(40, 167, 69, 0.05) 100%);
+    border-radius: 16px;
+    border: 2px dashed #28a745;
+}
+
+.no-assignments-message i {
+    font-size: 3.5rem;
+    color: #28a745;
+    display: block;
+    margin-bottom: 1rem;
+}
+
+.no-assignments-message p {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #28a745;
+    margin: 0;
 }
 
 /* Concerns Students Container */

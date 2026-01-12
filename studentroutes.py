@@ -1911,13 +1911,23 @@ def take_quiz(assignment_id):
     if is_retake and attempts_remaining and attempts_remaining > 0:
         submission = None  # Clear submission to allow new attempt
         grade = None  # Clear grade view to allow new attempt
+        
+        # Clear old progress on retake so it doesn't interfere with new attempt
+        old_progress = QuizProgress.query.filter_by(
+            student_id=student.id,
+            assignment_id=assignment_id,
+            is_submitted=False
+        ).first()
+        if old_progress:
+            db.session.delete(old_progress)
+            db.session.commit()
     
     # Load quiz questions
     questions = QuizQuestion.query.filter_by(assignment_id=assignment_id).order_by(QuizQuestion.order).all()
     
-    # Shuffle questions if enabled
-    if assignment.shuffle_questions and not submission:
-        # Only shuffle if this is a new attempt (no existing submission)
+    # Shuffle questions only on retake if enabled
+    # Reshuffle is only for retakes, not for initial attempts
+    if is_retake and assignment.shuffle_questions:
         import random
         questions = list(questions)
         random.shuffle(questions)

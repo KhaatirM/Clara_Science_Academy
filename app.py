@@ -4,6 +4,7 @@ from flask import Flask, render_template, g, current_app, redirect, url_for, fla
 from flask_login import current_user, login_user, logout_user, login_required
 from flask_wtf.csrf import CSRFError
 from werkzeug.security import check_password_hash
+from werkzeug.middleware.proxy_fix import ProxyFix
 from config import Config, ProductionConfig, DevelopmentConfig, TestingConfig
 from sqlalchemy import func, and_, text
 from datetime import datetime, timezone
@@ -505,6 +506,22 @@ def create_app(config_class=None):
     
     app = Flask(__name__)
     app.config.from_object(config_class)
+
+    # ----------------------------------------------------------------------
+    # START OF FIX: Trust Render's Load Balancer Headers
+    # ----------------------------------------------------------------------
+    # This tells Flask to trust the X-Forwarded-Proto header set by Render
+    # so it knows it is running behind HTTPS.
+    app.wsgi_app = ProxyFix(
+        app.wsgi_app, 
+        x_for=1, 
+        x_proto=1, 
+        x_host=1, 
+        x_prefix=1
+    )
+    # ----------------------------------------------------------------------
+    # END OF FIX
+    # ----------------------------------------------------------------------
 
     # Initialize extensions with the app
     db.init_app(app)

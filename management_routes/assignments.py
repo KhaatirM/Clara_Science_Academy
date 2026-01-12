@@ -3646,3 +3646,235 @@ def admin_grant_extensions(assignment_id):
         flash('Error accessing extensions management.', 'error')
         return redirect(url_for('management.view_assignment', assignment_id=assignment_id))
 
+@bp.route('/assignment/<int:assignment_id>/reopen', methods=['POST'])
+@login_required
+@management_required
+def admin_reopen_assignment(assignment_id):
+    """Reopen an assignment for selected students - Management view."""
+    try:
+        from models import Assignment, AssignmentReopening, Enrollment, TeacherStaff, Submission
+        from flask_login import current_user
+        
+        assignment = Assignment.query.get_or_404(assignment_id)
+        class_obj = Class.query.get_or_404(assignment.class_id)
+        
+        # Get form data
+        student_ids = request.form.getlist('student_ids')
+        reason = request.form.get('reason', '')
+        additional_attempts = request.form.get('additional_attempts', type=int, default=0)
+        
+        if not student_ids:
+            return jsonify({'success': False, 'message': 'Please select at least one student.'})
+        
+        # For quizzes, additional_attempts is required
+        if assignment.assignment_type == 'quiz' and additional_attempts <= 0:
+            return jsonify({'success': False, 'message': 'For quiz assignments, you must specify the number of additional attempts to grant.'})
+        
+        # Get the teacher_staff_id for the current user (admin/director)
+        # For management users, we need to find or create a TeacherStaff record
+        teacher_staff = None
+        if current_user.role in ['Director', 'School Administrator']:
+            # Try to find existing TeacherStaff record
+            teacher_staff = TeacherStaff.query.filter_by(user_id=current_user.id).first()
+            # If not found, we'll use a system/admin ID or create a placeholder
+            if not teacher_staff:
+                # For now, use the first available teacher or system ID
+                # In production, you might want to create a system admin TeacherStaff record
+                teacher_staff = TeacherStaff.query.first()
+        
+        reopened_by_id = teacher_staff.id if teacher_staff else None
+        
+        if not reopened_by_id:
+            return jsonify({'success': False, 'message': 'Cannot reopen assignment: No teacher record found.'})
+        
+        reopened_count = 0
+        
+        for student_id in student_ids:
+            try:
+                student_id = int(student_id)
+                
+                # Check if student is enrolled
+                enrollment = Enrollment.query.filter_by(
+                    student_id=student_id,
+                    class_id=class_obj.id,
+                    is_active=True
+                ).first()
+                
+                if not enrollment:
+                    continue  # Skip if not enrolled
+                
+                # Deactivate any existing active reopenings for this student and assignment
+                existing_reopenings = AssignmentReopening.query.filter_by(
+                    assignment_id=assignment_id,
+                    student_id=student_id,
+                    is_active=True
+                ).all()
+                
+                for reopening in existing_reopenings:
+                    reopening.is_active = False
+                
+                # Create new reopening
+                reopening = AssignmentReopening(
+                    assignment_id=assignment_id,
+                    student_id=student_id,
+                    reopened_by=reopened_by_id,
+                    reason=reason,
+                    additional_attempts=additional_attempts if assignment.assignment_type == 'quiz' else 0,
+                    is_active=True
+                )
+                
+                db.session.add(reopening)
+                reopened_count += 1
+                
+            except (ValueError, TypeError) as e:
+                current_app.logger.warning(f"Invalid student ID in reopen request: {student_id}, error: {e}")
+                continue
+        
+        db.session.commit()
+        
+        message = f'Successfully reopened assignment for {reopened_count} student(s).'
+        if assignment.assignment_type == 'quiz' and additional_attempts > 0:
+            message += f' Each student has been granted {additional_attempts} additional attempt(s).'
+        
+        return jsonify({
+            'success': True,
+            'message': message,
+            'reopened_count': reopened_count
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error reopening assignment: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Error reopening assignment: {str(e)}'})
+
+@bp.route('/assignment/<int:assignment_id>/reopen-status', methods=['GET'])
+@login_required
+@management_required
+def admin_get_reopen_status(assignment_id):
+    """Get reopening status for all students in the assignment's class - Management view."""
+    try:
+        from models import Assignment, AssignmentReopening, Student, Submission
+        
+        assignment = Assignment.query.get_or_404(assignment_id)
+        class_obj = Class.query.get_or_404(assignment.class_id)
+        
+        # Get all enrolled students
+        enrollments = Enrollment.query.filter_by(
+            class_id=class_obj.id,
+            is_active=True
+        ).all()
+        
+        student_data = []
+        
+        for enrollment in enrollments:
+            if not enrollment.student:
+                continue
+            
+            student = enrollment.student
+            
+            # Get active reopening if any
+            reopening = AssignmentReopening.query.filter_by(
+                assignment_id=assignment_id,
+                student_id=student.id,
+                is_active=True
+            ).first()
+            
+            # Get submission count (for quizzes)
+            submissions_count = 0
+            if assignment.assignment_type == 'quiz':
+                submissions_count = Submission.query.filter_by(
+                    student_id=student.id,
+                    assignment_id=assignment_id
+                ).count()
+            
+            # Determine if student needs reopening
+            needs_reopening = False
+            reason_needs_reopening = []
+            
+            # Check if assignment is inactive/closed
+            if assignment.status not in ['Active']:
+                needs_reopening = True
+                reason_needs_reopening.append(f'Assignment is {assignment.status.lower()}')
+            
+            # For quizzes, check if max attempts reached
+            if assignment.assignment_type == 'quiz' and assignment.max_attempts:
+                if submissions_count >= assignment.max_attempts:
+                    needs_reopening = True
+                    reason_needs_reopening.append(f'Max attempts ({assignment.max_attempts}) reached')
+            
+            student_data.append({
+                'student_id': student.id,
+                'name': f'{student.first_name} {student.last_name}',
+                'has_reopening': reopening is not None,
+                'additional_attempts': reopening.additional_attempts if reopening else 0,
+                'reopened_at': reopening.reopened_at.isoformat() if reopening and reopening.reopened_at else None,
+                'needs_reopening': needs_reopening,
+                'reason_needs_reopening': ', '.join(reason_needs_reopening) if reason_needs_reopening else None,
+                'submissions_count': submissions_count,
+                'max_attempts': assignment.max_attempts if assignment.assignment_type == 'quiz' else None
+            })
+        
+        return jsonify({
+            'success': True,
+            'students': student_data,
+            'assignment_type': assignment.assignment_type,
+            'assignment_status': assignment.status,
+            'max_attempts': assignment.max_attempts if assignment.assignment_type == 'quiz' else None
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Error getting reopen status: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Error getting reopen status: {str(e)}'})
+
+@bp.route('/assignment/<int:assignment_id>/revoke-reopen', methods=['POST'])
+@login_required
+@management_required
+def admin_revoke_reopen(assignment_id):
+    """Revoke (deactivate) reopenings for selected students - Management view."""
+    try:
+        from models import Assignment, AssignmentReopening
+        
+        assignment = Assignment.query.get_or_404(assignment_id)
+        class_obj = Class.query.get_or_404(assignment.class_id)
+        
+        student_ids = request.form.getlist('student_ids')
+        
+        if not student_ids:
+            return jsonify({'success': False, 'message': 'Please select at least one student.'})
+        
+        revoked_count = 0
+        
+        for student_id in student_ids:
+            try:
+                student_id = int(student_id)
+                
+                # Find and deactivate active reopenings
+                reopenings = AssignmentReopening.query.filter_by(
+                    assignment_id=assignment_id,
+                    student_id=student_id,
+                    is_active=True
+                ).all()
+                
+                for reopening in reopenings:
+                    reopening.is_active = False
+                    revoked_count += 1
+                
+            except (ValueError, TypeError):
+                continue
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Successfully revoked reopenings for {revoked_count} student(s).',
+            'revoked_count': revoked_count
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error revoking reopenings: {str(e)}")
+        return jsonify({'success': False, 'message': f'Error revoking reopenings: {str(e)}'})

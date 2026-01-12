@@ -1667,6 +1667,38 @@ class AssignmentExtension(db.Model):
         return f"AssignmentExtension(Assignment: {self.assignment_id}, Student: {self.student_id}, New Due: {self.extended_due_date})"
 
 
+class AssignmentReopening(db.Model):
+    """
+    Model for tracking assignment reopenings granted to students.
+    Allows teachers to reopen closed/inactive assignments or grant additional attempts for quizzes.
+    """
+    __tablename__ = 'assignment_reopening'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    assignment_id = db.Column(db.Integer, db.ForeignKey('assignment.id'), nullable=False)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
+    
+    # Reopening details
+    reopened_by = db.Column(db.Integer, db.ForeignKey('teacher_staff.id'), nullable=False)  # Teacher who reopened
+    reopened_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    reason = db.Column(db.Text, nullable=True)  # Why reopening was granted (optional)
+    
+    # For quizzes: additional attempts granted
+    additional_attempts = db.Column(db.Integer, default=0, nullable=False)  # How many extra attempts to grant
+    
+    # Status
+    is_active = db.Column(db.Boolean, default=True, nullable=False)  # Can be deactivated later
+    expires_at = db.Column(db.DateTime, nullable=True)  # Optional expiration date
+    
+    # Relationships
+    assignment = db.relationship('Assignment', backref='reopenings')
+    student = db.relationship('Student', backref='assignment_reopenings')
+    reopened_by_teacher = db.relationship('TeacherStaff', backref='granted_reopenings')
+    
+    def __repr__(self):
+        return f"AssignmentReopening(Assignment: {self.assignment_id}, Student: {self.student_id}, Additional Attempts: {self.additional_attempts})"
+
+
 class ExtensionRequest(db.Model):
     """
     Model for tracking extension requests from students.

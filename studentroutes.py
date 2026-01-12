@@ -1867,10 +1867,33 @@ def take_quiz(assignment_id):
         flash("You are not enrolled in this class.", "danger")
         return redirect(url_for('student.student_assignments'))
     
-    # Check if assignment is still active
-    if assignment.status not in ['Active', 'Inactive']:
+    # Check if assignment is still active (or has been reopened for this student)
+    from models import AssignmentReopening
+    active_reopening = AssignmentReopening.query.filter_by(
+        assignment_id=assignment_id,
+        student_id=student.id,
+        is_active=True
+    ).first()
+    
+    # Allow access if assignment is active, or if student has an active reopening
+    if assignment.status not in ['Active', 'Inactive'] and not active_reopening:
         flash("This assignment is no longer available.", "danger")
         return redirect(url_for('student.student_assignments'))
+    
+    # Check if this is a retake request
+    is_retake = request.args.get('retake', 'false').lower() == 'true'
+    
+    # Get the most recent submission (if any) - need this before checking attempts
+    submission = Submission.query.filter_by(
+        student_id=student.id,
+        assignment_id=assignment_id
+    ).order_by(Submission.submitted_at.desc()).first()
+    
+    # Check if already graded - need this before checking attempts
+    grade = Grade.query.filter_by(
+        student_id=student.id,
+        assignment_id=assignment_id
+    ).first()
     
     # Check number of attempts (submissions)
     submissions_count = Submission.query.filter_by(
@@ -1878,34 +1901,36 @@ def take_quiz(assignment_id):
         assignment_id=assignment_id
     ).count()
     
-    # Check max attempts - only block if they've reached the limit
+    # Check for active reopening that grants additional attempts
+    from models import AssignmentReopening
+    active_reopening = AssignmentReopening.query.filter_by(
+        assignment_id=assignment_id,
+        student_id=student.id,
+        is_active=True
+    ).first()
+    
+    # Calculate effective max attempts (base + additional from reopening)
+    effective_max_attempts = assignment.max_attempts
+    if active_reopening and active_reopening.additional_attempts > 0:
+        effective_max_attempts = (assignment.max_attempts or 0) + active_reopening.additional_attempts
+    
+    # Check max attempts - only block if they've reached the effective limit
     # If they have attempts remaining, allow them to retake (they'll see the retake button)
-    if assignment.max_attempts and submissions_count >= assignment.max_attempts:
+    if assignment.max_attempts and effective_max_attempts and submissions_count >= effective_max_attempts:
         # Only redirect if they're trying to take a new quiz, not viewing results
         # Allow viewing results even if max attempts reached
         if not submission and not grade:
-            flash(f"You have reached the maximum number of attempts ({assignment.max_attempts}) for this quiz.", "warning")
+            flash(f"You have reached the maximum number of attempts ({effective_max_attempts}) for this quiz.", "warning")
             return redirect(url_for('student.student_assignments'))
     
-    # Check if this is a retake request
-    is_retake = request.args.get('retake', 'false').lower() == 'true'
-    
-    # Get the most recent submission (if any)
-    submission = Submission.query.filter_by(
-        student_id=student.id,
-        assignment_id=assignment_id
-    ).order_by(Submission.submitted_at.desc()).first()
-    
-    # Check if already graded
-    grade = Grade.query.filter_by(
-        student_id=student.id,
-        assignment_id=assignment_id
-    ).first()
-    
-    # Calculate attempts remaining
+    # Calculate attempts remaining (accounting for reopenings)
+    # Note: active_reopening was already queried above
     attempts_remaining = None
     if assignment.max_attempts:
-        attempts_remaining = max(0, assignment.max_attempts - submissions_count)
+        effective_max_attempts = assignment.max_attempts
+        if active_reopening and active_reopening.additional_attempts > 0:
+            effective_max_attempts = (assignment.max_attempts or 0) + active_reopening.additional_attempts
+        attempts_remaining = max(0, effective_max_attempts - submissions_count)
     
     # If retaking and has attempts remaining, allow new attempt (don't show submission)
     if is_retake and attempts_remaining and attempts_remaining > 0:
@@ -2090,9 +2115,22 @@ def submit_quiz(assignment_id):
         assignment_id=assignment_id
     ).count()
     
+    # Check for active reopening that grants additional attempts
+    from models import AssignmentReopening
+    active_reopening = AssignmentReopening.query.filter_by(
+        assignment_id=assignment_id,
+        student_id=student.id,
+        is_active=True
+    ).first()
+    
+    # Calculate effective max attempts (base + additional from reopening)
+    effective_max_attempts = assignment.max_attempts
+    if active_reopening and active_reopening.additional_attempts > 0:
+        effective_max_attempts = (assignment.max_attempts or 0) + active_reopening.additional_attempts
+    
     # Check max attempts (allow submission if under limit, or if max_attempts is None/unlimited)
-    if assignment.max_attempts and submissions_count >= assignment.max_attempts:
-        flash(f"You have reached the maximum number of attempts ({assignment.max_attempts}) for this quiz.", "warning")
+    if assignment.max_attempts and effective_max_attempts and submissions_count >= effective_max_attempts:
+        flash(f"You have reached the maximum number of attempts ({effective_max_attempts}) for this quiz.", "warning")
         return redirect(url_for('student.student_assignments'))
     
     try:

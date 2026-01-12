@@ -5340,6 +5340,19 @@
     box-shadow: 0 4px 12px rgba(23, 162, 184, 0.3);
 }
 
+.btn-compact-reopen {
+    background: white;
+    border-color: #8b5cf6;
+    color: #8b5cf6;
+}
+
+.btn-compact-reopen:hover {
+    background: #8b5cf6;
+    color: white;
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
 .btn-compact-void {
     background: white;
     border-color: #dc3545;

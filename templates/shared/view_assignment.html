@@ -285,6 +285,11 @@
                             <i class="bi bi-clock-history"></i>
                             <span>Extensions</span>
                         </button>
+                        <button class="btn btn-compact btn-compact-reopen" 
+                                onclick="openReopenModal()">
+                            <i class="bi bi-arrow-repeat"></i>
+                            <span>Reopen</span>
+                        </button>
                         {% set has_voided_grades = assignment.grades|selectattr('is_voided', 'equalto', True)|list|length > 0 %}
                         {% if has_voided_grades %}
                         <button class="btn btn-compact btn-compact-unvoid" 
@@ -785,6 +790,90 @@
     </div>
 </div>
 
+<!-- Reopen Assignment Modal -->
+<div class="modal fade" id="reopenModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content modal-modern">
+            <div class="modal-header-reopen">
+                <div class="modal-icon-reopen">
+                    <i class="bi bi-arrow-repeat"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <h5 class="modal-title-reopen">Reopen Assignment</h5>
+                    <p class="modal-subtitle-reopen">Grant access to closed/inactive assignments or additional quiz attempts</p>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" id="reopenForm" onsubmit="handleReopenSubmit(event)">
+                <div class="modal-body modal-body-enhanced">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <input type="hidden" name="assignment_id" value="{{ assignment.id }}">
+                    
+                    <div class="alert-modern alert-reopen">
+                        <div class="alert-icon">
+                            <i class="bi bi-info-circle"></i>
+                        </div>
+                        <div>
+                            <div class="alert-title">Reopening Guidelines</div>
+                            <p class="alert-text">Select students to reopen this assignment for. For quiz assignments, you can grant additional attempts. Reopened assignments will be accessible even if the assignment is inactive or closed.</p>
+                        </div>
+                    </div>
+                    
+                    {% if assignment.assignment_type == 'quiz' %}
+                    <div class="date-picker-section">
+                        <label for="additional_attempts" class="section-label">
+                            <i class="bi bi-123 me-2"></i>Additional Attempts <span class="text-danger">*</span>
+                        </label>
+                        <input type="number" class="form-control form-control-modern" id="additional_attempts" name="additional_attempts" min="1" value="1" required>
+                        <small class="text-muted mt-1 d-block">
+                            <i class="bi bi-info-circle me-1"></i>Number of extra attempts to grant each selected student. Current max attempts: {{ assignment.max_attempts or 'Unlimited' }}
+                        </small>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="student-selection-section">
+                        <div class="selection-header">
+                            <i class="bi bi-people me-2"></i>Select Students
+                        </div>
+                        
+                        <div class="select-all-card">
+                            <input class="form-check-input" type="checkbox" id="selectAllReopen" onclick="toggleAllReopenStudents(this)">
+                            <label class="select-all-label" for="selectAllReopen">
+                                <i class="bi bi-check-all me-2"></i>Select All Students
+                            </label>
+                        </div>
+                        
+                        <div class="students-grid" id="reopenStudentsGrid">
+                            <!-- Students will be loaded dynamically -->
+                            <div class="text-center p-3">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="text-muted mt-2">Loading students...</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="reason-section">
+                        <label for="reopen_reason" class="section-label">
+                            <i class="bi bi-chat-text me-2"></i>Reason for Reopening <span class="text-muted">(Optional)</span>
+                        </label>
+                        <textarea class="form-control form-control-modern" id="reopen_reason" name="reason" rows="3" placeholder="Student request, technical issues, make-up opportunity..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer modal-footer-enhanced">
+                    <button type="button" class="btn btn-cancel" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-2"></i>Cancel
+                    </button>
+                    <button type="submit" class="btn btn-reopen" id="reopenAssignmentBtn">
+                        <i class="bi bi-check-circle me-2"></i>Reopen Assignment
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
 function handleExtensionSubmit(event) {
     event.preventDefault();
@@ -919,6 +1008,185 @@ function toggleStudentSelection() {
 function openExtensionModal() {
     const modal = new bootstrap.Modal(document.getElementById('extensionModal'));
     modal.show();
+}
+
+// Open reopen modal
+function openReopenModal() {
+    const modal = new bootstrap.Modal(document.getElementById('reopenModal'));
+    modal.show();
+    
+    // Load student data
+    loadReopenStudentData();
+}
+
+function loadReopenStudentData() {
+    const assignmentId = {{ assignment.id }};
+    const grid = document.getElementById('reopenStudentsGrid');
+    
+    // Show loading state
+    grid.innerHTML = `
+        <div class="text-center p-3">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="text-muted mt-2">Loading students...</p>
+        </div>
+    `;
+    
+    {% if current_user.role in ['Director', 'School Administrator'] %}
+        const reopenStatusUrl = `/management/assignment/${assignmentId}/reopen-status`;
+    {% else %}
+        const reopenStatusUrl = `/teacher/assignment/${assignmentId}/reopen-status`;
+    {% endif %}
+    
+    fetch(reopenStatusUrl, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            renderReopenStudents(data.students, data.assignment_type, data.max_attempts);
+        } else {
+            grid.innerHTML = `<div class="alert alert-danger">Error loading students: ${data.message || 'Unknown error'}</div>`;
+        }
+    })
+    .catch(error => {
+        console.error('Error loading reopen status:', error);
+        grid.innerHTML = `<div class="alert alert-danger">Error loading students. Please try again.</div>`;
+    });
+}
+
+function renderReopenStudents(students, assignmentType, maxAttempts) {
+    const grid = document.getElementById('reopenStudentsGrid');
+    
+    if (!students || students.length === 0) {
+        grid.innerHTML = '<div class="alert alert-info">No students found for this assignment.</div>';
+        return;
+    }
+    
+    let html = '';
+    
+    students.forEach(student => {
+        const needsReopen = student.needs_reopening;
+        const hasReopening = student.has_reopening;
+        const statusClass = hasReopening ? 'success' : (needsReopen ? 'warning' : '');
+        
+        // Build status text based on assignment type
+        let statusText = '';
+        if (hasReopening) {
+            if (assignmentType === 'quiz' && student.additional_attempts > 0) {
+                statusText = `✓ Reopened (${student.additional_attempts} extra attempts)`;
+            } else {
+                statusText = '✓ Reopened';
+            }
+        } else if (needsReopen) {
+            statusText = `⚠ ${student.reason_needs_reopening || 'Needs reopening'}`;
+        }
+        
+        html += `
+            <div class="student-select-card ${statusClass ? 'border-' + statusClass : ''}">
+                <input class="form-check-input reopen-student-checkbox" type="checkbox" name="student_ids" value="${student.student_id}" id="reopenstudent${student.student_id}">
+                <label class="student-select-label" for="reopenstudent${student.student_id}">
+                    <div class="student-avatar-mini">
+                        ${student.name.split(' ').map(n => n[0]).join('')}
+                    </div>
+                    <div class="flex-grow-1">
+                        <span>${student.name}</span>
+                        ${statusText ? `<small class="d-block text-muted">${statusText}</small>` : ''}
+                        ${assignmentType === 'quiz' && maxAttempts ? `<small class="d-block text-muted">Attempts: ${student.submissions_count}/${maxAttempts}</small>` : ''}
+                    </div>
+                </label>
+            </div>
+        `;
+    });
+    
+    grid.innerHTML = html;
+}
+
+function toggleAllReopenStudents(source) {
+    const checkboxes = document.querySelectorAll('.reopen-student-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = source.checked;
+    });
+}
+
+function handleReopenSubmit(event) {
+    event.preventDefault();
+    const form = event.target;
+    const formData = new FormData(form);
+    
+    // Get selected students
+    const selectedStudents = Array.from(document.querySelectorAll('.reopen-student-checkbox:checked')).map(cb => cb.value);
+    
+    if (selectedStudents.length === 0) {
+        showToast('warning', 'Please select at least one student.');
+        return;
+    }
+    
+    // Add selected students to form data
+    selectedStudents.forEach(studentId => {
+        formData.append('student_ids', studentId);
+    });
+    
+    // For non-quiz assignments, ensure additional_attempts is 0 (not required)
+    const additionalAttemptsInput = document.getElementById('additional_attempts');
+    if (!additionalAttemptsInput) {
+        // For non-quiz assignments, add additional_attempts as 0
+        formData.append('additional_attempts', '0');
+    }
+    
+    // Show loading state
+    const reopenBtn = document.getElementById('reopenAssignmentBtn');
+    const originalBtnText = reopenBtn.innerHTML;
+    reopenBtn.disabled = true;
+    reopenBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Reopening...';
+    
+    const assignmentId = {{ assignment.id }};
+    {% if current_user.role in ['Director', 'School Administrator'] %}
+        const reopenUrl = `/management/assignment/${assignmentId}/reopen`;
+    {% else %}
+        const reopenUrl = `/teacher/assignment/${assignmentId}/reopen`;
+    {% endif %}
+    
+    fetch(reopenUrl, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+    })
+    .then(response => {
+        if (response.ok) {
+            return response.json();
+        }
+        throw new Error('Network response was not ok');
+    })
+    .then(data => {
+        if (data.success) {
+            showToast('success', data.message || `Successfully reopened assignment for ${data.reopened_count || selectedStudents.length} student(s).`);
+            // Close the modal
+            bootstrap.Modal.getInstance(document.getElementById('reopenModal')).hide();
+            // Reload the page to show updated info
+            setTimeout(() => {
+                location.reload();
+            }, 500);
+        } else {
+            showToast('danger', 'Error reopening assignment: ' + (data.message || 'Unknown error'));
+            // Reset button state
+            reopenBtn.disabled = false;
+            reopenBtn.innerHTML = originalBtnText;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('danger', 'Error reopening assignment. Please try again.');
+        // Reset button state
+        reopenBtn.disabled = false;
+        reopenBtn.innerHTML = originalBtnText;
+    });
 }
 
 function confirmDelete(title, assignmentId) {

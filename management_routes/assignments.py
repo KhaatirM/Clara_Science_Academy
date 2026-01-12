@@ -285,7 +285,11 @@ def create_discussion_assignment():
         classes = Class.query.filter_by(is_active=True).order_by(Class.name).all()
     else:
         # For teachers, get their classes
-        teacher = TeacherStaff.query.filter_by(user_id=current_user.id).first()
+        if current_user.teacher_staff_id:
+            teacher = TeacherStaff.query.filter_by(id=current_user.teacher_staff_id).first()
+        else:
+            from models import User
+            teacher = TeacherStaff.query.join(User).filter(User.id == current_user.id).first()
         if teacher:
             classes = Class.query.filter_by(teacher_id=teacher.id, is_active=True).order_by(Class.name).all()
         else:
@@ -3675,7 +3679,11 @@ def admin_reopen_assignment(assignment_id):
         teacher_staff = None
         if current_user.role in ['Director', 'School Administrator']:
             # Try to find existing TeacherStaff record
-            teacher_staff = TeacherStaff.query.filter_by(user_id=current_user.id).first()
+            if current_user.teacher_staff_id:
+                teacher_staff = TeacherStaff.query.filter_by(id=current_user.teacher_staff_id).first()
+            if not teacher_staff:
+                from models import User
+                teacher_staff = TeacherStaff.query.join(User).filter(User.id == current_user.id).first()
             # If not found, we'll use a system/admin ID or create a placeholder
             if not teacher_staff:
                 # For now, use the first available teacher or system ID

@@ -42,199 +42,83 @@ try:
         print("✓ All database tables created successfully")
         
         # Create default teams if they don't exist
-        print("\nSetting up default cleaning teams...")
+        print("\nSetting up default teams...")
         
-        # Team 1: 4 Classrooms & Hallway Trash
-        team1 = CleaningTeam.query.filter_by(team_name="Team 1").first()
+        # Cleaning Team 1
+        team1 = CleaningTeam.query.filter_by(team_name="Cleaning Team 1").first()
         if not team1:
             team1 = CleaningTeam(
-                team_name="Team 1",
-                team_description="4 Classrooms & Hallway Trash",
+                team_name="Cleaning Team 1",
+                team_description="Cleaning duties for 3rd-5th, 6th-8th, and K classrooms plus common areas",
+                team_type="cleaning",
                 is_active=True
             )
             db.session.add(team1)
-            print("✓ Created Team 1")
+            print("✓ Created Cleaning Team 1")
         else:
-            print("✓ Team 1 already exists")
+            print("✓ Cleaning Team 1 already exists")
         
-        # Team 2: 4 Classrooms & Bathrooms
-        team2 = CleaningTeam.query.filter_by(team_name="Team 2").first()
+        # Cleaning Team 2
+        team2 = CleaningTeam.query.filter_by(team_name="Cleaning Team 2").first()
         if not team2:
             team2 = CleaningTeam(
-                team_name="Team 2",
-                team_description="4 Classrooms & Bathrooms",
+                team_name="Cleaning Team 2",
+                team_description="Cleaning duties for 3rd-5th, 6th-8th, and K classrooms plus common areas",
+                team_type="cleaning",
                 is_active=True
             )
             db.session.add(team2)
-            print("✓ Created Team 2")
+            print("✓ Created Cleaning Team 2")
         else:
-            print("✓ Team 2 already exists")
+            print("✓ Cleaning Team 2 already exists")
         
-        db.session.commit()
-        
-        # Create default tasks for each team
-        print("\nSetting up default cleaning tasks...")
-        
-        # Team 1 Tasks
-        team1_tasks = [
-            {
-                'task_name': 'Sweeping Team',
-                'task_description': 'Sweep all four classrooms.',
-                'area_covered': 'all four classrooms'
-            },
-            {
-                'task_name': 'Wipe Down Team', 
-                'task_description': 'Wipe down all tables and desks in the four classrooms.',
-                'area_covered': 'all four classrooms'
-            },
-            {
-                'task_name': 'Trash Team',
-                'task_description': 'Replace liners in all four classroom trash cans and all hallway trash cans.',
-                'area_covered': 'all four classrooms and hallway trash cans'
-            }
-        ]
-        
-        for task_data in team1_tasks:
-            existing_task = CleaningTask.query.filter_by(
-                team_id=team1.id, 
-                task_name=task_data['task_name']
-            ).first()
-            if not existing_task:
-                task = CleaningTask(
-                    team_id=team1.id,
-                    task_name=task_data['task_name'],
-                    task_description=task_data['task_description'],
-                    area_covered=task_data['area_covered'],
-                    is_active=True
-                )
-                db.session.add(task)
-                print(f"✓ Created Team 1 task: {task_data['task_name']}")
-        
-        # Team 2 Tasks
-        team2_tasks = [
-            {
-                'task_name': 'Sweeping Team',
-                'task_description': 'Sweep all four classrooms.',
-                'area_covered': 'all four classrooms'
-            },
-            {
-                'task_name': 'Wipe Down Team',
-                'task_description': 'Wipe down all tables and desks in the four classrooms.',
-                'area_covered': 'all four classrooms'
-            },
-            {
-                'task_name': 'Bathroom Team',
-                'task_description': 'Sweep both Male and Female restrooms, replace trash cans, and restock all paper products and soap.',
-                'area_covered': 'both Male and Female restrooms'
-            }
-        ]
-        
-        for task_data in team2_tasks:
-            existing_task = CleaningTask.query.filter_by(
-                team_id=team2.id,
-                task_name=task_data['task_name']
-            ).first()
-            if not existing_task:
-                task = CleaningTask(
-                    team_id=team2.id,
-                    task_name=task_data['task_name'],
-                    task_description=task_data['task_description'],
-                    area_covered=task_data['area_covered'],
-                    is_active=True
-                )
-                db.session.add(task)
-                print(f"✓ Created Team 2 task: {task_data['task_name']}")
-        
-        db.session.commit()
-        
-        # Create sample team members (if students exist)
-        print("\nSetting up sample team members...")
-        students = Student.query.limit(16).all()
-        
-        if students:
-            # Team 1 Members (first 8 students)
-            team1_members_data = [
-                {'name': 'Mason Jackson', 'role': 'Sweeping Team'},
-                {'name': 'Julien John', 'role': 'Sweeping Team'},
-                {'name': 'Ester Hope', 'role': 'Sweeping Team'},
-                {'name': 'Nathan Cassidy', 'role': 'Wipe Down Team'},
-                {'name': 'Brendan Tinsley', 'role': 'Wipe Down Team'},
-                {'name': 'Ty\'mier Crandell', 'role': 'Trash Team'},
-                {'name': 'Miracle Heuston', 'role': 'Trash Team'},
-                {'name': 'Emack Akili', 'role': 'Trash Team'}
-            ]
-            
-            for i, member_data in enumerate(team1_members_data):
-                if i < len(students):
-                    existing_member = CleaningTeamMember.query.filter_by(
-                        team_id=team1.id,
-                        student_id=students[i].id
-                    ).first()
-                    if not existing_member:
-                        member = CleaningTeamMember(
-                            team_id=team1.id,
-                            student_id=students[i].id,
-                            role=member_data['role'],
-                            is_active=True
-                        )
-                        db.session.add(member)
-                        print(f"✓ Added {students[i].first_name} {students[i].last_name} to Team 1 ({member_data['role']})")
-            
-            # Team 2 Members (next 8 students)
-            team2_members_data = [
-                {'name': 'Mason Jackson', 'role': 'Bathroom Team'},
-                {'name': 'Julien Amani', 'role': 'Sweeping Team'},
-                {'name': 'Kya Patterson', 'role': 'Wipe Down Team'},
-                {'name': 'Jayden Hope', 'role': 'Wipe Down Team'},
-                {'name': 'Elimine', 'role': 'Sweeping Team'},
-                {'name': 'Josue Perez', 'role': 'Bathroom Team'},
-                {'name': 'Zatianna Bennett', 'role': 'Bathroom Team'},
-                {'name': 'Mwajuma Abubakari', 'role': 'Bathroom Team'}
-            ]
-            
-            for i, member_data in enumerate(team2_members_data):
-                if i + 8 < len(students):
-                    existing_member = CleaningTeamMember.query.filter_by(
-                        team_id=team2.id,
-                        student_id=students[i + 8].id
-                    ).first()
-                    if not existing_member:
-                        member = CleaningTeamMember(
-                            team_id=team2.id,
-                            student_id=students[i + 8].id,
-                            role=member_data['role'],
-                            is_active=True
-                        )
-                        db.session.add(member)
-                        print(f"✓ Added {students[i + 8].first_name} {students[i + 8].last_name} to Team 2 ({member_data['role']})")
-        else:
-            print("⚠ No students found in database. Team members will need to be added manually.")
-        
-        db.session.commit()
-        
-        # Create sample inspection (optional)
-        print("\nCreating sample inspection...")
-        existing_inspection = CleaningInspection.query.filter_by(
-            team_id=team1.id,
-            inspector_name="System Setup"
-        ).first()
-        
-        if not existing_inspection:
-            sample_inspection = CleaningInspection(
-                team_id=team1.id,
-                inspection_date=date.today(),
-                inspector_name="System Setup",
-                inspector_notes="Initial system setup - perfect score for demonstration",
-                starting_score=100,
-                major_deductions=0,
-                moderate_deductions=0,
-                minor_deductions=0,
-                bonus_points=5,
-                final_score=105,
-                exceptional_finish=True
+        # Computer Team
+        computer_team = CleaningTeam.query.filter_by(team_name="Computer Team").first()
+        if not computer_team:
+            computer_team = CleaningTeam(
+                team_name="Computer Team",
+                team_description="Manage and organize all computers, cords, and chromebooks in the office cabinet",
+                team_type="computer",
+                is_active=True
             )
-            db.session.add(sample_inspection)
-            print("✓ Created sample inspection for Team 1")
+            db.session.add(computer_team)
+            print("✓ Created Computer Team")
+        else:
+            print("✓ Computer Team already exists")
+        
+        # Backup Computer Team
+        backup_computer_team = CleaningTeam.query.filter_by(team_name="Backup Computer Team").first()
+        if not backup_computer_team:
+            backup_computer_team = CleaningTeam(
+                team_name="Backup Computer Team",
+                team_description="Backup team for managing and organizing all computers, cords, and chromebooks",
+                team_type="computer",
+                is_active=True
+            )
+            db.session.add(backup_computer_team)
+            print("✓ Created Backup Computer Team")
+        else:
+            print("✓ Backup Computer Team already exists")
+        
+        db.session.commit()
+        
+        # Note: Tasks are no longer used - teams now have detailed descriptions instead
+        # The detailed descriptions are handled in the route's get_team_detailed_description function
+        print("\nNote: Teams now use detailed descriptions instead of individual tasks.")
+        print("Detailed descriptions are automatically generated based on team name and type.")
+        
+        db.session.commit()
+        
+        # Note: Team members should be added manually through the web interface
+        # This allows teachers and administrators to assign students to teams as needed
+        print("\nNote: Team members should be added through the Student Jobs interface.")
+        print("Teachers and administrators can add members to teams using the 'Add Members' button.")
+        
+        db.session.commit()
+        
+        # Note: Inspections should be created through the web interface
+        print("\nNote: Inspections should be conducted through the Student Jobs interface.")
+        print("Use the 'Conduct Inspection' button to record team inspections.")
         
         db.session.commit()
         
@@ -243,10 +127,12 @@ try:
         print("=" * 60)
         print()
         print("✓ Database tables created")
-        print("✓ Default teams configured")
-        print("✓ Cleaning tasks set up")
-        print("✓ Sample team members assigned")
-        print("✓ Sample inspection created")
+        print("✓ Default teams configured:")
+        print("  - Cleaning Team 1")
+        print("  - Cleaning Team 2")
+        print("  - Computer Team")
+        print("  - Backup Computer Team")
+        print("✓ Teams are ready for member assignment and inspections")
         print()
         print("The Student Jobs system is now ready to use!")
         print("You can access it through the 'Student Jobs' tab in the management interface.")

@@ -108,3 +108,10 @@ def review_extension_request(request_id):
     from .assignments import review_extension_request as review_extension_request_func
     return review_extension_request_func(request_id)
 
+@teacher_blueprint.route('/redo-dashboard', endpoint='redo_dashboard')
+@login_required
+@teacher_required
+def teacher_redo_dashboard():
+    """Redo dashboard route for teachers - delegates to management dashboard function"""
+    from management_routes.dashboard import redo_dashboard as redo_dashboard_func
+    return redo_dashboard_func()

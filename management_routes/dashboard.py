@@ -6,7 +6,7 @@ from flask import Blueprint, render_template, request, flash, redirect, url_for,
 from flask_login import login_required, current_user
 from decorators import management_required
 from models import (
-    db, Student, TeacherStaff, Class, Assignment, Grade, Submission, Notification, Enrollment, Attendance, AssignmentRedo
+    db, Student, TeacherStaff, Class, Assignment, Grade, Submission, Notification, Enrollment, Attendance, AssignmentRedo, AssignmentReopening
 )
 from sqlalchemy import or_, and_
 from sqlalchemy.orm import joinedload
@@ -346,14 +346,16 @@ def management_dashboard():
 @bp.route('/redo-dashboard')
 @login_required
 def redo_dashboard():
-    """Dashboard showing all active redo opportunities"""
+    """Dashboard showing all active redo opportunities and reopenings"""
     from datetime import datetime
+    from models import AssignmentRedo, AssignmentReopening, Assignment, Class, TeacherStaff
+    from sqlalchemy.orm import joinedload
     
     # Authorization check
     if current_user.role == 'Teacher':
         if not current_user.teacher_staff_id:
             flash('Teacher record not found.', 'danger')
-            return redirect(url_for('teacher.teacher_dashboard'))
+            return redirect(url_for('teacher.dashboard.teacher_dashboard'))
         teacher = TeacherStaff.query.get(current_user.teacher_staff_id)
         # Get redos for teacher's classes only
         redos = AssignmentRedo.query.join(Assignment).join(Class).filter(
@@ -362,23 +364,43 @@ def redo_dashboard():
             joinedload(AssignmentRedo.assignment).joinedload(Assignment.class_info),
             joinedload(AssignmentRedo.student)
         ).order_by(AssignmentRedo.redo_deadline.asc()).all()
+        
+        # Get reopenings for teacher's classes only
+        reopenings = AssignmentReopening.query.join(Assignment).join(Class).filter(
+            Class.teacher_id == teacher.id,
+            AssignmentReopening.is_active == True
+        ).options(
+            joinedload(AssignmentReopening.assignment).joinedload(Assignment.class_info),
+            joinedload(AssignmentReopening.student)
+        ).order_by(AssignmentReopening.reopened_at.desc()).all()
+        
         classes = Class.query.filter_by(teacher_id=teacher.id).all()
     else:
-        # Directors and School Administrators see all redos
+        # Directors and School Administrators see all redos and reopenings
         redos = AssignmentRedo.query.options(
             joinedload(AssignmentRedo.assignment).joinedload(Assignment.class_info),
             joinedload(AssignmentRedo.student)
         ).order_by(AssignmentRedo.redo_deadline.asc()).all()
+        
+        reopenings = AssignmentReopening.query.filter(
+            AssignmentReopening.is_active == True
+        ).options(
+            joinedload(AssignmentReopening.assignment).joinedload(Assignment.class_info),
+            joinedload(AssignmentReopening.student)
+        ).order_by(AssignmentReopening.reopened_at.desc()).all()
+        
         classes = Class.query.all()
     
-    # Filter out redos with missing assignments or students (data integrity check)
+    # Filter out records with missing assignments or students (data integrity check)
     redos = [r for r in redos if r.assignment and r.student]
+    reopenings = [r for r in reopenings if r.assignment and r.student]
     
     # Calculate statistics
     active_redos = len([r for r in redos if not r.is_used and not r.final_grade])
     completed_redos = len([r for r in redos if r.final_grade])
     now = datetime.utcnow()
-    overdue_redos = len([r for r in redos if not r.is_used and r.redo_deadline < now])
+    overdue_redos = len([r for r in redos if not r.is_used and r.redo_deadline and r.redo_deadline < now])
+    active_reopenings = len(reopenings)
     
     # Calculate average improvement
     improvements = []
@@ -392,9 +414,11 @@ def redo_dashboard():
     
     return render_template('management/redo_dashboard.html',
                          redos=redos,
+                         reopenings=reopenings,
                          classes=classes,
                          active_redos=active_redos,
                          completed_redos=completed_redos,
+                         active_reopenings=active_reopenings,
                          improvement_rate=improvement_rate,
                          overdue_redos=overdue_redos,
                          now=now)

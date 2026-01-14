@@ -7,7 +7,7 @@ from flask_login import login_required, current_user
 from decorators import management_required
 from models import (
     db, Assignment, Grade, Submission, Student, Class, Enrollment, AssignmentExtension,
-    AssignmentRedo, QuizQuestion, QuizOption, QuizAnswer, DiscussionThread, DiscussionPost,
+    AssignmentRedo, AssignmentReopening, QuizQuestion, QuizOption, QuizAnswer, DiscussionThread, DiscussionPost,
     GroupAssignment, TeacherStaff, SchoolYear, ExtensionRequest
 )
 from werkzeug.utils import secure_filename
@@ -2828,15 +2828,42 @@ def grant_assignment_redo(assignment_id):
         return jsonify({'success': False, 'message': 'Redos are only available for PDF/Paper assignments.'})
     
     # Authorization check - Teachers, School Admins, and Directors
-    if current_user.role == 'Teacher':
-        # Teachers can only grant redos for their own classes
-        if current_user.teacher_staff_id:
-            teacher = TeacherStaff.query.get(current_user.teacher_staff_id)
-            if assignment.class_info.teacher_id != teacher.id:
-                return jsonify({'success': False, 'message': 'You can only grant redos for your own classes.'})
-        else:
+    from decorators import is_teacher_role
+    from sqlalchemy import or_
+    from models import class_additional_teachers, class_substitute_teachers
+    
+    is_teacher = is_teacher_role(current_user.role)
+    is_admin = current_user.role in ['Director', 'School Administrator']
+    
+    if is_teacher:
+        # Teachers can only grant redos for their own classes (primary, additional, or substitute)
+        if not current_user.teacher_staff_id:
             return jsonify({'success': False, 'message': 'Teacher record not found.'})
-    elif current_user.role not in ['Director', 'School Administrator']:
+        
+        teacher = TeacherStaff.query.get(current_user.teacher_staff_id)
+        if not teacher:
+            return jsonify({'success': False, 'message': 'Teacher record not found.'})
+        
+        class_obj = assignment.class_info
+        if not class_obj:
+            return jsonify({'success': False, 'message': 'Assignment class not found.'})
+        
+        # Check if teacher is authorized for this class
+        is_authorized = (
+            class_obj.teacher_id == teacher.id or
+            db.session.query(class_additional_teachers).filter(
+                class_additional_teachers.c.class_id == class_obj.id,
+                class_additional_teachers.c.teacher_id == teacher.id
+            ).count() > 0 or
+            db.session.query(class_substitute_teachers).filter(
+                class_substitute_teachers.c.class_id == class_obj.id,
+                class_substitute_teachers.c.teacher_id == teacher.id
+            ).count() > 0
+        )
+        
+        if not is_authorized:
+            return jsonify({'success': False, 'message': 'You can only grant redos for your own classes.'})
+    elif not is_admin:
         return jsonify({'success': False, 'message': 'You are not authorized to grant redos.'})
     
     # Get form data
@@ -2861,6 +2888,8 @@ def grant_assignment_redo(assignment_id):
         
         granted_count = 0
         already_granted_count = 0
+        redo_count = 0
+        reopen_count = 0
         
         for student_id in student_ids:
             student_id = int(student_id)
@@ -2875,11 +2904,31 @@ def grant_assignment_redo(assignment_id):
             if not enrollment:
                 continue
             
-            # Check if redo already exists
-            existing_redo = AssignmentRedo.query.filter_by(
-                assignment_id=assignment_id,
-                student_id=student_id
+            # Check if student has already submitted this assignment
+            # This determines if it's a "redo" (has submission) or "reopen" (no submission)
+            submission = Submission.query.filter_by(
+                student_id=student_id,
+                assignment_id=assignment_id
             ).first()
+            
+            has_submitted = submission is not None and submission.submission_type != 'not_submitted'
+            
+            # Check if redo already exists (for students who have submitted)
+            existing_redo = None
+            if has_submitted:
+                existing_redo = AssignmentRedo.query.filter_by(
+                    assignment_id=assignment_id,
+                    student_id=student_id
+                ).first()
+            
+            # Check if reopening already exists (for students who haven't submitted)
+            existing_reopening = None
+            if not has_submitted:
+                existing_reopening = AssignmentReopening.query.filter_by(
+                    assignment_id=assignment_id,
+                    student_id=student_id,
+                    is_active=True
+                ).first()
             
             if existing_redo:
                 # Update existing redo
@@ -2889,49 +2938,168 @@ def grant_assignment_redo(assignment_id):
                 if teacher:
                     existing_redo.granted_by = teacher.id
                 already_granted_count += 1
+                
+                # Notify student of updated redo
+                student = Student.query.get(student_id)
+                if student and student.user:
+                    from app import create_notification
+                    create_notification(
+                        user_id=student.user.id,
+                        notification_type='assignment',
+                        title=f'Redo Updated: {assignment.title}',
+                        message=f'Your redo opportunity for "{assignment.title}" has been updated. New deadline: {redo_deadline.strftime("%m/%d/%Y")}',
+                        link=url_for('student.student_assignments')
+                    )
+            elif existing_reopening:
+                # Update existing reopening - convert to redo if they've now submitted
+                if has_submitted:
+                    # Student has now submitted, so convert reopening to redo
+                    existing_reopening.is_active = False
+                    
+                    # Get original grade if it exists
+                    grade = Grade.query.filter_by(
+                        student_id=student_id,
+                        assignment_id=assignment_id
+                    ).first()
+                    
+                    original_grade = None
+                    if grade and grade.grade_data:
+                        try:
+                            grade_data = json.loads(grade.grade_data)
+                            original_grade = grade_data.get('score')
+                        except:
+                            pass
+                    
+                    # Create redo
+                    redo = AssignmentRedo(
+                        assignment_id=assignment_id,
+                        student_id=student_id,
+                        granted_by=teacher.id if teacher else None,
+                        redo_deadline=redo_deadline,
+                        reason=reason,
+                        original_grade=original_grade
+                    )
+                    db.session.add(redo)
+                    granted_count += 1
+                    redo_count += 1
+                    
+                    # Notify student of conversion from reopening to redo
+                    student = Student.query.get(student_id)
+                    if student and student.user:
+                        from app import create_notification
+                        create_notification(
+                            user_id=student.user.id,
+                            notification_type='assignment',
+                            title=f'Redo Opportunity: {assignment.title}',
+                            message=f'You have been granted permission to redo "{assignment.title}". New deadline: {redo_deadline.strftime("%m/%d/%Y")}',
+                            link=url_for('student.student_assignments')
+                        )
+                else:
+                    # Still no submission, just update reopening
+                    existing_reopening.reason = reason if reason else existing_reopening.reason
+                    existing_reopening.reopened_at = datetime.utcnow()
+                    if teacher:
+                        existing_reopening.reopened_by = teacher.id
+                    already_granted_count += 1
+                    
+                    # Notify student of updated reopening
+                    student = Student.query.get(student_id)
+                    if student and student.user:
+                        from app import create_notification
+                        create_notification(
+                            user_id=student.user.id,
+                            notification_type='assignment',
+                            title=f'Reopening Updated: {assignment.title}',
+                            message=f'Your reopening for "{assignment.title}" has been updated.',
+                            link=url_for('student.student_assignments')
+                        )
             else:
-                # Get original grade if it exists
-                grade = Grade.query.filter_by(
-                    student_id=student_id,
-                    assignment_id=assignment_id
-                ).first()
-                
-                original_grade = None
-                if grade and grade.grade_data:
-                    try:
-                        grade_data = json.loads(grade.grade_data)
-                        original_grade = grade_data.get('score')
-                    except:
-                        pass
-                
-                # Create new redo permission
-                redo = AssignmentRedo(
-                    assignment_id=assignment_id,
-                    student_id=student_id,
-                    granted_by=teacher.id if teacher else None,
-                    redo_deadline=redo_deadline,
-                    reason=reason,
-                    original_grade=original_grade
-                )
-                db.session.add(redo)
-                granted_count += 1
-            
-            # Create notification for student
-            student = Student.query.get(student_id)
-            if student and student.user:
-                create_notification(
-                    user_id=student.user.id,
-                    notification_type='assignment',
-                    title=f'Redo Opportunity: {assignment.title}',
-                    message=f'You have been granted permission to redo "{assignment.title}". New deadline: {redo_deadline.strftime("%m/%d/%Y")}',
-                    link=url_for('student.student_assignments')
-                )
+                # Create new record based on whether student has submitted
+                if has_submitted:
+                    # Student has submitted - create a REDO
+                    grade = Grade.query.filter_by(
+                        student_id=student_id,
+                        assignment_id=assignment_id
+                    ).first()
+                    
+                    original_grade = None
+                    if grade and grade.grade_data:
+                        try:
+                            grade_data = json.loads(grade.grade_data)
+                            original_grade = grade_data.get('score')
+                        except:
+                            pass
+                    
+                    redo = AssignmentRedo(
+                        assignment_id=assignment_id,
+                        student_id=student_id,
+                        granted_by=teacher.id if teacher else None,
+                        redo_deadline=redo_deadline,
+                        reason=reason,
+                        original_grade=original_grade
+                    )
+                    db.session.add(redo)
+                    granted_count += 1
+                    redo_count += 1
+                    
+                    # Create notification for redo
+                    student = Student.query.get(student_id)
+                    if student and student.user:
+                        from app import create_notification
+                        create_notification(
+                            user_id=student.user.id,
+                            notification_type='assignment',
+                            title=f'Redo Opportunity: {assignment.title}',
+                            message=f'You have been granted permission to redo "{assignment.title}". New deadline: {redo_deadline.strftime("%m/%d/%Y")}',
+                            link=url_for('student.student_assignments')
+                        )
+                else:
+                    # Student hasn't submitted - create a REOPENING
+                    # Deactivate any existing reopenings first
+                    existing_reopenings = AssignmentReopening.query.filter_by(
+                        assignment_id=assignment_id,
+                        student_id=student_id,
+                        is_active=True
+                    ).all()
+                    for reopening in existing_reopenings:
+                        reopening.is_active = False
+                    
+                    reopening = AssignmentReopening(
+                        assignment_id=assignment_id,
+                        student_id=student_id,
+                        reopened_by=teacher.id if teacher else None,
+                        reason=reason,
+                        additional_attempts=0,  # Not applicable for PDF/Paper
+                        is_active=True
+                    )
+                    db.session.add(reopening)
+                    granted_count += 1
+                    reopen_count += 1
+                    
+                    # Create notification for reopen
+                    student = Student.query.get(student_id)
+                    if student and student.user:
+                        from app import create_notification
+                        create_notification(
+                            user_id=student.user.id,
+                            notification_type='assignment',
+                            title=f'Assignment Reopened: {assignment.title}',
+                            message=f'"{assignment.title}" has been reopened for you. New deadline: {redo_deadline.strftime("%m/%d/%Y")}',
+                            link=url_for('student.student_assignments')
+                        )
         
         db.session.commit()
         
-        message = f'Redo permission granted to {granted_count} student(s).'
+        # Build message based on what was granted
+        message_parts = []
+        if redo_count > 0:
+            message_parts.append(f'{redo_count} redo(s) granted')
+        if reopen_count > 0:
+            message_parts.append(f'{reopen_count} reopening(s) granted')
         if already_granted_count > 0:
-            message += f' Updated {already_granted_count} existing redo(s).'
+            message_parts.append(f'{already_granted_count} existing record(s) updated')
+        
+        message = f'Successfully processed {granted_count} student(s). ' + ', '.join(message_parts) + '.'
         
         return jsonify({'success': True, 'message': message})
         

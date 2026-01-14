@@ -4,7 +4,7 @@ Students routes for management users.
 
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, Response, abort, jsonify
 from flask_login import login_required, current_user
-from decorators import management_required
+from decorators import management_required, teacher_required
 from models import (
     db, Student, User, Enrollment, Class, Grade, Assignment, ReportCard, SchoolYear,
     Attendance, SchoolDayAttendance, StudentGoal, StudentGroupMember, Submission,
@@ -1861,14 +1861,104 @@ def remove_student(student_id):
 # Function: student_jobs
 # ============================================================
 
+def get_team_detailed_description(team):
+    """Get detailed description for a team based on its name and type"""
+    team_name = team.team_name.lower()
+    team_type = team.team_type.lower() if team.team_type else 'cleaning'
+    
+    # Cleaning Team 1
+    if 'cleaning team 1' in team_name or (team_type == 'cleaning' and '1' in team_name):
+        return {
+            'classrooms': {
+                '1st-3rd Classroom': 'DO NOT TOUCH - This classroom is not cleaned by cleaning teams.',
+                '3rd, 4th & 5th Classroom': '''• Sweep the entire floor, including under the table and in between the chairs.
+• Wipe down all tables, no crumbs on chairs, no crumbs on tables
+• Trash taken out, new trash liner''',
+                '6th, 7th & 8th Classroom': '''• All desk in a straight line/row with no spaces starting from the wall with windows.
+• Desks wiped down
+• Floors swept
+• No crumbs, no paper, clean and shiny
+• Should be 5x5x5, 3 rows of 5s on Tuesdays and Thursdays
+• Should be 4x6x5 on Mondays, Wednesdays and Fridays.
+• Trash taken out, new trash liner''',
+                'K Classroom': 'N/A'
+            },
+            'common_areas': {
+                'Hallway': '• Swept & all trash liners replaced',
+                'Females Restroom': '• Swept, Toilet Paper in each stall, soap near sink, Papertowls/napkins to dry hands.',
+                'Mens Restroom': '• Swept, Toilet Paper in each stall, soap near sink, Papertowls/napkins to dry hands.'
+            }
+        }
+    
+    # Cleaning Team 2
+    elif 'cleaning team 2' in team_name or (team_type == 'cleaning' and '2' in team_name):
+        return {
+            'classrooms': {
+                '1st-3rd Classroom': 'DO NOT TOUCH - This classroom is not cleaned by cleaning teams.',
+                '3rd, 4th & 5th Classroom': '''• Sweep the entire floor, including under the table and in between the chairs.
+• Wipe down all tables, no crumbs on chairs, no crumbs on tables
+• Trash taken out, new trash liner''',
+                '6th, 7th & 8th Classroom': '''• All desk in a straight line/row with no spaces starting from the wall with windows.
+• Desks wiped down
+• Floors swept
+• No crumbs, no paper, clean and shiny
+• Should be 5x5x5, 3 rows of 5s on Tuesdays and Thursdays
+• Should be 4x6x5 on Mondays, Wednesdays and Fridays.
+• Trash taken out, new trash liner''',
+                'K Classroom': 'N/A'
+            },
+            'common_areas': {
+                'Hallway': '• Swept & all trash liners replaced',
+                'Females Restroom': '• Swept, Toilet Paper in each stall, soap near sink, Papertowls/napkins to dry hands.',
+                'Mens Restroom': '• Swept, Toilet Paper in each stall, soap near sink, Papertowls/napkins to dry hands.'
+            }
+        }
+    
+    # Computer Team
+    elif 'computer team' in team_name and 'backup' not in team_name:
+        return {
+            'description': '''They are to make sure all computers are in the cabinet upstairs in the office:
+
+• 28 Student computers marked with numbers 1-28
+
+• They are to make sure all cords relating to each computer is in the office near the school. 28 Cords accounted for including 3-8 Extension cords
+
+• So it will be 28+ extension cords
+
+• Along with chromebooks, there should be 5+ unmarked chromebooks and charges so it would be 28+ computers and 28+ chargers with extension cords and chromebook chargers'''
+        }
+    
+    # Backup Computer Team
+    elif 'backup computer' in team_name or ('computer' in team_name and 'backup' in team_name):
+        return {
+            'description': '''They are to make sure all computers are in the cabinet upstairs in the office:
+
+• 28 Student computers marked with numbers 1-28
+
+• They are to make sure all cords relating to each computer is in the office near the school. 28 Cords accounted for including 3-8 Extension cords
+
+• So it will be 28+ extension cords
+
+• Along with chromebooks, there should be 5+ unmarked chromebooks and charges so it would be 28+ computers and 28+ chargers with extension cords and chromebook chargers'''
+        }
+    
+    # Other teams
+    else:
+        return {
+            'description': team.team_description or 'No detailed description available.'
+        }
+
+
 @bp.route('/student-jobs')
 @login_required
-@management_required
+@teacher_required
 def student_jobs():
-    """Student Jobs management page for cleaning crews"""
+    """Student Jobs management page for cleaning crews, computer teams, and other teams"""
     try:
-        # Get all cleaning teams
-        teams = CleaningTeam.query.filter_by(is_active=True).all()
+        # Get all teams (cleaning, computer, and other)
+        teams = CleaningTeam.query.filter_by(is_active=True).order_by(
+            CleaningTeam.team_type, CleaningTeam.team_name
+        ).all()
         
         # Import datetime for checking reset time
         from datetime import datetime, timezone, timedelta
@@ -1954,11 +2044,15 @@ def student_jobs():
                         'member_id': member.id
                     })
             
+            # Get detailed description for the team
+            detailed_description = get_team_detailed_description(team)
+            
             team_data[team.id] = {
                 'team': team,
                 'members': member_list,
                 'recent_inspections': recent_inspections,
-                'current_score': current_score
+                'current_score': current_score,
+                'detailed_description': detailed_description
             }
         
         # Get all inspections from all teams for the global history table

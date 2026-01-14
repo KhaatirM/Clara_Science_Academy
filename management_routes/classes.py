@@ -1032,10 +1032,10 @@ def class_grades(class_id):
     enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
     enrolled_students = [enrollment.student for enrollment in enrollments if enrollment.student]
     
-    # Get individual assignments for this class
+    # Get individual assignments for this class (exclude voided assignments from grade calculations)
     assignments = Assignment.query.filter_by(class_id=class_id).order_by(Assignment.due_date.desc()).all()
     
-    # Get group assignments for this class
+    # Get group assignments for this class (exclude voided assignments from grade calculations)
     try:
         group_assignments = GroupAssignment.query.filter_by(class_id=class_id).order_by(GroupAssignment.due_date.desc()).all()
     except Exception as e:
@@ -1056,6 +1056,10 @@ def class_grades(class_id):
     for student in enrolled_students:
         student_grades[student.id] = {}
         for assignment in assignments:
+            # Skip voided assignments - they should not be included in grade calculations
+            if assignment.status == 'Voided':
+                continue
+                
             grade = Grade.query.filter_by(student_id=student.id, assignment_id=assignment.id).first()
             if grade:
                 try:
@@ -1065,7 +1069,8 @@ def class_grades(class_id):
                         'comments': grade_data.get('comments', ''),
                         'graded_at': grade.graded_at,
                         'type': 'individual',
-                        'is_voided': grade.is_voided if hasattr(grade, 'is_voided') else False
+                        'is_voided': grade.is_voided if hasattr(grade, 'is_voided') else False,
+                        'assignment_voided': False  # Assignment is not voided (we skip voided ones above)
                     }
                 except (json.JSONDecodeError, TypeError):
                     student_grades[student.id][assignment.id] = {
@@ -1073,7 +1078,8 @@ def class_grades(class_id):
                         'comments': 'Error parsing grade data',
                         'graded_at': grade.graded_at,
                         'type': 'individual',
-                        'is_voided': grade.is_voided if hasattr(grade, 'is_voided') else False
+                        'is_voided': grade.is_voided if hasattr(grade, 'is_voided') else False,
+                        'assignment_voided': False
                     }
             else:
                 student_grades[student.id][assignment.id] = {
@@ -1081,13 +1087,18 @@ def class_grades(class_id):
                     'comments': '',
                     'graded_at': None,
                     'is_voided': False,
-                    'type': 'individual'
+                    'type': 'individual',
+                    'assignment_voided': False
                 }
     
     # Get group grades for students (group assignments)
     
     for student in enrolled_students:
         for group_assignment in group_assignments:
+            # Skip voided group assignments - they should not be included in grade calculations
+            if group_assignment.status == 'Voided':
+                continue
+                
             # Check if this group assignment is for specific groups
             # selected_group_ids is a JSON string of group IDs (null = all groups)
             assignment_group_ids = []
@@ -1149,7 +1160,8 @@ def class_grades(class_id):
                                 'graded_at': group_grade.graded_at,
                                 'type': 'group',
                                 'group_name': student_group_name,
-                                'is_voided': group_grade.is_voided if hasattr(group_grade, 'is_voided') else False
+                                'is_voided': group_grade.is_voided if hasattr(group_grade, 'is_voided') else False,
+                                'assignment_voided': False  # Assignment is not voided (we skip voided ones above)
                             }
                         except (json.JSONDecodeError, TypeError, AttributeError):
                             student_grades[student.id][f'group_{group_assignment.id}'] = {
@@ -1158,7 +1170,8 @@ def class_grades(class_id):
                                 'graded_at': None,
                                 'type': 'group',
                                 'group_name': student_group_name,
-                                'is_voided': group_grade.is_voided if hasattr(group_grade, 'is_voided') else False
+                                'is_voided': group_grade.is_voided if hasattr(group_grade, 'is_voided') else False,
+                                'assignment_voided': False
                             }
                     else:
                         student_grades[student.id][f'group_{group_assignment.id}'] = {
@@ -1167,7 +1180,8 @@ def class_grades(class_id):
                             'graded_at': None,
                             'type': 'group',
                             'group_name': student_group_name,
-                            'is_voided': False
+                            'is_voided': False,
+                            'assignment_voided': False
                         }
                 else:
                     # Student is not in any group but assignment is for all groups
@@ -1177,7 +1191,8 @@ def class_grades(class_id):
                         'graded_at': None,
                         'type': 'group',
                         'group_name': 'N/A',
-                        'is_voided': False
+                        'is_voided': False,
+                        'assignment_voided': False
                     }
             else:
                 # Student should not see this assignment (not in the assigned group)
@@ -1190,7 +1205,8 @@ def class_grades(class_id):
                         'graded_at': None,
                         'is_voided': False,
                         'type': 'group',
-                        'group_name': 'N/A'
+                        'group_name': 'N/A',
+                        'assignment_voided': False
                     }
                 else:
                     # Assignment is for specific groups and student is not in any of them
@@ -1200,21 +1216,26 @@ def class_grades(class_id):
                         'comments': 'Not assigned to this group',
                         'graded_at': None,
                         'type': 'group',
-                        'group_name': 'N/A'
+                        'group_name': 'N/A',
+                        'assignment_voided': False
                     }
     
     # Calculate averages for each student (including both individual and group assignments)
     # Only include grades that are applicable to the student (exclude N/A, Not Assigned from group assignments they're not part of)
-    # IMPORTANT: Exclude voided grades from average calculation
+    # IMPORTANT: Exclude voided grades AND voided assignments from average calculation
+    # This matches the logic used in the student dashboard grades view
     student_averages = {}
     for student_id, grades in student_grades.items():
         # Filter out non-applicable grades (N/A, Not Assigned, Not Graded, No Group) and only include numeric grades
-        # ALSO exclude voided grades
+        # ALSO exclude voided grades AND voided assignments
         valid_grades = []
         for g in grades.values():
             grade_val = g['grade']
             # Skip voided grades - CRITICAL FIX
             if g.get('is_voided', False):
+                continue
+            # Skip voided assignments - CRITICAL FIX to match student dashboard behavior
+            if g.get('assignment_voided', False):
                 continue
             # Skip if the comment indicates the student isn't part of this assignment
             if 'Not assigned to this group' in g.get('comments', ''):

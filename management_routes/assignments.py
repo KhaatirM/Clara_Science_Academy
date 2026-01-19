@@ -855,10 +855,22 @@ def assignments_and_grades():
                             if grade:
                                 try:
                                     grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
-                                    score = grade_data.get('score')
-                                    # Handle None scores
-                                    if score is None:
+                                    points_earned = grade_data.get('score') or grade_data.get('points_earned')
+                                    # Always use assignment's total_points as source of truth
+                                    total_points = assignment.total_points if assignment.total_points else 100.0
+                                    
+                                    # Calculate percentage from points
+                                    if points_earned is not None:
+                                        try:
+                                            points_float = float(points_earned)
+                                            percentage = (points_float / total_points * 100) if total_points > 0 else 0
+                                            # Store percentage for display
+                                            score = round(percentage, 1)
+                                        except (ValueError, TypeError):
+                                            score = 'N/A'
+                                    else:
                                         score = 'N/A'
+                                    
                                     table_student_grades[student.id][assignment.id] = {
                                         'grade': score,
                                         'comments': grade_data.get('comments', ''),
@@ -928,10 +940,22 @@ def assignments_and_grades():
                                 if group_grade:
                                     try:
                                         grade_data = json.loads(group_grade.grade_data) if isinstance(group_grade.grade_data, str) else group_grade.grade_data
-                                        score = grade_data.get('score')
-                                        # Handle None scores
-                                        if score is None:
+                                        points_earned = grade_data.get('score') or grade_data.get('points_earned')
+                                        # Always use group_assignment's total_points as source of truth
+                                        total_points = group_assignment.total_points if group_assignment.total_points else 100.0
+                                        
+                                        # Calculate percentage from points
+                                        if points_earned is not None:
+                                            try:
+                                                points_float = float(points_earned)
+                                                percentage = (points_float / total_points * 100) if total_points > 0 else 0
+                                                # Store percentage for display
+                                                score = round(percentage, 1)
+                                            except (ValueError, TypeError):
+                                                score = 'N/A'
+                                        else:
                                             score = 'N/A'
+                                        
                                         table_student_grades[student.id][f'group_{group_assignment.id}'] = {
                                             'grade': score,
                                             'comments': grade_data.get('comments', ''),

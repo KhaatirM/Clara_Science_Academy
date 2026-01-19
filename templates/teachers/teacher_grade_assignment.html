@@ -77,15 +77,18 @@
             <div class="stat-icon"><i class="bi bi-graph-up"></i></div>
             <div class="stat-content">
                 <div class="stat-value" id="averageStatValue">
-                    {% set total_score = 0 %}
+                    {% set total_percentage = 0 %}
                     {% set count = 0 %}
                     {% for student_id, grade_data in grades.items() %}
-                        {% if grade_data.score %}
-                            {% set total_score = total_score + grade_data.score %}
+                        {% if grade_data.score is defined and grade_data.score is not none %}
+                            {# Always recalculate percentage using assignment's total_points #}
+                            {% set points_earned = grade_data.score|float %}
+                            {% set percentage = (points_earned / total_points * 100) if total_points > 0 else 0 %}
+                            {% set total_percentage = total_percentage + percentage %}
                             {% set count = count + 1 %}
                         {% endif %}
                     {% endfor %}
-                    {{ (total_score / count)|round(1) if count > 0 else '--' }}%
+                    {{ (total_percentage / count)|round(1) if count > 0 else '--' }}%
                 </div>
                 <div class="stat-label">Average</div>
             </div>
@@ -940,21 +943,27 @@ function updateDistributionChart() {
     const scoreInputs = document.querySelectorAll('.score-input');
     let counts = { a: 0, b: 0, c: 0, d: 0, f: 0, ungraded: 0 };
     let total = scoreInputs.length;
+    const totalPoints = {{ total_points if total_points else 100.0 }};
     
     scoreInputs.forEach(input => {
-        const score = parseFloat(input.value);
-        if (isNaN(score) || score === 0) {
+        const pointsEarned = parseFloat(input.value);
+        if (isNaN(pointsEarned) || pointsEarned === 0) {
             counts.ungraded++;
-        } else if (score >= 90) {
-            counts.a++;
-        } else if (score >= 80) {
-            counts.b++;
-        } else if (score >= 70) {
-            counts.c++;
-        } else if (score >= 60) {
-            counts.d++;
         } else {
-            counts.f++;
+            // Calculate percentage using assignment's total_points
+            const percentage = totalPoints > 0 ? (pointsEarned / totalPoints * 100) : 0;
+            // Determine letter grade based on percentage
+            if (percentage >= 90) {
+                counts.a++;
+            } else if (percentage >= 80) {
+                counts.b++;
+            } else if (percentage >= 70) {
+                counts.c++;
+            } else if (percentage >= 60) {
+                counts.d++;
+            } else {
+                counts.f++;
+            }
         }
     });
     
@@ -977,19 +986,21 @@ function updateDistributionChart() {
         document.getElementById('distUngraded').style.width = ((counts.ungraded / total) * 100) + '%';
     }
     
-    // Update average
-    let totalScore = 0;
+    // Update average (calculate percentage average)
+    let totalPercentage = 0;
     let countScored = 0;
     scoreInputs.forEach(input => {
-        const score = parseFloat(input.value);
-        if (!isNaN(score) && score > 0) {
-            totalScore += score;
+        const pointsEarned = parseFloat(input.value);
+        if (!isNaN(pointsEarned) && pointsEarned > 0) {
+            // Calculate percentage using assignment's total_points
+            const percentage = totalPoints > 0 ? (pointsEarned / totalPoints * 100) : 0;
+            totalPercentage += percentage;
             countScored++;
         }
     });
     
     if (countScored > 0) {
-        const average = (totalScore / countScored).toFixed(1);
+        const average = (totalPercentage / countScored).toFixed(1);
         document.getElementById('averageStatValue').textContent = average + '%';
     }
     

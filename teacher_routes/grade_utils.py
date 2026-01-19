@@ -177,6 +177,26 @@ def calculate_assignment_statistics(assignment_id):
     Returns:
         Dictionary with average, median, mode, min, max, std_dev, grade_distribution
     """
+    from models import Assignment
+    
+    # Get assignment to access total_points
+    assignment = Assignment.query.get(assignment_id)
+    if not assignment:
+        return {
+            "total_students": 0,
+            "graded_students": 0,
+            "average": 0,
+            "median": 0,
+            "mode": 0,
+            "min": 0,
+            "max": 0,
+            "std_dev": 0,
+            "grade_distribution": {}
+        }
+    
+    # Always use assignment's total_points as source of truth
+    assignment_total_points = assignment.total_points if assignment.total_points else 100.0
+    
     grades = Grade.query.filter_by(
         assignment_id=assignment_id,
         is_voided=False
@@ -199,10 +219,14 @@ def calculate_assignment_statistics(assignment_id):
     for grade in grades:
         try:
             grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
-            percentage = grade_data.get('percentage', 0)
-            if percentage > 0:
-                percentages.append(percentage)
-        except:
+            # Get points earned from grade_data
+            points_earned = grade_data.get('points_earned') or grade_data.get('score', 0)
+            if points_earned:
+                # Always recalculate percentage using assignment's actual total_points
+                percentage = (float(points_earned) / assignment_total_points * 100) if assignment_total_points > 0 else 0
+                if percentage > 0:
+                    percentages.append(percentage)
+        except (ValueError, TypeError, KeyError):
             continue
     
     if not percentages:

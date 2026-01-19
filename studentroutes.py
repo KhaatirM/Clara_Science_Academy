@@ -164,7 +164,8 @@ def get_grade_trends(student_id, class_id, limit=10):
         # Skip voided grades (double check)
         if grade.is_voided or (grade.assignment and grade.assignment.status == 'Voided'):
             continue
-            
+        
+        percentage = None  # Initialize to avoid UnboundLocalError
         try:
             grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
             # Always use assignment's total_points as source of truth
@@ -473,6 +474,7 @@ def student_dashboard():
             # Calculate average grade for this class
             grade_percentages = []
             for g in class_grades:
+                percentage = None  # Initialize to avoid UnboundLocalError
                 grade_data = json.loads(g.grade_data)
                 # Always use assignment's total_points as source of truth
                 score = grade_data.get('score') or grade_data.get('points_earned')
@@ -1033,7 +1035,8 @@ def student_grades():
                 # Skip voided grades and voided assignments
                 if grade.is_voided or (grade.assignment and grade.assignment.status == 'Voided'):
                     continue
-                    
+                
+                percentage = None  # Initialize to avoid UnboundLocalError
                 grade_data = json.loads(grade.grade_data)
                 # Always use assignment's total_points as source of truth
                 score = grade_data.get('score') or grade_data.get('points_earned')

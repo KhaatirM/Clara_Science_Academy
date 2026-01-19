@@ -301,9 +301,9 @@ def management_schedule_announcement_route():
 
 @management_blueprint.route('/student-jobs', endpoint='student_jobs')
 @login_required
-@management_required
 def student_jobs_route():
-    """Student jobs route - delegates to students module"""
+    """Student jobs route - delegates to students module (allows teachers and admins)"""
+    # The function itself has @teacher_required which allows teachers and admins
     return student_jobs_func()
 
 @management_blueprint.route('/settings', endpoint='settings')

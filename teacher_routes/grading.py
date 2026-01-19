@@ -200,14 +200,12 @@ def grade_assignment(assignment_id):
         try:
             # Parse the JSON grade_data
             grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
-            # Get points earned and total points from grade_data, fallback to assignment total_points
+            # Get points earned from grade_data
             points_earned = grade_data.get('points_earned') or grade_data.get('score', 0)
-            total_points = grade_data.get('total_points') or grade_data.get('max_score', assignment_total_points)
-            percentage = grade_data.get('percentage', 0)
-            
-            # Recalculate percentage if not present or if using old format
-            if not percentage or percentage == points_earned:
-                percentage = (points_earned / total_points * 100) if total_points > 0 else 0
+            # Always use assignment's total_points as source of truth, not stored value
+            total_points = assignment_total_points
+            # Always recalculate percentage using assignment's actual total_points
+            percentage = (points_earned / total_points * 100) if total_points > 0 else 0
             
             # Create a dict with the parsed data plus the grade object attributes
             grades_dict[grade.student_id] = {

@@ -15,6 +15,7 @@
                 <h1 class="h3 mb-0">
                     <i class="bi bi-briefcase-fill me-2"></i>Student Jobs Management
                 </h1>
+                {% if current_user.role != 'Student' %}
                 <div class="btn-group" role="group">
                     <button type="button" class="btn btn-outline-primary" onclick="exportToSheets()">
                         <i class="bi bi-file-earmark-spreadsheet me-1"></i>Export to Sheets
@@ -23,6 +24,7 @@
                         <i class="bi bi-clipboard-check me-1"></i>Conduct Inspection
                     </button>
                 </div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -97,93 +99,94 @@
                 <div class="card-body" id="team1Content">
                     <div class="team-stats mb-4">
                         <div class="row text-center">
-                            <div class="col-3">
+                            <div class="col-6">
                                 <div class="stat-item">
-                                    <div class="stat-number">8</div>
+                                    <div class="stat-number">{% if team_data %}{% for team_entry in team_data.values() %}{% if team_entry.team.team_name == "Team 1" %}{{ team_entry.members|length }}{% endif %}{% endfor %}{% else %}0{% endif %}</div>
                                     <div class="stat-label">Members</div>
                                 </div>
                             </div>
-                            <div class="col-3">
+                            <div class="col-6">
                                 <div class="stat-item">
-                                    <div class="stat-number">4</div>
-                                    <div class="stat-label">Classrooms</div>
-                                </div>
-                            </div>
-                            <div class="col-3">
-                                <div class="stat-item">
-                                    <div class="stat-number">3</div>
-                                    <div class="stat-label">Common Areas</div>
-                                </div>
-                            </div>
-                            <div class="col-3">
-                                <div class="stat-item">
-                                    <div class="stat-number">2</div>
-                                    <div class="stat-label">Weeks/Month</div>
+                                    <div class="stat-number">{% if team_data %}{% for team_entry in team_data.values() %}{% if team_entry.team.team_name == "Team 1" and team_entry.detailed_description %}{{ (team_entry.detailed_description.classrooms|length if team_entry.detailed_description.classrooms else 0) + (team_entry.detailed_description.common_areas|length if team_entry.detailed_description.common_areas else 0) }}{% endif %}{% endfor %}{% else %}0{% endif %}</div>
+                                    <div class="stat-label">Areas</div>
                                 </div>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="cleaning-areas mb-4">
-                        <h6 class="section-title">
-                            <i class="bi bi-geo-alt me-2"></i>Cleaning Areas
-                        </h6>
-                        <div class="areas-list">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <ul class="list-unstyled mb-0">
-                                        <li><i class="bi bi-check-circle-fill text-success me-2"></i>4 Classrooms</li>
-                                        <li><i class="bi bi-check-circle-fill text-success me-2"></i>Main Hallway</li>
-                                    </ul>
+                    <!-- Detailed Cleaning Areas Description -->
+                    {% if team_data %}
+                        {% for team_entry in team_data.values() %}
+                            {% if (team_entry.team.team_name == "Team 1" or "1" in team_entry.team.team_name) and team_entry.detailed_description %}
+                                {% set desc = team_entry.detailed_description %}
+                                <div class="cleaning-areas-detail mb-4">
+                                    <h6 class="section-title mb-3">
+                                        <i class="bi bi-geo-alt me-2"></i>Cleaning Areas & Requirements
+                                    </h6>
+                                    
+                                    <!-- Classrooms Section -->
+                                    {% if desc.classrooms %}
+                                    <div class="mb-4">
+                                        <h6 class="fw-bold text-primary mb-3"><i class="bi bi-door-open me-2"></i>Classrooms</h6>
+                                        {% for classroom, instructions in desc.classrooms.items() %}
+                                        <div class="mb-3 p-3 border rounded bg-light">
+                                            <h6 class="fw-bold mb-2">{{ classroom }}</h6>
+                                            {% if instructions == 'N/A' %}
+                                                <p class="text-muted mb-0">N/A</p>
+                                            {% elif 'DO NOT TOUCH' in instructions %}
+                                                <p class="text-danger mb-0 fw-bold">{{ instructions }}</p>
+                                            {% else %}
+                                                <div class="text-muted" style="white-space: pre-line;">{{ instructions }}</div>
+                                            {% endif %}
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <!-- Common Areas Section -->
+                                    {% if desc.common_areas %}
+                                    <div class="mb-4">
+                                        <h6 class="fw-bold text-primary mb-3"><i class="bi bi-building me-2"></i>Common Areas</h6>
+                                        {% for area, instructions in desc.common_areas.items() %}
+                                        <div class="mb-3 p-3 border rounded bg-light">
+                                            <h6 class="fw-bold mb-2">{{ area }}</h6>
+                                            <div class="text-muted" style="white-space: pre-line;">{{ instructions }}</div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
                                 </div>
-                                <div class="col-md-6">
-                                    <ul class="list-unstyled mb-0">
-                                        <li><i class="bi bi-check-circle-fill text-success me-2"></i>Girls Bathroom</li>
-                                        <li><i class="bi bi-check-circle-fill text-success me-2"></i>Boys Bathroom</li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
                     
+                    <!-- Team Members List (Simple) -->
                     <div class="team-members mb-4">
                         <h6 class="section-title">
-                            <i class="bi bi-people-fill me-2"></i>Team Members & Assignments
+                            <i class="bi bi-people-fill me-2"></i>Team Members
                         </h6>
-                        <div class="clean-team-grid" id="team1Members">
+                        <div id="team1Members">
                             {% if team_data %}
                                 {% for team_entry in team_data.values() %}
                                     {% if team_entry.team.team_name == "Team 1" %}
                                         {% if team_entry.members %}
-                                            {% for member in team_entry.members %}
-                                <div class="team-member-card" data-member-id="{{ member.member_id }}" data-member-name="{{ member.name }}" data-member-role="{{ member.role }}" data-member-assignment="{{ member.assignment_description if member.assignment_description else '' }}">
-                                    <div class="member-header">
-                                        <span class="member-name">{{ member.name }}</span>
-                                        <span class="job-badge sweeping">{{ member.role }}</span>
-                                    </div>
-                                    <div class="job-details">{{ member.assignment_description if member.assignment_description else 'Member of Cleanup Team 1' }}</div>
-                                    <button class="btn btn-sm btn-outline-secondary mt-2 edit-member-btn" data-team-id="1">
-                                        <i class="bi bi-pencil me-1"></i>Edit Assignment
-                                    </button>
-                                </div>
-                                            {% endfor %}
-                                        {% else %}
-                                            <div class="col-12 text-center text-muted py-4">
-                                                <i class="bi bi-people fs-1 mb-3"></i>
-                                                <p>No members assigned yet</p>
+                                            <div class="d-flex flex-wrap gap-2">
+                                                {% for member in team_entry.members %}
+                                                <span class="badge bg-primary p-2">{{ member.name }}</span>
+                                                {% endfor %}
                                             </div>
+                                        {% else %}
+                                            <p class="text-muted mb-0">No members assigned yet</p>
                                         {% endif %}
                                     {% endif %}
                                 {% endfor %}
                             {% else %}
-                                <div class="col-12 text-center text-muted py-4">
-                                    <i class="bi bi-people fs-1 mb-3"></i>
-                                    <p>No members assigned yet</p>
-                                </div>
+                                <p class="text-muted mb-0">No members assigned yet</p>
                             {% endif %}
                         </div>
                     </div>
                     
+                    {% if current_user.role != 'Student' %}
                     <div class="team-actions">
                         <button class="btn btn-success btn-inspect" onclick="recordInspection('team1')">
                             <i class="bi bi-clipboard-check me-2"></i>Record Inspection
@@ -198,6 +201,13 @@
                             <i class="bi bi-person-dash me-1"></i>Remove Members
                         </button>
                     </div>
+                    {% else %}
+                    <div class="team-actions">
+                        <button class="btn btn-outline-primary btn-sm" onclick="viewTeamHistory('team1')">
+                            <i class="bi bi-clock-history me-1"></i>History
+                        </button>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -229,93 +239,94 @@
                 <div class="card-body" id="team2Content">
                     <div class="team-stats mb-4">
                         <div class="row text-center">
-                            <div class="col-3">
+                            <div class="col-6">
                                 <div class="stat-item">
-                                    <div class="stat-number">8</div>
+                                    <div class="stat-number">{% if team_data %}{% for team_entry in team_data.values() %}{% if team_entry.team.team_name == "Team 2" %}{{ team_entry.members|length }}{% endif %}{% endfor %}{% else %}0{% endif %}</div>
                                     <div class="stat-label">Members</div>
                                 </div>
                             </div>
-                            <div class="col-3">
+                            <div class="col-6">
                                 <div class="stat-item">
-                                    <div class="stat-number">4</div>
-                                    <div class="stat-label">Classrooms</div>
-                                </div>
-                            </div>
-                            <div class="col-3">
-                                <div class="stat-item">
-                                    <div class="stat-number">3</div>
-                                    <div class="stat-label">Common Areas</div>
-                                </div>
-                            </div>
-                            <div class="col-3">
-                                <div class="stat-item">
-                                    <div class="stat-number">2</div>
-                                    <div class="stat-label">Weeks/Month</div>
+                                    <div class="stat-number">{% if team_data %}{% for team_entry in team_data.values() %}{% if team_entry.team.team_name == "Team 2" and team_entry.detailed_description %}{{ (team_entry.detailed_description.classrooms|length if team_entry.detailed_description.classrooms else 0) + (team_entry.detailed_description.common_areas|length if team_entry.detailed_description.common_areas else 0) }}{% endif %}{% endfor %}{% else %}0{% endif %}</div>
+                                    <div class="stat-label">Areas</div>
                                 </div>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="cleaning-areas mb-4">
-                        <h6 class="section-title">
-                            <i class="bi bi-geo-alt me-2"></i>Cleaning Areas
-                        </h6>
-                        <div class="areas-list">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <ul class="list-unstyled mb-0">
-                                        <li><i class="bi bi-check-circle-fill text-success me-2"></i>4 Classrooms</li>
-                                        <li><i class="bi bi-check-circle-fill text-success me-2"></i>Main Hallway</li>
-                                    </ul>
+                    <!-- Detailed Cleaning Areas Description -->
+                    {% if team_data %}
+                        {% for team_entry in team_data.values() %}
+                            {% if (team_entry.team.team_name == "Team 2" or "2" in team_entry.team.team_name) and team_entry.detailed_description %}
+                                {% set desc = team_entry.detailed_description %}
+                                <div class="cleaning-areas-detail mb-4">
+                                    <h6 class="section-title mb-3">
+                                        <i class="bi bi-geo-alt me-2"></i>Cleaning Areas & Requirements
+                                    </h6>
+                                    
+                                    <!-- Classrooms Section -->
+                                    {% if desc.classrooms %}
+                                    <div class="mb-4">
+                                        <h6 class="fw-bold text-primary mb-3"><i class="bi bi-door-open me-2"></i>Classrooms</h6>
+                                        {% for classroom, instructions in desc.classrooms.items() %}
+                                        <div class="mb-3 p-3 border rounded bg-light">
+                                            <h6 class="fw-bold mb-2">{{ classroom }}</h6>
+                                            {% if instructions == 'N/A' %}
+                                                <p class="text-muted mb-0">N/A</p>
+                                            {% elif 'DO NOT TOUCH' in instructions %}
+                                                <p class="text-danger mb-0 fw-bold">{{ instructions }}</p>
+                                            {% else %}
+                                                <div class="text-muted" style="white-space: pre-line;">{{ instructions }}</div>
+                                            {% endif %}
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <!-- Common Areas Section -->
+                                    {% if desc.common_areas %}
+                                    <div class="mb-4">
+                                        <h6 class="fw-bold text-primary mb-3"><i class="bi bi-building me-2"></i>Common Areas</h6>
+                                        {% for area, instructions in desc.common_areas.items() %}
+                                        <div class="mb-3 p-3 border rounded bg-light">
+                                            <h6 class="fw-bold mb-2">{{ area }}</h6>
+                                            <div class="text-muted" style="white-space: pre-line;">{{ instructions }}</div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
                                 </div>
-                                <div class="col-md-6">
-                                    <ul class="list-unstyled mb-0">
-                                        <li><i class="bi bi-check-circle-fill text-success me-2"></i>Girls Bathroom</li>
-                                        <li><i class="bi bi-check-circle-fill text-success me-2"></i>Boys Bathroom</li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
                     
+                    <!-- Team Members List (Simple) -->
                     <div class="team-members mb-4">
                         <h6 class="section-title">
-                            <i class="bi bi-people-fill me-2"></i>Team Members & Assignments
+                            <i class="bi bi-people-fill me-2"></i>Team Members
                         </h6>
-                        <div class="clean-team-grid" id="team2Members">
+                        <div id="team2Members">
                             {% if team_data %}
                                 {% for team_entry in team_data.values() %}
                                     {% if team_entry.team.team_name == "Team 2" %}
                                         {% if team_entry.members %}
-                                            {% for member in team_entry.members %}
-                                <div class="team-member-card" data-member-id="{{ member.member_id }}" data-member-name="{{ member.name }}" data-member-role="{{ member.role }}" data-member-assignment="{{ member.assignment_description if member.assignment_description else '' }}">
-                                    <div class="member-header">
-                                        <span class="member-name">{{ member.name }}</span>
-                                        <span class="job-badge sweeping">{{ member.role }}</span>
-                                    </div>
-                                    <div class="job-details">{{ member.assignment_description if member.assignment_description else 'Member of Cleanup Team 2' }}</div>
-                                    <button class="btn btn-sm btn-outline-secondary mt-2 edit-member-btn" data-team-id="2">
-                                        <i class="bi bi-pencil me-1"></i>Edit Assignment
-                                    </button>
-                                </div>
-                                            {% endfor %}
-                                        {% else %}
-                                            <div class="col-12 text-center text-muted py-4">
-                                                <i class="bi bi-people fs-1 mb-3"></i>
-                                                <p>No members assigned yet</p>
+                                            <div class="d-flex flex-wrap gap-2">
+                                                {% for member in team_entry.members %}
+                                                <span class="badge bg-secondary p-2">{{ member.name }}</span>
+                                                {% endfor %}
                                             </div>
+                                        {% else %}
+                                            <p class="text-muted mb-0">No members assigned yet</p>
                                         {% endif %}
                                     {% endif %}
                                 {% endfor %}
                             {% else %}
-                                <div class="col-12 text-center text-muted py-4">
-                                    <i class="bi bi-people fs-1 mb-3"></i>
-                                    <p>No members assigned yet</p>
-                                </div>
+                                <p class="text-muted mb-0">No members assigned yet</p>
                             {% endif %}
                         </div>
                     </div>
                     
+                    {% if current_user.role != 'Student' %}
                     <div class="team-actions">
                         <button class="btn btn-success btn-inspect" onclick="recordInspection('team2')">
                             <i class="bi bi-clipboard-check me-2"></i>Record Inspection
@@ -330,88 +341,138 @@
                             <i class="bi bi-person-dash me-1"></i>Remove Members
                         </button>
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Computer Cleanup & Setup Team -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card border-info">
-                <div class="card-header d-flex justify-content-between align-items-center bg-info text-white">
-                    <h5 class="card-title mb-0">
-                        <i class="bi bi-laptop me-2"></i>Computer Cleanup & Setup Team
-                    </h5>
-                    <div class="d-flex align-items-center">
-                        <span class="badge bg-light text-dark me-2" id="computerTeamScore">100 Points</span>
-                        <button class="btn btn-sm btn-outline-light" onclick="toggleComputerTeam()">
-                            <i class="bi bi-chevron-down" id="computerTeamChevron"></i>
+                    {% else %}
+                    <div class="team-actions">
+                        <button class="btn btn-outline-primary btn-sm" onclick="viewTeamHistory('team2')">
+                            <i class="bi bi-clock-history me-1"></i>History
                         </button>
                     </div>
-                </div>
-                <div class="card-body" id="computerTeamContent">
-                    <div class="row mb-3">
-                        <div class="col-md-8">
-                            <h6><i class="bi bi-person-check me-1"></i>Team Members:</h6>
-                            <p class="mb-2">Muaci Ajuwa, Godanse Ajuwa, Zawadi Ajuwa, Deborah Ajuwa, Manasseh Ajuwa, Jeannette Ajuwa</p>
-                            <small class="text-muted">Responsible for setting up and putting up all laptops</small>
-                        </div>
-                        <div class="col-md-4 text-end">
-                            <button class="btn btn-sm btn-info" onclick="recordComputerInspection()">
-                                <i class="bi bi-clipboard-check me-1"></i>Record Inspection
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <!-- Computer Team Point System -->
-                    <div class="card border-info">
-                        <div class="card-header bg-info text-white">
-                            <h6 class="mb-0"><i class="bi bi-calculator me-1"></i>Point Deduction System</h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <span><i class="bi bi-laptop text-danger me-1"></i>Computer left out</span>
-                                        <span class="badge bg-danger">-10 points</span>
-                                    </div>
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <span><i class="bi bi-tablet text-warning me-1"></i>Tablet left out</span>
-                                        <span class="badge bg-warning">-8 points</span>
-                                    </div>
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <span><i class="bi bi-lightning text-info me-1"></i>Charger left out</span>
-                                        <span class="badge bg-info">-5 points</span>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <span><i class="bi bi-headphones text-primary me-1"></i>Headphones left out</span>
-                                        <span class="badge bg-primary">-5 points</span>
-                                    </div>
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <span><i class="bi bi-plug text-secondary me-1"></i>Extension cord left out</span>
-                                        <span class="badge bg-secondary">-3 points</span>
-                                    </div>
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <span class="fw-bold">Starting Points</span>
-                                        <span class="badge bg-success">100 points</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="alert alert-info mt-3 mb-0">
-                                <i class="bi bi-info-circle me-1"></i>
-                                <strong>Stacking:</strong> Multiple items can be left out and points will be deducted for each item.
-                            </div>
-                        </div>
-                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Computer Teams -->
+    {% if team_data %}
+        {% for team_entry in team_data.values() %}
+            {% if (team_entry.team.team_type|default('') == 'computer') or 'computer' in team_entry.team.team_name.lower() %}
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card border-info">
+                        <div class="card-header d-flex justify-content-between align-items-center bg-info text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-laptop me-2"></i>{{ team_entry.team.team_name }}
+                            </h5>
+                            <div class="d-flex align-items-center">
+                                <span class="badge bg-light text-dark me-2" id="computerTeam{{ team_entry.team.id }}Score">{{ team_entry.current_score }} Points</span>
+                                <button class="btn btn-sm btn-outline-light" onclick="toggleComputerTeam({{ team_entry.team.id }})">
+                                    <i class="bi bi-chevron-down" id="computerTeam{{ team_entry.team.id }}Chevron"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body" id="computerTeam{{ team_entry.team.id }}Content">
+                            <!-- Team Description -->
+                            {% if team_entry.detailed_description and team_entry.detailed_description.description %}
+                            <div class="mb-4">
+                                <h6 class="fw-bold text-info mb-3"><i class="bi bi-info-circle me-2"></i>Team Responsibilities</h6>
+                                <div class="p-3 border rounded bg-light">
+                                    <div class="text-muted" style="white-space: pre-line;">{{ team_entry.detailed_description.description }}</div>
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Team Members List -->
+                            <div class="mb-4">
+                                <h6 class="section-title">
+                                    <i class="bi bi-people-fill me-2"></i>Team Members
+                                </h6>
+                                {% if team_entry.members %}
+                                    <div class="d-flex flex-wrap gap-2">
+                                        {% for member in team_entry.members %}
+                                        <span class="badge bg-info p-2">{{ member.name }}</span>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <p class="text-muted mb-0">No members assigned yet</p>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Team Actions -->
+                            <div class="d-flex gap-2 flex-wrap">
+                                {% if current_user.role != 'Student' %}
+                                <button class="btn btn-success btn-sm" onclick="recordInspection('{{ team_entry.team.id }}')">
+                                    <i class="bi bi-clipboard-check me-1"></i>Record Inspection
+                                </button>
+                                {% endif %}
+                                <button class="btn btn-outline-primary btn-sm" onclick="viewTeamHistory('{{ team_entry.team.id }}')">
+                                    <i class="bi bi-clock-history me-1"></i>History
+                                </button>
+                                <button class="btn btn-outline-info btn-sm" onclick="toggleComputerTeam({{ team_entry.team.id }})">
+                                    <i class="bi bi-chevron-down me-1"></i>Toggle
+                                </button>
+                                {% if current_user.role != 'Student' %}
+                                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addMembersModal" onclick="openAddMembersModal({{ team_entry.team.id }})">
+                                    <i class="bi bi-person-plus me-1"></i>Add Members
+                                </button>
+                                <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#removeMembersModal" onclick="openRemoveMembersModal({{ team_entry.team.id }})">
+                                    <i class="bi bi-person-dash me-1"></i>Remove Members
+                                </button>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Computer Team Point System -->
+                            <div class="card border-info mt-4">
+                                <div class="card-header bg-info text-white">
+                                    <h6 class="mb-0"><i class="bi bi-calculator me-1"></i>Point Deduction System</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <span><i class="bi bi-laptop text-danger me-1"></i>Computer left out</span>
+                                                <span class="badge bg-danger">-10 points</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <span><i class="bi bi-tablet text-warning me-1"></i>Tablet left out</span>
+                                                <span class="badge bg-warning">-8 points</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <span><i class="bi bi-lightning text-info me-1"></i>Charger left out</span>
+                                                <span class="badge bg-info">-5 points</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <span><i class="bi bi-headphones text-primary me-1"></i>Headphones left out</span>
+                                                <span class="badge bg-primary">-5 points</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <span><i class="bi bi-plug text-secondary me-1"></i>Extension cord left out</span>
+                                                <span class="badge bg-secondary">-3 points</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <span class="fw-bold">Starting Points</span>
+                                                <span class="badge bg-success">100 points</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="alert alert-info mt-3 mb-0">
+                                        <i class="bi bi-info-circle me-1"></i>
+                                        <strong>Stacking:</strong> Multiple items can be left out and points will be deducted for each item.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+
     <!-- Dynamic Team Management System -->
+    {% if current_user.role != 'Student' %}
     <div class="row mb-4">
         <div class="col-12">
             <div class="card border-primary">
@@ -436,6 +497,7 @@
             </div>
         </div>
     </div>
+    {% endif %}
 
     <!-- Inspection History -->
     <div class="row">
@@ -1070,9 +1132,11 @@ function toggleTeam2() {
     }
 }
 
-function toggleComputerTeam() {
-    const content = document.getElementById('computerTeamContent');
-    const chevron = document.getElementById('computerTeamChevron');
+function toggleComputerTeam(teamId) {
+    const content = document.getElementById('computerTeam' + teamId + 'Content');
+    const chevron = document.getElementById('computerTeam' + teamId + 'Chevron');
+    if (!content || !chevron) return;
+    
     if (content.style.display === 'none') {
         content.style.display = 'block';
         chevron.classList.remove('bi-chevron-right');
@@ -1860,13 +1924,35 @@ let currentTeamMembers = [];
 function openAddMembersModal(teamId) {
     currentTeamId = teamId;
     
+    // Update modal title based on team
+    const modalTitle = document.getElementById('addMembersModalLabel');
+    fetchTeamInfo(teamId).then(teamInfo => {
+        if (teamInfo && teamInfo.name) {
+            modalTitle.innerHTML = `<i class="bi bi-person-plus me-2"></i>Add Members to ${teamInfo.name}`;
+        } else {
+            modalTitle.innerHTML = `<i class="bi bi-person-plus me-2"></i>Add Members to Team`;
+        }
+    }).catch(() => {
+        modalTitle.innerHTML = `<i class="bi bi-person-plus me-2"></i>Add Members to Team`;
+    });
+    
     // Show loading state
     const container = document.getElementById('addMembersContainer');
     container.innerHTML = '<div class="col-12 text-center py-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading students...</span></div><p class="mt-2">Loading students...</p></div>';
     
     // Load all students from database
     fetch('/management/api/students')
-        .then(response => response.json())
+        .then(response => {
+            // Check if response is OK and is JSON
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const contentType = response.headers.get("content-type");
+            if (!contentType || !contentType.includes("application/json")) {
+                throw new Error("Response is not JSON. You may need to log in again.");
+            }
+            return response.json();
+        })
         .then(data => {
             console.log('Students API response:', data);
             if (data.success) {
@@ -1888,18 +1974,43 @@ function openAddMembersModal(teamId) {
                     });
             } else {
                 console.error('Failed to load students:', data.error);
-                container.innerHTML = '<div class="col-12 text-center text-danger py-4"><p>Failed to load students from database.</p></div>';
+                container.innerHTML = '<div class="col-12 text-center text-danger py-4"><p>Failed to load students: ' + (data.error || 'Unknown error') + '</p></div>';
             }
         })
         .catch(error => {
             console.error('Error loading students:', error);
-            container.innerHTML = '<div class="col-12 text-center text-danger py-4"><p>Error loading students. Please try again.</p></div>';
+            container.innerHTML = '<div class="col-12 text-center text-danger py-4"><p>Error loading students: ' + error.message + '. Please refresh the page and try again.</p></div>';
+        });
+}
+
+function fetchTeamInfo(teamId) {
+    return fetch(`/management/api/team-members/${teamId}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success && data.team) {
+                return { name: data.team.name || `Team ${teamId}` };
+            }
+            return { name: `Team ${teamId}` };
+        })
+        .catch(error => {
+            console.error('Error fetching team info:', error);
+            return { name: `Team ${teamId}` };
         });
 }
 
 function fetchTeamMembers(teamId) {
     return fetch(`/management/api/team-members/${teamId}`)
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 return data.members;
@@ -1909,6 +2020,26 @@ function fetchTeamMembers(teamId) {
         .catch(error => {
             console.error('Error loading team members:', error);
             return [];
+        });
+}
+
+function fetchTeamInfo(teamId) {
+    return fetch(`/management/api/team-members/${teamId}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success && data.team) {
+                return { name: data.team.name || `Team ${teamId}` };
+            }
+            return { name: `Team ${teamId}` };
+        })
+        .catch(error => {
+            console.error('Error fetching team info:', error);
+            return { name: `Team ${teamId}` };
         });
 }
 

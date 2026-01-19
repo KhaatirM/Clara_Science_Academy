@@ -648,9 +648,13 @@ def assignments_and_grades():
                                     else:
                                         grade_dict = json.loads(grade.grade_data)
                                     
-                                    if 'score' in grade_dict:
-                                        total_score += grade_dict['score']
-                                        graded_count += 1
+                                    if 'score' in grade_dict and grade_dict['score'] is not None:
+                                        score_value = grade_dict['score']
+                                        try:
+                                            total_score += float(score_value)
+                                            graded_count += 1
+                                        except (ValueError, TypeError):
+                                            continue
                                 except (json.JSONDecodeError, TypeError):
                                     # Skip invalid grade data
                                     continue
@@ -740,9 +744,13 @@ def assignments_and_grades():
                                 else:
                                     grade_dict = json.loads(g.grade_data)
                                 
-                                if 'score' in grade_dict:
+                                if 'score' in grade_dict and grade_dict['score'] is not None:
                                     graded_grades.append(grade_dict)
-                                    total_score += grade_dict['score']
+                                    score_value = grade_dict['score']
+                                    try:
+                                        total_score += float(score_value)
+                                    except (ValueError, TypeError):
+                                        continue
                             except (json.JSONDecodeError, TypeError):
                                 # Skip invalid grade data
                                 continue
@@ -784,9 +792,13 @@ def assignments_and_grades():
                                 else:
                                     grade_dict = json.loads(gg.grade_data)
                                 
-                                if 'score' in grade_dict:
+                                if 'score' in grade_dict and grade_dict['score'] is not None:
                                     graded_group_grades.append(grade_dict)
-                                    total_score += grade_dict['score']
+                                    score_value = grade_dict['score']
+                                    try:
+                                        total_score += float(score_value)
+                                    except (ValueError, TypeError):
+                                        continue
                             except (json.JSONDecodeError, TypeError):
                                 # Skip invalid grade data
                                 continue
@@ -816,11 +828,178 @@ def assignments_and_grades():
         # Get pending extension request count
         pending_extension_count = ExtensionRequest.query.filter_by(status='Pending').count()
         
+        # Create combined assignments list for grades and table views
+        class_assignments_data = list(class_assignments) if class_assignments else []
+        
+        # Get enrolled students and all assignments for any view when class is selected
+        enrolled_students = []
+        all_assignments = []
+        table_student_grades = {}
+        table_student_averages = {}
+        
+        if selected_class:
+            try:
+                from models import Enrollment
+                enrollments = Enrollment.query.filter_by(class_id=selected_class.id, is_active=True).all()
+                enrolled_students = [e.student for e in enrollments if e.student]
+                # Combine regular and group assignments for table view
+                all_assignments = list(class_assignments) + list(group_assignments) if group_assignments else list(class_assignments)
+                
+                # Calculate student grades for table view
+                if view_mode == 'table':
+                    # Get grades for enrolled students (individual assignments)
+                    for student in enrolled_students:
+                        table_student_grades[student.id] = {}
+                        for assignment in class_assignments:
+                            grade = Grade.query.filter_by(student_id=student.id, assignment_id=assignment.id).first()
+                            if grade:
+                                try:
+                                    grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
+                                    score = grade_data.get('score')
+                                    # Handle None scores
+                                    if score is None:
+                                        score = 'N/A'
+                                    table_student_grades[student.id][assignment.id] = {
+                                        'grade': score,
+                                        'comments': grade_data.get('comments', ''),
+                                        'graded_at': grade.graded_at,
+                                        'type': 'individual',
+                                        'is_voided': getattr(grade, 'is_voided', False)
+                                    }
+                                except (json.JSONDecodeError, TypeError):
+                                    table_student_grades[student.id][assignment.id] = {
+                                        'grade': 'N/A',
+                                        'comments': 'Error parsing grade data',
+                                        'graded_at': grade.graded_at,
+                                        'type': 'individual',
+                                        'is_voided': getattr(grade, 'is_voided', False)
+                                    }
+                            else:
+                                table_student_grades[student.id][assignment.id] = {
+                                    'grade': 'Not Graded',
+                                    'comments': '',
+                                    'graded_at': None,
+                                    'is_voided': False,
+                                    'type': 'individual'
+                                }
+                        
+                        # Get group assignment grades
+                        from models import GroupGrade, StudentGroupMember, StudentGroup
+                        for group_assignment in group_assignments:
+                            # Check if this group assignment is for specific groups
+                            if hasattr(group_assignment, 'selected_groups') and group_assignment.selected_groups:
+                                try:
+                                    selected_group_ids = json.loads(group_assignment.selected_groups) if isinstance(group_assignment.selected_groups, str) else group_assignment.selected_groups
+                                except:
+                                    selected_group_ids = []
+                            else:
+                                selected_group_ids = []
+                            
+                            # Find which group this student belongs to for this assignment
+                            student_group = None
+                            if selected_group_ids:
+                                # Check if student is in any of the selected groups
+                                for group_id in selected_group_ids:
+                                    group_member = StudentGroupMember.query.filter_by(
+                                        student_id=student.id,
+                                        group_id=group_id
+                                    ).first()
+                                    if group_member:
+                                        student_group = StudentGroup.query.get(group_id)
+                                        break
+                            else:
+                                # Check all groups in the class
+                                groups = StudentGroup.query.filter_by(class_id=selected_class.id).all()
+                                for group in groups:
+                                    group_member = StudentGroupMember.query.filter_by(
+                                        student_id=student.id,
+                                        group_id=group.id
+                                    ).first()
+                                    if group_member:
+                                        student_group = group
+                                        break
+                            
+                            if student_group:
+                                group_grade = GroupGrade.query.filter_by(
+                                    group_assignment_id=group_assignment.id,
+                                    group_id=student_group.id
+                                ).first()
+                                
+                                if group_grade:
+                                    try:
+                                        grade_data = json.loads(group_grade.grade_data) if isinstance(group_grade.grade_data, str) else group_grade.grade_data
+                                        score = grade_data.get('score')
+                                        # Handle None scores
+                                        if score is None:
+                                            score = 'N/A'
+                                        table_student_grades[student.id][f'group_{group_assignment.id}'] = {
+                                            'grade': score,
+                                            'comments': grade_data.get('comments', ''),
+                                            'graded_at': group_grade.graded_at,
+                                            'type': 'group',
+                                            'is_voided': getattr(group_grade, 'is_voided', False)
+                                        }
+                                    except (json.JSONDecodeError, TypeError):
+                                        table_student_grades[student.id][f'group_{group_assignment.id}'] = {
+                                            'grade': 'N/A',
+                                            'comments': 'Error parsing grade data',
+                                            'graded_at': group_grade.graded_at,
+                                            'type': 'group',
+                                            'is_voided': getattr(group_grade, 'is_voided', False)
+                                        }
+                                else:
+                                    table_student_grades[student.id][f'group_{group_assignment.id}'] = {
+                                        'grade': 'Not Graded',
+                                        'comments': '',
+                                        'graded_at': None,
+                                        'is_voided': False,
+                                        'type': 'group'
+                                    }
+                            else:
+                                table_student_grades[student.id][f'group_{group_assignment.id}'] = {
+                                    'grade': 'Not in Group',
+                                    'comments': '',
+                                    'graded_at': None,
+                                    'is_voided': False,
+                                    'type': 'group'
+                                }
+                    
+                    # Calculate student averages
+                    for student_id, grades in table_student_grades.items():
+                        total_score = 0
+                        count = 0
+                        for assignment_id, grade_info in grades.items():
+                            # Skip voided grades
+                            if grade_info.get('is_voided', False):
+                                continue
+                            grade = grade_info.get('grade')
+                            # Only process valid numeric grades
+                            if grade and grade != 'Not Graded' and grade != 'N/A' and grade != 'Not in Group' and grade != 'Not Assigned' and grade != 'No Group' and grade is not None:
+                                try:
+                                    grade_num = float(grade)
+                                    total_score += grade_num
+                                    count += 1
+                                except (ValueError, TypeError):
+                                    pass
+                        if count > 0:
+                            table_student_averages[student_id] = round(total_score / count, 1)
+                        else:
+                            table_student_averages[student_id] = None
+            except Exception as e:
+                current_app.logger.error(f"Error loading enrolled students: {e}")
+                import traceback
+                current_app.logger.error(traceback.format_exc())
+                enrolled_students = []
+                all_assignments = []
+                table_student_grades = {}
+                table_student_averages = {}
+        
         return render_template('management/assignments_and_grades.html',
                              accessible_classes=accessible_classes,
                              class_data=class_data,
                              selected_class=selected_class,
                              class_assignments=class_assignments,
+                             class_assignments_data=class_assignments_data,
                              group_assignments=group_assignments,
                              assignment_grades=assignment_grades,
                              class_filter=class_filter,
@@ -830,10 +1009,19 @@ def assignments_and_grades():
                              user_role=user_role,
                              show_class_selection=False,
                              today=date.today(),
-                             extension_request_count=pending_extension_count)
+                             extension_request_count=pending_extension_count,
+                             enrolled_students=enrolled_students,
+                             all_assignments=all_assignments,
+                             student_grades=table_student_grades,
+                             student_averages=table_student_averages)
     
     except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        current_app.logger.error(f"Error in assignments_and_grades: {e}")
+        current_app.logger.error(f"Traceback: {error_trace}")
         print(f"Error in assignments_and_grades: {e}")
+        print(f"Traceback: {error_trace}")
         flash('Error loading assignments and grades. Please try again.', 'error')
         return redirect(url_for('management.management_dashboard'))
 
@@ -1426,12 +1614,10 @@ def grade_assignment(assignment_id):
                         grade_data = json.loads(g.grade_data)
                         # Ensure grade_data has the expected structure
                         points_earned = grade_data.get('points_earned') or grade_data.get('score', 0)
-                        total_points = grade_data.get('total_points') or grade_data.get('max_score', assignment_total_points)
-                        percentage = grade_data.get('percentage', 0)
-                        
-                        # Recalculate percentage if not present
-                        if not percentage or percentage == points_earned:
-                            percentage = (points_earned / total_points * 100) if total_points > 0 else 0
+                        # Always use assignment's total_points as source of truth, not stored value
+                        total_points = assignment_total_points
+                        # Always recalculate percentage using assignment's actual total_points
+                        percentage = (points_earned / total_points * 100) if total_points > 0 else 0
                         
                         grade_data['points_earned'] = points_earned
                         grade_data['total_points'] = total_points

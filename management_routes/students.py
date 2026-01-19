@@ -1864,10 +1864,12 @@ def remove_student(student_id):
 def get_team_detailed_description(team):
     """Get detailed description for a team based on its name and type"""
     team_name = team.team_name.lower()
-    team_type = team.team_type.lower() if team.team_type else 'cleaning'
+    # Safely get team_type - handle case where column doesn't exist in database yet
+    team_type = getattr(team, 'team_type', None)
+    team_type = team_type.lower() if team_type else 'cleaning'
     
-    # Cleaning Team 1
-    if 'cleaning team 1' in team_name or (team_type == 'cleaning' and '1' in team_name):
+    # Cleaning Team 1 - match "Team 1", "Cleaning Team 1", or any team with "1" and cleaning type
+    if ('team 1' in team_name or 'cleaning team 1' in team_name) or (team_type == 'cleaning' and ('1' in team_name or team.team_name == 'Team 1')):
         return {
             'classrooms': {
                 '1st-3rd Classroom': 'DO NOT TOUCH - This classroom is not cleaned by cleaning teams.',
@@ -1890,8 +1892,8 @@ def get_team_detailed_description(team):
             }
         }
     
-    # Cleaning Team 2
-    elif 'cleaning team 2' in team_name or (team_type == 'cleaning' and '2' in team_name):
+    # Cleaning Team 2 - match "Team 2", "Cleaning Team 2", or any team with "2" and cleaning type
+    elif ('team 2' in team_name or 'cleaning team 2' in team_name) or (team_type == 'cleaning' and ('2' in team_name or team.team_name == 'Team 2')):
         return {
             'classrooms': {
                 '1st-3rd Classroom': 'DO NOT TOUCH - This classroom is not cleaned by cleaning teams.',
@@ -1942,6 +1944,31 @@ def get_team_detailed_description(team):
 • Along with chromebooks, there should be 5+ unmarked chromebooks and charges so it would be 28+ computers and 28+ chargers with extension cords and chromebook chargers'''
         }
     
+    # Other teams - if it's a cleaning team but didn't match above, still return cleaning description
+    elif team_type == 'cleaning':
+        # Default cleaning team description if name doesn't match Team 1 or 2
+        return {
+            'classrooms': {
+                '1st-3rd Classroom': 'DO NOT TOUCH - This classroom is not cleaned by cleaning teams.',
+                '3rd, 4th & 5th Classroom': '''• Sweep the entire floor, including under the table and in between the chairs.
+• Wipe down all tables, no crumbs on chairs, no crumbs on tables
+• Trash taken out, new trash liner''',
+                '6th, 7th & 8th Classroom': '''• All desk in a straight line/row with no spaces starting from the wall with windows.
+• Desks wiped down
+• Floors swept
+• No crumbs, no paper, clean and shiny
+• Should be 5x5x5, 3 rows of 5s on Tuesdays and Thursdays
+• Should be 4x6x5 on Mondays, Wednesdays and Fridays.
+• Trash taken out, new trash liner''',
+                'K Classroom': 'N/A'
+            },
+            'common_areas': {
+                'Hallway': '• Swept & all trash liners replaced',
+                'Females Restroom': '• Swept, Toilet Paper in each stall, soap near sink, Papertowls/napkins to dry hands.',
+                'Mens Restroom': '• Swept, Toilet Paper in each stall, soap near sink, Papertowls/napkins to dry hands.'
+            }
+        }
+    
     # Other teams
     else:
         return {
@@ -1951,14 +1978,25 @@ def get_team_detailed_description(team):
 
 @bp.route('/student-jobs')
 @login_required
-@teacher_required
 def student_jobs():
     """Student Jobs management page for cleaning crews, computer teams, and other teams"""
     try:
         # Get all teams (cleaning, computer, and other)
-        teams = CleaningTeam.query.filter_by(is_active=True).order_by(
-            CleaningTeam.team_type, CleaningTeam.team_name
-        ).all()
+        # Check if team_type column exists first, then order accordingly
+        from sqlalchemy import inspect
+        inspector = inspect(db.engine)
+        columns = [col['name'] for col in inspector.get_columns('cleaning_team')]
+        
+        if 'team_type' in columns:
+            # Column exists, order by team_type and name
+            teams = CleaningTeam.query.filter_by(is_active=True).order_by(
+                CleaningTeam.team_type, CleaningTeam.team_name
+            ).all()
+        else:
+            # Column doesn't exist yet, order by name only
+            teams = CleaningTeam.query.filter_by(is_active=True).order_by(
+                CleaningTeam.team_name
+            ).all()
         
         # Import datetime for checking reset time
         from datetime import datetime, timezone, timedelta
@@ -1980,17 +2018,37 @@ def student_jobs():
         team_data = {}
         for team in teams:
             # Get team members
-            members = CleaningTeamMember.query.filter_by(
-                team_id=team.id,
-                is_active=True
-            ).all()
+            try:
+                members = CleaningTeamMember.query.filter_by(
+                    team_id=team.id,
+                    is_active=True
+                ).all()
+            except Exception as e:
+                # If query fails due to missing column, provide helpful error
+                if 'assignment_description' in str(e):
+                    print(f"Error: assignment_description column missing. Please run migration: python maintenance_scripts/add_assignment_description_to_cleaning_teams.py")
+                    print(f"Error details: {e}")
+                    # Return empty members list to allow page to load
+                    members = []
+                else:
+                    raise
             
             # Get recent inspections for this team
-            recent_inspections = CleaningInspection.query.filter_by(
-                team_id=team.id
-            ).order_by(
-                CleaningInspection.inspection_date.desc()
-            ).limit(5).all()
+            try:
+                recent_inspections = CleaningInspection.query.filter_by(
+                    team_id=team.id
+                ).order_by(
+                    CleaningInspection.inspection_date.desc()
+                ).limit(5).all()
+            except Exception as e:
+                # If query fails due to missing column, provide helpful error
+                if 'inspection_type' in str(e):
+                    print(f"Error: inspection_type column missing. Please run migration: python maintenance_scripts/add_team_and_inspection_types.py")
+                    print(f"Error details: {e}")
+                    # Return empty inspections list to allow page to load
+                    recent_inspections = []
+                else:
+                    raise
             
             # Get current score - use the most recent inspection's score
             # But check if we need to reset based on Monday 12:00 AM EST rule
@@ -2056,9 +2114,19 @@ def student_jobs():
             }
         
         # Get all inspections from all teams for the global history table
-        all_inspections = CleaningInspection.query.order_by(
-            CleaningInspection.inspection_date.desc()
-        ).limit(50).all()
+        try:
+            all_inspections = CleaningInspection.query.order_by(
+                CleaningInspection.inspection_date.desc()
+            ).limit(50).all()
+        except Exception as e:
+            # If query fails due to missing column, provide helpful error
+            if 'inspection_type' in str(e):
+                print(f"Error: inspection_type column missing. Please run migration: python maintenance_scripts/add_team_and_inspection_types.py")
+                print(f"Error details: {e}")
+                # Return empty inspections list to allow page to load
+                all_inspections = []
+            else:
+                raise
         
         # Prepare inspection history data
         inspection_history = []
@@ -2095,7 +2163,7 @@ def student_jobs():
 
 @bp.route('/api/students')
 @login_required
-@management_required
+@teacher_required
 def api_get_students():
     """API endpoint to get all students for dynamic team creation"""
     try:
@@ -2116,6 +2184,94 @@ def api_get_students():
         })
     except Exception as e:
         current_app.logger.error(f"Error fetching students: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+# ============================================================
+# Route: /api/team-members/<team_identifier>
+# Function: api_get_team_members
+# ============================================================
+
+@bp.route('/api/team-members/<team_identifier>')
+@login_required
+@teacher_required
+def api_get_team_members(team_identifier):
+    """API endpoint to get team members by team ID or team name"""
+    try:
+        # Try to find team by ID first (if team_identifier is numeric)
+        team = None
+        if team_identifier.isdigit():
+            team = CleaningTeam.query.filter_by(id=int(team_identifier), is_active=True).first()
+        
+        # If not found by ID, try to find by team name (e.g., "Team 1", "Team 2")
+        if not team:
+            # Handle both "Team 1" and "1" formats
+            team_name = team_identifier
+            if team_identifier.isdigit():
+                team_name = f"Team {team_identifier}"
+            team = CleaningTeam.query.filter_by(team_name=team_name, is_active=True).first()
+        
+        if not team:
+            return jsonify({
+                'success': False,
+                'error': f'Team not found: {team_identifier}'
+            }), 404
+        
+        # Get team members
+        # Check if assignment_description column exists
+        from sqlalchemy import inspect as sql_inspect
+        inspector = sql_inspect(db.engine)
+        member_columns = [col['name'] for col in inspector.get_columns('cleaning_team_member')]
+        has_assignment_desc = 'assignment_description' in member_columns
+        
+        try:
+            members = CleaningTeamMember.query.filter_by(
+                team_id=team.id,
+                is_active=True
+            ).all()
+        except Exception as e:
+            # If query fails due to missing column, handle gracefully
+            if 'assignment_description' in str(e):
+                print(f"Warning: assignment_description column issue: {e}")
+                # Return empty list - column should exist after migration
+                return jsonify({
+                    'success': False,
+                    'error': 'Database schema needs migration. Please run: python maintenance_scripts/add_assignment_description_to_cleaning_teams.py'
+                }), 500
+            else:
+                raise
+        
+        member_list = []
+        for member in members:
+            if member.student:
+                assignment_desc = ''
+                try:
+                    assignment_desc = member.assignment_description or ''
+                except:
+                    pass
+                
+                member_list.append({
+                    'id': member.student.id,
+                    'name': f"{member.student.first_name} {member.student.last_name}",
+                    'role': member.role or '',
+                    'assignment_description': assignment_desc,
+                    'member_id': member.id
+                })
+        
+        return jsonify({
+            'success': True,
+            'members': member_list,
+            'team': {
+                'id': team.id,
+                'name': team.team_name,
+                'description': team.team_description
+            }
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error fetching team members: {e}")
         return jsonify({
             'success': False,
             'error': str(e)

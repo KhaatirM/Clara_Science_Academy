@@ -217,3 +217,34 @@
     }
 }
 
+/* Table View Styling - Improved spacing and layout */
+.table-responsive {
+    max-height: 80vh;
+    overflow-x: auto;
+    overflow-y: auto;
+}
+
+.table-responsive table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.table-responsive thead th {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background-color: #f8f9fa !important;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.table-responsive tbody td {
+    padding: 0.75rem 0.5rem;
+    vertical-align: middle;
+}/* Ensure sticky columns have proper background on hover */
+.table-responsive tbody tr:hover td {
+    background-color: #f8f9fa;
+}
+
+.table-responsive tbody tr:hover td[style*="position: sticky"] {
+    background-color: #f8f9fa !important;
+}

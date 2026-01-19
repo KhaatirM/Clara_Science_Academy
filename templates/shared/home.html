@@ -83,6 +83,9 @@
                     <button class="hero-btn hero-btn-secondary" data-bs-toggle="modal" data-bs-target="#contactModal">
                         <i class="fas fa-envelope"></i>Contact Us
                     </button>
+                    <button class="hero-btn hero-btn-outline" data-bs-toggle="modal" data-bs-target="#updateModal" style="background: rgba(102, 126, 234, 0.1); border-color: rgba(102, 126, 234, 0.5); color: rgba(255, 255, 255, 0.95);">
+                        <i class="fas fa-rocket"></i>View Updates
+                    </button>
                 </div>
             </div>
         {% endif %}
@@ -694,13 +697,65 @@
                     </div>
                     <div>
                         <h6 class="updates-intro-title mb-2">
-                            <i class="fas fa-calendar-alt me-2"></i>Latest System Update - January 12, 2026
+                            <i class="fas fa-calendar-alt me-2"></i>Latest System Update - January 15, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>Assignment Reopening Feature & Bug Fixes!</strong> Teachers, School Administrators, and Directors can now reopen closed or inactive assignments for specific students. For quiz assignments, you can grant additional attempts. Fixed quiz attempt checking errors and improved the assignment management workflow. This powerful new feature gives educators more flexibility to help students succeed!</p>
+                        <p class="updates-intro-text mb-0"><strong>Assignments & Grades Improvements & Critical Bug Fixes!</strong> Fixed critical percentage calculation errors that were affecting report cards and grades. Improved the Assignments & Grades tab with better default views, working table view, and enhanced layout. Enhanced Student Jobs page visibility and fixed Attendance Analytics button visibility. All grade calculations now use correct total points for accurate percentage displays!</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- January 15, 2026 - Assignments & Grades Improvements & Bug Fixes -->
+                    <div class="update-section mb-4" style="border-left-color: #10b981;">
+                        <h6 class="text-primary mb-3" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+                            <i class="fas fa-chart-line me-2"></i>📊 Assignments & Grades Improvements & Critical Fixes - January 15, 2026
+                        </h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Critical Percentage Calculation Fix:</strong> Fixed a major bug where assignments with custom total points (e.g., 50 or 70 instead of 100) were incorrectly calculated as percentages. The system was dividing by 100 instead of the actual assignment total points. Now 50/50 correctly shows as 100% instead of 50%, ensuring accurate report cards and grade displays across all assignment types
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Assignments & Grades Tab Default View:</strong> Fixed issue where selecting a class in the Assignments & Grades tab would show a blank page. The system now defaults to "Assignments View" when a class is selected, providing immediate visibility into class assignments and student work
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Grades View & Table View Functionality:</strong> Resolved errors that prevented "Grades View" and "Assignments & Grades Table View" from displaying. Both views now work correctly, showing comprehensive grade information with proper data handling for all assignment types including individual and group assignments
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Enhanced Table View Layout:</strong> Completely redesigned the "Assignments & Grades Table View" to fix cramped layout issues. Added proper column widths, sticky student and average columns for horizontal scrolling, improved assignment headers with truncation and tooltips, and better spacing throughout. The table is now much more readable and user-friendly
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Robust Grade Data Handling:</strong> Fixed <code>TypeError</code> errors when processing grades with <code>None</code> values. Added comprehensive null checks and safe type conversions throughout the grade calculation system. The system now gracefully handles missing grades, voided assignments, and incomplete data without errors
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Student Jobs Tab Access:</strong> Students can now view the "Student Jobs" tab to see available cleaning teams, computer teams, and other dynamic teams. Management actions (Record Inspection, Add/Remove Members, Create New Team) are properly hidden from students, providing a read-only view appropriate for their role
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Student Jobs Team Management Fixes:</strong> Fixed "Add Members" modal to dynamically display the correct team name instead of always showing "Cleanup Team". Resolved error loading students in the modal by ensuring proper API endpoint access for School Administrators
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Attendance Analytics Button Visibility:</strong> Enhanced visibility of "Export CSV" and "Back to Attendance" buttons on the Attendance Analytics page for School Administrators. Added high-contrast styling, improved button colors, and hover effects to ensure these important actions are clearly visible against the purple header
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Comprehensive Grade Calculation Updates:</strong> Updated all grade calculation functions across the system (management routes, teacher routes, student routes, and quarter grade calculator) to consistently use <code>assignment.total_points</code> as the denominator. This ensures accurate percentage calculations regardless of when assignments were created or if total points were modified
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Syntax Error Fixes:</strong> Resolved multiple syntax errors in student routes that were preventing the application from starting. Fixed incorrectly indented <code>except</code> clauses and removed duplicate code blocks, ensuring smooth application startup and operation
+                            </li>
+                        </ul>
+                        <div class="alert alert-success mt-3" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 100%); border-color: #10b981; border-left: 4px solid #10b981;">
+                            <p class="mb-0"><strong>💡 Impact:</strong> These critical fixes ensure accurate grade calculations and report cards, which are essential for student assessment and parent communication. The improved Assignments & Grades interface makes it easier for teachers and administrators to view and manage student work. Students can now access the Student Jobs tab to see available opportunities, and all management interfaces have improved visibility and functionality!</p>
+                        </div>
+                    </div>
+
                     <!-- January 12, 2026 - Assignment Reopening Feature -->
                     <div class="update-section mb-4" style="border-left-color: #8b5cf6;">
                         <h6 class="text-primary mb-3" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
@@ -873,63 +928,7 @@
                         </div>
                     </div>
 
-                    <!-- Latest Updates - Quiz & Report Card Improvements -->
-                    <div class="update-section mb-4">
-                        <h6 class="text-primary mb-3" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
-                            <i class="fas fa-bug me-2"></i>🔧 Previous Updates & Bug Fixes - Recent
-                        </h6>
-                        <ul class="list-unstyled">
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Enhanced Quiz Assignment View Modal:</strong> Students can now view comprehensive quiz details including time limits, attempts remaining, scores, percentages, letter grades, and quiz settings directly from the dashboard. Beautiful modal interface with color-coded grade badges and detailed progress information
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Quiz Grading Logic Improvements:</strong> The grading page now only appears for quizzes with open-ended questions (short answer/essay) that require manual grading. Fully auto-graded quizzes show an "Auto-Graded" button with tooltip instead of a grading interface, streamlining the workflow
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Fixed Quiz Grade Calculation Bug:</strong> Resolved critical issue where students received "F" grades despite answering all questions correctly. The system now correctly uses percentage values instead of raw scores, ensuring accurate letter grade calculations (A, B, C, D, F) for all quiz assignments
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Google Sign-in Error Notification Fix:</strong> Fixed false error notifications appearing after successful Google OAuth logins. Users now see success messages when login succeeds, even if non-critical logging operations fail. Improved error handling prevents user confusion
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Quiz Assignment Type Cursor Fix:</strong> Removed "not-allowed" cursor from the "Questionnaire/Quiz Assignment" option on the assignment creation page. Quiz assignments are now fully available with normal pointer cursor and hover effects
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Report Card PDF Restructuring (4th-8th Grade):</strong> Completely redesigned report card layout to a clean 2-page format. Page 1 includes header, progress/grades section, and signatures. Page 2 contains subject grades & teacher comments table, additional comments, and parent comment section. Dynamic comment box sizing based on number of classes ensures content fits perfectly without creating a third page
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Report Card Header Styling Improvements:</strong> Removed horizontal lines between labels and values in student and school info sections for a cleaner appearance. Increased border thickness to 2px for better visibility. Made student and school info boxes symmetrical in height. Bold and italic styling for "Clara Science Academy" school name
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Report Card Column Width Optimization:</strong> Reduced quarter columns (Q1-Q4) width to 6% each (from 10%) to accommodate letter grades like "A+" or "N/A". Slightly reduced Subject/Teacher column to 35% (from 40%). Increased Comments column to 41% (from 20%) providing significantly more space for teacher feedback
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>PDF Generation Form Enhancements:</strong> Added comprehensive confirmation section with student and school information fields. Student fields include: First & Last Name (read-only), Student ID (read-only), Gender (editable), Grade (read-only), Address (editable), DOB (editable), State ID (read-only). School fields include: Entrance Date (editable), Expected Graduation Date (auto-calculated based on current grade). Auto-calculation determines graduation year in June based on years remaining to 12th grade
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Feature Development Indicators:</strong> Added "In Development" badges to "Include Comments" and "Include Attendance" options in the PDF generation form. Clear visual indicators with disabled state prevent confusion about feature availability while maintaining professional appearance
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Administrator Dashboard Statistics Fix:</strong> Fixed month-over-month percentage calculations to show accurate changes based on actual data. Active Assignments card now correctly displays only active assignments instead of total assignments. Statistics now reflect real changes with proper up/down indicators and "No change" messages when applicable
-                            </li>
-                        </ul>
-                        <div class="alert alert-info mt-3" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.1) 100%); border-color: #f59e0b;">
-                            <p class="mb-0"><strong>💡 User Experience Improvements:</strong> These updates focus on bug fixes, accuracy improvements, and enhanced user experience. Quiz assignments now provide better feedback, report cards have improved layouts and readability, and the PDF generation process includes comprehensive information confirmation steps!</p>
-                        </div>
-                    </div>
-
-                    <!-- December 28, 2025 - Quiz Assignment System -->
+                    <!-- Coming Soon - Future Updates -->
                     <div class="update-section mb-4">
                         <h6 class="text-primary mb-3" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
                             <i class="fas fa-question-circle me-2"></i>📝 Interactive Quiz Assignment System - December 28, 2025
@@ -1065,471 +1064,6 @@
                             </li>
                         </ul>
                     </div>
-
-                    <!-- December 1, 2025 - Administrative & System Fixes -->
-                    <div class="update-section mb-4">
-                        <h6 class="text-primary mb-3" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
-                            <i class="fas fa-tools me-2"></i>🔧 Administrative & System Fixes - December 1, 2025
-                        </h6>
-                        <ul class="list-unstyled">
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Deadline Reminders Functionality Fixed:</strong> Resolved database column errors that prevented deadline reminders from loading. Added graceful handling for missing database columns and fixed all route references. Deadline reminders now work correctly for both teachers and School Administrators
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Class View Layout Fix for School Administrators:</strong> Fixed critical layout issue where the sidebar was appearing at the bottom instead of side-by-side with main content. Changed breakpoints from `col-lg-*` to `col-md-*` for better compatibility with standard laptop screens (768px+). Removed extra closing div tag that was breaking the layout structure
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Responsive Layout Improvements:</strong> Class view page now displays correctly on medium-sized screens (tablets and laptops) with proper side-by-side layout. Added `align-items: start` to prevent stretching issues when content heights differ
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Route Reference Fixes:</strong> Updated all deadline reminder route references from `url_for()` calls to direct URLs to prevent Flask route name resolution errors. All deadline reminder actions (create, edit, toggle, send, delete) now work correctly
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Database Query Improvements:</strong> Enhanced deadline reminders query to handle missing database columns gracefully using raw SQL fallback when needed. Prevents errors when database schema hasn't been fully migrated
-                            </li>
-                        </ul>
-                    </div>
-
-                    <!-- November 29, 2025 - Student Experience Enhancements -->
-                    <div class="update-section mb-4">
-                        <h6 class="text-primary mb-3" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
-                            <i class="fas fa-star me-2"></i>⭐ Student Experience Enhancements - November 29, 2025
-                        </h6>
-                        <ul class="list-unstyled">
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Improved Modal Visibility:</strong> Fixed modal backdrop visibility issues by reducing opacity from 40% to 25% and ensuring all text has proper contrast. Modal bodies now have explicit white backgrounds with dark text for maximum readability. All form controls, alerts, and interactive elements are now clearly visible
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Class Assignments Modal Popup:</strong> Created a beautiful modal popup for viewing class assignments directly from the Classes tab. The "Assignments" button now opens a responsive modal showing all assignments for that class, grouped by Active and Inactive status, with submission status, grades, and quick view options
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Enhanced Student Classes Tab:</strong> Fixed the "Open" button to properly navigate to full class pages with announcements, notifications, student information, and comprehensive class details. The "Assignments" button now opens a convenient popup modal instead of navigating away
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Class Assignments API Endpoint:</strong> Added new API endpoint `/student/api/class/<class_id>/assignments` that returns JSON data for assignments, including submission status, grades, due dates, and days remaining/overdue. Enables dynamic loading of assignments in the modal
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Fixed Date Comparison Errors:</strong> Resolved "unsupported operand type(s) for -: 'datetime.date' and 'datetime.datetime'" errors by ensuring consistent date type handling throughout the application. All date comparisons now work correctly
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Assignment Status Safety Checks:</strong> Added comprehensive null checks for assignment relationships to prevent "NoneType object has no attribute 'status'" errors. All grade and assignment status checks now safely handle missing or deleted assignments
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Student Assignment Filtering:</strong> Enhanced student assignments tab with improved filtering by class, date range, and active/inactive status. Assignments are now clearly grouped into "Active Assignments" and "Inactive Assignments" sections with visible dividers
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Improved Submission Modal:</strong> Redesigned the assignment submission popup with modern gradient header, drag-and-drop file upload zone, file preview display, and comprehensive submission guidelines. Removed test function buttons for a cleaner interface
-                            </li>
-                        </ul>
-                    </div>
-
-                    <!-- November 23, 2025 - Major Updates & Enhancements -->
-                    <div class="update-section mb-4">
-                        <h6 class="text-primary mb-3" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
-                            <i class="fas fa-star me-2"></i>⭐ Major Updates & Enhancements - November 23, 2025
-                        </h6>
-                        <ul class="list-unstyled">
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Enhanced Assignment Type Selector:</strong> Completely redesigned assignment creation page with stunning gradient header, animated cards, smooth hover effects, and beautiful modal popups. Added "In Development" badges to Quiz and Discussion assignments with pulsing animations. Improved user experience with better visual feedback and modern design
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Assignment Creation Layout Fix:</strong> Fixed critical layout issue where "Live Preview" and "Assignment Tips" sidebar was appearing at the bottom instead of the right side. Restructured HTML to ensure proper Bootstrap grid layout with sidebar correctly positioned
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Enhanced Student Settings Page:</strong> Completely redesigned student settings with modern gradient header, animated cards, iOS-style toggle switches for notifications, beautiful data privacy controls, academic information display, and comprehensive system information. Matches the professional design of teacher/admin settings
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Improved Error Handling:</strong> Fixed 403 access denied errors to properly redirect users to their appropriate dashboards based on role (teachers → teacher dashboard, students → student dashboard, etc.) instead of showing generic error pages
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Student Grades Page Fix:</strong> Resolved 500 Internal Server Error that prevented students from accessing their grades. Added missing database columns (assignment_type, assignment_context, allow_save_and_continue, max_save_attempts, save_timeout_minutes) to group_assignment table
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Navigation Cleanup:</strong> Removed "Resources" tab from all user dashboards (Director, School Administrator, Teacher, Tech) for a cleaner navigation experience
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Enhanced PDF/Paper Assignment Modals:</strong> Improved popup modals for assignment target selection (Individual vs Group) and context selection (In-Class vs Homework) with larger layouts, better spacing, enhanced hover effects, and professional styling
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Database Schema Updates:</strong> Added comprehensive migration scripts for missing columns in group_assignment table, ensuring compatibility with all assignment features and preventing future errors
-                            </li>
-                        </ul>
-                    </div>
-
-                    <!-- November 18, 2025 - Grading & Assignment Management Updates -->
-                    <div class="update-section mb-4">
-                        <h6 class="text-primary mb-3">
-                            <i class="fas fa-graduation-cap me-2"></i>🎓 Grading & Assignment Management - November 18, 2025
-                        </h6>
-                        <ul class="list-unstyled">
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Group Assignment Grading Redesign:</strong> Completely redesigned group assignment grading page to match individual assignment grading style. Added statistics bar, extension reminders, grade distribution, letter grade quick buttons, and modern student cards organized by group
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Extension Reminders on Grading Page:</strong> Added visible notification banner on both individual and group assignment grading pages showing which students have been granted extensions, including extended due dates and reasons
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Assignment Creator Tracking:</strong> Assignments now display the name of the person who created them (School Administrators, Directors, or Teachers) instead of always showing the class teacher. Added creator tracking for all new assignments
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Streamlined Assignment Card Actions:</strong> Removed unnecessary buttons from assignment cards in Assignments & Grades tab. Now only shows "View Assignment" and "View Class" buttons for cleaner interface
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>In-Class/Homework Badge Fixes:</strong> Fixed badge display logic to correctly identify and display "IN-Class" vs "Homework" badges for all assignments. Badges now appear on both teacher and administrator assignment views
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Assignment Status Badge Logic:</strong> Updated status badges to show only "Graded", "Active", or "Inactive" based on actual assignment state. "Graded" appears when any grades have been entered, regardless of completion status
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Assignment Deletion Improvements:</strong> Fixed 404 errors when deleting assignments. Now handles already-deleted assignments gracefully and provides proper feedback via AJAX
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Extension Granting Fixes:</strong> Fixed "Missing required fields" error when granting extensions. Added proper AJAX form submission, class_id field, and improved error handling
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Grading Statistics Updates:</strong> Fixed statistics (Submitted, Graded, Pending, Average) to update in real-time on grading pages after saving grades
-                            </li>
-                        </ul>
-                    </div>
-
-                    <!-- November 8, 2025 - Critical Bug Fixes & New Features -->
-                    <div class="update-section mb-4">
-                        <h6 class="text-danger mb-3">
-                            <i class="fas fa-bug-slash me-2"></i>🐛 Critical Bug Fixes - November 8, 2025
-                        </h6>
-                        <ul class="list-unstyled">
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Teacher Assignment Creation Flow:</strong> Teachers now go through the same question flow as administrators (assignment type → individual/group → in-class/homework) instead of jumping straight to PDF creation
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Assignments & Grades Grades Tab:</strong> Fixed blank Grades section when switching tabs and class filter now maintains the current view instead of redirecting back to Assignments
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Void Assignment Logic:</strong> When assignments are voided after grading, ALL student grades are now properly nullified. Fixed inconsistency where some students kept 100% while others had 0.0%
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Kindergarten Grade Display:</strong> Kindergarteners now display as "Grade K" instead of "Grade 0" or "Grade N/A" across all views
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Account Column Badge Visibility:</strong> Fixed text visibility issue in Students Tab where usernames weren't appearing in Account column badges
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Teacher Student Directory Filter:</strong> Teachers now only see students enrolled in their assigned classes instead of all students in the system
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Attendance Statistics Update Bug:</strong> Fixed statistics counters (Present, Late, Absent, Rate) to update in real-time when marking students instead of staying at 0
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Report Card Class Filter:</strong> Report cards now only show classes where students are actively enrolled, excluding classes they've been removed from
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Voided Assignment Averages:</strong> Fixed Average column in class grades table to exclude voided grades from calculations, showing "N/A" when no valid grades exist
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Student Grades View Voided Display:</strong> Voided assignments now show "Voided" badge instead of actual grade scores in the Student Grades View cards
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>GPA Calculation Accuracy:</strong> Updated GPA calculations across all views to properly exclude both voided assignments and voided individual grades
-                            </li>
-                        </ul>
-                    </div>
-
-                    <!-- Latest Updates - November 28, 2025 -->
-                    <div class="update-section mb-4">
-                        <h6 class="text-primary mb-3" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
-                            <i class="fas fa-star me-2"></i>⭐ Latest Updates & Enhancements - November 28, 2025
-                        </h6>
-                        <ul class="list-unstyled">
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Assignment Deletion Fix:</strong> Resolved database error when deleting assignments that prevented removal due to missing deadline_reminder column. Assignments can now be deleted successfully with proper cleanup of related reminder records
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Attendance Records View Fix:</strong> Fixed 500 Internal Server Error when teachers tried to view attendance records. Corrected template variable mismatch (class_obj vs class_item) to ensure proper data display
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Take Attendance Page Enhancements:</strong> Added visual confirmation messages when attendance is saved successfully. Fixed real-time statistics updates (Present, Late, Absent counts) that were previously stuck at zero. Improved form field naming consistency and added proper error handling
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Interactive PDF/Document Viewer:</strong> Added Blackboard-style document viewer for PDF/Paper assignments on the assignment view page. Features include zoom controls, page navigation, fullscreen mode, download, and print options. Viewer fills the container properly with responsive design for both desktop and mobile devices
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Assignment View Statistics:</strong> Enhanced assignment view page with comprehensive statistics including total students, submissions count, graded count, average score, submission rate, and grading rate. Provides teachers, administrators, and directors with better insights into assignment performance
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Teacher Reports Button Enhancement:</strong> Improved "Reports" quick action button on Teacher Home tab. Now shows a class selection popup when teachers have multiple classes, or redirects directly to Reports & Analytics page when only one class is assigned. Fixed JavaScript loading issues for proper functionality
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Report Card Quarter Selection:</strong> Added quarter selection feature to report card generation form. Users can now select which quarters (Q1-Q4) to include in the report card instead of auto-determining based on current date. All quarter columns (Q1-Q4) and Comments column now always display, with "—" shown for non-selected quarters
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Report Card PDF Generation Fix:</strong> Resolved "Unexpected error: '1'" when generating report cards on live server. Fixed quarter format normalization (converting '1' to 'Q1') to prevent KeyError exceptions. Report cards now generate successfully with proper quarter data display
-                            </li>
-                        </ul>
-                    </div>
-
-                    <!-- Latest Updates - November 23, 2025 -->
-                    <div class="update-section mb-4">
-                        <h6 class="text-primary mb-3" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
-                            <i class="fas fa-star me-2"></i>⭐ Major Updates & Enhancements - November 23, 2025
-                        </h6>
-                        <ul class="list-unstyled">
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Enhanced Assignment Type Selector:</strong> Completely redesigned assignment creation page with stunning gradient header, animated cards, smooth hover effects, and beautiful modal popups. Added "In Development" badges to Quiz and Discussion assignments with pulsing animations. Improved user experience with better visual feedback and modern design
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Assignment Creation Layout Fix:</strong> Fixed critical layout issue where "Live Preview" and "Assignment Tips" sidebar was appearing at the bottom instead of the right side. Restructured HTML to ensure proper Bootstrap grid layout with sidebar correctly positioned
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Enhanced Student Settings Page:</strong> Completely redesigned student settings with modern gradient header, animated cards, iOS-style toggle switches for notifications, beautiful data privacy controls, academic information display, and comprehensive system information. Matches the professional design of teacher/admin settings
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Improved Error Handling:</strong> Fixed 403 access denied errors to properly redirect users to their appropriate dashboards based on role (teachers → teacher dashboard, students → student dashboard, etc.) instead of showing generic error pages
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Student Grades Page Fix:</strong> Resolved 500 Internal Server Error that prevented students from accessing their grades. Added missing database columns (assignment_type, assignment_context, allow_save_and_continue, max_save_attempts, save_timeout_minutes) to group_assignment table
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Navigation Cleanup:</strong> Removed "Resources" tab from all user dashboards (Director, School Administrator, Teacher, Tech) for a cleaner navigation experience
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Enhanced PDF/Paper Assignment Modals:</strong> Improved popup modals for assignment target selection (Individual vs Group) and context selection (In-Class vs Homework) with larger layouts, better spacing, enhanced hover effects, and professional styling
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Database Schema Updates:</strong> Added comprehensive migration scripts for missing columns in group_assignment table, ensuring compatibility with all assignment features and preventing future errors
-                            </li>
-                        </ul>
-                    </div>
-
-                    <!-- Latest Updates - November 16, 2025 -->
-                    <div class="update-section mb-4">
-                        <h6 class="text-primary mb-3">
-                            <i class="fas fa-chart-line me-2"></i>📊 Latest Updates - November 16, 2025
-                        </h6>
-                        <ul class="list-unstyled">
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Reports & Analytics Improvements:</strong> Enhanced analytics page to properly handle voided assignments. Students with all assignments voided now show "0/0 submissions" and "N/A" for completion percentage instead of incorrect counts. Fixed percentage display in completion circles with improved centering and readability
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Assignment Context Badges:</strong> Added visual badges to the Assignments & Grades tab showing whether each assignment is "IN-Class" or "Homework". Badges appear below assignment titles with distinct colors and icons for easy identification
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Assignment Context Field:</strong> New database field stores assignment context (in-class/homework) for all assignments. Assignment creation forms now include a context selector, and existing assignments default to "homework" for backwards compatibility
-                            </li>
-                        </ul>
-                    </div>
-
-                    <!-- Latest Updates - November 10, 2025 -->
-                    <div class="update-section mb-4">
-                        <h6 class="text-primary mb-3">
-                            <i class="fas fa-rocket me-2"></i>🚀 Latest Updates - November 10, 2025
-                        </h6>
-                        <ul class="list-unstyled">
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Modern Settings Pages:</strong> Completely redesigned settings for teachers and administrators with animated gradient headers, iOS-style toggle switches, Google Classroom integration cards, and beautiful data privacy controls
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Google Classroom Integration for Administrators:</strong> School Administrators and Directors can now connect their Google accounts, create/link Google Classrooms, view link status on all classes, and manage classroom integration system-wide
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Real-Time Dashboard Data:</strong> Admin dashboard now displays actual notifications and recent activity from the database instead of placeholder data, with dynamic icons based on notification type
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Student Academic Concerns Popup Fixed:</strong> Resolved 500 errors, now properly loads student details, GPA analysis, missing assignments, and class-by-class breakdowns for at-risk students
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Assignment Creation Fixes:</strong> Removed invalid 'points' field causing crashes, fixed quarter pre-selection to automatically select current quarter, corrected all endpoint references
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Enhanced Deadline Reminders:</strong> Added "Send Reminder" functionality with selective student notification, accurate submission counts (excluding voided, including graded), beautiful modal design with custom message support
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Voided Assignment Display:</strong> Grading page now shows "Voided" badge (red gradient) for voided students with disabled inputs and visual styling, submission counts exclude voided students
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Batch Grading System:</strong> Teachers can now grade multiple students at once, with proper handling of voided assignments and accurate grade saving
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Google OAuth via Environment Variables:</strong> Fixed file dependency issues by using environment variables instead of client_secret.json, proper redirect URI handling for multiple domains
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Group Assignment Creation:</strong> Fixed 405 Method Not Allowed error, added POST support, works for both teachers and administrators
-                            </li>
-                        </ul>
-                    </div>
-
-                    <!-- New Features - November 8, 2025 -->
-                    <div class="update-section mb-4">
-                        <h6 class="text-success mb-3">
-                            <i class="fas fa-sparkles me-2"></i>✨ New Features - November 8, 2025
-                        </h6>
-                        <ul class="list-unstyled">
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Bulk Attendance CSV Upload:</strong> Teachers can now upload historical attendance records via CSV! Perfect for migrating data from Google Sheets, IXL, or paper records. Includes downloadable class-specific template with enrolled students and comprehensive validation
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Class Roster Redesign:</strong> School Administrator class roster page completely redesigned with stunning purple gradient hero header, animated statistics cards, modern student card grid with avatars, integrated search functionality, and enhanced add students interface
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Attendance Template System:</strong> Download CSV templates pre-filled with your class roster including student IDs, names, and grade levels with detailed instructions and validation rules
-                            </li>
-                        </ul>
-                    </div>
-
-                    <!-- November 6-7, 2025 - Major Features & Security -->
-                    <div class="update-section mb-4">
-                        <h6 class="text-info mb-3">
-                            <i class="fas fa-shield-alt me-2"></i>🔐 Google Workspace Integration - November 6-7, 2025
-                        </h6>
-                        <ul class="list-unstyled">
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Google Sign-In for Teachers:</strong> Full OAuth integration allowing teachers/staff to sign in with their Google accounts. "Sign in with Google" button on login page
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Dual Email System:</strong> Users now have both personal email and Google Workspace email (@clarascienceacademy.org). Auto-generates workspace emails in firstname.lastname format
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Secure Credential Storage:</strong> All OAuth credentials stored via environment variables with no hardcoded secrets. GitHub secret scanning protection enabled
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>OAuth Token Verification:</strong> Proper audience validation ensuring secure authentication
-                            </li>
-                        </ul>
-                    </div>
-
-                    <!-- November 6-7, 2025 - Assignment Management -->
-                    <div class="update-section mb-4">
-                        <h6 class="text-primary mb-3">
-                            <i class="fas fa-tasks me-2"></i>📚 Enhanced Assignment Management - November 6-7, 2025
-                        </h6>
-                        <ul class="list-unstyled">
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Selective Student Voiding:</strong> Teachers can void assignments for specific students (not just all students). Includes student selection checkboxes with "Select All" / "Deselect All" buttons
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Assignment Extensions System:</strong> Grant deadline extensions to specific students with new due date/time and optional reason. Tracks who granted extension and when
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Multi-Step Assignment Creation:</strong> Wizard-style flow with assignment type selection → target selection (individual/group) → context (in-class/homework) → details
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Smart Due Date Defaults:</strong> In-class assignments auto-default to 4 PM EST same day. Homework assignments auto-default to 11:59 PM next day
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Accurate Grading Progress:</strong> Fixed assignment cards to show correct "X/Y Graded" counts instead of "0/0 Graded"
-                            </li>
-                        </ul>
-                    </div>
-
-                    <!-- November 6-7, 2025 - Critical Bug Fixes -->
-                    <div class="update-section mb-4">
-                        <h6 class="text-danger mb-3">
-                            <i class="fas fa-wrench me-2"></i>🔧 Additional Bug Fixes - November 6-7, 2025
-                        </h6>
-                        <ul class="list-unstyled">
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Report Card Display Fix:</strong> Fixed bunched-up student cards, sideways text, and narrow widths across all grade levels (K-2, 3rd-5th, 6th-8th)
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Teacher Assignments Page Crash:</strong> Fixed "Could not build url for endpoint 'teacher.edit_group_assignment'" error that crashed the entire page
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Modal Footer Visibility:</strong> Fixed void and extensions modals where footer buttons were pushed off-screen by adding max-height and scrolling
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Production Database Schema:</strong> Fixed "column user.email does not exist" error that caused 500 errors across entire site. Created production-safe migration scripts
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Google OAuth Token Errors:</strong> Fixed "Token has wrong audience" by properly extracting Client ID from environment variables
-                            </li>
-                        </ul>
-                    </div>
                 </div>
 
                 <div class="update-footer mt-4 p-4 bg-primary text-white rounded">
@@ -1590,71 +1124,21 @@
 <script>
 // ===== PREMIUM HOMEPAGE FUNCTIONALITY =====
 document.addEventListener('DOMContentLoaded', function() {
-    // ===== CREATE FLOATING PARTICLES - Optimized: Reduced from 50 to 18 =====
-    function createParticles() {
-        const container = document.getElementById('particlesContainer');
-        if (!container) return;
-        
-        // Reduce particles for better performance
-        const particleCount = 18;
-        // Use requestAnimationFrame for smoother creation
-        let created = 0;
-        function createParticle() {
-            if (created >= particleCount) return;
-            const particle = document.createElement('div');
-            particle.className = 'particle';
-            particle.style.left = Math.random() * 100 + '%';
-            particle.style.animationDelay = Math.random() * 20 + 's';
-            particle.style.animationDuration = (15 + Math.random() * 10) + 's';
-            container.appendChild(particle);
-            created++;
-            if (created < particleCount) {
-                requestAnimationFrame(createParticle);
-            }
-        }
-        createParticle();
-    }
-    createParticles();
-    
-    // ===== ANIMATED NUMBER COUNTERS =====
-    function animateCounter(element, target, duration = 2000) {
-        const start = 0;
-        const increment = target / (duration / 16);
-        let current = start;
-        
-        const timer = setInterval(() => {
-            current += increment;
-            if (current >= target) {
-                element.textContent = target;
-                clearInterval(timer);
-            } else {
-                element.textContent = Math.floor(current);
-            }
-        }, 16);
+    // ===== PARTICLES DISABLED FOR PERFORMANCE =====
+    // Particles completely disabled to improve page performance
+    const particlesContainer = document.getElementById('particlesContainer');
+    if (particlesContainer) {
+        particlesContainer.style.display = 'none';
     }
     
-    // Trigger counters when stat boxes come into view
+    // ===== NUMBER COUNTERS - Simplified for performance =====
+    // Counters display immediately without animation for better performance
     const statObserver = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting && !entry.target.dataset.animated) {
                 const numberElement = entry.target.querySelector('.stat-number');
                 if (numberElement) {
-                    const text = numberElement.textContent;
-                    const number = parseInt(text.replace(/\D/g, ''));
-                    if (number) {
-                        numberElement.textContent = '0';
-                        animateCounter(numberElement, number);
-                        
-                        // Add the + sign back if it was there
-                        if (text.includes('+')) {
-                            setTimeout(() => {
-                                const plusSpan = document.createElement('span');
-                                plusSpan.className = 'stat-plus';
-                                plusSpan.textContent = '+';
-                                numberElement.appendChild(plusSpan);
-                            }, 2000);
-                        }
-                    }
+                    // Numbers display immediately - no animation
                     entry.target.dataset.animated = 'true';
                 }
             }
@@ -1681,7 +1165,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     showSlide(0);
-    setInterval(nextSlide, 6000);
+    // Slideshow interval increased for better performance
+    setInterval(nextSlide, 8000);
     
     // ===== SMOOTH SCROLL WITH EASING =====
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
@@ -1700,175 +1185,100 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // ===== ADVANCED SCROLL ANIMATIONS - Optimized with larger threshold =====
-    const observerOptions = {
-        threshold: 0.25, // Increased from 0.15 for better performance
-        rootMargin: '0px 0px -50px 0px' // Reduced margin for earlier triggering
-    };
-
-    const observer = new IntersectionObserver(function(entries) {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.style.opacity = '1';
-                entry.target.style.transform = 'translateY(0) scale(1)';
-                
-                // Add stagger effect for cards - optimized with requestAnimationFrame
-                const cards = entry.target.querySelectorAll('.feature-card, .program-card, .modern-testimonial, .modern-contact');
-                cards.forEach((card, index) => {
-                    requestAnimationFrame(() => {
-                        setTimeout(() => {
-                            card.style.opacity = '1';
-                            card.style.transform = 'translateY(0) scale(1)';
-                        }, index * 50); // Reduced delay from 100ms to 50ms
-                    });
-                });
-                // Unobserve after animation to reduce observer overhead
-                observer.unobserve(entry.target);
-            }
-        });
-    }, observerOptions);
-
-    // Observe sections
-    document.querySelectorAll('.features-section, .programs-section, .testimonials-section, .contact-section').forEach(el => {
-        observer.observe(el);
-    });
+    // ===== SCROLL ANIMATIONS DISABLED FOR PERFORMANCE =====
+    // Scroll animations completely disabled to improve page performance
+    // Elements will appear immediately without animation
     
-    // ===== HERO BUTTON RIPPLE EFFECT =====
-    document.querySelectorAll('.hero-btn').forEach(button => {
-        button.addEventListener('click', function(e) {
+    // ===== HERO BUTTON RIPPLE EFFECT - Optimized =====
+    // Use event delegation to avoid multiple listeners
+    document.addEventListener('click', function(e) {
+        const heroBtn = e.target.closest('.hero-btn');
+        if (heroBtn && !heroBtn.hasAttribute('data-bs-toggle')) {
+            // Only add ripple to buttons that don't trigger modals
             const ripple = document.createElement('span');
             ripple.className = 'ripple';
-            this.appendChild(ripple);
-            
+            heroBtn.appendChild(ripple);
             setTimeout(() => ripple.remove(), 600);
-        });
+        }
     });
     
-    // ===== PARALLAX EFFECT ON SCROLL - Optimized with debouncing =====
-    // Disable parallax on mobile for better performance
-    const isMobile = window.innerWidth <= 768 || 'ontouchstart' in window;
-    if (!isMobile) {
-        let ticking = false;
-        let lastScrollY = 0;
-        // Debounce scroll handler (200ms)
-        function handleParallax() {
-            if (!ticking) {
-                window.requestAnimationFrame(function() {
-                    const scrolled = window.pageYOffset;
-                    // Only update if scroll changed significantly (performance optimization)
-                    if (Math.abs(scrolled - lastScrollY) > 5) {
-                        const parallaxElements = document.querySelectorAll('.hero-content');
-                        parallaxElements.forEach(el => {
-                            el.style.transform = `translateY(${scrolled * 0.2}px)`;
-                        });
-                        lastScrollY = scrolled;
-                    }
-                    ticking = false;
-                });
-                ticking = true;
+    // ===== PARALLAX EFFECT DISABLED FOR PERFORMANCE =====
+    // Parallax completely disabled to improve page performance
+    
+    // ===== SHOW UPDATE MODAL - Optimized =====
+    const updateModalElement = document.getElementById('updateModal');
+    if (updateModalElement) {
+        // Optimize modal performance by reducing will-change after animation
+        updateModalElement.addEventListener('shown.bs.modal', function() {
+            const modalContent = this.querySelector('.updates-modal-content');
+            if (modalContent) {
+                // Remove will-change after animation completes to reduce repaints
+                setTimeout(() => {
+                    modalContent.style.willChange = 'auto';
+                }, 300);
             }
+        });
+        
+        // Show modal automatically if not already shown (only once per session)
+        // Use Bootstrap's built-in modal handling instead of creating new instances
+        if (!sessionStorage.getItem('updateModalShownDec14_2025')) {
+            // Small delay to ensure page is fully loaded
+            setTimeout(() => {
+                // Get or create modal instance once
+                let updateModal = bootstrap.Modal.getInstance(updateModalElement);
+                if (!updateModal) {
+                    updateModal = new bootstrap.Modal(updateModalElement, {
+                        backdrop: true,
+                        keyboard: true
+                    });
+                }
+                updateModal.show();
+                sessionStorage.setItem('updateModalShownDec14_2025', 'true');
+            }, 500);
         }
-        // Use passive listener for better scroll performance
-        window.addEventListener('scroll', handleParallax, { passive: true });
+        
+        // Remove redundant event listeners - Bootstrap handles data-bs-toggle="modal" automatically
+        // No need to add click listeners to buttons with data-bs-target
     }
     
-    // ===== SHOW UPDATE MODAL =====
-    if (!sessionStorage.getItem('updateModalShownDec14_2025')) {
-        const updateModalElement = document.getElementById('updateModal');
-        if (updateModalElement) {
-            const updateModal = new bootstrap.Modal(updateModalElement);
-            updateModal.show();
-            sessionStorage.setItem('updateModalShownDec14_2025', 'true');
-        }
-    }
-    
-    // ===== ADD MOUSE FOLLOW EFFECT TO HERO =====
-    // Only enable on non-touch devices to prevent mobile/tablet overlap issues
-    const heroContent = document.querySelector('.hero-content');
+    // ===== HERO SECTION OPTIMIZATION =====
+    // Simplified hero section handling for better performance
     const heroSection = document.querySelector('.hero-section');
     
-    if (heroContent && heroSection) {
-        // Detect if device is touch-enabled
+    if (heroSection) {
+        // Fix for mobile/tablet: Prevent card from blocking interactions when scrolled
         const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
         
-        if (!isTouchDevice) {
-            // Only enable mouse follow on non-touch devices - optimized with throttling
-            let mouseTicking = false;
-            document.addEventListener('mousemove', (e) => {
-                if (!mouseTicking) {
-                    requestAnimationFrame(() => {
-                        const rect = heroContent.getBoundingClientRect();
-                        const x = e.clientX - rect.left;
-                        const y = e.clientY - rect.top;
-                        
-                        const centerX = rect.width / 2;
-                        const centerY = rect.height / 2;
-                        
-                        const deltaX = (x - centerX) / centerX;
-                        const deltaY = (y - centerY) / centerY;
-                        
-                        // Reduced tilt intensity for better performance
-                        const tiltX = deltaY * 3;
-                        const tiltY = -deltaX * 3;
-                        
-                        heroContent.style.transform = `perspective(1000px) rotateX(${tiltX}deg) rotateY(${tiltY}deg)`;
-                        mouseTicking = false;
-                    });
-                    mouseTicking = true;
-                }
-            }, { passive: true });
-            
-            heroContent.addEventListener('mouseleave', () => {
-                heroContent.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg)';
-            });
-        }
-        
-        // Fix for mobile/tablet: Prevent card from blocking interactions when scrolled
         if (isTouchDevice) {
+            // Only add scroll listener on touch devices, and use throttling
             let ticking = false;
+            let lastScrollY = 0;
             
             window.addEventListener('scroll', () => {
                 if (!ticking) {
                     window.requestAnimationFrame(() => {
-                        const heroRect = heroSection.getBoundingClientRect();
-                        const viewportHeight = window.innerHeight;
-                        const heroBottom = heroRect.bottom;
-                        
-                        // If hero section bottom is above viewport (scrolled past), disable pointer events
-                        // This prevents the hero from blocking interactions with content below
-                        if (heroBottom < 0) {
-                            // Hero is completely above viewport - disable pointer events
-                            heroSection.style.pointerEvents = 'none';
-                            heroSection.style.zIndex = '1';
-                        } else if (heroRect.top > viewportHeight) {
-                            // Hero is completely below viewport - disable pointer events
-                            heroSection.style.pointerEvents = 'none';
-                            heroSection.style.zIndex = '1';
-                        } else {
-                            // Hero is in viewport - enable normal interactions
-                            heroSection.style.pointerEvents = 'auto';
-                            heroSection.style.zIndex = '2';
+                        const scrolled = window.pageYOffset;
+                        // Only update if scroll changed significantly (performance optimization)
+                        if (Math.abs(scrolled - lastScrollY) > 50) {
+                            const heroRect = heroSection.getBoundingClientRect();
+                            const viewportHeight = window.innerHeight;
+                            
+                            // Only update if hero is completely out of viewport
+                            if (heroRect.bottom < 0 || heroRect.top > viewportHeight) {
+                                heroSection.style.pointerEvents = 'none';
+                                heroSection.style.zIndex = '1';
+                            } else {
+                                heroSection.style.pointerEvents = 'auto';
+                                heroSection.style.zIndex = '2';
+                            }
+                            
+                            lastScrollY = scrolled;
                         }
-                        
                         ticking = false;
                     });
                     ticking = true;
                 }
             }, { passive: true });
-            
-            // Also check on initial load
-            const checkHeroPosition = () => {
-                const heroRect = heroSection.getBoundingClientRect();
-                const viewportHeight = window.innerHeight;
-                
-                if (heroRect.bottom < 0 || heroRect.top > viewportHeight) {
-                    heroSection.style.pointerEvents = 'none';
-                    heroSection.style.zIndex = '1';
-                }
-            };
-            
-            // Check after a short delay to ensure layout is complete
-            setTimeout(checkHeroPosition, 100);
         }
     }
 });

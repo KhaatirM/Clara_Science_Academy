@@ -2,11 +2,18 @@
 """
 Migration script to add assignment_description column to cleaning_team_member table
 This allows storing detailed job assignments for each team member.
+This works with both SQLite and PostgreSQL databases.
 """
+
+import sys
+import os
+
+# Add parent directory to path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app import create_app
 from extensions import db
-from sqlalchemy import text
+from sqlalchemy import text, inspect
 
 app = create_app()
 
@@ -18,17 +25,20 @@ def add_assignment_description_column():
             print("ADDING ASSIGNMENT_DESCRIPTION COLUMN TO CLEANING_TEAM_MEMBER")
             print("="*70)
             
-            # Check if column already exists
-            result = db.session.execute(text("""
-                SELECT column_name 
-                FROM information_schema.columns 
-                WHERE table_name='cleaning_team_member' 
-                AND column_name='assignment_description'
-            """))
+            # Get database engine
+            engine = db.engine
+            inspector = inspect(engine)
             
-            if result.fetchone():
-                print("✓ Column 'assignment_description' already exists. Skipping migration.")
+            # Check if column already exists
+            columns = [col['name'] for col in inspector.get_columns('cleaning_team_member')]
+            
+            if 'assignment_description' in columns:
+                print("[OK] Column 'assignment_description' already exists. Skipping migration.")
                 return
+            
+            # Determine database type
+            db_url = str(engine.url)
+            is_sqlite = 'sqlite' in db_url.lower()
             
             # Add the column
             print("\n[1] Adding assignment_description column to cleaning_team_member table...")
@@ -38,7 +48,7 @@ def add_assignment_description_column():
             """))
             
             db.session.commit()
-            print("✓ Successfully added assignment_description column")
+            print("[OK] Successfully added assignment_description column")
             
             print("\n" + "="*70)
             print("MIGRATION COMPLETED SUCCESSFULLY")
@@ -46,8 +56,10 @@ def add_assignment_description_column():
             
         except Exception as e:
             db.session.rollback()
-            print(f"\n✗ Error during migration: {e}")
+            print(f"\n[ERROR] Error during migration: {e}")
             print("Please check the database connection and permissions.")
+            import traceback
+            traceback.print_exc()
             raise
 
 if __name__ == "__main__":

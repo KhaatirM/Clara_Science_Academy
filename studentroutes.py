@@ -167,18 +167,16 @@ def get_grade_trends(student_id, class_id, limit=10):
             
         try:
             grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
-            # Use percentage if available, otherwise calculate from score/total_points
-            percentage = grade_data.get('percentage')
-            if percentage is None:
-                score = grade_data.get('score') or grade_data.get('points_earned')
-                if score is not None:
-                    total_points = grade_data.get('total_points') or grade_data.get('max_score') or (grade.assignment.total_points if grade.assignment.total_points else 100.0)
-                    if total_points and total_points > 0:
-                        try:
-                            percentage = (float(score) / float(total_points) * 100)
-                        except (ValueError, TypeError, ZeroDivisionError):
-                            continue
-                    else:
+            # Always use assignment's total_points as source of truth
+            score = grade_data.get('score') or grade_data.get('points_earned')
+            if score is not None:
+                # Always use assignment's total_points, not stored value in grade_data
+                total_points = grade.assignment.total_points if grade.assignment and grade.assignment.total_points else 100.0
+                if total_points and total_points > 0:
+                    try:
+                        # Always recalculate percentage using assignment's actual total_points
+                        percentage = (float(score) / float(total_points) * 100)
+                    except (ValueError, TypeError, ZeroDivisionError):
                         continue
                 else:
                     continue
@@ -476,18 +474,16 @@ def student_dashboard():
             grade_percentages = []
             for g in class_grades:
                 grade_data = json.loads(g.grade_data)
-                # Use percentage if available, otherwise calculate from score/total_points
-                percentage = grade_data.get('percentage')
-                if percentage is None:
-                    score = grade_data.get('score') or grade_data.get('points_earned')
-                    if score is not None:
-                        total_points = grade_data.get('total_points') or grade_data.get('max_score') or (g.assignment.total_points if g.assignment.total_points else 100.0)
-                        if total_points and total_points > 0:
-                            try:
-                                percentage = (float(score) / float(total_points) * 100)
-                            except (ValueError, TypeError, ZeroDivisionError):
-                                continue
-                        else:
+                # Always use assignment's total_points as source of truth
+                score = grade_data.get('score') or grade_data.get('points_earned')
+                if score is not None:
+                    # Always use assignment's total_points, not stored value in grade_data
+                    total_points = g.assignment.total_points if g.assignment and g.assignment.total_points else 100.0
+                    if total_points and total_points > 0:
+                        try:
+                            # Always recalculate percentage using assignment's actual total_points
+                            percentage = (float(score) / float(total_points) * 100)
+                        except (ValueError, TypeError, ZeroDivisionError):
                             continue
                     else:
                         continue
@@ -986,11 +982,16 @@ def student_grades():
                 continue
                 
             grade_data = json.loads(grade.grade_data)
-            if 'score' in grade_data and grade_data['score'] is not None:
+            # Calculate percentage using assignment's total_points
+            points_earned = grade_data.get('points_earned') or grade_data.get('score', 0)
+            if points_earned is not None:
                 try:
-                    score = float(grade_data['score'])  # Convert to float
-                    assignment_grades[grade.assignment.title] = f"{score}%"
-                    total_score += score
+                    points_earned = float(points_earned)
+                    # Always use assignment's total_points as source of truth
+                    total_points = grade.assignment.total_points if grade.assignment and grade.assignment.total_points else 100.0
+                    percentage = (points_earned / total_points * 100) if total_points > 0 else 0
+                    assignment_grades[grade.assignment.title] = f"{round(percentage, 1)}%"
+                    total_score += percentage
                     valid_grades += 1
                 except (ValueError, TypeError):
                     continue  # Skip invalid scores
@@ -1002,11 +1003,16 @@ def student_grades():
                 continue
                 
             grade_data = json.loads(group_grade.grade_data) if isinstance(group_grade.grade_data, str) else group_grade.grade_data
-            if 'score' in grade_data and grade_data['score'] is not None:
+            # Calculate percentage using assignment's total_points
+            points_earned = grade_data.get('points_earned') or grade_data.get('score', 0)
+            if points_earned is not None:
                 try:
-                    score = float(grade_data['score'])  # Convert to float
-                    assignment_grades[group_grade.group_assignment.title] = f"{score}%"
-                    total_score += score
+                    points_earned = float(points_earned)
+                    # Always use assignment's total_points as source of truth
+                    total_points = group_grade.group_assignment.total_points if group_grade.group_assignment and group_grade.group_assignment.total_points else 100.0
+                    percentage = (points_earned / total_points * 100) if total_points > 0 else 0
+                    assignment_grades[group_grade.group_assignment.title] = f"{round(percentage, 1)}%"
+                    total_score += percentage
                     valid_grades += 1
                 except (ValueError, TypeError):
                     continue  # Skip invalid scores
@@ -1029,18 +1035,16 @@ def student_grades():
                     continue
                     
                 grade_data = json.loads(grade.grade_data)
-                # Use percentage if available, otherwise calculate from score/total_points
-                percentage = grade_data.get('percentage')
-                if percentage is None:
-                    score = grade_data.get('score') or grade_data.get('points_earned')
-                    if score is not None:
-                        total_points = grade_data.get('total_points') or grade_data.get('max_score') or (grade.assignment.total_points if grade.assignment.total_points else 100.0)
-                        if total_points and total_points > 0:
-                            try:
-                                percentage = (float(score) / float(total_points) * 100)
-                            except (ValueError, TypeError, ZeroDivisionError):
-                                continue
-                        else:
+                # Always use assignment's total_points as source of truth
+                score = grade_data.get('score') or grade_data.get('points_earned')
+                if score is not None:
+                    # Always use assignment's total_points, not stored value in grade_data
+                    total_points = grade.assignment.total_points if grade.assignment and grade.assignment.total_points else 100.0
+                    if total_points and total_points > 0:
+                        try:
+                            # Always recalculate percentage using assignment's actual total_points
+                            percentage = (float(score) / float(total_points) * 100)
+                        except (ValueError, TypeError, ZeroDivisionError):
                             continue
                     else:
                         continue
@@ -2263,16 +2267,15 @@ def get_quiz_details(assignment_id):
         try:
             grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
             score = grade_data.get('score') or grade_data.get('points_earned')
-            # Use total_points from grade_data (quiz actual total) instead of assignment.total_points
-            total_points = grade_data.get('total_points') or grade_data.get('max_score') or (assignment.total_points if assignment.total_points else 100.0)
-            percentage = grade_data.get('percentage')
-            # Calculate percentage if not present
-            if score is not None and not percentage and total_points:
+            # Always use assignment's total_points as source of truth, not stored value
+            total_points = assignment.total_points if assignment.total_points else 100.0
+            # Always recalculate percentage using assignment's actual total_points
+            if score is not None and total_points:
                 percentage = round((float(score) / float(total_points) * 100), 2) if total_points > 0 else 0
         except (json.JSONDecodeError, TypeError, ValueError):
             pass
     
-    # Fallback to assignment total_points if not in grade_data
+    # Ensure total_points is set
     if total_points is None:
         total_points = assignment.total_points or 100.0
     

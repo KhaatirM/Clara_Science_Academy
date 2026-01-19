@@ -1235,13 +1235,19 @@ def assignments_and_grades():
         enrolled_students = []
         all_assignments_list = []
         
+        # Get enrolled students and all assignments for any view when class is selected
+        if selected_class:
+            try:
+                enrollments = Enrollment.query.filter_by(class_id=selected_class.id, is_active=True).all()
+                enrolled_students = [enrollment.student for enrollment in enrollments if enrollment.student]
+                # Combine regular and group assignments
+                all_assignments_list = list(class_assignments) + list(group_assignments) if group_assignments else list(class_assignments)
+            except Exception as e:
+                current_app.logger.error(f"Error loading enrolled students: {e}")
+                enrolled_students = []
+                all_assignments_list = []
+        
         if selected_class and view_mode == 'table':
-            # Get enrolled students
-            enrollments = Enrollment.query.filter_by(class_id=selected_class.id, is_active=True).all()
-            enrolled_students = [enrollment.student for enrollment in enrollments if enrollment.student]
-            
-            # Get all assignments for the table
-            all_assignments_list = list(class_assignments) + list(group_assignments)
             
             # Get grades for enrolled students (individual assignments)
             for student in enrolled_students:
@@ -1424,7 +1430,7 @@ def assignments_and_grades():
                              class_assignments=class_assignments_count if not selected_class else class_assignments,
                              unique_student_count=unique_student_count,
                              selected_class=selected_class,
-                             class_assignments_data=class_assignments if selected_class else None,
+                             class_assignments_data=list(class_assignments) if selected_class and class_assignments else [],
                              group_assignments=group_assignments if selected_class else [],
                              assignment_grades=assignment_grades if selected_class else {},
                              sort_by=sort_by,
@@ -1436,10 +1442,10 @@ def assignments_and_grades():
                              today=today,
                              extension_request_count=pending_extension_count,
                              # Table view data
-                             enrolled_students=enrolled_students if view_mode == 'table' else [],
+                             enrolled_students=enrolled_students,
                              student_grades=table_student_grades if view_mode == 'table' else {},
                              student_averages=table_student_averages if view_mode == 'table' else {},
-                             all_assignments=all_assignments_list if view_mode == 'table' else [])
+                             all_assignments=all_assignments_list)
     
     except Exception as e:
         current_app.logger.error(f"Error in assignments_and_grades route: {e}")

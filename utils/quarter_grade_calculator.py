@@ -105,16 +105,15 @@ def calculate_quarter_grade_for_student_class(student_id, class_id, school_year_
             if not grade_data:
                 continue
             
-            # Get assignment total points (from assignment object)
+            # Get assignment total points (from assignment object) - always use as source of truth
             assignment = grade.assignment
             assignment_total_points = assignment.total_points if (hasattr(assignment, 'total_points') and assignment.total_points) else 100.0
             
-            # Try to get points_earned and total_points from grade_data first (preferred method for new grades)
+            # Get points_earned from grade_data
             points_earned = grade_data.get('points_earned')
-            grade_total_points = grade_data.get('total_points')
             
-            # Determine total points for this assignment
-            total_pts = float(grade_total_points) if grade_total_points else float(assignment_total_points)
+            # Always use assignment's total_points, not stored value in grade_data
+            total_pts = float(assignment_total_points)
             
             # If points_earned is not available, try to derive it from percentage or score (backward compatibility)
             if points_earned is None:

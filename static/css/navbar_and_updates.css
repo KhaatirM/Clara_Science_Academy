@@ -96,7 +96,11 @@
     border-radius: 20px;
     overflow: hidden;
     box-shadow: 0 25px 70px rgba(0, 0, 0, 0.35);
-    animation: modalSlideIn 0.3s ease-out;
+    /* Simplified animation for performance */
+    animation: modalSlideIn 0.2s ease-out;
+    /* Optimize rendering */
+    transform: translateZ(0);
+    will-change: transform, opacity;
 }
 
 @keyframes modalSlideIn {
@@ -132,7 +136,8 @@
     justify-content: center;
     font-size: 2rem;
     color: white;
-    backdrop-filter: blur(10px);
+    /* backdrop-filter disabled for performance */
+    backdrop-filter: none;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
@@ -152,6 +157,47 @@
 .updates-modal-body {
     padding: 2rem;
     background: #f8f9fa;
+}
+
+/* Performance optimization: Optimize modal rendering */
+#updateModal .updates-modal-body {
+    contain: layout style paint;
+}
+
+#updateModal .update-section {
+    contain: layout style paint;
+    contain-intrinsic-size: auto 500px;
+}
+
+/* Optimize modal rendering */
+#updateModal .updates-modal-content {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+}
+
+#updateModal.show .updates-modal-content {
+    will-change: auto;
+}
+
+/* Optimize scrolling in modal */
+#updateModal .modal-body {
+    transform: translateZ(0);
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Reduce animation complexity on low-end devices */
+@media (prefers-reduced-motion: reduce) {
+    .updates-modal-content {
+        animation: none;
+    }
+    
+    .updates-intro-card {
+        transition: none;
+    }
+    
+    .updates-intro-card:hover {
+        transform: none;
+    }
 }
 
 .updates-intro-card {

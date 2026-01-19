@@ -23,43 +23,7 @@
 
 /* Additional global styles that don't fit in other categories */
 
-/* Slideshow Background Styles */
-.slideshow-container {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: -1;
-    overflow: hidden;
-}
-
-.slideshow-image {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    opacity: 0;
-    transition: opacity 0.5s ease-in-out;
-}
-
-.slideshow-image.active {
-    opacity: 1;
-}
-
-.slideshow-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.2);
-    z-index: 1;
-}
+/* Slideshow Background Styles - Removed duplicate (defined in home-page.css) */
 
 /* Global Animations */
 @keyframes fadeIn {

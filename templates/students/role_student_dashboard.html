@@ -2769,7 +2769,8 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                     {% set percentage = grade_data_dict.get('percentage') if grade_data_dict else none %}
                                     {% if not percentage and score is not none and grade_data_dict %}
                                         {# Calculate percentage if not present #}
-                                        {% set total_points = grade_data_dict.get('total_points') or grade_data_dict.get('max_score') or (assignment.total_points if assignment.total_points else 100.0) %}
+                                        {# Always use assignment.total_points as source of truth, not stored value in grade_data #}
+                                        {% set total_points = assignment.total_points if assignment.total_points else 100.0 %}
                                         {% if total_points and total_points > 0 %}
                                             {% set score_float = score|float %}
                                             {% set total_points_float = total_points|float %}
@@ -2962,7 +2963,8 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                     {% set percentage = grade_data_dict.get('percentage') if grade_data_dict else none %}
                                     {% if not percentage and score is not none and grade_data_dict %}
                                         {# Calculate percentage if not present #}
-                                        {% set total_points = grade_data_dict.get('total_points') or grade_data_dict.get('max_score') or (assignment.total_points if assignment.total_points else 100.0) %}
+                                        {# Always use assignment.total_points as source of truth, not stored value in grade_data #}
+                                        {% set total_points = assignment.total_points if assignment.total_points else 100.0 %}
                                         {% if total_points and total_points > 0 %}
                                             {% set score_float = score|float %}
                                             {% set total_points_float = total_points|float %}

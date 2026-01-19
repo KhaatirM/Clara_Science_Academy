@@ -268,23 +268,25 @@
                     {% set is_voided = false %}
                     {% set score_value = 0 %}
                     {% set points_earned = 0 %}
-                    {% set total_points = total_points|default(100.0)|float %}
+                    {# Always use assignment.total_points as source of truth, not stored value in grade_data #}
+                    {% set total_points = assignment.total_points if assignment.total_points else 100.0 %}
                     {% set percentage_value = 0 %}
                     {% set comment_data = '' %}
                     {% set grade_id = None %}
                     {% if grade_data %}
                         {% set is_voided = grade_data.is_voided|default(false) %}
                         {% set points_earned = grade_data.points_earned|default(grade_data.score|default(0))|float %}
-                        {% set total_points = grade_data.total_points|default(grade_data.max_score|default(total_points))|float %}
-                        {% set percentage_value = grade_data.percentage|default(0)|float %}
+                        {# Always recalculate percentage using assignment's actual total_points #}
+                        {% if points_earned > 0 and total_points > 0 %}
+                            {% set percentage_value = (points_earned / total_points * 100)|round(2) %}
+                        {% else %}
+                            {% set percentage_value = grade_data.percentage|default(0)|float %}
+                        {% endif %}
                         {% set grade_id = grade_data.grade_id|default(None) %}
                         {% if grade_data.score is defined and grade_data.score is not none %}
                             {% set score_value = grade_data.score|float %}
                         {% elif grade_data['score'] is defined and grade_data['score'] is not none %}
                             {% set score_value = grade_data['score']|float %}
-                        {% endif %}
-                        {% if not percentage_value and points_earned > 0 and total_points > 0 %}
-                            {% set percentage_value = (points_earned / total_points * 100)|round(2) %}
                         {% endif %}
                         {% if not score_value and percentage_value %}
                             {% set score_value = percentage_value %}

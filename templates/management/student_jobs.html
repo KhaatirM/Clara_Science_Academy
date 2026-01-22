@@ -356,7 +356,9 @@
     <!-- Computer Teams -->
     {% if team_data %}
         {% for team_entry in team_data.values() %}
-            {% if (team_entry.team.team_type|default('') == 'computer') or 'computer' in team_entry.team.team_name.lower() %}
+            {% set team_type = team_entry.team.team_type|default('')|lower %}
+            {% set team_name_lower = team_entry.team.team_name|lower %}
+            {% if team_type == 'computer' or 'computer' in team_name_lower %}
             <div class="row mb-4">
                 <div class="col-12">
                     <div class="card border-info">
@@ -1707,6 +1709,11 @@ function createNewTeam() {
 function renderDynamicTeams() {
     const container = document.getElementById('dynamicTeamsContainer');
     
+    // Only render if container exists (non-students only)
+    if (!container) {
+        return;
+    }
+    
     if (dynamicTeams.length === 0) {
         container.innerHTML = `
             <div class="col-12 text-center text-muted py-4">
@@ -2212,6 +2219,13 @@ function removeSelectedMembers() {
 }
 
 function loadExistingTeams() {
+    // Only load dynamic teams if the container exists (non-students only)
+    const container = document.getElementById('dynamicTeamsContainer');
+    if (!container) {
+        // Students don't have this container, so skip loading dynamic teams
+        return;
+    }
+    
     // Load existing dynamic teams from backend
     fetch('/management/api/dynamic-teams')
         .then(response => response.json())

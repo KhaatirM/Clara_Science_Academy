@@ -1989,14 +1989,29 @@ def student_jobs():
         
         if 'team_type' in columns:
             # Column exists, order by team_type and name
+            # Use CASE to prioritize: cleaning first, then computer, then others
+            from sqlalchemy import case
             teams = CleaningTeam.query.filter_by(is_active=True).order_by(
-                CleaningTeam.team_type, CleaningTeam.team_name
-            ).all()
-        else:
-            # Column doesn't exist yet, order by name only
-            teams = CleaningTeam.query.filter_by(is_active=True).order_by(
+                case(
+                    (CleaningTeam.team_type == 'cleaning', 1),
+                    (CleaningTeam.team_type == 'computer', 2),
+                    else_=3
+                ),
                 CleaningTeam.team_name
             ).all()
+        else:
+            # Column doesn't exist yet, order by name but prioritize computer teams
+            # Check if team name contains "computer" to identify computer teams
+            teams = CleaningTeam.query.filter_by(is_active=True).all()
+            # Sort manually: cleaning teams first, then computer teams, then others
+            teams.sort(key=lambda t: (
+                1 if 'computer' in t.team_name.lower() and 'backup' not in t.team_name.lower() else
+                2 if 'backup' in t.team_name.lower() and 'computer' in t.team_name.lower() else
+                0 if 'team 1' in t.team_name.lower() or t.team_name == 'Team 1' else
+                0 if 'team 2' in t.team_name.lower() or t.team_name == 'Team 2' else
+                3,
+                t.team_name
+            ))
         
         # Import datetime for checking reset time
         from datetime import datetime, timezone, timedelta

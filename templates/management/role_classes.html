@@ -41,7 +41,7 @@
             <div class="class-card">
                 <div class="class-card-header d-flex justify-content-between align-items-center">
                     <h5 class="class-card-title">{{ class.name }}</h5>
-                    <span class="grade-badge">{{ class.grade_level | display_grade }}</span>
+                    <span class="grade-badge">{{ class.get_grade_levels_display() or 'N/A' }}</span>
                 </div>
                 <div class="class-card-body d-flex flex-column">
                     <!-- Class Information -->

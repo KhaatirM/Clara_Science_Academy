@@ -42,11 +42,9 @@
                         </a>
                     {% endif %}
                 {% endif %}
-                {% if current_user.role in ['Director', 'School Administrator'] %}
-                    <a href="{{ url_for('management.redo_dashboard') }}" class="btn btn-redo-dashboard">
-                        <i class="bi bi-arrow-repeat me-2"></i>Redo Dashboard
-                    </a>
-                {% endif %}
+                <a href="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.redo_dashboard') }}{% else %}{{ url_for('teacher.redo_dashboard') }}{% endif %}" class="btn btn-redo-dashboard">
+                    <i class="bi bi-arrow-repeat me-2"></i>Redo Dashboard
+                </a>
                 <a href="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.view_extension_requests') }}{% else %}{{ url_for('teacher.view_extension_requests') }}{% endif %}" class="btn btn-extension-requests">
                     <i class="bi bi-clock-history me-2"></i>Extension Requests
                     {% if extension_request_count and extension_request_count > 0 %}
@@ -138,7 +136,7 @@
                         </div>
                         <div class="assignment-class-detail">
                             <i class="bi bi-mortarboard me-2"></i>
-                            <span>Grade: <strong>{{ class_obj.grade_level or 'N/A' }}</strong></span>
+                            <span>Grade: <strong>{{ class_obj.get_grade_levels_display() or 'N/A' }}</strong></span>
                         </div>
                         {% if class_obj.schedule %}
                         <div class="assignment-class-detail">

@@ -115,3 +115,12 @@ def teacher_redo_dashboard():
     """Redo dashboard route for teachers - delegates to management dashboard function"""
     from management_routes.dashboard import redo_dashboard as redo_dashboard_func
     return redo_dashboard_func()
+
+# Add route alias for mark_notification_read for backward compatibility
+@teacher_blueprint.route('/notifications/mark-read/<int:notification_id>', methods=['POST'], endpoint='mark_notification_read')
+@login_required
+@teacher_required
+def mark_notification_read(notification_id):
+    """Mark notification as read route - delegates to communications module"""
+    from .communications import mark_notification_read as mark_notification_read_func
+    return mark_notification_read_func(notification_id)

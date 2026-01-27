@@ -80,7 +80,7 @@
                                 <label for="due_date" class="form-label fw-semibold">
                                     <i class="bi bi-calendar-event me-1 text-primary"></i>Due Date <span class="text-danger">*</span>
                                 </label>
-                                <input type="datetime-local" class="form-control form-control-lg" id="due_date" name="due_date" required>
+                                <input type="datetime-local" class="form-control form-control-lg" id="due_date" name="due_date" min="2020-01-01T00:00" required>
                             </div>
                             <div class="col-md-6">
                                 <label for="quarter" class="form-label fw-semibold">
@@ -106,14 +106,14 @@
                                 <label for="open_date" class="form-label fw-semibold">
                                     <i class="bi bi-unlock me-1 text-success"></i>Open Date & Time
                                 </label>
-                                <input type="datetime-local" class="form-control form-control-lg" id="open_date" name="open_date">
+                                <input type="datetime-local" class="form-control form-control-lg" id="open_date" name="open_date" min="2020-01-01T00:00">
                                 <div class="form-text">When students can start this quiz (leave empty for immediate availability)</div>
                             </div>
                             <div class="col-md-6">
                                 <label for="close_date" class="form-label fw-semibold">
                                     <i class="bi bi-lock me-1 text-danger"></i>Close Date & Time
                                 </label>
-                                <input type="datetime-local" class="form-control form-control-lg" id="close_date" name="close_date">
+                                <input type="datetime-local" class="form-control form-control-lg" id="close_date" name="close_date" min="2020-01-01T00:00">
                                 <div class="form-text">When this quiz closes (leave empty to close at due date)</div>
                             </div>
                         </div>

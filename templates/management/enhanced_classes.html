@@ -152,7 +152,7 @@
                 <div class="class-card-body-modern">
                     <div class="class-card-detail-modern">
                         <i class="bi bi-mortarboard me-2"></i>
-                        <span>Grade: <strong>{{ class.grade_level or 'N/A' }}</strong></span>
+                        <span>Grade: <strong>{{ class.get_grade_levels_display() or 'N/A' }}</strong></span>
                     </div>
                     <div class="class-card-detail-modern">
                         <i class="bi bi-person-badge me-2"></i>

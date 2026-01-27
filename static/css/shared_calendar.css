@@ -42,8 +42,10 @@
     transition: all 0.3s ease;
     display: flex;
     flex-direction: column;
+    height: 140px !important;
     min-height: 140px;
-    height: 140px;
+    max-height: 140px;
+    overflow: hidden;
 }
 
 .calendar-day:last-child {
@@ -105,11 +107,12 @@
     max-height: 90px;
     overflow-y: auto;
     overflow-x: hidden;
-    flex: 1;
+    flex: 1 1 auto;
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
     min-height: 0;
+    flex-shrink: 1;
 }
 
 .day-events::-webkit-scrollbar {
@@ -248,6 +251,13 @@
 /* Calendar Week */
 .calendar-week {
     transition: all 0.2s ease;
+    display: flex;
+    align-items: stretch;
+}
+
+.calendar-week .col {
+    display: flex;
+    flex-direction: column;
 }
 
 .calendar-week:hover {
@@ -257,7 +267,9 @@
 /* Responsive Design */
 @media (max-width: 992px) {
     .calendar-day {
+        height: 120px !important;
         min-height: 120px;
+        max-height: 120px;
     }
     
     .day-number {
@@ -272,7 +284,9 @@
 
 @media (max-width: 768px) {
     .calendar-day {
+        height: 100px !important;
         min-height: 100px;
+        max-height: 100px;
     }
     
     .calendar-event {
@@ -294,7 +308,9 @@
 
 @media (max-width: 576px) {
     .calendar-day {
+        height: 80px !important;
         min-height: 80px;
+        max-height: 80px;
     }
     
     .calendar-event {

@@ -370,7 +370,12 @@ def save_group_assignment(class_id):
         description = request.form.get('description', '').strip()
         instructions = request.form.get('instructions', '').strip()
         due_date_str = request.form.get('due_date', '').strip()
-        total_points = request.form.get('total_points', type=int)
+        # Handle total_points as float (can be decimal like 50.5)
+        total_points_str = request.form.get('total_points', '100').strip()
+        try:
+            total_points = float(total_points_str) if total_points_str else 100.0
+        except (ValueError, TypeError):
+            total_points = 100.0
         selected_groups = request.form.getlist('groups')  # List of group IDs
         
         # Check if this is admin view
@@ -414,6 +419,7 @@ def save_group_assignment(class_id):
             school_year_id=current_year.id,
             assignment_type='pdf',
             assignment_context=assignment_context,
+            total_points=total_points,  # Add total_points field
             selected_group_ids=json.dumps(selected_groups),  # Store as JSON
             created_by=current_user.id,
             status='Active'

@@ -1773,7 +1773,7 @@
                         <div class="class-card-body">
                             <div class="class-card-detail">
                                 <i class="bi bi-mortarboard me-2"></i>
-                                <span>Grade: <strong>{{ class.grade_level or 'N/A' }}</strong></span>
+                                <span>Grade: <strong>{{ class.get_grade_levels_display() or 'N/A' }}</strong></span>
                             </div>
                             <div class="class-card-detail">
                                 <i class="bi bi-person-badge me-2"></i>
@@ -2241,7 +2241,7 @@
                                         <p class="attendance-class-subject">{{ class.subject or 'General' }}</p>
                                         <div class="attendance-class-meta">
                                             <span class="badge bg-primary">{{ class.enrollments|selectattr('is_active')|list|length }} students</span>
-                                            <span class="badge bg-success">{{ class.grade_level or 'N/A' }}</span>
+                                            <span class="badge bg-success">{{ class.get_grade_levels_display() or 'N/A' }}</span>
                                         </div>
                                     </div>
                                     <div class="attendance-class-action">

@@ -1064,8 +1064,25 @@ def class_grades(class_id):
             if grade:
                 try:
                     grade_data = json.loads(grade.grade_data)
+                    # Get points earned from grade_data (support both 'points_earned' and 'score' for backward compatibility)
+                    points_earned = grade_data.get('points_earned') or grade_data.get('score')
+                    # Always use assignment's total_points as source of truth
+                    total_points = assignment.total_points if assignment.total_points else 100.0
+                    
+                    # Calculate percentage from points
+                    if points_earned is not None:
+                        try:
+                            points_float = float(points_earned)
+                            percentage = (points_float / total_points * 100) if total_points > 0 else 0
+                            # Store percentage for display (rounded to 1 decimal place)
+                            display_grade = round(percentage, 1)
+                        except (ValueError, TypeError):
+                            display_grade = 'N/A'
+                    else:
+                        display_grade = 'N/A'
+                    
                     student_grades[student.id][assignment.id] = {
-                        'grade': grade_data.get('score', 'N/A'),
+                        'grade': display_grade,
                         'comments': grade_data.get('comments', ''),
                         'graded_at': grade.graded_at,
                         'type': 'individual',
@@ -1154,8 +1171,25 @@ def class_grades(class_id):
                     if group_grade:
                         try:
                             grade_data = json.loads(group_grade.grade_data) if group_grade.grade_data else {}
+                            # Get points earned from grade_data (support both 'points_earned' and 'score' for backward compatibility)
+                            points_earned = grade_data.get('points_earned') or grade_data.get('score')
+                            # Always use group_assignment's total_points as source of truth
+                            total_points = group_assignment.total_points if group_assignment.total_points else 100.0
+                            
+                            # Calculate percentage from points
+                            if points_earned is not None:
+                                try:
+                                    points_float = float(points_earned)
+                                    percentage = (points_float / total_points * 100) if total_points > 0 else 0
+                                    # Store percentage for display (rounded to 1 decimal place)
+                                    display_grade = round(percentage, 1)
+                                except (ValueError, TypeError):
+                                    display_grade = 'N/A'
+                            else:
+                                display_grade = 'N/A'
+                            
                             student_grades[student.id][f'group_{group_assignment.id}'] = {
-                                'grade': grade_data.get('score', 'N/A'),
+                                'grade': display_grade,
                                 'comments': grade_data.get('comments', ''),
                                 'graded_at': group_grade.graded_at,
                                 'type': 'group',

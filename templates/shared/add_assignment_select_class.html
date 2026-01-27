@@ -30,8 +30,8 @@
                                 {% for class in classes %}
                                     <option value="{{ class.id }}">
                                         {{ class.name }} - {{ class.subject }}
-                                        {% if class.grade_level %}
-                                            (Grade {{ class.grade_level }})
+                                        {% if class.get_grade_levels_display() %}
+                                            ({{ class.get_grade_levels_display() }})
                                         {% endif %}
                                     </option>
                                 {% endfor %}

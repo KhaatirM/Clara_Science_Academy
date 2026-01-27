@@ -9,7 +9,7 @@
         <h1 class="teacher-class-title">
           <i class="bi bi-mortarboard me-3"></i>{{ class_item.name }}
         </h1>
-        <p class="teacher-class-subtitle">{{ class_item.subject }} • {{ class_item.grade_level or 'All Grades' }}</p>
+        <p class="teacher-class-subtitle">{{ class_item.subject }} • {{ class_item.get_grade_levels_display() or 'All Grades' }}</p>
       </div>
       <a href="{{ url_for('teacher.dashboard.my_classes') }}" class="btn-teacher-class-back">
         <i class="bi bi-arrow-left me-2"></i>Back to My Classes
@@ -87,7 +87,7 @@
             </div>
             <div class="teacher-class-info-item" style="margin-bottom: 0; padding: 0.25rem 0;">
               <i class="bi bi-mortarboard me-2"></i>
-              <strong>Grade Level:</strong> {{ class_item.grade_level or 'N/A' }}
+              <strong>Grade Level:</strong> {{ class_item.get_grade_levels_display() or 'N/A' }}
             </div>
             <div class="teacher-class-info-item" style="margin-bottom: 0; padding: 0.25rem 0;">
               <i class="bi bi-door-open me-2"></i>

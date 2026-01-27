@@ -216,14 +216,14 @@
                                     <label for="due_date" class="form-label fw-semibold">
                                         <i class="bi bi-calendar-check me-1 text-danger"></i>Due Date & Time <span class="text-danger">*</span>
                                     </label>
-                                    <input type="datetime-local" class="form-control form-control-lg" id="due_date" name="due_date" required>
+                                    <input type="datetime-local" class="form-control form-control-lg" id="due_date" name="due_date" min="2020-01-01T00:00" required>
                                 </div>
                                 
                                 <div class="col-12 col-md-6">
                                     <label for="open_date" class="form-label fw-semibold">
                                         <i class="bi bi-unlock me-1 text-success"></i>Open Date & Time <span class="text-danger">*</span>
                                     </label>
-                                    <input type="datetime-local" class="form-control form-control-lg" id="open_date" name="open_date" required>
+                                    <input type="datetime-local" class="form-control form-control-lg" id="open_date" name="open_date" min="2020-01-01T00:00" required>
                                     <div class="form-text">When students can start participating in the discussion</div>
                                 </div>
                                 
@@ -231,7 +231,7 @@
                                     <label for="close_date" class="form-label fw-semibold">
                                         <i class="bi bi-lock me-1 text-danger"></i>Close Date & Time <span class="text-danger">*</span>
                                     </label>
-                                    <input type="datetime-local" class="form-control form-control-lg" id="close_date" name="close_date" required>
+                                    <input type="datetime-local" class="form-control form-control-lg" id="close_date" name="close_date" min="2020-01-01T00:00" required>
                                     <div class="form-text">When the discussion closes (defaults to due date if not set)</div>
                                 </div>
                             </div>

@@ -120,7 +120,7 @@
                                     <div class="row calendar-week g-0 border-bottom">
                                         {% for day in week %}
                                             <div class="col calendar-day {% if not day.is_current_month %}calendar-day-other-month{% endif %} {% if day.is_today %}calendar-day-today{% endif %}"
-                                                 style="min-height: 140px; position: relative; transition: all 0.2s ease; display: flex; flex-direction: column;">
+                                                 style="position: relative;">
                                                 {% if day.is_current_month %}
                                                     <div class="day-number fw-bold p-2" style="font-size: 1.2rem; color: {% if day.is_today %}#667eea{% else %}#212529{% endif %}; flex-shrink: 0;">
                                                         {% if day.is_today %}

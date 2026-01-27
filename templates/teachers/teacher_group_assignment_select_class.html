@@ -31,8 +31,16 @@
                          style="width: 60px; height: 60px;">
                         <i class="bi bi-book fs-3"></i>
                     </div>
-                    <h5 class="card-title mb-2">{{ class_item.class_name }}</h5>
-                    <p class="text-muted small mb-3">{{ class_item.subject }}</p>
+                    <h5 class="card-title mb-2">{{ class_item.name }}</h5>
+                    <p class="text-muted small mb-3">
+                        <strong>Subject:</strong> {{ class_item.subject or 'N/A' }}<br>
+                        {% if class_item.get_grade_levels_display() %}
+                        <strong>Grade Level:</strong> {{ class_item.get_grade_levels_display() }}<br>
+                        {% endif %}
+                        {% if class_item.teacher %}
+                        <strong>Teacher:</strong> {{ class_item.teacher.first_name }} {{ class_item.teacher.last_name }}
+                        {% endif %}
+                    </p>
                     <a href="{{ url_for('teacher.groups.create_group_assignment', class_id=class_item.id) }}" 
                        class="btn btn-success w-100">
                         <i class="bi bi-arrow-right me-2"></i>Continue

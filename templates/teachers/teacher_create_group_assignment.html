@@ -4,7 +4,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/teachers_teacher_create_group_assignment.css') }}">
 {% endblock %}
 
-{% block title %}Create Group Assignment - {{ class_item.class_name }}{% endblock %}
+{% block title %}Create Group Assignment - {{ class_item.name }}{% endblock %}
 
 {% block dashboard_content %}
 <div class="container-fluid py-4">
@@ -23,7 +23,7 @@
                 </ol>
             </nav>
             <h2 class="mb-1"><i class="bi bi-journal-plus me-2"></i>Create Group Assignment</h2>
-            <p class="text-muted mb-0">{{ class_item.class_name }} - {{ class_item.subject }}</p>
+            <p class="text-muted mb-0">{{ class_item.name }} - {{ class_item.subject }}{% if class_item.get_grade_levels_display() %} ({{ class_item.get_grade_levels_display() }}){% endif %}</p>
         </div>
     </div>
 
@@ -53,7 +53,7 @@
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label for="due_date" class="form-label">Due Date & Time <span class="text-danger">*</span></label>
-                                <input type="datetime-local" class="form-control" id="due_date" name="due_date" required>
+                                <input type="datetime-local" class="form-control" id="due_date" name="due_date" min="2020-01-01T00:00" required>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label for="total_points" class="form-label">Total Points</label>
@@ -207,11 +207,11 @@ function toggleAll(source) {
     });
 }
 
-// Set minimum datetime to now
+// Set minimum datetime to allow dates back to 2020 (for historical assignments)
 document.addEventListener('DOMContentLoaded', function() {
-    const now = new Date();
-    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-    document.getElementById('due_date').min = now.toISOString().slice(0, 16);
+    // Allow dates back to 2020-01-01 to support historical assignments
+    const minDate = new Date('2020-01-01T00:00');
+    document.getElementById('due_date').min = minDate.toISOString().slice(0, 16);
     
     // File upload functionality
     const fileInput = document.getElementById('assignment_file');

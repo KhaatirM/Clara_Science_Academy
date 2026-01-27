@@ -59,3 +59,20 @@ def communications_hub():
 # Conflict Resolution routes have been moved to teacher_routes/conflict_resolution.py
 # The route is now handled by teacher.conflict_resolution.class_conflicts
 
+@bp.route('/notifications/mark-read/<int:notification_id>', methods=['POST'])
+@login_required
+@teacher_required
+def mark_notification_read(notification_id):
+    """Mark a notification as read."""
+    from flask import request, abort
+    notification = Notification.query.get_or_404(notification_id)
+    
+    # Ensure the notification belongs to the current user
+    if notification.user_id != current_user.id:
+        abort(403)
+    
+    notification.is_read = True
+    db.session.commit()
+    
+    flash('Notification marked as read.', 'success')
+    return redirect(request.referrer or url_for('teacher.dashboard.teacher_dashboard'))

@@ -52,9 +52,17 @@ def management_dashboard():
         new_students = 0
         
         # Alternative: Track new enrollments this month
+        # Check if enrolled_at column exists before using it
+        new_enrollments = 0
         try:
-            new_enrollments = Enrollment.query.filter(Enrollment.enrolled_at >= month_start).count()
-        except (AttributeError, Exception) as e:
+            # Check if Enrollment model has enrolled_at attribute
+            if hasattr(Enrollment, 'enrolled_at'):
+                new_enrollments = Enrollment.query.filter(Enrollment.enrolled_at >= month_start).count()
+            else:
+                # Fallback: count all active enrollments if enrolled_at doesn't exist
+                new_enrollments = Enrollment.query.filter(Enrollment.is_active == True).count()
+        except Exception as e:
+            # Handle any database errors gracefully
             current_app.logger.warning(f"Error getting new enrollments: {e}")
             new_enrollments = 0
     

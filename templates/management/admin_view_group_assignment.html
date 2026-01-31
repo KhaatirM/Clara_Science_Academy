@@ -45,7 +45,7 @@
       <a href="{{ url_for('management.admin_edit_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-warning btn-sm">
         <i class="bi bi-pencil me-1"></i>Edit
       </a>
-      <a href="{{ url_for('management.admin_grant_extensions', assignment_id=group_assignment.id) }}" class="btn btn-primary btn-sm">
+      <a href="{{ url_for('management.admin_grant_group_extensions', assignment_id=group_assignment.id) }}" class="btn btn-primary btn-sm">
         <i class="bi bi-clock me-1"></i>Extensions
       </a>
       <button type="button" class="btn btn-danger btn-sm" 
@@ -405,7 +405,7 @@
                     <h6 class="mb-1">{{ ext.student.first_name }} {{ ext.student.last_name }}</h6>
                     <small class="text-muted d-block">
                       <i class="bi bi-calendar-event me-1"></i>
-                      New Due: {{ ext.new_due_date.strftime('%b %d, %Y %I:%M %p') if ext.new_due_date else 'N/A' }}
+                      New Due: {{ ext.extended_due_date.strftime('%b %d, %Y %I:%M %p') if ext.extended_due_date else 'N/A' }}
                     </small>
                     {% if ext.reason %}
                       <p class="mb-0 mt-1 small text-muted">
@@ -413,9 +413,7 @@
                       </p>
                     {% endif %}
                   </div>
-                  <span class="badge bg-{% if ext.approved %}success{% else %}warning{% endif %}">
-                    {{ 'Approved' if ext.approved else 'Pending' }}
-                  </span>
+                  <span class="badge bg-success">Active</span>
                 </div>
               </div>
             {% endfor %}

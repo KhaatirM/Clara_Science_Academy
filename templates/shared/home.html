@@ -697,13 +697,61 @@
                     </div>
                     <div>
                         <h6 class="updates-intro-title mb-2">
-                            <i class="fas fa-calendar-alt me-2"></i>Latest System Update - January 15, 2026
+                            <i class="fas fa-calendar-alt me-2"></i>Latest System Update - February 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>Assignments & Grades Improvements & Critical Bug Fixes!</strong> Fixed critical percentage calculation errors that were affecting report cards and grades. Improved the Assignments & Grades tab with better default views, working table view, and enhanced layout. Enhanced Student Jobs page visibility and fixed Attendance Analytics button visibility. All grade calculations now use correct total points for accurate percentage displays!</p>
+                        <p class="updates-intro-text mb-0"><strong>Grading Policy Update, Student Grades Multi-Class Fix & Group Assignment Enhancements!</strong> The minimum letter grade is now D across the entire system—no more F grades on report cards or anywhere else. Fixed the bug where students in multiple classes only saw grades for one class. Enhanced group assignment creation and management with new options and full Quick Actions. Teachers can now edit their own group assignments!</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- February 2026 - Grading Policy, Student Grades Fix & Group Assignments -->
+                    <div class="update-section mb-4" style="border-left-color: #0ea5e9;">
+                        <h6 class="text-primary mb-3" style="background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+                            <i class="fas fa-graduation-cap me-2"></i>📚 Grading Policy, Student Grades & Group Assignments - February 2026
+                        </h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Grading Policy: Minimum Letter Grade is D:</strong> The lowest letter grade across the entire system is now D. F grades have been eliminated from assignment grades, quarter grades, report cards, student dashboard, and grade statistics. Students below the D threshold receive D as their minimum grade. This applies consistently everywhere—including newly generated and previously stored report cards
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Student Grades Tab Multi-Class Fix:</strong> Fixed the bug where students registered in multiple classes only saw quarter grades calculated for one class. The system now correctly displays grades for all enrolled classes. Fixes include quarter format matching (Q1 vs 1), proper grade data extraction (points_earned, score, percentage), and group assignment grades included in quarter calculations
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Report Card Letter Grade Sanitization:</strong> Report cards never display F—the minimum shown is D. Added sanitization so that even previously generated report cards and old stored data display D instead of F when viewed or downloaded as PDF
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Group Assignment Creation Enhancements:</strong> The Group Assignment Creation page (for teachers, School Administrators, and Directors) now includes Assignment Status, Quarter, Open Date & Time, Close Date & Time, Assignment Category, and Advanced Grading Options (extra credit, late penalties, grade scale presets)—matching individual paper/PDF assignments
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Group Assignment Quick Actions:</strong> The View Group Assignment page now includes full Quick Actions for all authorized users: Edit, Extension, Void, Reopen, Unvoid, and Remove. Teachers can access these actions for their own assignments
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Teachers Can Edit Their Group Assignments:</strong> Teachers who created group assignments can now edit them. Fixed the permission error that previously blocked teachers from editing their own assignments
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Group Assignment Edit Page Redesign:</strong> Completely redesigned the group assignment edit/update page with a modern, section-based layout matching the creation page. Includes all new fields and role-based navigation (teachers and admins see appropriate back/cancel links)
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Group Assignment Extensions:</strong> Teachers and administrators can grant extensions for group assignments. The extension system supports individual students with new due dates and reasons
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Quarter Grade Calculator Improvements:</strong> Quarter grades now include group assignment grades in calculations. Academic period lookup handles both Q1 and 1 formats for compatibility
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3" style="background: linear-gradient(135deg, rgba(14, 165, 233, 0.1) 0%, rgba(2, 132, 199, 0.1) 100%); border-color: #0ea5e9; border-left: 4px solid #0ea5e9;">
+                            <p class="mb-0"><strong>💡 Impact:</strong> Students and parents see consistent, supportive grading with D as the minimum. Multi-class students now see complete grade information. Teachers and administrators have full control over group assignments with modern workflows. Run a quarter grade refresh after deployment to recalculate grades for all students across all classes!</p>
+                        </div>
+                    </div>
+
                     <!-- January 15, 2026 - Assignments & Grades Improvements & Bug Fixes -->
                     <div class="update-section mb-4" style="border-left-color: #10b981;">
                         <h6 class="text-primary mb-3" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
@@ -1221,7 +1269,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Show modal automatically if not already shown (only once per session)
         // Use Bootstrap's built-in modal handling instead of creating new instances
-        if (!sessionStorage.getItem('updateModalShownDec14_2025')) {
+        if (!sessionStorage.getItem('updateModalShownFeb2026')) {
             // Small delay to ensure page is fully loaded
             setTimeout(() => {
                 // Get or create modal instance once
@@ -1233,7 +1281,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
                 }
                 updateModal.show();
-                sessionStorage.setItem('updateModalShownDec14_2025', 'true');
+                sessionStorage.setItem('updateModalShownFeb2026', 'true');
             }, 500);
         }
         

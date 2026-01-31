@@ -1,0 +1,168 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
+    <h3 class="mb-2 mb-md-0"><i class="bi bi-clock me-2"></i>Extensions: {{ group_assignment.title }}</h3>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('teacher.assignments.view_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Back to Assignment
+      </a>
+    </div>
+  </div>
+
+  <!-- Assignment Info -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-header bg-primary text-white">
+      <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Group Assignment Information</h5>
+    </div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-12 col-md-6">
+          <strong>Due Date:</strong> {{ group_assignment.due_date.strftime('%B %d, %Y at %I:%M %p') if group_assignment.due_date else 'No due date set' }}
+        </div>
+        <div class="col-12 col-md-6">
+          <strong>Class:</strong> {{ class_obj.name }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 g-md-4">
+    <!-- Grant New Extensions -->
+    <div class="col-12 col-lg-6">
+      <div class="card shadow-sm">
+        <div class="card-header bg-success text-white">
+          <h5 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Grant New Extensions</h5>
+        </div>
+        <div class="card-body">
+          <form method="POST" action="{{ url_for('management.grant_group_extensions', assignment_id=group_assignment.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            
+            <div class="mb-3">
+              <label for="extended_due_date" class="form-label">
+                <i class="bi bi-calendar-event me-1"></i>New Due Date
+              </label>
+              <input type="datetime-local" 
+                     class="form-control" 
+                     id="extended_due_date" 
+                     name="extended_due_date" 
+                     required>
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label">
+                <i class="bi bi-people me-1"></i>Select Students
+              </label>
+              <div class="border rounded p-3" style="max-height: 300px; overflow-y: auto;">
+                {% for student in students %}
+                  <div class="form-check">
+                    <input class="form-check-input" 
+                           type="checkbox" 
+                           id="student_{{ student.id }}" 
+                           name="student_ids" 
+                           value="{{ student.id }}">
+                    <label class="form-check-label" for="student_{{ student.id }}">
+                      {{ student.first_name }} {{ student.last_name }} (Grade {{ student.grade_level }})
+                    </label>
+                  </div>
+                {% endfor %}
+                {% if not students %}
+                  <p class="text-muted mb-0">No students in groups for this assignment.</p>
+                {% endif %}
+              </div>
+            </div>
+            
+            <div class="mb-3">
+              <label for="reason" class="form-label">
+                <i class="bi bi-chat-text me-1"></i>Reason for Extension
+              </label>
+              <textarea class="form-control" 
+                        id="reason" 
+                        name="reason" 
+                        rows="3" 
+                        placeholder="Enter reason for granting extensions..."></textarea>
+            </div>
+            
+            <div class="d-grid">
+              <button type="submit" class="btn btn-success" {% if not students %}disabled{% endif %}>
+                <i class="bi bi-check-circle me-2"></i>Grant Extensions
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Existing Extensions -->
+    <div class="col-12 col-lg-6">
+      <div class="card shadow-sm">
+        <div class="card-header bg-info text-white">
+          <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Existing Extensions ({{ extensions|length }})</h5>
+        </div>
+        <div class="card-body p-0">
+          {% if extensions %}
+            <div class="list-group list-group-flush">
+              {% for ext in extensions %}
+                <div class="list-group-item">
+                  <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                      <h6 class="mb-1">{{ ext.student.first_name }} {{ ext.student.last_name }}</h6>
+                      <small class="text-muted">
+                        <i class="bi bi-calendar-event me-1"></i>
+                        New Due Date: {{ ext.extended_due_date.strftime('%b %d, %Y %I:%M %p') if ext.extended_due_date else 'N/A' }}
+                      </small>
+                      {% if ext.reason %}
+                        <p class="mb-0 mt-1"><small>Reason: {{ ext.reason }}</small></p>
+                      {% endif %}
+                      {% if ext.granter %}
+                        <small class="text-muted d-block">
+                          <i class="bi bi-person me-1"></i>
+                          Granted by: {{ ext.granter.first_name }} {{ ext.granter.last_name }}
+                        </small>
+                      {% endif %}
+                    </div>
+                    <span class="badge bg-success">Active</span>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="p-4 text-muted text-center">
+              <i class="bi bi-clock text-muted" style="font-size: 2rem;"></i>
+              <p class="mb-0">No extensions granted yet.</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const dateInput = document.getElementById('extended_due_date');
+    if (dateInput) {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        dateInput.min = `${year}-${month}-${day}T${hours}:${minutes}`;
+    }
+    
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const checkboxes = document.querySelectorAll('input[name="student_ids"]:checked');
+            if (checkboxes.length === 0) {
+                e.preventDefault();
+                alert('Please select at least one student to grant an extension.');
+                return false;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

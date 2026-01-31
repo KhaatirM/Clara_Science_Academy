@@ -102,7 +102,7 @@ def class_analytics(class_id):
         'B (80-89)': 0,
         'C (70-79)': 0,
         'D (60-69)': 0,
-        'F (0-59)': 0
+        'D (0-59)': 0
     }
     
     for grade in grades:
@@ -122,7 +122,7 @@ def class_analytics(class_id):
                 elif score >= 60:
                     grade_ranges['D (60-69)'] += 1
                 else:
-                    grade_ranges['F (0-59)'] += 1
+                    grade_ranges['D (0-59)'] += 1
         except:
             pass
     

@@ -165,11 +165,11 @@
                     <div class="dist-segment dist-c" id="distC" style="width: 0%" title="C grades">
                         <span class="dist-label">C: <span id="countC">0</span></span>
                     </div>
-                    <div class="dist-segment dist-d" id="distD" style="width: 0%" title="D grades">
-                        <span class="dist-label">D: <span id="countD">0</span></span>
+                    <div class="dist-segment dist-d" id="distD" style="width: 0%" title="D (60-69%)">
+                        <span class="dist-label">D (60-69): <span id="countD">0</span></span>
                     </div>
-                    <div class="dist-segment dist-f" id="distF" style="width: 0%" title="F grades">
-                        <span class="dist-label">F: <span id="countF">0</span></span>
+                    <div class="dist-segment dist-f" id="distF" style="width: 0%" title="D (0-59%)">
+                        <span class="dist-label">D (0-59): <span id="countF">0</span></span>
                     </div>
                     <div class="dist-segment dist-ungraded" id="distUngraded" style="width: 100%" title="Ungraded">
                         <span class="dist-label">Ungraded: <span id="countUngraded">{{ students|length }}</span></span>
@@ -382,7 +382,6 @@
                                             <button type="button" class="btn-letter-grade btn-grade-b" {% if is_voided %}disabled{% endif %} onclick="setLetterGrade({{ student.id }}, 85)" title="B (85%)">B</button>
                                             <button type="button" class="btn-letter-grade btn-grade-c" {% if is_voided %}disabled{% endif %} onclick="setLetterGrade({{ student.id }}, 75)" title="C (75%)">C</button>
                                             <button type="button" class="btn-letter-grade btn-grade-d" {% if is_voided %}disabled{% endif %} onclick="setLetterGrade({{ student.id }}, 65)" title="D (65%)">D</button>
-                                            <button type="button" class="btn-letter-grade btn-grade-f" {% if is_voided %}disabled{% endif %} onclick="setLetterGrade({{ student.id }}, 50)" title="F (50%)">F</button>
                                         </div>
                                         
                                         <!-- Common Grade Presets -->
@@ -590,7 +589,7 @@ function updateScoreVisual(input) {
         letter = 'D';
         performanceClass = 'failing';
     } else if (percentage > 0) {
-        letter = 'F';
+        letter = 'D';
         performanceClass = 'failing';
     }
     
@@ -815,7 +814,7 @@ function generatePrintableGradebook() {
         const score = scoreInput?.value || '0';
         const scoreNum = parseFloat(score);
         const letter = scoreNum >= 90 ? 'A' : scoreNum >= 80 ? 'B' : scoreNum >= 70 ? 'C' : scoreNum >= 60 ? 'D' : scoreNum > 0 ? 'F' : 'N/A';
-        const gradeClass = scoreNum >= 90 ? 'grade-a' : scoreNum >= 80 ? 'grade-b' : scoreNum >= 70 ? 'grade-c' : scoreNum >= 60 ? 'grade-d' : 'grade-f';
+        const gradeClass = scoreNum >= 90 ? 'grade-a' : scoreNum >= 80 ? 'grade-b' : scoreNum >= 70 ? 'grade-c' : scoreNum >= 60 ? 'grade-d' : 'grade-d';
         const comment = (commentInput?.value || '').substring(0, 100);
         const submissionStatus = submissionSelect?.options[submissionSelect.selectedIndex]?.text || 'Not Submitted';
         

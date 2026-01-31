@@ -1,155 +1,460 @@
 {% extends "shared/dashboard_layout.html" %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/teachers_teacher_create_group_assignment.css') }}">
+<style>
+.form-section .section-title::after { display: none; }
+</style>
+{% endblock %}
+
+{% block title %}Edit Group Assignment - {{ group_assignment.title }}{% endblock %}
+
 {% block dashboard_content %}
-<div class="container-fluid px-2 px-md-4">
-  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
-    <h3 class="mb-2 mb-md-0"><i class="bi bi-pencil me-2"></i>Edit Group Assignment: {{ group_assignment.title }}</h3>
-    <div class="d-flex gap-2">
-      <a href="{{ url_for('management.admin_view_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-outline-secondary btn-sm">
-        <i class="bi bi-arrow-left me-1"></i>Back to Assignment
-      </a>
-    </div>
-  </div>
-
-  <div class="row justify-content-center">
-    <div class="col-12 col-lg-8">
-      <div class="card shadow-sm">
-        <div class="card-header bg-warning text-dark">
-          <h5 class="mb-0"><i class="bi bi-gear me-2"></i>Assignment Settings</h5>
+<div class="container-fluid py-4">
+    <!-- Enhanced Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="page-header-card">
+                <div class="header-content">
+                    <div class="header-icon">
+                        <i class="bi bi-pencil-square"></i>
+                    </div>
+                    <div class="header-text">
+                        <nav aria-label="breadcrumb" class="mb-2">
+                            <ol class="breadcrumb breadcrumb-light mb-0">
+                                {% if current_user.role in ['Director', 'School Administrator'] %}
+                                <li class="breadcrumb-item"><a href="{{ url_for('management.management_dashboard') }}">Dashboard</a></li>
+                                <li class="breadcrumb-item"><a href="{{ url_for('management.admin_class_group_assignments', class_id=class_obj.id) }}">Group Assignments</a></li>
+                                {% else %}
+                                <li class="breadcrumb-item"><a href="{{ url_for('teacher.dashboard.assignments_and_grades') }}">Assignments & Grades</a></li>
+                                <li class="breadcrumb-item"><a href="{{ url_for('teacher.assignments.view_group_assignment', assignment_id=group_assignment.id) }}">View Assignment</a></li>
+                                {% endif %}
+                                <li class="breadcrumb-item active">Edit</li>
+                            </ol>
+                        </nav>
+                        <h1 class="header-title">Edit Group Assignment</h1>
+                        <p class="header-subtitle">
+                            <i class="bi bi-book me-1"></i>{{ class_obj.name }} - {{ class_obj.subject }}
+                            {% if class_obj.get_grade_levels_display() %}<span class="badge bg-white bg-opacity-25 ms-2">{{ class_obj.get_grade_levels_display() }}</span>{% endif %}
+                        </p>
+                    </div>
+                    <div class="header-actions">
+                        {% if current_user.role in ['Director', 'School Administrator'] %}
+                        <a href="{{ url_for('management.admin_view_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-light btn-sm">
+                            <i class="bi bi-arrow-left me-1"></i>Back
+                        </a>
+                        {% else %}
+                        <a href="{{ url_for('teacher.assignments.view_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-light btn-sm">
+                            <i class="bi bi-arrow-left me-1"></i>Back
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="card-body">
-          <form method="POST">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-            
-            <!-- Title -->
-            <div class="mb-3">
-              <label for="title" class="form-label">
-                <i class="bi bi-card-text me-1"></i>Assignment Title *
-              </label>
-              <input type="text" 
-                     class="form-control" 
-                     id="title" 
-                     name="title" 
-                     value="{{ group_assignment.title }}" 
-                     required>
-            </div>
-
-            <!-- Description -->
-            <div class="mb-3">
-              <label for="description" class="form-label">
-                <i class="bi bi-file-text me-1"></i>Description
-              </label>
-              <textarea class="form-control" 
-                        id="description" 
-                        name="description" 
-                        rows="4" 
-                        placeholder="Enter assignment description...">{{ group_assignment.description or '' }}</textarea>
-            </div>
-
-            <!-- Due Date -->
-            <div class="mb-3">
-              <label for="due_date" class="form-label">
-                <i class="bi bi-calendar-event me-1"></i>Due Date *
-              </label>
-              <input type="datetime-local" 
-                     class="form-control" 
-                     id="due_date" 
-                     name="due_date" 
-                     value="{{ group_assignment.due_date.strftime('%Y-%m-%dT%H:%M') if group_assignment.due_date else '' }}" 
-                     required>
-            </div>
-
-            <!-- Group Size -->
-            <div class="row g-3 mb-3">
-              <div class="col-6">
-                <label for="min_group_size" class="form-label">
-                  <i class="bi bi-people me-1"></i>Minimum Group Size *
-                </label>
-                <input type="number" 
-                       class="form-control" 
-                       id="min_group_size" 
-                       name="min_group_size" 
-                       value="{{ group_assignment.min_group_size or 2 }}" 
-                       min="1" 
-                       max="10" 
-                       required>
-              </div>
-              <div class="col-6">
-                <label for="max_group_size" class="form-label">
-                  <i class="bi bi-people-fill me-1"></i>Maximum Group Size *
-                </label>
-                <input type="number" 
-                       class="form-control" 
-                       id="max_group_size" 
-                       name="max_group_size" 
-                       value="{{ group_assignment.max_group_size or 4 }}" 
-                       min="1" 
-                       max="10" 
-                       required>
-              </div>
-            </div>
-
-            <!-- Assignment Type -->
-            <div class="mb-3">
-              <label for="assignment_type" class="form-label">
-                <i class="bi bi-tag me-1"></i>Assignment Type
-              </label>
-              <select class="form-select" id="assignment_type" name="assignment_type">
-                <option value="worksheet" {% if group_assignment.assignment_type == 'worksheet' %}selected{% endif %}>Worksheet</option>
-                <option value="project" {% if group_assignment.assignment_type == 'project' %}selected{% endif %}>Project</option>
-                <option value="presentation" {% if group_assignment.assignment_type == 'presentation' %}selected{% endif %}>Presentation</option>
-                <option value="research" {% if group_assignment.assignment_type == 'research' %}selected{% endif %}>Research</option>
-                <option value="lab" {% if group_assignment.assignment_type == 'lab' %}selected{% endif %}>Lab Report</option>
-                <option value="discussion" {% if group_assignment.assignment_type == 'discussion' %}selected{% endif %}>Discussion</option>
-              </select>
-            </div>
-
-            <!-- Collaboration Type -->
-            <div class="mb-3">
-              <label for="collaboration_type" class="form-label">
-                <i class="bi bi-diagram-3 me-1"></i>Collaboration Type
-              </label>
-              <select class="form-select" id="collaboration_type" name="collaboration_type">
-                <option value="collaborative" {% if group_assignment.collaboration_type == 'collaborative' %}selected{% endif %}>Collaborative</option>
-                <option value="cooperative" {% if group_assignment.collaboration_type == 'cooperative' %}selected{% endif %}>Cooperative</option>
-                <option value="competitive" {% if group_assignment.collaboration_type == 'competitive' %}selected{% endif %}>Competitive</option>
-                <option value="individual" {% if group_assignment.collaboration_type == 'individual' %}selected{% endif %}>Individual within Group</option>
-              </select>
-            </div>
-
-            <!-- Action Buttons -->
-            <div class="d-flex justify-content-center gap-3 mt-4">
-              <button type="submit" class="btn btn-success btn-lg">
-                <i class="bi bi-check-circle me-2"></i>Save Changes
-              </button>
-              <a href="{{ url_for('management.admin_view_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-outline-secondary btn-lg">
-                <i class="bi bi-x-circle me-2"></i>Cancel
-              </a>
-            </div>
-          </form>
-        </div>
-      </div>
     </div>
-  </div>
+
+    <div class="row">
+        <div class="col-12 col-lg-8">
+            <form method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+                <!-- Section 1: Assignment Details -->
+                <div class="form-section">
+                    <div class="section-header">
+                        <div class="section-header-row">
+                            <div class="section-icon bg-primary">
+                                <i class="bi bi-pencil-square"></i>
+                            </div>
+                            <div class="section-title">
+                                <h5>Assignment Details</h5>
+                                <p class="text-muted mb-0">Basic information about your group assignment</p>
+                            </div>
+                        </div>
+                        <div class="section-header-line"></div>
+                    </div>
+                    <div class="section-body">
+                        <div class="mb-4">
+                            <label for="title" class="form-label fw-semibold">
+                                <i class="bi bi-type me-1 text-primary"></i>Assignment Title <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control form-control-lg" id="title" name="title"
+                                   value="{{ group_assignment.title }}" required>
+                        </div>
+                        <div class="mb-4">
+                            <label for="description" class="form-label fw-semibold">
+                                <i class="bi bi-card-text me-1 form-label-icon"></i>Description
+                            </label>
+                            <textarea class="form-control" id="description" name="description" rows="4">{{ group_assignment.description or '' }}</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Schedule & Settings -->
+                <div class="form-section">
+                    <div class="section-header">
+                        <div class="section-header-row">
+                            <div class="section-icon bg-info">
+                                <i class="bi bi-calendar-event"></i>
+                            </div>
+                            <div class="section-title">
+                                <h5>Schedule & Settings</h5>
+                                <p class="text-muted mb-0">Set dates, quarter, and assignment category</p>
+                            </div>
+                        </div>
+                        <div class="section-header-line"></div>
+                    </div>
+                    <div class="section-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="assignment_status" class="form-label fw-semibold">
+                                    <i class="bi bi-patch-check me-1 form-label-icon"></i>Status <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select" id="assignment_status" name="assignment_status" required>
+                                    <option value="Active" {% if group_assignment.status == 'Active' %}selected{% endif %}>Active - Visible to students</option>
+                                    <option value="Inactive" {% if group_assignment.status == 'Inactive' %}selected{% endif %}>Inactive - Hidden from students</option>
+                                    <option value="Voided" {% if group_assignment.status == 'Voided' %}selected{% endif %}>Voided</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="quarter" class="form-label fw-semibold">
+                                    <i class="bi bi-calendar3 me-1 form-label-icon"></i>Quarter <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select" id="quarter" name="quarter" required>
+                                    <option value="Q1" {% if group_assignment.quarter == 'Q1' %}selected{% endif %}>Quarter 1 (Aug-Oct)</option>
+                                    <option value="Q2" {% if group_assignment.quarter == 'Q2' %}selected{% endif %}>Quarter 2 (Nov-Jan)</option>
+                                    <option value="Q3" {% if group_assignment.quarter == 'Q3' %}selected{% endif %}>Quarter 3 (Feb-Apr)</option>
+                                    <option value="Q4" {% if group_assignment.quarter == 'Q4' %}selected{% endif %}>Quarter 4 (May-Jul)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+                        <h6 class="text-muted mb-3"><i class="bi bi-clock-history me-1 form-label-icon"></i>Assignment Timeline</h6>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <div class="date-input-card">
+                                    <div class="date-icon open"><i class="bi bi-unlock"></i></div>
+                                    <label for="open_date" class="form-label fw-semibold">Open Date</label>
+                                    <input type="datetime-local" class="form-control" id="open_date" name="open_date" min="2020-01-01T00:00"
+                                           value="{{ group_assignment.open_date.strftime('%Y-%m-%dT%H:%M') if group_assignment.open_date else '' }}">
+                                    <small class="text-muted">When available</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="date-input-card">
+                                    <div class="date-icon due"><i class="bi bi-alarm"></i></div>
+                                    <label for="due_date" class="form-label fw-semibold">Due Date <span class="text-danger">*</span></label>
+                                    <input type="datetime-local" class="form-control" id="due_date" name="due_date" min="2020-01-01T00:00" required
+                                           value="{{ group_assignment.due_date.strftime('%Y-%m-%dT%H:%M') if group_assignment.due_date else '' }}">
+                                    <small class="text-muted">When due</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="date-input-card">
+                                    <div class="date-icon close"><i class="bi bi-lock"></i></div>
+                                    <label for="close_date" class="form-label fw-semibold">Close Date</label>
+                                    <input type="datetime-local" class="form-control" id="close_date" name="close_date" min="2020-01-01T00:00"
+                                           value="{{ group_assignment.close_date.strftime('%Y-%m-%dT%H:%M') if group_assignment.close_date else '' }}">
+                                    <small class="text-muted">When closes</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="assignment_category" class="form-label fw-semibold">
+                                    <i class="bi bi-folder me-1 form-label-icon"></i>Category
+                                </label>
+                                <select class="form-select" id="assignment_category" name="assignment_category">
+                                    <option value="">Select Category (Optional)</option>
+                                    <option value="Homework" {% if group_assignment.assignment_category == 'Homework' %}selected{% endif %}>Homework</option>
+                                    <option value="Tests" {% if group_assignment.assignment_category == 'Tests' %}selected{% endif %}>Tests</option>
+                                    <option value="Quizzes" {% if group_assignment.assignment_category == 'Quizzes' %}selected{% endif %}>Quizzes</option>
+                                    <option value="Projects" {% if group_assignment.assignment_category == 'Projects' %}selected{% endif %}>Projects</option>
+                                    <option value="Classwork" {% if group_assignment.assignment_category == 'Classwork' %}selected{% endif %}>Classwork</option>
+                                    <option value="Participation" {% if group_assignment.assignment_category == 'Participation' %}selected{% endif %}>Participation</option>
+                                    <option value="Extra Credit" {% if group_assignment.assignment_category == 'Extra Credit' %}selected{% endif %}>Extra Credit</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="category_weight" class="form-label fw-semibold">
+                                    <i class="bi bi-percent me-1 form-label-icon"></i>Category Weight
+                                </label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="category_weight" name="category_weight"
+                                           value="{{ group_assignment.category_weight or 0 }}" min="0" max="100" step="0.1">
+                                    <span class="input-group-text">%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Grading Options -->
+                <div class="form-section">
+                    <div class="section-header">
+                        <div class="section-header-row">
+                            <div class="section-icon bg-warning">
+                                <i class="bi bi-star"></i>
+                            </div>
+                            <div class="section-title">
+                                <h5>Grading Options</h5>
+                                <p class="text-muted mb-0">Configure points and advanced grading settings</p>
+                            </div>
+                        </div>
+                        <div class="section-header-line"></div>
+                    </div>
+                    <div class="section-body">
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label for="total_points" class="form-label fw-semibold">
+                                    <i class="bi bi-trophy me-1 text-warning"></i>Total Points <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group input-group-lg">
+                                    <input type="number" class="form-control" id="total_points" name="total_points"
+                                           value="{{ group_assignment.total_points or 100 }}" min="0.1" step="0.1" required>
+                                    <span class="input-group-text">pts</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="grade_scale_preset" class="form-label fw-semibold">
+                                    <i class="bi bi-bar-chart-steps me-1 form-label-icon"></i>Grade Scale
+                                </label>
+                                <select class="form-select form-select-lg" id="grade_scale_preset" name="grade_scale_preset">
+                                    <option value="">Default Scale</option>
+                                    <option value="standard">Standard (A=90, B=80, C=70, D=60)</option>
+                                    <option value="strict">Strict (A=93, B=85, C=77, D=70)</option>
+                                    <option value="lenient">Lenient (A=88, B=78, C=68, D=58)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="advanced-options-grid">
+                            <div class="option-card">
+                                <div class="option-card-header">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="allow_extra_credit" name="allow_extra_credit" {% if group_assignment.allow_extra_credit %}checked{% endif %}>
+                                        <label class="form-check-label" for="allow_extra_credit">
+                                            <i class="bi bi-plus-circle text-success me-1"></i><strong>Extra Credit</strong>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="option-card-body">
+                                    <label for="max_extra_credit_points" class="form-label small">Max Extra Points</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" class="form-control" id="max_extra_credit_points" name="max_extra_credit_points"
+                                               value="{{ group_assignment.max_extra_credit_points or 0 }}" min="0" step="0.1">
+                                        <span class="input-group-text">pts</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="option-card">
+                                <div class="option-card-header">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="late_penalty_enabled" name="late_penalty_enabled" {% if group_assignment.late_penalty_enabled %}checked{% endif %}>
+                                        <label class="form-check-label" for="late_penalty_enabled">
+                                            <i class="bi bi-clock-history text-danger me-1"></i><strong>Late Penalty</strong>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="option-card-body">
+                                    <div class="row g-2">
+                                        <div class="col-6">
+                                            <label class="form-label small">Per Day (%)</label>
+                                            <input type="number" class="form-control form-control-sm" id="late_penalty_per_day" name="late_penalty_per_day"
+                                                   value="{{ group_assignment.late_penalty_per_day or 10 }}" min="0" max="100" step="0.1">
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label small">Max Days</label>
+                                            <input type="number" class="form-control form-control-sm" id="late_penalty_max_days" name="late_penalty_max_days"
+                                                   value="{{ group_assignment.late_penalty_max_days or 0 }}" min="0">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 4: Group Size & Type -->
+                <div class="form-section">
+                    <div class="section-header">
+                        <div class="section-header-row">
+                            <div class="section-icon bg-success">
+                                <i class="bi bi-people-fill"></i>
+                            </div>
+                            <div class="section-title">
+                                <h5>Group Settings</h5>
+                                <p class="text-muted mb-0">Group size and collaboration settings</p>
+                            </div>
+                        </div>
+                        <div class="section-header-line"></div>
+                    </div>
+                    <div class="section-body">
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label for="min_group_size" class="form-label fw-semibold">
+                                    <i class="bi bi-people me-1"></i>Minimum Group Size <span class="text-danger">*</span>
+                                </label>
+                                <input type="number" class="form-control" id="min_group_size" name="min_group_size"
+                                       value="{{ group_assignment.min_group_size or 2 }}" min="1" max="10" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="max_group_size" class="form-label fw-semibold">
+                                    <i class="bi bi-people-fill me-1"></i>Maximum Group Size <span class="text-danger">*</span>
+                                </label>
+                                <input type="number" class="form-control" id="max_group_size" name="max_group_size"
+                                       value="{{ group_assignment.max_group_size or 4 }}" min="1" max="10" required>
+                            </div>
+                        </div>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label for="assignment_type" class="form-label fw-semibold">
+                                    <i class="bi bi-tag me-1"></i>Assignment Type
+                                </label>
+                                <select class="form-select" id="assignment_type" name="assignment_type">
+                                    <option value="worksheet" {% if group_assignment.assignment_type == 'worksheet' %}selected{% endif %}>Worksheet</option>
+                                    <option value="project" {% if group_assignment.assignment_type == 'project' %}selected{% endif %}>Project</option>
+                                    <option value="presentation" {% if group_assignment.assignment_type == 'presentation' %}selected{% endif %}>Presentation</option>
+                                    <option value="research" {% if group_assignment.assignment_type == 'research' %}selected{% endif %}>Research</option>
+                                    <option value="lab" {% if group_assignment.assignment_type == 'lab' %}selected{% endif %}>Lab Report</option>
+                                    <option value="discussion" {% if group_assignment.assignment_type == 'discussion' %}selected{% endif %}>Discussion</option>
+                                    <option value="pdf" {% if group_assignment.assignment_type == 'pdf' %}selected{% endif %}>PDF/Paper</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="collaboration_type" class="form-label fw-semibold">
+                                    <i class="bi bi-diagram-3 me-1"></i>Collaboration Type
+                                </label>
+                                <select class="form-select" id="collaboration_type" name="collaboration_type">
+                                    <option value="collaborative" {% if group_assignment.collaboration_type == 'collaborative' %}selected{% endif %}>Collaborative</option>
+                                    <option value="cooperative" {% if group_assignment.collaboration_type == 'cooperative' %}selected{% endif %}>Cooperative</option>
+                                    <option value="competitive" {% if group_assignment.collaboration_type == 'competitive' %}selected{% endif %}>Competitive</option>
+                                    <option value="individual" {% if group_assignment.collaboration_type == 'individual' %}selected{% endif %}>Individual within Group</option>
+                                    <option value="group" {% if group_assignment.collaboration_type == 'group' %}selected{% endif %}>Group</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Select Groups -->
+                        <h6 class="text-muted mb-3"><i class="bi bi-people me-1"></i>Select Groups</h6>
+                        <div class="group-selection-header mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="select_all" onclick="toggleAllGroups(this)">
+                                <label class="form-check-label fw-bold" for="select_all">
+                                    <i class="bi bi-check-all me-1"></i>Select All Groups
+                                </label>
+                            </div>
+                            <span class="badge bg-primary rounded-pill">{{ groups|length }} groups available</span>
+                        </div>
+                        <div class="groups-grid">
+                            {% for group in groups %}
+                            <div class="group-card {% if group.id in selected_group_ids %}selected{% endif %}" onclick="toggleGroupCard(this, '{{ group.id }}')">
+                                <input class="form-check-input group-checkbox d-none" type="checkbox" name="groups" value="{{ group.id }}"
+                                       id="group{{ group.id }}" {% if group.id in selected_group_ids %}checked{% endif %}>
+                                <div class="group-card-content">
+                                    <div class="group-avatar"><i class="bi bi-people"></i></div>
+                                    <div class="group-info">
+                                        <h6 class="group-name">{{ group.name }}</h6>
+                                        <span class="group-members">
+                                            <i class="bi bi-person me-1"></i>{{ group.members|length }} members
+                                        </span>
+                                    </div>
+                                    <div class="group-check"><i class="bi bi-check-circle-fill"></i></div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit -->
+                <div class="submit-section">
+                    <div class="submit-content">
+                        <div class="submit-info">
+                            <i class="bi bi-info-circle text-muted me-2"></i>
+                            <span class="text-muted">Review your changes before saving</span>
+                        </div>
+                        <div class="submit-actions">
+                            {% if current_user.role in ['Director', 'School Administrator'] %}
+                            <a href="{{ url_for('management.admin_view_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-outline-secondary btn-lg">
+                                <i class="bi bi-x-circle me-2"></i>Cancel
+                            </a>
+                            {% else %}
+                            <a href="{{ url_for('teacher.assignments.view_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-outline-secondary btn-lg">
+                                <i class="bi bi-x-circle me-2"></i>Cancel
+                            </a>
+                            {% endif %}
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-check-circle me-2"></i>Save Changes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Sidebar Preview -->
+        <div class="col-lg-4">
+            <div class="sidebar-card preview-card sticky-top" style="top: 20px;">
+                <div class="sidebar-card-header">
+                    <i class="bi bi-eye me-2"></i>Assignment Preview
+                </div>
+                <div class="sidebar-card-body">
+                    <div class="preview-title">{{ group_assignment.title }}</div>
+                    <div class="preview-meta mb-2">
+                        <span class="preview-badge status">{{ group_assignment.status }}</span>
+                        <span class="preview-badge quarter">{{ group_assignment.quarter }}</span>
+                    </div>
+                    <div class="preview-description">{{ (group_assignment.description or 'No description')[:150] }}{% if (group_assignment.description or '')|length > 150 %}...{% endif %}</div>
+                    <div class="preview-dates mt-3">
+                        <div class="preview-date">
+                            <i class="bi bi-calendar-check"></i>
+                            <span>Due: {{ group_assignment.due_date.strftime('%b %d, %Y %I:%M %p') if group_assignment.due_date else 'Not set' }}</span>
+                        </div>
+                        <div class="preview-points">
+                            <i class="bi bi-trophy"></i>
+                            <span>{{ group_assignment.total_points or 100 }} pts</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Ensure max group size is always >= min group size
     const minSizeInput = document.getElementById('min_group_size');
     const maxSizeInput = document.getElementById('max_group_size');
-    
-    function validateGroupSizes() {
-        const minSize = parseInt(minSizeInput.value);
-        const maxSize = parseInt(maxSizeInput.value);
-        
-        if (minSize > maxSize) {
-            maxSizeInput.value = minSize;
+    if (minSizeInput && maxSizeInput) {
+        function validateGroupSizes() {
+            const minSize = parseInt(minSizeInput.value) || 1;
+            const maxSize = parseInt(maxSizeInput.value) || 1;
+            if (minSize > maxSize) maxSizeInput.value = minSize;
         }
+        minSizeInput.addEventListener('change', validateGroupSizes);
+        maxSizeInput.addEventListener('change', validateGroupSizes);
     }
-    
-    minSizeInput.addEventListener('change', validateGroupSizes);
-    maxSizeInput.addEventListener('change', validateGroupSizes);
 });
+
+function toggleAllGroups(checkbox) {
+    document.querySelectorAll('.group-checkbox').forEach(cb => {
+        cb.checked = checkbox.checked;
+    });
+    document.querySelectorAll('.group-card').forEach(card => {
+        card.classList.toggle('selected', checkbox.checked);
+    });
+}
+
+function toggleGroupCard(card, groupId) {
+    const checkbox = document.getElementById('group' + groupId);
+    if (checkbox) {
+        checkbox.checked = !checkbox.checked;
+        card.classList.toggle('selected', checkbox.checked);
+    }
+}
 </script>
 {% endblock %}

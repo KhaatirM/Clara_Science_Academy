@@ -5,7 +5,7 @@ This module handles automatic quarter grade calculations that refresh every 3 ho
 
 from datetime import datetime, timedelta
 from flask import current_app
-from models import db, QuarterGrade, Grade, Assignment, Student, Class, SchoolYear, Enrollment, AcademicPeriod
+from models import db, QuarterGrade, Grade, Assignment, Student, Class, SchoolYear, Enrollment, AcademicPeriod, GroupGrade, GroupAssignment
 import json
 
 
@@ -28,8 +28,7 @@ def calculate_quarter_grade_for_student_class(student_id, class_id, school_year_
     quarter_str = str(quarter_number)  # String version: '1', '2', '3', '4'
     quarter_q_format = f'Q{quarter_number}'  # Q format: 'Q1', 'Q2', 'Q3', 'Q4'
     
-    # Fetch all non-voided grades for this student, class, and quarter
-    # PostgreSQL requires exact type matching, so we check string variations
+    # Fetch all non-voided grades for this student, class, and quarter (regular assignments)
     from sqlalchemy import cast, String
     grades = db.session.query(Grade).join(Assignment).filter(
         Grade.student_id == student_id,
@@ -42,6 +41,19 @@ def calculate_quarter_grade_for_student_class(student_id, class_id, school_year_
         ),
         Grade.is_voided == False
     ).all()
+
+    # Fetch group assignment grades for this student, class, and quarter
+    group_grades = db.session.query(GroupGrade).join(GroupAssignment).filter(
+        GroupGrade.student_id == student_id,
+        GroupAssignment.class_id == class_id,
+        GroupAssignment.school_year_id == school_year_id,
+        GroupGrade.is_voided == False,
+        db.or_(
+            GroupAssignment.quarter == quarter_q_format,
+            GroupAssignment.quarter == quarter_str,
+            cast(GroupAssignment.quarter, String) == quarter_str
+        )
+    ).all()
     
     # Check if student was enrolled during the quarter
     enrollment = Enrollment.query.filter_by(
@@ -52,20 +64,26 @@ def calculate_quarter_grade_for_student_class(student_id, class_id, school_year_
     if not enrollment:
         return None  # Student not enrolled in this class
     
-    # Get quarter period to check enrollment date
+    # Get quarter period to check enrollment date (try Q1 and 1 formats)
+    quarter_normalized = quarter.replace('Q', '') if isinstance(quarter, str) and quarter.startswith('Q') else str(quarter)
     academic_period = AcademicPeriod.query.filter_by(
         school_year_id=school_year_id,
         name=quarter,
         period_type='quarter'
     ).first()
-    
+    if not academic_period:
+        academic_period = AcademicPeriod.query.filter_by(
+            school_year_id=school_year_id,
+            name=quarter_normalized,
+            period_type='quarter'
+        ).first()
     if not academic_period:
         return None  # Quarter period not found
     
     # If we have grades for this quarter, include them regardless of enrollment date
     # This handles cases where assignments from previous quarters exist in classes
     # created in later quarters (e.g., Q1 assignment in a Q2 class)
-    if grades:
+    if grades or group_grades:
         # Student has grades for this quarter, so we should calculate the grade
         # Skip the enrollment date check in this case - grades exist, so include them
         pass
@@ -151,7 +169,43 @@ def calculate_quarter_grade_for_student_class(student_id, class_id, school_year_
         except (json.JSONDecodeError, TypeError, ValueError, AttributeError) as e:
             current_app.logger.warning(f"Could not parse grade data for grade {grade.id}: {e}")
             continue
-    
+
+    # Process group assignment grades
+    for group_grade in group_grades:
+        try:
+            grade_data = json.loads(group_grade.grade_data) if isinstance(group_grade.grade_data, str) else group_grade.grade_data
+            if not grade_data:
+                continue
+
+            ga = group_grade.group_assignment
+            total_pts = ga.total_points if (hasattr(ga, 'total_points') and ga.total_points) else 100.0
+            points_earned = grade_data.get('points_earned')
+
+            if points_earned is None:
+                percentage = grade_data.get('percentage')
+                score = grade_data.get('score')
+                if percentage is not None:
+                    points_earned = (float(percentage) / 100.0) * total_pts
+                elif score is not None:
+                    score_val = float(score)
+                    if total_pts == 100.0 and score_val <= 100:
+                        points_earned = (score_val / 100.0) * total_pts
+                    elif score_val > total_pts:
+                        points_earned = (score_val / 100.0) * total_pts
+                    else:
+                        points_earned = score_val
+                else:
+                    continue
+            else:
+                points_earned = float(points_earned)
+
+            points_earned_sum += float(points_earned)
+            total_points_sum += float(total_pts)
+            valid_grades_count += 1
+        except (json.JSONDecodeError, TypeError, ValueError, AttributeError) as e:
+            current_app.logger.warning(f"Could not parse group grade data for group_grade {group_grade.id}: {e}")
+            continue
+
     if total_points_sum == 0 or valid_grades_count == 0:
         return None  # No valid grades
     
@@ -178,7 +232,7 @@ def calculate_quarter_grade_for_student_class(student_id, class_id, school_year_
     elif average >= 65:
         letter = 'D'
     else:
-        letter = 'F'
+        letter = 'D'  # Minimum letter grade
     
     return {
         'letter_grade': letter,

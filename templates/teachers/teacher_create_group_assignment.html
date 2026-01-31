@@ -8,210 +8,640 @@
 
 {% block dashboard_content %}
 <div class="container-fluid py-4">
+    <!-- Enhanced Header with Gradient Background -->
     <div class="row mb-4">
         <div class="col-12">
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    {% if request.args.get('admin_view') == 'true' %}
-                    <li class="breadcrumb-item"><a href="{{ url_for('management.management_dashboard') }}">Dashboard</a></li>
-                    <li class="breadcrumb-item"><a href="{{ url_for('management.admin_class_group_assignments', class_id=class_item.id) }}">Group Assignments</a></li>
-                    {% else %}
-                    <li class="breadcrumb-item"><a href="{{ url_for('teacher.dashboard.assignments_and_grades') }}">Assignments & Grades</a></li>
-                    <li class="breadcrumb-item"><a href="{{ url_for('teacher.groups.group_assignment_select_class') }}">Select Class</a></li>
-                    {% endif %}
-                    <li class="breadcrumb-item active">Create Group Assignment</li>
-                </ol>
-            </nav>
-            <h2 class="mb-1"><i class="bi bi-journal-plus me-2"></i>Create Group Assignment</h2>
-            <p class="text-muted mb-0">{{ class_item.name }} - {{ class_item.subject }}{% if class_item.get_grade_levels_display() %} ({{ class_item.get_grade_levels_display() }}){% endif %}</p>
+            <div class="page-header-card">
+                <div class="header-content">
+                    <div class="header-icon">
+                        <i class="bi bi-people-fill"></i>
+                    </div>
+                    <div class="header-text">
+                        <nav aria-label="breadcrumb" class="mb-2">
+                            <ol class="breadcrumb breadcrumb-light mb-0">
+                                {% if request.args.get('admin_view') == 'true' %}
+                                <li class="breadcrumb-item"><a href="{{ url_for('management.management_dashboard') }}">Dashboard</a></li>
+                                <li class="breadcrumb-item"><a href="{{ url_for('management.admin_class_group_assignments', class_id=class_item.id) }}">Group Assignments</a></li>
+                                {% else %}
+                                <li class="breadcrumb-item"><a href="{{ url_for('teacher.dashboard.assignments_and_grades') }}">Assignments & Grades</a></li>
+                                <li class="breadcrumb-item"><a href="{{ url_for('teacher.groups.group_assignment_select_class') }}">Select Class</a></li>
+                                {% endif %}
+                                <li class="breadcrumb-item active">Create</li>
+                            </ol>
+                        </nav>
+                        <h1 class="header-title">Create Group Assignment</h1>
+                        <p class="header-subtitle">
+                            <i class="bi bi-book me-1"></i>{{ class_item.name }} - {{ class_item.subject }}
+                            {% if class_item.get_grade_levels_display() %}<span class="badge bg-white bg-opacity-25 ms-2">{{ class_item.get_grade_levels_display() }}</span>{% endif %}
+                        </p>
+                    </div>
+                    <div class="header-actions">
+                        {% if request.args.get('admin_view') == 'true' %}
+                        <a href="{{ url_for('management.admin_class_group_assignments', class_id=class_item.id) }}" class="btn btn-light btn-sm">
+                            <i class="bi bi-arrow-left me-1"></i>Back
+                        </a>
+                        {% else %}
+                        <a href="{{ url_for('teacher.dashboard.assignments_and_grades') }}" class="btn btn-light btn-sm">
+                            <i class="bi bi-arrow-left me-1"></i>Back
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress Steps -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="progress-steps">
+                <div class="step active" data-step="1">
+                    <div class="step-icon"><i class="bi bi-pencil"></i></div>
+                    <span class="step-label">Details</span>
+                </div>
+                <div class="step-connector"></div>
+                <div class="step" data-step="2">
+                    <div class="step-icon"><i class="bi bi-calendar"></i></div>
+                    <span class="step-label">Schedule</span>
+                </div>
+                <div class="step-connector"></div>
+                <div class="step" data-step="3">
+                    <div class="step-icon"><i class="bi bi-sliders"></i></div>
+                    <span class="step-label">Grading</span>
+                </div>
+                <div class="step-connector"></div>
+                <div class="step" data-step="4">
+                    <div class="step-icon"><i class="bi bi-people"></i></div>
+                    <span class="step-label">Groups</span>
+                </div>
+            </div>
         </div>
     </div>
 
     <div class="row">
+        <!-- Main Form Column -->
         <div class="col-lg-8">
-            <div class="card shadow-sm border-0 mb-4">
-                <div class="card-header bg-gradient-primary text-white">
-                    <h5 class="mb-0"><i class="bi bi-file-text me-2"></i>Assignment Details</h5>
-                </div>
-                <div class="card-body">
-                    <form method="POST" action="{{ url_for('teacher.groups.save_group_assignment', class_id=class_item.id, admin_view=request.args.get('admin_view')) }}" enctype="multipart/form-data">
-                        <div class="mb-3">
-                            <label for="title" class="form-label">Assignment Title <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="title" name="title" required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="description" class="form-label">Description</label>
-                            <textarea class="form-control" id="description" name="description" rows="3"></textarea>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="instructions" class="form-label">Instructions</label>
-                            <textarea class="form-control" id="instructions" name="instructions" rows="5"></textarea>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="due_date" class="form-label">Due Date & Time <span class="text-danger">*</span></label>
-                                <input type="datetime-local" class="form-control" id="due_date" name="due_date" min="2020-01-01T00:00" required>
+            <form method="POST" action="{{ url_for('teacher.groups.save_group_assignment', class_id=class_item.id, admin_view=request.args.get('admin_view')) }}" enctype="multipart/form-data" id="assignmentForm">
+                
+                <!-- Section 1: Assignment Details -->
+                <div class="form-section" data-section="1">
+                    <div class="section-header">
+                        <div class="section-header-row">
+                            <div class="section-icon bg-primary">
+                                <i class="bi bi-pencil-square"></i>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="total_points" class="form-label">Total Points</label>
-                                <input type="number" class="form-control" id="total_points" name="total_points" value="100" min="0">
+                            <div class="section-title">
+                                <h5>Assignment Details</h5>
+                                <p class="text-muted mb-0">Basic information about your group assignment</p>
                             </div>
                         </div>
-
-                        <!-- File Upload Section -->
+                        <div class="section-header-line"></div>
+                    </div>
+                    <div class="section-body">
                         <div class="mb-4">
-                            <div class="card border-success shadow-sm">
-                                <div class="card-header bg-success text-white">
-                                    <h6 class="mb-0 fw-bold"><i class="bi bi-cloud-upload me-2"></i>Assignment Document (Optional)</h6>
+                            <label for="title" class="form-label fw-semibold">
+                                <i class="bi bi-type me-1 text-primary"></i>Assignment Title <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control form-control-lg" id="title" name="title" 
+                                   placeholder="Enter a clear, descriptive title..." required>
+                            <div class="form-text">Choose a title that clearly describes the assignment</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="description" class="form-label fw-semibold">
+                                <i class="bi bi-card-text me-1 form-label-icon"></i>Description
+                            </label>
+                            <textarea class="form-control" id="description" name="description" rows="3" 
+                                      placeholder="Provide a brief overview of the assignment..."></textarea>
+                            <div class="form-text">A summary of what this assignment is about</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="instructions" class="form-label fw-semibold">
+                                <i class="bi bi-list-check me-1 text-primary"></i>Instructions
+                            </label>
+                            <textarea class="form-control" id="instructions" name="instructions" rows="5" 
+                                      placeholder="Step-by-step instructions for completing the assignment..."></textarea>
+                            <div class="form-text">Detailed instructions for students to follow</div>
+                        </div>
+
+                        <!-- File Upload -->
+                        <div class="file-upload-container">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-paperclip me-1 form-label-icon"></i>Assignment Document <span class="text-muted">(Optional)</span>
+                            </label>
+                            <div class="file-upload-zone" id="fileUploadArea">
+                                <div class="upload-icon">
+                                    <i class="bi bi-cloud-arrow-up"></i>
                                 </div>
-                                <div class="card-body">
-                                    <label for="assignment_file" class="form-label fw-semibold">
-                                        <i class="bi bi-paperclip me-1 text-success"></i>Upload PDF/Paper Document
-                                    </label>
-                                    <div class="file-upload-area border-2 border-dashed border-success rounded p-4 text-center" 
-                                         id="fileUploadArea" style="cursor: pointer; transition: all 0.3s ease;">
-                                        <i class="bi bi-cloud-upload text-success mb-2" style="font-size: 2rem;"></i>
-                                        <p class="mb-2 fw-semibold">Click to upload or drag and drop</p>
-                                        <p class="text-muted small mb-0">PDF, DOC(X), TXT, JPG, PNG, GIF, XLS(X), PPT(X)</p>
-                                        <p class="text-muted small">Maximum file size: 16 MB</p>
-                                        <input type="file" class="d-none" id="assignment_file" name="assignment_file" 
-                                               accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.xls,.xlsx,.ppt,.pptx">
+                                <h6 class="mb-1">Drop files here or click to upload</h6>
+                                <p class="text-muted small mb-0">PDF, DOC, DOCX, TXT, JPG, PNG, GIF, XLS, XLSX, PPT, PPTX</p>
+                                <p class="text-muted small">Maximum file size: 16 MB</p>
+                                <input type="file" class="d-none" id="assignment_file" name="assignment_file" 
+                                       accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.xls,.xlsx,.ppt,.pptx">
+                            </div>
+                            <div id="filePreview" class="file-preview" style="display: none;">
+                                <div class="file-preview-content">
+                                    <div class="file-icon">
+                                        <i class="bi bi-file-earmark-text"></i>
                                     </div>
-                                    <!-- File Preview -->
-                                    <div id="filePreview" class="mt-3" style="display: none;">
-                                        <div class="card border-success">
-                                            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-                                                <h6 class="mb-0"><i class="bi bi-file-earmark me-2"></i>File Preview</h6>
-                                                <button type="button" class="btn btn-light btn-sm" id="removeFile">
-                                                    <i class="bi bi-x-circle"></i>
-                                                </button>
+                                    <div class="file-details">
+                                        <h6 id="fileName" class="mb-0"></h6>
+                                        <small class="text-muted"><span id="fileSize"></span> - <span id="fileType"></span></small>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" id="removeFile">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Schedule & Settings -->
+                <div class="form-section" data-section="2">
+                    <div class="section-header">
+                        <div class="section-header-row">
+                            <div class="section-icon bg-info">
+                                <i class="bi bi-calendar-event"></i>
+                            </div>
+                            <div class="section-title">
+                                <h5>Schedule & Settings</h5>
+                                <p class="text-muted mb-0">Set dates, quarter, and assignment category</p>
+                            </div>
+                        </div>
+                        <div class="section-header-line"></div>
+                    </div>
+                    <div class="section-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="assignment_status" class="form-label fw-semibold">
+                                    <i class="bi bi-patch-check me-1 form-label-icon"></i>Status <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select" id="assignment_status" name="assignment_status" required>
+                                    <option value="Active" selected>Active - Visible to students</option>
+                                    <option value="Inactive">Inactive - Hidden from students</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="quarter" class="form-label fw-semibold">
+                                    <i class="bi bi-calendar3 me-1 form-label-icon"></i>Quarter <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select" id="quarter" name="quarter" required>
+                                    <option value="">Select Quarter</option>
+                                    <option value="Q1">Quarter 1 (Aug-Oct)</option>
+                                    <option value="Q2">Quarter 2 (Nov-Jan)</option>
+                                    <option value="Q3">Quarter 3 (Feb-Apr)</option>
+                                    <option value="Q4">Quarter 4 (May-Jul)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <h6 class="text-muted mb-3"><i class="bi bi-clock-history me-1 form-label-icon"></i>Assignment Timeline</h6>
+                        <div class="timeline-inputs">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <div class="date-input-card">
+                                        <div class="date-icon open">
+                                            <i class="bi bi-unlock"></i>
+                                        </div>
+                                        <label for="open_date" class="form-label fw-semibold">Open Date</label>
+                                        <input type="datetime-local" class="form-control" id="open_date" name="open_date" min="2020-01-01T00:00">
+                                        <small class="text-muted">When available</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="date-input-card">
+                                        <div class="date-icon due">
+                                            <i class="bi bi-alarm"></i>
+                                        </div>
+                                        <label for="due_date" class="form-label fw-semibold">Due Date <span class="text-danger">*</span></label>
+                                        <input type="datetime-local" class="form-control" id="due_date" name="due_date" min="2020-01-01T00:00" required>
+                                        <small class="text-muted">When due</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="date-input-card">
+                                        <div class="date-icon close">
+                                            <i class="bi bi-lock"></i>
+                                        </div>
+                                        <label for="close_date" class="form-label fw-semibold">Close Date</label>
+                                        <input type="datetime-local" class="form-control" id="close_date" name="close_date" min="2020-01-01T00:00">
+                                        <small class="text-muted">When closes</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="assignment_category" class="form-label fw-semibold">
+                                    <i class="bi bi-folder me-1 form-label-icon"></i>Category
+                                </label>
+                                <select class="form-select" id="assignment_category" name="assignment_category">
+                                    <option value="">Select Category (Optional)</option>
+                                    <option value="Homework">Homework</option>
+                                    <option value="Tests">Tests</option>
+                                    <option value="Quizzes">Quizzes</option>
+                                    <option value="Projects">Projects</option>
+                                    <option value="Classwork">Classwork</option>
+                                    <option value="Participation">Participation</option>
+                                    <option value="Extra Credit">Extra Credit</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="category_weight" class="form-label fw-semibold">
+                                    <i class="bi bi-percent me-1 form-label-icon"></i>Category Weight
+                                </label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="category_weight" name="category_weight" value="0" min="0" max="100" step="0.1">
+                                    <span class="input-group-text">%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Grading Options -->
+                <div class="form-section" data-section="3">
+                    <div class="section-header">
+                        <div class="section-header-row">
+                            <div class="section-icon bg-warning">
+                                <i class="bi bi-star"></i>
+                            </div>
+                            <div class="section-title">
+                                <h5>Grading Options</h5>
+                                <p class="text-muted mb-0">Configure points and advanced grading settings</p>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-secondary ms-auto toggle-section" data-target="gradingOptionsContent">
+                                <i class="bi bi-chevron-down"></i>
+                            </button>
+                        </div>
+                        <div class="section-header-line"></div>
+                    </div>
+                    <div class="section-body" id="gradingOptionsContent">
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label for="total_points" class="form-label fw-semibold">
+                                    <i class="bi bi-trophy me-1 text-warning"></i>Total Points <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group input-group-lg">
+                                    <input type="number" class="form-control" id="total_points" name="total_points" value="100" min="0.1" step="0.1" required>
+                                    <span class="input-group-text">pts</span>
+                                </div>
+                                <div class="form-text">Maximum points students can earn</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="grade_scale_preset" class="form-label fw-semibold">
+                                    <i class="bi bi-bar-chart-steps me-1 form-label-icon"></i>Grade Scale
+                                </label>
+                                <select class="form-select form-select-lg" id="grade_scale_preset" name="grade_scale_preset">
+                                    <option value="">Default Scale</option>
+                                    <option value="standard">Standard (A=90, B=80, C=70, D=60)</option>
+                                    <option value="strict">Strict (A=93, B=85, C=77, D=70)</option>
+                                    <option value="lenient">Lenient (A=88, B=78, C=68, D=58)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Advanced Options Toggle Cards -->
+                        <div class="advanced-options-grid">
+                            <!-- Extra Credit Card -->
+                            <div class="option-card" id="extraCreditCard">
+                                <div class="option-card-header">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="allow_extra_credit" name="allow_extra_credit">
+                                        <label class="form-check-label" for="allow_extra_credit">
+                                            <i class="bi bi-plus-circle text-success me-1"></i>
+                                            <strong>Extra Credit</strong>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="option-card-body" id="extra_credit_options" style="display: none;">
+                                    <label for="max_extra_credit_points" class="form-label small">Max Extra Points</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" class="form-control" id="max_extra_credit_points" name="max_extra_credit_points" value="0" min="0" step="0.1">
+                                        <span class="input-group-text">pts</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Late Penalty Card -->
+                            <div class="option-card" id="latePenaltyCard">
+                                <div class="option-card-header">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="late_penalty_enabled" name="late_penalty_enabled">
+                                        <label class="form-check-label" for="late_penalty_enabled">
+                                            <i class="bi bi-clock-history text-danger me-1"></i>
+                                            <strong>Late Penalty</strong>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="option-card-body" id="late_penalty_options" style="display: none;">
+                                    <div class="row g-2">
+                                        <div class="col-6">
+                                            <label class="form-label small">Per Day</label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="number" class="form-control" id="late_penalty_per_day" name="late_penalty_per_day" value="10" min="0" max="100" step="0.1">
+                                                <span class="input-group-text">%</span>
                                             </div>
-                                            <div class="card-body">
-                                                <div id="fileInfo">
-                                                    <div class="d-flex align-items-center">
-                                                        <i class="bi bi-file-earmark-text text-success me-3" style="font-size: 2rem;"></i>
-                                                        <div>
-                                                            <p class="mb-1 fw-semibold"><span id="fileName"></span></p>
-                                                            <p class="mb-1 text-muted"><strong>Size:</strong> <span id="fileSize"></span></p>
-                                                            <p class="mb-0 text-muted"><strong>Type:</strong> <span id="fileType"></span></p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label small">Max Days</label>
+                                            <input type="number" class="form-control form-control-sm" id="late_penalty_max_days" name="late_penalty_max_days" value="0" min="0">
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
 
-                        <div class="mb-4">
-                            <label class="form-label">Select Groups <span class="text-danger">*</span></label>
-                            <p class="text-muted small">Choose which groups should receive this assignment</p>
-                            
-                            <div class="form-check mb-2">
+                <!-- Section 4: Group Selection -->
+                <div class="form-section" data-section="4">
+                    <div class="section-header">
+                        <div class="section-header-row">
+                            <div class="section-icon bg-success">
+                                <i class="bi bi-people-fill"></i>
+                            </div>
+                            <div class="section-title">
+                                <h5>Select Groups</h5>
+                                <p class="text-muted mb-0">Choose which groups will receive this assignment</p>
+                            </div>
+                        </div>
+                        <div class="section-header-line"></div>
+                    </div>
+                    <div class="section-body">
+                        <div class="group-selection-header">
+                            <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="select_all" onclick="toggleAll(this)">
                                 <label class="form-check-label fw-bold" for="select_all">
-                                    Select All Groups
+                                    <i class="bi bi-check-all me-1"></i>Select All Groups
                                 </label>
                             </div>
-                            
-                            <hr class="my-3">
-                            
-                            <div class="row">
-                                {% for group in groups %}
-                                <div class="col-md-6 mb-2">
-                                    <div class="card group-select-card">
-                                        <div class="card-body p-3">
-                                            <div class="form-check">
-                                                <input class="form-check-input group-checkbox" 
-                                                       type="checkbox" 
-                                                       name="groups" 
-                                                       value="{{ group.id }}" 
-                                                       id="group{{ group.id }}">
-                                                <label class="form-check-label" for="group{{ group.id }}">
-                                                    <strong>{{ group.name }}</strong>
-                                                    <span class="badge bg-primary ms-2">{{ group.member_count }} members</span>
-                                                </label>
-                                            </div>
-                                            {% if group.description %}
-                                            <p class="text-muted small mb-0 mt-2">{{ group.description }}</p>
-                                            {% endif %}
-                                        </div>
+                            <span class="badge bg-primary rounded-pill">{{ groups|length }} groups available</span>
+                        </div>
+                        
+                        <div class="groups-grid">
+                            {% for group in groups %}
+                            <div class="group-card" onclick="toggleGroupCard(this, '{{ group.id }}')">
+                                <input class="form-check-input group-checkbox d-none" 
+                                       type="checkbox" 
+                                       name="groups" 
+                                       value="{{ group.id }}" 
+                                       id="group{{ group.id }}">
+                                <div class="group-card-content">
+                                    <div class="group-avatar">
+                                        <i class="bi bi-people"></i>
+                                    </div>
+                                    <div class="group-info">
+                                        <h6 class="group-name">{{ group.name }}</h6>
+                                        <span class="group-members">
+                                            <i class="bi bi-person me-1"></i>{{ group.member_count }} members
+                                        </span>
+                                        {% if group.description %}
+                                        <p class="group-description">{{ group.description }}</p>
+                                        {% endif %}
+                                    </div>
+                                    <div class="group-check">
+                                        <i class="bi bi-check-circle-fill"></i>
                                     </div>
                                 </div>
-                                {% endfor %}
                             </div>
+                            {% endfor %}
                         </div>
+                    </div>
+                </div>
 
-                        <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-circle me-2"></i>Create Assignment
-                            </button>
+                <!-- Submit Section -->
+                <div class="submit-section">
+                    <div class="submit-content">
+                        <div class="submit-info">
+                            <i class="bi bi-info-circle text-muted me-2"></i>
+                            <span class="text-muted">Review your assignment details before creating</span>
+                        </div>
+                        <div class="submit-actions">
                             {% if request.args.get('admin_view') == 'true' %}
-                            <a href="{{ url_for('management.admin_class_group_assignments', class_id=class_item.id) }}" class="btn btn-secondary">
+                            <a href="{{ url_for('management.admin_class_group_assignments', class_id=class_item.id) }}" class="btn btn-outline-secondary btn-lg">
                                 <i class="bi bi-x-circle me-2"></i>Cancel
                             </a>
                             {% else %}
-                            <a href="{{ url_for('teacher.dashboard.assignments_and_grades') }}" class="btn btn-secondary">
+                            <a href="{{ url_for('teacher.dashboard.assignments_and_grades') }}" class="btn btn-outline-secondary btn-lg">
                                 <i class="bi bi-x-circle me-2"></i>Cancel
                             </a>
                             {% endif %}
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-check-circle me-2"></i>Create Assignment
+                            </button>
                         </div>
-                    </form>
+                    </div>
                 </div>
-            </div>
+            </form>
         </div>
 
+        <!-- Sidebar -->
         <div class="col-lg-4">
-            <div class="card shadow-sm border-0 mb-3">
-                <div class="card-header bg-info text-white">
-                    <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Tips</h6>
+            <!-- Live Preview Card -->
+            <div class="sidebar-card preview-card sticky-top" style="top: 20px;">
+                <div class="sidebar-card-header">
+                    <i class="bi bi-eye me-2"></i>Live Preview
                 </div>
-                <div class="card-body">
-                    <ul class="mb-0">
-                        <li class="mb-2">Group assignments allow collaborative work</li>
-                        <li class="mb-2">All selected groups will receive the same assignment</li>
-                        <li class="mb-2">Students will see their group's assignment</li>
-                        <li>You can grade each group's submission</li>
+                <div class="sidebar-card-body">
+                    <div id="previewContent">
+                        <div class="preview-placeholder">
+                            <i class="bi bi-file-earmark-text"></i>
+                            <p>Start filling out the form to see a preview</p>
+                        </div>
+                    </div>
+                    <div id="previewFilled" style="display: none;">
+                        <div class="preview-title" id="previewTitle">Assignment Title</div>
+                        <div class="preview-meta">
+                            <span class="preview-badge status" id="previewStatus">Active</span>
+                            <span class="preview-badge quarter" id="previewQuarter">Q1</span>
+                        </div>
+                        <div class="preview-description" id="previewDescription">Description will appear here...</div>
+                        <div class="preview-dates">
+                            <div class="preview-date">
+                                <i class="bi bi-calendar-check"></i>
+                                <span id="previewDueDate">Due date not set</span>
+                            </div>
+                            <div class="preview-points">
+                                <i class="bi bi-trophy"></i>
+                                <span id="previewPoints">100 pts</span>
+                            </div>
+                        </div>
+                        <div class="preview-groups" id="previewGroups">
+                            <small class="text-muted">No groups selected</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tips Card -->
+            <div class="sidebar-card tips-card mt-3">
+                <div class="sidebar-card-header">
+                    <i class="bi bi-lightbulb me-2"></i>Tips & Best Practices
+                </div>
+                <div class="sidebar-card-body">
+                    <ul class="tips-list">
+                        <li>
+                            <i class="bi bi-check-circle-fill text-success"></i>
+                            <span>Use clear, descriptive titles</span>
+                        </li>
+                        <li>
+                            <i class="bi bi-check-circle-fill text-success"></i>
+                            <span>Set realistic due dates</span>
+                        </li>
+                        <li>
+                            <i class="bi bi-check-circle-fill text-success"></i>
+                            <span>Provide detailed instructions</span>
+                        </li>
+                        <li>
+                            <i class="bi bi-check-circle-fill text-success"></i>
+                            <span>Consider using late penalties for accountability</span>
+                        </li>
+                        <li>
+                            <i class="bi bi-check-circle-fill text-success"></i>
+                            <span>Attach reference documents when helpful</span>
+                        </li>
                     </ul>
                 </div>
             </div>
 
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-success text-white">
-                    <h6 class="mb-0"><i class="bi bi-people me-2"></i>Class Groups ({{ groups|length }})</h6>
+            <!-- Class Groups Summary -->
+            <div class="sidebar-card groups-summary-card mt-3">
+                <div class="sidebar-card-header">
+                    <i class="bi bi-people me-2"></i>Class Groups
+                    <span class="badge bg-white text-dark ms-auto">{{ groups|length }}</span>
                 </div>
-                <div class="card-body">
-                    {% for group in groups %}
-                    <div class="mb-2">
-                        <strong>{{ group.name }}</strong>
-                        <span class="badge bg-secondary">{{ group.member_count }}</span>
+                <div class="sidebar-card-body">
+                    <div class="groups-summary-list">
+                        {% for group in groups %}
+                        <div class="group-summary-item">
+                            <span class="group-summary-name">{{ group.name }}</span>
+                            <span class="badge bg-secondary">{{ group.member_count }}</span>
+                        </div>
+                        {% endfor %}
                     </div>
-                    {% endfor %}
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-
-
 <script>
 function toggleAll(source) {
     const checkboxes = document.querySelectorAll('.group-checkbox');
-    checkboxes.forEach(checkbox => {
+    const cards = document.querySelectorAll('.group-card');
+    checkboxes.forEach((checkbox, index) => {
         checkbox.checked = source.checked;
+        if (source.checked) {
+            cards[index].classList.add('selected');
+        } else {
+            cards[index].classList.remove('selected');
+        }
+    });
+    updatePreview();
+}
+
+function toggleGroupCard(card, groupId) {
+    const checkbox = card.querySelector('.group-checkbox');
+    checkbox.checked = !checkbox.checked;
+    card.classList.toggle('selected', checkbox.checked);
+    
+    // Update select all checkbox
+    const allCheckboxes = document.querySelectorAll('.group-checkbox');
+    const allChecked = Array.from(allCheckboxes).every(cb => cb.checked);
+    document.getElementById('select_all').checked = allChecked;
+    
+    updatePreview();
+}
+
+function updatePreview() {
+    const title = document.getElementById('title').value;
+    const description = document.getElementById('description').value;
+    const status = document.getElementById('assignment_status').value;
+    const quarter = document.getElementById('quarter').value;
+    const dueDate = document.getElementById('due_date').value;
+    const totalPoints = document.getElementById('total_points').value;
+    const selectedGroups = document.querySelectorAll('.group-checkbox:checked');
+    
+    const placeholder = document.getElementById('previewContent');
+    const filled = document.getElementById('previewFilled');
+    
+    if (title || description || dueDate) {
+        placeholder.style.display = 'none';
+        filled.style.display = 'block';
+        
+        document.getElementById('previewTitle').textContent = title || 'Untitled Assignment';
+        document.getElementById('previewDescription').textContent = description || 'No description provided';
+        document.getElementById('previewStatus').textContent = status;
+        document.getElementById('previewStatus').className = 'preview-badge status ' + (status === 'Active' ? 'active' : 'inactive');
+        document.getElementById('previewQuarter').textContent = quarter || 'No quarter';
+        document.getElementById('previewPoints').textContent = totalPoints + ' pts';
+        
+        if (dueDate) {
+            const date = new Date(dueDate);
+            document.getElementById('previewDueDate').textContent = date.toLocaleDateString('en-US', { 
+                weekday: 'short', 
+                month: 'short', 
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit'
+            });
+        }
+        
+        const groupsPreview = document.getElementById('previewGroups');
+        if (selectedGroups.length > 0) {
+            groupsPreview.innerHTML = `<small class="text-success"><i class="bi bi-check-circle me-1"></i>${selectedGroups.length} group(s) selected</small>`;
+        } else {
+            groupsPreview.innerHTML = '<small class="text-muted">No groups selected</small>';
+        }
+    } else {
+        placeholder.style.display = 'block';
+        filled.style.display = 'none';
+    }
+}
+
+// Highlight active form section on scroll
+function updateProgressSteps() {
+    const sections = document.querySelectorAll('.form-section');
+    const steps = document.querySelectorAll('.step');
+    
+    sections.forEach((section, index) => {
+        const rect = section.getBoundingClientRect();
+        if (rect.top <= 200 && rect.bottom >= 200) {
+            steps.forEach(s => s.classList.remove('active'));
+            steps[index].classList.add('active');
+        }
     });
 }
 
-// Set minimum datetime to allow dates back to 2020 (for historical assignments)
 document.addEventListener('DOMContentLoaded', function() {
-    // Allow dates back to 2020-01-01 to support historical assignments
-    const minDate = new Date('2020-01-01T00:00');
-    document.getElementById('due_date').min = minDate.toISOString().slice(0, 16);
+    // Set default quarter based on current date
+    const currentMonth = new Date().getMonth() + 1;
+    let defaultQuarter = 'Q1';
+    if (currentMonth >= 8 && currentMonth <= 10) defaultQuarter = 'Q1';
+    else if (currentMonth >= 11 || currentMonth <= 1) defaultQuarter = 'Q2';
+    else if (currentMonth >= 2 && currentMonth <= 4) defaultQuarter = 'Q3';
+    else defaultQuarter = 'Q4';
+    document.getElementById('quarter').value = defaultQuarter;
+    
+    // Toggle extra credit options
+    document.getElementById('allow_extra_credit').addEventListener('change', function() {
+        document.getElementById('extra_credit_options').style.display = this.checked ? 'block' : 'none';
+        document.getElementById('extraCreditCard').classList.toggle('active', this.checked);
+    });
+    
+    // Toggle late penalty options
+    document.getElementById('late_penalty_enabled').addEventListener('change', function() {
+        document.getElementById('late_penalty_options').style.display = this.checked ? 'block' : 'none';
+        document.getElementById('latePenaltyCard').classList.toggle('active', this.checked);
+    });
     
     // File upload functionality
     const fileInput = document.getElementById('assignment_file');
@@ -223,10 +653,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const removeFileBtn = document.getElementById('removeFile');
     
     if (fileInput && fileUploadArea) {
-        // Click to upload
         fileUploadArea.addEventListener('click', () => fileInput.click());
         
-        // File input change
         fileInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
@@ -235,35 +663,32 @@ document.addEventListener('DOMContentLoaded', function() {
                 fileSize.textContent = fileSizeMB + ' MB';
                 fileType.textContent = file.type || 'Unknown';
                 filePreview.style.display = 'block';
-                fileUploadArea.style.borderColor = '#28a745';
-                fileUploadArea.style.backgroundColor = '#f8f9fa';
+                fileUploadArea.classList.add('has-file');
             }
         });
         
-        // Remove file
         if (removeFileBtn) {
-            removeFileBtn.addEventListener('click', function() {
+            removeFileBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
                 fileInput.value = '';
                 filePreview.style.display = 'none';
-                fileUploadArea.style.borderColor = '#28a745';
-                fileUploadArea.style.backgroundColor = 'transparent';
+                fileUploadArea.classList.remove('has-file');
             });
         }
         
-        // Drag and drop
         fileUploadArea.addEventListener('dragover', function(e) {
             e.preventDefault();
-            fileUploadArea.style.backgroundColor = '#e8f5e9';
+            fileUploadArea.classList.add('dragover');
         });
         
         fileUploadArea.addEventListener('dragleave', function(e) {
             e.preventDefault();
-            fileUploadArea.style.backgroundColor = 'transparent';
+            fileUploadArea.classList.remove('dragover');
         });
         
         fileUploadArea.addEventListener('drop', function(e) {
             e.preventDefault();
-            fileUploadArea.style.backgroundColor = 'transparent';
+            fileUploadArea.classList.remove('dragover');
             const files = e.dataTransfer.files;
             if (files.length > 0) {
                 fileInput.files = files;
@@ -271,6 +696,25 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+    
+    // Live preview updates
+    document.querySelectorAll('#title, #description, #assignment_status, #quarter, #due_date, #total_points').forEach(el => {
+        el.addEventListener('input', updatePreview);
+        el.addEventListener('change', updatePreview);
+    });
+    
+    // Progress steps on scroll
+    window.addEventListener('scroll', updateProgressSteps);
+    
+    // Section toggle
+    document.querySelectorAll('.toggle-section').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const target = document.getElementById(this.dataset.target);
+            target.classList.toggle('collapsed');
+            this.querySelector('i').classList.toggle('bi-chevron-down');
+            this.querySelector('i').classList.toggle('bi-chevron-up');
+        });
+    });
 });
 </script>
 {% endblock %}

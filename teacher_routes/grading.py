@@ -363,7 +363,7 @@ def grade_statistics(assignment_id):
     }
     
     scores = []
-    letter_grades = {'A': 0, 'B': 0, 'C': 0, 'D': 0, 'F': 0}
+    letter_grades = {'A': 0, 'B': 0, 'C': 0, 'D': 0}
     grade_distribution = {'90-100': 0, '80-89': 0, '70-79': 0, '60-69': 0, '0-59': 0}
     
     total_points = assignment.total_points if assignment.total_points else 100.0
@@ -407,7 +407,7 @@ def grade_statistics(assignment_id):
                     letter_grades['D'] += 1
                     grade_distribution['60-69'] += 1
                 else:
-                    letter_grades['F'] += 1
+                    letter_grades['D'] += 1
                     grade_distribution['0-59'] += 1
         except (json.JSONDecodeError, TypeError, ValueError, KeyError):
             continue

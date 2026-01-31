@@ -1,30 +1,503 @@
 {% extends "shared/dashboard_layout.html" %}
 
+{% block extra_css %}
+<style>
+/* ===== CSS Variables ===== */
+:root {
+    --primary-gradient: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    --success-gradient: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    --warning-gradient: linear-gradient(135deg, #f5af19 0%, #f12711 100%);
+    --info-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    --card-shadow-hover: 0 8px 25px rgba(0, 0, 0, 0.12);
+    --border-radius: 12px;
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ===== Page Header ===== */
+.page-header-card {
+    background: var(--primary-gradient);
+    border-radius: var(--border-radius);
+    padding: 1.5rem 2rem;
+    box-shadow: var(--card-shadow);
+    position: relative;
+    overflow: hidden;
+}
+
+.page-header-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 50%;
+    height: 200%;
+    background: rgba(255, 255, 255, 0.05);
+    transform: rotate(15deg);
+    pointer-events: none;
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    position: relative;
+    z-index: 1;
+}
+
+.header-icon {
+    width: 64px;
+    height: 64px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.75rem;
+    color: white;
+    backdrop-filter: blur(10px);
+}
+
+.header-text {
+    flex: 1;
+}
+
+.header-title {
+    color: white;
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin: 0 0 0.25rem 0;
+}
+
+.header-subtitle {
+    color: rgba(255, 255, 255, 0.9);
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+/* ===== Form Sections ===== */
+.form-section {
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--card-shadow);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+    transition: var(--transition-smooth);
+}
+
+.form-section:hover {
+    box-shadow: var(--card-shadow-hover);
+}
+
+.section-header {
+    display: flex;
+    flex-direction: column;
+    padding: 1.25rem 1.5rem 0;
+    background: #fafbfc;
+}
+
+.section-header-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding-bottom: 1rem;
+}
+
+.section-header-line {
+    height: 1px;
+    background: #e8e8e8;
+    margin: 0 -1.5rem;
+}
+
+.section-icon {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    flex-shrink: 0;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    color: white;
+    background: var(--primary-gradient);
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.25);
+}
+
+.section-icon.bg-primary,
+.section-icon.bg-info,
+.section-icon.bg-warning,
+.section-icon.bg-success {
+    background: var(--primary-gradient);
+}
+
+.section-title {
+    flex: 1;
+    min-width: 0;
+}
+
+.section-title h5 {
+    margin: 0 0 0.15rem 0;
+    font-weight: 600;
+    color: #333;
+    font-size: 1.1rem;
+}
+
+.section-body {
+    padding: 1.5rem;
+}
+
+.form-label-icon {
+    color: #28a745;
+    font-size: 0.9em;
+    vertical-align: middle;
+}
+
+/* Remove conflicting ::after accent line from components.css */
+.form-section .section-title::after {
+    display: none;
+}
+
+/* ===== Form Controls ===== */
+.form-control, .form-select {
+    border-radius: 8px;
+    border: 1.5px solid #e0e0e0;
+    padding: 0.625rem 1rem;
+    transition: var(--transition-smooth);
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #28a745;
+    box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.15);
+}
+
+.form-control-lg {
+    font-size: 1.1rem;
+    padding: 0.75rem 1rem;
+}
+
+/* ===== Timeline Date Inputs ===== */
+.timeline-inputs {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 1.25rem;
+}
+
+.date-input-card {
+    background: white;
+    border-radius: 10px;
+    padding: 1rem;
+    text-align: center;
+    border: 1px solid #e9ecef;
+    transition: var(--transition-smooth);
+}
+
+.date-input-card:hover {
+    border-color: #28a745;
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.15);
+}
+
+.date-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 0.75rem;
+    font-size: 1.1rem;
+}
+
+.date-icon.open { background: rgba(40, 167, 69, 0.1); color: #28a745; }
+.date-icon.due { background: rgba(255, 193, 7, 0.15); color: #e0a800; }
+.date-icon.close { background: rgba(220, 53, 69, 0.1); color: #dc3545; }
+
+/* ===== File Upload ===== */
+.file-upload-zone {
+    border: 2px dashed #28a745;
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    background: #fafbfc;
+}
+
+.file-upload-zone:hover {
+    border-color: #1e7e34;
+    background: rgba(40, 167, 69, 0.03);
+}
+
+.file-upload-zone.dragover {
+    border-color: #1e7e34;
+    background: rgba(40, 167, 69, 0.08);
+    transform: scale(1.01);
+}
+
+.upload-icon {
+    width: 60px;
+    height: 60px;
+    background: var(--primary-gradient);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+    font-size: 1.5rem;
+    color: white;
+}
+
+.file-preview-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: #f0fff4;
+    border: 1px solid #28a745;
+    border-radius: 10px;
+    margin-top: 1rem;
+}
+
+.file-icon {
+    width: 48px;
+    height: 48px;
+    background: #28a745;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: white;
+}
+
+/* ===== Advanced Options ===== */
+.advanced-options-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.option-card {
+    border: 1.5px solid #e9ecef;
+    border-radius: 10px;
+    overflow: hidden;
+    transition: var(--transition-smooth);
+}
+
+.option-card.active {
+    border-color: #28a745;
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.15);
+}
+
+.option-card-header {
+    padding: 1rem;
+    background: #fafbfc;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.option-card-body {
+    padding: 1rem;
+}
+
+/* ===== Group Selection ===== */
+.groups-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+.group-card {
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    overflow: hidden;
+}
+
+.group-card:hover {
+    border-color: #28a745;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(40, 167, 69, 0.15);
+}
+
+.group-card.selected {
+    border-color: #28a745;
+    background: linear-gradient(135deg, rgba(40, 167, 69, 0.05) 0%, rgba(56, 239, 125, 0.05) 100%);
+}
+
+.group-card-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+}
+
+.group-avatar {
+    width: 48px;
+    height: 48px;
+    background: var(--primary-gradient);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    color: white;
+    flex-shrink: 0;
+}
+
+.group-check {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #e9ecef;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: transparent;
+    transition: var(--transition-smooth);
+    flex-shrink: 0;
+}
+
+.group-card.selected .group-check {
+    background: #28a745;
+    color: white;
+}
+
+/* ===== Sidebar ===== */
+.sidebar-card {
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--card-shadow);
+    overflow: hidden;
+}
+
+.sidebar-card-header {
+    padding: 1rem 1.25rem;
+    background: var(--primary-gradient);
+    color: white;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+}
+
+.sidebar-card-body {
+    padding: 1.25rem;
+}
+
+.preview-placeholder {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: #aaa;
+}
+
+.preview-placeholder i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    display: block;
+}
+
+.tips-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.tips-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.tips-list li:last-child {
+    border-bottom: none;
+}
+
+/* ===== Submit Section ===== */
+.submit-section {
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--card-shadow);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.submit-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.btn-success {
+    background: var(--primary-gradient);
+    border: none;
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+    border-radius: 8px;
+    transition: var(--transition-smooth);
+}
+
+.btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(40, 167, 69, 0.35);
+}
+
+/* ===== Animations ===== */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.form-section {
+    animation: fadeIn 0.4s ease-out forwards;
+}
+
+.form-switch .form-check-input:checked {
+    background-color: #28a745;
+    border-color: #28a745;
+}
+
+@media (max-width: 991px) {
+    .header-content { flex-wrap: wrap; }
+    .header-icon { display: none; }
+    .submit-content { flex-direction: column; align-items: stretch; }
+}
+
+@media (max-width: 768px) {
+    .groups-grid { grid-template-columns: 1fr; }
+}
+</style>
+{% endblock %}
+
 {% block dashboard_content %}
-<div class="container-fluid px-3 px-md-4 px-lg-5">
-    <!-- Enhanced Header Section -->
+<div class="container-fluid py-4">
+    <!-- Enhanced Header -->
     <div class="row mb-4">
         <div class="col-12">
-            <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
-                <div class="card-body text-white p-4">
-                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
-                        <div>
-                            <h2 class="mb-2 mb-md-0 fw-bold">
-                                <i class="bi bi-file-earmark-text me-3"></i>Create Group PDF/Paper Assignment
-                            </h2>
-                            <p class="mb-0 opacity-75">Design collaborative assignments with file attachments and clear instructions</p>
-                        </div>
-                        <div class="d-flex gap-2 mt-3 mt-md-0">
-                            {% if admin_view %}
-                                <a href="{{ url_for('management.admin_group_assignment_type_selector', class_id=class_obj.id) }}" class="btn btn-light btn-sm">
-                                    <i class="bi bi-arrow-left me-1"></i>Back to Assignment Types
-                                </a>
-                            {% else %}
-                                <a href="{{ url_for('teacher.group_assignment_type_selector', class_id=class_obj.id) }}" class="btn btn-light btn-sm">
-                                    <i class="bi bi-arrow-left me-1"></i>Back to Assignment Types
-                                </a>
-                            {% endif %}
-                        </div>
+            <div class="page-header-card">
+                <div class="header-content">
+                    <div class="header-icon">
+                        <i class="bi bi-file-earmark-text"></i>
+                    </div>
+                    <div class="header-text">
+                        <h1 class="header-title">Create Group PDF/Paper Assignment</h1>
+                        <p class="header-subtitle">
+                            <i class="bi bi-book me-1"></i>{{ class_obj.name }}
+                            {% if class_obj.subject %} - {{ class_obj.subject }}{% endif %}
+                        </p>
+                    </div>
+                    <div class="header-actions">
+                        {% if admin_view %}
+                        <a href="{{ url_for('management.admin_group_assignment_type_selector', class_id=class_obj.id) }}" class="btn btn-light btn-sm">
+                            <i class="bi bi-arrow-left me-1"></i>Back
+                        </a>
+                        {% else %}
+                        <a href="{{ url_for('teacher.group_assignment_type_selector', class_id=class_obj.id) }}" class="btn btn-light btn-sm">
+                            <i class="bi bi-arrow-left me-1"></i>Back
+                        </a>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -36,75 +509,316 @@
             <form method="POST" enctype="multipart/form-data" id="assignmentForm">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 
-                <!-- Assignment Information -->
-                <div class="card mb-4 border-0 shadow-sm">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0 fw-bold"><i class="bi bi-info-circle me-2"></i>Assignment Information</h5>
+                <!-- Section 1: Assignment Information -->
+                <div class="form-section">
+                    <div class="section-header">
+                        <div class="section-header-row">
+                            <div class="section-icon bg-primary">
+                                <i class="bi bi-pencil-square"></i>
+                            </div>
+                            <div class="section-title">
+                                <h5>Assignment Information</h5>
+                                <p class="text-muted mb-0">Basic details about your group assignment</p>
+                            </div>
+                        </div>
+                        <div class="section-header-line"></div>
                     </div>
-                    <div class="card-body p-4">
+                    <div class="section-body">
+                        <div class="mb-4">
+                            <label for="title" class="form-label fw-semibold">
+                                <i class="bi bi-type me-1 text-success"></i>Assignment Title <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control form-control-lg" id="title" name="title" required 
+                                   placeholder="Enter a clear, descriptive title...">
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="description" class="form-label fw-semibold">
+                                <i class="bi bi-card-text me-1 form-label-icon"></i>Description & Instructions
+                            </label>
+                            <textarea class="form-control" id="description" name="description" rows="5" 
+                                      placeholder="Provide detailed instructions, objectives, and requirements..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Assignment Settings -->
+                <div class="form-section">
+                    <div class="section-header">
+                        <div class="section-header-row">
+                            <div class="section-icon bg-info">
+                                <i class="bi bi-gear"></i>
+                            </div>
+                            <div class="section-title">
+                                <h5>Assignment Settings</h5>
+                                <p class="text-muted mb-0">Status, category, and academic settings</p>
+                            </div>
+                        </div>
+                        <div class="section-header-line"></div>
+                    </div>
+                    <div class="section-body">
                         <div class="row g-3">
-                            <div class="col-12">
-                                <label for="title" class="form-label fw-semibold">
-                                    <i class="bi bi-journal-text me-1 text-primary"></i>Assignment Title
+                            <div class="col-md-6">
+                                <label for="assignment_status" class="form-label fw-semibold">
+                                    <i class="bi bi-patch-check me-1 form-label-icon"></i>Status <span class="text-danger">*</span>
                                 </label>
-                                <input type="text" class="form-control form-control-lg" id="title" name="title" required 
-                                       placeholder="Enter a descriptive title for your assignment">
-                                <div class="form-text">Choose a clear, engaging title that describes the assignment</div>
+                                <select class="form-select" id="assignment_status" name="assignment_status" required>
+                                    <option value="Active" selected>Active - Visible to students</option>
+                                    <option value="Inactive">Inactive - Hidden from students</option>
+                                </select>
                             </div>
                             
-                            <div class="col-12">
-                                <label for="description" class="form-label fw-semibold">
-                                    <i class="bi bi-file-text me-1 text-primary"></i>Description & Instructions
+                            <div class="col-md-6">
+                                <label for="assignment_category" class="form-label fw-semibold">
+                                    <i class="bi bi-folder me-1 text-info"></i>Category
                                 </label>
-                                <textarea class="form-control" id="description" name="description" rows="6" 
-                                          placeholder="Provide detailed instructions, objectives, and requirements for the assignment..."></textarea>
-                                <div class="form-text">Include clear instructions, learning objectives, and any specific requirements</div>
+                                <select class="form-select" id="assignment_category" name="assignment_category">
+                                    <option value="">Select Category (Optional)</option>
+                                    <option value="Homework">Homework</option>
+                                    <option value="Tests">Tests</option>
+                                    <option value="Quizzes">Quizzes</option>
+                                    <option value="Projects">Projects</option>
+                                    <option value="Classwork">Classwork</option>
+                                    <option value="Participation">Participation</option>
+                                    <option value="Extra Credit">Extra Credit</option>
+                                </select>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Group Settings -->
-                <div class="card mb-4 border-0 shadow-sm">
-                    <div class="card-header bg-success text-white">
-                        <h5 class="mb-0 fw-bold"><i class="bi bi-people me-2"></i>Group Settings</h5>
+                <!-- Section 3: Schedule & Academic Period -->
+                <div class="form-section">
+                    <div class="section-header">
+                        <div class="section-icon bg-info">
+                            <i class="bi bi-calendar-event"></i>
+                        </div>
+                        <div class="section-title">
+                            <h5>Schedule & Academic Period</h5>
+                            <p class="text-muted mb-0">Set dates and academic period information</p>
+                        </div>
                     </div>
-                    <div class="card-body p-4">
+                    <div class="section-body">
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label for="quarter" class="form-label fw-semibold">
+                                    <i class="bi bi-calendar3 me-1 form-label-icon"></i>Quarter <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select" id="quarter" name="quarter" required>
+                                    <option value="">Select Quarter</option>
+                                    <option value="Q1">Quarter 1</option>
+                                    <option value="Q2">Quarter 2</option>
+                                    <option value="Q3">Quarter 3</option>
+                                    <option value="Q4">Quarter 4</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="semester" class="form-label fw-semibold">
+                                    <i class="bi bi-calendar-range me-1 form-label-icon"></i>Semester
+                                </label>
+                                <select class="form-select" id="semester" name="semester">
+                                    <option value="">Select Semester (Optional)</option>
+                                    <option value="S1">Semester 1</option>
+                                    <option value="S2">Semester 2</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <h6 class="text-muted mb-3"><i class="bi bi-clock-history me-1"></i>Assignment Timeline</h6>
+                        <div class="timeline-inputs">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <div class="date-input-card">
+                                        <div class="date-icon open">
+                                            <i class="bi bi-unlock"></i>
+                                        </div>
+                                        <label for="open_date" class="form-label fw-semibold">Open Date</label>
+                                        <input type="datetime-local" class="form-control" id="open_date" name="open_date" min="2020-01-01T00:00">
+                                        <small class="text-muted">When available</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="date-input-card">
+                                        <div class="date-icon due">
+                                            <i class="bi bi-alarm"></i>
+                                        </div>
+                                        <label for="due_date" class="form-label fw-semibold">Due Date <span class="text-danger">*</span></label>
+                                        <input type="datetime-local" class="form-control" id="due_date" name="due_date" min="2020-01-01T00:00" required>
+                                        <small class="text-muted">When due</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="date-input-card">
+                                        <div class="date-icon close">
+                                            <i class="bi bi-lock"></i>
+                                        </div>
+                                        <label for="close_date" class="form-label fw-semibold">Close Date</label>
+                                        <input type="datetime-local" class="form-control" id="close_date" name="close_date" min="2020-01-01T00:00">
+                                        <small class="text-muted">When closes</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mt-3">
+                            <div class="col-md-6">
+                                <label for="academic_period_id" class="form-label fw-semibold">
+                                    <i class="bi bi-calendar-check me-1 form-label-icon"></i>Academic Period
+                                </label>
+                                <select class="form-select" id="academic_period_id" name="academic_period_id">
+                                    <option value="">Select Academic Period (Optional)</option>
+                                    {% for period in academic_periods %}
+                                        <option value="{{ period.id }}">{{ period.name }} ({{ period.period_type }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="category_weight" class="form-label fw-semibold">
+                                    <i class="bi bi-percent me-1 form-label-icon"></i>Category Weight
+                                </label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="category_weight" name="category_weight" value="0" min="0" max="100" step="0.1">
+                                    <span class="input-group-text">%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 4: Grading Options -->
+                <div class="form-section">
+                    <div class="section-header">
+                        <div class="section-header-row">
+                            <div class="section-icon bg-warning">
+                                <i class="bi bi-star"></i>
+                            </div>
+                            <div class="section-title">
+                                <h5>Grading Options</h5>
+                                <p class="text-muted mb-0">Configure points and advanced grading settings</p>
+                            </div>
+                        </div>
+                        <div class="section-header-line"></div>
+                    </div>
+                    <div class="section-body">
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label for="total_points" class="form-label fw-semibold">
+                                    <i class="bi bi-trophy me-1 form-label-icon"></i>Total Points <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group input-group-lg">
+                                    <input type="number" class="form-control" id="total_points" name="total_points" 
+                                           value="100" min="0.1" step="0.1" required>
+                                    <span class="input-group-text">pts</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="grade_scale_preset" class="form-label fw-semibold">
+                                    <i class="bi bi-bar-chart-steps me-1 form-label-icon"></i>Grade Scale
+                                </label>
+                                <select class="form-select form-select-lg" id="grade_scale_preset" name="grade_scale_preset">
+                                    <option value="">Default Scale</option>
+                                    <option value="standard">Standard (A=90, B=80, C=70, D=60)</option>
+                                    <option value="strict">Strict (A=93, B=85, C=77, D=70)</option>
+                                    <option value="lenient">Lenient (A=88, B=78, C=68, D=58)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="advanced-options-grid">
+                            <div class="option-card" id="extraCreditCard">
+                                <div class="option-card-header">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="allow_extra_credit" name="allow_extra_credit">
+                                        <label class="form-check-label" for="allow_extra_credit">
+                                            <i class="bi bi-plus-circle text-success me-1"></i>
+                                            <strong>Extra Credit</strong>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="option-card-body" id="extra_credit_options" style="display: none;">
+                                    <label for="max_extra_credit_points" class="form-label small">Max Extra Points</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" class="form-control" id="max_extra_credit_points" name="max_extra_credit_points" value="0" min="0" step="0.1">
+                                        <span class="input-group-text">pts</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="option-card" id="latePenaltyCard">
+                                <div class="option-card-header">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="late_penalty_enabled" name="late_penalty_enabled">
+                                        <label class="form-check-label" for="late_penalty_enabled">
+                                            <i class="bi bi-clock-history text-danger me-1"></i>
+                                            <strong>Late Penalty</strong>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="option-card-body" id="late_penalty_options" style="display: none;">
+                                    <div class="row g-2">
+                                        <div class="col-6">
+                                            <label class="form-label small">Per Day</label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="number" class="form-control" id="late_penalty_per_day" name="late_penalty_per_day" value="10" min="0" max="100" step="0.1">
+                                                <span class="input-group-text">%</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label small">Max Days</label>
+                                            <input type="number" class="form-control form-control-sm" id="late_penalty_max_days" name="late_penalty_max_days" value="0" min="0">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 5: Group Settings -->
+                <div class="form-section">
+                    <div class="section-header">
+                        <div class="section-icon bg-success">
+                            <i class="bi bi-people-fill"></i>
+                        </div>
+                        <div class="section-title">
+                            <h5>Group Settings</h5>
+                            <p class="text-muted mb-0">Configure group size and collaboration options</p>
+                        </div>
+                    </div>
+                    <div class="section-body">
                         <div class="row g-3">
                             <div class="col-md-4">
                                 <label for="group_size_min" class="form-label fw-semibold">
-                                    <i class="bi bi-people me-1 text-success"></i>Minimum Group Size
+                                    <i class="bi bi-people me-1 form-label-icon"></i>Min Group Size
                                 </label>
                                 <div class="input-group">
                                     <input type="number" class="form-control" id="group_size_min" name="group_size_min" 
                                            min="1" max="10" value="2">
                                     <span class="input-group-text">students</span>
                                 </div>
-                                <div class="form-text">Minimum number of students per group</div>
                             </div>
                             
                             <div class="col-md-4">
                                 <label for="group_size_max" class="form-label fw-semibold">
-                                    <i class="bi bi-people-fill me-1 text-success"></i>Maximum Group Size
+                                    <i class="bi bi-people-fill me-1 form-label-icon"></i>Max Group Size
                                 </label>
                                 <div class="input-group">
                                     <input type="number" class="form-control" id="group_size_max" name="group_size_max" 
                                            min="2" max="20" value="4">
                                     <span class="input-group-text">students</span>
                                 </div>
-                                <div class="form-text">Maximum number of students per group</div>
                             </div>
                             
                             <div class="col-md-4">
                                 <label for="collaboration_type" class="form-label fw-semibold">
-                                    <i class="bi bi-gear me-1 text-success"></i>Collaboration Type
+                                    <i class="bi bi-gear me-1 form-label-icon"></i>Collaboration Type
                                 </label>
                                 <select class="form-select" id="collaboration_type" name="collaboration_type">
                                     <option value="group">Group Work Only</option>
                                     <option value="individual">Individual Work Only</option>
-                                    <option value="both">Allow Both Group and Individual</option>
+                                    <option value="both">Allow Both</option>
                                 </select>
-                                <div class="form-text">Choose the collaboration approach</div>
                             </div>
                             
                             <div class="col-12">
@@ -113,24 +827,32 @@
                                     <label class="form-check-label fw-semibold" for="allow_individual">
                                         <i class="bi bi-person me-2 text-success"></i>Allow Individual Submissions
                                     </label>
-                                    <div class="form-text">Students can submit work individually even if working in groups</div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Group Selection -->
-                <div class="card mb-4 border-0 shadow-sm">
-                    <div class="card-header bg-info text-white">
-                        <h5 class="mb-0 fw-bold"><i class="bi bi-people-fill me-2"></i>Target Groups</h5>
+                <!-- Section 6: Target Groups -->
+                <div class="form-section">
+                    <div class="section-header">
+                        <div class="section-header-row">
+                            <div class="section-icon bg-primary">
+                                <i class="bi bi-check2-square"></i>
+                            </div>
+                            <div class="section-title">
+                                <h5>Target Groups</h5>
+                                <p class="text-muted mb-0">Select which groups will receive this assignment</p>
+                            </div>
+                        </div>
+                        <div class="section-header-line"></div>
                     </div>
-                    <div class="card-body p-4">
+                    <div class="section-body">
                         <div class="mb-3">
                             <div class="form-check">
                                 <input class="form-check-input" type="radio" name="group_selection" id="all_groups" value="all" checked>
                                 <label class="form-check-label fw-semibold" for="all_groups">
-                                    <i class="bi bi-globe me-2 text-info"></i>All Groups
+                                    <i class="bi bi-globe me-2 text-primary"></i>All Groups
                                 </label>
                                 <div class="form-text">Assignment will be available to all groups in the class</div>
                             </div>
@@ -140,9 +862,8 @@
                             <div class="form-check">
                                 <input class="form-check-input" type="radio" name="group_selection" id="specific_groups" value="specific">
                                 <label class="form-check-label fw-semibold" for="specific_groups">
-                                    <i class="bi bi-list-check me-2 text-info"></i>Select Specific Groups
+                                    <i class="bi bi-list-check me-2 text-primary"></i>Select Specific Groups
                                 </label>
-                                <div class="form-text">Choose which groups will receive this assignment</div>
                             </div>
                         </div>
                         
@@ -155,128 +876,67 @@
                     </div>
                 </div>
 
-                <!-- File Upload Section -->
-                <div class="card mb-4 border-0 shadow-sm">
-                    <div class="card-header bg-warning text-dark">
-                        <h5 class="mb-0 fw-bold"><i class="bi bi-paperclip me-2"></i>Assignment Files</h5>
+                <!-- Section 7: File Upload -->
+                <div class="form-section">
+                    <div class="section-header">
+                        <div class="section-header-row">
+                            <div class="section-icon bg-success">
+                                <i class="bi bi-paperclip"></i>
+                            </div>
+                            <div class="section-title">
+                                <h5>Assignment Files</h5>
+                                <p class="text-muted mb-0">Upload documents for this assignment</p>
+                            </div>
+                        </div>
+                        <div class="section-header-line"></div>
                     </div>
-                    <div class="card-body p-4">
-                        <div class="file-upload-area border-2 border-dashed border-success rounded p-4 text-center" 
-                             id="fileUploadArea" style="cursor: pointer; transition: all 0.3s ease;">
-                            <i class="bi bi-cloud-upload text-success mb-2" style="font-size: 2rem;"></i>
-                            <p class="mb-2 fw-semibold">Click to upload or drag and drop</p>
-                            <p class="text-muted small mb-0">PDF, DOC(X), TXT, JPG, PNG, GIF, XLS(X), PPT(X)</p>
+                    <div class="section-body">
+                        <div class="file-upload-zone" id="fileUploadArea">
+                            <div class="upload-icon">
+                                <i class="bi bi-cloud-arrow-up"></i>
+                            </div>
+                            <h6 class="mb-1">Drop files here or click to upload</h6>
+                            <p class="text-muted small mb-0">PDF, DOC, DOCX, TXT, JPG, PNG, GIF, XLS, XLSX, PPT, PPTX</p>
                             <p class="text-muted small">Maximum file size: 16 MB</p>
                             <input type="file" class="d-none" id="attachment" name="attachment" 
                                    accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.xls,.xlsx,.ppt,.pptx">
                         </div>
                         
-                        <!-- File Preview -->
-                        <div id="filePreview" class="mt-3" style="display: none;">
-                            <div class="card border-success">
-                                <div class="card-header bg-success text-white">
-                                    <h6 class="mb-0"><i class="bi bi-file-earmark me-2"></i>Selected File</h6>
+                        <div id="filePreview" style="display: none;">
+                            <div class="file-preview-content">
+                                <div class="file-icon">
+                                    <i class="bi bi-file-earmark-text"></i>
                                 </div>
-                                <div class="card-body">
-                                    <div class="d-flex align-items-center">
-                                        <i class="bi bi-file-earmark-text text-success me-3" style="font-size: 2rem;"></i>
-                                        <div class="flex-grow-1">
-                                            <h6 class="mb-1" id="fileName"></h6>
-                                            <small class="text-muted" id="fileSize"></small>
-                                        </div>
-                                        <button type="button" class="btn btn-outline-danger btn-sm" id="removeFile">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1" id="fileName"></h6>
+                                    <small class="text-muted" id="fileSize"></small>
                                 </div>
+                                <button type="button" class="btn btn-outline-danger btn-sm" id="removeFile">
+                                    <i class="bi bi-trash"></i>
+                                </button>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Due Date & Academic Period -->
-                <div class="card mb-4 border-0 shadow-sm">
-                    <div class="card-header bg-info text-white">
-                        <h5 class="mb-0 fw-bold"><i class="bi bi-calendar me-2"></i>Due Date & Academic Period</h5>
-                    </div>
-                    <div class="card-body p-4">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label for="due_date" class="form-label fw-semibold">
-                                    <i class="bi bi-clock me-1 text-info"></i>Due Date & Time
-                                </label>
-                                <input type="datetime-local" class="form-control" id="due_date" name="due_date" min="2020-01-01T00:00" required>
-                                <div class="form-text">When should this assignment be completed?</div>
-                            </div>
-                            
-                            <div class="col-md-6">
-                                <label for="quarter" class="form-label fw-semibold">
-                                    <i class="bi bi-calendar3 me-1 text-info"></i>Quarter
-                                </label>
-                                <select class="form-select" id="quarter" name="quarter" required>
-                                    <option value="">Select Quarter</option>
-                                    <option value="Q1">Quarter 1</option>
-                                    <option value="Q2">Quarter 2</option>
-                                    <option value="Q3">Quarter 3</option>
-                                    <option value="Q4">Quarter 4</option>
-                                </select>
-                                <div class="form-text">Which quarter does this assignment belong to?</div>
-                            </div>
-                            
-                            <div class="col-md-6">
-                                <label for="semester" class="form-label fw-semibold">
-                                    <i class="bi bi-calendar-range me-1 text-info"></i>Semester
-                                </label>
-                                <select class="form-select" id="semester" name="semester">
-                                    <option value="">Select Semester (Optional)</option>
-                                    <option value="S1">Semester 1</option>
-                                    <option value="S2">Semester 2</option>
-                                </select>
-                                <div class="form-text">Optional semester classification</div>
-                            </div>
-                            
-                            <div class="col-md-6">
-                                <label for="academic_period_id" class="form-label fw-semibold">
-                                    <i class="bi bi-calendar-check me-1 text-info"></i>Academic Period
-                                </label>
-                                <select class="form-select" id="academic_period_id" name="academic_period_id">
-                                    <option value="">Select Academic Period (Optional)</option>
-                                    {% for period in academic_periods %}
-                                        <option value="{{ period.id }}">{{ period.name }} ({{ period.period_type }})</option>
-                                    {% endfor %}
-                                </select>
-                                <div class="form-text">Optional specific academic period</div>
-                            </div>
-                            
-                            <div class="col-md-6">
-                                <label for="total_points" class="form-label fw-semibold">
-                                    <i class="bi bi-star me-1 text-info"></i>Total Points <span class="text-danger">*</span>
-                                </label>
-                                <input type="number" class="form-control" id="total_points" name="total_points" 
-                                       value="100" min="0.1" step="0.1" required>
-                                <div class="form-text">
-                                    Set the maximum points for this assignment (e.g., 50, 100, 150). 
-                                    Students will be graded out of this total. Default is 100 points.
-                                </div>
-                            </div>
+                <!-- Submit Section -->
+                <div class="submit-section">
+                    <div class="submit-content">
+                        <div>
+                            <i class="bi bi-info-circle text-muted me-2"></i>
+                            <span class="text-muted">Review your assignment details before creating</span>
                         </div>
-                    </div>
-                </div>
-
-                <!-- Action Buttons -->
-                <div class="card mb-4 border-0 shadow-sm">
-                    <div class="card-body p-4">
-                        <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex gap-2">
                             {% if admin_view %}
-                                <a href="{{ url_for('management.admin_group_assignment_type_selector', class_id=class_obj.id) }}" 
-                                   class="btn btn-outline-secondary btn-lg">
-                                    <i class="bi bi-arrow-left me-2"></i>Cancel
-                                </a>
+                            <a href="{{ url_for('management.admin_group_assignment_type_selector', class_id=class_obj.id) }}" 
+                               class="btn btn-outline-secondary btn-lg">
+                                <i class="bi bi-x-circle me-2"></i>Cancel
+                            </a>
                             {% else %}
-                                <a href="{{ url_for('teacher.group_assignment_type_selector', class_id=class_obj.id) }}" 
-                                   class="btn btn-outline-secondary btn-lg">
-                                    <i class="bi bi-arrow-left me-2"></i>Cancel
-                                </a>
+                            <a href="{{ url_for('teacher.group_assignment_type_selector', class_id=class_obj.id) }}" 
+                               class="btn btn-outline-secondary btn-lg">
+                                <i class="bi bi-x-circle me-2"></i>Cancel
+                            </a>
                             {% endif %}
                             <button type="submit" class="btn btn-success btn-lg fw-bold">
                                 <i class="bi bi-check-circle me-2"></i>Create Group Assignment
@@ -290,46 +950,46 @@
         <!-- Sidebar -->
         <div class="col-12 col-lg-4">
             <!-- Live Preview -->
-            <div class="card mb-4 border-0 shadow-sm">
-                <div class="card-header bg-info text-white">
-                    <h6 class="mb-0 fw-bold"><i class="bi bi-eye me-2"></i>Live Preview</h6>
+            <div class="sidebar-card sticky-top" style="top: 20px;">
+                <div class="sidebar-card-header">
+                    <i class="bi bi-eye me-2"></i>Live Preview
                 </div>
-                <div class="card-body">
+                <div class="sidebar-card-body">
                     <div id="assignmentPreview">
-                        <div class="text-center text-muted py-4">
-                            <i class="bi bi-file-earmark-text mb-2" style="font-size: 2rem;"></i>
-                            <p class="mb-0">Assignment preview will appear here</p>
+                        <div class="preview-placeholder">
+                            <i class="bi bi-file-earmark-text"></i>
+                            <p class="mb-0">Start filling out the form to see a preview</p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Assignment Tips -->
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-secondary text-white">
-                    <h6 class="mb-0 fw-bold"><i class="bi bi-lightbulb me-2"></i>Assignment Tips</h6>
+            <!-- Tips Card -->
+            <div class="sidebar-card mt-3">
+                <div class="sidebar-card-header" style="background: var(--warning-gradient);">
+                    <i class="bi bi-lightbulb me-2"></i>Tips & Best Practices
                 </div>
-                <div class="card-body">
-                    <ul class="list-unstyled mb-0">
-                        <li class="mb-2">
-                            <i class="bi bi-check-circle text-success me-2"></i>
-                            <small>Use clear, specific instructions</small>
-                        </li>
-                        <li class="mb-2">
-                            <i class="bi bi-check-circle text-success me-2"></i>
-                            <small>Set realistic group sizes (2-6 students)</small>
-                        </li>
-                        <li class="mb-2">
-                            <i class="bi bi-check-circle text-success me-2"></i>
-                            <small>Provide rubrics or grading criteria</small>
-                        </li>
-                        <li class="mb-2">
-                            <i class="bi bi-check-circle text-success me-2"></i>
-                            <small>Consider individual accountability</small>
+                <div class="sidebar-card-body">
+                    <ul class="tips-list">
+                        <li>
+                            <i class="bi bi-check-circle-fill text-success"></i>
+                            <span>Use clear, specific instructions</span>
                         </li>
                         <li>
-                            <i class="bi bi-check-circle text-success me-2"></i>
-                            <small>Allow time for group formation</small>
+                            <i class="bi bi-check-circle-fill text-success"></i>
+                            <span>Set realistic group sizes (2-6 students)</span>
+                        </li>
+                        <li>
+                            <i class="bi bi-check-circle-fill text-success"></i>
+                            <span>Provide rubrics or grading criteria</span>
+                        </li>
+                        <li>
+                            <i class="bi bi-check-circle-fill text-success"></i>
+                            <span>Consider individual accountability</span>
+                        </li>
+                        <li>
+                            <i class="bi bi-check-circle-fill text-success"></i>
+                            <span>Allow time for group formation</span>
                         </li>
                     </ul>
                 </div>
@@ -343,12 +1003,28 @@ document.addEventListener('DOMContentLoaded', function() {
     // Set default due date to tomorrow
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
-    const dateTimeString = tomorrow.toISOString().slice(0, 16);
-    document.getElementById('due_date').value = dateTimeString;
+    document.getElementById('due_date').value = tomorrow.toISOString().slice(0, 16);
     
     // Set default quarter to current quarter
-    const currentQuarter = getCurrentQuarter();
-    document.getElementById('quarter').value = currentQuarter;
+    const currentMonth = new Date().getMonth() + 1;
+    let defaultQuarter = 'Q1';
+    if (currentMonth >= 8 && currentMonth <= 10) defaultQuarter = 'Q1';
+    else if (currentMonth >= 11 || currentMonth <= 1) defaultQuarter = 'Q2';
+    else if (currentMonth >= 2 && currentMonth <= 4) defaultQuarter = 'Q3';
+    else defaultQuarter = 'Q4';
+    document.getElementById('quarter').value = defaultQuarter;
+    
+    // Toggle extra credit options
+    document.getElementById('allow_extra_credit').addEventListener('change', function() {
+        document.getElementById('extra_credit_options').style.display = this.checked ? 'block' : 'none';
+        document.getElementById('extraCreditCard').classList.toggle('active', this.checked);
+    });
+    
+    // Toggle late penalty options
+    document.getElementById('late_penalty_enabled').addEventListener('change', function() {
+        document.getElementById('late_penalty_options').style.display = this.checked ? 'block' : 'none';
+        document.getElementById('latePenaltyCard').classList.toggle('active', this.checked);
+    });
     
     // File upload handling
     const fileUploadArea = document.getElementById('fileUploadArea');
@@ -358,60 +1034,40 @@ document.addEventListener('DOMContentLoaded', function() {
     const fileSize = document.getElementById('fileSize');
     const removeFileBtn = document.getElementById('removeFile');
     
-    // Click to upload
-    fileUploadArea.addEventListener('click', () => {
-        fileInput.click();
-    });
+    fileUploadArea.addEventListener('click', () => fileInput.click());
     
-    // Drag and drop
     fileUploadArea.addEventListener('dragover', (e) => {
         e.preventDefault();
-        fileUploadArea.style.borderColor = '#28a745';
-        fileUploadArea.style.backgroundColor = '#f8f9fa';
+        fileUploadArea.classList.add('dragover');
     });
     
     fileUploadArea.addEventListener('dragleave', (e) => {
         e.preventDefault();
-        fileUploadArea.style.borderColor = '#28a745';
-        fileUploadArea.style.backgroundColor = '';
+        fileUploadArea.classList.remove('dragover');
     });
     
     fileUploadArea.addEventListener('drop', (e) => {
         e.preventDefault();
-        fileUploadArea.style.borderColor = '#28a745';
-        fileUploadArea.style.backgroundColor = '';
-        
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            handleFileSelection(files[0]);
+        fileUploadArea.classList.remove('dragover');
+        if (e.dataTransfer.files.length > 0) {
+            handleFileSelection(e.dataTransfer.files[0]);
         }
     });
     
-    // File input change
     fileInput.addEventListener('change', (e) => {
         if (e.target.files.length > 0) {
             handleFileSelection(e.target.files[0]);
         }
     });
     
-    // Remove file
     removeFileBtn.addEventListener('click', () => {
         fileInput.value = '';
         filePreview.style.display = 'none';
     });
     
     function handleFileSelection(file) {
-        // Validate file size (16MB)
         if (file.size > 16 * 1024 * 1024) {
             alert('File size must be less than 16MB');
-            return;
-        }
-        
-        // Validate file type
-        const allowedTypes = ['.pdf', '.doc', '.docx', '.txt', '.jpg', '.jpeg', '.png', '.gif', '.xls', '.xlsx', '.ppt', '.pptx'];
-        const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
-        if (!allowedTypes.includes(fileExtension)) {
-            alert('File type not supported. Please upload a supported file type.');
             return;
         }
         
@@ -428,15 +1084,6 @@ document.addEventListener('DOMContentLoaded', function() {
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
     
-    function getCurrentQuarter() {
-        const now = new Date();
-        const month = now.getMonth() + 1; // 0-indexed
-        if (month >= 1 && month <= 3) return 'Q1';
-        if (month >= 4 && month <= 6) return 'Q2';
-        if (month >= 7 && month <= 9) return 'Q3';
-        return 'Q4';
-    }
-    
     // Live preview updates
     const form = document.getElementById('assignmentForm');
     const preview = document.getElementById('assignmentPreview');
@@ -449,12 +1096,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const description = document.getElementById('description').value;
         const dueDate = document.getElementById('due_date').value;
         const quarter = document.getElementById('quarter').value;
+        const totalPoints = document.getElementById('total_points').value;
         
         if (title || description) {
             let previewHTML = '<div class="assignment-preview">';
             
             if (title) {
-                previewHTML += `<h6 class="fw-bold text-primary mb-2">${title}</h6>`;
+                previewHTML += `<h6 class="fw-bold text-success mb-2">${title}</h6>`;
             }
             
             if (description) {
@@ -463,89 +1111,84 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (dueDate) {
                 const date = new Date(dueDate);
-                previewHTML += `<small class="text-info"><i class="bi bi-clock me-1"></i>Due: ${date.toLocaleDateString()} at ${date.toLocaleTimeString()}</small>`;
+                previewHTML += `<small class="text-info d-block"><i class="bi bi-clock me-1"></i>Due: ${date.toLocaleDateString()} at ${date.toLocaleTimeString()}</small>`;
             }
             
             if (quarter) {
-                previewHTML += `<br><small class="text-secondary"><i class="bi bi-calendar3 me-1"></i>${quarter}</small>`;
+                previewHTML += `<small class="text-secondary d-block"><i class="bi bi-calendar3 me-1"></i>${quarter}</small>`;
+            }
+            
+            if (totalPoints) {
+                previewHTML += `<small class="text-warning d-block"><i class="bi bi-trophy me-1"></i>${totalPoints} points</small>`;
             }
             
             previewHTML += '</div>';
             preview.innerHTML = previewHTML;
         } else {
-            preview.innerHTML = '<div class="text-center text-muted py-4"><i class="bi bi-file-earmark-text mb-2" style="font-size: 2rem;"></i><p class="mb-0">Assignment preview will appear here</p></div>';
+            preview.innerHTML = '<div class="preview-placeholder"><i class="bi bi-file-earmark-text"></i><p class="mb-0">Start filling out the form to see a preview</p></div>';
         }
     }
     
     // Group selection functionality
     const groupSelectionRadios = document.querySelectorAll('input[name="group_selection"]');
     const groupSelectionArea = document.getElementById('groupSelectionArea');
-    const availableGroups = document.getElementById('availableGroups');
-    
-    // Debug: Check if admin_view is set
-    console.log('DEBUG: admin_view = {{ admin_view }}');
-    
-    // Load groups when page loads
-    loadGroups();
     
     groupSelectionRadios.forEach(radio => {
         radio.addEventListener('change', function() {
+            groupSelectionArea.style.display = this.value === 'specific' ? 'block' : 'none';
             if (this.value === 'specific') {
-                groupSelectionArea.style.display = 'block';
                 loadGroups();
-            } else {
-                groupSelectionArea.style.display = 'none';
             }
         });
     });
     
     function loadGroups() {
-        // Determine the correct API endpoint based on admin_view
         {% if admin_view %}
         const apiUrl = '/management/api/class/{{ class_obj.id }}/groups';
-        console.log('DEBUG: Using management API:', apiUrl);
         {% else %}
         const apiUrl = '/teacher/api/class/{{ class_obj.id }}/groups';
-        console.log('DEBUG: Using teacher API:', apiUrl);
         {% endif %}
         
-        // Fetch groups for this class
-        console.log('DEBUG: Fetching groups from:', apiUrl);
         fetch(apiUrl)
             .then(response => response.json())
             .then(data => {
                 if (data.success && data.groups) {
                     displayGroups(data.groups);
                 } else {
-                    availableGroups.innerHTML = '<p class="text-muted">No groups found for this class.</p>';
+                    document.getElementById('availableGroups').innerHTML = '<p class="text-muted">No groups found for this class.</p>';
                 }
             })
             .catch(error => {
                 console.error('Error loading groups:', error);
-                availableGroups.innerHTML = '<p class="text-danger">Error loading groups.</p>';
+                document.getElementById('availableGroups').innerHTML = '<p class="text-danger">Error loading groups.</p>';
             });
     }
     
     function displayGroups(groups) {
         if (groups.length === 0) {
-            availableGroups.innerHTML = '<p class="text-muted">No groups found for this class.</p>';
+            document.getElementById('availableGroups').innerHTML = '<p class="text-muted">No groups found for this class.</p>';
             return;
         }
         
-        let groupsHTML = '';
+        let groupsHTML = '<div class="groups-grid">';
         groups.forEach(group => {
             groupsHTML += `
-                <div class="form-check mb-2">
-                    <input class="form-check-input" type="checkbox" name="selected_groups" value="${group.id}" id="group_${group.id}">
-                    <label class="form-check-label" for="group_${group.id}">
-                        <strong>${group.name}</strong>
-                        <small class="text-muted d-block">${group.member_count} members</small>
-                    </label>
+                <div class="group-card" onclick="this.classList.toggle('selected'); this.querySelector('input').checked = !this.querySelector('input').checked;">
+                    <input class="d-none" type="checkbox" name="selected_groups" value="${group.id}" id="group_${group.id}">
+                    <div class="group-card-content">
+                        <div class="group-avatar"><i class="bi bi-people"></i></div>
+                        <div style="flex: 1;">
+                            <h6 class="mb-0">${group.name}</h6>
+                            <small class="text-muted">${group.member_count} members</small>
+                        </div>
+                        <div class="group-check"><i class="bi bi-check-circle-fill"></i></div>
+                    </div>
                 </div>
             `;
         });
+        groupsHTML += '</div>';
         
-        availableGroups.innerHTML = groupsHTML;
+        document.getElementById('availableGroups').innerHTML = groupsHTML;
     }
 });
 </script>

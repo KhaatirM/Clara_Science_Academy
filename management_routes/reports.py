@@ -13,6 +13,26 @@ from models import db, ReportCard, SchoolYear, Class, Student, Enrollment
 bp = Blueprint('reports', __name__)
 
 
+def _sanitize_letter_grades_for_report(obj):
+    """
+    Recursively replace 'F' with 'D' in grade data (minimum letter grade is D).
+    Handles grades dict, grades_by_quarter, and nested structures.
+    """
+    if obj is None:
+        return obj
+    if isinstance(obj, dict):
+        result = {}
+        for k, v in obj.items():
+            if k in ('letter', 'letter_grade', 'overall_letter', 'grade') and v == 'F':
+                result[k] = 'D'
+            else:
+                result[k] = _sanitize_letter_grades_for_report(v)
+        return result
+    if isinstance(obj, list):
+        return [_sanitize_letter_grades_for_report(item) for item in obj]
+    return obj
+
+
 # ============================================================
 # Route: /report/card/generate', methods=['GET', 'POST']
 # Function: generate_report_card_form
@@ -280,6 +300,10 @@ def generate_report_card_form():
             else:  # Grades 4-8
                 template_name = f'management/{template_prefix}_report_card_pdf_template_4_8.html'
             
+            # Sanitize letter grades: minimum is D, never show F
+            calculated_grades = _sanitize_letter_grades_for_report(calculated_grades)
+            calculated_grades_by_quarter = _sanitize_letter_grades_for_report(calculated_grades_by_quarter)
+
             # Render the HTML template
             html_content = render_template(
                 template_name,
@@ -413,6 +437,9 @@ def view_report_card(report_card_id):
     # If attendance is empty but was requested, provide default
     if not attendance and include_attendance:
         attendance = {"Present": 0, "Absent": 0, "Tardy": 0}
+
+    # Sanitize letter grades: minimum is D, never show F on report cards
+    grades = _sanitize_letter_grades_for_report(grades)
     
     # Get class objects for selected classes
     class_objects = []
@@ -477,6 +504,10 @@ def generate_report_card_pdf(report_card_id):
             school_year_id=report_card.school_year_id,
             class_ids=selected_classes if selected_classes else None
         )
+
+        # Sanitize letter grades: minimum is D, never show F on report cards
+        grades = _sanitize_letter_grades_for_report(grades)
+        grades_by_quarter = _sanitize_letter_grades_for_report(grades_by_quarter)
         
         # Get class objects
         class_objects = []

@@ -2071,13 +2071,34 @@ def admin_create_group_pdf_assignment(class_id):
         title = request.form.get('title', '').strip()
         description = request.form.get('description', '').strip()
         due_date_str = request.form.get('due_date')
+        open_date_str = request.form.get('open_date', '').strip()
+        close_date_str = request.form.get('close_date', '').strip()
         quarter = request.form.get('quarter', '')
         semester = request.form.get('semester', '')
         academic_period_id = request.form.get('academic_period_id')
+        assignment_status = request.form.get('assignment_status', 'Active').strip()
+        assignment_category = request.form.get('assignment_category', '').strip()
         group_size_min = request.form.get('group_size_min', 2)
         group_size_max = request.form.get('group_size_max', 4)
         allow_individual = 'allow_individual' in request.form
         collaboration_type = request.form.get('collaboration_type', 'group')
+        
+        # Advanced grading options
+        allow_extra_credit = request.form.get('allow_extra_credit') == 'on'
+        max_extra_credit_points = float(request.form.get('max_extra_credit_points', 0) or 0)
+        late_penalty_enabled = request.form.get('late_penalty_enabled') == 'on'
+        late_penalty_per_day = float(request.form.get('late_penalty_per_day', 0) or 0)
+        late_penalty_max_days = int(request.form.get('late_penalty_max_days', 0) or 0)
+        category_weight = float(request.form.get('category_weight', 0) or 0)
+        
+        grade_scale_preset = request.form.get('grade_scale_preset', '').strip()
+        grade_scale = None
+        if grade_scale_preset == 'standard':
+            grade_scale = json.dumps({"A": 90, "B": 80, "C": 70, "D": 60, "F": 0, "use_plus_minus": False})
+        elif grade_scale_preset == 'strict':
+            grade_scale = json.dumps({"A": 93, "B": 85, "C": 77, "D": 70, "F": 0, "use_plus_minus": False})
+        elif grade_scale_preset == 'lenient':
+            grade_scale = json.dumps({"A": 88, "B": 78, "C": 68, "D": 58, "F": 0, "use_plus_minus": False})
         
         if not title or not due_date_str or not quarter:
             flash('Title, due date, and quarter are required.', 'danger')
@@ -2088,8 +2109,10 @@ def admin_create_group_pdf_assignment(class_id):
         
         try:
             due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
+            open_date = datetime.strptime(open_date_str, '%Y-%m-%dT%H:%M') if open_date_str else None
+            close_date = datetime.strptime(close_date_str, '%Y-%m-%dT%H:%M') if close_date_str else None
         except ValueError:
-            flash('Invalid due date format.', 'danger')
+            flash('Invalid date format.', 'danger')
             return render_template('shared/create_group_pdf_assignment.html', 
                                  class_obj=class_obj, 
                                  academic_periods=academic_periods,
@@ -2141,11 +2164,21 @@ def admin_create_group_pdf_assignment(class_id):
             description=description,
             class_id=class_id,
             due_date=due_date,
+            open_date=open_date,
+            close_date=close_date,
             quarter=quarter,
             semester=semester if semester else None,
             academic_period_id=int(academic_period_id) if academic_period_id else None,
             school_year_id=current_school_year.id if current_school_year else None,
             assignment_type='pdf',
+            assignment_category=assignment_category if assignment_category else None,
+            category_weight=category_weight,
+            allow_extra_credit=allow_extra_credit,
+            max_extra_credit_points=max_extra_credit_points,
+            late_penalty_enabled=late_penalty_enabled,
+            late_penalty_per_day=late_penalty_per_day,
+            late_penalty_max_days=late_penalty_max_days,
+            grade_scale=grade_scale,
             group_size_min=int(group_size_min),
             group_size_max=int(group_size_max),
             allow_individual=allow_individual,
@@ -2159,7 +2192,7 @@ def admin_create_group_pdf_assignment(class_id):
             attachment_file_path=attachment_file_path,
             attachment_file_size=attachment_file_size,
             attachment_mime_type=attachment_mime_type,
-            status='Active'
+            status=assignment_status
         )
         
         db.session.add(group_assignment)

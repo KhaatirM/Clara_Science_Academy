@@ -403,20 +403,30 @@ def run_production_database_fix():
             cursor.execute(f"ALTER TABLE assignment ADD COLUMN {column_def}")
             print(f"Added column: {column_name}")
         
-        # Check if created_by column exists for group_assignment table
+        # Check if columns exist for group_assignment table
         cursor.execute("""
-            SELECT column_name 
-            FROM information_schema.columns 
-            WHERE table_name = 'group_assignment' 
-            AND column_name = 'created_by'
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_name = 'group_assignment'
+            AND column_name IN ('created_by', 'open_date', 'close_date')
         """)
-        
+
         group_existing = [row[0] for row in cursor.fetchall()]
-        
+
         if 'created_by' not in group_existing:
             print("Adding column to group_assignment table: created_by")
             cursor.execute("ALTER TABLE group_assignment ADD COLUMN created_by INTEGER")
             print("Added column: created_by")
+        
+        if 'open_date' not in group_existing:
+            print("Adding column to group_assignment table: open_date")
+            cursor.execute("ALTER TABLE group_assignment ADD COLUMN open_date TIMESTAMP")
+            print("Added column: open_date")
+        
+        if 'close_date' not in group_existing:
+            print("Adding column to group_assignment table: close_date")
+            cursor.execute("ALTER TABLE group_assignment ADD COLUMN close_date TIMESTAMP")
+            print("Added column: close_date")
         
         # Check if grade_levels column exists for class table
         cursor.execute("""
@@ -462,6 +472,29 @@ def run_production_database_fix():
             print("Adding column to teacher_staff table: deleted_at")
             cursor.execute("ALTER TABLE teacher_staff ADD COLUMN deleted_at TIMESTAMP")
             print("Added column: deleted_at")
+        
+        # Create group_assignment_extension table if it doesn't exist
+        cursor.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_name = 'group_assignment_extension'
+            )
+        """)
+        if not cursor.fetchone()[0]:
+            print("Creating group_assignment_extension table...")
+            cursor.execute("""
+                CREATE TABLE group_assignment_extension (
+                    id SERIAL PRIMARY KEY,
+                    group_assignment_id INTEGER NOT NULL REFERENCES group_assignment(id),
+                    student_id INTEGER NOT NULL REFERENCES student(id),
+                    extended_due_date TIMESTAMP NOT NULL,
+                    reason TEXT,
+                    granted_by INTEGER NOT NULL REFERENCES teacher_staff(id),
+                    granted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    is_active BOOLEAN DEFAULT TRUE
+                )
+            """)
+            print("Created group_assignment_extension table")
         
         cursor.close()
         conn.close()
@@ -947,7 +980,7 @@ def create_app(config_class=None):
             # Import the models to ensure they're registered
             from models import (
                 DeadlineReminder, ReminderNotification, 
-                StudentGroup, StudentGroupMember, GroupAssignment, 
+                StudentGroup, StudentGroupMember, GroupAssignment, GroupAssignmentExtension,
                 GroupSubmission, GroupGrade, GroupTemplate, GroupContract,
                 GroupRotation, GroupRotationHistory, PeerEvaluation,
                 AssignmentRubric, AssignmentTemplate, GroupProgress,

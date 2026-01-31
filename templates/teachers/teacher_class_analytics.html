@@ -119,7 +119,7 @@
                     {% for grade_range, count in grade_distribution.items() %}
                     <div class="grade-dist-item">
                         <div class="grade-dist-header">
-                            <span class="grade-letter {% if 'A' in grade_range %}grade-a{% elif 'B' in grade_range %}grade-b{% elif 'C' in grade_range %}grade-c{% elif 'D' in grade_range %}grade-d{% else %}grade-f{% endif %}">
+                            <span class="grade-letter {% if 'A' in grade_range %}grade-a{% elif 'B' in grade_range %}grade-b{% elif 'C' in grade_range %}grade-c{% elif 'D' in grade_range %}grade-d{% else %}grade-d{% endif %}">
                                 {{ grade_range.split()[0] }}
                             </span>
                             <span class="grade-range-text">{{ grade_range }}</span>

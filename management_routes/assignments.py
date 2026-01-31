@@ -2502,7 +2502,7 @@ def admin_grade_statistics(assignment_id):
     }
     
     scores = []
-    letter_grades = {'A': 0, 'B': 0, 'C': 0, 'D': 0, 'F': 0}
+    letter_grades = {'A': 0, 'B': 0, 'C': 0, 'D': 0}
     grade_distribution = {'90-100': 0, '80-89': 0, '70-79': 0, '60-69': 0, '0-59': 0}
     
     total_points = assignment.total_points if assignment.total_points else 100.0
@@ -2546,7 +2546,7 @@ def admin_grade_statistics(assignment_id):
                     letter_grades['D'] += 1
                     grade_distribution['60-69'] += 1
                 else:
-                    letter_grades['F'] += 1
+                    letter_grades['D'] += 1
                     grade_distribution['0-59'] += 1
         except (json.JSONDecodeError, TypeError, ValueError, KeyError):
             continue
@@ -2603,7 +2603,7 @@ def admin_group_grade_statistics(assignment_id):
     }
     
     scores = []
-    letter_grades = {'A': 0, 'B': 0, 'C': 0, 'D': 0, 'F': 0}
+    letter_grades = {'A': 0, 'B': 0, 'C': 0, 'D': 0}
     grade_distribution = {'90-100': 0, '80-89': 0, '70-79': 0, '60-69': 0, '0-59': 0}
     
     total_points = group_assignment.total_points if group_assignment.total_points else 100.0
@@ -2647,7 +2647,7 @@ def admin_group_grade_statistics(assignment_id):
                     letter_grades['D'] += 1
                     grade_distribution['60-69'] += 1
                 else:
-                    letter_grades['F'] += 1
+                    letter_grades['D'] += 1
                     grade_distribution['0-59'] += 1
         except (json.JSONDecodeError, TypeError, ValueError, KeyError):
             continue
@@ -3543,6 +3543,122 @@ def grant_extensions():
         return jsonify({'success': False, 'message': str(e)})
 
 
+# ============================================================
+# Route: /group-assignment/<int:assignment_id>/extensions
+# Function: admin_grant_group_extensions
+# ============================================================
+
+@bp.route('/group-assignment/<int:assignment_id>/extensions')
+@login_required
+def admin_grant_group_extensions(assignment_id):
+    """View and manage extensions for a group assignment - Teachers and admins."""
+    from models import GroupAssignment, GroupAssignmentExtension, StudentGroupMember
+    from teacher_routes.utils import teacher_or_management_for_group_assignment
+
+    # Auth check via decorator logic
+    if current_user.role not in ['Director', 'School Administrator']:
+        group_assignment = GroupAssignment.query.get_or_404(assignment_id)
+        from teacher_routes.utils import is_authorized_for_class
+        if not is_authorized_for_class(group_assignment.class_info):
+            flash("You are not authorized to manage extensions for this assignment.", "danger")
+            return redirect(url_for('teacher.assignments.view_group_assignment', assignment_id=assignment_id))
+
+    try:
+        group_assignment = GroupAssignment.query.get_or_404(assignment_id)
+        class_obj = group_assignment.class_info
+
+        # Get existing extensions for this group assignment
+        extensions = GroupAssignmentExtension.query.filter_by(
+            group_assignment_id=assignment_id, is_active=True
+        ).all()
+
+        # Get students in groups for this assignment
+        from models import StudentGroup
+        if group_assignment.selected_group_ids:
+            try:
+                selected_ids = json.loads(group_assignment.selected_group_ids) if isinstance(group_assignment.selected_group_ids, str) else group_assignment.selected_group_ids
+                groups = StudentGroup.query.filter(StudentGroup.class_id == group_assignment.class_id, StudentGroup.is_active == True, StudentGroup.id.in_(selected_ids)).all()
+            except Exception:
+                groups = StudentGroup.query.filter_by(class_id=group_assignment.class_id, is_active=True).all()
+        else:
+            groups = StudentGroup.query.filter_by(class_id=group_assignment.class_id, is_active=True).all()
+
+        students = []
+        for group in groups:
+            for member in StudentGroupMember.query.filter_by(group_id=group.id).all():
+                if member.student and member.student not in students:
+                    students.append(member.student)
+
+        return render_template('management/admin_grant_group_extensions.html',
+                             group_assignment=group_assignment,
+                             assignment=group_assignment,
+                             class_obj=class_obj,
+                             extensions=extensions,
+                             students=students)
+    except Exception as e:
+        print(f"Error viewing group extensions: {e}")
+        import traceback
+        traceback.print_exc()
+        flash('Error accessing extensions management.', 'error')
+        return redirect(url_for('teacher.assignments.view_group_assignment', assignment_id=assignment_id))
+
+
+@bp.route('/group-assignment/<int:assignment_id>/grant-extensions', methods=['POST'])
+@login_required
+def grant_group_extensions(assignment_id):
+    """Grant extensions for a group assignment - Teachers and admins."""
+    from models import GroupAssignment, GroupAssignmentExtension
+    from teacher_routes.utils import is_authorized_for_class
+
+    group_assignment = GroupAssignment.query.get_or_404(assignment_id)
+    if current_user.role not in ['Director', 'School Administrator']:
+        if not is_authorized_for_class(group_assignment.class_info):
+            flash("You are not authorized to grant extensions.", "danger")
+            return redirect(url_for('teacher.assignments.view_group_assignment', assignment_id=assignment_id))
+
+    try:
+        extended_due_date_str = request.form.get('extended_due_date')
+        reason = request.form.get('reason', '')
+        student_ids = request.form.getlist('student_ids')
+
+        if not all([extended_due_date_str, student_ids]):
+            flash('Missing required fields.', 'danger')
+            return redirect(url_for('management.admin_grant_group_extensions', assignment_id=assignment_id))
+
+        extended_due_date = datetime.strptime(extended_due_date_str, '%Y-%m-%dT%H:%M')
+        granter_id = current_user.teacher_staff_id or (group_assignment.class_info.teacher_id if group_assignment.class_info else None)
+
+        if not granter_id:
+            flash('Cannot grant extensions: No teacher record found.', 'danger')
+            return redirect(url_for('management.admin_grant_group_extensions', assignment_id=assignment_id))
+
+        granted_count = 0
+        for sid in student_ids:
+            try:
+                sid = int(sid)
+                for old_ext in GroupAssignmentExtension.query.filter_by(group_assignment_id=assignment_id, student_id=sid, is_active=True).all():
+                    old_ext.is_active = False
+                new_ext = GroupAssignmentExtension(
+                    group_assignment_id=assignment_id,
+                    student_id=sid,
+                    extended_due_date=extended_due_date,
+                    reason=reason,
+                    granted_by=granter_id,
+                    is_active=True
+                )
+                db.session.add(new_ext)
+                granted_count += 1
+            except (ValueError, TypeError):
+                continue
+
+        db.session.commit()
+        flash(f'Successfully granted extensions to {granted_count} student(s).', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error granting extensions: {str(e)}', 'danger')
+
+    return redirect(url_for('management.admin_grant_group_extensions', assignment_id=assignment_id))
+
 
 # ============================================================
 # Route: /group-assignment/<int:assignment_id>/view
@@ -3586,10 +3702,11 @@ def admin_view_group_assignment(assignment_id):
             # If no specific groups selected, get all groups
             groups = StudentGroup.query.filter_by(class_id=group_assignment.class_id, is_active=True).all()
         
-        # Get extensions for this assignment
+        # Get extensions for this group assignment
         try:
-            extensions = AssignmentExtension.query.filter_by(assignment_id=assignment_id).all()
-        except:
+            from models import GroupAssignmentExtension
+            extensions = GroupAssignmentExtension.query.filter_by(group_assignment_id=assignment_id, is_active=True).all()
+        except Exception:
             extensions = []
         
         # Calculate enhanced statistics
@@ -3684,7 +3801,7 @@ def admin_view_group_assignment(assignment_id):
 @login_required
 def admin_grade_group_assignment(assignment_id):
     """Grade a group assignment - Allows teachers and administrators."""
-    from models import GroupAssignment, StudentGroup, GroupGrade, AssignmentExtension, TeacherStaff
+    from models import GroupAssignment, StudentGroup, GroupGrade, GroupAssignmentExtension, TeacherStaff
     from teacher_routes.utils import is_authorized_for_class
     import json
     
@@ -3742,9 +3859,9 @@ def admin_grade_group_assignment(assignment_id):
         except:
             pass
         
-        # Get active extensions for this assignment
-        extensions = AssignmentExtension.query.filter_by(
-            assignment_id=assignment_id,
+        # Get active extensions for this group assignment
+        extensions = GroupAssignmentExtension.query.filter_by(
+            group_assignment_id=assignment_id,
             is_active=True
         ).all()
         extensions_dict = {ext.student_id: ext for ext in extensions}
@@ -3786,7 +3903,7 @@ def admin_grade_group_assignment(assignment_id):
                                         elif percentage >= 60:
                                             letter_grade = 'D'
                                         else:
-                                            letter_grade = 'F'
+                                            letter_grade = 'D'
                                         
                                         grade_data = {
                                             'score': points_earned,
@@ -3935,32 +4052,94 @@ def admin_delete_group_assignment(assignment_id):
 
 @bp.route('/group-assignment/<int:assignment_id>/edit', methods=['GET', 'POST'])
 @login_required
-@management_required
 def admin_edit_group_assignment(assignment_id):
-    """Edit a group assignment - Management view."""
-    try:
+    """Edit a group assignment - allows teachers (authorized for class) and admins."""
+    # Enforce authorization: Directors/Admins or teachers authorized for the class
+    if current_user.role not in ['Director', 'School Administrator']:
         from models import GroupAssignment
-        
         group_assignment = GroupAssignment.query.get_or_404(assignment_id)
-        
+        from teacher_routes.utils import is_authorized_for_class
+        if not is_authorized_for_class(group_assignment.class_info):
+            flash("You are not authorized to edit this group assignment.", "danger")
+            return redirect(url_for('teacher.dashboard.assignments_and_grades'))
+
+    try:
+        from models import GroupAssignment, StudentGroup
+
+        group_assignment = GroupAssignment.query.get_or_404(assignment_id)
+        class_obj = group_assignment.class_info
+
+        # Get groups for select groups section
+        groups = StudentGroup.query.filter_by(class_id=group_assignment.class_id, is_active=True).all()
+        # Parse selected group IDs for pre-checking (null/empty = all groups)
+        selected_ids = []
+        if group_assignment.selected_group_ids:
+            try:
+                selected_ids = json.loads(group_assignment.selected_group_ids) if isinstance(group_assignment.selected_group_ids, str) else group_assignment.selected_group_ids
+                selected_ids = [int(x) for x in selected_ids]
+            except Exception:
+                pass
+        # If no specific groups selected, treat as "all groups" - pre-select all
+        if not selected_ids and groups:
+            selected_ids = [g.id for g in groups]
+
         if request.method == 'POST':
             try:
-                # Update assignment fields
+                # Update basic fields
                 group_assignment.title = request.form.get('title', group_assignment.title)
                 group_assignment.description = request.form.get('description', group_assignment.description)
-                
-                # Update due date
+                group_assignment.status = request.form.get('assignment_status', group_assignment.status)
+                group_assignment.quarter = request.form.get('quarter', group_assignment.quarter)
+
+                # Dates
                 due_date_str = request.form.get('due_date')
                 if due_date_str:
                     try:
-                        from datetime import datetime
                         group_assignment.due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
                     except ValueError:
                         flash('Invalid due date format.', 'error')
-                        return render_template('management/admin_edit_group_assignment.html', 
-                                             group_assignment=group_assignment)
-                
-                # Update group size constraints
+                        return render_template('management/admin_edit_group_assignment.html',
+                                             group_assignment=group_assignment, class_obj=class_obj, groups=groups)
+                open_date_str = request.form.get('open_date', '').strip()
+                close_date_str = request.form.get('close_date', '').strip()
+                group_assignment.open_date = datetime.strptime(open_date_str, '%Y-%m-%dT%H:%M') if open_date_str else None
+                group_assignment.close_date = datetime.strptime(close_date_str, '%Y-%m-%dT%H:%M') if close_date_str else None
+
+                # Category
+                group_assignment.assignment_category = request.form.get('assignment_category') or None
+                try:
+                    group_assignment.category_weight = float(request.form.get('category_weight', 0) or 0)
+                except (ValueError, TypeError):
+                    group_assignment.category_weight = 0.0
+
+                # Grading
+                try:
+                    group_assignment.total_points = float(request.form.get('total_points', 100) or 100)
+                except (ValueError, TypeError):
+                    group_assignment.total_points = 100.0
+                group_assignment.allow_extra_credit = request.form.get('allow_extra_credit') == 'on'
+                try:
+                    group_assignment.max_extra_credit_points = float(request.form.get('max_extra_credit_points', 0) or 0)
+                except (ValueError, TypeError):
+                    group_assignment.max_extra_credit_points = 0.0
+                group_assignment.late_penalty_enabled = request.form.get('late_penalty_enabled') == 'on'
+                try:
+                    group_assignment.late_penalty_per_day = float(request.form.get('late_penalty_per_day', 0) or 0)
+                    group_assignment.late_penalty_max_days = int(request.form.get('late_penalty_max_days', 0) or 0)
+                except (ValueError, TypeError):
+                    group_assignment.late_penalty_per_day = 0.0
+                    group_assignment.late_penalty_max_days = 0
+                grade_scale_preset = request.form.get('grade_scale_preset', '').strip()
+                if grade_scale_preset == 'standard':
+                    group_assignment.grade_scale = json.dumps({"A": 90, "B": 80, "C": 70, "D": 60, "F": 0, "use_plus_minus": False})
+                elif grade_scale_preset == 'strict':
+                    group_assignment.grade_scale = json.dumps({"A": 93, "B": 85, "C": 77, "D": 70, "F": 0, "use_plus_minus": False})
+                elif grade_scale_preset == 'lenient':
+                    group_assignment.grade_scale = json.dumps({"A": 88, "B": 78, "C": 68, "D": 58, "F": 0, "use_plus_minus": False})
+                else:
+                    group_assignment.grade_scale = None
+
+                # Group size
                 min_size = request.form.get('min_group_size')
                 max_size = request.form.get('max_group_size')
                 if min_size and max_size:
@@ -3969,27 +4148,47 @@ def admin_edit_group_assignment(assignment_id):
                         group_assignment.max_group_size = int(max_size)
                     except ValueError:
                         flash('Invalid group size values.', 'error')
-                        return render_template('management/admin_edit_group_assignment.html', 
-                                             group_assignment=group_assignment)
-                
+                        return render_template('management/admin_edit_group_assignment.html',
+                                             group_assignment=group_assignment, class_obj=class_obj, groups=groups, selected_group_ids=selected_ids)
+
                 group_assignment.assignment_type = request.form.get('assignment_type', group_assignment.assignment_type)
                 group_assignment.collaboration_type = request.form.get('collaboration_type', group_assignment.collaboration_type)
-                
+
+                # Selected groups (empty = all groups = null; need at least one for valid assignment)
+                selected_groups = request.form.getlist('groups')
+                if not selected_groups and groups:
+                    flash('Please select at least one group for this assignment.', 'warning')
+                    return render_template('management/admin_edit_group_assignment.html',
+                                         group_assignment=group_assignment, class_obj=class_obj, groups=groups, selected_group_ids=selected_ids)
+                group_assignment.selected_group_ids = json.dumps(selected_groups) if selected_groups else None
+
                 db.session.commit()
                 flash('Assignment updated successfully!', 'success')
-                return redirect(url_for('management.admin_view_group_assignment', assignment_id=assignment_id))
+                # Redirect to appropriate view: teacher view for teachers, admin view for admins
+                if current_user.role in ['Director', 'School Administrator']:
+                    return redirect(url_for('management.admin_view_group_assignment', assignment_id=assignment_id))
+                return redirect(url_for('teacher.assignments.view_group_assignment', assignment_id=assignment_id))
                 
             except Exception as e:
                 db.session.rollback()
                 print(f"Error updating assignment: {e}")
                 flash('Error updating assignment. Please try again.', 'error')
-        
-        return render_template('management/admin_edit_group_assignment.html', 
-                             group_assignment=group_assignment)
+
+        return render_template('management/admin_edit_group_assignment.html',
+                             group_assignment=group_assignment, class_obj=class_obj, groups=groups, selected_group_ids=selected_ids)
     except Exception as e:
         print(f"Error editing group assignment: {e}")
         flash('Error accessing group assignment editing.', 'error')
-        return redirect(url_for('management.admin_class_group_assignments', class_id=group_assignment.class_id))
+        try:
+            ga = GroupAssignment.query.get(assignment_id)
+            class_id = ga.class_id if ga else None
+            if class_id:
+                if current_user.role in ['Director', 'School Administrator']:
+                    return redirect(url_for('management.admin_class_group_assignments', class_id=class_id))
+                return redirect(url_for('teacher.dashboard.assignments_and_grades'))
+        except Exception:
+            pass
+        return redirect(url_for('teacher.dashboard.assignments_and_grades'))
 
 
 

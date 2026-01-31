@@ -370,40 +370,75 @@ def save_group_assignment(class_id):
         description = request.form.get('description', '').strip()
         instructions = request.form.get('instructions', '').strip()
         due_date_str = request.form.get('due_date', '').strip()
+        open_date_str = request.form.get('open_date', '').strip()
+        close_date_str = request.form.get('close_date', '').strip()
+        quarter = request.form.get('quarter', '').strip()
+        assignment_status = request.form.get('assignment_status', 'Active').strip()
+        assignment_category = request.form.get('assignment_category', '').strip()
+        
         # Handle total_points as float (can be decimal like 50.5)
         total_points_str = request.form.get('total_points', '100').strip()
         try:
             total_points = float(total_points_str) if total_points_str else 100.0
         except (ValueError, TypeError):
             total_points = 100.0
+        
+        # Handle category_weight as float
+        category_weight_str = request.form.get('category_weight', '0').strip()
+        try:
+            category_weight = float(category_weight_str) if category_weight_str else 0.0
+        except (ValueError, TypeError):
+            category_weight = 0.0
+        
+        # Advanced grading options
+        allow_extra_credit = request.form.get('allow_extra_credit') == 'on'
+        max_extra_credit_points_str = request.form.get('max_extra_credit_points', '0').strip()
+        try:
+            max_extra_credit_points = float(max_extra_credit_points_str) if max_extra_credit_points_str else 0.0
+        except (ValueError, TypeError):
+            max_extra_credit_points = 0.0
+        
+        late_penalty_enabled = request.form.get('late_penalty_enabled') == 'on'
+        late_penalty_per_day_str = request.form.get('late_penalty_per_day', '0').strip()
+        try:
+            late_penalty_per_day = float(late_penalty_per_day_str) if late_penalty_per_day_str else 0.0
+        except (ValueError, TypeError):
+            late_penalty_per_day = 0.0
+        
+        late_penalty_max_days_str = request.form.get('late_penalty_max_days', '0').strip()
+        try:
+            late_penalty_max_days = int(late_penalty_max_days_str) if late_penalty_max_days_str else 0
+        except (ValueError, TypeError):
+            late_penalty_max_days = 0
+        
+        grade_scale_preset = request.form.get('grade_scale_preset', '').strip()
+        grade_scale = None
+        if grade_scale_preset == 'standard':
+            grade_scale = json.dumps({"A": 90, "B": 80, "C": 70, "D": 60, "F": 0, "use_plus_minus": False})
+        elif grade_scale_preset == 'strict':
+            grade_scale = json.dumps({"A": 93, "B": 85, "C": 77, "D": 70, "F": 0, "use_plus_minus": False})
+        elif grade_scale_preset == 'lenient':
+            grade_scale = json.dumps({"A": 88, "B": 78, "C": 68, "D": 58, "F": 0, "use_plus_minus": False})
+        
         selected_groups = request.form.getlist('groups')  # List of group IDs
         
         # Check if this is admin view
         admin_view = request.args.get('admin_view') == 'true'
         
-        if not title or not due_date_str or not selected_groups:
-            flash("Title, due date, and at least one group are required.", "danger")
+        if not title or not due_date_str or not selected_groups or not quarter:
+            flash("Title, due date, quarter, and at least one group are required.", "danger")
             return redirect(url_for('teacher.groups.create_group_assignment', class_id=class_id, admin_view=admin_view))
         
-        # Parse due date
+        # Parse dates
         due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
+        open_date = datetime.strptime(open_date_str, '%Y-%m-%dT%H:%M') if open_date_str else None
+        close_date = datetime.strptime(close_date_str, '%Y-%m-%dT%H:%M') if close_date_str else None
         
         # Get current school year
         current_year = SchoolYear.query.filter_by(is_active=True).first()
         if not current_year:
             flash("No active school year found. Please contact administrator.", "danger")
             return redirect(url_for('teacher.groups.create_group_assignment', class_id=class_id, admin_view=admin_view))
-        
-        # Determine current quarter based on due date
-        current_month = due_date.month
-        if current_month in [8, 9, 10]:
-            quarter = "Q1"
-        elif current_month in [11, 12, 1]:
-            quarter = "Q2"
-        elif current_month in [2, 3, 4]:
-            quarter = "Q3"
-        else:
-            quarter = "Q4"
         
         # Create group assignment
         teacher = get_teacher_or_admin()
@@ -415,14 +450,24 @@ def save_group_assignment(class_id):
             description=description,
             class_id=class_id,
             due_date=due_date,
+            open_date=open_date,
+            close_date=close_date,
             quarter=quarter,
             school_year_id=current_year.id,
             assignment_type='pdf',
             assignment_context=assignment_context,
-            total_points=total_points,  # Add total_points field
+            total_points=total_points,
+            assignment_category=assignment_category if assignment_category else None,
+            category_weight=category_weight,
+            allow_extra_credit=allow_extra_credit,
+            max_extra_credit_points=max_extra_credit_points,
+            late_penalty_enabled=late_penalty_enabled,
+            late_penalty_per_day=late_penalty_per_day,
+            late_penalty_max_days=late_penalty_max_days,
+            grade_scale=grade_scale,
             selected_group_ids=json.dumps(selected_groups),  # Store as JSON
             created_by=current_user.id,
-            status='Active'
+            status=assignment_status
         )
         db.session.add(new_assignment)
         db.session.flush()  # Get the ID for file path

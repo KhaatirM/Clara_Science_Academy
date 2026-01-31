@@ -1419,6 +1419,8 @@ class GroupAssignment(db.Model):
     description = db.Column(db.Text, nullable=True)
     class_id = db.Column(db.Integer, db.ForeignKey('class.id'), nullable=False)
     due_date = db.Column(db.DateTime, nullable=False)
+    open_date = db.Column(db.DateTime, nullable=True)  # When assignment becomes available (NULL = available immediately)
+    close_date = db.Column(db.DateTime, nullable=True)  # When assignment closes (NULL = closes at due_date)
     quarter = db.Column(db.String(10), nullable=False)
     semester = db.Column(db.String(10), nullable=True)
     academic_period_id = db.Column(db.Integer, db.ForeignKey('academic_period.id'), nullable=True)
@@ -1665,6 +1667,29 @@ class AssignmentExtension(db.Model):
     
     def __repr__(self):
         return f"AssignmentExtension(Assignment: {self.assignment_id}, Student: {self.student_id}, New Due: {self.extended_due_date})"
+
+
+class GroupAssignmentExtension(db.Model):
+    """
+    Model for tracking extensions granted for group assignments.
+    Extends due date for specific students or groups.
+    """
+    __tablename__ = 'group_assignment_extension'
+    id = db.Column(db.Integer, primary_key=True)
+    group_assignment_id = db.Column(db.Integer, db.ForeignKey('group_assignment.id'), nullable=False)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
+    extended_due_date = db.Column(db.DateTime, nullable=False)
+    reason = db.Column(db.Text, nullable=True)
+    granted_by = db.Column(db.Integer, db.ForeignKey('teacher_staff.id'), nullable=False)
+    granted_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_active = db.Column(db.Boolean, default=True)
+
+    group_assignment = db.relationship('GroupAssignment', backref='extensions')
+    student = db.relationship('Student', backref='group_assignment_extensions')
+    granter = db.relationship('TeacherStaff', backref='granted_group_extensions')
+
+    def __repr__(self):
+        return f"GroupAssignmentExtension(GroupAssignment: {self.group_assignment_id}, Student: {self.student_id}, New Due: {self.extended_due_date})"
 
 
 class AssignmentReopening(db.Model):

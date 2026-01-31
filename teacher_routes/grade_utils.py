@@ -95,7 +95,8 @@ def calculate_letter_grade(percentage, grade_scale=None):
                 return "D-"
         return "D"
     else:
-        return "F"
+        # Minimum letter grade is D (no F)
+        return "D" if not use_plus_minus else "D-"
 
 
 def calculate_late_penalty(assignment, submission_date, due_date):
@@ -262,8 +263,8 @@ def calculate_assignment_statistics(assignment_id):
         grade_ranges[range_key] = grade_ranges.get(range_key, 0) + 1
     mode_range = max(grade_ranges.items(), key=lambda x: x[1])[0] if grade_ranges else "0-9"
     
-    # Grade distribution (A, B, C, D, F)
-    distribution = {"A": 0, "B": 0, "C": 0, "D": 0, "F": 0}
+    # Grade distribution (A, B, C, D - minimum is D)
+    distribution = {"A": 0, "B": 0, "C": 0, "D": 0}
     for p in percentages:
         if p >= 90:
             distribution["A"] += 1
@@ -271,10 +272,8 @@ def calculate_assignment_statistics(assignment_id):
             distribution["B"] += 1
         elif p >= 70:
             distribution["C"] += 1
-        elif p >= 60:
-            distribution["D"] += 1
         else:
-            distribution["F"] += 1
+            distribution["D"] += 1
     
     return {
         "total_students": len(grades),

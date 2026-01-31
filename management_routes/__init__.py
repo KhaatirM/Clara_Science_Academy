@@ -42,6 +42,7 @@ management_blueprint.register_blueprint(administration.bp, url_prefix='')
 # These ensure endpoints like 'management.calendar' work (not 'management.calendar.calendar')
 from flask_login import login_required
 from decorators import management_required
+from teacher_routes.utils import teacher_or_management_for_group_assignment
 
 # Import the actual functions to call them
 from .dashboard import management_dashboard as management_dashboard_func, redo_dashboard as redo_dashboard_func
@@ -95,6 +96,8 @@ from .assignments import (
     admin_edit_group_assignment as admin_edit_group_assignment_func,
     admin_delete_group_assignment as admin_delete_group_assignment_func,
     admin_grant_extensions as admin_grant_extensions_func,
+    admin_grant_group_extensions as admin_grant_group_extensions_func,
+    grant_group_extensions as grant_group_extensions_func,
     admin_reopen_assignment as admin_reopen_assignment_func,
     admin_get_reopen_status as admin_get_reopen_status_func,
     admin_revoke_reopen as admin_revoke_reopen_func,
@@ -716,37 +719,37 @@ def admin_grade_group_assignment_route(assignment_id):
 
 @management_blueprint.route('/group-assignment/<int:assignment_id>/edit', methods=['GET', 'POST'], endpoint='admin_edit_group_assignment')
 @login_required
-@management_required
+@teacher_or_management_for_group_assignment
 def admin_edit_group_assignment_route(assignment_id):
-    """Admin edit group assignment route - delegates to assignments module"""
+    """Edit group assignment - allows teachers (authorized for class) and admins"""
     return admin_edit_group_assignment_func(assignment_id)
 
 @management_blueprint.route('/group-assignment/<int:assignment_id>/delete', methods=['POST'], endpoint='admin_delete_group_assignment')
 @login_required
-@management_required
+@teacher_or_management_for_group_assignment
 def admin_delete_group_assignment_route(assignment_id):
-    """Admin delete group assignment route - delegates to assignments module"""
+    """Delete group assignment - allows teachers (authorized for class) and admins"""
     return admin_delete_group_assignment_func(assignment_id)
 
 @management_blueprint.route('/group-assignment/<int:assignment_id>/void', methods=['POST'], endpoint='void_group_assignment')
 @login_required
-@management_required
+@teacher_or_management_for_group_assignment
 def void_group_assignment_route(assignment_id):
-    """Void group assignment route - delegates to assignments module"""
+    """Void group assignment - allows teachers (authorized for class) and admins"""
     return void_group_assignment_func(assignment_id)
 
 @management_blueprint.route('/group-assignment/<int:assignment_id>/unvoid', methods=['POST'], endpoint='unvoid_group_assignment')
 @login_required
-@management_required
+@teacher_or_management_for_group_assignment
 def unvoid_group_assignment_route(assignment_id):
-    """Unvoid group assignment route - delegates to assignments module"""
+    """Unvoid group assignment - allows teachers (authorized for class) and admins"""
     return unvoid_group_assignment_func(assignment_id)
 
 @management_blueprint.route('/group-assignment/<int:assignment_id>/change-status', methods=['POST'], endpoint='admin_change_group_assignment_status')
 @login_required
-@management_required
+@teacher_or_management_for_group_assignment
 def admin_change_group_assignment_status_route(assignment_id):
-    """Change group assignment status route - delegates to assignments module"""
+    """Change group assignment status - allows teachers (authorized for class) and admins"""
     return admin_change_group_assignment_status_func(assignment_id)
 
 @management_blueprint.route('/assignment/<int:assignment_id>/extensions', endpoint='admin_grant_extensions')
@@ -755,6 +758,18 @@ def admin_change_group_assignment_status_route(assignment_id):
 def admin_grant_extensions_route(assignment_id):
     """Admin grant extensions route - delegates to assignments module"""
     return admin_grant_extensions_func(assignment_id)
+
+@management_blueprint.route('/group-assignment/<int:assignment_id>/extensions', endpoint='admin_grant_group_extensions')
+@login_required
+def admin_grant_group_extensions_route(assignment_id):
+    """Group assignment extensions - allows teachers and admins"""
+    return admin_grant_group_extensions_func(assignment_id)
+
+@management_blueprint.route('/group-assignment/<int:assignment_id>/grant-extensions', methods=['POST'], endpoint='grant_group_extensions')
+@login_required
+def grant_group_extensions_route(assignment_id):
+    """Grant extensions for group assignment - allows teachers and admins"""
+    return grant_group_extensions_func(assignment_id)
 
 # Add alias for grant_extensions (backward compatibility)
 @management_blueprint.route('/assignment/<int:assignment_id>/grant-extensions', methods=['POST'], endpoint='grant_extensions')

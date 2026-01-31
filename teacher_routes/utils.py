@@ -25,6 +25,26 @@ def get_teacher_or_admin():
             return TeacherStaff.query.filter_by(id=current_user.teacher_staff_id).first()
         return None
 
+def teacher_or_management_for_group_assignment(f):
+    """Allows Directors, School Administrators, OR teachers authorized for the assignment's class."""
+    from functools import wraps
+    from flask import abort
+    from flask_login import current_user
+    from models import GroupAssignment
+
+    @wraps(f)
+    def decorated_function(assignment_id, *args, **kwargs):
+        if not current_user.is_authenticated:
+            abort(401)
+        if current_user.role in ['Director', 'School Administrator']:
+            return f(assignment_id, *args, **kwargs)
+        group_assignment = GroupAssignment.query.get_or_404(assignment_id)
+        if is_authorized_for_class(group_assignment.class_info):
+            return f(assignment_id, *args, **kwargs)
+        abort(403)
+    return decorated_function
+
+
 def is_authorized_for_class(class_obj):
     """Check if current user is authorized to access a specific class."""
     # --- DEBUG PRINT: Check your server console when you click a class ---

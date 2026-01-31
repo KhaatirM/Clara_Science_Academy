@@ -33,13 +33,11 @@
     <div class="card-body p-4">
       <h5 class="mb-3"><i class="bi bi-lightning-fill me-2"></i>Quick Actions</h5>
       <div class="compact-action-grid">
-        {% if current_user.role in ['Director', 'School Administrator'] %}
-          <a href="{{ url_for('management.admin_edit_group_assignment', assignment_id=group_assignment.id) }}" 
-             class="btn btn-compact btn-compact-edit">
-            <i class="bi bi-pencil-square"></i>
-            <span>Edit</span>
-          </a>
-        {% endif %}
+        <a href="{{ url_for('management.admin_edit_group_assignment', assignment_id=group_assignment.id) }}" 
+           class="btn btn-compact btn-compact-edit">
+          <i class="bi bi-pencil-square"></i>
+          <span>Edit</span>
+        </a>
         
         <button class="btn btn-compact btn-compact-submissions" 
                 onclick="scrollToSubmissions()">
@@ -53,42 +51,46 @@
           <span>Grade</span>
         </a>
         
-        {% if current_user.role in ['Director', 'School Administrator'] %}
-          <a href="{{ url_for('management.admin_grant_extensions', assignment_id=group_assignment.id) }}" 
-             class="btn btn-compact btn-compact-extension">
-            <i class="bi bi-clock-history"></i>
-            <span>Extensions</span>
-          </a>
-          
-          {% set has_voided_grades = group_grades|selectattr('is_voided', 'equalto', True)|list|length > 0 if group_grades else False %}
-          {% if has_voided_grades %}
-          <button class="btn btn-compact btn-compact-unvoid" 
-                  data-bs-toggle="modal" 
-                  data-bs-target="#unvoidGroupModal">
-            <i class="bi bi-arrow-counterclockwise"></i>
-            <span>Unvoid</span>
-          </button>
-          {% endif %}
-          
-          <button class="btn btn-compact btn-compact-void" 
-                  data-bs-toggle="modal" 
-                  data-bs-target="#voidGroupModal">
-            <i class="bi bi-slash-circle"></i>
-            <span>Void</span>
-          </button>
-          
-          <button class="btn btn-compact btn-compact-status" 
-                  onclick="changeGroupAssignmentStatus({{ group_assignment.id }}, '{{ group_assignment.status }}')">
-            <i class="bi bi-gear"></i>
-            <span>Status</span>
-          </button>
-          
-          <button class="btn btn-compact btn-compact-remove" 
-                  onclick="confirmDeleteGroupAssignment('{{ group_assignment.title }}', {{ group_assignment.id }})">
-            <i class="bi bi-trash"></i>
-            <span>Remove</span>
-          </button>
+        <a href="{{ url_for('management.admin_grant_group_extensions', assignment_id=group_assignment.id) }}" 
+           class="btn btn-compact btn-compact-extension">
+          <i class="bi bi-clock-history"></i>
+          <span>Extension</span>
+        </a>
+        
+        <button class="btn btn-compact btn-compact-reopen" 
+                onclick="openReopenGroupModal()">
+          <i class="bi bi-arrow-repeat"></i>
+          <span>Reopen</span>
+        </button>
+        
+        {% set has_voided_grades = group_grades|selectattr('is_voided', 'equalto', True)|list|length > 0 if group_grades else False %}
+        {% if has_voided_grades %}
+        <button class="btn btn-compact btn-compact-unvoid" 
+                data-bs-toggle="modal" 
+                data-bs-target="#unvoidGroupModal">
+          <i class="bi bi-arrow-counterclockwise"></i>
+          <span>Unvoid</span>
+        </button>
         {% endif %}
+        
+        <button class="btn btn-compact btn-compact-void" 
+                data-bs-toggle="modal" 
+                data-bs-target="#voidGroupModal">
+          <i class="bi bi-slash-circle"></i>
+          <span>Void</span>
+        </button>
+        
+        <button class="btn btn-compact btn-compact-status" 
+                onclick="changeGroupAssignmentStatus({{ group_assignment.id }}, '{{ group_assignment.status }}')">
+          <i class="bi bi-gear"></i>
+          <span>Status</span>
+        </button>
+        
+        <button class="btn btn-compact btn-compact-remove" 
+                onclick="confirmDeleteGroupAssignment('{{ group_assignment.title }}', {{ group_assignment.id }})">
+          <i class="bi bi-trash"></i>
+          <span>Remove</span>
+        </button>
         
         <button onclick="goBack()" class="btn btn-compact btn-compact-back">
           <i class="bi bi-arrow-left-circle"></i>
@@ -312,15 +314,13 @@
                     <h6 class="mb-1">{{ ext.student.first_name }} {{ ext.student.last_name }}</h6>
                     <small class="text-muted">
                       <i class="bi bi-calendar-event me-1"></i>
-                      New Due Date: {{ ext.new_due_date.strftime('%b %d, %Y %I:%M %p') if ext.new_due_date else 'N/A' }}
+                      New Due Date: {{ ext.extended_due_date.strftime('%b %d, %Y %I:%M %p') if ext.extended_due_date else 'N/A' }}
                     </small>
                     {% if ext.reason %}
                       <p class="mb-0 mt-1"><small>Reason: {{ ext.reason }}</small></p>
                     {% endif %}
                   </div>
-                  <span class="badge bg-{% if ext.approved %}success{% else %}warning{% endif %}">
-                    {{ 'Approved' if ext.approved else 'Pending' }}
-                  </span>
+                  <span class="badge bg-success">Active</span>
                 </div>
               </div>
             {% endfor %}
@@ -332,7 +332,6 @@
   </div>
 </div>
 
-{% if current_user.role in ['Director', 'School Administrator'] %}
 <!-- Void Group Assignment Modal -->
 <div class="modal fade" id="voidGroupModal" tabindex="-1">
   <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -533,9 +532,11 @@
     </div>
   </div>
 </div>
-{% endif %}
 
 <script>
+function openReopenGroupModal() {
+  alert('Reopen for group assignments allows you to reopen the assignment for groups that have not yet submitted. This feature is available when the assignment is inactive or closed.');
+}
 function scrollToSubmissions() {
   document.querySelector('.card-header.bg-success').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -554,7 +555,7 @@ function changeGroupAssignmentStatus(assignmentId, currentStatus) {
     if (confirm(`Change status from "${currentStatus}" to "${newStatus}"?`)) {
       const form = document.createElement('form');
       form.method = 'POST';
-      form.action = "{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.admin_change_group_assignment_status', assignment_id=0) }}{% else %}#{% endif %}".replace('0', assignmentId);
+      form.action = "{{ url_for('management.admin_change_group_assignment_status', assignment_id=0) }}".replace('0', assignmentId);
       
       const csrfInput = document.createElement('input');
       csrfInput.type = 'hidden';
@@ -578,7 +579,7 @@ function confirmDeleteGroupAssignment(title, assignmentId) {
   if (confirm(`Are you sure you want to delete the group assignment "${title}"?\n\nThis action cannot be undone and will delete all grades and submissions for this assignment.`)) {
     const form = document.createElement('form');
     form.method = 'POST';
-    form.action = "{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.admin_delete_group_assignment', assignment_id=0) }}{% else %}#{% endif %}".replace('0', assignmentId);
+    form.action = "{{ url_for('management.admin_delete_group_assignment', assignment_id=0) }}".replace('0', assignmentId);
     
     const csrfInput = document.createElement('input');
     csrfInput.type = 'hidden';

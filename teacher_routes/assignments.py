@@ -1740,10 +1740,11 @@ def view_group_assignment(assignment_id):
             # If no specific groups selected, get all groups
             groups = StudentGroup.query.filter_by(class_id=group_assignment.class_id, is_active=True).all()
         
-        # Get extensions for this assignment
+        # Get extensions for this group assignment
         try:
-            extensions = AssignmentExtension.query.filter_by(assignment_id=assignment_id).all()
-        except:
+            from models import GroupAssignmentExtension
+            extensions = GroupAssignmentExtension.query.filter_by(group_assignment_id=assignment_id, is_active=True).all()
+        except Exception:
             extensions = []
         
         # Calculate enhanced statistics

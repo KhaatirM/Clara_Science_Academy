@@ -130,14 +130,14 @@ const letterGradeCtx = document.getElementById('letterGradeChart').getContext('2
 new Chart(letterGradeCtx, {
     type: 'pie',
     data: {
-        labels: ['A (90-100%)', 'B (80-89%)', 'C (70-79%)', 'D (60-69%)', 'F (0-59%)'],
+        labels: ['A (90-100%)', 'B (80-89%)', 'C (70-79%)', 'D (60-69%)', 'D (0-59%)'],
         datasets: [{
             data: [
-                {{ letter_grades.A }},
-                {{ letter_grades.B }},
-                {{ letter_grades.C }},
-                {{ letter_grades.D }},
-                {{ letter_grades.F }}
+                {{ grade_distribution['90-100'] }},
+                {{ grade_distribution['80-89'] }},
+                {{ grade_distribution['70-79'] }},
+                {{ grade_distribution['60-69'] }},
+                {{ grade_distribution['0-59'] }}
             ],
             backgroundColor: [
                 '#28a745', // Green for A

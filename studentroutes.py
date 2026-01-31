@@ -194,12 +194,11 @@ def get_grade_trends(student_id, class_id, limit=10):
     return trends
 
 def get_letter_grade(percentage):
-    """Convert percentage to letter grade."""
-    # Ensure percentage is a number
+    """Convert percentage to letter grade. Minimum letter grade is D."""
     try:
         percentage = float(percentage)
     except (ValueError, TypeError):
-        return 'F'  # Return F for invalid percentages
+        return 'D'
     
     if percentage >= 93:
         return 'A'
@@ -224,7 +223,7 @@ def get_letter_grade(percentage):
     elif percentage >= 60:
         return 'D-'
     else:
-        return 'F'
+        return 'D'
 
 def create_template_context(student, section, active_tab, **kwargs):
     """Helper function to create common template context."""
@@ -1101,6 +1100,14 @@ def student_grades():
             
             # Calculate grades for each quarter (including group assignments)
             from datetime import date
+            def _quarter_matches(assign_quarter, period_name):
+                """Match quarter formats: Q1/1, Q2/2, etc. Handles None/empty."""
+                if assign_quarter is None or assign_quarter == '':
+                    return False
+                a = str(assign_quarter).strip().upper().replace('Q', '')
+                b = str(period_name or '').strip().upper().replace('Q', '')
+                return a and b and a == b
+
             for quarter in quarters:
                 # Check if the quarter has ended before calculating grades
                 today = date.today()
@@ -1116,11 +1123,11 @@ def student_grades():
                     }
                     continue
                 
-                quarter_assignments = [a for a in assignments if a.quarter == quarter.name]
-                quarter_group_assignments = [a for a in group_assignments if a.quarter == quarter.name]
+                quarter_assignments = [a for a in assignments if _quarter_matches(a.quarter, quarter.name)]
+                quarter_group_assignments = [a for a in group_assignments if _quarter_matches(a.quarter, quarter.name)]
                 quarter_grades_list = []
                 
-                # Add regular assignment grades
+                # Add regular assignment grades (use percentage for proper weighting)
                 for assignment in quarter_assignments:
                     # Skip voided assignments
                     if assignment.status == 'Voided':
@@ -1128,15 +1135,19 @@ def student_grades():
                         
                     grade = next((g for g in grades if g.assignment_id == assignment.id), None)
                     if grade and not grade.is_voided:
-                        grade_data = json.loads(grade.grade_data)
-                        if 'score' in grade_data and grade_data['score'] is not None:
-                            try:
-                                score = float(grade_data['score'])  # Convert to float
-                                quarter_grades_list.append(score)
-                            except (ValueError, TypeError):
-                                continue  # Skip invalid scores
+                        try:
+                            grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
+                            points_earned = grade_data.get('points_earned') or grade_data.get('score')
+                            if points_earned is not None:
+                                total_pts = assignment.total_points if (assignment.total_points and assignment.total_points > 0) else 100.0
+                                pct = (float(points_earned) / float(total_pts) * 100) if total_pts > 0 else 0
+                                quarter_grades_list.append(pct)
+                            elif grade_data.get('percentage') is not None:
+                                quarter_grades_list.append(float(grade_data['percentage']))
+                        except (ValueError, TypeError, json.JSONDecodeError):
+                            continue
                 
-                # Add group assignment grades
+                # Add group assignment grades (use percentage for proper weighting)
                 for group_assignment in quarter_group_assignments:
                     # Skip voided assignments
                     if group_assignment.status == 'Voided':
@@ -1144,13 +1155,17 @@ def student_grades():
                         
                     group_grade = next((g for g in group_grades if g.group_assignment_id == group_assignment.id), None)
                     if group_grade and not group_grade.is_voided:
-                        grade_data = json.loads(group_grade.grade_data) if isinstance(group_grade.grade_data, str) else group_grade.grade_data
-                        if 'score' in grade_data and grade_data['score'] is not None:
-                            try:
-                                score = float(grade_data['score'])  # Convert to float
-                                quarter_grades_list.append(score)
-                            except (ValueError, TypeError):
-                                continue  # Skip invalid scores
+                        try:
+                            grade_data = json.loads(group_grade.grade_data) if isinstance(group_grade.grade_data, str) else group_grade.grade_data
+                            points_earned = grade_data.get('points_earned') or grade_data.get('score')
+                            if points_earned is not None:
+                                total_pts = group_assignment.total_points if (group_assignment.total_points and group_assignment.total_points > 0) else 100.0
+                                pct = (float(points_earned) / float(total_pts) * 100) if total_pts > 0 else 0
+                                quarter_grades_list.append(pct)
+                            elif grade_data.get('percentage') is not None:
+                                quarter_grades_list.append(float(grade_data['percentage']))
+                        except (ValueError, TypeError, json.JSONDecodeError):
+                            continue
                 
                 if quarter_grades_list:
                     quarter_avg = round(sum(quarter_grades_list) / len(quarter_grades_list), 2)
@@ -1209,7 +1224,7 @@ def student_grades():
                 
                 semester_grades_list = []
                 
-                # Add regular assignment grades
+                # Add regular assignment grades (use percentage for proper weighting)
                 for assignment in semester_assignments:
                     # Skip voided assignments
                     if assignment.status == 'Voided':
@@ -1217,15 +1232,19 @@ def student_grades():
                         
                     grade = next((g for g in grades if g.assignment_id == assignment.id), None)
                     if grade and not grade.is_voided:
-                        grade_data = json.loads(grade.grade_data)
-                        if 'score' in grade_data and grade_data['score'] is not None:
-                            try:
-                                score = float(grade_data['score'])  # Convert to float
-                                semester_grades_list.append(score)
-                            except (ValueError, TypeError):
-                                continue  # Skip invalid scores
+                        try:
+                            grade_data = json.loads(grade.grade_data) if isinstance(grade.grade_data, str) else grade.grade_data
+                            points_earned = grade_data.get('points_earned') or grade_data.get('score')
+                            if points_earned is not None:
+                                total_pts = assignment.total_points if (assignment.total_points and assignment.total_points > 0) else 100.0
+                                pct = (float(points_earned) / float(total_pts) * 100) if total_pts > 0 else 0
+                                semester_grades_list.append(pct)
+                            elif grade_data.get('percentage') is not None:
+                                semester_grades_list.append(float(grade_data['percentage']))
+                        except (ValueError, TypeError, json.JSONDecodeError):
+                            continue
                 
-                # Add group assignment grades
+                # Add group assignment grades (use percentage for proper weighting)
                 for group_assignment in semester_group_assignments:
                     # Skip voided assignments
                     if group_assignment.status == 'Voided':
@@ -1233,13 +1252,17 @@ def student_grades():
                         
                     group_grade = next((g for g in group_grades if g.group_assignment_id == group_assignment.id), None)
                     if group_grade and not group_grade.is_voided:
-                        grade_data = json.loads(group_grade.grade_data) if isinstance(group_grade.grade_data, str) else group_grade.grade_data
-                        if 'score' in grade_data and grade_data['score'] is not None:
-                            try:
-                                score = float(grade_data['score'])  # Convert to float
-                                semester_grades_list.append(score)
-                            except (ValueError, TypeError):
-                                continue  # Skip invalid scores
+                        try:
+                            grade_data = json.loads(group_grade.grade_data) if isinstance(group_grade.grade_data, str) else group_grade.grade_data
+                            points_earned = grade_data.get('points_earned') or grade_data.get('score')
+                            if points_earned is not None:
+                                total_pts = group_assignment.total_points if (group_assignment.total_points and group_assignment.total_points > 0) else 100.0
+                                pct = (float(points_earned) / float(total_pts) * 100) if total_pts > 0 else 0
+                                semester_grades_list.append(pct)
+                            elif grade_data.get('percentage') is not None:
+                                semester_grades_list.append(float(grade_data['percentage']))
+                        except (ValueError, TypeError, json.JSONDecodeError):
+                            continue
                 
                 if semester_grades_list:
                     semester_avg = round(sum(semester_grades_list) / len(semester_grades_list), 2)

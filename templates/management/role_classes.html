@@ -28,7 +28,7 @@
                 <p class="mb-0 opacity-90">Manage your classes and Google Classroom integration</p>
             </div>
             {% if current_user.role in ['Director', 'School Administrator'] %}
-                <a href="{{ url_for('management.add_class') }}" class="add-class-btn">
+                <a href="{{ url_for('management.classes', open='create') }}" class="add-class-btn">
                     <i class="bi bi-plus-circle-fill me-2"></i>Add New Class
                 </a>
             {% endif %}

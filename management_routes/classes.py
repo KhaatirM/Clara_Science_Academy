@@ -5,7 +5,7 @@ Classes routes for management users.
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, Response, abort, jsonify
 from flask_login import login_required, current_user
 from decorators import management_required
-from models import db, Class, TeacherStaff, Student, Enrollment, Assignment, Attendance, Grade, Submission, StudentGroup, StudentGroupMember, GroupAssignment, GroupConflict, GroupGrade, SchoolDayAttendance
+from models import db, Class, TeacherStaff, Student, Enrollment, Assignment, Attendance, Grade, Submission, StudentGroup, StudentGroupMember, GroupAssignment, GroupConflict, GroupGrade, SchoolDayAttendance, SchoolYear
 from datetime import datetime
 import json
 
@@ -147,13 +147,13 @@ def add_class():
             
             if not name or not subject or not teacher_id:
                 flash('Please fill in all required fields.', 'danger')
-                return redirect(url_for('management.add_class'))
+                return redirect(url_for('management.classes'))
             
             # Get current school year
             current_school_year = SchoolYear.query.filter_by(is_active=True).first()
             if not current_school_year:
                 flash('Cannot create class: No active school year.', 'danger')
-                return redirect(url_for('management.add_class'))
+                return redirect(url_for('management.classes'))
             
             # Create new class
             new_class = Class(
@@ -248,16 +248,15 @@ def add_class():
             else:
                 flash(f'Class "{name}" created successfully. Note: Google Classroom was not created. The assigned teacher may need to connect their Google account.', 'info')
             
-            return redirect(url_for('management.classes'))
+            return redirect(url_for('management.view_class', class_id=new_class.id))
             
         except Exception as e:
             db.session.rollback()
             flash(f'Error creating class: {str(e)}', 'danger')
-            return redirect(url_for('management.add_class'))
+            return redirect(url_for('management.classes'))
     
-    # GET request - show form
-    teachers = TeacherStaff.query.filter(TeacherStaff.is_deleted == False).all()
-    return render_template('management/add_class.html', available_teachers=teachers)
+    # GET request - no standalone page; redirect to classes view (create via modal there)
+    return redirect(url_for('management.classes'))
 
 
 

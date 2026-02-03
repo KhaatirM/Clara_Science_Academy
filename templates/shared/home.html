@@ -506,7 +506,7 @@
                         <h6 class="home-updates-intro-title mb-2">
                             <i class="bi bi-calendar3 me-2"></i>Latest System Update - February 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>Home Page, Schedule Tab & Updates Popup.</strong> The public home page has been restructured and restyled with a teal-and-off-white design, hero image slideshow, and softer backgrounds. Teachers and students now share one unified schedule view tied to the class schedule. This updates popup has been redesigned to match and now shows only the latest changes.</p>
+                        <p class="updates-intro-text mb-0"><strong>Home Page, Schedule Tab, Updates Popup & Google Login.</strong> The public home page has been restructured and restyled with a teal-and-off-white design, hero image slideshow, and softer backgrounds. Teachers and students now share one unified schedule view tied to the class schedule. Sign in with Google was fixed so it works on the live server (no more 400 error). This updates popup has been redesigned to match and now shows only the latest changes.</p>
                     </div>
                 </div>
                 
@@ -535,9 +535,13 @@
                                 <i class="bi bi-check-circle-fill me-2"></i>
                                 <strong>Updates Popup Redesign:</strong> This System Updates modal now matches the new home: teal header, soft body background, intro card, and styled update sections. Old historical entries were removed; this popup now shows only the latest changes.
                             </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Google Login 400 Error Fix:</strong> Sign in with Google was fixed so it works on the live server (e.g. Render). The OAuth redirect URI is now built dynamically from the current request instead of a hardcoded localhost URL, and the app trusts proxy headers so it knows it’s running over HTTPS.
+                            </li>
                         </ul>
                         <div class="alert alert-info mt-3">
-                            <p class="mb-0"><strong>Impact:</strong> Students and teachers get a single, clear schedule tied to the class schedule. Visitors see a refreshed home page with the same information and a more modern look. The updates popup is simpler and aligned with the new design.</p>
+                            <p class="mb-0"><strong>Impact:</strong> Students and teachers get a single, clear schedule tied to the class schedule. Visitors see a refreshed home page with the same information and a more modern look. The updates popup is simpler and aligned with the new design. Sign in with Google now works in production without a 400 error.</p>
                         </div>
                     </div>
                 </div>

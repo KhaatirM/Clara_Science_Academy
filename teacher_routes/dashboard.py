@@ -1466,45 +1466,28 @@ def resources():
 @login_required
 @teacher_required
 def calendar():
-    """Display the calendar view."""
-    # Get teacher object or None for administrators
-    teacher = get_teacher_or_admin()
-    
-    # Get month and year from request or use current
+    """Display the school calendar (same design and data as students/admins)."""
+    from management_routes.calendar import get_academic_dates_for_calendar
+
     month = request.args.get('month', datetime.now().month, type=int)
     year = request.args.get('year', datetime.now().year, type=int)
-    
-    # Calculate previous and next month
+
     current_date = datetime(year, month, 1)
     prev_month = (current_date - timedelta(days=1)).replace(day=1)
     next_month = (current_date + timedelta(days=32)).replace(day=1)
-    
-    # Create calendar data
+
     cal_obj = cal.monthcalendar(year, month)
     month_name = datetime(year, month, 1).strftime('%B')
-    
-    # Get classes for the current teacher/admin
-    if is_admin():
-        classes = Class.query.all()
-    else:
-        if teacher is None:
-            classes = []
-        else:
-            classes = Class.query.filter_by(teacher_id=teacher.id).all()
-    
-    # Get assignments for calendar display
-    class_ids = [c.id for c in classes]
-    assignments = Assignment.query.filter(Assignment.class_id.in_(class_ids)).all()
-    
-    # Simple calendar data structure
+
+    academic_dates = get_academic_dates_for_calendar(year, month)
+
     calendar_data = {
         'month_name': month_name,
         'year': year,
         'weekdays': ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
         'weeks': []
     }
-    
-    # Convert calendar to our format
+
     for week in cal_obj:
         week_data = []
         for day in week:
@@ -1512,28 +1495,30 @@ def calendar():
                 week_data.append({'day_num': '', 'is_current_month': False, 'is_today': False, 'events': []})
             else:
                 is_today = (day == datetime.now().day and month == datetime.now().month and year == datetime.now().year)
-                
-                # Get assignments for this day
                 day_events = []
-                for assignment in assignments:
-                    if assignment.due_date and assignment.due_date.day == day and assignment.due_date.month == month and assignment.due_date.year == year:
+                for academic_date in academic_dates:
+                    if academic_date['day'] == day:
                         day_events.append({
-                            'title': assignment.title,
-                            'class_name': assignment.class_info.name if assignment.class_info else 'Unknown'
+                            'title': academic_date['title'],
+                            'category': academic_date.get('category', ''),
+                            'type': academic_date.get('type', 'other_event'),
+                            'description': academic_date.get('description', '')
                         })
-                
                 week_data.append({'day_num': day, 'is_current_month': True, 'is_today': is_today, 'events': day_events})
         calendar_data['weeks'].append(week_data)
-    
-    return render_template('management/role_calendar.html', 
+
+    return render_template('shared/calendar.html',
                          calendar_data=calendar_data,
                          prev_month=prev_month,
                          next_month=next_month,
                          month_name=month_name,
                          year=year,
-                         assignments=assignments, 
-                         classes=classes, 
-                         teacher=teacher)
+                         month=month,
+                         work_days=[],
+                         breaks=[],
+                         open_modal='',
+                         section='calendar',
+                         active_tab='calendar')
 
 @bp.route('/schedule')
 @login_required
@@ -1609,156 +1594,11 @@ def teacher_schedule():
     today = datetime.now()
     today_weekday = today.weekday()
     
-    return render_template('teachers/teacher_schedule.html',
+    return render_template('shared/schedule.html',
                          weekly_schedule=weekly_schedule,
                          today_weekday=today_weekday,
-                         classes=classes,
+                         schedule_role='teacher',
                          teacher=teacher)
-
-
-@bp.route('/schedule')
-@login_required
-@teacher_required
-def schedule():
-    """View teacher's weekly class schedule"""
-    try:
-        teacher = get_teacher_or_admin()
-        
-        # Initialize default values
-        schedules_by_day = {i: [] for i in range(7)}  # 0=Monday, 6=Sunday
-        today_schedule = []
-        classes = []
-        time_slots = []
-        
-        # Get current school year
-        current_school_year = SchoolYear.query.filter_by(is_active=True).first()
-        if not current_school_year:
-            # Convert classes to JSON-serializable format for JavaScript (if needed)
-            classes_json = []
-            
-            return render_template('management/role_teacher_dashboard.html',
-                                 teacher=teacher,
-                                 schedules_by_day=schedules_by_day,
-                                 today_schedule=today_schedule,
-                                 classes=classes,
-                                 classes_json=classes_json,
-                                 time_slots=time_slots,
-                                 section='schedule',
-                                 active_tab='schedule',
-                                 is_admin=is_admin(),
-                                 show_schedule=True)
-        
-        # Get teacher's classes
-        if is_admin():
-            classes = Class.query.filter(Class.school_year_id == current_school_year.id).all()
-        else:
-            if teacher is None:
-                classes = []
-            else:
-                classes = Class.query.filter_by(
-                    teacher_id=teacher.id,
-                    school_year_id=current_school_year.id
-                ).all()
-        
-        # Get schedules for all teacher's classes
-        class_ids = [c.id for c in classes]
-        all_schedules = []
-        if class_ids:  # Only query if there are classes
-            all_schedules = ClassSchedule.query.filter(
-                ClassSchedule.class_id.in_(class_ids)
-            ).order_by(ClassSchedule.day_of_week, ClassSchedule.start_time).all()
-        
-        # Organize schedules by day of week
-        time_slots_set = set()  # Track unique time slots
-        
-        for schedule_item in all_schedules:
-            try:
-                if not schedule_item or not schedule_item.class_id:
-                    continue
-                    
-                class_obj = next((c for c in classes if c.id == schedule_item.class_id), None)
-                if not class_obj:
-                    continue
-                    
-                if not schedule_item.start_time or not schedule_item.end_time:
-                    continue
-                
-                # Ensure day_of_week is an integer (0-6)
-                day_of_week = int(schedule_item.day_of_week) if schedule_item.day_of_week is not None else 0
-                if day_of_week < 0 or day_of_week > 6:
-                    continue  # Skip invalid day_of_week values
-                
-                # Get enrollment count
-                try:
-                    enrollment_count = Enrollment.query.filter_by(
-                        class_id=class_obj.id,
-                        is_active=True
-                    ).count()
-                except:
-                    enrollment_count = 0
-                
-                time_key = f"{schedule_item.start_time.strftime('%H:%M')}-{schedule_item.end_time.strftime('%H:%M')}"
-                time_slots_set.add(time_key)
-                
-                schedules_by_day[day_of_week].append({
-                    'class': class_obj,
-                    'start_time': schedule_item.start_time,
-                    'end_time': schedule_item.end_time,
-                    'room': schedule_item.room or (class_obj.room_number if class_obj.room_number else 'TBD'),
-                    'enrollment_count': enrollment_count
-                })
-            except Exception as e:
-                print(f"Error processing schedule item {schedule_item.id if schedule_item else 'unknown'}: {e}")
-                continue
-        
-        # Sort time slots
-        time_slots = sorted(time_slots_set) if time_slots_set else []
-        
-        # Get today's schedule
-        today = datetime.now()
-        today_weekday = today.weekday()  # 0=Monday, 1=Tuesday, etc.
-        today_schedule = schedules_by_day.get(today_weekday, [])
-        
-        # Sort today's schedule by start time
-        if today_schedule:
-            today_schedule.sort(key=lambda x: x['start_time'])
-        
-        # Convert classes to JSON-serializable format for JavaScript (if needed)
-        classes_json = [{'id': c.id, 'name': c.name, 'subject': c.subject or 'N/A'} for c in classes]
-        
-        return render_template('management/role_teacher_dashboard.html',
-                             teacher=teacher,
-                             schedules_by_day=schedules_by_day,
-                             today_schedule=today_schedule,
-                             classes=classes,
-                             classes_json=classes_json,
-                             time_slots=time_slots,
-                             section='schedule',
-                             active_tab='schedule',
-                             is_admin=is_admin(),
-                             show_schedule=True)
-    except Exception as e:
-        import traceback
-        print(f"Error in teacher schedule route: {e}")
-        print(traceback.format_exc())
-        flash(f"An error occurred while loading your schedule: {str(e)}", "danger")
-        try:
-            teacher_obj = get_teacher_or_admin()
-            admin_status = is_admin()
-        except:
-            teacher_obj = None
-            admin_status = False
-        return render_template('management/role_teacher_dashboard.html',
-                             teacher=teacher_obj,
-                             schedules_by_day={i: [] for i in range(7)},
-                             today_schedule=[],
-                             classes=[],
-                             classes_json=[],
-                             time_slots=[],
-                             section='schedule',
-                             active_tab='schedule',
-                             is_admin=admin_status,
-                             show_schedule=True)
 
 
 # ===== GOOGLE CLASSROOM LINKING ROUTES =====

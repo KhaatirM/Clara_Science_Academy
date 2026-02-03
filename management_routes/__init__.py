@@ -46,13 +46,20 @@ from teacher_routes.utils import teacher_or_management_for_group_assignment
 
 # Import the actual functions to call them
 from .dashboard import management_dashboard as management_dashboard_func, redo_dashboard as redo_dashboard_func
-from .calendar import calendar as calendar_func, school_breaks as school_breaks_func, add_calendar_event as add_calendar_event_func
+from .calendar import (
+    calendar as calendar_func,
+    school_breaks as school_breaks_func,
+    add_school_break as add_school_break_func,
+    delete_school_break as delete_school_break_func,
+    add_calendar_event as add_calendar_event_func,
+)
 from .students import students as students_func, student_jobs as student_jobs_func, add_student as add_student_func, download_students_csv as download_students_csv_func, download_students_template as download_students_template_func, upload_students_csv as upload_students_csv_func, student_report_card_history as student_report_card_history_func, view_student as view_student_func, admin_create_student_group as admin_create_student_group_func, generate_report_card_for_student as generate_report_card_for_student_func, void_assignment_for_students as void_assignment_for_students_func, unvoid_assignment_for_students as unvoid_assignment_for_students_func
 from .teachers import (
     teachers as teachers_func, 
     add_teacher_staff as add_teacher_staff_func, 
     teacher_work_days as teacher_work_days_func, 
     add_teacher_work_days as add_teacher_work_days_func,
+    delete_teacher_work_day as delete_teacher_work_day_func,
     edit_teacher_staff as edit_teacher_staff_func,
     remove_teacher_staff as remove_teacher_staff_func,
     view_teacher as view_teacher_func
@@ -398,13 +405,13 @@ def group_assignment_type_selector_route():
     """Group assignment type selector route - delegates to assignments module"""
     return group_assignment_type_selector_func()
 
-# Add alias for teacher work days route
+# Teacher work days: redirect to calendar and open modal (no standalone page)
 @management_blueprint.route('/calendar/teacher-work-days', endpoint='teacher_work_days')
 @login_required
 @management_required
 def teacher_work_days_route():
-    """Teacher work days route - delegates to teachers module"""
-    return teacher_work_days_func()
+    """Redirect to calendar with Teacher Work Days modal open"""
+    return redirect(url_for('management.calendar', open='teacher-work-days'))
 
 # Add alias for add teacher work days route
 @management_blueprint.route('/calendar/teacher-work-days/add', methods=['POST'], endpoint='add_teacher_work_days')
@@ -413,6 +420,14 @@ def teacher_work_days_route():
 def add_teacher_work_days_route():
     """Add teacher work days route - delegates to teachers module"""
     return add_teacher_work_days_func()
+
+# Add alias for delete teacher work day route (template uses url_for('management.delete_teacher_work_day'))
+@management_blueprint.route('/calendar/teacher-work-days/delete/<int:work_day_id>', methods=['POST'], endpoint='delete_teacher_work_day')
+@login_required
+@management_required
+def delete_teacher_work_day_route(work_day_id):
+    """Delete teacher work day route - delegates to teachers module"""
+    return delete_teacher_work_day_func(work_day_id)
 
 # Add alias for download students CSV route
 @management_blueprint.route('/students/download-csv', endpoint='download_students_csv')
@@ -518,13 +533,29 @@ def take_class_attendance_route(class_id):
     """Take class attendance route - delegates to classes module"""
     return take_class_attendance_func(class_id)
 
-# Add alias for school breaks route
-@management_blueprint.route('/calendar/school-breaks', methods=['GET', 'POST'], endpoint='school_breaks')
+# School breaks: redirect to calendar and open modal (no standalone page)
+@management_blueprint.route('/calendar/school-breaks', methods=['GET'], endpoint='school_breaks')
 @login_required
 @management_required
 def school_breaks_route():
-    """School breaks route - delegates to calendar module"""
-    return school_breaks_func()
+    """Redirect to calendar with School Breaks modal open"""
+    return redirect(url_for('management.calendar', open='school-breaks'))
+
+# Add alias for add school break route (form on School Breaks page posts here)
+@management_blueprint.route('/calendar/school-breaks/add', methods=['POST'], endpoint='add_school_break')
+@login_required
+@management_required
+def add_school_break_route():
+    """Add school break route - delegates to calendar module"""
+    return add_school_break_func()
+
+# Add alias for delete school break route
+@management_blueprint.route('/calendar/school-breaks/delete/<int:break_id>', methods=['POST'], endpoint='delete_school_break')
+@login_required
+@management_required
+def delete_school_break_route(break_id):
+    """Delete school break route - delegates to calendar module"""
+    return delete_school_break_func(break_id)
 
 # Add alias for add calendar event route
 @management_blueprint.route('/calendar/add-event', methods=['POST'], endpoint='add_calendar_event')

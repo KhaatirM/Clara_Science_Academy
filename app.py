@@ -1093,7 +1093,9 @@ def create_app(config_class=None):
     @app.errorhandler(Exception)
     def handle_unexpected_error(error):
         """Handle any unexpected errors."""
+        import traceback
         print(f"Unexpected error: {error}")
+        traceback.print_exc()
         return render_template('shared/error.html', 
                              error_code=500,
                              error_message="An unexpected error occurred. Please try again later.",

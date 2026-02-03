@@ -1338,13 +1338,14 @@ def student_schedule():
             ).first()
             
             if schedule:
+                teacher_name = (class_obj.teacher.first_name + ' ' + class_obj.teacher.last_name) if class_obj.teacher else 'TBD'
                 day_schedules.append({
                     'class': class_obj,
                     'start_time': schedule.start_time,
                     'end_time': schedule.end_time,
                     'time_str': f"{schedule.start_time.strftime('%I:%M %p')} - {schedule.end_time.strftime('%I:%M %p')}",
                     'room': schedule.room or class_obj.room_number or 'TBD',
-                    'teacher': class_obj.teacher.first_name + ' ' + class_obj.teacher.last_name if class_obj.teacher else 'TBD'
+                    'teacher_name': teacher_name
                 })
         
         # Sort by start time
@@ -1358,11 +1359,11 @@ def student_schedule():
     today = datetime.now()
     today_weekday = today.weekday()
     
-    return render_template('students/role_student_dashboard.html', 
-                         **create_template_context(student, 'schedule', 'schedule',
-                             weekly_schedule=weekly_schedule,
-                             today_weekday=today_weekday,
-                             classes=classes))
+    return render_template('shared/schedule.html',
+                         weekly_schedule=weekly_schedule,
+                         today_weekday=today_weekday,
+                         schedule_role='student',
+                         dashboard_title='Student')
 
 @student_blueprint.route('/school-calendar')
 @login_required
@@ -1405,13 +1406,15 @@ def student_school_calendar():
             else:
                 is_today = (day == datetime.now().day and month == datetime.now().month and year == datetime.now().year)
                 
-                # Get events for this day
+                # Get events for this day (include type and description for badge colors and modal)
                 day_events = []
                 for academic_date in academic_dates:
                     if academic_date['day'] == day:
                         day_events.append({
                             'title': academic_date['title'],
-                            'category': academic_date['category']
+                            'category': academic_date.get('category', ''),
+                            'type': academic_date.get('type', 'other_event'),
+                            'description': academic_date.get('description', '')
                         })
                 
                 week_data.append({'day_num': day, 'is_current_month': True, 'is_today': is_today, 'events': day_events})
@@ -1423,6 +1426,7 @@ def student_school_calendar():
                          next_month=next_month,
                          month_name=month_name,
                          year=year,
+                         month=month,
                          section='calendar',
                          active_tab='calendar')
 

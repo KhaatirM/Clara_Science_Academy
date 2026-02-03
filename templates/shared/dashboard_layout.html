@@ -182,7 +182,7 @@
             overlay.classList.toggle('show');
         }
         
-        // Close mobile sidebar when clicking on a nav link
+        // Close mobile sidebar when clicking on a nav link; set hover tooltips from tab names
         document.addEventListener('DOMContentLoaded', function() {
             const navLinks = document.querySelectorAll('.sidebar .nav-link');
             navLinks.forEach(link => {
@@ -191,27 +191,49 @@
                         toggleMobileSidebar();
                     }
                 });
+                const span = link.querySelector('span');
+                if (span) link.setAttribute('title', span.textContent.trim());
             });
+            const logoutBtn = document.querySelector('.sidebar .logout-btn-container a');
+            if (logoutBtn) {
+                const span = logoutBtn.querySelector('span');
+                if (span) logoutBtn.setAttribute('title', span.textContent.trim());
+            }
         });
         
-        // Always collapse sidebar on mobile and hide hamburger
+        // Sync sidebar with viewport: collapse on mobile/tablet, restore preference on desktop
         function forceSidebarCollapsedOnMobile() {
             const sidebar = document.getElementById('sidebar');
             const mainContent = document.querySelector('.main-content');
             const sidebarToggle = document.querySelector('.sidebar-toggle');
-            
-            if (window.innerWidth <= 768) {
-                // On mobile: always collapsed, no hamburger visible
+            const overlay = document.getElementById('sidebarOverlay');
+            const hamburgerIcon = document.getElementById('hamburger-icon');
+            const collapseText = document.getElementById('collapse-text');
+            const width = window.innerWidth;
+
+            if (width <= 768) {
+                // Mobile: sidebar off-screen by default, floating hamburger to open it
+                sidebar.classList.remove('show');
+                if (overlay) overlay.classList.remove('show');
                 sidebar.classList.add('collapsed');
                 mainContent.classList.add('collapsed');
-                sidebarToggle.style.display = 'none';
-            } else {
-                // On desktop: show toggle and restore state
+                sidebarToggle.style.display = 'flex'; // show floating hamburger
+                hamburgerIcon.style.display = 'flex';
+                collapseText.style.display = 'none';
+            } else if (width <= 1200) {
+                // Tablet/small desktop: CSS shows icons-only; force collapsed state so layout and toggle match
+                sidebar.classList.remove('show');
+                if (overlay) overlay.classList.remove('show');
+                sidebar.classList.add('collapsed');
+                mainContent.classList.add('collapsed');
                 sidebarToggle.style.display = 'flex';
-                const hamburgerIcon = document.getElementById('hamburger-icon');
-                const collapseText = document.getElementById('collapse-text');
+                hamburgerIcon.style.display = 'flex';
+                collapseText.style.display = 'none';
+            } else {
+                // Desktop (>1200px): show toggle and restore user preference
+                sidebarToggle.style.display = 'flex';
                 const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
-                
+
                 if (isCollapsed) {
                     sidebar.classList.add('collapsed');
                     mainContent.classList.add('collapsed');

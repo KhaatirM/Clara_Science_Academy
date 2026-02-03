@@ -5,48 +5,31 @@
 {% endblock title %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/home-enhanced.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/home-redesign.css') }}">
 {% endblock extra_css %}
 
 {% block content %}
-<!-- Slideshow Background - Optimized: Reduced from 9 to 4 images -->
-<div class="slideshow-container">
-    <div class="slideshow-image active" style="background-image: url('/static/img/backimg/image1.png');" loading="eager"></div>
-    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image2.png');" loading="lazy"></div>
-    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image3.png');" loading="lazy"></div>
-    <div class="slideshow-image" style="background-image: url('/static/img/backimg/image4.png');" loading="lazy"></div>
-    <div class="slideshow-overlay"></div>
-</div>
-
-<!-- Floating Particles -->
-<div class="particles-container" id="particlesContainer"></div>
-
-<!-- Hero Section -->
-<div class="hero-section">
-    <div class="container hero-content">
-        <div class="hero-text">
-            <h1 class="display-4 display-md-3">Empowering Minds, Shaping Futures</h1>
-            <p class="lead">
-                Welcome to Clara Science Academy's comprehensive student management portal. <br class="d-none d-md-block">
-                A centralized hub for academic excellence, seamless administration, and educational innovation.
-            </p>
-            <div class="hero-features">
-                <div class="hero-feature">
-                    <i class="fas fa-graduation-cap"></i>
-                    <span>Academic Excellence</span>
-                </div>
-                <div class="hero-feature">
-                    <i class="fas fa-users"></i>
-                    <span>Community Focus</span>
-                </div>
-                <div class="hero-feature">
-                    <i class="fas fa-chart-line"></i>
-                    <span>Data-Driven Results</span>
-                </div>
-            </div>
-            <hr class="my-4 border-color-white-50">
+<!-- Hero: image background + content -->
+<div class="home-hero-wrap">
+    <div class="home-hero-bg" aria-hidden="true">
+        <div class="home-hero-bg-slide active" style="background-image: url('/static/img/backimg/image1.png');" loading="eager"></div>
+        <div class="home-hero-bg-slide" style="background-image: url('/static/img/backimg/image2.png');" loading="lazy"></div>
+        <div class="home-hero-bg-slide" style="background-image: url('/static/img/backimg/image3.png');" loading="lazy"></div>
+        <div class="home-hero-bg-slide" style="background-image: url('/static/img/backimg/image4.png');" loading="lazy"></div>
+        <div class="home-hero-bg-overlay"></div>
+    </div>
+    <section class="home-hero">
+    <div class="container text-center">
+        <h1>Empowering Minds, Shaping Futures</h1>
+        <p class="lead">
+            Welcome to Clara Science Academy's comprehensive student management portal.<br class="d-none d-md-block">
+            A centralized hub for academic excellence, seamless administration, and educational innovation.
+        </p>
+        <div class="home-hero-features">
+            <span class="home-hero-feature"><i class="bi bi-mortarboard-fill"></i> Academic Excellence</span>
+            <span class="home-hero-feature"><i class="bi bi-people-fill"></i> Community Focus</span>
+            <span class="home-hero-feature"><i class="bi bi-graph-up-arrow"></i> Data-Driven Results</span>
         </div>
-        
         {% if current_user.is_authenticated %}
             {% set role_name = current_user.role|lower|replace(' ', '_') %}
             {% if role_name == 'school_administrator' %}
@@ -62,493 +45,319 @@
             {% else %}
                 {% set dashboard_url = url_for('auth.dashboard') %}
             {% endif %}
-            <div class="hero-actions">
-                <p class="mb-3">Welcome back, {{ current_user.username }}! ({{ current_user.role }})</p>
-                <div class="hero-buttons">
-                    <a class="hero-btn hero-btn-primary" href="{{ dashboard_url }}" role="button">
-                        <i class="fas fa-tachometer-alt"></i>Go to Your Dashboard
+            <div class="home-hero-actions">
+                <p>Welcome back, {{ current_user.username }}! ({{ current_user.role }})</p>
+                <div class="home-hero-buttons">
+                    <a class="home-hero-btn home-hero-btn-primary" href="{{ dashboard_url }}" role="button">
+                        <i class="bi bi-speedometer2"></i> Go to Your Dashboard
                     </a>
-                    <a class="hero-btn hero-btn-outline" href="{{ url_for('auth.logout') }}" role="button">
-                        <i class="fas fa-sign-out-alt"></i>Logout
+                    <a class="home-hero-btn home-hero-btn-outline" href="{{ url_for('auth.logout') }}" role="button">
+                        <i class="bi bi-box-arrow-right"></i> Logout
                     </a>
                 </div>
             </div>
         {% else %}
-            <div class="hero-actions">
-                <p class="mb-3">Access your personalized educational portal</p>
-                <div class="hero-buttons">
-                    <a class="hero-btn hero-btn-primary" href="{{ url_for('auth.login') }}" role="button">
-                        <i class="fas fa-sign-in-alt"></i>Secure Login
+            <div class="home-hero-actions">
+                <p>Access your personalized educational portal</p>
+                <div class="home-hero-buttons">
+                    <a class="home-hero-btn home-hero-btn-primary" href="{{ url_for('auth.login') }}" role="button">
+                        <i class="bi bi-box-arrow-in-right"></i> Secure Login
                     </a>
-                    <button class="hero-btn hero-btn-secondary" data-bs-toggle="modal" data-bs-target="#contactModal">
-                        <i class="fas fa-envelope"></i>Contact Us
+                    <button class="home-hero-btn home-hero-btn-outline" type="button" data-bs-toggle="modal" data-bs-target="#contactModal">
+                        <i class="bi bi-envelope"></i> Contact Us
                     </button>
-                    <button class="hero-btn hero-btn-outline" data-bs-toggle="modal" data-bs-target="#updateModal" style="background: rgba(102, 126, 234, 0.1); border-color: rgba(102, 126, 234, 0.5); color: rgba(255, 255, 255, 0.95);">
-                        <i class="fas fa-rocket"></i>View Updates
+                    <button class="home-hero-btn home-hero-btn-accent" type="button" data-bs-toggle="modal" data-bs-target="#updateModal">
+                        <i class="bi bi-megaphone"></i> View Updates
                     </button>
                 </div>
             </div>
         {% endif %}
     </div>
+</section>
 </div>
 
 <!-- About Section -->
-<div class="about-section py-5">
+<section class="home-section home-section-alt">
     <div class="container">
         <div class="row align-items-center g-5">
             <div class="col-lg-7">
-                <h2 class="section-title mb-3 text-start">About Clara Science Academy</h2>
-                <p class="lead mb-4" style="color: rgba(255, 255, 255, 0.95) !important; font-size: 1.4rem !important; text-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;">Excellence in Education Since Our Founding</p>
-                <p class="about-text" style="color: rgba(255, 255, 255, 0.95) !important; font-size: 1.15rem !important; text-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;">Clara Science Academy is a premier educational institution dedicated to fostering academic excellence, critical thinking, and scientific inquiry. Our comprehensive curriculum and innovative teaching methods prepare students for success in an ever-evolving world.</p>
-                <p class="about-text mb-4" style="color: rgba(255, 255, 255, 0.95) !important; font-size: 1.15rem !important; text-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;">We believe that every student has the potential to achieve greatness when provided with the right tools, guidance, and environment. Our commitment to personalized education ensures that each student receives the attention and support they need to thrive.</p>
-                <div class="row g-3 mt-4">
-                    <div class="col-6">
-                        <div class="modern-stat-box">
-                            <div class="stat-icon-wrapper">
-                                <i class="fas fa-user-graduate"></i>
-                            </div>
-                            <div class="stat-content-wrapper">
-                                <h3 class="stat-number">150<span class="stat-plus">+</span></h3>
-                                <p class="stat-label">Students Enrolled</p>
+                <h2 class="home-section-title">About Clara Science Academy</h2>
+                <p class="home-section-subtitle">Excellence in Education Since Our Founding</p>
+                <div class="home-about-text">
+                    <p class="lead">Clara Science Academy is a premier educational institution dedicated to fostering academic excellence, critical thinking, and scientific inquiry. Our comprehensive curriculum and innovative teaching methods prepare students for success in an ever-evolving world.</p>
+                    <p>We believe that every student has the potential to achieve greatness when provided with the right tools, guidance, and environment. Our commitment to personalized education ensures that each student receives the attention and support they need to thrive.</p>
+                    <div class="home-stat-cards">
+                        <div class="home-stat-card">
+                            <i class="bi bi-person-badge"></i>
+                            <div>
+                                <div class="home-stat-number">150+</div>
+                                <p class="home-stat-label">Students Enrolled</p>
                             </div>
                         </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="modern-stat-box">
-                            <div class="stat-icon-wrapper stat-icon-green">
-                                <i class="fas fa-chalkboard-teacher"></i>
-                            </div>
-                            <div class="stat-content-wrapper">
-                                <h3 class="stat-number">25<span class="stat-plus">+</span></h3>
-                                <p class="stat-label">Expert Teachers</p>
+                        <div class="home-stat-card">
+                            <i class="bi bi-person-video2"></i>
+                            <div>
+                                <div class="home-stat-number">25+</div>
+                                <p class="home-stat-label">Expert Teachers</p>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="col-lg-5">
-                <div class="about-campus-card">
-                    <div class="campus-icon-large">
-                        <i class="fas fa-graduation-cap"></i>
-                    </div>
-                    <h4 class="campus-title">Academy Campus</h4>
-                    <p class="campus-subtitle" style="color: rgba(255, 255, 255, 0.9) !important; text-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;">State-of-the-art facilities designed for modern learning</p>
-                    <div class="campus-features">
-                        <div class="campus-feature-item">
-                            <i class="fas fa-check-circle"></i>
-                            <span>Modern Classrooms</span>
-                        </div>
-                        <div class="campus-feature-item">
-                            <i class="fas fa-check-circle"></i>
-                            <span>Science Labs</span>
-                        </div>
-                        <div class="campus-feature-item">
-                            <i class="fas fa-check-circle"></i>
-                            <span>Technology Centers</span>
-                        </div>
-                    </div>
+                <div class="home-campus-card">
+                    <div class="mb-3"><i class="bi bi-building" style="font-size: 2rem; opacity: 0.9;"></i></div>
+                    <h4>Academy Campus</h4>
+                    <p class="subtitle">State-of-the-art facilities designed for modern learning</p>
+                    <ul class="home-campus-list">
+                        <li><i class="bi bi-check-circle-fill"></i> Modern Classrooms</li>
+                        <li><i class="bi bi-check-circle-fill"></i> Science Labs</li>
+                        <li><i class="bi bi-check-circle-fill"></i> Technology Centers</li>
+                    </ul>
                 </div>
             </div>
         </div>
     </div>
-</div>
+</section>
 
 <!-- Features Section -->
-<div class="features-section">
+<section class="home-section">
     <div class="container">
-        <div class="row text-center g-4">
-            <div class="col-12 mb-5">
-                <h2 class="section-title">Why Choose Clara Science Academy?</h2>
-                <div class="section-title-glow"></div>
-                <p class="section-subtitle">Comprehensive tools and features designed for modern education management</p>
+        <h2 class="home-section-title text-center">Why Choose Clara Science Academy?</h2>
+        <p class="home-section-subtitle text-center mx-auto">Comprehensive tools and features designed for modern education management</p>
+        <div class="home-features-grid">
+            <div class="home-feature-card">
+                <div class="icon-wrap"><i class="bi bi-person-badge"></i></div>
+                <h3>Student Management</h3>
+                <p>Easily manage student records, enrollment, and academic progress all in one place with our intuitive dashboard.</p>
             </div>
-            <!-- Feature 1: Student Management -->
-            <div class="col-12 col-sm-6 col-lg-4">
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-user-graduate"></i>
-                    </div>
-                    <h3>Student Management</h3>
-                    <p>Easily manage student records, enrollment, and academic progress all in one place with our intuitive dashboard.</p>
-                </div>
+            <div class="home-feature-card">
+                <div class="icon-wrap"><i class="bi bi-person-video2"></i></div>
+                <h3>Teacher & Class Tools</h3>
+                <p>Empower teachers with advanced tools for class management, assignments, grading, and student engagement. Now featuring interactive quiz assignments with Google Forms integration!</p>
             </div>
-            <!-- Feature 2: Teacher & Class Tools -->
-            <div class="col-12 col-sm-6 col-lg-4">
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-chalkboard-teacher"></i>
-                    </div>
-                    <h3>Teacher & Class Tools</h3>
-                    <p>Empower teachers with advanced tools for class management, assignments, grading, and student engagement. Now featuring interactive quiz assignments with Google Forms integration!</p>
-                </div>
+            <div class="home-feature-card">
+                <div class="icon-wrap"><i class="bi bi-question-circle"></i></div>
+                <h3>Interactive Quiz System</h3>
+                <p>Create engaging quizzes with multiple question types, auto-grading, time limits, and Google Forms integration. Comprehensive quiz management and grading tools for educators.</p>
             </div>
-            <!-- Feature 7: Interactive Quiz System -->
-            <div class="col-12 col-sm-6 col-lg-4">
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-question-circle"></i>
-                    </div>
-                    <h3>Interactive Quiz System</h3>
-                    <p>Create engaging quizzes with multiple question types, auto-grading, time limits, and Google Forms integration. Comprehensive quiz management and grading tools for educators.</p>
-                </div>
+            <div class="home-feature-card">
+                <div class="icon-wrap"><i class="bi bi-pie-chart"></i></div>
+                <h3>Comprehensive Reporting</h3>
+                <p>Generate detailed reports for attendance, grades, and overall school performance with real-time analytics.</p>
             </div>
-            <!-- Feature 3: Comprehensive Reporting -->
-            <div class="col-12 col-sm-6 col-lg-4">
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-chart-pie"></i>
-                    </div>
-                    <h3>Comprehensive Reporting</h3>
-                    <p>Generate detailed reports for attendance, grades, and overall school performance with real-time analytics.</p>
-                </div>
+            <div class="home-feature-card">
+                <div class="icon-wrap"><i class="bi bi-graph-up-arrow"></i></div>
+                <h3>Advanced Analytics</h3>
+                <p>Track student performance trends and identify areas for improvement with data-driven insights and visualizations.</p>
             </div>
-            <!-- Feature 4: Advanced Analytics -->
-            <div class="col-12 col-sm-6 col-lg-4">
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-chart-line"></i>
-                    </div>
-                    <h3>Advanced Analytics</h3>
-                    <p>Track student performance trends and identify areas for improvement with data-driven insights and visualizations.</p>
-                </div>
+            <div class="home-feature-card">
+                <div class="icon-wrap"><i class="bi bi-chat-dots"></i></div>
+                <h3>Communication Hub</h3>
+                <p>Seamless communication between students, teachers, and parents through integrated messaging and notifications.</p>
             </div>
-            <!-- Feature 5: Communication Hub -->
-            <div class="col-12 col-sm-6 col-lg-4">
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-comments"></i>
-                    </div>
-                    <h3>Communication Hub</h3>
-                    <p>Seamless communication between students, teachers, and parents through integrated messaging and notifications.</p>
-                </div>
-            </div>
-            <!-- Feature 6: Secure Platform -->
-            <div class="col-12 col-sm-6 col-lg-4">
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-shield-alt"></i>
-                    </div>
-                    <h3>Secure Platform</h3>
-                    <p>Enterprise-grade security ensures student data privacy and platform reliability with advanced encryption.</p>
-                </div>
+            <div class="home-feature-card">
+                <div class="icon-wrap"><i class="bi bi-shield-check"></i></div>
+                <h3>Secure Platform</h3>
+                <p>Enterprise-grade security ensures student data privacy and platform reliability with advanced encryption.</p>
             </div>
         </div>
     </div>
-</div>
+</section>
 
 <!-- Programs Section -->
-<div class="programs-section py-5">
+<section class="home-section home-section-alt">
     <div class="container">
-        <div class="row">
-            <div class="col-12 text-center mb-5">
-                <h2 class="section-title">Our Academic Programs</h2>
-                <div class="section-title-glow"></div>
-                <p class="section-subtitle">Comprehensive curriculum designed to prepare students for future success</p>
+        <h2 class="home-section-title text-center">Our Academic Programs</h2>
+        <p class="home-section-subtitle text-center mx-auto">Comprehensive curriculum designed to prepare students for future success</p>
+        <div class="home-programs-grid">
+            <div class="home-program-card">
+                <div class="icon-wrap"><i class="bi bi-mortarboard"></i></div>
+                <h4>Science & Technology</h4>
+                <p>Advanced courses in physics, chemistry, biology, and computer science with hands-on laboratory experiences and modern equipment.</p>
             </div>
-        </div>
-        <div class="row g-4">
-            <div class="col-md-6 col-lg-4">
-                <div class="program-card">
-                    <div class="program-icon">
-                        <i class="fas fa-flask"></i>
-                    </div>
-                    <h4>Science & Technology</h4>
-                    <p>Advanced courses in physics, chemistry, biology, and computer science with hands-on laboratory experiences and modern equipment.</p>
-                </div>
+            <div class="home-program-card">
+                <div class="icon-wrap"><i class="bi bi-calculator"></i></div>
+                <h4>Mathematics</h4>
+                <p>Comprehensive math curriculum from basic arithmetic to advanced calculus, statistics, and problem-solving methodologies.</p>
             </div>
-            <div class="col-md-6 col-lg-4">
-                <div class="program-card">
-                    <div class="program-icon">
-                        <i class="fas fa-calculator"></i>
-                    </div>
-                    <h4>Mathematics</h4>
-                    <p>Comprehensive math curriculum from basic arithmetic to advanced calculus, statistics, and problem-solving methodologies.</p>
-                </div>
+            <div class="home-program-card">
+                <div class="icon-wrap"><i class="bi bi-journal-text"></i></div>
+                <h4>Language Arts</h4>
+                <p>Literature, writing, and communication skills development for academic and professional success with creative expression.</p>
             </div>
-            <div class="col-md-6 col-lg-4">
-                <div class="program-card">
-                    <div class="program-icon">
-                        <i class="fas fa-book"></i>
-                    </div>
-                    <h4>Language Arts</h4>
-                    <p>Literature, writing, and communication skills development for academic and professional success with creative expression.</p>
-                </div>
+            <div class="home-program-card">
+                <div class="icon-wrap"><i class="bi bi-globe2"></i></div>
+                <h4>Social Sciences</h4>
+                <p>History, geography, civics, and social studies to develop well-rounded global citizens with cultural awareness.</p>
             </div>
-            <div class="col-md-6 col-lg-4">
-                <div class="program-card">
-                    <div class="program-icon">
-                        <i class="fas fa-globe-americas"></i>
-                    </div>
-                    <h4>Social Sciences</h4>
-                    <p>History, geography, civics, and social studies to develop well-rounded global citizens with cultural awareness.</p>
-                </div>
+            <div class="home-program-card">
+                <div class="icon-wrap"><i class="bi bi-code-slash"></i></div>
+                <h4>Programming</h4>
+                <p>Modern programming languages, software development, web technologies, and computational thinking skills for the digital age.</p>
             </div>
-            <div class="col-md-6 col-lg-4">
-                <div class="program-card">
-                    <div class="program-icon">
-                        <i class="fas fa-code"></i>
-                    </div>
-                    <h4>Programming</h4>
-                    <p>Modern programming languages, software development, web technologies, and computational thinking skills for the digital age.</p>
-                </div>
-            </div>
-            <div class="col-md-6 col-lg-4">
-                <div class="program-card">
-                    <div class="program-icon">
-                        <i class="fas fa-palette"></i>
-                    </div>
-                    <h4>Arts & Creativity</h4>
-                    <p>Visual arts, music, drama, and creative expression to foster imagination and artistic development in our students.</p>
-                </div>
+            <div class="home-program-card">
+                <div class="icon-wrap"><i class="bi bi-palette"></i></div>
+                <h4>Arts & Creativity</h4>
+                <p>Visual arts, music, drama, and creative expression to foster imagination and artistic development in our students.</p>
             </div>
         </div>
     </div>
-</div>
+</section>
 
 <!-- Technology Section -->
-<div class="technology-section py-5">
+<section class="home-section">
     <div class="container">
         <div class="row align-items-center g-5">
-            <div class="col-lg-12">
-                <div class="row align-items-center g-4">
-                    <div class="col-lg-7 order-lg-2">
-                        <h2 class="section-title mb-3">Cutting-Edge Technology</h2>
-                        <p class="lead mb-4" style="color: rgba(255, 255, 255, 0.95) !important; font-size: 1.4rem !important; text-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;">Digital Innovation in Education</p>
-                        <p class="about-text mb-4" style="color: rgba(255, 255, 255, 0.95) !important; font-size: 1.15rem !important; text-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;">Our student management system leverages the latest technology to provide seamless, efficient, and secure educational administration. From real-time attendance tracking to comprehensive grade management, we've integrated modern solutions to enhance the learning experience.</p>
-                        <ul class="tech-features">
-                            <li><i class="fas fa-check-circle"></i> Real-time attendance tracking and monitoring</li>
-                            <li><i class="fas fa-check-circle"></i> Digital grade books and automated report cards</li>
-                            <li><i class="fas fa-check-circle"></i> Interactive quiz system with auto-grading</li>
-                            <li><i class="fas fa-check-circle"></i> Google Forms integration and synchronization</li>
-                            <li><i class="fas fa-check-circle"></i> Mobile-responsive design for all devices</li>
-                            <li><i class="fas fa-check-circle"></i> Secure cloud-based platform with 99.9% uptime</li>
-                            <li><i class="fas fa-check-circle"></i> Advanced analytics and performance insights</li>
-                            <li><i class="fas fa-check-circle"></i> Integrated communication and notification system</li>
-                        </ul>
+            <div class="col-lg-7 order-lg-2">
+                <h2 class="home-section-title">Cutting-Edge Technology</h2>
+                <p class="home-section-subtitle">Digital Innovation in Education</p>
+                <div class="home-tech-content">
+                    <p>Our student management system leverages the latest technology to provide seamless, efficient, and secure educational administration. From real-time attendance tracking to comprehensive grade management, we've integrated modern solutions to enhance the learning experience.</p>
+                    <ul class="home-tech-list">
+                        <li><i class="bi bi-check-circle-fill"></i> Real-time attendance tracking and monitoring</li>
+                        <li><i class="bi bi-check-circle-fill"></i> Digital grade books and automated report cards</li>
+                        <li><i class="bi bi-check-circle-fill"></i> Interactive quiz system with auto-grading</li>
+                        <li><i class="bi bi-check-circle-fill"></i> Google Forms integration and synchronization</li>
+                        <li><i class="bi bi-check-circle-fill"></i> Mobile-responsive design for all devices</li>
+                        <li><i class="bi bi-check-circle-fill"></i> Secure cloud-based platform with 99.9% uptime</li>
+                        <li><i class="bi bi-check-circle-fill"></i> Advanced analytics and performance insights</li>
+                        <li><i class="bi bi-check-circle-fill"></i> Integrated communication and notification system</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="col-lg-5 order-lg-1">
+                <div class="home-tech-stack">
+                    <h4><i class="bi bi-rocket-takeoff"></i> Powered By</h4>
+                    <div class="grid">
+                        <div class="home-tech-stack-item"><i class="bi bi-laptop"></i> Desktop</div>
+                        <div class="home-tech-stack-item"><i class="bi bi-phone"></i> Mobile</div>
+                        <div class="home-tech-stack-item"><i class="bi bi-cloud"></i> Cloud</div>
+                        <div class="home-tech-stack-item"><i class="bi bi-shield-check"></i> Secure</div>
                     </div>
-                    
-                    <!-- Ultra-Modern Tech Stack Display -->
-                    <div class="col-lg-5 order-lg-1">
-                        <div class="tech-stack-showcase">
-                            <div class="tech-stack-header">
-                                <i class="fas fa-rocket"></i>
-                                <h4>Powered By</h4>
-                            </div>
-                            <div class="tech-stack-grid">
-                                <div class="tech-stack-item" data-tooltip="Cross-Platform">
-                                    <div class="tech-stack-icon">
-                                        <i class="fas fa-laptop"></i>
-                                    </div>
-                                    <span class="tech-stack-label">Desktop</span>
-                                </div>
-                                <div class="tech-stack-item" data-tooltip="Mobile First">
-                                    <div class="tech-stack-icon">
-                                        <i class="fas fa-mobile-alt"></i>
-                                    </div>
-                                    <span class="tech-stack-label">Mobile</span>
-                                </div>
-                                <div class="tech-stack-item" data-tooltip="Cloud Infrastructure">
-                                    <div class="tech-stack-icon">
-                                        <i class="fas fa-cloud"></i>
-                                    </div>
-                                    <span class="tech-stack-label">Cloud</span>
-                                </div>
-                                <div class="tech-stack-item" data-tooltip="Enterprise Security">
-                                    <div class="tech-stack-icon">
-                                        <i class="fas fa-shield-alt"></i>
-                                    </div>
-                                    <span class="tech-stack-label">Secure</span>
-                                </div>
-                            </div>
-                            <div class="tech-platform-badge">
-                                <i class="fas fa-check-circle me-2"></i>
-                                <span>Modern Technology Platform</span>
-                            </div>
-                        </div>
-                    </div>
+                    <div class="home-tech-badge"><i class="bi bi-check-circle"></i> Modern Technology Platform</div>
                 </div>
             </div>
         </div>
     </div>
-</div>
+</section>
 
-<!-- Community Leadership Section -->
-<div class="testimonials-section py-5">
+<!-- Leadership Section -->
+<section class="home-section home-section-alt">
     <div class="container">
-        <div class="row">
-            <div class="col-12 text-center mb-5">
-                <h2 class="section-title">Our Leadership Team</h2>
-                <div class="section-divider-center mb-4"></div>
-                <p class="section-subtitle">Meet the dedicated professionals leading Clara Science Academy</p>
-            </div>
-        </div>
-        <div class="row g-4">
-            <div class="col-md-4">
-                <div class="testimonial-card modern-testimonial">
-                    <div class="quote-icon">
-                        <i class="fas fa-quote-left"></i>
-                    </div>
-                    <div class="testimonial-content">
-                        <p>"Leading Clara Science Academy with a vision for educational excellence and innovation. We are committed to providing the best learning environment for our students and preparing them for future success."</p>
-                    </div>
-                    <div class="testimonial-author">
-                        <div class="author-avatar">
-                            <i class="fas fa-user-tie"></i>
-                        </div>
-                        <div class="author-info">
-                            <h5>Omar. P</h5>
-                            <p>Board of Directors</p>
-                        </div>
+        <h2 class="home-section-title text-center">Our Leadership Team</h2>
+        <p class="home-section-subtitle text-center mx-auto">Meet the dedicated professionals leading Clara Science Academy</p>
+        <div class="home-leadership-grid">
+            <div class="home-leadership-card">
+                <div class="quote-icon"><i class="bi bi-quote"></i></div>
+                <p class="content">"Leading Clara Science Academy with a vision for educational excellence and innovation. We are committed to providing the best learning environment for our students and preparing them for future success."</p>
+                <div class="author">
+                    <div class="author-avatar"><i class="bi bi-person-badge"></i></div>
+                    <div>
+                        <h5 class="author-name">Omar. P</h5>
+                        <p class="author-role">Board of Directors</p>
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="testimonial-card modern-testimonial">
-                    <div class="quote-icon">
-                        <i class="fas fa-quote-left"></i>
-                    </div>
-                    <div class="testimonial-content">
-                        <p>"As Director, I ensure that every student receives the highest quality education and support. Our comprehensive management system helps us achieve this goal effectively while maintaining personal connections."</p>
-                    </div>
-                    <div class="testimonial-author">
-                        <div class="author-avatar">
-                            <i class="fas fa-user-shield"></i>
-                        </div>
-                        <div class="author-info">
-                            <h5>Varsty. C</h5>
-                            <p>Director</p>
-                        </div>
+            <div class="home-leadership-card">
+                <div class="quote-icon"><i class="bi bi-quote"></i></div>
+                <p class="content">"As Director, I ensure that every student receives the highest quality education and support. Our comprehensive management system helps us achieve this goal effectively while maintaining personal connections."</p>
+                <div class="author">
+                    <div class="author-avatar"><i class="bi bi-person-shield"></i></div>
+                    <div>
+                        <h5 class="author-name">Varsty. C</h5>
+                        <p class="author-role">Director</p>
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="testimonial-card modern-testimonial">
-                    <div class="quote-icon">
-                        <i class="fas fa-quote-left"></i>
-                    </div>
-                    <div class="testimonial-content">
-                        <p>"Technology is the backbone of modern education. Our advanced student management system ensures seamless operations and enhanced learning experiences for all stakeholders in our educational community."</p>
-                    </div>
-                    <div class="testimonial-author">
-                        <div class="author-avatar">
-                            <i class="fas fa-laptop-code"></i>
-                        </div>
-                        <div class="author-info">
-                            <h5>Khaatir. H</h5>
-                            <p>IT Department Head</p>
-                        </div>
+            <div class="home-leadership-card">
+                <div class="quote-icon"><i class="bi bi-quote"></i></div>
+                <p class="content">"Technology is the backbone of modern education. Our advanced student management system ensures seamless operations and enhanced learning experiences for all stakeholders in our educational community."</p>
+                <div class="author">
+                    <div class="author-avatar"><i class="bi bi-laptop"></i></div>
+                    <div>
+                        <h5 class="author-name">Khaatir. H</h5>
+                        <p class="author-role">IT Department Head</p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
+</section>
 
 <!-- Contact Section -->
-<div class="contact-section py-5">
+<section class="home-section">
     <div class="container">
-        <div class="row">
-            <div class="col-12 text-center mb-5">
-                <h2 class="section-title">Contact Clara Science Academy</h2>
-                <div class="section-divider-center mb-4"></div>
-                <p class="section-subtitle">Get in touch with us for more information</p>
+        <h2 class="home-section-title text-center">Contact Clara Science Academy</h2>
+        <p class="home-section-subtitle text-center mx-auto">Get in touch with us for more information</p>
+        <div class="home-contact-grid">
+            <div class="home-contact-card">
+                <div class="icon-wrap"><i class="bi bi-geo-alt"></i></div>
+                <h4>Visit Us</h4>
+                <p>3015 East Bessemer Ave.<br>Greensboro, NC 27405</p>
+            </div>
+            <div class="home-contact-card">
+                <div class="icon-wrap"><i class="bi bi-telephone"></i></div>
+                <h4>Call Us</h4>
+                <p><a href="tel:1-800-567-5110">1-800-567-5110</a></p>
+            </div>
+            <div class="home-contact-card">
+                <div class="icon-wrap"><i class="bi bi-envelope"></i></div>
+                <h4>Email Us</h4>
+                <p><a href="mailto:info@clarascienceacademy.com">info@clarascienceacademy.com</a></p>
+            </div>
+            <div class="home-contact-card">
+                <div class="icon-wrap"><i class="bi bi-globe2"></i></div>
+                <h4>Visit Website</h4>
+                <p><a href="https://www.clarascienceacademy.com" target="_blank">clarascienceacademy.com</a></p>
             </div>
         </div>
-        <div class="row g-4 mb-5">
-            <div class="col-md-6 col-lg-3">
-                <div class="contact-card modern-contact">
-                    <div class="contact-icon">
-                        <i class="fas fa-map-marker-alt"></i>
-                    </div>
-                    <h4>Visit Us</h4>
-                    <p class="contact-info-text">3015 East Bessemer Ave.<br>Greensboro, NC 27405</p>
-                </div>
+        <div class="home-office-hours">
+            <h4><i class="bi bi-clock"></i> Office Hours</h4>
+            <div class="row-item">
+                <span>Monday - Thursday</span>
+                <span>8:00 AM - 3:30 PM</span>
             </div>
-            <div class="col-md-6 col-lg-3">
-                <div class="contact-card modern-contact">
-                    <div class="contact-icon contact-icon-phone">
-                        <i class="fas fa-phone"></i>
-                    </div>
-                    <h4>Call Us</h4>
-                    <p class="contact-info-text"><a href="tel:1-800-567-5110">1-800-567-5110</a></p>
-                </div>
+            <div class="row-item">
+                <span>Friday</span>
+                <span>8:00 AM - 12:00 PM</span>
             </div>
-            <div class="col-md-6 col-lg-3">
-                <div class="contact-card modern-contact">
-                    <div class="contact-icon contact-icon-email">
-                        <i class="fas fa-envelope"></i>
-                    </div>
-                    <h4>Email Us</h4>
-                    <p class="contact-info-text"><a href="mailto:info@clarascienceacademy.com">info@clarascienceacademy.com</a></p>
-                </div>
-            </div>
-            <div class="col-md-6 col-lg-3">
-                <div class="contact-card modern-contact">
-                    <div class="contact-icon contact-icon-web">
-                        <i class="fas fa-globe"></i>
-                    </div>
-                    <h4>Visit Website</h4>
-                    <p class="contact-info-text"><a href="https://www.clarascienceacademy.com" target="_blank">clarascienceacademy.com</a></p>
-                </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-12">
-                <div class="modern-office-hours">
-                    <div class="office-hours-header">
-                        <i class="fas fa-clock"></i>
-                        <h4>Office Hours</h4>
-                    </div>
-                    <div class="office-hours-grid">
-                        <div class="office-hours-item">
-                            <div class="day-label">Monday - Thursday</div>
-                            <div class="time-label">8:00 AM - 3:30 PM</div>
-                        </div>
-                        <div class="office-hours-item">
-                            <div class="day-label">Friday</div>
-                            <div class="time-label">8:00 AM - 12:00 PM</div>
-                        </div>
-                        <div class="office-hours-item closed">
-                            <div class="day-label">Saturday & Sunday</div>
-                            <div class="time-label">Closed</div>
-                        </div>
-                    </div>
-                </div>
+            <div class="row-item closed">
+                <span>Saturday & Sunday</span>
+                <span>Closed</span>
             </div>
         </div>
     </div>
-</div>
+</section>
 
-<!-- Call to Action Section -->
-<div class="cta-section py-5">
+<!-- CTA Section -->
+<section class="home-cta">
     <div class="container text-center">
-        <div class="row">
-            <div class="col-12">
-                <h2 class="mb-4">Ready to Get Started?</h2>
-                <p class="lead mb-4">Join Clara Science Academy and experience the future of education management.</p>
-                {% if not current_user.is_authenticated %}
-                <a class="btn btn-light btn-lg me-3" href="{{ url_for('auth.login') }}" role="button">
-                    <i class="fas fa-sign-in-alt me-2"></i>Login to Portal
-                </a>
-                {% endif %}
-                <button class="btn btn-outline-light btn-lg me-3" data-bs-toggle="modal" data-bs-target="#contactModal">
-                    <i class="fas fa-envelope me-2"></i>Contact Us
-                </button>
-                <a class="btn btn-outline-light btn-lg" href="https://www.clarascienceacademy.com" target="_blank" role="button">
-                    <i class="fas fa-globe me-2"></i>Visit Our Website
-                </a>
-            </div>
+        <h2>Ready to Get Started?</h2>
+        <p class="lead">Join Clara Science Academy and experience the future of education management.</p>
+        <div class="btn-group">
+            {% if not current_user.is_authenticated %}
+            <a class="btn btn-light" href="{{ url_for('auth.login') }}" role="button">
+                <i class="bi bi-box-arrow-in-right me-2"></i>Login to Portal
+            </a>
+            {% endif %}
+            <button class="btn btn-outline-light" type="button" data-bs-toggle="modal" data-bs-target="#contactModal">
+                <i class="bi bi-envelope me-2"></i>Contact Us
+            </button>
+            <a class="btn btn-outline-light" href="https://www.clarascienceacademy.com" target="_blank" role="button">
+                <i class="bi bi-globe2 me-2"></i>Visit Our Website
+            </a>
         </div>
     </div>
-</div>
+</section>
 
 <!-- Contact Modal -->
 <div class="modal fade" id="contactModal" tabindex="-1" aria-labelledby="contactModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header bg-success text-white">
+            <div class="modal-header text-white" style="background: var(--home-primary, #0f766e);">
                 <h5 class="modal-title" id="contactModalLabel">
-                    <i class="fas fa-envelope me-2"></i>Contact Clara Science Academy
+                    <i class="bi bi-envelope me-2"></i>Contact Clara Science Academy
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -562,7 +371,7 @@
                         <div class="contact-info">
                             <div class="contact-item mb-3">
                                 <div class="contact-icon-wrapper">
-                                    <i class="fas fa-map-marker-alt text-success"></i>
+                                    <i class="bi bi-geo-alt text-success" style="color: var(--home-primary, #0f766e) !important;"></i>
                                 </div>
                                 <div class="contact-details">
                                     <strong>Address</strong><br>
@@ -583,7 +392,7 @@
                             
                             <div class="contact-item mb-3">
                                 <div class="contact-icon-wrapper">
-                                    <i class="fas fa-envelope text-success"></i>
+                                    <i class="bi bi-envelope text-success" style="color: var(--home-primary, #0f766e) !important;"></i>
                                 </div>
                                 <div class="contact-details">
                                     <strong>Email</strong><br>
@@ -593,7 +402,7 @@
                             
                             <div class="contact-item mb-3">
                                 <div class="contact-icon-wrapper">
-                                    <i class="fas fa-globe text-success"></i>
+                                    <i class="bi bi-globe2 text-success" style="color: var(--home-primary, #0f766e) !important;"></i>
                                 </div>
                                 <div class="contact-details">
                                     <strong>Website</strong><br>
@@ -605,8 +414,8 @@
                     
                     <!-- Office Hours -->
                     <div class="col-md-6">
-                        <h6 class="text-success mb-3">
-                            <i class="fas fa-clock me-2"></i>Office Hours
+                        <h6 class="text-success mb-3" style="color: var(--home-primary, #0f766e) !important;">
+                            <i class="bi bi-clock me-2"></i>Office Hours
                         </h6>
                         <div class="office-hours">
                             <div class="hours-item mb-2">
@@ -624,8 +433,8 @@
                         </div>
                         
                         <div class="mt-4">
-                            <h6 class="text-success mb-3">
-                                <i class="fas fa-user-tie me-2"></i>Leadership Team
+                            <h6 class="text-success mb-3" style="color: var(--home-primary, #0f766e) !important;">
+                                <i class="bi bi-people me-2"></i>Leadership Team
                             </h6>
                             <div class="leadership-info">
                                 <div class="leader-item mb-2">
@@ -648,18 +457,18 @@
                 <!-- Quick Actions -->
                 <div class="row mt-4">
                     <div class="col-12">
-                        <h6 class="text-success mb-3">
-                            <i class="fas fa-bolt me-2"></i>Quick Actions
+                        <h6 class="text-success mb-3" style="color: var(--home-primary, #0f766e) !important;">
+                            <i class="bi bi-lightning me-2"></i>Quick Actions
                         </h6>
                         <div class="d-flex flex-wrap gap-2">
-                            <a href="mailto:info@clarascienceacademy.com" class="btn btn-success btn-sm">
-                                <i class="fas fa-envelope me-1"></i>Send Email
+                            <a href="mailto:info@clarascienceacademy.com" class="btn btn-sm" style="background: var(--home-primary, #0f766e); color: white;">
+                                <i class="bi bi-envelope me-1"></i>Send Email
                             </a>
-                            <a href="tel:1-800-567-5110" class="btn btn-outline-success btn-sm">
-                                <i class="fas fa-phone me-1"></i>Call Now
+                            <a href="tel:1-800-567-5110" class="btn btn-outline-secondary btn-sm">
+                                <i class="bi bi-telephone me-1"></i>Call Now
                             </a>
-                            <a href="https://www.clarascienceacademy.com" target="_blank" class="btn btn-outline-success btn-sm">
-                                <i class="fas fa-globe me-1"></i>Visit Website
+                            <a href="https://www.clarascienceacademy.com" target="_blank" class="btn btn-outline-secondary btn-sm">
+                                <i class="bi bi-globe2 me-1"></i>Visit Website
                             </a>
                         </div>
                     </div>
@@ -672,497 +481,70 @@
     </div>
 </div>
 
-<!-- Enhanced Update Modal -->
+<!-- Update Modal - Feb 2026 (single entry: Home, Schedule, Updates popup) -->
 <div class="modal fade" id="updateModal" tabindex="-1" aria-labelledby="updateModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
-        <div class="modal-content updates-modal-content">
-            <div class="modal-header updates-modal-header">
-                <div class="updates-header-content">
-                    <div class="updates-icon-wrapper">
-                        <i class="fas fa-rocket"></i>
+        <div class="modal-content home-updates-modal">
+            <div class="modal-header home-updates-header">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="home-updates-header-icon">
+                        <i class="bi bi-megaphone"></i>
                     </div>
                     <div>
-                        <h5 class="modal-title updates-modal-title" id="updateModalLabel">
-                            System Updates
-                        </h5>
-                        <p class="updates-subtitle mb-0">Latest improvements and enhancements</p>
+                        <h5 class="modal-title mb-0" id="updateModalLabel">System Updates</h5>
+                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body updates-modal-body">
-                <div class="update-intro updates-intro-card mb-4">
-                    <div class="updates-intro-icon">
-                        <i class="fas fa-sparkles"></i>
+            <div class="modal-body home-updates-body">
+                <div class="home-updates-intro mb-4">
+                    <div class="home-updates-intro-icon">
+                        <i class="bi bi-stars"></i>
                     </div>
                     <div>
-                        <h6 class="updates-intro-title mb-2">
-                            <i class="fas fa-calendar-alt me-2"></i>Latest System Update - February 2026
+                        <h6 class="home-updates-intro-title mb-2">
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Update - February 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>Grading Policy Update, Student Grades Multi-Class Fix & Group Assignment Enhancements!</strong> The minimum letter grade is now D across the entire system—no more F grades on report cards or anywhere else. Fixed the bug where students in multiple classes only saw grades for one class. Enhanced group assignment creation and management with new options and full Quick Actions. Teachers can now edit their own group assignments!</p>
+                        <p class="updates-intro-text mb-0"><strong>Home Page, Schedule Tab & Updates Popup.</strong> The public home page has been restructured and restyled with a teal-and-off-white design, hero image slideshow, and softer backgrounds. Teachers and students now share one unified schedule view tied to the class schedule. This updates popup has been redesigned to match and now shows only the latest changes.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
-                    <!-- February 2026 - Grading Policy, Student Grades Fix & Group Assignments -->
-                    <div class="update-section mb-4" style="border-left-color: #0ea5e9;">
-                        <h6 class="text-primary mb-3" style="background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
-                            <i class="fas fa-graduation-cap me-2"></i>📚 Grading Policy, Student Grades & Group Assignments - February 2026
-                        </h6>
-                        <ul class="list-unstyled">
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Grading Policy: Minimum Letter Grade is D:</strong> The lowest letter grade across the entire system is now D. F grades have been eliminated from assignment grades, quarter grades, report cards, student dashboard, and grade statistics. Students below the D threshold receive D as their minimum grade. This applies consistently everywhere—including newly generated and previously stored report cards
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Student Grades Tab Multi-Class Fix:</strong> Fixed the bug where students registered in multiple classes only saw quarter grades calculated for one class. The system now correctly displays grades for all enrolled classes. Fixes include quarter format matching (Q1 vs 1), proper grade data extraction (points_earned, score, percentage), and group assignment grades included in quarter calculations
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Report Card Letter Grade Sanitization:</strong> Report cards never display F—the minimum shown is D. Added sanitization so that even previously generated report cards and old stored data display D instead of F when viewed or downloaded as PDF
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Group Assignment Creation Enhancements:</strong> The Group Assignment Creation page (for teachers, School Administrators, and Directors) now includes Assignment Status, Quarter, Open Date & Time, Close Date & Time, Assignment Category, and Advanced Grading Options (extra credit, late penalties, grade scale presets)—matching individual paper/PDF assignments
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Group Assignment Quick Actions:</strong> The View Group Assignment page now includes full Quick Actions for all authorized users: Edit, Extension, Void, Reopen, Unvoid, and Remove. Teachers can access these actions for their own assignments
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Teachers Can Edit Their Group Assignments:</strong> Teachers who created group assignments can now edit them. Fixed the permission error that previously blocked teachers from editing their own assignments
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Group Assignment Edit Page Redesign:</strong> Completely redesigned the group assignment edit/update page with a modern, section-based layout matching the creation page. Includes all new fields and role-based navigation (teachers and admins see appropriate back/cancel links)
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Group Assignment Extensions:</strong> Teachers and administrators can grant extensions for group assignments. The extension system supports individual students with new due dates and reasons
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Quarter Grade Calculator Improvements:</strong> Quarter grades now include group assignment grades in calculations. Academic period lookup handles both Q1 and 1 formats for compatibility
-                            </li>
-                        </ul>
-                        <div class="alert alert-info mt-3" style="background: linear-gradient(135deg, rgba(14, 165, 233, 0.1) 0%, rgba(2, 132, 199, 0.1) 100%); border-color: #0ea5e9; border-left: 4px solid #0ea5e9;">
-                            <p class="mb-0"><strong>💡 Impact:</strong> Students and parents see consistent, supportive grading with D as the minimum. Multi-class students now see complete grade information. Teachers and administrators have full control over group assignments with modern workflows. Run a quarter grade refresh after deployment to recalculate grades for all students across all classes!</p>
-                        </div>
-                    </div>
-
-                    <!-- January 15, 2026 - Assignments & Grades Improvements & Bug Fixes -->
-                    <div class="update-section mb-4" style="border-left-color: #10b981;">
-                        <h6 class="text-primary mb-3" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
-                            <i class="fas fa-chart-line me-2"></i>📊 Assignments & Grades Improvements & Critical Fixes - January 15, 2026
-                        </h6>
-                        <ul class="list-unstyled">
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Critical Percentage Calculation Fix:</strong> Fixed a major bug where assignments with custom total points (e.g., 50 or 70 instead of 100) were incorrectly calculated as percentages. The system was dividing by 100 instead of the actual assignment total points. Now 50/50 correctly shows as 100% instead of 50%, ensuring accurate report cards and grade displays across all assignment types
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Assignments & Grades Tab Default View:</strong> Fixed issue where selecting a class in the Assignments & Grades tab would show a blank page. The system now defaults to "Assignments View" when a class is selected, providing immediate visibility into class assignments and student work
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Grades View & Table View Functionality:</strong> Resolved errors that prevented "Grades View" and "Assignments & Grades Table View" from displaying. Both views now work correctly, showing comprehensive grade information with proper data handling for all assignment types including individual and group assignments
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Enhanced Table View Layout:</strong> Completely redesigned the "Assignments & Grades Table View" to fix cramped layout issues. Added proper column widths, sticky student and average columns for horizontal scrolling, improved assignment headers with truncation and tooltips, and better spacing throughout. The table is now much more readable and user-friendly
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Robust Grade Data Handling:</strong> Fixed <code>TypeError</code> errors when processing grades with <code>None</code> values. Added comprehensive null checks and safe type conversions throughout the grade calculation system. The system now gracefully handles missing grades, voided assignments, and incomplete data without errors
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Student Jobs Tab Access:</strong> Students can now view the "Student Jobs" tab to see available cleaning teams, computer teams, and other dynamic teams. Management actions (Record Inspection, Add/Remove Members, Create New Team) are properly hidden from students, providing a read-only view appropriate for their role
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Student Jobs Team Management Fixes:</strong> Fixed "Add Members" modal to dynamically display the correct team name instead of always showing "Cleanup Team". Resolved error loading students in the modal by ensuring proper API endpoint access for School Administrators
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Attendance Analytics Button Visibility:</strong> Enhanced visibility of "Export CSV" and "Back to Attendance" buttons on the Attendance Analytics page for School Administrators. Added high-contrast styling, improved button colors, and hover effects to ensure these important actions are clearly visible against the purple header
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Comprehensive Grade Calculation Updates:</strong> Updated all grade calculation functions across the system (management routes, teacher routes, student routes, and quarter grade calculator) to consistently use <code>assignment.total_points</code> as the denominator. This ensures accurate percentage calculations regardless of when assignments were created or if total points were modified
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Syntax Error Fixes:</strong> Resolved multiple syntax errors in student routes that were preventing the application from starting. Fixed incorrectly indented <code>except</code> clauses and removed duplicate code blocks, ensuring smooth application startup and operation
-                            </li>
-                        </ul>
-                        <div class="alert alert-success mt-3" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 100%); border-color: #10b981; border-left: 4px solid #10b981;">
-                            <p class="mb-0"><strong>💡 Impact:</strong> These critical fixes ensure accurate grade calculations and report cards, which are essential for student assessment and parent communication. The improved Assignments & Grades interface makes it easier for teachers and administrators to view and manage student work. Students can now access the Student Jobs tab to see available opportunities, and all management interfaces have improved visibility and functionality!</p>
-                        </div>
-                    </div>
-
-                    <!-- January 12, 2026 - Assignment Reopening Feature -->
-                    <div class="update-section mb-4" style="border-left-color: #8b5cf6;">
-                        <h6 class="text-primary mb-3" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
-                            <i class="fas fa-redo me-2"></i>🔄 Assignment Reopening Feature - January 12, 2026
-                        </h6>
-                        <ul class="list-unstyled">
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Assignment Reopening System:</strong> Teachers, School Administrators, and Directors can now reopen closed or inactive assignments for specific students! This powerful feature allows educators to grant students access to assignments that have been closed or marked inactive, giving students another opportunity to complete their work
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Additional Quiz Attempts:</strong> For quiz assignments, teachers can grant additional attempts to students who have used all their allowed attempts. Simply select the students and specify how many extra attempts to grant. The system automatically tracks and enforces the new attempt limits
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Selective Student Reopening:</strong> Reopen assignments for individual students or multiple students at once. The system shows which students need reopening (those with max attempts reached or assignments that are inactive/closed) and which students already have reopenings active
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Smart Status Display:</strong> The reopening modal intelligently displays student status with visual indicators. Students who need reopening are highlighted, and those with active reopenings show their additional attempts. For PDF assignments, the interface adapts to show only relevant information without confusing attempt-related fields
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Universal Assignment Support:</strong> The reopening feature works for all assignment types - Quiz, PDF/Paper, and Discussion assignments. For quizzes, you can grant additional attempts. For other assignment types, reopening simply grants access to inactive or closed assignments
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Fixed Quiz Attempt Checking:</strong> Resolved critical error where quiz attempt checking was failing due to variable scope issues. Students can now properly access quizzes with reopened attempts, and the system correctly calculates effective max attempts including additional attempts from reopenings
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Management Role Access:</strong> School Administrators and Directors have full access to the reopening feature through the management interface. The feature is seamlessly integrated into both teacher and management assignment views with role-appropriate routing
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Modern UI Design:</strong> The reopening modal features a beautiful purple gradient design consistent with other assignment management modals. Student selection uses an intuitive grid layout with visual status indicators, making it easy to identify which students need reopening
-                            </li>
-                        </ul>
-                        <div class="alert alert-info mt-3" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(124, 58, 237, 0.1) 100%); border-color: #8b5cf6; border-left: 4px solid #8b5cf6;">
-                            <p class="mb-0"><strong>💡 Impact:</strong> This feature provides educators with the flexibility to help students who need additional opportunities to complete assignments. Whether a student missed a deadline due to extenuating circumstances, needs more quiz attempts, or requires access to a closed assignment, the reopening feature makes it easy to grant these opportunities while maintaining proper tracking and accountability!</p>
-                        </div>
-                    </div>
-
-                    <!-- January 7, 2026 - UI/UX Overhaul & Feature Enhancements -->
-                    <div class="update-section mb-4" style="border-left-color: #667eea;">
-                        <h6 class="text-primary mb-3" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
-                            <i class="fas fa-paint-brush me-2"></i>🎨 UI/UX Overhaul & Feature Enhancements - January 7, 2026
-                        </h6>
-                        <ul class="list-unstyled">
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Complete Quiz Page Redesign:</strong> Transformed the quiz taking interface with modern gradients, enhanced question cards, improved navigation controls, and beautiful visual feedback. Added smooth animations, hover effects, and professional styling throughout. Students now enjoy a premium quiz-taking experience with better visual hierarchy and intuitive controls
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Quiz Retake Functionality:</strong> Students can now retake quiz assignments when multiple attempts are available! Added "Retake Quiz" buttons on both the quiz results page and assignments list. The system properly tracks attempts remaining and allows students to retake quizzes with a fresh start. Questions may be reshuffled on retake if enabled
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>School Calendar Complete Redesign:</strong> Completely redesigned the calendar system for all user roles with modern UI, beautiful gradients, improved event badges, and enhanced layout. Fixed layout shifting issues with fixed-height cells and proper flexbox implementation. Event badges now display with correct colors and consistent sizing. Added hover effects, today indicators, and improved event detail modals
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Teacher & Staff Management Enhancements:</strong> Redesigned "Add Teacher Staff" page with modern card-based layout, gradient headers, and improved form styling. Enhanced "View Staff Info" pop-up to display temporary access status and expiration dates. Added comprehensive temporary access management in "Edit Staff Info" with options to make permanent or extend access
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Soft Deletion for Teachers:</strong> Implemented soft deletion system for teacher/staff records. When teachers are removed, their accounts are deactivated but all historical data (assignments, grades, etc.) is preserved. This prevents data loss and maintains accurate assignment attribution. Deleted teachers are filtered out from active lists and dropdowns
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Temporary Access Management:</strong> Added comprehensive temporary access system for staff members. Administrators can set temporary access with expiration dates, view access status, convert to permanent access, or extend access periods. All temporary access information is clearly displayed in staff management interfaces
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Redo Dashboard Fixes:</strong> Fixed 500 errors on the Assignment Redo Dashboard for School Administrators. Resolved missing model imports and None relationship errors by implementing proper eager loading and filtering. Added template-level safety checks to prevent rendering errors
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Enhanced Form Design:</strong> Transformed "Grades Taught" checkboxes into visually appealing clickable boxes with highlight effects. Improved department selection with modern checkbox styling. All form elements now feature consistent design language with gradients, shadows, and smooth transitions
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Calendar Event Color System:</strong> Fixed color mismatches in calendar event badges by normalizing event type strings and ensuring correct CSS class mapping. Each event type now displays with its designated gradient color for consistent visual identification
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Responsive Design Improvements:</strong> All redesigned components are fully responsive with proper mobile and tablet layouts. Enhanced touch interactions and improved spacing for smaller screens
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Quiz Retake Experience Improvements:</strong> Removed intrusive "Progress loaded successfully!" notification pop-up. Fixed retake functionality to properly preserve quiz progress and only reshuffle questions when explicitly enabled. Retakes now start fresh without resetting progress unexpectedly, providing a smoother experience for students
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Enhanced Academic Alerts System:</strong> Completely redesigned the academic alerts modal for teachers with modern design, improved visual hierarchy, and comprehensive student information display. Academic alerts now show assignment types (Quiz, PDF, Discussion, Group) with appropriate icons and badges. Enhanced alert data structure includes all assignment types and missing assignments for complete student performance tracking
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>HTTPS & Security Improvements:</strong> Added ProxyFix middleware to properly handle HTTPS requests behind Render's load balancer. Fixed secure cookie issues and redirect loops in production by correctly reading X-Forwarded-Proto headers. The application now properly recognizes HTTPS connections and sets secure session cookies correctly
-                            </li>
-                        </ul>
-                        <div class="alert alert-info mt-3" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%); border-color: #667eea; border-left: 4px solid #667eea;">
-                            <p class="mb-0"><strong>💡 Impact:</strong> These updates provide a significantly improved user experience with modern, professional design throughout the application. Students can now retake quizzes smoothly, enjoy a beautiful calendar interface, and teachers benefit from enhanced staff management tools and improved academic alerts. Production deployment is now more secure with proper HTTPS handling. All improvements maintain existing functionality while elevating the visual design and user experience!</p>
-                        </div>
-                    </div>
-
-                    <!-- January 5, 2026 - Major Assignment System Updates -->
+                    <!-- February 2026 - Home Page, Schedule Tab & Updates Popup -->
                     <div class="update-section mb-4">
-                        <h6 class="text-primary mb-3" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
-                            <i class="fas fa-tasks me-2"></i>📋 Assignment System Overhaul - January 5, 2026
-                        </h6>
+                        <h6 class="mb-3"><i class="bi bi-calendar3 me-2"></i>Home Page, Schedule Tab & Updates Popup – February 2026</h6>
                         <ul class="list-unstyled">
                             <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Fixed Auto-Grading Bug:</strong> Resolved critical issue where assignments were incorrectly showing as "graded" immediately after creation. The system now only marks assignments as completed when they have a <code>graded_at</code> timestamp, ensuring accurate status display for students and teachers
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Unified Schedule Tab:</strong> Teachers and students now share one schedule view. A single shared template shows weekly day cards (Monday–Sunday) with class name, time, and room. Schedules are synced with Classes → Edit class → Schedule. Teachers see student count and a "View Class" link; students see teacher name.
                             </li>
                             <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Universal Extension Request System:</strong> Extension request functionality is now available for ALL assignment types! Students can request extensions for PDF/Paper assignments, Quiz assignments, and Discussion assignments. The extension request button appears consistently across all assignment views
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Public Home Page Redesign:</strong> The home page was restructured and restyled. New teal-and-off-white design, clear section layout (About, Features, Programs, Technology, Leadership, Contact, CTA), Bootstrap Icons throughout, and the same content in a cleaner, easier-to-scan layout.
                             </li>
                             <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Discussion Assignment Enhancements:</strong> Created dedicated view and grading pages for discussion assignments. Management and teachers can now see all participants, their posts, participation statistics, and grade discussions with a streamlined interface that displays student posts alongside grading controls
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Hero Image Background:</strong> The slideshow of four hero images is back behind the main headline. Images cycle every 6 seconds with a teal overlay so the hero text stays readable.
                             </li>
                             <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Modern Modal System:</strong> Replaced all browser-native prompts, confirms, and alerts with beautiful Bootstrap modals. Status changes, delete confirmations, and void operations now use professional modal dialogs with proper styling, loading states, and toast notifications for feedback
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Softer Section Backgrounds:</strong> Stark white was replaced with a soft off-white and a light teal tint on alternating sections so the page feels easier on the eyes and ties into the hero.
                             </li>
                             <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Void Button Restoration:</strong> Restored the void assignment button to discussion assignment views. Teachers and administrators can now void assignments for all students or specific students directly from the assignment view page with a comprehensive modal interface
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Extension Management Fixes:</strong> Fixed critical error where extension management page couldn't load students. Resolved <code>Class.students</code> attribute error by using proper <code>Enrollment</code> queries. Extension granting now works seamlessly for all assignment types
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Group Assignment View Fixes:</strong> Fixed 500 errors when viewing group assignments. The system now properly detects assignment types and redirects to appropriate views. Non-group assignments no longer cause errors when accessed through group assignment routes
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Route Access Improvements:</strong> Verified and fixed all route access issues. All routes are properly protected with appropriate decorators (<code>@login_required</code>, <code>@student_required</code>, <code>@teacher_required</code>, <code>@management_required</code>). No unauthorized access or 403 errors for legitimate users
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Student Assignment Status Logic:</strong> Enhanced assignment status determination to prevent false "completed" status. Assignments now correctly show as "Un-Submitted", "Submitted or Awaiting Grade", "Past Due", or "Completed" based on actual submission and grading status
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Assignment Type Badge System:</strong> All assignment cards now display clear type badges (Quiz, Discussion, PDF/Paper) with color-coded styling. Status badges show "Active", "Inactive", "Upcoming", "Voided", "Graded", or "Autograde" based on assignment state
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Quick Actions Enhancement:</strong> Discussion assignment view now includes comprehensive Quick Actions section with Edit, Grade, Extensions, Void, Status, Remove, and Back buttons. All actions use modern modals instead of browser prompts
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Toast Notification System:</strong> Implemented Bootstrap toast notifications throughout the application. Success, error, and warning messages now appear as elegant toast notifications instead of browser alerts, providing better user experience
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Code Quality Improvements:</strong> Cleaned up debug statements, fixed URL routing issues, and ensured all endpoints are properly registered. The codebase is now more maintainable with consistent error handling and proper route organization
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Updates Popup Redesign:</strong> This System Updates modal now matches the new home: teal header, soft body background, intro card, and styled update sections. Old historical entries were removed; this popup now shows only the latest changes.
                             </li>
                         </ul>
-                        <div class="alert alert-success mt-3" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 100%); border-color: #10b981;">
-                            <p class="mb-0"><strong>💡 Impact:</strong> These updates ensure accurate assignment status tracking, provide consistent extension request functionality across all assignment types, improve the discussion assignment workflow, and enhance overall user experience with modern UI components. All assignment types now work seamlessly with proper status tracking and management tools!</p>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> Students and teachers get a single, clear schedule tied to the class schedule. Visitors see a refreshed home page with the same information and a more modern look. The updates popup is simpler and aligned with the new design.</p>
                         </div>
-                    </div>
-
-                    <!-- Coming Soon - Future Updates -->
-                    <div class="update-section mb-4">
-                        <h6 class="text-primary mb-3" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
-                            <i class="fas fa-question-circle me-2"></i>📝 Interactive Quiz Assignment System - December 28, 2025
-                        </h6>
-                        <ul class="list-unstyled">
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Native Quiz Builder:</strong> Create engaging quizzes directly in the platform with support for multiple choice, true/false, short answer, and essay questions. Intuitive drag-and-drop interface with live preview and real-time statistics
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Google Forms Integration:</strong> Link existing Google Forms to assignments or export native quizzes to Google Forms with one click. Full two-way synchronization for seamless workflow between platforms
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Auto-Grading & Manual Review:</strong> Automatic grading for multiple choice and true/false questions with instant feedback. Manual grading interface for short answer and essay questions with detailed per-question scoring
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Advanced Quiz Settings:</strong> Configure time limits, multiple attempts, question shuffling, and correct answer display. Full control over quiz behavior and student experience
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Progress Saving:</strong> Students can save their quiz progress and return later to complete it. Auto-save functionality prevents data loss during long quizzes
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Submission Tracking:</strong> Real-time tracking of quiz submissions with email matching for Google Forms responses. Comprehensive submission history and grade management
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Enhanced Quiz Grading Interface:</strong> Specialized grading view for quizzes showing each question, student answers, auto-graded status, and detailed feedback options. Streamlined workflow for efficient grading
-                            </li>
-                        </ul>
-                        <div class="alert alert-info mt-3" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%); border-color: #667eea;">
-                            <p class="mb-0"><strong>💡 How to Use:</strong> Go to Assignments & Grades → Create Assignment → Select "Quiz" type. Build your quiz with questions, configure settings, and optionally link to Google Forms. Students can take quizzes with time limits and multiple attempts, and you can grade them with our enhanced interface!</p>
-                        </div>
-                    </div>
-
-                    <!-- December 14, 2025 - Google Classroom Sync -->
-                    <div class="update-section mb-4">
-                        <h6 class="text-primary mb-3" style="background: linear-gradient(135deg, #4285f4 0%, #34a853 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
-                            <i class="fab fa-google me-2"></i>🔗 Google Classroom Synchronization - December 14, 2025
-                        </h6>
-                        <ul class="list-unstyled">
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Automated Synchronization System:</strong> The Google Classroom sync system is now fully active and configured to run automatically every 15 minutes via scheduled cron jobs. No manual intervention required!
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Many-to-One Classroom Linking:</strong> One Google Classroom can now be linked to multiple internal classes, allowing teachers to sync assignments and grades across different class sections efficiently
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Automatic Assignment Sync:</strong> When you create a new assignment (Coursework type) in Google Classroom, it automatically appears in your Clara Science Academy system within 15 minutes. Assignments are created as PDF type with proper due dates, point values, and academic period assignments
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Intelligent Grade Filtering:</strong> The system only syncs grades for students who are actively enrolled in the specific internal class. Students in Google Classroom but not enrolled in the internal class are automatically filtered out, ensuring accurate gradebooks
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Seamless Integration:</strong> All synced assignments and grades are properly linked via Google Coursework IDs, maintaining data integrity and preventing duplicates. The system handles date parsing, academic period assignment, and grade data formatting automatically
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Background Processing:</strong> All synchronization happens in the background without disrupting your workflow. Monitor sync status through Render dashboard logs and see real-time updates in your assignments and gradebooks
-                            </li>
-                        </ul>
-                        <div class="alert alert-info mt-3" style="background: linear-gradient(135deg, rgba(66, 133, 244, 0.1) 0%, rgba(52, 168, 83, 0.1) 100%); border-color: #4285f4;">
-                            <p class="mb-0"><strong>💡 How It Works:</strong> Connect your Google account in Settings, link your Google Classroom to internal classes, and the system will automatically sync assignments and grades every 15 minutes. Create assignments in Google Classroom and they'll appear in your system automatically!</p>
-                        </div>
-                    </div>
-
-                    <!-- December 8, 2025 - Public Homepage & Bug Fixes -->
-                    <div class="update-section mb-4">
-                        <h6 class="text-primary mb-3" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
-                            <i class="fas fa-globe me-2"></i>🌐 Public Homepage & Bug Fixes - December 8, 2025
-                        </h6>
-                        <ul class="list-unstyled">
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>About Us Dropdown Updates:</strong> Added comprehensive information to all About Us sections including Education Plan with curriculum details (Amplify, Eureka, PLTW Launch), complete STEM Manifesto with all 10 principles, Tuition Assistance programs with PDF policy links, detailed Admission Policy with procedures, and Locations page with all school addresses
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Attendance System Fixes:</strong> Fixed critical bug where School Administrators couldn't save manual attendance due to field name mismatch (status_ vs status-). Resolved date selection issues for Class Period attendance - now properly loads and displays attendance data for selected dates instead of always showing today's date
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Group Management Bug Fix:</strong> Fixed 500 error when teachers clicked "Manage Groups" from class view. Resolved template variable mismatch (class_item vs class_obj) that was causing server errors
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Recent Assignments Button Styling:</strong> Completely redesigned assignment action buttons with modern gradients, smooth hover animations, enhanced shadows, and improved color-coding. Buttons now have a professional, polished appearance with better visual hierarchy
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check-circle text-success me-2"></i>
-                                <strong>Mobile/Tablet Hero Card Fix:</strong> Fixed issue where the dynamic hero card was blocking interactions when scrolling on tablets and phones. Added touch device detection and proper pointer event handling to prevent overlap issues
-                            </li>
-                        </ul>
-                    </div>
-
-                    <!-- Coming Soon - Future Updates -->
-                    <div class="update-section mb-4" style="border-top: 2px dashed #e2e8f0; padding-top: 1.5rem; margin-top: 2rem;">
-                        <h6 class="text-primary mb-3" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
-                            <i class="fas fa-road me-2"></i>🚀 Coming Soon - Future Updates
-                        </h6>
-                        <div class="alert alert-info mb-3" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 100%); border-color: #10b981;">
-                            <p class="mb-2"><strong>We're constantly working to improve your experience!</strong> Here's what's on the horizon:</p>
-                        </div>
-                        <ul class="list-unstyled">
-                            <li class="mb-2">
-                                <i class="fas fa-database me-2 text-primary"></i>
-                                <strong>Question Banks:</strong> Create reusable question banks that can be shared across quizzes and classes. Build a library of questions for faster quiz creation
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-link me-2 text-primary"></i>
-                                <strong>Matching Questions:</strong> Add matching question type for quizzes, allowing students to match items from two columns
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-file-alt me-2 text-primary"></i>
-                                <strong>Fill-in-the-Blank Questions:</strong> Interactive fill-in-the-blank question type with auto-grading support for vocabulary and concept assessments
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-cogs me-2 text-primary"></i>
-                                <strong>System Updates & Improvements:</strong> Ongoing enhancements to performance, user interface, and feature additions based on user feedback
-                            </li>
-                            <li class="mb-2">
-                                <i class="fas fa-bell me-2 text-primary"></i>
-                                <strong>Stay Tuned:</strong> More exciting features and improvements are in development. We'll keep you updated as new features become available!
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-
-                <div class="update-footer mt-4 p-4 bg-primary text-white rounded">
-                    <h6 class="mb-3">
-                        <i class="fas fa-trophy me-2"></i>🎉 What This Means for You
-                    </h6>
-                    <div class="row">
-                        <div class="col-md-4">
-                            <h6 class="mb-2">For Students:</h6>
-                            <ul class="list-unstyled small">
-                                <li>• Beautiful modern interface with purple/teal gradients</li>
-                                <li>• Card-based assignment view with clear status indicators</li>
-                                <li>• Personalized welcome and profile display</li>
-                                <li>• Activity timeline showing recent updates</li>
-                                <li>• Enhanced mobile-friendly responsive design</li>
-                            </ul>
-                        </div>
-                        <div class="col-md-4">
-                            <h6 class="mb-2">For Teachers:</h6>
-                            <ul class="list-unstyled small">
-                                <li>• All existing functionality preserved</li>
-                                <li>• Enhanced visual consistency across interface</li>
-                                <li>• Reliable attendance tracking system</li>
-                                <li>• Modern class management tools</li>
-                            </ul>
-                        </div>
-                        <div class="col-md-4">
-                            <h6 class="mb-2">For Administrators:</h6>
-                            <ul class="list-unstyled small">
-                                <li>• Completely redesigned dashboard with modern aesthetics</li>
-                                <li>• Color-coded tabs (gold, purple, pink gradients)</li>
-                                <li>• Statistics cards with real-time data</li>
-                                <li>• Accurate unique student counts</li>
-                                <li>• Enhanced attendance management interface</li>
-                            </ul>
-                        </div>
-                    </div>
-                    <div class="mt-3 p-3 bg-white bg-opacity-10 rounded">
-                        <p class="mb-0 small">
-                            <i class="fas fa-rocket me-2"></i>
-                            <strong>Major Visual Overhaul Complete:</strong> This update represents a comprehensive redesign of the student 
-                            experience and administrator tools. Every interface has been modernized with gradient designs, card-based layouts, 
-                            and enhanced user experience. All changes have been thoroughly tested and are production-ready. 
-                            Thank you for your patience as we continue to make Clara Science Academy's platform world-class!
-                        </p>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer bg-light">
+            <div class="modal-footer">
                 <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
-                    <i class="fas fa-check me-2"></i>Awesome! Let's Go!
+                    <i class="bi bi-check-lg me-2"></i>Awesome! Let's Go!
                 </button>
             </div>
         </div>
@@ -1170,164 +552,40 @@
 </div>
 
 <script>
-// ===== PREMIUM HOMEPAGE FUNCTIONALITY =====
 document.addEventListener('DOMContentLoaded', function() {
-    // ===== PARTICLES DISABLED FOR PERFORMANCE =====
-    // Particles completely disabled to improve page performance
-    const particlesContainer = document.getElementById('particlesContainer');
-    if (particlesContainer) {
-        particlesContainer.style.display = 'none';
+    // Hero background slideshow
+    var slides = document.querySelectorAll('.home-hero-bg-slide');
+    var current = 0;
+    if (slides.length > 0) {
+        setInterval(function() {
+            slides[current].classList.remove('active');
+            current = (current + 1) % slides.length;
+            slides[current].classList.add('active');
+        }, 6000);
     }
-    
-    // ===== NUMBER COUNTERS - Simplified for performance =====
-    // Counters display immediately without animation for better performance
-    const statObserver = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting && !entry.target.dataset.animated) {
-                const numberElement = entry.target.querySelector('.stat-number');
-                if (numberElement) {
-                    // Numbers display immediately - no animation
-                    entry.target.dataset.animated = 'true';
-                }
-            }
-        });
-    }, { threshold: 0.5 });
-    
-    document.querySelectorAll('.modern-stat-box').forEach(box => {
-        statObserver.observe(box);
-    });
-    
-    // ===== SLIDESHOW WITH KEN BURNS EFFECT =====
-    const slideshowImages = document.querySelectorAll('.slideshow-image');
-    let currentSlide = 0;
-    
-    function showSlide(index) {
-        slideshowImages.forEach((img, i) => {
-            img.classList.toggle('active', i === index);
-        });
-    }
-    
-    function nextSlide() {
-        currentSlide = (currentSlide + 1) % slideshowImages.length;
-        showSlide(currentSlide);
-    }
-    
-    showSlide(0);
-    // Slideshow interval increased for better performance
-    setInterval(nextSlide, 8000);
-    
-    // ===== SMOOTH SCROLL WITH EASING =====
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener('click', function (e) {
-            const href = this.getAttribute('href');
+
+    // Smooth scroll for in-page # links
+    document.querySelectorAll('a[href^="#"]').forEach(function(anchor) {
+        anchor.addEventListener('click', function(e) {
+            var href = this.getAttribute('href');
             if (href && href !== '#' && href.length > 1) {
-                e.preventDefault();
-                const target = document.querySelector(href);
+                var target = document.querySelector(href);
                 if (target) {
-                    target.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
+                    e.preventDefault();
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
             }
         });
     });
-    
-    // ===== SCROLL ANIMATIONS DISABLED FOR PERFORMANCE =====
-    // Scroll animations completely disabled to improve page performance
-    // Elements will appear immediately without animation
-    
-    // ===== HERO BUTTON RIPPLE EFFECT - Optimized =====
-    // Use event delegation to avoid multiple listeners
-    document.addEventListener('click', function(e) {
-        const heroBtn = e.target.closest('.hero-btn');
-        if (heroBtn && !heroBtn.hasAttribute('data-bs-toggle')) {
-            // Only add ripple to buttons that don't trigger modals
-            const ripple = document.createElement('span');
-            ripple.className = 'ripple';
-            heroBtn.appendChild(ripple);
-            setTimeout(() => ripple.remove(), 600);
-        }
-    });
-    
-    // ===== PARALLAX EFFECT DISABLED FOR PERFORMANCE =====
-    // Parallax completely disabled to improve page performance
-    
-    // ===== SHOW UPDATE MODAL - Optimized =====
-    const updateModalElement = document.getElementById('updateModal');
-    if (updateModalElement) {
-        // Optimize modal performance by reducing will-change after animation
-        updateModalElement.addEventListener('shown.bs.modal', function() {
-            const modalContent = this.querySelector('.updates-modal-content');
-            if (modalContent) {
-                // Remove will-change after animation completes to reduce repaints
-                setTimeout(() => {
-                    modalContent.style.willChange = 'auto';
-                }, 300);
-            }
-        });
-        
-        // Show modal automatically if not already shown (only once per session)
-        // Use Bootstrap's built-in modal handling instead of creating new instances
-        if (!sessionStorage.getItem('updateModalShownFeb2026')) {
-            // Small delay to ensure page is fully loaded
-            setTimeout(() => {
-                // Get or create modal instance once
-                let updateModal = bootstrap.Modal.getInstance(updateModalElement);
-                if (!updateModal) {
-                    updateModal = new bootstrap.Modal(updateModalElement, {
-                        backdrop: true,
-                        keyboard: true
-                    });
-                }
-                updateModal.show();
-                sessionStorage.setItem('updateModalShownFeb2026', 'true');
-            }, 500);
-        }
-        
-        // Remove redundant event listeners - Bootstrap handles data-bs-toggle="modal" automatically
-        // No need to add click listeners to buttons with data-bs-target
-    }
-    
-    // ===== HERO SECTION OPTIMIZATION =====
-    // Simplified hero section handling for better performance
-    const heroSection = document.querySelector('.hero-section');
-    
-    if (heroSection) {
-        // Fix for mobile/tablet: Prevent card from blocking interactions when scrolled
-        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-        
-        if (isTouchDevice) {
-            // Only add scroll listener on touch devices, and use throttling
-            let ticking = false;
-            let lastScrollY = 0;
-            
-            window.addEventListener('scroll', () => {
-                if (!ticking) {
-                    window.requestAnimationFrame(() => {
-                        const scrolled = window.pageYOffset;
-                        // Only update if scroll changed significantly (performance optimization)
-                        if (Math.abs(scrolled - lastScrollY) > 50) {
-                            const heroRect = heroSection.getBoundingClientRect();
-                            const viewportHeight = window.innerHeight;
-                            
-                            // Only update if hero is completely out of viewport
-                            if (heroRect.bottom < 0 || heroRect.top > viewportHeight) {
-                                heroSection.style.pointerEvents = 'none';
-                                heroSection.style.zIndex = '1';
-                            } else {
-                                heroSection.style.pointerEvents = 'auto';
-                                heroSection.style.zIndex = '2';
-                            }
-                            
-                            lastScrollY = scrolled;
-                        }
-                        ticking = false;
-                    });
-                    ticking = true;
-                }
-            }, { passive: true });
-        }
+
+    // Show updates modal once per session
+    var updateModalEl = document.getElementById('updateModal');
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownFeb2026v2')) {
+        setTimeout(function() {
+            var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
+            modal.show();
+            sessionStorage.setItem('updateModalShownFeb2026v2', 'true');
+        }, 500);
     }
 });
 </script>

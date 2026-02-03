@@ -5,8 +5,9 @@ Teachers routes for management users.
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, Response, abort, jsonify
 from flask_login import login_required, current_user
 from decorators import management_required
-from models import db, TeacherStaff, User
+from models import db, TeacherStaff, User, SchoolYear, TeacherWorkDay
 from werkzeug.security import generate_password_hash
+from datetime import datetime
 import json
 
 
@@ -653,13 +654,13 @@ def add_teacher_work_days():
         
         if not dates_str or not title:
             flash('Dates and title are required.', 'danger')
-            return redirect(url_for('management.teacher_work_days'))
+            return redirect(url_for('management.calendar'))
         
         # Get active school year
         active_year = SchoolYear.query.filter_by(is_active=True).first()
         if not active_year:
             flash('No active school year found.', 'danger')
-            return redirect(url_for('management.teacher_work_days'))
+            return redirect(url_for('management.calendar'))
         
         # Parse dates (comma-separated)
         dates = [date.strip() for date in dates_str.split(',')]
@@ -704,7 +705,11 @@ def add_teacher_work_days():
         db.session.rollback()
         flash(f'Error adding teacher work days: {str(e)}', 'danger')
     
-    return redirect(url_for('management.teacher_work_days'))
+    month = request.form.get('redirect_month')
+    year = request.form.get('redirect_year')
+    if month and year:
+        return redirect(url_for('management.calendar', month=month, year=year))
+    return redirect(url_for('management.calendar'))
 
 
 
@@ -728,7 +733,11 @@ def delete_teacher_work_day(work_day_id):
         db.session.rollback()
         flash(f'Error deleting teacher work day: {str(e)}', 'danger')
     
-    return redirect(url_for('management.teacher_work_days'))
+    month = request.form.get('redirect_month')
+    year = request.form.get('redirect_year')
+    if month and year:
+        return redirect(url_for('management.calendar', month=month, year=year))
+    return redirect(url_for('management.calendar'))
 
 
 # School Break Management Routes

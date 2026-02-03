@@ -30,13 +30,13 @@
                         <!-- Quick Navigation -->
                         <div class="btn-group" role="group">
                             {% if 'Teacher' in current_user.role %}
-                                <a href="{{ url_for('teacher.calendar', month=prev_month.month, year=prev_month.year) }}" class="btn btn-light" style="border-radius: 0.5rem 0 0 0.5rem;">
+                                <a href="{{ url_for('teacher.dashboard.calendar', month=prev_month.month, year=prev_month.year) }}" class="btn btn-light" style="border-radius: 0.5rem 0 0 0.5rem;">
                                     <i class="bi bi-chevron-left me-1"></i>Previous
                                 </a>
-                                <a href="{{ url_for('teacher.calendar') }}" class="btn btn-light" style="border-radius: 0;">
+                                <a href="{{ url_for('teacher.dashboard.calendar') }}" class="btn btn-light" style="border-radius: 0;">
                                     <i class="bi bi-calendar-check me-1"></i>Today
                                 </a>
-                                <a href="{{ url_for('teacher.calendar', month=next_month.month, year=next_month.year) }}" class="btn btn-light" style="border-radius: 0 0.5rem 0.5rem 0;">
+                                <a href="{{ url_for('teacher.dashboard.calendar', month=next_month.month, year=next_month.year) }}" class="btn btn-light" style="border-radius: 0 0.5rem 0.5rem 0;">
                                     Next<i class="bi bi-chevron-right ms-1"></i>
                                 </a>
                             {% elif current_user.role == 'Student' %}
@@ -67,12 +67,12 @@
                             <button class="btn btn-warning fw-bold" data-bs-toggle="modal" data-bs-target="#addEventModal" style="border-radius: 0.5rem; box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4);">
                                 <i class="bi bi-plus-circle me-2"></i>Add Event
                             </button>
-                            <a href="{{ url_for('management.teacher_work_days') }}" class="btn btn-light fw-bold" style="border-radius: 0.5rem;">
+                            <button type="button" class="btn btn-light fw-bold" style="border-radius: 0.5rem;" data-bs-toggle="modal" data-bs-target="#teacherWorkDaysModal">
                                 <i class="bi bi-person-badge me-2"></i>Teacher Work Days
-                            </a>
-                            <a href="{{ url_for('management.school_breaks') }}" class="btn btn-light fw-bold" style="border-radius: 0.5rem;">
+                            </button>
+                            <button type="button" class="btn btn-light fw-bold" style="border-radius: 0.5rem;" data-bs-toggle="modal" data-bs-target="#schoolBreaksModal">
                                 <i class="bi bi-calendar-x me-2"></i>School Breaks
-                            </a>
+                            </button>
                         {% endif %}
                     </div>
                 </div>
@@ -331,6 +331,144 @@
         </div>
     </div>
 </div>
+
+<!-- Teacher Work Days Modal -->
+<div class="modal fade" id="teacherWorkDaysModal" tabindex="-1" aria-labelledby="teacherWorkDaysModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content" style="border-radius: 1rem;">
+            <div class="modal-header text-white" style="background: linear-gradient(135deg, #2E8B57 0%, #228B22 100%); border-radius: 1rem 1rem 0 0;">
+                <h5 class="modal-title fw-bold" id="teacherWorkDaysModalLabel"><i class="bi bi-person-badge me-2"></i>Teacher Work Days</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <h6 class="fw-bold mb-3">Add Work Days</h6>
+                <form action="{{ url_for('management.add_teacher_work_days') }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <input type="hidden" name="redirect_month" value="{{ month }}"/>
+                    <input type="hidden" name="redirect_year" value="{{ year }}"/>
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label for="twd_title" class="form-label small">Title *</label>
+                            <input type="text" class="form-control form-control-sm" id="twd_title" name="title" placeholder="e.g., PD Day" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="twd_attendance" class="form-label small">Attendance</label>
+                            <select class="form-select form-select-sm" id="twd_attendance" name="attendance_requirement">
+                                <option value="Mandatory">Mandatory</option>
+                                <option value="Optional">Optional</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="twd_dates" class="form-label small">Dates * (comma-separated, MM/DD/YYYY or YYYY-MM-DD)</label>
+                        <input type="text" class="form-control form-control-sm" id="twd_dates" name="dates" placeholder="e.g., 01/15/2026, 02/20/2026" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="twd_description" class="form-label small">Description (optional)</label>
+                        <textarea class="form-control form-control-sm" id="twd_description" name="description" rows="2" placeholder="Optional details..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-success btn-sm"><i class="bi bi-plus-circle me-1"></i>Add Work Days</button>
+                </form>
+                <hr class="my-4">
+                <h6 class="fw-bold mb-2">Current Teacher Work Days <span class="badge bg-secondary">{{ work_days|length }}</span></h6>
+                {% if work_days %}
+                    <div class="list-group list-group-flush" style="max-height: 220px; overflow-y: auto;">
+                        {% for wd in work_days %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
+                                <div>
+                                    <span class="badge bg-info">{{ wd.date.strftime('%b %d, %Y') }}</span>
+                                    <strong class="ms-2">{{ wd.title }}</strong>
+                                    <span class="badge {{ 'bg-danger' if wd.attendance_requirement == 'Mandatory' else 'bg-warning' }} ms-1">{{ wd.attendance_requirement }}</span>
+                                </div>
+                                <form action="{{ url_for('management.delete_teacher_work_day', work_day_id=wd.id) }}" method="POST" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <input type="hidden" name="redirect_month" value="{{ month }}"/>
+                                    <input type="hidden" name="redirect_year" value="{{ year }}"/>
+                                    <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Delete this work day?');"><i class="bi bi-trash"></i></button>
+                                </form>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted small mb-0">No teacher work days yet. Add some above.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- School Breaks Modal -->
+<div class="modal fade" id="schoolBreaksModal" tabindex="-1" aria-labelledby="schoolBreaksModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content" style="border-radius: 1rem;">
+            <div class="modal-header text-white" style="background: linear-gradient(135deg, #2E8B57 0%, #228B22 100%); border-radius: 1rem 1rem 0 0;">
+                <h5 class="modal-title fw-bold" id="schoolBreaksModalLabel"><i class="bi bi-calendar-x me-2"></i>School Breaks</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <h6 class="fw-bold mb-3">Add School Break</h6>
+                <form action="{{ url_for('management.add_school_break') }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <input type="hidden" name="redirect_month" value="{{ month }}"/>
+                    <input type="hidden" name="redirect_year" value="{{ year }}"/>
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label for="sb_name" class="form-label small">Break Name *</label>
+                            <input type="text" class="form-control form-control-sm" id="sb_name" name="name" placeholder="e.g., Winter Break" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="sb_type" class="form-label small">Type</label>
+                            <select class="form-select form-select-sm" id="sb_type" name="break_type">
+                                <option value="Vacation">Vacation</option>
+                                <option value="Holiday">Holiday</option>
+                                <option value="Professional Development">Professional Development</option>
+                                <option value="No School">No School</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label for="sb_start" class="form-label small">Start Date *</label>
+                            <input type="date" class="form-control form-control-sm" id="sb_start" name="start_date" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="sb_end" class="form-label small">End Date *</label>
+                            <input type="date" class="form-control form-control-sm" id="sb_end" name="end_date" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="sb_description" class="form-label small">Description (optional)</label>
+                        <textarea class="form-control form-control-sm" id="sb_description" name="description" rows="2" placeholder="Optional details..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-success btn-sm"><i class="bi bi-plus-circle me-1"></i>Add School Break</button>
+                </form>
+                <hr class="my-4">
+                <h6 class="fw-bold mb-2">Current School Breaks <span class="badge bg-secondary">{{ breaks|length }}</span></h6>
+                {% if breaks %}
+                    <div class="list-group list-group-flush" style="max-height: 220px; overflow-y: auto;">
+                        {% for b in breaks %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
+                                <div>
+                                    <strong>{{ b.name }}</strong>
+                                    <span class="badge bg-secondary ms-1">{{ b.break_type }}</span>
+                                    <span class="text-muted small ms-1">{{ b.start_date.strftime('%b %d') }} – {{ b.end_date.strftime('%b %d, %Y') }}</span>
+                                </div>
+                                <form action="{{ url_for('management.delete_school_break', break_id=b.id) }}" method="POST" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <input type="hidden" name="redirect_month" value="{{ month }}"/>
+                                    <input type="hidden" name="redirect_year" value="{{ year }}"/>
+                                    <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Delete this break?');"><i class="bi bi-trash"></i></button>
+                                </form>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted small mb-0">No school breaks yet. Add one above.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
 {% endif %}
 
 <script>
@@ -367,11 +505,20 @@ function showEventDetails(title, category, description) {
     modal.show();
 }
 
+// Open Teacher Work Days or School Breaks modal from URL ?open=teacher-work-days or ?open=school-breaks
+document.addEventListener('DOMContentLoaded', function() {
+    var openModal = '{{ open_modal|default("", true) }}';
+    if (openModal === 'teacher-work-days') {
+        var el = document.getElementById('teacherWorkDaysModal');
+        if (el) { var m = new bootstrap.Modal(el); m.show(); }
+    } else if (openModal === 'school-breaks') {
+        var el = document.getElementById('schoolBreaksModal');
+        if (el) { var m = new bootstrap.Modal(el); m.show(); }
+    }
+});
+
 // Initialize calendar interactions
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Modern calendar page loaded for {{ current_user.role }}');
-    
-    // Add smooth scroll behavior
     document.querySelectorAll('.calendar-day').forEach(day => {
         day.addEventListener('mouseenter', function() {
             if (this.classList.contains('calendar-day-today')) {

@@ -72,7 +72,8 @@ def get_academic_dates_for_calendar(year, month):
                 'day': event.start_date.day,
                 'title': event.name,
                 'category': event.event_type.replace('_', ' ').title() if event.event_type else 'Other Event',
-                'type': event_type
+                'type': event_type,
+                'description': event.description or ''
             })
     
     # Get teacher work days for this month
@@ -94,7 +95,8 @@ def get_academic_dates_for_calendar(year, month):
                 'day': work_day.date.day,
                 'title': short_title,
                 'category': 'Teacher Work Day',
-                'type': 'teacher_work_day'
+                'type': 'teacher_work_day',
+                'description': work_day.description or ''
             })
     
     # Get school breaks for this month
@@ -122,7 +124,8 @@ def get_academic_dates_for_calendar(year, month):
                     'day': school_break.start_date.day,
                     'title': f"{short_name} Start",
                     'category': school_break.break_type,
-                    'type': 'school_break_start'
+                    'type': 'school_break_start',
+                    'description': school_break.description or ''
                 })
             
             if school_break.end_date.month == month:
@@ -138,7 +141,8 @@ def get_academic_dates_for_calendar(year, month):
                     'day': school_break.end_date.day,
                     'title': f"{short_name} End",
                     'category': school_break.break_type,
-                    'type': 'school_break_end'
+                    'type': 'school_break_end',
+                    'description': school_break.description or ''
                 })
     
     return academic_dates
@@ -190,13 +194,15 @@ def calendar():
             else:
                 is_today = (day == datetime.now().day and month == datetime.now().month and year == datetime.now().year)
                 
-                # Get events for this day
+                # Get events for this day (include 'type' so badge color matches event category)
                 day_events = []
                 for academic_date in academic_dates:
                     if academic_date['day'] == day:
                         day_events.append({
                             'title': academic_date['title'],
-                            'category': academic_date['category']
+                            'category': academic_date.get('category', ''),
+                            'type': academic_date.get('type', 'other_event'),
+                            'description': academic_date.get('description', '')
                         })
                 
                 week_data.append({'day_num': day, 'is_current_month': True, 'is_today': is_today, 'events': day_events})
@@ -208,12 +214,21 @@ def calendar():
     # Get active school year and add academic periods and calendar events data
     active_school_year = SchoolYear.query.filter_by(is_active=True).first()
     
-    # Add academic periods to each school year
-    for year in school_years:
-        year.academic_periods = AcademicPeriod.query.filter_by(school_year_id=year.id, is_active=True).all()
-        year.calendar_events = CalendarEvent.query.filter_by(school_year_id=year.id).all()
-        if year.start_date and year.end_date:
-            year.total_days = (year.end_date - year.start_date).days
+    # Work days and breaks for modals (management only)
+    work_days = []
+    breaks = []
+    if active_school_year:
+        work_days = TeacherWorkDay.query.filter_by(school_year_id=active_school_year.id).order_by(TeacherWorkDay.date).all()
+        breaks = SchoolBreak.query.filter_by(school_year_id=active_school_year.id).order_by(SchoolBreak.start_date).all()
+    
+    # Add academic periods to each school year (use sy to avoid overwriting year)
+    for sy in school_years:
+        sy.academic_periods = AcademicPeriod.query.filter_by(school_year_id=sy.id, is_active=True).all()
+        sy.calendar_events = CalendarEvent.query.filter_by(school_year_id=sy.id).all()
+        if sy.start_date and sy.end_date:
+            sy.total_days = (sy.end_date - sy.start_date).days
+    
+    open_modal = request.args.get('open', '')  # 'teacher-work-days' or 'school-breaks' for popup from old links
     
     return render_template('shared/calendar.html', 
                          calendar_data=calendar_data,
@@ -223,6 +238,10 @@ def calendar():
                          active_school_year=active_school_year,
                          month_name=month_name,
                          year=year,
+                         month=month,
+                         work_days=work_days,
+                         breaks=breaks,
+                         open_modal=open_modal,
                          section='calendar',
                          active_tab='calendar')
 
@@ -238,7 +257,43 @@ def calendar():
 @management_required
 def add_calendar_event():
     """Add a new calendar event"""
-    flash('Calendar event functionality will be implemented soon!', 'info')
+    try:
+        event_title = request.form.get('event_title', '').strip()
+        event_date_str = request.form.get('event_date', '').strip()
+        event_category = request.form.get('event_category', 'other_event').strip()
+        event_description = request.form.get('event_description', '').strip()
+
+        if not event_title or not event_date_str:
+            flash('Event title and date are required.', 'danger')
+            return redirect(url_for('management.calendar'))
+
+        active_year = SchoolYear.query.filter_by(is_active=True).first()
+        if not active_year:
+            flash('No active school year found.', 'danger')
+            return redirect(url_for('management.calendar'))
+
+        event_date = datetime.strptime(event_date_str, '%Y-%m-%d').date()
+        event_type = event_category if event_category else 'other_event'
+        if event_type == 'other':
+            event_type = 'other_event'
+
+        calendar_event = CalendarEvent(
+            school_year_id=active_year.id,
+            name=event_title,
+            start_date=event_date,
+            end_date=event_date,
+            event_type=event_type,
+            description=event_description or None
+        )
+        db.session.add(calendar_event)
+        db.session.commit()
+        flash('Calendar event added successfully.', 'success')
+    except ValueError:
+        flash('Invalid date format. Use YYYY-MM-DD.', 'danger')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error adding event: {str(e)}', 'danger')
+
     return redirect(url_for('management.calendar'))
 
 
@@ -307,13 +362,13 @@ def add_school_break():
         
         if not all([name, start_date_str, end_date_str]):
             flash('Name, start date, and end date are required.', 'danger')
-            return redirect(url_for('management.school_breaks'))
+            return redirect(url_for('management.calendar'))
         
         # Get active school year
         active_year = SchoolYear.query.filter_by(is_active=True).first()
         if not active_year:
             flash('No active school year found.', 'danger')
-            return redirect(url_for('management.school_breaks'))
+            return redirect(url_for('management.calendar'))
         
         # Parse dates
         start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
@@ -321,7 +376,7 @@ def add_school_break():
         
         if start_date > end_date:
             flash('Start date must be before or equal to end date.', 'danger')
-            return redirect(url_for('management.school_breaks'))
+            return redirect(url_for('management.calendar'))
         
         # Check if break already exists for this date range
         existing = SchoolBreak.query.filter(
@@ -351,7 +406,11 @@ def add_school_break():
         db.session.rollback()
         flash(f'Error adding school break: {str(e)}', 'danger')
     
-    return redirect(url_for('management.school_breaks'))
+    month = request.form.get('redirect_month')
+    year = request.form.get('redirect_year')
+    if month and year:
+        return redirect(url_for('management.calendar', month=month, year=year))
+    return redirect(url_for('management.calendar'))
 
 
 
@@ -375,7 +434,11 @@ def delete_school_break(break_id):
         db.session.rollback()
         flash(f'Error deleting school break: {str(e)}', 'danger')
     
-    return redirect(url_for('management.school_breaks'))
+    month = request.form.get('redirect_month')
+    year = request.form.get('redirect_year')
+    if month and year:
+        return redirect(url_for('management.calendar', month=month, year=year))
+    return redirect(url_for('management.calendar'))
 
 
 

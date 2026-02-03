@@ -628,6 +628,9 @@ def change_password_ajax():
 
 
 # ==================== GOOGLE OAUTH 2.0 ROUTES ====================
+# Redirect URI is built dynamically (url_for with _external=True) so OAuth
+# works on both localhost and live server (e.g. Render). Do not hardcode
+# http://127.0.0.1:5000/... or it will fail in production.
 
 # Disable HTTPS requirement for local development (ONLY FOR DEVELOPMENT)
 # In production, remove this line - HTTPS is required
@@ -637,6 +640,9 @@ def get_google_oauth_flow():
     """Create and return a Google OAuth Flow object."""
     import json
     import tempfile
+    
+    # Build redirect_uri from current request so it works on live server (Render, etc.)
+    redirect_uri = url_for('auth.google_callback', _external=True)
     
     # Try to get client secret from environment variable first (for production)
     client_secret_json = os.environ.get('GOOGLE_CLIENT_SECRET_JSON')
@@ -650,7 +656,7 @@ def get_google_oauth_flow():
             flow = Flow.from_client_config(
                 client_config,
                 scopes=current_app.config.get('GOOGLE_OAUTH_SCOPES'),
-                redirect_uri=url_for('auth.google_callback', _external=True)
+                redirect_uri=redirect_uri
             )
             
             current_app.logger.info("Google OAuth flow created from environment variable")
@@ -674,7 +680,7 @@ def get_google_oauth_flow():
     flow = Flow.from_client_secrets_file(
         client_secrets_file,
         scopes=current_app.config.get('GOOGLE_OAUTH_SCOPES'),
-        redirect_uri=url_for('auth.google_callback', _external=True)
+        redirect_uri=redirect_uri
     )
     
     current_app.logger.info("Google OAuth flow created from client_secret.json file")

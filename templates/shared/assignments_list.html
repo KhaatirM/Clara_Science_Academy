@@ -27,9 +27,15 @@
                     <i class="bi bi-plus-circle me-1 me-md-2"></i>Add Assignment
                 </a>
             {% endif %}
-            <button class="btn btn-sm text-white" style="background: linear-gradient(135deg, #2E8B57 0%, #228B22 50%, #556B2F 100%);" onclick="window.history.back()">
-                <i class="bi bi-arrow-left me-1 me-md-2"></i>Back to Dashboard
-            </button>
+            {% if current_user.role in ['Director', 'School Administrator'] %}
+                <a href="{{ url_for('management.management_dashboard') }}" class="btn btn-sm text-white" style="background: linear-gradient(135deg, #2E8B57 0%, #228B22 50%, #556B2F 100%);">
+                    <i class="bi bi-arrow-left me-1 me-md-2"></i>Back to Dashboard
+                </a>
+            {% else %}
+                <a href="{{ url_for('teacher.dashboard.teacher_dashboard') }}" class="btn btn-sm text-white" style="background: linear-gradient(135deg, #2E8B57 0%, #228B22 50%, #556B2F 100%);">
+                    <i class="bi bi-arrow-left me-1 me-md-2"></i>Back to Dashboard
+                </a>
+            {% endif %}
         </div>
     </div>
 

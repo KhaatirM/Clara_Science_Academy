@@ -52,9 +52,15 @@
                             </a>
                         </div>
                     {% endif %}
-                    <button class="btn btn-secondary" onclick="window.history.back()">
-                        <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
-                    </button>
+                    {% if current_user.role == 'Teacher' %}
+                        <a href="{{ url_for('teacher.dashboard.teacher_dashboard') }}" class="btn btn-secondary text-decoration-none">
+                            <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
+                        </a>
+                    {% else %}
+                        <a href="{{ url_for('management.management_dashboard') }}" class="btn btn-secondary text-decoration-none">
+                            <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
+                        </a>
+                    {% endif %}
                 </div>
             </div>
 

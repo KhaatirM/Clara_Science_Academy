@@ -20,9 +20,9 @@
                             <p class="text-white mb-0 opacity-90"><i class="bi bi-person me-2"></i>{{ current_user.username }} - {{ current_user.role }}</p>
                         </div>
                     </div>
-                    <button class="btn-back-settings" onclick="window.history.back()">
+                    <a href="{{ url_for('teacher.dashboard.teacher_dashboard') }}" class="btn btn-back-settings text-decoration-none">
                         <i class="bi bi-arrow-left me-2"></i>Back
-                    </button>
+                    </a>
                 </div>
             </div>
         </div>

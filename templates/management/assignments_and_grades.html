@@ -287,10 +287,6 @@
                                     <span class="badge bg-info">
                                         <i class="bi bi-clock me-1"></i>Upcoming
                                     </span>
-                                {% elif current_status == 'Inactive' %}
-                                    <span class="badge bg-warning">
-                                        <i class="bi bi-pause-circle me-1"></i>Inactive
-                                    </span>
                                 {% elif has_grades %}
                                     {% if assignment.assignment_type == 'quiz' and is_autogradeable %}
                                         <span class="badge bg-success">
@@ -301,6 +297,10 @@
                                             <i class="bi bi-check-circle me-1"></i>Graded
                                         </span>
                                     {% endif %}
+                                {% elif current_status == 'Inactive' %}
+                                    <span class="badge bg-warning">
+                                        <i class="bi bi-pause-circle me-1"></i>Inactive
+                                    </span>
                                 {% else %}
                                     <span class="badge bg-success">
                                         <i class="bi bi-check-circle me-1"></i>Active
@@ -344,18 +344,11 @@
                                     <small class="text-muted">
                                         <i class="bi bi-person me-1"></i>
                                         {% if assignment.creator %}
-                                            {% if assignment.creator.teacher_staff_id %}
-                                                {% set teacher_staff = assignment.creator.teacher_staff_profile %}
-                                                {% if teacher_staff %}
-                                                    {{ teacher_staff.first_name }} {{ teacher_staff.last_name }}
-                                                {% else %}
-                                                    {{ assignment.creator.username }}
-                                                {% endif %}
+                                            {% if assignment.creator.teacher_staff_id and assignment.creator.teacher_staff_profile %}
+                                                {{ assignment.creator.teacher_staff_profile.first_name }} {{ assignment.creator.teacher_staff_profile.last_name }}
                                             {% else %}
                                                 {{ assignment.creator.username }}
                                             {% endif %}
-                                        {% elif assignment.class_info and assignment.class_info.teacher %}
-                                            {{ assignment.class_info.teacher.first_name }} {{ assignment.class_info.teacher.last_name }}
                                         {% else %}
                                             Unknown
                                         {% endif %}
@@ -430,9 +423,11 @@
                                         <small class="text-muted">
                                             <i class="bi bi-person me-1"></i>
                                             {% if group_assignment.creator %}
-                                                {{ group_assignment.creator.first_name }} {{ group_assignment.creator.last_name }}
-                                            {% elif group_assignment.class_info and group_assignment.class_info.teacher %}
-                                                {{ group_assignment.class_info.teacher.first_name }} {{ group_assignment.class_info.teacher.last_name }}
+                                                {% if group_assignment.creator.teacher_staff_id and group_assignment.creator.teacher_staff_profile %}
+                                                    {{ group_assignment.creator.teacher_staff_profile.first_name }} {{ group_assignment.creator.teacher_staff_profile.last_name }}
+                                                {% else %}
+                                                    {{ group_assignment.creator.username }}
+                                                {% endif %}
                                             {% else %}
                                                 Unknown
                                             {% endif %}

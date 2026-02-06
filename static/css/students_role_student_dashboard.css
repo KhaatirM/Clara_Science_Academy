@@ -1751,3 +1751,105 @@
         margin-bottom: 1.5rem;
     }
 }
+
+/* ===== STUDENT NOTIFICATIONS PANEL (Failing Classes & Missing Assignments) ===== */
+.student-notifications-panel {
+    animation: studentNotificationFadeIn 0.4s ease-out;
+}
+
+@keyframes studentNotificationFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.student-notifications-card {
+    background: linear-gradient(135deg, #fff8e6 0%, #fff3cd 50%, #ffe69c 100%);
+    border: 2px solid #ffc107;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(255, 193, 7, 0.25);
+}
+
+.student-notifications-header {
+    background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+    color: #212529;
+    padding: 1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.student-notifications-icon {
+    font-size: 1.5rem;
+}
+
+.student-notifications-title {
+    font-weight: 700;
+    color: #212529;
+}
+
+.student-notifications-body {
+    padding: 1.25rem 1.5rem;
+}
+
+.student-notification-section-title {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+}
+
+.student-notification-list {
+    list-style: none;
+    padding-left: 0;
+    margin-bottom: 0;
+}
+
+.student-notification-item {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.student-notification-item:last-child {
+    border-bottom: none;
+}
+
+.student-notification-link {
+    color: #0d6efd;
+    text-decoration: none;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+}
+
+.student-notification-link:hover {
+    color: #0a58ca;
+    text-decoration: underline;
+}
+
+.student-notification-failing .student-notification-link {
+    color: #dc3545;
+}
+
+.student-notification-failing .student-notification-link:hover {
+    color: #bb2d3b;
+}
+
+.student-notification-missing .student-notification-link {
+    color: #856404;
+}
+
+.student-notification-missing .student-notification-link:hover {
+    color: #664d03;
+}

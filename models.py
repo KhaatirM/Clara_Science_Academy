@@ -979,6 +979,23 @@ class ReportCard(db.Model):
         return f"ReportCard(Student ID: {self.student_id}, Quarter: {self.quarter})"
 
 
+class SubjectRequirement(db.Model):
+    """
+    Subject requirements per grade band for report cards.
+    Replaces hardcoded subject lists so the school can add/change subjects without code changes.
+    grade_level_min/max: e.g. 1,2 for grades 1-2; 3,3 for grade 3; 4,8 for grades 4-8.
+    """
+    __tablename__ = 'subject_requirement'
+    id = db.Column(db.Integer, primary_key=True)
+    grade_level_min = db.Column(db.Integer, nullable=False)
+    grade_level_max = db.Column(db.Integer, nullable=False)
+    subject_name = db.Column(db.String(120), nullable=False)
+    display_order = db.Column(db.Integer, default=0, nullable=False)
+
+    def __repr__(self):
+        return f"SubjectRequirement({self.grade_level_min}-{self.grade_level_max}: {self.subject_name})"
+
+
 class Announcement(db.Model):
     """
     Model for storing announcements sent by teachers or administrators.

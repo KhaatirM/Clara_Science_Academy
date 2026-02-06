@@ -481,7 +481,7 @@
     </div>
 </div>
 
-<!-- Update Modal - Feb 2026 (single entry: Home, Schedule, Updates popup) -->
+<!-- Update Modal - Feb 2026 (Platform improvements, Assignment Command Center, Home/Schedule/Updates) -->
 <div class="modal fade" id="updateModal" tabindex="-1" aria-labelledby="updateModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content home-updates-modal">
@@ -504,13 +504,43 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Update - February 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – February 2026
                         </h6>
-                        <p class="updates-intro-text mb-0"><strong>Home Page, Schedule Tab, Updates Popup & Google Login.</strong> The public home page has been restructured and restyled with a teal-and-off-white design, hero image slideshow, and softer backgrounds. Teachers and students now share one unified schedule view tied to the class schedule. Sign in with Google was fixed so it works on the live server (no more 400 error). This updates popup has been redesigned to match and now shows only the latest changes.</p>
+                        <p class="updates-intro-text mb-0">Recent improvements include a cleaner home page and schedule, plus new platform upgrades: <strong>Assignment Command Center</strong> for admins, <strong>smarter notifications</strong> when grades are posted, <strong>data-driven report card subjects</strong>, and a more maintainable codebase. Details below.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- February 2026 - Platform improvements & Assignment Command Center -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-gear-wide-connected me-2"></i>Platform Improvements & Assignment Hub – February 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Assignment Command Center:</strong> Directors and School Administrators now have a single hub for each assignment. From one page you can jump to View, Grade, Statistics, or History via tabs—no more hunting through separate screens. Open it from "Command Center" on the assignment view or from the Grade Statistics page.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Quieter grade notifications:</strong> When teachers or admins save grades for many students at once, each student receives one combined "Grade updated" notification instead of multiple alerts. Notifications stay informative without feeling like spam.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Data-driven report card subjects:</strong> Subject lists for report cards (by grade level) can now be managed in the database. Schools can add or adjust subjects without code changes. A one-time setup script is available for existing installations.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Cleaner, safer deployments:</strong> Application startup no longer runs automatic database schema changes. All schema updates use proper migrations (Flask-Migrate), making deployments more predictable and safer for the live site.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Consistent filter pattern (documented):</strong> A shared approach for date range, role, and search filters across Student, Teacher, and Admin views is documented so future pages can offer a familiar experience when filtering lists and activity.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> Admins spend less time switching between assignment pages. Students get clearer, less noisy grade notifications. Report card subjects are easier to maintain. Deployments are safer and the codebase is easier to maintain.</p>
+                        </div>
+                    </div>
+
                     <!-- February 2026 - Home Page, Schedule Tab & Updates Popup -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-calendar3 me-2"></i>Home Page, Schedule Tab & Updates Popup – February 2026</h6>
@@ -582,13 +612,13 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Show updates modal once per session
+    // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownFeb2026v2')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownFeb2026v3')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownFeb2026v2', 'true');
+            sessionStorage.setItem('updateModalShownFeb2026v3', 'true');
         }, 500);
     }
 });

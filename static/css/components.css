@@ -3902,6 +3902,38 @@
     animation: pulse 2s ease-in-out infinite;
 }
 
+/* ===== ACADEMIC ALERT TOAST ANIMATION ===== */
+.toast-container.academic-alert-toast-container {
+    animation: academicToastSlideIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+#academicAlertToast.toast.show {
+    animation: academicToastPulse 2.5s ease-in-out infinite;
+    box-shadow: 0 4px 20px rgba(255, 193, 7, 0.4);
+}
+
+@keyframes academicToastSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes academicToastPulse {
+    0%, 100% {
+        box-shadow: 0 4px 20px rgba(255, 193, 7, 0.4);
+        transform: scale(1);
+    }
+    50% {
+        box-shadow: 0 6px 28px rgba(255, 193, 7, 0.55);
+        transform: scale(1.02);
+    }
+}
+
 /* ===== ACADEMIC CONCERNS MODAL ===== */
 .academic-concerns-modal .modal-content {
     border: none;

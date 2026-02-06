@@ -379,7 +379,7 @@
 <script>
 // Import functions from individual assignment grading page
 function goBack() {
-    window.history.back();
+    window.location.href = "{{ url_for('management.admin_view_group_assignment', assignment_id=group_assignment.id) }}";
 }
 
 function toggleSelectAll() {

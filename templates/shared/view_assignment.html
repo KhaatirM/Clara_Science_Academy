@@ -23,6 +23,11 @@
                 </div>
             </div>
             <div class="d-flex gap-2 flex-wrap align-items-start">
+                {% if current_user.role in ['Director', 'School Administrator'] %}
+                <a href="{{ url_for('management.assignments.assignment_command_center', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-gear-wide-connected me-1"></i>Command Center
+                </a>
+                {% endif %}
                 <span class="view-status-badge badge-{{ assignment.status.lower() if assignment.status else 'active' }}">{{ assignment.status.upper() if assignment.status else 'ACTIVE' }}</span>
             </div>
         </div>
@@ -1318,19 +1323,13 @@ function showNotification(message, type) {
     }, 3000);
 }
 
-// Back navigation function
+// Back navigation: always go to intended page (no history.back)
 function goBack() {
-    // Check if there's history to go back to
-    if (window.history.length > 1) {
-        window.history.back();
-    } else {
-        // Fallback to assignments page if no history
-        {% if current_user.role in ['Director', 'School Administrator'] %}
-            window.location.href = "{{ url_for('management.assignments_and_grades') }}";
-        {% else %}
-            window.location.href = "{{ url_for('teacher.dashboard.assignments_and_grades') }}";
-        {% endif %}
-    }
+    {% if current_user.role in ['Director', 'School Administrator'] %}
+        window.location.href = "{{ url_for('management.assignments_and_grades') }}";
+    {% else %}
+        window.location.href = "{{ url_for('teacher.dashboard.assignments_and_grades') }}";
+    {% endif %}
 }
 
 // Helper function for void option selection

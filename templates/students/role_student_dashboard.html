@@ -1233,6 +1233,64 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
             </div>
         </div>
 
+        <!-- Student Notifications: Failing Classes & Missing Assignments -->
+        {% if (failing_classes is defined and failing_classes and failing_classes|length > 0) or (missing_assignments is defined and missing_assignments and missing_assignments|length > 0) %}
+        <div class="student-notifications-panel mb-4">
+            <div class="student-notifications-card">
+                <div class="student-notifications-header">
+                    <i class="bi bi-bell-fill student-notifications-icon"></i>
+                    <h5 class="student-notifications-title mb-0">Attention Needed</h5>
+                </div>
+                <div class="student-notifications-body">
+                    {% if failing_classes is defined and failing_classes and failing_classes|length > 0 %}
+                    <div class="student-notification-section">
+                        <h6 class="student-notification-section-title text-danger">
+                            <i class="bi bi-exclamation-octagon-fill me-2"></i>Classes You're Currently Failing
+                        </h6>
+                        <ul class="student-notification-list">
+                            {% for item in failing_classes %}
+                            <li class="student-notification-item student-notification-failing">
+                                <a href="{{ url_for('student.view_class', class_id=item.class.id) }}" class="student-notification-link">
+                                    <span class="fw-bold">{{ item.class.name }}</span>
+                                    <span class="badge bg-danger ms-2">{{ item.average }}%</span>
+                                </a>
+                                <span class="text-muted small">— Improve grades to pass (70%+)</span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                    {% if missing_assignments is defined and missing_assignments and missing_assignments|length > 0 %}
+                    <div class="student-notification-section {% if failing_classes and failing_classes|length > 0 %}mt-3{% endif %}">
+                        <h6 class="student-notification-section-title text-warning text-dark">
+                            <i class="bi bi-journal-x me-2"></i>Missing or Past-Due Assignments
+                        </h6>
+                        <ul class="student-notification-list">
+                            {% for assignment in missing_assignments[:10] %}
+                            <li class="student-notification-item student-notification-missing">
+                                <a href="{{ url_for('student.student_assignments') }}?class_id={{ assignment.class_id }}" class="student-notification-link">
+                                    <span class="fw-bold">{{ assignment.title }}</span>
+                                    <span class="badge bg-warning text-dark ms-2">
+                                        {% set due_d = assignment.due_date.date() if assignment.due_date and hasattr(assignment.due_date, 'date') else (assignment.due_date if assignment.due_date else none) %}
+                                        {% if due_d and today %}{{ (today - due_d).days }} days overdue{% else %}Overdue{% endif %}
+                                    </span>
+                                </a>
+                                <span class="text-muted small">— {{ assignment.class_info.name if assignment.class_info else 'Class' }}</span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% if missing_assignments|length > 10 %}
+                        <p class="small text-muted mb-0 mt-2">+ {{ missing_assignments|length - 10 }} more. <a href="{{ url_for('student.student_assignments') }}">View all assignments</a></p>
+                        {% else %}
+                        <p class="small mb-0 mt-2"><a href="{{ url_for('student.student_assignments') }}">View all assignments</a></p>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
         <!-- Statistics Overview -->
         <div class="row g-3 mb-4">
             <div class="col-12 col-sm-6 col-lg-3">
@@ -3962,9 +4020,9 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                     </p>
                                 </div>
                             </div>
-                            <button class="btn-back-settings" onclick="window.history.back()">
+                            <a href="{{ url_for('student.student_dashboard') }}" class="btn btn-back-settings text-decoration-none">
                                 <i class="bi bi-arrow-left me-2"></i>Back
-                            </button>
+                            </a>
                         </div>
                     </div>
                 </div>

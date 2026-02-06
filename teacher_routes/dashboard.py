@@ -1123,76 +1123,76 @@ def assignments_and_grades():
                     # Get grade data for each assignment
                     for assignment in class_assignments:
                         grades = Grade.query.filter_by(assignment_id=assignment.id).all()
-                        graded_count = sum(1 for g in grades if g.grade_data)
+                        total_submissions = Submission.query.filter_by(assignment_id=assignment.id).filter(
+                            Submission.submission_type != 'not_submitted'
+                        ).count()
                         
-                        # Check if quiz is auto-gradeable (all questions are multiple_choice or true_false)
                         is_autogradeable = False
                         if assignment.assignment_type == 'quiz':
                             from models import QuizQuestion
                             quiz_questions = QuizQuestion.query.filter_by(assignment_id=assignment.id).all()
                             if quiz_questions:
-                                # Check if all questions are auto-gradeable
                                 auto_gradeable_types = ['multiple_choice', 'true_false']
                                 is_autogradeable = all(q.question_type in auto_gradeable_types for q in quiz_questions)
                         
-                        # Calculate average
                         total_score = 0
                         graded_with_score = 0
                         for grade in grades:
+                            if grade.is_voided:
+                                continue
                             if grade.grade_data:
                                 try:
                                     if isinstance(grade.grade_data, dict):
                                         grade_dict = grade.grade_data
                                     else:
                                         grade_dict = json.loads(grade.grade_data)
-                                    
-                                    if 'score' in grade_dict and grade_dict['score'] is not None:
-                                        total_score += grade_dict['score']
+                                    if grade_dict.get('is_voided'):
+                                        continue
+                                    score_val = grade_dict.get('score') or grade_dict.get('points_earned')
+                                    if score_val is not None and str(score_val).strip() != '':
+                                        total_score += float(score_val)
                                         graded_with_score += 1
                                 except (json.JSONDecodeError, TypeError):
                                     continue
                         
-                        average_score = 0
-                        if graded_with_score > 0:
-                            average_score = round(total_score / graded_with_score, 1)
-                        
+                        average_score = round(total_score / graded_with_score, 1) if graded_with_score > 0 else 0
                         assignment_grades[assignment.id] = {
-                            'total_submissions': len(grades),
-                            'graded_count': graded_count,
+                            'total_submissions': total_submissions,
+                            'graded_count': graded_with_score,
                             'average_score': average_score,
                             'is_autogradeable': is_autogradeable
                         }
                     
                     # Get grade data for group assignments
                     for group_assignment in group_assignments:
-                        from models import GroupGrade
+                        from models import GroupGrade, GroupSubmission
                         group_grades = GroupGrade.query.filter_by(group_assignment_id=group_assignment.id).all()
-                        graded_count = sum(1 for g in group_grades if g.grade_data)
+                        total_group_submissions = GroupSubmission.query.filter_by(group_assignment_id=group_assignment.id).count()
                         
-                        # Calculate average for group assignments
                         total_score = 0
                         graded_with_score = 0
                         for grade in group_grades:
+                            if grade.is_voided:
+                                continue
                             if grade.grade_data:
                                 try:
                                     if isinstance(grade.grade_data, dict):
                                         grade_dict = grade.grade_data
                                     else:
                                         grade_dict = json.loads(grade.grade_data)
-                                    
-                                    if 'score' in grade_dict and grade_dict['score'] is not None:
-                                        total_score += grade_dict['score']
+                                    if grade_dict.get('is_voided'):
+                                        continue
+                                    score_val = grade_dict.get('score') or grade_dict.get('points_earned')
+                                    if score_val is not None and str(score_val).strip() != '':
+                                        total_score += float(score_val)
                                         graded_with_score += 1
                                 except (json.JSONDecodeError, TypeError):
                                     continue
                         
-                        average_score = 0
-                        if graded_with_score > 0:
-                            average_score = round(total_score / graded_with_score, 1)
-                        
+                        average_score = round(total_score / graded_with_score, 1) if graded_with_score > 0 else 0
                         assignment_grades[f'group_{group_assignment.id}'] = {
-                            'total_submissions': len(group_grades),
-                            'graded_count': graded_count,
+                            'total_submissions': total_group_submissions,
+                            'graded_count': graded_with_score,
                             'average_score': average_score
                         }
             

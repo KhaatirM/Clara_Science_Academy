@@ -601,6 +601,16 @@ def student_dashboard():
             'score': grade_data.get('score', 'N/A')
         })
     
+    # Failing classes: class average < 70%
+    failing_classes = []
+    for c in classes:
+        avg = grades.get(c.name)
+        if avg is not None and float(avg) < 70:
+            failing_classes.append({'class': c, 'average': round(float(avg), 1)})
+
+    # Missing assignments = past due with no grade (already in past_due_assignments)
+    missing_assignments = past_due_assignments
+
     # Announcements: all students, all, or for any of their classes
     announcements = Announcement.query.filter(
         (Announcement.target_group.in_(['all_students', 'all'])) |
@@ -622,6 +632,9 @@ def student_dashboard():
                              today_schedule=today_schedule,
                              goals=goals_dict,
                              classes=classes,
+                             my_classes=classes,
+                             failing_classes=failing_classes,
+                             missing_assignments=missing_assignments,
                              today=datetime.now().date()))
 
 @student_blueprint.route('/assignments')

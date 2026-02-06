@@ -333,7 +333,7 @@
 
 <script>
 function goBack() {
-    window.history.back();
+    window.location.href = "{{ url_for('teacher.dashboard.assignments_and_grades') }}";
 }
 
 function updateStudentTotalScore(studentId) {

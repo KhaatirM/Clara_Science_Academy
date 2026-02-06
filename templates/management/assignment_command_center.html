@@ -1,0 +1,91 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block title %}Assignment Center — {{ assignment.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .command-center-card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 1.5rem; }
+    .command-center-card .card-header { border-bottom: 1px solid #eee; font-weight: 600; }
+    .nav-tabs .nav-link { border: none; color: #6c757d; font-weight: 500; }
+    .nav-tabs .nav-link.active { color: #0d6efd; border-bottom: 2px solid #0d6efd; background: transparent; }
+    .tab-pane { padding: 1.5rem 0; }
+    .center-stat { font-size: 1.5rem; font-weight: 700; color: #2c3e50; }
+</style>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-2 px-md-4">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
+        <div>
+            <a href="{{ url_for('management.assignments_and_grades') }}" class="btn btn-sm btn-outline-secondary mb-2">
+                <i class="bi bi-arrow-left me-1"></i>Assignments &amp; Grades
+            </a>
+            <h2 class="mb-1">
+                <i class="bi bi-gear-wide-connected me-2"></i>Assignment Command Center
+            </h2>
+            <p class="text-muted mb-0">{{ assignment.title }}{% if class_info %} · {{ class_info.name }}{% endif %}</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-4 mb-4">
+            <div class="command-center-card card">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase small mb-3">Summary</h6>
+                    <p class="mb-2"><strong>Due:</strong> {{ assignment.due_date.strftime('%b %d, %Y') if assignment.due_date else '—' }}</p>
+                    <p class="mb-2"><strong>Submissions:</strong> <span class="center-stat">{{ submission_count }}</span></p>
+                    <p class="mb-0"><strong>Graded:</strong> <span class="center-stat">{{ graded_count }}</span></p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-8">
+            <div class="command-center-card card">
+                <div class="card-header bg-transparent px-4 pt-4 pb-0">
+                    <ul class="nav nav-tabs card-header-tabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link active" href="#overview" data-bs-toggle="tab" role="tab">Overview</a>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link" href="#grade" data-bs-toggle="tab" role="tab">Grade</a>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link" href="#statistics" data-bs-toggle="tab" role="tab">Statistics</a>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link" href="#history" data-bs-toggle="tab" role="tab">History</a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-body px-4">
+                    <div class="tab-content">
+                        <div class="tab-pane fade show active" id="overview" role="tabpanel">
+                            <p class="text-muted">View full assignment details, submissions, and points.</p>
+                            <a href="{{ url_for('management.view_assignment', assignment_id=assignment.id) }}" class="btn btn-primary">
+                                <i class="bi bi-eye me-1"></i>View Assignment
+                            </a>
+                        </div>
+                        <div class="tab-pane fade" id="grade" role="tabpanel">
+                            <p class="text-muted">Enter or edit grades for this assignment.</p>
+                            <a href="{{ url_for('management.grade_assignment', assignment_id=assignment.id) }}" class="btn btn-success">
+                                <i class="bi bi-pencil-square me-1"></i>Grade Assignment
+                            </a>
+                        </div>
+                        <div class="tab-pane fade" id="statistics" role="tabpanel">
+                            <p class="text-muted">See grade distribution, averages, and charts.</p>
+                            <a href="{{ url_for('management.admin_grade_statistics', assignment_id=assignment.id) }}" class="btn btn-info">
+                                <i class="bi bi-bar-chart me-1"></i>View Statistics
+                            </a>
+                        </div>
+                        <div class="tab-pane fade" id="history" role="tabpanel">
+                            <p class="text-muted">Grade history is available per student on the Grade page.</p>
+                            <a href="{{ url_for('management.grade_assignment', assignment_id=assignment.id) }}" class="btn btn-outline-secondary">
+                                <i class="bi bi-clock-history me-1"></i>Open Grade Page
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

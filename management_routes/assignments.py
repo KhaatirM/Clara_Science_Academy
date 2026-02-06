@@ -731,28 +731,32 @@ def assignments_and_grades():
                 # Get grade data for each individual assignment
                 for assignment in class_assignments:
                     grades = Grade.query.filter_by(assignment_id=assignment.id).all()
+                    # Actual submission count: students marked as submitted (not 'not_submitted')
+                    total_submissions = Submission.query.filter_by(assignment_id=assignment.id).filter(
+                        Submission.submission_type != 'not_submitted'
+                    ).count()
                     
-                    # Process grade data safely
                     graded_grades = []
                     total_score = 0
                     for g in grades:
+                        if g.is_voided:
+                            continue
                         if g.grade_data is not None:
                             try:
-                                # Handle both dict and JSON string cases
                                 if isinstance(g.grade_data, dict):
                                     grade_dict = g.grade_data
                                 else:
                                     grade_dict = json.loads(g.grade_data)
-                                
-                                if 'score' in grade_dict and grade_dict['score'] is not None:
+                                if grade_dict.get('is_voided'):
+                                    continue
+                                score_val = grade_dict.get('score') or grade_dict.get('points_earned')
+                                if score_val is not None and str(score_val).strip() != '':
                                     graded_grades.append(grade_dict)
-                                    score_value = grade_dict['score']
                                     try:
-                                        total_score += float(score_value)
+                                        total_score += float(score_val)
                                     except (ValueError, TypeError):
                                         continue
                             except (json.JSONDecodeError, TypeError):
-                                # Skip invalid grade data
                                 continue
                     
                     # Check if quiz is auto-gradeable (all questions are multiple_choice or true_false)
@@ -766,8 +770,7 @@ def assignments_and_grades():
                             is_autogradeable = all(q.question_type in auto_gradeable_types for q in quiz_questions)
                     
                     assignment_grades[assignment.id] = {
-                        'grades': grades,
-                        'total_submissions': len(grades),
+                        'total_submissions': total_submissions,
                         'graded_count': len(graded_grades),
                         'average_score': round(total_score / len(graded_grades), 1) if graded_grades else 0,
                         'type': 'individual',
@@ -776,41 +779,38 @@ def assignments_and_grades():
                 
                 # Get grade data for each group assignment
                 for group_assignment in group_assignments:
-                    # Get group grades for this assignment
-                    from models import GroupGrade
+                    from models import GroupGrade, GroupSubmission
                     group_grades = GroupGrade.query.filter_by(group_assignment_id=group_assignment.id).all()
+                    total_group_submissions = GroupSubmission.query.filter_by(group_assignment_id=group_assignment.id).count()
                     
-                    # Process group grade data safely
                     graded_group_grades = []
                     total_score = 0
                     for gg in group_grades:
+                        if gg.is_voided:
+                            continue
                         if gg.grade_data is not None:
                             try:
-                                # Handle both dict and JSON string cases
                                 if isinstance(gg.grade_data, dict):
                                     grade_dict = gg.grade_data
                                 else:
                                     grade_dict = json.loads(gg.grade_data)
-                                
-                                if 'score' in grade_dict and grade_dict['score'] is not None:
+                                if grade_dict.get('is_voided'):
+                                    continue
+                                score_val = grade_dict.get('score') or grade_dict.get('points_earned')
+                                if score_val is not None and str(score_val).strip() != '':
                                     graded_group_grades.append(grade_dict)
-                                    score_value = grade_dict['score']
                                     try:
-                                        total_score += float(score_value)
+                                        total_score += float(score_val)
                                     except (ValueError, TypeError):
                                         continue
                             except (json.JSONDecodeError, TypeError):
-                                # Skip invalid grade data
                                 continue
                     
-                    # Use a special key format for group assignments
                     assignment_grades[f'group_{group_assignment.id}'] = {
-                        'grades': group_grades,
-                        'total_submissions': len(group_grades),
+                        'total_submissions': total_group_submissions,
                         'graded_count': len(graded_group_grades),
                         'average_score': round(total_score / len(graded_group_grades), 1) if graded_group_grades else 0,
-                        'type': 'group',
-                        'assignment': group_assignment  # Store the assignment object for template use
+                        'type': 'group'
                     }
             except (ValueError, TypeError, AttributeError) as e:
                 # Handle any conversion errors gracefully
@@ -1475,7 +1475,8 @@ def grade_assignment(assignment_id):
                 teacher = None
                 if current_user.teacher_staff_id:
                     teacher = TeacherStaff.query.get(current_user.teacher_staff_id)
-                
+                # Collect user IDs for grade-update digest (one notification per student after save)
+                graded_user_ids = []
                 for student in students:
                     score = request.form.get(f'score_{student.id}')
                     comment = request.form.get(f'comment_{student.id}')
@@ -1592,27 +1593,22 @@ def grade_assignment(assignment_id):
                                     grade_data_dict['comment'] = f"{comment or ''}\n[REDO: Higher grade kept. Original: {redo.original_grade}%, Redo: {points_earned}%, Final: {redo.final_grade}%]"
                                 grade.grade_data = json.dumps(grade_data_dict)
                             
-                            # Create notification for the student
+                            # Queue for digest notification (one per student after commit)
                             if student.user:
-                                from app import create_notification
-                                if redo:
-                                    message = f'Your redo for "{assignment.title}" has been graded. Final Score: {redo.final_grade}%'
-                                else:
-                                    message = f'Your grade for "{assignment.title}" has been posted. Score: {points_earned}%'
-                                
-                                create_notification(
-                                    user_id=student.user.id,
-                                    notification_type='grade',
-                                    title=f'Grade posted for {assignment.title}',
-                                    message=message,
-                                    link=url_for('student.student_grades')
-                                )
+                                graded_user_ids.append(student.user.id)
                                 
                         except ValueError:
                             flash(f"Invalid score format for student {student.id}.", "warning")
                             continue # Skip this student and continue with others
                 
                 db.session.commit()
+                if graded_user_ids:
+                    from app import create_grade_update_digest
+                    create_grade_update_digest(
+                        graded_user_ids,
+                        assignment_title=assignment.title,
+                        link=url_for('student.student_grades')
+                    )
                 flash('Grades updated successfully.', 'success')
                 return redirect(url_for('management.grade_assignment', assignment_id=assignment_id))
             
@@ -1999,6 +1995,35 @@ def sync_google_forms_submissions(assignment_id):
     return redirect(url_for('management.view_assignment', assignment_id=assignment_id))
 
 
+
+
+# ============================================================
+# Route: /assignment/<int:assignment_id>/center
+# Function: assignment_command_center (tabbed hub - one page for View / Grade / Stats)
+# ============================================================
+
+@bp.route('/assignment/<int:assignment_id>/center')
+@login_required
+@management_required
+def assignment_command_center(assignment_id):
+    """Single command-center page for an assignment: Overview, Grade, Statistics in one place."""
+    assignment = Assignment.query.get_or_404(assignment_id)
+    class_info = assignment.class_info if assignment.class_id else None
+    submission_count = Submission.query.filter_by(assignment_id=assignment_id).filter(
+        Submission.submission_type != 'not_submitted'
+    ).count()
+    graded_count = Grade.query.filter_by(assignment_id=assignment_id).filter(
+        Grade.is_voided == False,
+        Grade.grade_data != None,
+        Grade.grade_data != ''
+    ).count()
+    return render_template(
+        'management/assignment_command_center.html',
+        assignment=assignment,
+        class_info=class_info,
+        submission_count=submission_count,
+        graded_count=graded_count,
+    )
 
 
 # ============================================================
@@ -3353,6 +3378,7 @@ def revoke_assignment_redo(redo_id):
     try:
         # Notify student
         if redo.student and redo.student.user:
+            from app import create_notification
             create_notification(
                 user_id=redo.student.user.id,
                 notification_type='assignment',

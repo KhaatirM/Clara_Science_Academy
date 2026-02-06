@@ -839,17 +839,13 @@ function generatePrintableGradebook() {
     return html;
 }
 
-// Back navigation function
+// Back navigation: always go to intended page (no history.back)
 function goBack() {
-    if (window.history.length > 1) {
-        window.history.back();
-    } else {
-        {% if current_user.role in ['Director', 'School Administrator'] %}
-            window.location.href = "{{ url_for('management.assignments_and_grades') }}";
-        {% else %}
-            window.location.href = "{{ url_for('teacher.dashboard.assignments_and_grades') }}";
-        {% endif %}
-    }
+    {% if current_user.role in ['Director', 'School Administrator'] %}
+        window.location.href = "{{ url_for('management.assignments_and_grades') }}";
+    {% else %}
+        window.location.href = "{{ url_for('teacher.dashboard.assignments_and_grades') }}";
+    {% endif %}
 }
 
 // Quick Grade Entry Functions

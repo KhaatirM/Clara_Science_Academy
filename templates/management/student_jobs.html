@@ -87,7 +87,7 @@
                     </div>
                     <div class="d-flex align-items-center">
                         <div class="score-display me-3">
-                            <span class="score-number" id="team1Score">{% if team_data and team_data.values() %}{% for team_entry in team_data.values() %}{% if team_entry.team.team_name == "Team 1" %}{{ team_entry.current_score }}{% endif %}{% endfor %}{% else %}100{% endif %}</span>
+                            <span class="score-number" id="team1Score">{% if team_data %}{% for team_entry in team_data.values() %}{% if team_entry.team.team_name in ["Team 1", "Cleaning Team 1", "Cleanup Team 1"] or (team_entry.team.team_name and "1" in team_entry.team.team_name and "2" not in team_entry.team.team_name and "team" in team_entry.team.team_name|lower) %}{{ team_entry.current_score }}{% endif %}{% endfor %}{% endif %}{% if not team_data or not team_data.values() %}100{% endif %}</span>
                             <small class="score-label">Points</small>
                         </div>
                         <button class="btn btn-sm btn-light btn-toggle" onclick="toggleTeam1()">
@@ -101,13 +101,13 @@
                         <div class="row text-center">
                             <div class="col-6">
                                 <div class="stat-item">
-                                    <div class="stat-number">{% if team_data %}{% for team_entry in team_data.values() %}{% if team_entry.team.team_name == "Team 1" %}{{ team_entry.members|length }}{% endif %}{% endfor %}{% else %}0{% endif %}</div>
+                                    <div class="stat-number">{% if team_data %}{% for team_entry in team_data.values() %}{% if team_entry.team.team_name in ["Team 1", "Cleaning Team 1", "Cleanup Team 1"] or (team_entry.team.team_name and "1" in team_entry.team.team_name and "2" not in team_entry.team.team_name and "team" in team_entry.team.team_name|lower) %}{{ team_entry.members|length }}{% endif %}{% endfor %}{% else %}0{% endif %}</div>
                                     <div class="stat-label">Members</div>
                                 </div>
                             </div>
                             <div class="col-6">
                                 <div class="stat-item">
-                                    <div class="stat-number">{% if team_data %}{% for team_entry in team_data.values() %}{% if team_entry.team.team_name == "Team 1" and team_entry.detailed_description %}{{ (team_entry.detailed_description.classrooms|length if team_entry.detailed_description.classrooms else 0) + (team_entry.detailed_description.common_areas|length if team_entry.detailed_description.common_areas else 0) }}{% endif %}{% endfor %}{% else %}0{% endif %}</div>
+                                    <div class="stat-number">{% if team_data %}{% for team_entry in team_data.values() %}{% if (team_entry.team.team_name in ["Team 1", "Cleaning Team 1", "Cleanup Team 1"] or (team_entry.team.team_name and "1" in team_entry.team.team_name and "2" not in team_entry.team.team_name and "team" in team_entry.team.team_name|lower)) and team_entry.detailed_description %}{{ (team_entry.detailed_description.classrooms|length if team_entry.detailed_description.classrooms else 0) + (team_entry.detailed_description.common_areas|length if team_entry.detailed_description.common_areas else 0) }}{% endif %}{% endfor %}{% else %}0{% endif %}</div>
                                     <div class="stat-label">Areas</div>
                                 </div>
                             </div>
@@ -168,7 +168,7 @@
                         <div id="team1Members">
                             {% if team_data %}
                                 {% for team_entry in team_data.values() %}
-                                    {% if team_entry.team.team_name == "Team 1" %}
+                                    {% if team_entry.team.team_name in ["Team 1", "Cleaning Team 1", "Cleanup Team 1"] or (team_entry.team.team_name and "1" in team_entry.team.team_name and "2" not in team_entry.team.team_name and "team" in team_entry.team.team_name|lower) %}
                                         {% if team_entry.members %}
                                             <div class="d-flex flex-wrap gap-2">
                                                 {% for member in team_entry.members %}
@@ -227,7 +227,7 @@
                     </div>
                     <div class="d-flex align-items-center">
                         <div class="score-display me-3">
-                            <span class="score-number" id="team2Score">{% if team_data and team_data.values() %}{% for team_entry in team_data.values() %}{% if team_entry.team.team_name == "Team 2" %}{{ team_entry.current_score }}{% endif %}{% endfor %}{% else %}100{% endif %}</span>
+                            <span class="score-number" id="team2Score">{% if team_data %}{% for team_entry in team_data.values() %}{% if team_entry.team.team_name in ["Team 2", "Cleaning Team 2", "Cleanup Team 2"] or (team_entry.team.team_name and "2" in team_entry.team.team_name and "1" not in team_entry.team.team_name and "team" in team_entry.team.team_name|lower) %}{{ team_entry.current_score }}{% endif %}{% endfor %}{% endif %}{% if not team_data or not team_data.values() %}100{% endif %}</span>
                             <small class="score-label">Points</small>
                         </div>
                         <button class="btn btn-sm btn-light btn-toggle" onclick="toggleTeam2()">
@@ -241,13 +241,13 @@
                         <div class="row text-center">
                             <div class="col-6">
                                 <div class="stat-item">
-                                    <div class="stat-number">{% if team_data %}{% for team_entry in team_data.values() %}{% if team_entry.team.team_name == "Team 2" %}{{ team_entry.members|length }}{% endif %}{% endfor %}{% else %}0{% endif %}</div>
+                                    <div class="stat-number">{% if team_data %}{% for team_entry in team_data.values() %}{% if team_entry.team.team_name in ["Team 2", "Cleaning Team 2", "Cleanup Team 2"] or (team_entry.team.team_name and "2" in team_entry.team.team_name and "1" not in team_entry.team.team_name and "team" in team_entry.team.team_name|lower) %}{{ team_entry.members|length }}{% endif %}{% endfor %}{% else %}0{% endif %}</div>
                                     <div class="stat-label">Members</div>
                                 </div>
                             </div>
                             <div class="col-6">
                                 <div class="stat-item">
-                                    <div class="stat-number">{% if team_data %}{% for team_entry in team_data.values() %}{% if team_entry.team.team_name == "Team 2" and team_entry.detailed_description %}{{ (team_entry.detailed_description.classrooms|length if team_entry.detailed_description.classrooms else 0) + (team_entry.detailed_description.common_areas|length if team_entry.detailed_description.common_areas else 0) }}{% endif %}{% endfor %}{% else %}0{% endif %}</div>
+                                    <div class="stat-number">{% if team_data %}{% for team_entry in team_data.values() %}{% if (team_entry.team.team_name in ["Team 2", "Cleaning Team 2", "Cleanup Team 2"] or (team_entry.team.team_name and "2" in team_entry.team.team_name and "1" not in team_entry.team.team_name and "team" in team_entry.team.team_name|lower)) and team_entry.detailed_description %}{{ (team_entry.detailed_description.classrooms|length if team_entry.detailed_description.classrooms else 0) + (team_entry.detailed_description.common_areas|length if team_entry.detailed_description.common_areas else 0) }}{% endif %}{% endfor %}{% else %}0{% endif %}</div>
                                     <div class="stat-label">Areas</div>
                                 </div>
                             </div>
@@ -308,7 +308,7 @@
                         <div id="team2Members">
                             {% if team_data %}
                                 {% for team_entry in team_data.values() %}
-                                    {% if team_entry.team.team_name == "Team 2" %}
+                                    {% if team_entry.team.team_name in ["Team 2", "Cleaning Team 2", "Cleanup Team 2"] or (team_entry.team.team_name and "2" in team_entry.team.team_name and "1" not in team_entry.team.team_name and "team" in team_entry.team.team_name|lower) %}
                                         {% if team_entry.members %}
                                             <div class="d-flex flex-wrap gap-2">
                                                 {% for member in team_entry.members %}
@@ -563,18 +563,41 @@
             </div>
             <div class="modal-body">
                 <div class="mb-3">
-                    <label for="addMemberSearch" class="form-label">Search Students</label>
-                    <input type="text" class="form-control" id="addMemberSearch" placeholder="Search by name..." onkeyup="filterAddMembers(this.value)">
+                    <label for="addMemberSearch" class="form-label fw-semibold">Search Students</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light"><i class="bi bi-search text-muted"></i></span>
+                        <input type="text" class="form-control" id="addMemberSearch" placeholder="Search by first or last name..." autocomplete="off" onkeyup="filterAddMembers(this.value)">
+                        <button type="button" class="btn btn-outline-secondary d-none" id="addMemberSearchClear" title="Clear search" onclick="document.getElementById('addMemberSearch').value=''; filterAddMembers(''); this.classList.add('d-none');">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
                 </div>
-                <div id="addMembersContainer" class="row" style="max-height: 400px; overflow-y: auto;">
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-2 pb-2 border-bottom">
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="selectAllVisibleAddMembers()">
+                        <i class="bi bi-check-all me-1"></i>Select all visible
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="deselectAllAddMembers()">
+                        <i class="bi bi-x-circle me-1"></i>Deselect all
+                    </button>
+                    <span class="ms-2 text-muted small" id="addMembersSelectedCount">0 selected</span>
+                    <span class="ms-auto text-muted small" id="addMembersVisibleCount"></span>
+                </div>
+                <div id="addMembersContainer" class="row g-2" style="max-height: 380px; overflow-y: auto;">
                     <!-- Students will be dynamically loaded here -->
                 </div>
+                <div id="addMembersNoResults" class="text-center text-muted py-4 d-none">
+                    <i class="bi bi-search fs-1"></i>
+                    <p class="mb-0 mt-2">No students match your search. Try a different name.</p>
+                </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="addSelectedMembers()">
-                    <i class="bi bi-check-circle me-1"></i>Add Selected Members
-                </button>
+            <div class="modal-footer d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <span class="text-muted small" id="addMembersFooterCount">0 selected</span>
+                <div>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="addMembersSubmitBtn" onclick="addSelectedMembers()">
+                        <i class="bi bi-check-circle me-1"></i>Add Selected Members
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -592,18 +615,75 @@
             </div>
             <div class="modal-body">
                 <div class="mb-3">
-                    <label for="removeMemberSearch" class="form-label">Search Team Members</label>
-                    <input type="text" class="form-control" id="removeMemberSearch" placeholder="Search by name..." onkeyup="filterRemoveMembers(this.value)">
+                    <label for="removeMemberSearch" class="form-label fw-semibold">Search Team Members</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light"><i class="bi bi-search text-muted"></i></span>
+                        <input type="text" class="form-control" id="removeMemberSearch" placeholder="Search by name..." autocomplete="off" onkeyup="filterRemoveMembers(this.value)">
+                        <button type="button" class="btn btn-outline-secondary d-none" id="removeMemberSearchClear" title="Clear search" onclick="document.getElementById('removeMemberSearch').value=''; filterRemoveMembers(''); this.classList.add('d-none');">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
                 </div>
-                <div id="removeMembersContainer" class="row" style="max-height: 400px; overflow-y: auto;">
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-2 pb-2 border-bottom">
+                    <button type="button" class="btn btn-sm btn-outline-warning" onclick="selectAllVisibleRemoveMembers()">
+                        <i class="bi bi-check-all me-1"></i>Select all visible
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="deselectAllRemoveMembers()">
+                        <i class="bi bi-x-circle me-1"></i>Deselect all
+                    </button>
+                    <span class="ms-2 text-muted small" id="removeMembersSelectedCount">0 selected</span>
+                    <span class="ms-auto text-muted small" id="removeMembersVisibleCount"></span>
+                </div>
+                <div id="removeMembersContainer" class="row g-2" style="max-height: 380px; overflow-y: auto;">
                     <!-- Current team members will be loaded here -->
+                </div>
+                <div id="removeMembersNoResults" class="text-center text-muted py-4 d-none">
+                    <i class="bi bi-search fs-1"></i>
+                    <p class="mb-0 mt-2">No members match your search.</p>
+                </div>
+            </div>
+            <div class="modal-footer d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <span class="text-muted small" id="removeMembersFooterCount">0 selected</span>
+                <div>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-warning" id="removeMembersSubmitBtn" onclick="removeSelectedMembers()">
+                        <i class="bi bi-trash me-1"></i>Remove Selected Members
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Inspection Detail Modal (View Details from history) -->
+<div class="modal fade" id="inspectionDetailModal" tabindex="-1" aria-labelledby="inspectionDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title" id="inspectionDetailModalLabel"><i class="bi bi-clipboard-data me-2"></i>Inspection Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><strong>Team</strong></div>
+                    <div class="col-6" id="inspectionDetailTeam">—</div>
+                    <div class="col-6"><strong>Date</strong></div>
+                    <div class="col-6" id="inspectionDetailDate">—</div>
+                    <div class="col-6"><strong>Score</strong></div>
+                    <div class="col-6"><span id="inspectionDetailScore" class="badge">—</span></div>
+                    <div class="col-6"><strong>Status</strong></div>
+                    <div class="col-6"><span id="inspectionDetailStatus" class="badge">—</span></div>
+                    <div class="col-12 small text-muted mt-1" id="inspectionDetailBreakdown"></div>
+                    <div class="col-6"><strong>Inspector</strong></div>
+                    <div class="col-6" id="inspectionDetailInspector">—</div>
+                    <div class="col-12 mt-2"><strong>Notes</strong></div>
+                    <div class="col-12" id="inspectionDetailNotes">—</div>
+                    <div class="col-12 mt-2"><strong>Items checked</strong></div>
+                    <div class="col-12"><ul class="list-unstyled mb-0 small" id="inspectionDetailItems"></ul></div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-warning" onclick="removeSelectedMembers()">
-                    <i class="bi bi-trash me-1"></i>Remove Selected Members
-                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -749,10 +829,15 @@
 <div class="modal fade" id="inspectionModal" tabindex="-1" aria-labelledby="inspectionModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
-            <div class="modal-header bg-success text-white">
-                <h5 class="modal-title" id="inspectionModalLabel">
+            <div class="modal-header bg-success text-white d-flex align-items-center flex-wrap">
+                <h5 class="modal-title me-3" id="inspectionModalLabel">
                     <i class="bi bi-clipboard-check me-2"></i>Conduct Cleaning Crew Inspection
                 </h5>
+                <div class="inspection-live-score ms-auto d-flex align-items-center gap-2 flex-wrap" id="inspectionLiveScoreBar" style="display: none !important;">
+                    <span class="text-white-50 small">Live score:</span>
+                    <span class="inspection-score-badge badge rounded-pill px-3 py-2" id="calculatedScore">100</span>
+                    <span class="text-white-50 small" id="inspectionScoreBreakdown"></span>
+                </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -774,11 +859,12 @@
                     </div>
 
                     <!-- Computer Team Deductions -->
-                    <div class="card mb-3 border-info" id="computerTeamDeductions" style="display: none;">
-                        <div class="card-header bg-info text-white">
+                    <div class="card mb-3 border-info inspection-section-card" id="computerTeamDeductions" style="display: none;">
+                        <div class="card-header bg-info text-white d-flex align-items-center py-2">
+                            <button class="btn btn-link btn-sm text-white text-decoration-none p-0 me-2 collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseComputer" aria-expanded="false"><i class="bi bi-chevron-down collapse-icon"></i></button>
                             <h6 class="mb-0"><i class="bi bi-laptop me-1"></i>Computer Team Deductions (Stackable)</h6>
                         </div>
-                        <div class="card-body">
+                        <div id="collapseComputer" class="collapse card-body">
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="form-check mb-2">
@@ -823,11 +909,12 @@
                     </div>
 
                     <!-- Lunch Duty Deductions -->
-                    <div class="card mb-3 border-warning" id="lunchDutyDeductions" style="display: none;">
-                        <div class="card-header bg-warning text-dark">
+                    <div class="card mb-3 border-warning inspection-section-card" id="lunchDutyDeductions" style="display: none;">
+                        <div class="card-header bg-warning text-dark d-flex align-items-center py-2">
+                            <button class="btn btn-link btn-sm text-dark text-decoration-none p-0 me-2 collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseLunch" aria-expanded="false"><i class="bi bi-chevron-down collapse-icon"></i></button>
                             <h6 class="mb-0"><i class="bi bi-utensils me-1"></i>Lunch Duty Inspection (Stackable)</h6>
                         </div>
-                        <div class="card-body">
+                        <div id="collapseLunch" class="collapse card-body">
                             <div class="row">
                                 <div class="col-md-6">
                                     <h6 class="text-danger">Major Deductions (-10 points each)</h6>
@@ -876,11 +963,12 @@
                     </div>
 
                     <!-- Experiment Duty Deductions -->
-                    <div class="card mb-3 border-primary" id="experimentDutyDeductions" style="display: none;">
-                        <div class="card-header bg-primary text-white">
+                    <div class="card mb-3 border-primary inspection-section-card" id="experimentDutyDeductions" style="display: none;">
+                        <div class="card-header bg-primary text-white d-flex align-items-center py-2">
+                            <button class="btn btn-link btn-sm text-white text-decoration-none p-0 me-2 collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseExperiment" aria-expanded="false"><i class="bi bi-chevron-down collapse-icon"></i></button>
                             <h6 class="mb-0"><i class="bi bi-flask me-1"></i>Experiment Duty Inspection (Stackable)</h6>
                         </div>
-                        <div class="card-body">
+                        <div id="collapseExperiment" class="collapse card-body">
                             <div class="row">
                                 <div class="col-md-6">
                                     <h6 class="text-danger">Major Deductions (-10 points each)</h6>
@@ -929,11 +1017,12 @@
                     </div>
 
                     <!-- Cleanup Team Deductions -->
-                    <div class="card mb-3 border-danger" id="cleanupTeamDeductions">
-                        <div class="card-header bg-danger text-white">
+                    <div class="card mb-3 border-danger inspection-section-card" id="cleanupTeamDeductions">
+                        <div class="card-header bg-danger text-white d-flex align-items-center py-2">
+                            <button class="btn btn-link btn-sm text-white text-decoration-none p-0 me-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCleanup" aria-expanded="true"><i class="bi bi-chevron-down collapse-icon"></i></button>
                             <h6 class="mb-0"><i class="bi bi-exclamation-triangle me-1"></i>Cleanup Team Deductions (Stackable)</h6>
                         </div>
-                        <div class="card-body">
+                        <div id="collapseCleanup" class="collapse show card-body">
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="form-check mb-2">
@@ -972,11 +1061,12 @@
                     </div>
 
                     <!-- Moderate Deductions (-5 Points) -->
-                    <div class="card mb-3 border-warning">
-                        <div class="card-header bg-warning text-dark">
+                    <div class="card mb-3 border-warning inspection-section-card">
+                        <div class="card-header bg-warning text-dark d-flex align-items-center py-2">
+                            <button class="btn btn-link btn-sm text-dark text-decoration-none p-0 me-2 collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseModerate" aria-expanded="false"><i class="bi bi-chevron-down collapse-icon"></i></button>
                             <h6 class="mb-0"><i class="bi bi-exclamation-circle me-1"></i>Moderate Deductions (-5 Points each)</h6>
                         </div>
-                        <div class="card-body">
+                        <div id="collapseModerate" class="collapse card-body">
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="form-check mb-2">
@@ -1011,11 +1101,12 @@
                     </div>
 
                     <!-- Minor Deductions (-2 Points) -->
-                    <div class="card mb-3 border-info">
-                        <div class="card-header bg-info text-white">
+                    <div class="card mb-3 border-info inspection-section-card">
+                        <div class="card-header bg-info text-white d-flex align-items-center py-2">
+                            <button class="btn btn-link btn-sm text-white text-decoration-none p-0 me-2 collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMinor" aria-expanded="false"><i class="bi bi-chevron-down collapse-icon"></i></button>
                             <h6 class="mb-0"><i class="bi bi-info-circle me-1"></i>Minor Deductions (-2 Points each)</h6>
                         </div>
-                        <div class="card-body">
+                        <div id="collapseMinor" class="collapse card-body">
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="form-check mb-2">
@@ -1044,11 +1135,12 @@
                     </div>
 
                     <!-- Bonus Points -->
-                    <div class="card mb-3 border-success">
-                        <div class="card-header bg-success text-white">
+                    <div class="card mb-3 border-success inspection-section-card">
+                        <div class="card-header bg-success text-white d-flex align-items-center py-2">
+                            <button class="btn btn-link btn-sm text-white text-decoration-none p-0 me-2 collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseBonus" aria-expanded="false"><i class="bi bi-chevron-down collapse-icon"></i></button>
                             <h6 class="mb-0"><i class="bi bi-star-fill me-1"></i>Bonus Points (+15 Max)</h6>
                         </div>
-                        <div class="card-body">
+                        <div id="collapseBonus" class="collapse card-body">
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="form-check mb-2">
@@ -1089,16 +1181,22 @@
                         </div>
                         <div class="col-md-6">
                             <label for="inspectorName" class="form-label">Inspector Name</label>
-                            <input type="text" class="form-control" id="inspectorName" required placeholder="Your name">
+                            <input type="text" class="form-control" id="inspectorName" required placeholder="Your name" value="{% if current_user %}{% if current_user.first_name or current_user.last_name %}{{ current_user.first_name or '' }} {{ current_user.last_name or '' }}{% else %}{{ current_user.username or '' }}{% endif %}{% endif %}">
                         </div>
                     </div>
                 </form>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-success" onclick="submitInspection()">
-                    <i class="bi bi-check-circle me-1"></i>Submit Inspection
-                </button>
+            <div class="modal-footer d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div class="inspection-live-score" id="inspectionFooterScore" style="display: none;">
+                    <span class="text-muted small me-2">Score:</span>
+                    <span class="badge rounded-pill px-2 py-1" id="calculatedScoreFooter">100</span>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" id="inspectionSubmitBtn" onclick="submitInspection()">
+                        <i class="bi bi-check-circle me-1"></i>Submit Inspection
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -1157,23 +1255,22 @@ function toggleInspectionSections() {
     const cleanupDeductions = document.getElementById('cleanupTeamDeductions');
     const lunchDutyDeductions = document.getElementById('lunchDutyDeductions');
     const experimentDutyDeductions = document.getElementById('experimentDutyDeductions');
-    
-    // Hide all sections first
+
     computerDeductions.style.display = 'none';
     cleanupDeductions.style.display = 'none';
     lunchDutyDeductions.style.display = 'none';
     experimentDutyDeductions.style.display = 'none';
-    
-    // Show appropriate section based on team type
+
     if (teamSelect.value === 'computer') {
         computerDeductions.style.display = 'block';
     } else if (teamSelect.value === 'lunch_duty') {
         lunchDutyDeductions.style.display = 'block';
     } else if (teamSelect.value === 'experiment_duty') {
         experimentDutyDeductions.style.display = 'block';
-    } else {
+    } else if (teamSelect.value === 'team1' || teamSelect.value === 'team2') {
         cleanupDeductions.style.display = 'block';
     }
+    calculateScore();
 }
 
 // Set today's date as default
@@ -1182,101 +1279,97 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('inspectionDate').value = today;
 });
 
-// Calculate and display score
+// Calculate and display score (live score bar + breakdown)
 function calculateScore() {
     const team = document.getElementById('teamSelect').value;
-    if (!team) return;
-    
+    const scoreBar = document.getElementById('inspectionLiveScoreBar');
+    const footerScore = document.getElementById('inspectionFooterScore');
+    if (!team) {
+        if (scoreBar) scoreBar.style.display = 'none';
+        if (footerScore) footerScore.style.display = 'none';
+        return;
+    }
+    if (scoreBar) scoreBar.style.display = 'flex';
+    if (footerScore) footerScore.style.display = 'flex';
+
     let score = 100;
-    
+    let totalDeductions = 0;
+
     if (team === 'computer') {
-        // Computer team deductions (stackable)
-        if (document.getElementById('computerLeftOut').checked) score -= 10;
-        if (document.getElementById('tabletLeftOut').checked) score -= 8;
-        if (document.getElementById('chargerLeftOut').checked) score -= 5;
-        if (document.getElementById('headphonesLeftOut').checked) score -= 5;
-        if (document.getElementById('extensionCordLeftOut').checked) score -= 3;
+        if (document.getElementById('computerLeftOut').checked) { score -= 10; totalDeductions += 10; }
+        if (document.getElementById('tabletLeftOut').checked) { score -= 8; totalDeductions += 8; }
+        if (document.getElementById('chargerLeftOut').checked) { score -= 5; totalDeductions += 5; }
+        if (document.getElementById('headphonesLeftOut').checked) { score -= 5; totalDeductions += 5; }
+        if (document.getElementById('extensionCordLeftOut').checked) { score -= 3; totalDeductions += 3; }
     } else if (team === 'lunch_duty') {
-        // Lunch Duty deductions
-        const lunchMajor = ['lunchFoodSpilled', 'lunchNotOnTime', 'lunchTrashNotEmpty'];
-        lunchMajor.forEach(id => {
-            if (document.getElementById(id) && document.getElementById(id).checked) score -= 10;
+        ['lunchFoodSpilled', 'lunchNotOnTime', 'lunchTrashNotEmpty'].forEach(id => {
+            if (document.getElementById(id) && document.getElementById(id).checked) { score -= 10; totalDeductions += 10; }
         });
-        
-        const lunchModerate = ['lunchUtensilsMissing', 'lunchCountersNotWiped', 'lunchTablesNotCleared'];
-        lunchModerate.forEach(id => {
-            if (document.getElementById(id) && document.getElementById(id).checked) score -= 5;
+        ['lunchUtensilsMissing', 'lunchCountersNotWiped', 'lunchTablesNotCleared'].forEach(id => {
+            if (document.getElementById(id) && document.getElementById(id).checked) { score -= 5; totalDeductions += 5; }
         });
     } else if (team === 'experiment_duty') {
-        // Experiment Duty deductions
-        const expMajor = ['expEquipmentMissing', 'expSafetyViolation', 'expNotOnTime'];
-        expMajor.forEach(id => {
-            if (document.getElementById(id) && document.getElementById(id).checked) score -= 10;
+        ['expEquipmentMissing', 'expSafetyViolation', 'expNotOnTime'].forEach(id => {
+            if (document.getElementById(id) && document.getElementById(id).checked) { score -= 10; totalDeductions += 10; }
         });
-        
-        const expModerate = ['expSuppliesMissing', 'expAreaNotClean', 'expEquipmentNotReturned'];
-        expModerate.forEach(id => {
-            if (document.getElementById(id) && document.getElementById(id).checked) score -= 5;
+        ['expSuppliesMissing', 'expAreaNotClean', 'expEquipmentNotReturned'].forEach(id => {
+            if (document.getElementById(id) && document.getElementById(id).checked) { score -= 5; totalDeductions += 5; }
         });
     } else {
-        // Cleanup team deductions (stackable)
-        const cleanupDeductions = [
-            'bathroomNotRestocked', 'trashCanLeftFull', 'floorNotSwept', 'materialsLeftOut'
-        ];
-        cleanupDeductions.forEach(id => {
-            if (document.getElementById(id).checked) {
-                score -= 10;
-            }
+        ['bathroomNotRestocked', 'trashCanLeftFull', 'floorNotSwept', 'materialsLeftOut'].forEach(id => {
+            if (document.getElementById(id) && document.getElementById(id).checked) { score -= 10; totalDeductions += 10; }
         });
-        
-        // Moderate deductions (-5 points each)
-        const moderateDeductions = [
-            'tablesMissed', 'classroomTrashFull', 'bathroomFloorPoor', 'notFinishedOnTime'
-        ];
-        moderateDeductions.forEach(id => {
-            if (document.getElementById(id).checked) {
-                score -= 5;
-            }
+        ['tablesMissed', 'classroomTrashFull', 'bathroomFloorPoor', 'notFinishedOnTime'].forEach(id => {
+            if (document.getElementById(id) && document.getElementById(id).checked) { score -= 5; totalDeductions += 5; }
         });
-        
-        // Minor deductions (-2 points each)
-        const minorDeductions = [
-            'smallDebrisLeft', 'trashSpilled', 'dispensersHalfFilled'
-        ];
-        minorDeductions.forEach(id => {
-            if (document.getElementById(id).checked) {
-                score -= 2;
-            }
+        ['smallDebrisLeft', 'trashSpilled', 'dispensersHalfFilled'].forEach(id => {
+            if (document.getElementById(id) && document.getElementById(id).checked) { score -= 2; totalDeductions += 2; }
         });
     }
-    
-    // Bonus points (+15 max) - applies to all teams
+
     let bonus = 0;
     if (document.getElementById('exceptionalFinish').checked) bonus += 5;
     if (document.getElementById('speedEfficiency').checked) bonus += 5;
     if (document.getElementById('goingAboveBeyond').checked) bonus += 3;
     if (document.getElementById('teamworkAward').checked) bonus += 2;
-    
     score += bonus;
-    
-    // Display calculated score
+
+    const scoreClass = score <= 60 ? 'bg-danger' : score < 80 ? 'bg-warning text-dark' : 'bg-success';
+    const label = score + ' pts';
+    const breakdownParts = [];
+    if (totalDeductions > 0) breakdownParts.push('−' + totalDeductions);
+    if (bonus > 0) breakdownParts.push('+' + bonus);
+    const breakdownText = breakdownParts.length ? ' (' + breakdownParts.join(', ') + ')' : '';
+
     const scoreDisplay = document.getElementById('calculatedScore');
     if (scoreDisplay) {
-        scoreDisplay.textContent = `${score} Points`;
-        scoreDisplay.className = score <= 60 ? 'text-danger' : score < 80 ? 'text-warning' : 'text-success';
+        scoreDisplay.textContent = label;
+        scoreDisplay.className = 'inspection-score-badge badge rounded-pill px-3 py-2 ' + scoreClass;
     }
+    const scoreFooter = document.getElementById('calculatedScoreFooter');
+    if (scoreFooter) {
+        scoreFooter.textContent = label;
+        scoreFooter.className = 'badge rounded-pill px-2 py-1 ' + scoreClass;
+    }
+    const breakdownEl = document.getElementById('inspectionScoreBreakdown');
+    if (breakdownEl) breakdownEl.textContent = breakdownText;
 }
 
 // Submit inspection
 function submitInspection() {
     const team = document.getElementById('teamSelect').value;
     const date = document.getElementById('inspectionDate').value;
-    const inspector = document.getElementById('inspectorName').value;
+    const inspector = document.getElementById('inspectorName').value.trim();
     const notes = document.getElementById('inspectorNotes').value;
-    
+    const btn = document.getElementById('inspectionSubmitBtn');
+
     if (!team || !date || !inspector) {
-        alert('Please fill in all required fields.');
+        alert('Please fill in all required fields (Team, Date, Inspector Name).');
         return;
+    }
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span>Submitting...';
     }
     
     // Calculate final score
@@ -1393,8 +1486,10 @@ function submitInspection() {
         teamName = team === 'team1' ? 'Cleanup Team 1' : 'Cleanup Team 2';
     }
     
-    teamScoreElement.textContent = `${score} Points`;
-    teamScoreElement.className = score <= 60 ? 'badge bg-danger' : score < 80 ? 'badge bg-warning' : 'badge bg-success';
+    if (teamScoreElement) {
+        teamScoreElement.textContent = `${score} Points`;
+        teamScoreElement.className = score <= 60 ? 'badge bg-danger' : score < 80 ? 'badge bg-warning' : 'badge bg-success';
+    }
     
     // Collect detailed inspection data
     const inspectionData = {
@@ -1423,40 +1518,36 @@ function submitInspection() {
         teamwork_award: document.getElementById('teamworkAward').checked
     };
     
-    // Save inspection to database
     fetch('/management/api/save-inspection', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(inspectionData)
     })
     .then(response => response.json())
     .then(data => {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Submit Inspection';
+        }
         if (data.success) {
-            // Show result alert
-            const status = score <= 60 ? 'FAILED' : 'PASSED';
             const alertType = score <= 60 ? 'danger' : 'success';
-            const message = score <= 60 ? 
+            const message = score <= 60 ?
                 `${teamName} scored ${score} points and must redo cleaning next week.` :
                 `${teamName} scored ${score} points and passed inspection.`;
-            
             showAlert(message, alertType);
-            
-            // Close modal
             const modal = bootstrap.Modal.getInstance(document.getElementById('inspectionModal'));
             modal.hide();
-            
-            // Reload the page to show updated inspection history
-            setTimeout(() => {
-                location.reload();
-            }, 1000);
+            setTimeout(() => location.reload(), 1000);
         } else {
-            showAlert('Failed to save inspection: ' + data.error, 'danger');
+            showAlert('Failed to save inspection: ' + (data.error || ''), 'danger');
         }
     })
     .catch(error => {
         console.error('Error saving inspection:', error);
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Submit Inspection';
+        }
         showAlert('Error saving inspection. Please try again.', 'danger');
     });
 }
@@ -1487,9 +1578,10 @@ function exportToSheets() {
     alert('Export to Sheets functionality would be implemented here. This would send the current team data and inspection history to a Google Sheet.');
 }
 
-// Record inspection button functionality
+// Record inspection button functionality (team: 'team1' | 'team2' | 'computer' | 1 | 2)
 function recordInspection(team) {
-    document.getElementById('teamSelect').value = team;
+    const normalized = (team === 1 || team === '1') ? 'team1' : (team === 2 || team === '2') ? 'team2' : team;
+    document.getElementById('teamSelect').value = normalized;
     toggleInspectionSections();
     const modal = new bootstrap.Modal(document.getElementById('inspectionModal'));
     modal.show();
@@ -1574,8 +1666,40 @@ function viewInspectionDetails(inspectionId) {
 }
 
 function showInspectionDetailsModal(inspection) {
-    // This would show a detailed view of the inspection
-    alert(`Inspection Details:\n\nScore: ${inspection.final_score}\nInspector: ${inspection.inspector_name}\nNotes: ${inspection.inspector_notes || 'None'}`);
+    const score = inspection.score != null ? inspection.score : inspection.final_score;
+    const scoreClass = score <= 60 ? 'danger' : score < 80 ? 'warning' : 'success';
+    const status = score >= 60 ? 'Passed' : 'Failed – Re-do Required';
+    const deductions = (inspection.major_deductions || 0) + (inspection.moderate_deductions || 0) + (inspection.minor_deductions || 0);
+    const bonus = inspection.bonus_points || 0;
+    const items = [];
+    if (inspection.bathroom_not_restocked) items.push('Bathrooms not restocked');
+    if (inspection.trash_can_left_full) items.push('Trash can left full');
+    if (inspection.floor_not_swept) items.push('Floor not swept');
+    if (inspection.materials_left_out) items.push('Materials left out');
+    if (inspection.tables_missed) items.push('Tables/desks missed');
+    if (inspection.classroom_trash_full) items.push('Classroom trash full');
+    if (inspection.bathroom_floor_poor) items.push('Bathroom floor poor');
+    if (inspection.not_finished_on_time) items.push('Not finished on time');
+    if (inspection.small_debris_left) items.push('Small debris left');
+    if (inspection.trash_spilled) items.push('Trash spilled');
+    if (inspection.dispensers_half_filled) items.push('Dispensers half-filled');
+    if (inspection.exceptional_finish) items.push('Exceptional finish (+5)');
+    if (inspection.speed_efficiency) items.push('Finished early (+5)');
+    if (inspection.going_above_beyond) items.push('Cleaned unassigned area (+3)');
+    if (inspection.teamwork_award) items.push('Exceptional teamwork (+2)');
+    const dateStr = inspection.date ? (inspection.date.split && inspection.date.split('T')[0]) : inspection.date || '—';
+    document.getElementById('inspectionDetailTeam').textContent = inspection.team_name || 'Team';
+    document.getElementById('inspectionDetailDate').textContent = dateStr;
+    document.getElementById('inspectionDetailScore').textContent = score;
+    document.getElementById('inspectionDetailScore').className = 'badge bg-' + scoreClass + ' fs-6';
+    document.getElementById('inspectionDetailStatus').textContent = status;
+    document.getElementById('inspectionDetailStatus').className = 'badge bg-' + (score >= 60 ? 'success' : 'danger');
+    document.getElementById('inspectionDetailBreakdown').innerHTML = 'Deductions: −' + deductions + (bonus > 0 ? ' &nbsp;|&nbsp; Bonus: +' + bonus : '');
+    document.getElementById('inspectionDetailInspector').textContent = inspection.inspector_name || '—';
+    document.getElementById('inspectionDetailNotes').textContent = inspection.inspector_notes || 'None';
+    document.getElementById('inspectionDetailItems').innerHTML = items.length ? items.map(s => '<li>' + s + '</li>').join('') : '<li class="text-muted">No items recorded</li>';
+    const modal = new bootstrap.Modal(document.getElementById('inspectionDetailModal'));
+    modal.show();
 }
 
 // Dynamic Team Management Functions
@@ -1898,12 +2022,11 @@ function deleteTeam(teamId) {
 
 function recordTeamInspection(teamId) {
     const team = dynamicTeams.find(t => t.id === teamId);
-    if (team) {
-        document.getElementById('teamSelect').value = 'team1'; // Use existing inspection system
-        toggleInspectionSections();
-        const modal = new bootstrap.Modal(document.getElementById('inspectionModal'));
-        modal.show();
-    }
+    const selectVal = (teamId === 1 || teamId === '1') ? 'team1' : (teamId === 2 || teamId === '2') ? 'team2' : 'team1';
+    document.getElementById('teamSelect').value = selectVal;
+    toggleInspectionSections();
+    const modal = new bootstrap.Modal(document.getElementById('inspectionModal'));
+    modal.show();
 }
 
 // Add event listeners for score calculation
@@ -1930,6 +2053,10 @@ let currentTeamMembers = [];
 
 function openAddMembersModal(teamId) {
     currentTeamId = teamId;
+    document.getElementById('addMemberSearch').value = '';
+    document.getElementById('addMemberSearchClear').classList.add('d-none');
+    document.getElementById('addMembersNoResults').classList.add('d-none');
+    updateAddMembersSelectedCount();
     
     // Update modal title based on team
     const modalTitle = document.getElementById('addMembersModalLabel');
@@ -1963,20 +2090,23 @@ function openAddMembersModal(teamId) {
         .then(data => {
             console.log('Students API response:', data);
             if (data.success) {
-                allAvailableStudents = data.students;
+                const raw = data.students;
+                allAvailableStudents = Array.isArray(raw) ? raw : [];
                 console.log('Loaded students:', allAvailableStudents.length);
                 
                 // Get current team members to exclude them
                 fetchTeamMembers(teamId)
                     .then(members => {
-                        const memberIds = members.map(m => m.id);
-                        const availableStudents = allAvailableStudents.filter(s => !memberIds.includes(s.id));
+                        const memberIds = (Array.isArray(members) ? members : []).map(m => m.id).filter(id => id != null);
+                        const availableStudents = allAvailableStudents.filter(s => {
+                            const sid = s.id != null ? s.id : s.student_id;
+                            return sid != null && !memberIds.includes(sid);
+                        });
                         console.log('Available students to add:', availableStudents.length);
                         renderAddMembers(availableStudents);
                     })
                     .catch(error => {
                         console.error('Error fetching team members:', error);
-                        // Render all students if we can't fetch team members
                         renderAddMembers(allAvailableStudents);
                     });
             } else {
@@ -2052,44 +2182,108 @@ function fetchTeamInfo(teamId) {
 
 function renderAddMembers(students) {
     const container = document.getElementById('addMembersContainer');
+    const noResultsEl = document.getElementById('addMembersNoResults');
+    const visibleCountEl = document.getElementById('addMembersVisibleCount');
+    if (!container) return;
     container.innerHTML = '';
+    if (noResultsEl) noResultsEl.classList.add('d-none');
     
-    if (!students || students.length === 0) {
-        container.innerHTML = '<div class="col-12 text-center text-muted py-4"><i class="bi bi-people fs-1 mb-3"></i><p>No students available to add.</p></div>';
+    const list = Array.isArray(students) ? students : [];
+    if (list.length === 0) {
+        container.innerHTML = '<div class="col-12 text-center text-muted py-4"><i class="bi bi-people fs-1 mb-3 d-block"></i><p class="mb-0">No students available to add.</p><small class="text-muted">All students may already be on this team.</small></div>';
+        if (visibleCountEl) visibleCountEl.textContent = '';
+        updateAddMembersSelectedCount();
         return;
     }
     
-    students.forEach(student => {
+    list.forEach(student => {
+        const sid = student.id != null ? student.id : student.student_id;
+        if (sid == null) return;
+        const first = student.first_name != null ? student.first_name : '';
+        const last = student.last_name != null ? student.last_name : '';
+        const fullName = (first + ' ' + last).trim() || 'Unknown';
         const col = document.createElement('div');
-        col.className = 'col-md-6 mb-2';
-        col.innerHTML = `
-            <div class="form-check p-2 border rounded">
-                <input class="form-check-input" type="checkbox" id="add_student_${student.id}" value="${student.id}">
-                <label class="form-check-label" for="add_student_${student.id}">
-                    ${student.first_name} ${student.last_name}
-                </label>
-            </div>
-        `;
+        col.className = 'col-md-6 add-member-row';
+        col.setAttribute('data-name', fullName.toLowerCase());
+        col.setAttribute('data-student-id', String(sid));
+        col.setAttribute('role', 'button');
+        col.setAttribute('tabindex', '0');
+        col.innerHTML = '<div class="add-member-name-box p-2 border rounded text-center">' + escapeHtml(fullName) + '</div>';
+        col.addEventListener('click', function() {
+            this.classList.toggle('add-member-selected');
+            updateAddMembersSelectedCount();
+        });
+        col.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                this.classList.toggle('add-member-selected');
+                updateAddMembersSelectedCount();
+            }
+        });
         container.appendChild(col);
     });
+    filterAddMembers(document.getElementById('addMemberSearch').value);
+    updateAddMembersSelectedCount();
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function updateAddMembersSelectedCount() {
+    const selected = document.querySelectorAll('#addMembersContainer .add-member-row.add-member-selected');
+    const n = selected.length;
+    const label = n === 1 ? '1 selected' : `${n} selected`;
+    document.getElementById('addMembersSelectedCount').textContent = label;
+    document.getElementById('addMembersFooterCount').textContent = label;
+    const btn = document.getElementById('addMembersSubmitBtn');
+    if (btn) {
+        btn.innerHTML = n > 0 ? `<i class="bi bi-check-circle me-1"></i>Add Selected Members (${n})` : '<i class="bi bi-check-circle me-1"></i>Add Selected Members';
+        btn.disabled = n === 0;
+    }
+}
+
+function selectAllVisibleAddMembers() {
+    document.querySelectorAll('#addMembersContainer .add-member-row.add-member-visible').forEach(row => { row.classList.add('add-member-selected'); });
+    updateAddMembersSelectedCount();
+}
+
+function deselectAllAddMembers() {
+    document.querySelectorAll('#addMembersContainer .add-member-row').forEach(row => { row.classList.remove('add-member-selected'); });
+    updateAddMembersSelectedCount();
 }
 
 function filterAddMembers(searchTerm) {
-    const allRows = document.querySelectorAll('#addMembersContainer .col-md-6');
-    allRows.forEach(row => {
-        const label = row.querySelector('label').textContent.toLowerCase();
-        if (label.includes(searchTerm.toLowerCase())) {
-            row.style.display = '';
-        } else {
-            row.style.display = 'none';
-        }
+    const term = (searchTerm || '').trim().toLowerCase();
+    const clearBtn = document.getElementById('addMemberSearchClear');
+    if (clearBtn) clearBtn.classList.toggle('d-none', !term);
+    const rows = document.querySelectorAll('#addMembersContainer .add-member-row');
+    let visible = 0;
+    rows.forEach(row => {
+        const name = row.getAttribute('data-name') || '';
+        const show = !term || name.includes(term);
+        row.style.display = show ? '' : 'none';
+        row.classList.toggle('add-member-visible', show);
+        if (show) visible++;
     });
+    const noResults = document.getElementById('addMembersNoResults');
+    const visibleEl = document.getElementById('addMembersVisibleCount');
+    if (rows.length > 0) {
+        noResults.classList.toggle('d-none', visible > 0);
+        if (visibleEl) visibleEl.textContent = term ? `${visible} of ${rows.length} shown` : `${rows.length} students`;
+    } else if (visibleEl) {
+        visibleEl.textContent = '';
+    }
+    updateAddMembersSelectedCount();
 }
 
 function addSelectedMembers() {
     const selectedIds = [];
-    document.querySelectorAll('#addMembersContainer input[type="checkbox"]:checked').forEach(checkbox => {
-        selectedIds.push(parseInt(checkbox.value));
+    document.querySelectorAll('#addMembersContainer .add-member-row.add-member-selected').forEach(row => {
+        const id = row.getAttribute('data-student-id');
+        if (id) selectedIds.push(parseInt(id));
     });
     
     if (selectedIds.length === 0) {
@@ -2126,12 +2320,27 @@ function addSelectedMembers() {
 
 function openRemoveMembersModal(teamId) {
     currentTeamId = teamId;
+    document.getElementById('removeMemberSearch').value = '';
+    const clearBtn = document.getElementById('removeMemberSearchClear');
+    if (clearBtn) clearBtn.classList.add('d-none');
+    document.getElementById('removeMembersNoResults').classList.add('d-none');
+    
+    // Update modal title
+    const modalTitle = document.getElementById('removeMembersModalLabel');
+    fetchTeamInfo(teamId).then(teamInfo => {
+        if (teamInfo && teamInfo.name) {
+            modalTitle.innerHTML = '<i class="bi bi-person-dash me-2"></i>Remove Members from ' + escapeHtml(teamInfo.name);
+        } else {
+            modalTitle.innerHTML = '<i class="bi bi-person-dash me-2"></i>Remove Members from Team';
+        }
+    }).catch(() => {
+        modalTitle.innerHTML = '<i class="bi bi-person-dash me-2"></i>Remove Members from Team';
+    });
     
     // Show loading state
     const container = document.getElementById('removeMembersContainer');
-    container.innerHTML = '<div class="col-12 text-center py-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading team members...</span></div><p class="mt-2">Loading team members...</p></div>';
+    container.innerHTML = '<div class="col-12 text-center py-4"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Loading team members...</p></div>';
     
-    // Load current team members
     fetchTeamMembers(teamId)
         .then(members => {
             currentTeamMembers = members;
@@ -2145,45 +2354,96 @@ function openRemoveMembersModal(teamId) {
 
 function renderRemoveMembers(members) {
     const container = document.getElementById('removeMembersContainer');
+    const noResultsEl = document.getElementById('removeMembersNoResults');
+    const visibleCountEl = document.getElementById('removeMembersVisibleCount');
     container.innerHTML = '';
+    if (noResultsEl) noResultsEl.classList.add('d-none');
     
-    if (members.length === 0) {
-        container.innerHTML = '<div class="col-12 text-center text-muted py-4">No members in this team.</div>';
+    if (!members || members.length === 0) {
+        container.innerHTML = '<div class="col-12 text-center text-muted py-4"><i class="bi bi-people fs-1 mb-3 d-block"></i><p class="mb-0">No members in this team.</p></div>';
+        if (visibleCountEl) visibleCountEl.textContent = '';
+        updateRemoveMembersSelectedCount();
         return;
     }
     
     members.forEach(member => {
+        const name = (member.name || '').trim() || 'Unknown';
         const col = document.createElement('div');
-        col.className = 'col-md-6 mb-2';
-        col.innerHTML = `
-            <div class="form-check p-2 border rounded">
-                <input class="form-check-input" type="checkbox" id="remove_student_${member.id}" value="${member.id}">
-                <label class="form-check-label" for="remove_student_${member.id}">
-                    ${member.name}
-                    ${member.role ? '<span class="badge bg-secondary ms-2">' + member.role + '</span>' : ''}
-                </label>
-            </div>
-        `;
+        col.className = 'col-md-6 remove-member-row';
+        col.setAttribute('data-name', name.toLowerCase());
+        col.setAttribute('data-student-id', String(member.id));
+        col.setAttribute('role', 'button');
+        col.setAttribute('tabindex', '0');
+        col.innerHTML = '<div class="remove-member-name-box p-2 border rounded text-center">' + escapeHtml(name) + (member.role ? ' <span class="badge bg-secondary ms-1">' + escapeHtml(member.role) + '</span>' : '') + '</div>';
+        col.addEventListener('click', function() {
+            this.classList.toggle('remove-member-selected');
+            updateRemoveMembersSelectedCount();
+        });
+        col.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                this.classList.toggle('remove-member-selected');
+                updateRemoveMembersSelectedCount();
+            }
+        });
         container.appendChild(col);
     });
+    filterRemoveMembers(document.getElementById('removeMemberSearch').value);
+    updateRemoveMembersSelectedCount();
+}
+
+function updateRemoveMembersSelectedCount() {
+    const selected = document.querySelectorAll('#removeMembersContainer .remove-member-row.remove-member-selected');
+    const n = selected.length;
+    const label = n === 1 ? '1 selected' : n + ' selected';
+    const countEl = document.getElementById('removeMembersSelectedCount');
+    const footerEl = document.getElementById('removeMembersFooterCount');
+    const btn = document.getElementById('removeMembersSubmitBtn');
+    if (countEl) countEl.textContent = label;
+    if (footerEl) footerEl.textContent = label;
+    if (btn) {
+        btn.innerHTML = n > 0 ? '<i class="bi bi-trash me-1"></i>Remove Selected Members (' + n + ')' : '<i class="bi bi-trash me-1"></i>Remove Selected Members';
+        btn.disabled = n === 0;
+    }
+}
+
+function selectAllVisibleRemoveMembers() {
+    document.querySelectorAll('#removeMembersContainer .remove-member-row.remove-member-visible').forEach(row => { row.classList.add('remove-member-selected'); });
+    updateRemoveMembersSelectedCount();
+}
+
+function deselectAllRemoveMembers() {
+    document.querySelectorAll('#removeMembersContainer .remove-member-row').forEach(row => { row.classList.remove('remove-member-selected'); });
+    updateRemoveMembersSelectedCount();
 }
 
 function filterRemoveMembers(searchTerm) {
-    const allRows = document.querySelectorAll('#removeMembersContainer .col-md-6');
-    allRows.forEach(row => {
-        const label = row.querySelector('label').textContent.toLowerCase();
-        if (label.includes(searchTerm.toLowerCase())) {
-            row.style.display = '';
-        } else {
-            row.style.display = 'none';
-        }
+    const term = (searchTerm || '').trim().toLowerCase();
+    const clearBtn = document.getElementById('removeMemberSearchClear');
+    if (clearBtn) clearBtn.classList.toggle('d-none', !term);
+    const rows = document.querySelectorAll('#removeMembersContainer .remove-member-row');
+    let visible = 0;
+    rows.forEach(row => {
+        const name = row.getAttribute('data-name') || '';
+        const show = !term || name.includes(term);
+        row.style.display = show ? '' : 'none';
+        row.classList.toggle('remove-member-visible', show);
+        if (show) visible++;
     });
+    const noResultsEl = document.getElementById('removeMembersNoResults');
+    const visibleEl = document.getElementById('removeMembersVisibleCount');
+    if (rows.length > 0) {
+        if (noResultsEl) noResultsEl.classList.toggle('d-none', visible > 0);
+        if (visibleEl) visibleEl.textContent = term ? visible + ' of ' + rows.length + ' shown' : rows.length + ' members';
+    } else if (visibleEl) visibleEl.textContent = '';
+    updateRemoveMembersSelectedCount();
 }
 
 function removeSelectedMembers() {
     const selectedIds = [];
-    document.querySelectorAll('#removeMembersContainer input[type="checkbox"]:checked').forEach(checkbox => {
-        selectedIds.push(parseInt(checkbox.value));
+    document.querySelectorAll('#removeMembersContainer .remove-member-row.remove-member-selected').forEach(row => {
+        const id = row.getAttribute('data-student-id');
+        if (id) selectedIds.push(parseInt(id));
     });
     
     if (selectedIds.length === 0) {

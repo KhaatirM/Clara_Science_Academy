@@ -68,7 +68,7 @@
                         </div>
                         <div class="card-footer bg-transparent border-0 p-4 pt-0">
                             {% if admin_view %}
-                                <a href="{{ url_for('management.admin_create_group_pdf_assignment', class_id=class_obj.id) }}" 
+                                <a href="{{ url_for('management.classes.admin_create_group_pdf_assignment', class_id=class_obj.id) }}" 
                                    class="btn btn-primary w-100">
                                     <i class="bi bi-file-earmark-plus me-2"></i>Create PDF/Paper Assignment
                                 </a>
@@ -115,7 +115,7 @@
                         </div>
                         <div class="card-footer bg-transparent border-0 p-4 pt-0">
                             {% if admin_view %}
-                                <a href="{{ url_for('management.admin_create_group_quiz_assignment', class_id=class_obj.id) }}" 
+                                <a href="{{ url_for('management.classes.admin_create_group_quiz_assignment', class_id=class_obj.id) }}" 
                                    class="btn btn-success w-100">
                                     <i class="bi bi-question-circle me-2"></i>Create Quiz Assignment
                                 </a>
@@ -162,7 +162,7 @@
                         </div>
                         <div class="card-footer bg-transparent border-0 p-4 pt-0">
                             {% if admin_view %}
-                                <a href="{{ url_for('management.admin_create_group_discussion_assignment', class_id=class_obj.id) }}" 
+                                <a href="{{ url_for('management.classes.admin_create_group_discussion_assignment', class_id=class_obj.id) }}" 
                                    class="btn btn-info w-100">
                                     <i class="bi bi-chat-dots me-2"></i>Create Discussion Assignment
                                 </a>

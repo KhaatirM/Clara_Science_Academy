@@ -506,11 +506,45 @@
                         <h6 class="home-updates-intro-title mb-2">
                             <i class="bi bi-calendar3 me-2"></i>Latest System Updates – February 2026
                         </h6>
-                        <p class="updates-intro-text mb-0">Recent improvements include a cleaner home page and schedule, plus new platform upgrades: <strong>Assignment Command Center</strong> for admins, <strong>smarter notifications</strong> when grades are posted, <strong>data-driven report card subjects</strong>, and a more maintainable codebase. Details below.</p>
+                        <p class="updates-intro-text mb-0">Recent improvements include <strong>Student Jobs (School Jobs)</strong> with streamlined add/remove members and an enhanced inspection flow, <strong>attendance</strong> auto-recorded on student login and end-of-day automark, plus the <strong>Assignment Command Center</strong>, smarter grade notifications, and a cleaner home and schedule. Details below.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- February 2026 - Student Jobs, Attendance & Inspections -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-clipboard-check me-2"></i>Student Jobs, Attendance & Inspections – February 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>School Jobs (Student Jobs) for Administrators:</strong> Add and remove team members, record inspections, and view inspection history now work correctly for School Administrators. APIs use management access so the Add Members and Remove Members modals load and submit without errors.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Add Members & Remove Members:</strong> Both modals use name-only, click-to-highlight selection (no checkboxes). You get "Select all visible," "Deselect all," search, and a live selected count. Team members display correctly for Cleaning Team 1 and Cleaning Team 2.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Conduct Inspection popup:</strong> Live score updates as you check deductions and bonuses. Sections are collapsible to reduce scrolling. Inspector name is pre-filled from your account. Submit shows a loading state, and "View Details" in inspection history opens a proper details modal instead of an alert. All inspection data is saved to the database.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Attendance on login:</strong> When a student logs in during the school day, attendance is recorded automatically—Present (login 7–10 AM) or Late (10 AM–3 PM) in the school timezone. No need to mark them manually for that day if they logged in.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>End-of-day automark:</strong> After 3:30 PM (school time), any student with no attendance record for that day is marked as "Unexcused Absence" when you open the unified attendance view for today.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Attendance UI:</strong> Present, Absent, Late, Excused, and Unexcused Absence are now clickable status pills instead of radio buttons. Mark-all and clear-all still work as before.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> Administrators can manage cleaning teams and run inspections from one place. Inspections and team membership are stored in the database. Attendance is easier to track with login-based recording and a clearer, pill-based interface.</p>
+                        </div>
+                    </div>
+
                     <!-- February 2026 - Platform improvements & Assignment Command Center -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-gear-wide-connected me-2"></i>Platform Improvements & Assignment Hub – February 2026</h6>
@@ -614,11 +648,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownFeb2026v3')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownFeb2026v4')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownFeb2026v3', 'true');
+            sessionStorage.setItem('updateModalShownFeb2026v4', 'true');
         }, 500);
     }
 });

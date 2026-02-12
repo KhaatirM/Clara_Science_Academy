@@ -16,6 +16,7 @@ from .notifications import (
     create_grade_update_digest,
 )
 from .activity_log import log_activity, get_user_activity_log
+from .attendance_on_login import record_school_day_attendance_on_login
 
 __all__ = [
     'get_grade_for_student',
@@ -29,4 +30,5 @@ __all__ = [
     'create_grade_update_digest',
     'log_activity',
     'get_user_activity_log',
+    'record_school_day_attendance_on_login',
 ]

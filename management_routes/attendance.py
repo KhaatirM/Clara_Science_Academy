@@ -197,16 +197,28 @@ def unified_attendance():
     # Get all students
     students = Student.query.order_by(Student.last_name, Student.first_name).all()
     
+    # End-of-day automark: if viewing today and it's >= 3:30 PM (school time), mark unrecorded students as Unexcused Absence
+    try:
+        from services.attendance_on_login import _now_in_school_tz, is_past_end_of_day_cutoff, apply_end_of_day_automark
+        school_today, _ = _now_in_school_tz(current_app)
+        if selected_date == school_today and is_past_end_of_day_cutoff(current_app):
+            apply_end_of_day_automark(current_app, selected_date)
+    except Exception as e:
+        current_app.logger.warning('End-of-day attendance automark failed: %s', e)
+    
     # Get existing attendance records for the selected date
     existing_records = {}
     if selected_date:
         records = SchoolDayAttendance.query.filter_by(date=selected_date).all()
         existing_records = {record.student_id: record for record in records}
     
-    # Calculate school day statistics
+    # Calculate school day statistics (Absent = Absent + Unexcused Absence)
     total_students = len(students)
     present_count = sum(1 for record in existing_records.values() if record.status == 'Present')
-    absent_count = sum(1 for record in existing_records.values() if record.status == 'Absent')
+    absent_count = sum(
+        1 for record in existing_records.values()
+        if record.status in ('Absent', 'Unexcused Absence')
+    )
     late_count = sum(1 for record in existing_records.values() if record.status == 'Late')
     excused_count = sum(1 for record in existing_records.values() if record.status == 'Excused Absence')
     

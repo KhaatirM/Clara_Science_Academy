@@ -57,6 +57,10 @@ class Config:
     # Generate a key using: from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())
     ENCRYPTION_KEY = os.environ.get('ENCRYPTION_KEY')
 
+    # School timezone for login-based attendance (e.g. 'America/New_York'). Used to determine
+    # 7–10 AM = Present, 10 AM–3 PM = Late. Default UTC if not set.
+    SCHOOL_TIMEZONE = os.environ.get('SCHOOL_TIMEZONE') or 'UTC'
+
     # Ensure the upload folder exists
     if not os.path.exists(UPLOAD_FOLDER):
         os.makedirs(UPLOAD_FOLDER)

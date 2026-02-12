@@ -265,3 +265,61 @@
         font-size: 1.5rem;
     }
 }
+
+/* Add Members modal: name-only boxes (no checkboxes) */
+.add-member-name-box {
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    font-weight: 500;
+    min-height: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #212529;
+}
+.add-member-row:hover .add-member-name-box {
+    background-color: rgba(13, 110, 253, 0.08);
+    border-color: rgba(13, 110, 253, 0.4);
+}
+.add-member-row.add-member-selected .add-member-name-box {
+    background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+    border-color: #0d6efd;
+    color: white;
+    box-shadow: 0 2px 8px rgba(13, 110, 253, 0.35);
+}
+
+/* Remove Members modal: name-only boxes (no checkboxes) */
+.remove-member-name-box {
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    font-weight: 500;
+    min-height: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #212529;
+}
+.remove-member-row:hover .remove-member-name-box {
+    background-color: rgba(255, 193, 7, 0.15);
+    border-color: rgba(255, 193, 7, 0.6);
+}
+.remove-member-row.remove-member-selected .remove-member-name-box {
+    background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+    border-color: #ffc107;
+    color: #212529;
+    box-shadow: 0 2px 8px rgba(255, 193, 7, 0.4);
+}
+.remove-member-row.remove-member-selected .remove-member-name-box .badge {
+    background-color: rgba(0, 0, 0, 0.2) !important;
+    color: inherit;
+}
+
+/* Inspection modal: live score & collapsible sections */
+.inspection-score-badge { font-weight: 600; }
+#inspectionLiveScoreBar .text-white-50 { opacity: 0.9; }
+.inspection-section-card .collapse-icon {
+    transition: transform 0.2s ease;
+}
+.inspection-section-card .card-header button:not(.collapsed) .collapse-icon {
+    transform: rotate(-180deg);
+}

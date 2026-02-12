@@ -189,6 +189,14 @@ def login():
                     user_agent=request.headers.get('User-Agent')
                 )
                 
+                # Auto-record school-day attendance for students (7–10 AM Present, 10 AM–3 PM Late)
+                if user.role == 'Student' and user.student_id:
+                    try:
+                        from services.attendance_on_login import record_school_day_attendance_on_login
+                        record_school_day_attendance_on_login(user)
+                    except Exception as e:
+                        current_app.logger.warning('Attendance on login failed: %s', e)
+                
                 # Check if user has temporary password or is first-time login
                 if user.is_temporary_password or user.login_count == 1:
                     flash('You are using a temporary password or this is your first login. Please change your password for security.', 'warning')
@@ -869,6 +877,14 @@ def google_callback():
                 ip_address=request.remote_addr,
                 user_agent=request.headers.get('User-Agent')
             )
+            
+            # Auto-record school-day attendance for students (7–10 AM Present, 10 AM–3 PM Late)
+            if user.role == 'Student' and user.student_id:
+                try:
+                    from services.attendance_on_login import record_school_day_attendance_on_login
+                    record_school_day_attendance_on_login(user)
+                except Exception as e:
+                    current_app.logger.warning('Attendance on login failed: %s', e)
             
             flash(f'Welcome back, {user.first_name or google_given_name}! Logged in successfully with Google.', 'success')
             

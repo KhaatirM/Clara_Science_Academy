@@ -166,35 +166,19 @@
                                 </thead>
                                 <tbody>
                                     {% for student in students %}
-                                    <tr>
+                                    {% set existing_record = existing_records.get(student.id) %}
+                                    {% set current_status = existing_record.status if existing_record else '' %}
+                                    <tr class="school-day-row">
                                         <td>{{ student.first_name }} {{ student.last_name }}</td>
                                         <td>{{ student.grade_level | display_grade }}</td>
                                         <td>
-                                            {% set existing_record = existing_records.get(student.id) %}
-                                            <div class="btn-group status-btn-group" role="group">
-                                                <input type="radio" class="btn-check status-radio" name="status-{{ student.id }}" id="present-{{ student.id }}" value="Present" 
-                                                       {% if existing_record and existing_record.status == 'Present' %}checked{% endif %}>
-                                                <label class="btn btn-status-present" for="present-{{ student.id }}">
-                                                    <i class="bi bi-check-circle-fill me-1"></i>Present
-                                                </label>
-                                                
-                                                <input type="radio" class="btn-check status-radio" name="status-{{ student.id }}" id="absent-{{ student.id }}" value="Absent" 
-                                                       {% if existing_record and existing_record.status == 'Absent' %}checked{% endif %}>
-                                                <label class="btn btn-status-absent" for="absent-{{ student.id }}">
-                                                    <i class="bi bi-x-circle-fill me-1"></i>Absent
-                                                </label>
-                                                
-                                                <input type="radio" class="btn-check status-radio" name="status-{{ student.id }}" id="late-{{ student.id }}" value="Late" 
-                                                       {% if existing_record and existing_record.status == 'Late' %}checked{% endif %}>
-                                                <label class="btn btn-status-late" for="late-{{ student.id }}">
-                                                    <i class="bi bi-clock-fill me-1"></i>Late
-                                                </label>
-                                                
-                                                <input type="radio" class="btn-check status-radio" name="status-{{ student.id }}" id="excused-{{ student.id }}" value="Excused Absence" 
-                                                       {% if existing_record and existing_record.status == 'Excused Absence' %}checked{% endif %}>
-                                                <label class="btn btn-status-excused" for="excused-{{ student.id }}">
-                                                    <i class="bi bi-info-circle-fill me-1"></i>Excused
-                                                </label>
+                                            <input type="hidden" name="status-{{ student.id }}" class="school-day-status-input" value="{{ current_status }}" data-student-id="{{ student.id }}">
+                                            <div class="status-btn-group" role="group">
+                                                <span class="btn btn-status-present status-pill" data-status="Present" data-student-id="{{ student.id }}" title="Present"><i class="bi bi-check-circle-fill me-1"></i>Present</span>
+                                                <span class="btn btn-status-absent status-pill" data-status="Absent" data-student-id="{{ student.id }}" title="Absent"><i class="bi bi-x-circle-fill me-1"></i>Absent</span>
+                                                <span class="btn btn-status-late status-pill" data-status="Late" data-student-id="{{ student.id }}" title="Late"><i class="bi bi-clock-fill me-1"></i>Late</span>
+                                                <span class="btn btn-status-excused status-pill" data-status="Excused Absence" data-student-id="{{ student.id }}" title="Excused"><i class="bi bi-info-circle-fill me-1"></i>Excused</span>
+                                                <span class="btn btn-status-unexcused status-pill" data-status="Unexcused Absence" data-student-id="{{ student.id }}" title="Unexcused"><i class="bi bi-exclamation-circle-fill me-1"></i>Unexcused</span>
                                             </div>
                                         </td>
                                         <td>
@@ -615,111 +599,163 @@ document.getElementById('attendanceTabs').addEventListener('shown.bs.tab', funct
     console.log('Switched to tab:', target);
 });
 
+// School Day: highlight-based status selection (no radios)
+document.addEventListener('DOMContentLoaded', function() {
+    // Apply initial highlight from hidden input value
+    document.querySelectorAll('.school-day-status-input').forEach(function(inp) {
+        const val = (inp.value || '').trim();
+        if (!val) return;
+        const row = inp.closest('tr');
+        const pill = row.querySelector('.status-pill[data-status="' + val + '"]');
+        if (pill) pill.classList.add('status-selected');
+    });
+    // Click on pill: set hidden input and highlight
+    document.querySelectorAll('.status-pill').forEach(function(pill) {
+        pill.addEventListener('click', function() {
+            const studentId = this.getAttribute('data-student-id');
+            const status = this.getAttribute('data-status');
+            const row = this.closest('tr');
+            const input = row.querySelector('.school-day-status-input[name="status-' + studentId + '"]');
+            if (!input) return;
+            // Toggle off if same status clicked again
+            if (this.classList.contains('status-selected') && input.value === status) {
+                this.classList.remove('status-selected');
+                input.value = '';
+                return;
+            }
+            row.querySelectorAll('.status-pill').forEach(function(p) { p.classList.remove('status-selected'); });
+            this.classList.add('status-selected');
+            input.value = status;
+        });
+    });
+});
+
 // Bulk Actions for School Day Attendance
 function markAllSchoolDay(status) {
-    const radios = document.querySelectorAll(`#schoolDayForm input[type="radio"][value="${status}"]`);
-    radios.forEach(radio => {
-        radio.checked = true;
+    document.querySelectorAll('#schoolDayForm .school-day-status-input').forEach(function(inp) {
+        inp.value = status;
+    });
+    document.querySelectorAll('#schoolDayForm .status-pill').forEach(function(pill) {
+        pill.classList.toggle('status-selected', pill.getAttribute('data-status') === status);
     });
 }
 
 function clearAllSchoolDay() {
     if (confirm('Are you sure you want to clear all attendance selections?')) {
-        const radios = document.querySelectorAll('#schoolDayForm input[type="radio"]:checked');
-        radios.forEach(radio => {
-            radio.checked = false;
+        document.querySelectorAll('#schoolDayForm .school-day-status-input').forEach(function(inp) {
+            inp.value = '';
+        });
+        document.querySelectorAll('#schoolDayForm .status-pill').forEach(function(pill) {
+            pill.classList.remove('status-selected');
         });
     }
 }
 </script>
 
 <style>
-/* Enhanced Status Radio Buttons */
+/* School Day: status pills (click to highlight, no radios) */
 .status-btn-group {
     display: flex;
     flex-wrap: wrap;
     gap: 0.25rem;
 }
 
+.status-pill {
+    cursor: pointer;
+    user-select: none;
+}
+
 .btn-status-present,
 .btn-status-absent,
 .btn-status-late,
-.btn-status-excused {
+.btn-status-excused,
+.btn-status-unexcused {
     border: 2px solid;
     font-weight: 600;
     font-size: 0.85rem;
     padding: 0.4rem 0.75rem;
     border-radius: 0.5rem;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
     white-space: nowrap;
     display: inline-flex;
     align-items: center;
     justify-content: center;
 }
 
-/* Present Button - Green */
+/* Present - Green */
 .btn-status-present {
     background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
     border-color: #28a745;
     color: #155724;
 }
-
-.btn-check:checked + .btn-status-present,
-.btn-status-present:hover {
+.btn-status-present:hover,
+.btn-status-present.status-selected {
     background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
     border-color: #28a745;
     color: white;
-    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
-    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.35);
 }
+.btn-status-present.status-selected { transform: translateY(-1px); }
 
-/* Absent Button - Red */
+/* Absent - Red */
 .btn-status-absent {
     background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
     border-color: #dc3545;
     color: #721c24;
 }
-
-.btn-check:checked + .btn-status-absent,
-.btn-status-absent:hover {
+.btn-status-absent:hover,
+.btn-status-absent.status-selected {
     background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
     border-color: #dc3545;
     color: white;
-    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
-    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.35);
 }
+.btn-status-absent.status-selected { transform: translateY(-1px); }
 
-/* Late Button - Yellow */
+/* Late - Yellow */
 .btn-status-late {
     background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
     border-color: #ffc107;
     color: #856404;
 }
-
-.btn-check:checked + .btn-status-late,
-.btn-status-late:hover {
+.btn-status-late:hover,
+.btn-status-late.status-selected {
     background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
     border-color: #ffc107;
     color: white;
-    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4);
-    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(255, 193, 7, 0.35);
 }
+.btn-status-late.status-selected { transform: translateY(-1px); }
 
-/* Excused Button - Blue */
+/* Excused - Blue */
 .btn-status-excused {
     background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
     border-color: #17a2b8;
     color: #0c5460;
 }
-
-.btn-check:checked + .btn-status-excused,
-.btn-status-excused:hover {
+.btn-status-excused:hover,
+.btn-status-excused.status-selected {
     background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
     border-color: #17a2b8;
     color: white;
-    box-shadow: 0 4px 12px rgba(23, 162, 184, 0.4);
-    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(23, 162, 184, 0.35);
 }
+.btn-status-excused.status-selected { transform: translateY(-1px); }
+
+/* Unexcused - Dark red */
+.btn-status-unexcused {
+    background: linear-gradient(135deg, #e8d5d5 0%, #e2c4c4 100%);
+    border-color: #a94442;
+    color: #843534;
+}
+.btn-status-unexcused:hover,
+.btn-status-unexcused.status-selected {
+    background: linear-gradient(135deg, #c9302c 0%, #a94442 100%);
+    border-color: #a94442;
+    color: white;
+    box-shadow: 0 2px 8px rgba(169, 68, 66, 0.35);
+}
+.btn-status-unexcused.status-selected { transform: translateY(-1px); }
 
 /* Enhanced Button Hover Effects for Unified Attendance */
 .btn-status-action:hover {

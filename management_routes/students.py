@@ -2178,9 +2178,9 @@ def student_jobs():
 
 @bp.route('/api/students')
 @login_required
-@teacher_required
+@management_required
 def api_get_students():
-    """API endpoint to get all students for dynamic team creation"""
+    """API endpoint to get all students (Student Jobs / Add Members)."""
     try:
         # Get all students (no is_active filter since Student model doesn't have that column)
         students = Student.query.all()
@@ -2212,9 +2212,9 @@ def api_get_students():
 
 @bp.route('/api/team-members/<team_identifier>')
 @login_required
-@teacher_required
+@management_required
 def api_get_team_members(team_identifier):
-    """API endpoint to get team members by team ID or team name"""
+    """API endpoint to get team members by team ID or team name."""
     try:
         # Try to find team by ID first (if team_identifier is numeric)
         team = None
@@ -2292,6 +2292,235 @@ def api_get_team_members(team_identifier):
             'error': str(e)
         }), 500
 
+
+# ============================================================
+# Route: /api/team-members/<int:team_id>/add', methods=['POST']
+# ============================================================
+def _resolve_cleaning_team(team_id_or_num):
+    """Resolve team by id or by number (1 -> Team 1 / Cleaning Team 1, 2 -> Team 2 / Cleaning Team 2)."""
+    team = CleaningTeam.query.filter_by(id=team_id_or_num, is_active=True).first()
+    if not team and team_id_or_num in (1, 2):
+        for name in (f'Team {team_id_or_num}', f'Cleaning Team {team_id_or_num}', f'Cleanup Team {team_id_or_num}'):
+            team = CleaningTeam.query.filter_by(team_name=name, is_active=True).first()
+            if team:
+                break
+    return team
+
+
+@bp.route('/api/team-members/<int:team_id>/add', methods=['POST'])
+@login_required
+@management_required
+def api_team_members_add(team_id):
+    """Add students to a cleaning team."""
+    try:
+        team = _resolve_cleaning_team(team_id)
+        if not team:
+            return jsonify({'success': False, 'error': 'Team not found'}), 404
+        data = request.get_json() or {}
+        student_ids = data.get('student_ids') or []
+        if not student_ids:
+            return jsonify({'success': False, 'error': 'No student_ids provided'}), 400
+        added = 0
+        tid = team.id
+        for sid in student_ids:
+            existing = CleaningTeamMember.query.filter_by(
+                team_id=tid, student_id=int(sid), is_active=True
+            ).first()
+            if not existing:
+                member = CleaningTeamMember(
+                    team_id=tid,
+                    student_id=int(sid),
+                    role='Team Member',
+                    is_active=True
+                )
+                db.session.add(member)
+                added += 1
+        db.session.commit()
+        return jsonify({'success': True, 'message': f'Added {added} member(s).'})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error adding team members: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ============================================================
+# Route: /api/team-members/<int:team_id>/remove', methods=['POST']
+# ============================================================
+@bp.route('/api/team-members/<int:team_id>/remove', methods=['POST'])
+@login_required
+@management_required
+def api_team_members_remove(team_id):
+    """Remove students from a cleaning team (soft-deactivate)."""
+    try:
+        team = _resolve_cleaning_team(team_id)
+        if not team:
+            return jsonify({'success': False, 'error': 'Team not found'}), 404
+        data = request.get_json() or {}
+        # Frontend may send student_ids or member ids; support both
+        student_ids = data.get('student_ids') or []
+        member_ids = data.get('member_ids') or []
+        if not student_ids and not member_ids:
+            return jsonify({'success': False, 'error': 'No student_ids or member_ids provided'}), 400
+        removed = 0
+        tid = team.id
+        if student_ids:
+            for sid in student_ids:
+                m = CleaningTeamMember.query.filter_by(
+                    team_id=tid, student_id=int(sid), is_active=True
+                ).first()
+                if m:
+                    m.is_active = False
+                    removed += 1
+        for mid in member_ids:
+            m = CleaningTeamMember.query.filter_by(id=int(mid), team_id=tid, is_active=True).first()
+            if m:
+                m.is_active = False
+                removed += 1
+        db.session.commit()
+        return jsonify({'success': True, 'message': f'Removed {removed} member(s).'})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error removing team members: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ============================================================
+# Route: /api/team-members/<int:member_id>/update', methods=['POST']
+# ============================================================
+@bp.route('/api/team-members/<int:member_id>/update', methods=['POST'])
+@login_required
+@management_required
+def api_team_member_update(member_id):
+    """Update a team member's role and assignment description."""
+    try:
+        member = CleaningTeamMember.query.filter_by(id=member_id, is_active=True).first()
+        if not member:
+            return jsonify({'success': False, 'error': 'Member not found'}), 404
+        data = request.get_json() or {}
+        if 'role' in data:
+            member.role = (data['role'] or '').strip() or member.role
+        if 'assignment_description' in data:
+            member.assignment_description = (data.get('assignment_description') or '').strip() or None
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Member updated.'})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error updating team member: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ============================================================
+# Route: /api/team-inspections/<team_identifier>
+# ============================================================
+@bp.route('/api/team-inspections/<team_identifier>')
+@login_required
+@management_required
+def api_team_inspections(team_identifier):
+    """Get inspection history for a team (by team number or id)."""
+    try:
+        team = None
+        if team_identifier.isdigit():
+            tid = int(team_identifier)
+            team = CleaningTeam.query.filter_by(id=tid, is_active=True).first()
+            if not team:
+                team = CleaningTeam.query.filter_by(team_name=f'Team {tid}', is_active=True).first()
+        if not team:
+            team = CleaningTeam.query.filter_by(team_name=team_identifier, is_active=True).first()
+        if not team:
+            return jsonify({'success': False, 'error': 'Team not found'}), 404
+        inspections = CleaningInspection.query.filter_by(team_id=team.id).order_by(
+            CleaningInspection.inspection_date.desc()
+        ).limit(50).all()
+        out = []
+        for i in inspections:
+            out.append({
+                'id': i.id,
+                'date': i.inspection_date.isoformat() if hasattr(i.inspection_date, 'isoformat') else str(i.inspection_date),
+                'score': i.final_score,
+                'major_deductions': i.major_deductions,
+                'bonus_points': i.bonus_points,
+                'status': 'Passed' if i.final_score >= 60 else 'Failed - Re-do Required',
+                'inspector_name': i.inspector_name,
+                'inspector_notes': i.inspector_notes or ''
+            })
+        return jsonify({'success': True, 'inspections': out})
+    except Exception as e:
+        current_app.logger.error(f"Error fetching team inspections: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ============================================================
+# Route: /api/inspection/<int:inspection_id>
+# ============================================================
+@bp.route('/api/inspection/<int:inspection_id>')
+@login_required
+@management_required
+def api_inspection_get(inspection_id):
+    """Get a single inspection by id."""
+    try:
+        i = CleaningInspection.query.filter_by(id=inspection_id).first()
+        if not i:
+            return jsonify({'success': False, 'error': 'Inspection not found'}), 404
+        team = CleaningTeam.query.get(i.team_id)
+        team_name = team.team_name if team else f'Team {i.team_id}'
+        return jsonify({
+            'success': True,
+            'inspection': {
+                'id': i.id,
+                'team_id': i.team_id,
+                'team_name': team_name,
+                'date': i.inspection_date.isoformat() if hasattr(i.inspection_date, 'isoformat') else str(i.inspection_date),
+                'score': i.final_score,
+                'major_deductions': i.major_deductions,
+                'moderate_deductions': i.moderate_deductions,
+                'minor_deductions': i.minor_deductions,
+                'bonus_points': i.bonus_points,
+                'inspector_name': i.inspector_name,
+                'inspector_notes': i.inspector_notes or '',
+                'bathroom_not_restocked': i.bathroom_not_restocked,
+                'trash_can_left_full': i.trash_can_left_full,
+                'floor_not_swept': i.floor_not_swept,
+                'materials_left_out': i.materials_left_out,
+                'tables_missed': i.tables_missed,
+                'classroom_trash_full': i.classroom_trash_full,
+                'bathroom_floor_poor': i.bathroom_floor_poor,
+                'not_finished_on_time': i.not_finished_on_time,
+                'small_debris_left': i.small_debris_left,
+                'trash_spilled': i.trash_spilled,
+                'dispensers_half_filled': i.dispensers_half_filled,
+                'exceptional_finish': i.exceptional_finish,
+                'speed_efficiency': i.speed_efficiency,
+                'going_above_beyond': i.going_above_beyond,
+                'teamwork_award': i.teamwork_award,
+            }
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error fetching inspection: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ============================================================
+# Route: /api/save-inspection', methods=['POST'] (alias for student-jobs/inspection)
+# ============================================================
+@bp.route('/api/save-inspection', methods=['POST'])
+@login_required
+@management_required
+def api_save_inspection():
+    """Save cleaning inspection (same as student-jobs/inspection). Used by Student Jobs UI."""
+    return submit_cleaning_inspection()
+
+
+# ============================================================
+# Route: /api/dynamic-teams (GET returns empty; POST returns 400 so UI does not break)
+# ============================================================
+@bp.route('/api/dynamic-teams', methods=['GET', 'POST'])
+@login_required
+@management_required
+def api_dynamic_teams():
+    """GET: list dynamic teams (empty). POST: not implemented."""
+    if request.method == 'GET':
+        return jsonify({'success': True, 'teams': []})
+    return jsonify({'success': False, 'error': 'Creating new teams from this panel is not available. Use existing cleaning teams.'}), 400
 
 
 # ============================================================

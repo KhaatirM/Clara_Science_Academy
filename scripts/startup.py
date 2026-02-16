@@ -33,7 +33,8 @@ def run_database_fix():
                 'fix_bug_report_table_schema.py',
                 'fix_class_table_schema.py',
                 'fix_production_voided_fields.py',
-                'fix_production_teacher_staff_deleted_fields.py'
+                'fix_production_teacher_staff_deleted_fields.py',
+                'add_quiz_sections.py'
             ]
             
             # Get the maintenance_scripts directory path

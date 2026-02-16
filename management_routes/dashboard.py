@@ -126,7 +126,7 @@ def management_dashboard():
                 .all()
             
             # Get group assignments and group grades
-            from models import GroupAssignment, GroupGrade, StudentGroup, StudentGroupMember, Enrollment
+            from models import GroupAssignment, GroupGrade, StudentGroup, StudentGroupMember
             group_assignments = GroupAssignment.query.all()
             
             # Get group grades for all students

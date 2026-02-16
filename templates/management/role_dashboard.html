@@ -215,21 +215,24 @@
                             {% if notifications %}
                                 <span class="badge bg-danger rounded-pill ms-2">{{ notifications|length }}</span>
                             {% endif %}
+                            <small class="text-muted fw-normal ms-1">(last 7 days)</small>
                         </h5>
                         <div class="admin-notification-list">
                             {% if notifications %}
                                 {% for notification in notifications %}
                                 <div class="admin-notification-item">
                                     <div class="admin-notification-icon">
-                                        {% if notification.notification_type == 'grade' %}
+                                        {% if notification.type == 'grade' %}
                                             <i class="bi bi-clipboard-check-fill text-success"></i>
-                                        {% elif notification.notification_type == 'assignment' %}
+                                        {% elif notification.type == 'assignment' %}
                                             <i class="bi bi-journal-plus-fill text-primary"></i>
-                                        {% elif notification.notification_type == 'attendance' %}
+                                        {% elif notification.type == 'attendance' %}
                                             <i class="bi bi-calendar-check-fill text-info"></i>
-                                        {% elif notification.notification_type == 'submission' %}
+                                        {% elif notification.type == 'submission' %}
                                             <i class="bi bi-file-earmark-check-fill text-warning"></i>
-                                        {% elif notification.notification_type == 'alert' or notification.notification_type == 'warning' %}
+                                        {% elif notification.type == 'extension_request' %}
+                                            <i class="bi bi-clock-history text-info"></i>
+                                        {% elif notification.type == 'alert' or notification.type == 'warning' %}
                                             <i class="bi bi-exclamation-triangle-fill text-warning"></i>
                                         {% else %}
                                             <i class="bi bi-bell-fill text-secondary"></i>
@@ -241,6 +244,9 @@
                                         <small class="admin-notification-time">
                                             {{ notification.timestamp.strftime('%b %d, %I:%M %p') if notification.timestamp else 'Recently' }}
                                         </small>
+                                        {% if notification.link %}
+                                        <a href="{{ notification.link }}" class="btn btn-sm btn-outline-primary mt-2">View</a>
+                                        {% endif %}
                                     </div>
                                 </div>
                                 {% endfor %}
@@ -257,6 +263,7 @@
                     <div class="admin-recent-activity">
                         <h5 class="admin-section-title">
                             <i class="bi bi-clock-history me-2"></i>Recent Activity
+                            <small class="text-muted fw-normal ms-1">(last 7 days)</small>
                         </h5>
                         <div class="admin-activity-timeline">
                             {% if recent_activity %}
@@ -271,6 +278,8 @@
                                                 <i class="bi bi-journal-plus text-primary me-1"></i>
                                             {% elif activity.type == 'submission' %}
                                                 <i class="bi bi-file-earmark-check text-warning me-1"></i>
+                                            {% elif activity.type == 'extension_request' %}
+                                                <i class="bi bi-clock-history text-info me-1"></i>
                                             {% else %}
                                                 <i class="bi bi-circle-fill text-secondary me-1"></i>
                                             {% endif %}
@@ -280,6 +289,9 @@
                                         <small class="admin-activity-time">
                                             {{ activity.timestamp.strftime('%b %d, %I:%M %p') if activity.timestamp else 'Recently' }}
                                         </small>
+                                        {% if activity.link %}
+                                        <a href="{{ activity.link }}" class="btn btn-sm btn-outline-primary mt-2 d-inline-block">View</a>
+                                        {% endif %}
                                     </div>
                                 </div>
                                 {% endfor %}

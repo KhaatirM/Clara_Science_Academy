@@ -1080,10 +1080,36 @@ def review_extension_request(request_id):
             extension_request.reviewed_at = datetime.utcnow()
             extension_request.reviewed_by = teacher.id if teacher else None
             extension_request.review_notes = review_notes if review_notes else 'Extension request rejected'
-            
+
             message = 'Extension request rejected'
-        
+
         db.session.commit()
+
+        # Notify the student that their extension request was accepted or rejected (don't fail the request if this fails)
+        try:
+            student_user = getattr(extension_request.student, 'user', None)
+            if student_user and student_user.id:
+                from app import create_notification
+                assign_title = extension_request.assignment.title
+                if action == 'approve':
+                    create_notification(
+                        student_user.id,
+                        'extension_request',
+                        'Extension request approved',
+                        f'Your extension request for "{assign_title}" was approved. New due date: {extension_request.requested_due_date.strftime("%B %d, %Y at %I:%M %p")}.',
+                        link=url_for('student.student_assignments')
+                    )
+                else:
+                    create_notification(
+                        student_user.id,
+                        'extension_request',
+                        'Extension request not approved',
+                        f'Your extension request for "{assign_title}" was not approved.' + (f' Note: {review_notes}' if review_notes else ''),
+                        link=url_for('student.student_assignments')
+                    )
+        except Exception as notify_err:
+            current_app.logger.warning(f"Could not create extension notification for student: {notify_err}")
+
         return jsonify({'success': True, 'message': message})
         
     except Exception as e:

@@ -481,7 +481,7 @@
     </div>
 </div>
 
-<!-- Update Modal - Feb 2026 (Platform improvements, Assignment Command Center, Home/Schedule/Updates) -->
+<!-- Update Modal - System updates with dates -->
 <div class="modal fade" id="updateModal" tabindex="-1" aria-labelledby="updateModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content home-updates-modal">
@@ -492,7 +492,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title mb-0" id="updateModalLabel">System Updates</h5>
-                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements</p>
+                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated February 15, 2026</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -504,13 +504,65 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – February 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – February 15, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0">Recent improvements include <strong>Student Jobs (School Jobs)</strong> with streamlined add/remove members and an enhanced inspection flow, <strong>attendance</strong> auto-recorded on student login and end-of-day automark, plus the <strong>Assignment Command Center</strong>, smarter grade notifications, and a cleaner home and schedule. Details below.</p>
+                        <p class="updates-intro-text mb-0">Recent improvements include <strong>Dashboard Notifications & Recent Activity</strong> (working for admins and teachers; teachers notified when students request extensions), <strong>Quiz experience</strong> (Listen button for text-to-speech, Previous/Next at bottom, Submit after questions), <strong>Teacher home</strong> (total students = unique students you teach), <strong>Admin dashboard</strong> (notifications/activity last 7 days, compact layout), plus Extension Requests, Communications closed, sidebar, and quiz tools. Details below.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- February 15, 2026 - Dashboards, Quiz UX, Teacher stats -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-speedometer2 me-2"></i>Dashboards, Quiz Experience & Teacher Stats – February 15, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Notifications & Recent Activity (School Administrators / Directors):</strong> The home dashboard now loads and displays real notifications and recent activity. Notifications show the latest items (e.g. new extension requests); Recent Activity shows extension requests, grades entered, submissions, and new assignments from the last 7 days. The panels are compact and scrollable so they don’t take over the page. Items older than 7 days are no longer shown.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Notifications for Teachers:</strong> Teachers now see in-app notifications when a student submits an extension request for one of their assignments. Notifications and Recent Activity on the teacher home page are wired up and display correctly.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Teacher home – Total students:</strong> The “Total students” stat on the teacher dashboard now counts only the unique students that teacher teaches (across their classes). A student in two of your classes is counted once, so the number reflects how many students you have in total.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Quiz – Listen (text-to-speech):</strong> When taking a quiz, each question has a <strong>Listen</strong> button. Click it to hear the question and answer choices read aloud using your device’s built-in speech. Available for all students by default; no extra setup required.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Quiz – Navigation and Submit:</strong> Previous and Next are now at the <strong>bottom</strong> of each question, so students answer first and then move between questions. Submit Quiz and Back to Assignments sit below the navigation. When you reach the last question, a short message reminds you that you can submit when ready.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> Admins and teachers get useful notifications and activity on their home screen. Teachers see extension requests and an accurate student count. Students have a clearer quiz flow and optional read-aloud for every question.</p>
+                        </div>
+                    </div>
+
+                    <!-- February 14, 2026 - Extension Requests & Communications -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-clock-history me-2"></i>Extension Requests & Communications – February 14, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Extension Requests (Assignments & Grades):</strong> The Extension Requests tab has a new design with a clear hero header, stat cards (Pending/Approved/Rejected), and styled request cards. Approve, Reject, and View Details buttons now work correctly for both teachers and administrators; View Details opens a modal with full request info.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Student notifications for extensions:</strong> When a teacher or admin approves or rejects an extension request, the student receives an in-app notification with the outcome and a link to Assignments.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Communications tab closed:</strong> The Communications item has been removed from the sidebar for all roles (Director, School Administrator, Teacher, Student). The feature is temporarily unavailable from the main navigation.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> Teachers and admins can reliably review extension requests with a clearer layout and working actions. Students are notified when their request is approved or rejected. The Communications tab is no longer visible until it is re-enabled.</p>
+                        </div>
+                    </div>
+
                     <!-- February 2026 - Student Jobs, Attendance & Inspections -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-clipboard-check me-2"></i>Student Jobs, Attendance & Inspections – February 2026</h6>
@@ -542,6 +594,32 @@
                         </ul>
                         <div class="alert alert-info mt-3">
                             <p class="mb-0"><strong>Impact:</strong> Administrators can manage cleaning teams and run inspections from one place. Inspections and team membership are stored in the database. Attendance is easier to track with login-based recording and a clearer, pill-based interface.</p>
+                        </div>
+                    </div>
+
+                    <!-- February 14, 2026 - Quizzes & Grades -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-journal-check me-2"></i>Quizzes & Grades – February 14, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Quiz sections:</strong> Quizzes can now be organized into parts (e.g. Part A, Part B). Section headers appear when taking or grading a quiz. Sections are manageable when creating or editing a quiz.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Import from Question Bank & bulk add:</strong> When creating a quiz, you can add questions from a saved question bank, bulk-add a number of questions, paste a list (one line per short-answer question), or import from CSV. A "Format help" button explains the CSV format.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Duplicate question:</strong> Each question card has a Duplicate button to copy the question (and options) and insert it right after.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Grades view average:</strong> In Assignments & Grades → class → Grades View, the average is now shown as a percentage of each assignment’s total points (e.g. 45/50 → 90%) instead of a raw score out of 100.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> Creating and managing quizzes is faster with sections, bank import, bulk add, paste, CSV, and duplicate. Grade averages are easier to interpret as percentages.</p>
                         </div>
                     </div>
 
@@ -648,11 +726,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownFeb2026v4')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownFeb15_2026')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownFeb2026v4', 'true');
+            sessionStorage.setItem('updateModalShownFeb15_2026', 'true');
         }, 500);
     }
 });

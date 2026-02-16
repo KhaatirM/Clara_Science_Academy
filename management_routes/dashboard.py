@@ -6,7 +6,8 @@ from flask import Blueprint, render_template, request, flash, redirect, url_for,
 from flask_login import login_required, current_user
 from decorators import management_required
 from models import (
-    db, Student, TeacherStaff, Class, Assignment, Grade, Submission, Notification, Enrollment, Attendance, AssignmentRedo, AssignmentReopening
+    db, Student, TeacherStaff, Class, Assignment, Grade, Submission, Notification, Enrollment, Attendance, AssignmentRedo, AssignmentReopening,
+    User, ExtensionRequest
 )
 from sqlalchemy import or_, and_
 from sqlalchemy.orm import joinedload
@@ -312,6 +313,81 @@ def management_dashboard():
             at_risk_alerts = []  # Ensure it's still a list even if there's an error
         # --- END ALERTS ---
         
+        # --- Notifications & Recent Activity (only last 7 days, limited count) ---
+        activity_cutoff = now - timedelta(days=7)
+        notifications = Notification.query.filter(
+            Notification.user_id == current_user.id,
+            Notification.timestamp >= activity_cutoff
+        ).order_by(Notification.timestamp.desc()).limit(5).all()
+
+        recent_activity = []
+        # Extension requests (requested or reviewed in last 7 days)
+        for ext in ExtensionRequest.query.filter(
+            or_(ExtensionRequest.requested_at >= activity_cutoff, and_(ExtensionRequest.reviewed_at.isnot(None), ExtensionRequest.reviewed_at >= activity_cutoff))
+        ).order_by(ExtensionRequest.requested_at.desc()).limit(5).all():
+            try:
+                if ext.reviewed_at:
+                    recent_activity.append({
+                        'type': 'extension_request',
+                        'title': f'Extension {ext.status.lower()} for {ext.assignment.title}',
+                        'description': f'{ext.student.first_name} {ext.student.last_name} – {ext.status}',
+                        'timestamp': ext.reviewed_at,
+                        'link': url_for('management.view_extension_requests')
+                    })
+                else:
+                    recent_activity.append({
+                        'type': 'extension_request',
+                        'title': f'New extension request: {ext.assignment.title}',
+                        'description': f'{ext.student.first_name} {ext.student.last_name} requested extension',
+                        'timestamp': ext.requested_at,
+                        'link': url_for('management.view_extension_requests')
+                    })
+            except (AttributeError, TypeError):
+                continue
+        # Recent grades (school-wide, last 7 days)
+        for grade in Grade.query.join(Assignment).filter(Grade.graded_at >= activity_cutoff).order_by(Grade.graded_at.desc()).limit(5).all():
+            try:
+                if not grade.assignment or not grade.student:
+                    continue
+                recent_activity.append({
+                    'type': 'grade',
+                    'title': f'Grade entered for {grade.assignment.title}',
+                    'description': f'{grade.student.first_name} {grade.student.last_name}',
+                    'timestamp': grade.graded_at or datetime.utcnow(),
+                    'link': url_for('management.grade_assignment', assignment_id=grade.assignment_id)
+                })
+            except (AttributeError, TypeError):
+                continue
+        # Recent submissions (last 7 days)
+        for sub in Submission.query.join(Assignment).filter(Submission.submitted_at >= activity_cutoff).order_by(Submission.submitted_at.desc()).limit(5).all():
+            try:
+                if not sub.assignment or not sub.student:
+                    continue
+                recent_activity.append({
+                    'type': 'submission',
+                    'title': f'Submission for {sub.assignment.title}',
+                    'description': f'{sub.student.first_name} {sub.student.last_name} submitted',
+                    'timestamp': sub.submitted_at or datetime.utcnow(),
+                    'link': url_for('management.grade_assignment', assignment_id=sub.assignment_id)
+                })
+            except (AttributeError, TypeError):
+                continue
+        # Recent assignments created (last 7 days)
+        for assignment in Assignment.query.filter(Assignment.created_at >= activity_cutoff).order_by(Assignment.created_at.desc()).limit(5).all():
+            try:
+                class_name = assignment.class_info.name if assignment.class_info else 'Unknown'
+                recent_activity.append({
+                    'type': 'assignment',
+                    'title': f'New assignment: {assignment.title}',
+                    'description': f'Created for {class_name}',
+                    'timestamp': assignment.created_at or datetime.utcnow(),
+                    'link': url_for('management.view_assignment', assignment_id=assignment.id)
+                })
+            except (AttributeError, TypeError):
+                continue
+        recent_activity.sort(key=lambda x: x['timestamp'], reverse=True)
+        recent_activity = recent_activity[:5]
+
         # --- Debugging Print Statements ---
         print(f"--- Debug Dashboard Alerts ---")
         print(f"Checking alerts for user: {current_user.username}, Role: {current_user.role}")
@@ -326,7 +402,9 @@ def management_dashboard():
                              weekly_stats=weekly_stats,
                              section='home',
                              active_tab='home',
-                             at_risk_alerts=at_risk_alerts)
+                             at_risk_alerts=at_risk_alerts,
+                             notifications=notifications,
+                             recent_activity=recent_activity)
     except Exception as e:
         current_app.logger.error(f"Error in management_dashboard: {e}")
         import traceback
@@ -340,7 +418,9 @@ def management_dashboard():
                              weekly_stats={},
                              section='home',
                              active_tab='home',
-                             at_risk_alerts=[])
+                             at_risk_alerts=[],
+                             notifications=[],
+                             recent_activity=[])
 
 # Routes for managing students, teachers, classes etc.
 # Example: Add Student

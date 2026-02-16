@@ -1994,8 +1994,12 @@ def take_quiz(assignment_id):
             db.session.delete(old_progress)
             db.session.commit()
     
-    # Load quiz questions
-    questions = QuizQuestion.query.filter_by(assignment_id=assignment_id).order_by(QuizQuestion.order).all()
+    # Load quiz questions (with section for grouping)
+    from sqlalchemy.orm import joinedload
+    questions = QuizQuestion.query.options(
+        joinedload(QuizQuestion.section),
+        joinedload(QuizQuestion.options)
+    ).filter_by(assignment_id=assignment_id).order_by(QuizQuestion.order).all()
     
     # Shuffle questions only on retake if enabled
     # Reshuffle is only for retakes, not for initial attempts
@@ -2401,6 +2405,27 @@ def request_extension():
         )
         db.session.add(new_request)
         db.session.commit()
+
+        # Notify class teacher(s) and admins about the new extension request
+        try:
+            from app import create_notification
+            student_name = f"{student.first_name} {student.last_name}"
+            assign_title = assignment.title
+            title = "New extension request"
+            message = f'{student_name} requested an extension for "{assign_title}".'
+            recipients = []
+            if assignment.class_info and assignment.class_info.teacher_id:
+                teacher_user = User.query.filter_by(teacher_staff_id=assignment.class_info.teacher_id).first()
+                if teacher_user and teacher_user.id:
+                    recipients.append((teacher_user.id, url_for('teacher.view_extension_requests')))
+            for admin in User.query.filter(User.role.in_(['Director', 'School Administrator'])).all():
+                if admin.id and not any(r[0] == admin.id for r in recipients):
+                    recipients.append((admin.id, url_for('management.view_extension_requests')))
+            for user_id, link in recipients:
+                create_notification(user_id, 'extension_request', title, message, link=link)
+        except Exception as notify_err:
+            current_app.logger.warning(f"Could not create extension-request notifications: {notify_err}")
+
         return jsonify({'success': True, 'message': 'Extension request submitted successfully!'}), 200
 
     except Exception as e:

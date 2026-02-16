@@ -239,31 +239,56 @@
         font-size: 0.85rem;
     }
 
-    /* Admin Notifications */
+    /* Admin Notifications - constrained height, scroll if needed */
     .admin-notifications {
         background: white;
         border-radius: 15px;
-        padding: 1.5rem;
+        padding: 1rem 1.25rem;
         box-shadow: 0 5px 20px rgba(0,0,0,0.08);
         border: 1px solid rgba(0,0,0,0.05);
         height: 100%;
+        max-height: 320px;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    .admin-notifications .admin-section-title {
+        flex-shrink: 0;
+        margin-bottom: 0.75rem;
+        font-size: 1rem;
     }
 
     .admin-notification-list {
         display: flex;
         flex-direction: column;
-        gap: 1rem;
+        gap: 0.6rem;
+        overflow-y: auto;
+        overflow-x: hidden;
+        max-height: 260px;
+        padding-right: 4px;
+        scrollbar-width: thin;
+    }
+
+    .admin-notification-list::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .admin-notification-list::-webkit-scrollbar-thumb {
+        background: #dee2e6;
+        border-radius: 3px;
     }
 
     .admin-notification-item {
         display: flex;
         align-items: flex-start;
-        gap: 1rem;
-        padding: 1rem;
+        gap: 0.75rem;
+        padding: 0.65rem 0.85rem;
         background: #f8f9fa;
-        border-radius: 10px;
-        border-left: 4px solid #667eea;
-        transition: all 0.3s ease;
+        border-radius: 8px;
+        border-left: 3px solid #667eea;
+        transition: all 0.2s ease;
+        flex-shrink: 0;
     }
 
     .admin-notification-item:hover {
@@ -272,53 +297,84 @@
     }
 
     .admin-notification-icon {
-        width: 40px;
-        height: 40px;
+        width: 34px;
+        height: 34px;
         border-radius: 50%;
         background: white;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.1rem;
+        font-size: 1rem;
         flex-shrink: 0;
     }
 
     .admin-notification-content {
         flex: 1;
+        min-width: 0;
     }
 
     .admin-notification-title {
-        font-size: 0.95rem;
+        font-size: 0.875rem;
         font-weight: 700;
         color: #2c3e50;
-        margin: 0 0 0.25rem 0;
+        margin: 0 0 0.15rem 0;
+        line-height: 1.25;
     }
 
     .admin-notification-text {
-        font-size: 0.85rem;
+        font-size: 0.8rem;
         color: #6c757d;
-        margin: 0 0 0.25rem 0;
+        margin: 0 0 0.15rem 0;
+        line-height: 1.3;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
     }
 
     .admin-notification-time {
-        font-size: 0.75rem;
+        font-size: 0.7rem;
         color: #adb5bd;
         font-weight: 500;
     }
 
-    /* Admin Recent Activity */
+    /* Admin Recent Activity - constrained height, scroll if needed */
     .admin-recent-activity {
         background: white;
         border-radius: 15px;
-        padding: 1.5rem;
+        padding: 1rem 1.25rem;
         box-shadow: 0 5px 20px rgba(0,0,0,0.08);
         border: 1px solid rgba(0,0,0,0.05);
         height: 100%;
+        max-height: 320px;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    .admin-recent-activity .admin-section-title {
+        flex-shrink: 0;
+        margin-bottom: 0.75rem;
+        font-size: 1rem;
     }
 
     .admin-activity-timeline {
         position: relative;
-        padding-left: 2rem;
+        padding-left: 1.75rem;
+        overflow-y: auto;
+        overflow-x: hidden;
+        max-height: 260px;
+        padding-right: 4px;
+        scrollbar-width: thin;
+    }
+
+    .admin-activity-timeline::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .admin-activity-timeline::-webkit-scrollbar-thumb {
+        background: #dee2e6;
+        border-radius: 3px;
     }
 
     .admin-activity-timeline::before {
@@ -333,47 +389,59 @@
 
     .admin-activity-item {
         position: relative;
-        margin-bottom: 1.5rem;
+        margin-bottom: 0.75rem;
         display: flex;
         align-items: flex-start;
-        gap: 1rem;
+        gap: 0.75rem;
+        flex-shrink: 0;
+    }
+
+    .admin-activity-item:last-child {
+        margin-bottom: 0.25rem;
     }
 
     .admin-activity-dot {
         position: absolute;
-        left: -2rem;
-        top: 0.5rem;
-        width: 12px;
-        height: 12px;
+        left: -1.75rem;
+        top: 0.4rem;
+        width: 10px;
+        height: 10px;
         border-radius: 50%;
         background: #667eea;
-        border: 3px solid white;
-        box-shadow: 0 0 0 2px #667eea;
+        border: 2px solid white;
+        box-shadow: 0 0 0 1px #667eea;
     }
 
     .admin-activity-content {
         flex: 1;
+        min-width: 0;
         background: #f8f9fa;
-        padding: 1rem;
-        border-radius: 10px;
-        border-left: 4px solid #667eea;
+        padding: 0.65rem 0.85rem;
+        border-radius: 8px;
+        border-left: 3px solid #667eea;
     }
 
     .admin-activity-title {
-        font-size: 0.95rem;
+        font-size: 0.875rem;
         font-weight: 700;
         color: #2c3e50;
-        margin: 0 0 0.25rem 0;
+        margin: 0 0 0.15rem 0;
+        line-height: 1.25;
     }
 
     .admin-activity-text {
-        font-size: 0.85rem;
+        font-size: 0.8rem;
         color: #6c757d;
-        margin: 0 0 0.25rem 0;
+        margin: 0 0 0.15rem 0;
+        line-height: 1.3;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
     }
 
     .admin-activity-time {
-        font-size: 0.75rem;
+        font-size: 0.7rem;
         color: #adb5bd;
         font-weight: 500;
     }

@@ -8,7 +8,8 @@ from decorators import management_required
 from models import (
     db, Assignment, Grade, Submission, Student, Class, Enrollment, AssignmentExtension,
     AssignmentRedo, AssignmentReopening, QuizQuestion, QuizOption, QuizAnswer, DiscussionThread, DiscussionPost,
-    GroupAssignment, TeacherStaff, SchoolYear, ExtensionRequest
+    GroupAssignment, TeacherStaff, SchoolYear, ExtensionRequest,
+    QuestionBank, QuestionBankQuestion, QuestionBankOption
 )
 from werkzeug.utils import secure_filename
 from sqlalchemy import or_, and_, func
@@ -172,85 +173,144 @@ def create_quiz_assignment():
             
             db.session.add(new_assignment)
             db.session.flush()  # Get the assignment ID
-            
-            # Save quiz questions and calculate total points
+
+            # Import QuizSection for section support
+            from models import QuizSection
+
+            # Save sections and questions in block order (section_0, question_1, section_1, question_2, ...)
+            block_order_str = request.form.get('block_order', '').strip()
             question_count = 0
             total_points = 0.0
-            
-            # Process questions - collect all question IDs first
-            question_ids = set()
-            for key in request.form.keys():
-                if key.startswith('question_text_') and not key.endswith('[]'):
-                    # Extract question ID (e.g., "question_text_1" -> "1")
-                    question_id = key.split('_')[-1]
-                    question_ids.add(question_id)
-            
-            for question_id in sorted(question_ids, key=lambda x: int(x) if x.isdigit() else 999):
-                question_text = request.form.get(f'question_text_{question_id}', '').strip()
-                if not question_text:
-                    continue
-                    
-                question_type = request.form.get(f'question_type_{question_id}', 'multiple_choice')
-                points = float(request.form.get(f'question_points_{question_id}', 1.0))
-                total_points += points
-                
-                # Create the question
-                question = QuizQuestion(
-                    assignment_id=new_assignment.id,
-                    question_text=question_text,
-                    question_type=question_type,
-                    points=points,
-                    order=question_count
-                )
-                db.session.add(question)
-                db.session.flush()  # Get the question ID
-                
-                # Save options for multiple choice and true/false
-                if question_type == 'multiple_choice':
-                    option_count = 0
-                    correct_answer = request.form.get(f'correct_answer_{question_id}', '')
-                    
-                    # Handle array format for options (option_text_1[])
-                    option_values = request.form.getlist(f'option_text_{question_id}[]')
-                    
-                    for option_text in option_values:
-                        option_text = option_text.strip()
-                        if not option_text:
+            current_section_id = None
+            section_order = 0
+
+            if block_order_str:
+                blocks = [b.strip() for b in block_order_str.split(',') if b.strip()]
+                for block in blocks:
+                    if block.startswith('section_'):
+                        try:
+                            section_idx = block.replace('section_', '')
+                            title = request.form.get(f'section_title_{section_idx}', '').strip() or f'Part {section_order + 1}'
+                            sec = QuizSection(
+                                assignment_id=new_assignment.id,
+                                title=title,
+                                order=section_order
+                            )
+                            db.session.add(sec)
+                            db.session.flush()
+                            current_section_id = sec.id
+                            section_order += 1
+                        except Exception:
+                            pass
+                        continue
+                    if block.startswith('question_'):
+                        try:
+                            question_id = block.replace('question_', '')
+                        except Exception:
                             continue
-                            
-                        is_correct = str(option_count) == correct_answer
-                        
-                        option = QuizOption(
-                            question_id=question.id,
-                            option_text=option_text,
-                            is_correct=is_correct,
-                            order=option_count
+                        question_text = request.form.get(f'question_text_{question_id}', '').strip()
+                        if not question_text:
+                            continue
+                        question_type = request.form.get(f'question_type_{question_id}', 'multiple_choice')
+                        points = float(request.form.get(f'question_points_{question_id}', 1.0))
+                        total_points += points
+                        question = QuizQuestion(
+                            assignment_id=new_assignment.id,
+                            section_id=current_section_id,
+                            question_text=question_text,
+                            question_type=question_type,
+                            points=points,
+                            order=question_count
                         )
-                        db.session.add(option)
-                        option_count += 1
-                elif question_type == 'true_false':
-                    correct_answer = request.form.get(f'correct_answer_{question_id}', '')
-                    
-                    # Create True option
-                    true_option = QuizOption(
-                        question_id=question.id,
-                        option_text='True',
-                        is_correct=(correct_answer == 'true'),
-                        order=0
+                        db.session.add(question)
+                        db.session.flush()
+                        if question_type == 'multiple_choice':
+                            option_count = 0
+                            correct_answer = request.form.get(f'correct_answer_{question_id}', '')
+                            option_values = request.form.getlist(f'option_text_{question_id}[]')
+                            for option_text in option_values:
+                                option_text = option_text.strip()
+                                if not option_text:
+                                    continue
+                                is_correct = str(option_count) == correct_answer
+                                db.session.add(QuizOption(
+                                    question_id=question.id,
+                                    option_text=option_text,
+                                    is_correct=is_correct,
+                                    order=option_count
+                                ))
+                                option_count += 1
+                        elif question_type == 'true_false':
+                            correct_answer = request.form.get(f'correct_answer_{question_id}', '')
+                            db.session.add(QuizOption(
+                                question_id=question.id,
+                                option_text='True',
+                                is_correct=(correct_answer == 'true'),
+                                order=0
+                            ))
+                            db.session.add(QuizOption(
+                                question_id=question.id,
+                                option_text='False',
+                                is_correct=(correct_answer == 'false'),
+                                order=1
+                            ))
+                        question_count += 1
+            else:
+                # Fallback: no block_order (existing form behavior - all questions, no sections)
+                question_ids = set()
+                for key in request.form.keys():
+                    if key.startswith('question_text_') and not key.endswith('[]'):
+                        question_id = key.split('_')[-1]
+                        question_ids.add(question_id)
+                for question_id in sorted(question_ids, key=lambda x: int(x) if x.isdigit() else 999):
+                    question_text = request.form.get(f'question_text_{question_id}', '').strip()
+                    if not question_text:
+                        continue
+                    question_type = request.form.get(f'question_type_{question_id}', 'multiple_choice')
+                    points = float(request.form.get(f'question_points_{question_id}', 1.0))
+                    total_points += points
+                    question = QuizQuestion(
+                        assignment_id=new_assignment.id,
+                        section_id=None,
+                        question_text=question_text,
+                        question_type=question_type,
+                        points=points,
+                        order=question_count
                     )
-                    db.session.add(true_option)
-                    
-                    # Create False option
-                    false_option = QuizOption(
-                        question_id=question.id,
-                        option_text='False',
-                        is_correct=(correct_answer == 'false'),
-                        order=1
-                    )
-                    db.session.add(false_option)
-                
-                question_count += 1
-            
+                    db.session.add(question)
+                    db.session.flush()
+                    if question_type == 'multiple_choice':
+                        option_count = 0
+                        correct_answer = request.form.get(f'correct_answer_{question_id}', '')
+                        option_values = request.form.getlist(f'option_text_{question_id}[]')
+                        for option_text in option_values:
+                            option_text = option_text.strip()
+                            if not option_text:
+                                continue
+                            is_correct = str(option_count) == correct_answer
+                            db.session.add(QuizOption(
+                                question_id=question.id,
+                                option_text=option_text,
+                                is_correct=is_correct,
+                                order=option_count
+                            ))
+                            option_count += 1
+                    elif question_type == 'true_false':
+                        correct_answer = request.form.get(f'correct_answer_{question_id}', '')
+                        db.session.add(QuizOption(
+                            question_id=question.id,
+                            option_text='True',
+                            is_correct=(correct_answer == 'true'),
+                            order=0
+                        ))
+                        db.session.add(QuizOption(
+                            question_id=question.id,
+                            option_text='False',
+                            is_correct=(correct_answer == 'false'),
+                            order=1
+                        ))
+                    question_count += 1
+
             # Update assignment total_points
             new_assignment.total_points = total_points if total_points > 0 else 100.0
             db.session.commit()
@@ -264,8 +324,74 @@ def create_quiz_assignment():
     # GET request - show form
     classes = Class.query.all()
     current_quarter = get_current_quarter()
-    return render_template('shared/create_quiz_assignment.html', classes=classes, current_quarter=current_quarter)
+    question_banks_url = url_for('management.assignments.question_banks_json')
+    save_to_bank_url = url_for('management.assignments.save_to_bank')
+    return render_template('shared/create_quiz_assignment.html', classes=classes, current_quarter=current_quarter, question_banks_url=question_banks_url, save_to_bank_url=save_to_bank_url)
 
+
+@bp.route('/api/question-banks')
+@login_required
+@management_required
+def question_banks_json():
+    """Return question banks (user's + public) with questions and options for Import from Bank."""
+    banks = QuestionBank.query.filter(
+        (QuestionBank.created_by == current_user.id) | (QuestionBank.is_public == True)
+    ).order_by(QuestionBank.name).all()
+    out = []
+    for bank in banks:
+        questions = QuestionBankQuestion.query.filter_by(bank_id=bank.id).order_by(QuestionBankQuestion.order).all()
+        q_list = []
+        for q in questions:
+            opts = QuestionBankOption.query.filter_by(question_id=q.id).order_by(QuestionBankOption.order).all()
+            q_list.append({
+                'id': q.id,
+                'question_text': q.question_text,
+                'question_type': q.question_type,
+                'points': float(q.points),
+                'options': [{'option_text': o.option_text, 'is_correct': o.is_correct} for o in opts]
+            })
+        out.append({'id': bank.id, 'name': bank.name, 'questions': q_list})
+    return jsonify(out)
+
+
+@bp.route('/api/save-to-bank', methods=['POST'])
+@login_required
+@management_required
+def save_to_bank():
+    """Create a question bank from JSON body: { name, questions: [{ question_text, question_type, points, options }] }."""
+    data = request.get_json() or {}
+    name = (data.get('name') or '').strip()
+    questions = data.get('questions') or []
+    if not name:
+        return jsonify({'success': False, 'message': 'Bank name is required.'}), 400
+    if not questions:
+        return jsonify({'success': False, 'message': 'Add at least one question.'}), 400
+    try:
+        bank = QuestionBank(name=name, created_by=current_user.id, is_public=False)
+        db.session.add(bank)
+        db.session.flush()
+        for i, q in enumerate(questions):
+            qtext = (q.get('question_text') or '').strip()
+            if not qtext:
+                continue
+            qtype = q.get('question_type') or 'multiple_choice'
+            pts = float(q.get('points', 1))
+            bq = QuestionBankQuestion(bank_id=bank.id, question_text=qtext, question_type=qtype, points=pts, order=i)
+            db.session.add(bq)
+            db.session.flush()
+            opts = q.get('options') or []
+            for j, o in enumerate(opts):
+                db.session.add(QuestionBankOption(
+                    question_id=bq.id,
+                    option_text=(o.get('option_text') or '').strip(),
+                    is_correct=bool(o.get('is_correct')),
+                    order=j
+                ))
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Question bank saved.', 'bank_id': bank.id})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 
 # ============================================================
@@ -508,10 +634,36 @@ def review_extension_request(request_id):
             extension_request.review_notes = review_notes if review_notes else 'Extension request rejected'
             
             message = 'Extension request rejected'
-        
+
         db.session.commit()
+
+        # Notify the student that their extension request was accepted or rejected (don't fail the request if this fails)
+        try:
+            student_user = getattr(extension_request.student, 'user', None)
+            if student_user and student_user.id:
+                from app import create_notification
+                assign_title = extension_request.assignment.title
+                if action == 'approve':
+                    create_notification(
+                        student_user.id,
+                        'extension_request',
+                        'Extension request approved',
+                        f'Your extension request for "{assign_title}" was approved. New due date: {extension_request.requested_due_date.strftime("%B %d, %Y at %I:%M %p")}.',
+                        link=url_for('student.student_assignments')
+                    )
+                else:
+                    create_notification(
+                        student_user.id,
+                        'extension_request',
+                        'Extension request not approved',
+                        f'Your extension request for "{assign_title}" was not approved.' + (f' Note: {review_notes}' if review_notes else ''),
+                        link=url_for('student.student_assignments')
+                    )
+        except Exception as notify_err:
+            current_app.logger.warning(f"Could not create extension notification for student: {notify_err}")
+
         return jsonify({'success': True, 'message': message})
-        
+
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error reviewing extension request: {str(e)}")
@@ -632,9 +784,10 @@ def assignments_and_grades():
             }
             
             if view_mode == 'grades':
-                total_score = 0
+                total_percentage_sum = 0
                 graded_count = 0
                 for assignment in assignments:
+                    total_points = (assignment.total_points or 100.0) if hasattr(assignment, 'total_points') else 100.0
                     grades = Grade.query.filter_by(assignment_id=assignment.id).all()
                     grade_stats['total_submissions'] += len(grades)
                     if grades:
@@ -642,25 +795,25 @@ def assignments_and_grades():
                         for grade in grades:
                             if grade.grade_data:
                                 try:
-                                    # Handle both dict and JSON string cases
                                     if isinstance(grade.grade_data, dict):
                                         grade_dict = grade.grade_data
                                     else:
                                         grade_dict = json.loads(grade.grade_data)
-                                    
-                                    if 'score' in grade_dict and grade_dict['score'] is not None:
-                                        score_value = grade_dict['score']
+                                    if grade_dict.get('is_voided'):
+                                        continue
+                                    score_value = grade_dict.get('score') or grade_dict.get('points_earned')
+                                    if score_value is not None:
                                         try:
-                                            total_score += float(score_value)
+                                            points_float = float(score_value)
+                                            pct = (points_float / total_points * 100) if total_points > 0 else 0
+                                            total_percentage_sum += pct
                                             graded_count += 1
                                         except (ValueError, TypeError):
                                             continue
                                 except (json.JSONDecodeError, TypeError):
-                                    # Skip invalid grade data
                                     continue
-                
                 if graded_count > 0:
-                    grade_stats['average_score'] = round(total_score / graded_count, 1)
+                    grade_stats['average_score'] = round(total_percentage_sum / graded_count, 1)
             
             # Only add to class_data if class_obj.id is valid
             if class_obj.id is not None:
@@ -769,10 +922,12 @@ def assignments_and_grades():
                             auto_gradeable_types = ['multiple_choice', 'true_false']
                             is_autogradeable = all(q.question_type in auto_gradeable_types for q in quiz_questions)
                     
+                    total_points = (assignment.total_points or 100.0) if getattr(assignment, 'total_points', None) else 100.0
+                    avg_pct = round((total_score / len(graded_grades) / total_points * 100), 1) if graded_grades and total_points > 0 else 0
                     assignment_grades[assignment.id] = {
                         'total_submissions': total_submissions,
                         'graded_count': len(graded_grades),
-                        'average_score': round(total_score / len(graded_grades), 1) if graded_grades else 0,
+                        'average_score': avg_pct,
                         'type': 'individual',
                         'is_autogradeable': is_autogradeable
                     }
@@ -806,10 +961,12 @@ def assignments_and_grades():
                             except (json.JSONDecodeError, TypeError):
                                 continue
                     
+                    total_points_ga = (group_assignment.total_points or 100.0) if getattr(group_assignment, 'total_points', None) else 100.0
+                    avg_pct_ga = round((total_score / len(graded_group_grades) / total_points_ga * 100), 1) if graded_group_grades and total_points_ga > 0 else 0
                     assignment_grades[f'group_{group_assignment.id}'] = {
                         'total_submissions': total_group_submissions,
                         'graded_count': len(graded_group_grades),
-                        'average_score': round(total_score / len(graded_group_grades), 1) if graded_group_grades else 0,
+                        'average_score': avg_pct_ga,
                         'type': 'group'
                     }
             except (ValueError, TypeError, AttributeError) as e:
@@ -1713,7 +1870,10 @@ def grade_assignment(assignment_id):
         if assignment.assignment_type == 'quiz':
             # Load questions with options eagerly
             from sqlalchemy.orm import joinedload
-            quiz_questions = QuizQuestion.query.options(joinedload(QuizQuestion.options)).filter_by(assignment_id=assignment_id).order_by(QuizQuestion.order).all()
+            quiz_questions = QuizQuestion.query.options(
+                joinedload(QuizQuestion.options),
+                joinedload(QuizQuestion.section)
+            ).filter_by(assignment_id=assignment_id).order_by(QuizQuestion.order).all()
             
             # Check if quiz has open-ended questions (short_answer or essay) that need manual grading
             has_open_ended_questions = any(q.question_type in ['short_answer', 'essay'] for q in quiz_questions)
@@ -2386,7 +2546,7 @@ def remove_assignment(assignment_id):
     
     try:
         from models import (
-            QuizQuestion, QuizProgress, DiscussionThread, DiscussionPost, QuizAnswer, 
+            QuizQuestion, QuizProgress, QuizSection, DiscussionThread, DiscussionPost, QuizAnswer,
             DeadlineReminder, AssignmentExtension
         )
         
@@ -2408,26 +2568,29 @@ def remove_assignment(assignment_id):
         for question in quiz_questions:
             QuizAnswer.query.filter_by(question_id=question.id).delete()
         
-        # 2. Delete quiz questions (they reference assignments)
+        # 2. Delete quiz questions (they reference assignments and sections)
         QuizQuestion.query.filter_by(assignment_id=assignment_id).delete()
         
-        # 3. Delete quiz progress
+        # 3. Delete quiz sections (they reference assignments)
+        QuizSection.query.filter_by(assignment_id=assignment_id).delete()
+        
+        # 4. Delete quiz progress
         QuizProgress.query.filter_by(assignment_id=assignment_id).delete()
         
-        # 4. Delete discussion threads and posts
+        # 5. Delete discussion threads and posts
         discussion_threads = DiscussionThread.query.filter_by(assignment_id=assignment_id).all()
         for thread in discussion_threads:
             # Delete posts first (they reference threads)
             DiscussionPost.query.filter_by(thread_id=thread.id).delete()
         DiscussionThread.query.filter_by(assignment_id=assignment_id).delete()
         
-        # 5. Delete grades (they reference assignments)
+        # 6. Delete grades (they reference assignments)
         Grade.query.filter_by(assignment_id=assignment_id).delete()
         
-        # 6. Delete submissions (they reference assignments)
+        # 7. Delete submissions (they reference assignments)
         Submission.query.filter_by(assignment_id=assignment_id).delete()
         
-        # 7. Delete extensions (they reference assignments)
+        # 8. Delete extensions (they reference assignments)
         AssignmentExtension.query.filter_by(assignment_id=assignment_id).delete()
         
         # Delete the assignment file if it exists (using stored value to avoid accessing assignment)

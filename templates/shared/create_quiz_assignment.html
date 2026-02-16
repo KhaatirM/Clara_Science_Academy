@@ -252,9 +252,18 @@
                 <div class="card mb-4 border-0 shadow-sm">
                     <div class="card-header text-white d-flex justify-content-between align-items-center flex-wrap gap-2" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
                         <h5 class="mb-0 fw-bold"><i class="bi bi-question-square me-2"></i>Quiz Questions</h5>
-                        <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-info btn-sm fw-bold shadow-sm" id="importFromBankBtn" title="Import questions from question banks" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border: none; transition: transform 0.2s;">
+                        <div class="d-flex gap-2 flex-wrap">
+                            <button type="button" class="btn btn-secondary btn-sm fw-bold shadow-sm" id="addSectionBtn" title="Add a section/part to group questions" style="transition: transform 0.2s;">
+                                <i class="bi bi-collection me-2"></i>Add Section
+                            </button>
+                            <button type="button" class="btn btn-info btn-sm fw-bold shadow-sm" id="importFromBankBtn" title="Import questions from question banks" data-question-banks-url="{{ question_banks_url|default('', true) }}" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border: none; transition: transform 0.2s;">
                                 <i class="bi bi-database me-2"></i>Import from Bank
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm fw-bold shadow-sm" id="saveToBankBtn" title="Save current questions to a new question bank" data-save-to-bank-url="{{ save_to_bank_url|default('', true) }}">
+                                <i class="bi bi-save me-2"></i>Save to Bank
+                            </button>
+                            <button type="button" class="btn btn-outline-primary btn-sm fw-bold shadow-sm" id="bulkAddBtn" title="Add many questions at once or paste a list">
+                                <i class="bi bi-collection me-2"></i>Bulk add
                             </button>
                             <button type="button" class="btn btn-light btn-sm fw-bold shadow-sm" id="addQuestionBtn" style="transition: transform 0.2s;">
                                 <i class="bi bi-plus-circle me-2"></i>Add Question
@@ -262,6 +271,7 @@
                         </div>
                     </div>
                     <div class="card-body p-4">
+                        <input type="hidden" name="block_order" id="blockOrderInput" value="">
                         <div id="questionsContainer">
                             <div class="text-center text-muted py-5">
                                 <div class="mb-3">
@@ -395,15 +405,182 @@
     </form>
 </div>
 
+<!-- Import from Bank Modal -->
+<div class="modal fade" id="importFromBankModal" tabindex="-1" aria-labelledby="importFromBankModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header text-white" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);">
+                <h5 class="modal-title" id="importFromBankModalLabel"><i class="bi bi-database me-2"></i>Import from Question Bank</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="importBankLoading" class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mt-2 mb-0">Loading question banks...</p>
+                </div>
+                <div id="importBankEmpty" class="text-center py-4" style="display: none;">
+                    <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+                    <p class="mt-2 text-muted">No question banks yet.</p>
+                    <p class="small text-muted">Save questions from a quiz to a bank to reuse them here, or add questions manually.</p>
+                </div>
+                <div id="importBankContent" style="display: none;">
+                    <label class="form-label fw-semibold">Select a question bank</label>
+                    <select class="form-select mb-3" id="importBankSelect">
+                        <option value="">-- Choose a bank --</option>
+                    </select>
+                    <label class="form-label fw-semibold">Select questions to add</label>
+                    <div class="mb-2">
+                        <button type="button" class="btn btn-sm btn-outline-primary me-2" id="importSelectAll">Select all</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="importDeselectAll">Deselect all</button>
+                    </div>
+                    <div id="importQuestionList" class="list-group" style="max-height: 300px; overflow-y: auto;"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="importAddSelectedBtn" disabled style="display: none;">
+                    <i class="bi bi-plus-circle me-1"></i>Add selected to quiz
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Save to Bank Modal -->
+<div class="modal fade" id="saveToBankModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-save me-2"></i>Save to Question Bank</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small">Save the questions you've added below to a new question bank so you can reuse them in other quizzes.</p>
+                <label class="form-label fw-semibold">Bank name</label>
+                <input type="text" class="form-control" id="saveToBankName" placeholder="e.g. Chapter 5 Vocabulary" maxlength="200">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveToBankConfirmBtn"><i class="bi bi-save me-1"></i>Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Add Modal -->
+<div class="modal fade" id="bulkAddModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header text-white" style="background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);">
+                <h5 class="modal-title"><i class="bi bi-collection me-2"></i>Bulk add questions</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <ul class="nav nav-tabs mb-3" role="tablist">
+                    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#bulkAddCountTab">Add N questions</button></li>
+                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#bulkPasteTab">Paste list</button></li>
+                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#bulkCsvTab">Import CSV</button></li>
+                </ul>
+                <div class="tab-content">
+                    <div class="tab-pane fade show active" id="bulkAddCountTab">
+                        <p class="text-muted small">Add several empty questions at once, then fill them in.</p>
+                        <label class="form-label">Number of questions</label>
+                        <div class="d-flex gap-2 flex-wrap mb-2">
+                            <button type="button" class="btn btn-outline-primary bulk-num-btn" data-n="5">5</button>
+                            <button type="button" class="btn btn-outline-primary bulk-num-btn" data-n="10">10</button>
+                            <button type="button" class="btn btn-outline-primary bulk-num-btn" data-n="20">20</button>
+                            <button type="button" class="btn btn-outline-primary bulk-num-btn" data-n="50">50</button>
+                        </div>
+                        <div class="input-group mb-3">
+                            <span class="input-group-text">Custom</span>
+                            <input type="number" class="form-control" id="bulkAddCustomN" min="1" max="100" placeholder="e.g. 15">
+                        </div>
+                        <label class="form-label">Default type</label>
+                        <select class="form-select" id="bulkAddDefaultType">
+                            <option value="multiple_choice">Multiple Choice</option>
+                            <option value="true_false">True/False</option>
+                            <option value="short_answer">Short Answer</option>
+                            <option value="essay">Essay</option>
+                        </select>
+                    </div>
+                    <div class="tab-pane fade" id="bulkPasteTab">
+                        <p class="text-muted small">Paste one question per line. Each line becomes one question (short answer by default).</p>
+                        <textarea class="form-control font-monospace" id="bulkPasteText" rows="10" placeholder="Question 1 text&#10;Question 2 text&#10;Question 3 text"></textarea>
+                    </div>
+                    <div class="tab-pane fade" id="bulkCsvTab">
+                        <p class="text-muted small mb-2">Upload a CSV file. First row must be headers.</p>
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <input type="file" class="form-control" id="bulkCsvFile" accept=".csv,text/csv">
+                            <button type="button" class="btn btn-outline-info btn-sm flex-shrink-0" id="bulkCsvFormatBtn" title="CSV format help" data-bs-toggle="collapse" data-bs-target="#bulkCsvFormatHelp" aria-expanded="false" aria-controls="bulkCsvFormatHelp">
+                                <i class="bi bi-info-circle me-1"></i>Format help
+                            </button>
+                        </div>
+                        <div class="collapse" id="bulkCsvFormatHelp">
+                            <div class="card card-body bg-light small">
+                                <strong>Required columns:</strong>
+                                <ul class="mb-2 mb-md-0">
+                                    <li><code>question_text</code> – the question</li>
+                                    <li><code>question_type</code> – one of: <code>multiple_choice</code>, <code>true_false</code>, <code>short_answer</code>, <code>essay</code></li>
+                                    <li><code>points</code> – number (e.g. 1 or 2.5)</li>
+                                </ul>
+                                <strong>For multiple choice only:</strong>
+                                <ul class="mb-2 mb-md-0">
+                                    <li><code>option_a</code>, <code>option_b</code>, <code>option_c</code>, <code>option_d</code> – answer choices</li>
+                                    <li><code>correct</code> – letter of correct answer: <code>A</code>, <code>B</code>, <code>C</code>, or <code>D</code></li>
+                                </ul>
+                                <strong>Example (first row = headers):</strong>
+                                <pre class="mb-0 mt-1 p-2 bg-white border rounded" style="font-size: 0.75rem;">question_text,question_type,points,option_a,option_b,option_c,option_d,correct
+"What is 2+2?",multiple_choice,1,3,4,5,6,B
+"The sky is blue.",true_false,1,,,,,true</pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="bulkAddConfirmBtn"><i class="bi bi-plus-circle me-1"></i>Add</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Section Header Template (Hidden) -->
+<template id="sectionTemplate">
+    <div class="section-block card mb-4 border-0 shadow-sm" data-block-id="" style="border-left: 4px solid #0d6efd !important; background: linear-gradient(135deg, #f8f9ff 0%, #e8ecff 100%); transition: box-shadow 0.2s;">
+        <div class="card-header d-flex justify-content-between align-items-center" style="background: transparent;">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-collection-fill text-primary me-2"></i>
+                <h6 class="mb-0 fw-bold text-primary">Section: <span class="section-title-preview">New Section</span></h6>
+            </div>
+            <div class="btn-group btn-group-sm">
+                <button type="button" class="btn btn-outline-danger delete-section" title="Remove Section">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        </div>
+        <div class="card-body py-3">
+            <label class="form-label fw-semibold small">
+                <i class="bi bi-tag me-1"></i>Section / Part Title
+            </label>
+            <input type="text" class="form-control section-title-input" name="section_title_0" placeholder="e.g. Part A – Vocabulary, Part B – Reading" maxlength="200">
+            <div class="form-text small">Questions added below will belong to this section until the next section.</div>
+        </div>
+    </div>
+</template>
+
 <!-- Enhanced Question Template (Hidden) -->
 <template id="questionTemplate">
-    <div class="question-item card mb-4 border-0 shadow-sm" data-question-id="" style="border-left: 4px solid #667eea !important; transition: box-shadow 0.2s;">
+    <div class="question-item card mb-4 border-0 shadow-sm" data-question-id="" data-block-id="" style="border-left: 4px solid #667eea !important; transition: box-shadow 0.2s;">
         <div class="card-header d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);">
             <div class="d-flex align-items-center">
                 <span class="badge bg-primary me-2 question-number-badge">1</span>
                 <h6 class="mb-0 fw-bold">Question <span class="question-number"></span></h6>
             </div>
             <div class="btn-group btn-group-sm">
+                <button type="button" class="btn btn-outline-success duplicate-question" title="Duplicate question" style="transition: all 0.2s;">
+                    <i class="bi bi-copy"></i>
+                </button>
                 <button type="button" class="btn btn-outline-primary move-question-up" title="Move Up" style="transition: all 0.2s;" onmouseover="this.style.background='#667eea'; this.style.color='white';" onmouseout="this.style.background='transparent'; this.style.color='#667eea';">
                     <i class="bi bi-arrow-up"></i>
                 </button>
@@ -520,11 +697,23 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     let questionCounter = 0;
+    let sectionCounter = 0;
     const questionsContainer = document.getElementById('questionsContainer');
     const questionTemplate = document.getElementById('questionTemplate');
+    const sectionTemplate = document.getElementById('sectionTemplate');
     const addQuestionBtn = document.getElementById('addQuestionBtn');
+    const addSectionBtn = document.getElementById('addSectionBtn');
     const quizPreview = document.getElementById('quizPreview');
     const form = document.getElementById('quizAssignmentForm');
+    
+    // Add section functionality
+    if (addSectionBtn) {
+        addSectionBtn.addEventListener('click', function() {
+            addSection();
+            this.style.transform = 'scale(0.95)';
+            setTimeout(() => { this.style.transform = 'scale(1)'; }, 150);
+        });
+    }
     
     // Add question functionality with animation
     addQuestionBtn.addEventListener('click', function() {
@@ -536,18 +725,253 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 150);
     });
     
-    // Import from bank button animation
+    // Import from bank
     const importFromBankBtn = document.getElementById('importFromBankBtn');
+    const questionBanksUrl = importFromBankBtn ? importFromBankBtn.dataset.questionBanksUrl : '';
     if (importFromBankBtn) {
         importFromBankBtn.addEventListener('click', function() {
-            // TODO: Implement import from bank functionality
-            alert('Question Bank import feature coming soon!');
-            this.style.transform = 'scale(0.95)';
-            setTimeout(() => {
-                this.style.transform = 'scale(1)';
-            }, 150);
+            if (!questionBanksUrl) {
+                alert('Question Bank import is not available here.');
+                return;
+            }
+            const modal = new bootstrap.Modal(document.getElementById('importFromBankModal'));
+            modal.show();
+            document.getElementById('importBankLoading').style.display = 'block';
+            document.getElementById('importBankEmpty').style.display = 'none';
+            document.getElementById('importBankContent').style.display = 'none';
+            document.getElementById('importAddSelectedBtn').style.display = 'none';
+            document.getElementById('importAddSelectedBtn').disabled = true;
+            fetch(questionBanksUrl, { headers: { 'Accept': 'application/json' } })
+                .then(r => r.json())
+                .then(banks => {
+                    document.getElementById('importBankLoading').style.display = 'none';
+                    if (!banks || banks.length === 0) {
+                        document.getElementById('importBankEmpty').style.display = 'block';
+                        return;
+                    }
+                    document.getElementById('importBankContent').style.display = 'block';
+                    document.getElementById('importAddSelectedBtn').style.display = 'inline-block';
+                    const select = document.getElementById('importBankSelect');
+                    select.innerHTML = '<option value="">-- Choose a bank --</option>';
+                    banks.forEach(b => {
+                        const opt = document.createElement('option');
+                        opt.value = b.id;
+                        opt.textContent = b.name + ' (' + (b.questions ? b.questions.length : 0) + ' questions)';
+                        opt.dataset.questions = JSON.stringify(b.questions || []);
+                        select.appendChild(opt);
+                    });
+                    select.addEventListener('change', function() {
+                        const opt = this.options[this.selectedIndex];
+                        const list = document.getElementById('importQuestionList');
+                        list.innerHTML = '';
+                        if (!opt || !opt.value) {
+                            document.getElementById('importAddSelectedBtn').disabled = true;
+                            return;
+                        }
+                        const questions = JSON.parse(opt.dataset.questions || '[]');
+                        questions.forEach((q, i) => {
+                            const item = document.createElement('label');
+                            item.className = 'list-group-item list-group-item-action d-flex align-items-start';
+                            item.innerHTML = '<input type="checkbox" class="form-check-input me-3 mt-1 import-q-check" value="' + i + '" data-q-index="' + i + '"> <div class="flex-grow-1"><strong class="small">' + (q.question_text ? q.question_text.substring(0, 80) + (q.question_text.length > 80 ? '...' : '') : '') + '</strong><br><small class="text-muted">' + (q.question_type || 'multiple_choice') + ' · ' + (q.points || 1) + ' pts</small></div>';
+                            item.dataset.q = JSON.stringify(q);
+                            list.appendChild(item);
+                        });
+                        document.getElementById('importAddSelectedBtn').disabled = true;
+                    });
+                    document.getElementById('importSelectAll').onclick = function() {
+                        document.querySelectorAll('#importQuestionList .import-q-check').forEach(cb => { cb.checked = true; });
+                        document.getElementById('importAddSelectedBtn').disabled = false;
+                    };
+                    document.getElementById('importDeselectAll').onclick = function() {
+                        document.querySelectorAll('#importQuestionList .import-q-check').forEach(cb => { cb.checked = false; });
+                        document.getElementById('importAddSelectedBtn').disabled = true;
+                    };
+                    document.getElementById('importQuestionList').addEventListener('change', function() {
+                        const any = document.querySelectorAll('#importQuestionList .import-q-check:checked').length > 0;
+                        document.getElementById('importAddSelectedBtn').disabled = !any;
+                    });
+                })
+                .catch(() => {
+                    document.getElementById('importBankLoading').style.display = 'none';
+                    document.getElementById('importBankEmpty').style.display = 'block';
+                    document.querySelector('#importBankEmpty p').textContent = 'Could not load question banks.';
+                });
         });
     }
+    document.getElementById('importAddSelectedBtn').addEventListener('click', function() {
+        const select = document.getElementById('importBankSelect');
+        const opt = select.options[select.selectedIndex];
+        if (!opt || !opt.value) return;
+        const questions = JSON.parse(opt.dataset.questions || '[]');
+        const list = document.getElementById('importQuestionList');
+        const checked = list.querySelectorAll('.import-q-check:checked');
+        checked.forEach(cb => {
+            const i = parseInt(cb.dataset.qIndex, 10);
+            const q = questions[i];
+            if (q) addQuestionFromBank(q);
+        });
+        bootstrap.Modal.getInstance(document.getElementById('importFromBankModal')).hide();
+    });
+
+    // Save to Bank
+    const saveToBankBtn = document.getElementById('saveToBankBtn');
+    const saveToBankUrl = saveToBankBtn ? saveToBankBtn.dataset.saveToBankUrl : '';
+    if (saveToBankBtn && saveToBankUrl) {
+        saveToBankBtn.addEventListener('click', function() {
+            const questionItems = questionsContainer.querySelectorAll('.question-item');
+            if (questionItems.length === 0) {
+                alert('Add at least one question before saving to a bank.');
+                return;
+            }
+            document.getElementById('saveToBankName').value = '';
+            new bootstrap.Modal(document.getElementById('saveToBankModal')).show();
+        });
+    }
+    // Bulk add
+    document.getElementById('bulkAddBtn').addEventListener('click', function() {
+        document.getElementById('bulkAddCustomN').value = '';
+        document.getElementById('bulkPasteText').value = '';
+        new bootstrap.Modal(document.getElementById('bulkAddModal')).show();
+    });
+    let lastBulkN = 5;
+    document.querySelectorAll('.bulk-num-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            lastBulkN = parseInt(this.dataset.n, 10) || 5;
+            document.getElementById('bulkAddCustomN').value = '';
+        });
+    });
+    document.getElementById('bulkAddConfirmBtn').addEventListener('click', function() {
+        const activeTab = document.querySelector('#bulkAddModal .tab-pane.active');
+        if (activeTab && activeTab.id === 'bulkAddCountTab') {
+            let n = parseInt(document.getElementById('bulkAddCustomN').value, 10);
+            if (!n || n < 1) n = lastBulkN;
+            if (!n || n > 100) n = 5;
+            const defaultType = document.getElementById('bulkAddDefaultType').value;
+            for (let i = 0; i < n; i++) addQuestion();
+            const items = questionsContainer.querySelectorAll('.question-item');
+            const start = Math.max(0, items.length - n);
+            for (let i = start; i < items.length; i++) {
+                const typeSelect = items[i].querySelector('.question-type');
+                typeSelect.value = defaultType;
+                toggleQuestionOptions(items[i], defaultType);
+            }
+            updateQuestionNumbers();
+            updateQuizPreview();
+        } else if (activeTab && activeTab.id === 'bulkPasteTab') {
+            const text = document.getElementById('bulkPasteText').value || '';
+            const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+            lines.forEach(line => {
+                addQuestionFromBank({ question_text: line, question_type: 'short_answer', points: 1, options: [] });
+            });
+        } else if (activeTab && activeTab.id === 'bulkCsvTab') {
+            const fileInput = document.getElementById('bulkCsvFile');
+            const file = fileInput && fileInput.files[0];
+            if (!file) {
+                alert('Choose a CSV file first.');
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result || '';
+                const lines = text.split(/\r?\n/).filter(l => l.length > 0);
+                const headers = lines[0].toLowerCase().split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+                const idx = (name) => { const i = headers.indexOf(name); return i >= 0 ? i : headers.indexOf(name.replace('_', ' ')); };
+                const qTextIdx = idx('question_text') >= 0 ? idx('question_text') : 0;
+                const typeIdx = idx('question_type') >= 0 ? idx('question_type') : 1;
+                const pointsIdx = idx('points') >= 0 ? idx('points') : 2;
+                for (let i = 1; i < lines.length; i++) {
+                    const row = lines[i].split(',').map(c => (c || '').trim().replace(/^"|"$/g, ''));
+                    const question_text = (row[qTextIdx] || '').trim();
+                    if (!question_text) continue;
+                    const question_type = (row[typeIdx] || 'multiple_choice').toLowerCase().replace(/\s/g, '_');
+                    const points = parseFloat(row[pointsIdx]) || 1;
+                    const options = [];
+                    const correctLetter = (row[row.length - 1] || 'A').toUpperCase().charAt(0);
+                    if (question_type === 'multiple_choice') {
+                        ['option_a', 'option_b', 'option_c', 'option_d'].forEach((key, j) => {
+                            const k = headers.indexOf(key) >= 0 ? headers.indexOf(key) : 3 + j;
+                            const opt = (row[k] || '').trim();
+                            if (opt) options.push({ option_text: opt, is_correct: (String.fromCharCode(65 + j) === correctLetter) });
+                        });
+                    } else if (question_type === 'true_false') {
+                        const correct = (row[3] || 'true').toLowerCase();
+                        options.push({ option_text: 'True', is_correct: correct === 'true' });
+                        options.push({ option_text: 'False', is_correct: correct === 'false' });
+                    }
+                    addQuestionFromBank({ question_text: question_text, question_type: question_type, points: points, options: options });
+                }
+                fileInput.value = '';
+                bootstrap.Modal.getInstance(document.getElementById('bulkAddModal')).hide();
+            };
+            reader.readAsText(file);
+            return;
+        }
+        bootstrap.Modal.getInstance(document.getElementById('bulkAddModal')).hide();
+    });
+
+    document.getElementById('saveToBankConfirmBtn').addEventListener('click', function() {
+        const name = document.getElementById('saveToBankName').value.trim();
+        if (!name) {
+            alert('Enter a bank name.');
+            return;
+        }
+        const questionItems = questionsContainer.querySelectorAll('.question-item');
+        const questions = [];
+        questionItems.forEach(item => {
+            const textEl = item.querySelector('.question-text');
+            const typeEl = item.querySelector('.question-type');
+            const pointsEl = item.querySelector('.question-points');
+            const q = {
+                question_text: textEl ? textEl.value : '',
+                question_type: typeEl ? typeEl.value : 'multiple_choice',
+                points: pointsEl ? parseFloat(pointsEl.value) || 1 : 1,
+                options: []
+            };
+            if (q.question_type === 'multiple_choice') {
+                const opts = item.querySelectorAll('.options-container .option-item');
+                const correctRadios = item.querySelectorAll('input[name*="correct_answer"]:checked');
+                const correctVal = correctRadios.length ? correctRadios[0].value : '0';
+                opts.forEach((opt, idx) => {
+                    const input = opt.querySelector('input[name*="option_text"]');
+                    const radio = opt.querySelector('input[type="radio"]');
+                    q.options.push({
+                        option_text: input ? input.value : '',
+                        is_correct: String(idx) === correctVal
+                    });
+                });
+            } else if (q.question_type === 'true_false') {
+                const checked = item.querySelector('input[name*="correct_answer"]:checked');
+                const isTrue = checked && checked.value === 'true';
+                q.options = [
+                    { option_text: 'True', is_correct: isTrue },
+                    { option_text: 'False', is_correct: !isTrue }
+                ];
+            }
+            if (q.question_text) questions.push(q);
+        });
+        if (questions.length === 0) {
+            alert('No valid questions to save.');
+            return;
+        }
+        const btn = this;
+        btn.disabled = true;
+        fetch(saveToBankUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value },
+            body: JSON.stringify({ name: name, questions: questions })
+        }).then(r => r.json()).then(data => {
+            btn.disabled = false;
+            bootstrap.Modal.getInstance(document.getElementById('saveToBankModal')).hide();
+            if (data.success) {
+                alert(data.message || 'Question bank saved.');
+            } else {
+                alert(data.message || 'Failed to save.');
+            }
+        }).catch(() => {
+            btn.disabled = false;
+            alert('Failed to save question bank.');
+        });
+    });
     
     // Add first question button
     const addFirstQuestionBtn = document.getElementById('addFirstQuestionBtn');
@@ -557,6 +981,121 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    function addSection() {
+        sectionCounter++;
+        const sectionEl = sectionTemplate.content.cloneNode(true);
+        const sectionBlock = sectionEl.querySelector('.section-block');
+        const titleInput = sectionEl.querySelector('.section-title-input');
+        const titlePreview = sectionEl.querySelector('.section-title-preview');
+        sectionBlock.dataset.blockId = 'section_' + sectionCounter;
+        if (titleInput) {
+            titleInput.name = 'section_title_' + sectionCounter;
+            titleInput.addEventListener('input', function() {
+                if (titlePreview) titlePreview.textContent = this.value || 'New Section';
+            });
+        }
+        const noQuestionsMsg = questionsContainer.querySelector('.text-center');
+        if (noQuestionsMsg) noQuestionsMsg.remove();
+        questionsContainer.appendChild(sectionEl);
+        const inserted = questionsContainer.lastElementChild;
+        const delBtn = inserted.querySelector('.delete-section');
+        if (delBtn) {
+            delBtn.addEventListener('click', function() {
+                if (confirm('Remove this section? Questions in it will become unsectioned.')) {
+                    inserted.remove();
+                    updateQuizPreview();
+                }
+            });
+        }
+        updateQuizPreview();
+    }
+    
+    function collectQuestionDataFromElement(item) {
+        const textEl = item.querySelector('.question-text');
+        const typeEl = item.querySelector('.question-type');
+        const pointsEl = item.querySelector('.question-points');
+        const q = {
+            question_text: textEl ? textEl.value : '',
+            question_type: typeEl ? typeEl.value : 'multiple_choice',
+            points: pointsEl ? parseFloat(pointsEl.value) || 1 : 1,
+            options: []
+        };
+        if (q.question_type === 'multiple_choice') {
+            const opts = item.querySelectorAll('.options-container .option-item');
+            const correctRadios = item.querySelectorAll('input[name*="correct_answer"]:checked');
+            const correctVal = correctRadios.length ? correctRadios[0].value : '0';
+            opts.forEach((opt, idx) => {
+                const input = opt.querySelector('input[name*="option_text"]');
+                const radio = opt.querySelector('input[type="radio"]');
+                q.options.push({
+                    option_text: input ? input.value : '',
+                    is_correct: String(idx) === correctVal
+                });
+            });
+        } else if (q.question_type === 'true_false') {
+            const checked = item.querySelector('input[name*="correct_answer"]:checked');
+            const isTrue = checked && checked.value === 'true';
+            q.options = [
+                { option_text: 'True', is_correct: isTrue },
+                { option_text: 'False', is_correct: !isTrue }
+            ];
+        }
+        return q;
+    }
+    
+    function addQuestionFromBank(q) {
+        questionCounter++;
+        const questionElement = questionTemplate.content.cloneNode(true);
+        const questionItem = questionElement.querySelector('.question-item');
+        const questionNumber = questionElement.querySelector('.question-number');
+        questionItem.dataset.questionId = questionCounter;
+        questionItem.dataset.blockId = 'question_' + questionCounter;
+        questionNumber.textContent = questionCounter;
+        updateQuestionFieldNames(questionElement, questionCounter);
+        const noQuestionsMsg = questionsContainer.querySelector('.text-center');
+        if (noQuestionsMsg) noQuestionsMsg.remove();
+        questionsContainer.appendChild(questionElement);
+        const actualQuestionElement = questionsContainer.lastElementChild;
+        const typeSelect = actualQuestionElement.querySelector('.question-type');
+        const textArea = actualQuestionElement.querySelector('.question-text');
+        const pointsInput = actualQuestionElement.querySelector('.question-points');
+        typeSelect.value = q.question_type || 'multiple_choice';
+        textArea.value = q.question_text || '';
+        pointsInput.value = String(q.points !== undefined ? q.points : 1);
+        if (q.question_type === 'multiple_choice' && q.options && q.options.length) {
+            const optionsContainer = actualQuestionElement.querySelector('.options-container');
+            optionsContainer.innerHTML = '';
+            let correctIdx = 0;
+            q.options.forEach((opt, idx) => {
+                if (opt.is_correct) correctIdx = idx;
+                const optionLetter = String.fromCharCode(65 + idx);
+                const div = document.createElement('div');
+                div.className = 'option-item mb-2';
+                div.innerHTML = '<div class="input-group"><div class="input-group-text"><input class="form-check-input" type="radio" name="correct_answer_' + questionCounter + '" value="' + idx + '" ' + (opt.is_correct ? 'checked' : '') + ' required></div><input type="text" class="form-control" name="option_text_' + questionCounter + '[]" placeholder="Option ' + optionLetter + '" value="' + (opt.option_text || '').replace(/"/g, '&quot;') + '" required><button type="button" class="btn btn-outline-danger remove-option" title="Remove Option"><i class="bi bi-trash"></i></button></div>';
+                optionsContainer.appendChild(div);
+            });
+            const removeButtons = actualQuestionElement.querySelectorAll('.remove-option');
+            removeButtons.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    if (optionsContainer.children.length > 2) {
+                        btn.closest('.option-item').remove();
+                        updateOptionValues(actualQuestionElement);
+                    } else alert('At least 2 options are required.');
+                });
+            });
+        } else if (q.question_type === 'true_false' && q.options) {
+            const tfTrue = actualQuestionElement.querySelector('.true-false-options input[value="true"]');
+            const tfFalse = actualQuestionElement.querySelector('.true-false-options input[value="false"]');
+            const isTrueCorrect = q.options.some(o => o.option_text && o.option_text.toLowerCase() === 'true' && o.is_correct);
+            if (tfTrue) tfTrue.checked = isTrueCorrect;
+            if (tfFalse) tfFalse.checked = !isTrueCorrect;
+        }
+        setupQuestionEventListeners(actualQuestionElement);
+        toggleQuestionOptions(actualQuestionElement, typeSelect.value);
+        updateQuestionNumbers();
+        updateQuizPreview();
+    }
+    
     function addQuestion() {
         questionCounter++;
         const questionElement = questionTemplate.content.cloneNode(true);
@@ -564,6 +1103,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const questionNumber = questionElement.querySelector('.question-number');
         
         questionItem.dataset.questionId = questionCounter;
+        questionItem.dataset.blockId = 'question_' + questionCounter;
         questionNumber.textContent = questionCounter;
         
         // Update all form field names to be unique for this question
@@ -624,9 +1164,23 @@ document.addEventListener('DOMContentLoaded', function() {
     function setupQuestionEventListeners(questionElement) {
         const questionType = questionElement.querySelector('.question-type');
         const deleteBtn = questionElement.querySelector('.delete-question');
+        const duplicateBtn = questionElement.querySelector('.duplicate-question');
         const moveUpBtn = questionElement.querySelector('.move-question-up');
         const moveDownBtn = questionElement.querySelector('.move-question-down');
         const addOptionBtn = questionElement.querySelector('.add-option');
+        
+        // Duplicate question
+        if (duplicateBtn) {
+            duplicateBtn.addEventListener('click', function() {
+                const q = collectQuestionDataFromElement(questionElement);
+                addQuestionFromBank(q);
+                const newEl = questionsContainer.lastElementChild;
+                const ref = questionElement.nextElementSibling;
+                if (newEl && newEl !== questionElement) questionsContainer.insertBefore(newEl, ref);
+                updateQuestionNumbers();
+                updateQuizPreview();
+            });
+        }
         
         // Question type change
         questionType.addEventListener('change', function() {
@@ -830,6 +1384,18 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    function buildBlockOrder() {
+        const order = [];
+        Array.from(questionsContainer.children).forEach(function(child) {
+            const blockId = child.classList.contains('section-block') && child.dataset.blockId
+                ? child.dataset.blockId
+                : (child.classList.contains('question-item') && child.dataset.blockId ? child.dataset.blockId : null);
+            if (blockId) order.push(blockId);
+        });
+        const blockOrderInput = document.getElementById('blockOrderInput');
+        if (blockOrderInput) blockOrderInput.value = order.join(',');
+    }
+    
     function updateQuizPreview() {
         const questions = questionsContainer.querySelectorAll('.question-item');
         let previewHTML = '';
@@ -957,6 +1523,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Form submission
     form.addEventListener('submit', function(e) {
+        buildBlockOrder();
         console.log('Form submission started');
         const questions = questionsContainer.querySelectorAll('.question-item');
         console.log(`Found ${questions.length} questions`);

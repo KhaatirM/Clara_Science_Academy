@@ -661,30 +661,38 @@ body {
 }
 
 /* --- Tablet/Small Desktop Responsiveness --- */
+/* Small laptops: force sidebar into collapsed (icon-only) mode */
 @media (max-width: 1200px) and (min-width: 769px) {
     .sidebar {
-        width: 80px;
+        width: 80px !important;
         max-height: 100vh;
         overflow-y: auto;
         overflow-x: hidden;
     }
-    .main-content {
-        margin-left: 80px;
-        width: calc(100% - 80px);
-    }
     .sidebar .sidebar-heading,
     .sidebar .nav-link span,
     .sidebar .logout-btn-container span {
-        display: none;
+        display: none !important;
     }
     .sidebar .nav-link {
         justify-content: center;
+        padding: 6px 0;
+        min-height: 36px;
     }
     .sidebar .nav-link .bi {
         margin-right: 0;
+        margin-left: 0;
         font-size: 1.5rem;
     }
-    /* Ensure scrollbar works in collapsed state */
+    .sidebar .nav,
+    .sidebar-nav {
+        flex-direction: column !important;
+        flex-wrap: nowrap !important;
+    }
+    .main-content {
+        margin-left: 80px !important;
+        width: calc(100% - 80px) !important;
+    }
     .sidebar.collapsed {
         max-height: 100vh;
         overflow-y: auto;

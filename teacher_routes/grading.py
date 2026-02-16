@@ -252,7 +252,10 @@ def grade_assignment(assignment_id):
     if assignment.assignment_type == 'quiz':
         # Load questions with options eagerly
         from sqlalchemy.orm import joinedload
-        quiz_questions = QuizQuestion.query.options(joinedload(QuizQuestion.options)).filter_by(assignment_id=assignment_id).order_by(QuizQuestion.order).all()
+        quiz_questions = QuizQuestion.query.options(
+            joinedload(QuizQuestion.options),
+            joinedload(QuizQuestion.section)
+        ).filter_by(assignment_id=assignment_id).order_by(QuizQuestion.order).all()
         
         # Check if quiz has open-ended questions (short_answer or essay) that need manual grading
         has_open_ended_questions = any(q.question_type in ['short_answer', 'essay'] for q in quiz_questions)

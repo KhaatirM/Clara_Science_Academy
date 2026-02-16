@@ -257,13 +257,19 @@ def teacher_dashboard():
         user_id=current_user.id
     ).order_by(Notification.timestamp.desc()).limit(10).all()
     
-    # Calculate statistics
-    total_students = Student.query.count()  # Simplified - should filter by enrollment
+    # Calculate statistics (total_students = unique students across teacher's classes, no duplicates)
     if class_ids:
+        enrollments = Enrollment.query.filter(
+            Enrollment.class_id.in_(class_ids),
+            Enrollment.is_active == True
+        ).all()
+        unique_student_ids = {e.student_id for e in enrollments}
+        total_students = len(unique_student_ids)
         active_assignments = Assignment.query.filter(Assignment.class_id.in_(class_ids)).count()
         total_assignments = Assignment.query.filter(Assignment.class_id.in_(class_ids)).count()
         grades_entered = Grade.query.join(Assignment).filter(Assignment.class_id.in_(class_ids)).count()
     else:
+        total_students = 0
         active_assignments = 0
         total_assignments = 0
         grades_entered = 0
@@ -325,7 +331,6 @@ def teacher_dashboard():
         student_ids = [s.id for s in Student.query.all()]
     elif class_ids:
         # Get students enrolled in teacher's classes
-        from models import Enrollment
         enrollments = Enrollment.query.filter(
             Enrollment.class_id.in_(class_ids),
             Enrollment.is_active == True
@@ -1155,11 +1160,12 @@ def assignments_and_grades():
                                 except (json.JSONDecodeError, TypeError):
                                     continue
                         
-                        average_score = round(total_score / graded_with_score, 1) if graded_with_score > 0 else 0
+                        total_points = (assignment.total_points or 100.0) if getattr(assignment, 'total_points', None) else 100.0
+                        avg_pct = round((total_score / graded_with_score / total_points * 100), 1) if graded_with_score > 0 and total_points > 0 else 0
                         assignment_grades[assignment.id] = {
                             'total_submissions': total_submissions,
                             'graded_count': graded_with_score,
-                            'average_score': average_score,
+                            'average_score': avg_pct,
                             'is_autogradeable': is_autogradeable
                         }
                     
@@ -1189,11 +1195,12 @@ def assignments_and_grades():
                                 except (json.JSONDecodeError, TypeError):
                                     continue
                         
-                        average_score = round(total_score / graded_with_score, 1) if graded_with_score > 0 else 0
+                        total_points_ga = (group_assignment.total_points or 100.0) if getattr(group_assignment, 'total_points', None) else 100.0
+                        avg_pct_ga = round((total_score / graded_with_score / total_points_ga * 100), 1) if graded_with_score > 0 and total_points_ga > 0 else 0
                         assignment_grades[f'group_{group_assignment.id}'] = {
                             'total_submissions': total_group_submissions,
                             'graded_count': graded_with_score,
-                            'average_score': average_score
+                            'average_score': avg_pct_ga
                         }
             
             except Exception as e:

@@ -658,12 +658,30 @@ class Submission(db.Model):
         return f"Submission(Student: {self.student_id}, Assignment: {self.assignment_id}, Type: {self.submission_type})"
 
 
+class QuizSection(db.Model):
+    """
+    Model for grouping quiz questions into sections/parts (e.g. Part A, Part B).
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    assignment_id = db.Column(db.Integer, db.ForeignKey('assignment.id'), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    order = db.Column(db.Integer, default=0, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    assignment = db.relationship('Assignment', backref='quiz_sections', lazy=True)
+    questions = db.relationship('QuizQuestion', backref='section', lazy=True, foreign_keys='QuizQuestion.section_id')
+
+    def __repr__(self):
+        return f"QuizSection('{self.title}', order={self.order})"
+
+
 class QuizQuestion(db.Model):
     """
     Model for storing quiz questions.
     """
     id = db.Column(db.Integer, primary_key=True)
     assignment_id = db.Column(db.Integer, db.ForeignKey('assignment.id'), nullable=False)
+    section_id = db.Column(db.Integer, db.ForeignKey('quiz_section.id'), nullable=True)
     question_text = db.Column(db.Text, nullable=False)
     question_type = db.Column(db.String(20), nullable=False)  # multiple_choice, true_false, short_answer, essay
     points = db.Column(db.Float, default=1.0, nullable=False)

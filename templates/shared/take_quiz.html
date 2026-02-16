@@ -168,6 +168,11 @@
                                 </div>
                                 
                                 {% for question in questions %}
+                                    {% if question.section and (loop.index0 == 0 or questions[loop.index0 - 1].section_id != question.section_id) %}
+                                    <div class="mb-3 mt-4 pt-3 border-top border-2 rounded p-3" style="background: linear-gradient(135deg, #e8ecff 0%, #f0f4ff 100%); border-color: #667eea !important;">
+                                        <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-collection-fill me-2"></i>{{ question.section.title }}</h5>
+                                    </div>
+                                    {% endif %}
                                     {% set student_answer = existing_answers.get(question.id) %}
                                     {% set is_correct = student_answer and student_answer.is_correct %}
                                     <div class="card mb-4 border-0 shadow-sm" style="border-radius: 1rem; overflow: hidden; {% if is_correct %}border-left: 4px solid #28a745 !important;{% else %}border-left: 4px solid #dc3545 !important;{% endif %}">
@@ -345,6 +350,11 @@
                                 </div>
                                 
                                 {% for question in questions %}
+                                    {% if question.section and (loop.index0 == 0 or questions[loop.index0 - 1].section_id != question.section_id) %}
+                                    <div class="mb-3 mt-4 pt-3 border-top border-2 rounded p-3" style="background: linear-gradient(135deg, #e8ecff 0%, #f0f4ff 100%); border-color: #667eea !important;">
+                                        <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-collection-fill me-2"></i>{{ question.section.title }}</h5>
+                                    </div>
+                                    {% endif %}
                                     {% set student_answer = existing_answers.get(question.id) %}
                                     {% set is_correct = student_answer and student_answer.is_correct %}
                                     <div class="card mb-4 border-0 shadow-sm" style="border-radius: 1rem; overflow: hidden; {% if is_correct %}border-left: 4px solid #28a745 !important;{% else %}border-left: 4px solid #dc3545 !important;{% endif %}">
@@ -533,37 +543,27 @@
                     </div>
                     <div class="card-body p-4" style="background: white;">
                         {% if questions %}
-                            <!-- Enhanced Question Navigation -->
-                            <div class="question-navigation mb-4 p-3" id="questionNavigation" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 0.75rem; border: 2px solid #e9ecef;">
-                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-                                    <button type="button" class="btn px-4 py-2" id="prevQuestionBtn" disabled style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 0.5rem; font-weight: 600; opacity: 0.5; cursor: not-allowed;">
-                                        <i class="bi bi-chevron-left me-1"></i>Previous
-                                    </button>
-                                    <div class="question-counter text-center">
-                                        <div class="badge px-4 py-2" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-size: 1.1rem; border-radius: 0.5rem;">
-                                            <i class="bi bi-list-ol me-2"></i>
-                                            <span id="currentQuestionNumber">1</span> of <span id="totalQuestions">{{ questions|length }}</span>
-                                        </div>
-                                    </div>
-                                    <button type="button" class="btn px-4 py-2" id="nextQuestionBtn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 0.5rem; font-weight: 600;">
-                                        Next<i class="bi bi-chevron-right ms-1"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            
                             <form id="quizForm" method="POST" action="{{ url_for('student.submit_quiz', assignment_id=assignment.id) }}">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                 {% for question in questions %}
+                                    {% if question.section and (loop.index0 == 0 or questions[loop.index0 - 1].section_id != question.section_id) %}
+                                    <div class="mb-3 mt-2 pt-3 border-top border-2 rounded p-3 quiz-section-header question-card" data-question-number="{{ loop.index }}" style="display: {{ 'block' if loop.index == 1 else 'none' }}; background: linear-gradient(135deg, #e8ecff 0%, #f0f4ff 100%); border-color: #667eea !important;">
+                                        <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-collection-fill me-2"></i>{{ question.section.title }}</h5>
+                                    </div>
+                                    {% endif %}
                                     <div class="mb-4 p-4 border-0 rounded question-card shadow-sm" data-question-id="{{ question.id }}" data-question-number="{{ loop.index }}" style="display: {{ 'block' if loop.index == 1 else 'none' }}; background: white; border-radius: 1rem; border-left: 4px solid #667eea;">
-                                        <div class="d-flex justify-content-between align-items-start mb-4">
+                                        <div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-2">
                                             <div class="d-flex align-items-center">
                                                 <span class="badge px-3 py-2 me-3" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-size: 1rem; border-radius: 0.5rem;">
                                                     Question {{ loop.index }}
                                                 </span>
+                                                <button type="button" class="btn btn-sm px-3 py-2 quiz-tts-btn" title="Read question and choices aloud" aria-label="Read question aloud" style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); color: white; border: none; border-radius: 0.5rem; font-weight: 600;">
+                                                    <i class="bi bi-volume-up-fill me-1"></i>Listen
+                                                </button>
                                             </div>
                                             <span class="badge px-3 py-2" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border-radius: 0.5rem;">{{ question.points }} point{{ 's' if question.points != 1 else '' }}</span>
                                         </div>
-                                        <p class="mb-4 fw-bold" style="color: #2c3e50; font-size: 1.3rem; line-height: 1.7;">{{ question.question_text }}</p>
+                                        <p class="mb-4 fw-bold quiz-question-text" style="color: #2c3e50; font-size: 1.3rem; line-height: 1.7;">{{ question.question_text }}</p>
                                         
                                         {% if question.question_type == 'multiple_choice' %}
                                             <div class="options-container">
@@ -575,7 +575,7 @@
                                                                style="cursor: pointer; width: 1.25rem; height: 1.25rem; margin-top: 0.3rem;">
                                                         <label class="form-check-label w-100" for="option_{{ option.id }}" style="cursor: pointer; padding-left: 0.5rem;">
                                                             <span class="badge me-3 px-2 py-1" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 0.375rem; font-weight: 600; min-width: 2rem; text-align: center;">{{ loop.index0|string|replace('0', 'A')|replace('1', 'B')|replace('2', 'C')|replace('3', 'D')|replace('4', 'E')|replace('5', 'F') }}</span>
-                                                            <span style="font-size: 1.05rem; color: #495057;">{{ option.option_text }}</span>
+                                                            <span class="quiz-option-text" style="font-size: 1.05rem; color: #495057;">{{ option.option_text }}</span>
                                                         </label>
                                                     </div>
                                                 {% endfor %}
@@ -591,7 +591,7 @@
                                                                style="cursor: pointer; width: 1.25rem; height: 1.25rem; margin-top: 0.3rem;">
                                                         <label class="form-check-label w-100" for="option_{{ option.id }}" style="cursor: pointer; padding-left: 0.5rem;">
                                                             <i class="bi {% if 'true' in option.option_text.lower() %}bi-check-circle text-success{% else %}bi-x-circle text-danger{% endif %} me-2" style="font-size: 1.25rem;"></i>
-                                                            <span style="font-size: 1.05rem; color: #495057;">{{ option.option_text }}</span>
+                                                            <span class="quiz-option-text" style="font-size: 1.05rem; color: #495057;">{{ option.option_text }}</span>
                                                         </label>
                                                     </div>
                                                 {% endfor %}
@@ -625,6 +625,37 @@
                                     </div>
                                 {% endfor %}
                                 
+                                <!-- Question Navigation (Previous / Next) at bottom -->
+                                <div class="question-navigation mt-4 mb-4 p-3" id="questionNavigation" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 0.75rem; border: 2px solid #e9ecef;">
+                                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                                        <button type="button" class="btn px-4 py-2" id="prevQuestionBtn" disabled style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 0.5rem; font-weight: 600; opacity: 0.5; cursor: not-allowed;">
+                                            <i class="bi bi-chevron-left me-1"></i>Previous
+                                        </button>
+                                        <div class="question-counter text-center">
+                                            <div class="badge px-4 py-2" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-size: 1.1rem; border-radius: 0.5rem;">
+                                                <i class="bi bi-list-ol me-2"></i>
+                                                <span id="currentQuestionNumber">1</span> of <span id="totalQuestions">{{ questions|length }}</span>
+                                            </div>
+                                        </div>
+                                        <button type="button" class="btn px-4 py-2" id="nextQuestionBtn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 0.5rem; font-weight: 600;">
+                                            Next<i class="bi bi-chevron-right ms-1"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <!-- Submit Quiz (after answering/navigating through questions) -->
+                                <div class="quiz-submit-area mt-3 mb-2 p-3 rounded" id="quizSubmitArea" style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); border: 2px solid #28a745;">
+                                    <p class="mb-3 text-success fw-bold" id="submitQuizHint" style="display: none;"><i class="bi bi-check-circle me-2"></i>You can submit your quiz when you're ready.</p>
+                                    <div class="d-flex gap-3 flex-wrap">
+                                        <button type="submit" class="btn btn-lg px-5" id="submitQuizBtn" onclick="return confirm('Are you sure you want to submit this quiz? You cannot change your answers after submission.')" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border: none; border-radius: 0.5rem; font-weight: 700; box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4); font-size: 1.1rem;">
+                                            <i class="bi bi-check-circle me-2"></i>Submit Quiz
+                                        </button>
+                                        <a href="{{ url_for('student.student_assignments') }}" class="btn btn-lg px-5" style="background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%); color: white; border: none; border-radius: 0.5rem; font-weight: 600; box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3); text-decoration: none; font-size: 1.1rem;">
+                                            <i class="bi bi-arrow-left me-2"></i>Back to Assignments
+                                        </a>
+                                    </div>
+                                </div>
+                                
                                 <!-- Review Mode Summary -->
                                 <div class="review-summary" id="reviewSummary" style="display: none;">
                                     <div class="card border-0 shadow-sm" style="border-radius: 1rem; overflow: hidden; border-left: 4px solid #17a2b8;">
@@ -654,15 +685,6 @@
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                                
-                                <div class="d-flex gap-3 mt-4 flex-wrap">
-                                    <button type="submit" class="btn btn-lg px-5" id="submitQuizBtn" onclick="return confirm('Are you sure you want to submit this quiz? You cannot change your answers after submission.')" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border: none; border-radius: 0.5rem; font-weight: 700; box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4); font-size: 1.1rem;">
-                                        <i class="bi bi-check-circle me-2"></i>Submit Quiz
-                                    </button>
-                                    <a href="{{ url_for('student.student_assignments') }}" class="btn btn-lg px-5" style="background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%); color: white; border: none; border-radius: 0.5rem; font-weight: 600; box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3); text-decoration: none; font-size: 1.1rem;">
-                                        <i class="bi bi-arrow-left me-2"></i>Back to Assignments
-                                    </a>
                                 </div>
                                 
                                 <!-- Keyboard Shortcuts Help Modal -->
@@ -779,6 +801,7 @@ document.addEventListener('DOMContentLoaded', function() {
         prevBtn.addEventListener('click', () => navigateQuestion(-1));
         nextBtn.addEventListener('click', () => navigateQuestion(1));
         updateNavigationButtons();
+        updateQuestionCounter();
     }
     
     // Initialize review mode
@@ -820,6 +843,41 @@ document.addEventListener('DOMContentLoaded', function() {
         // Auto-save every 30 seconds
         setInterval(saveQuizProgress, 30000);
     }
+    
+    // Text-to-speech: read question and choices aloud
+    document.getElementById('quizForm') && document.getElementById('quizForm').addEventListener('click', function(e) {
+        const ttsBtn = e.target.closest('.quiz-tts-btn');
+        if (!ttsBtn) return;
+        e.preventDefault();
+        const card = ttsBtn.closest('.question-card[data-question-id]');
+        if (!card) return;
+        const questionEl = card.querySelector('.quiz-question-text');
+        const questionText = questionEl ? questionEl.textContent.trim() : '';
+        const optionEls = card.querySelectorAll('.quiz-option-text');
+        const letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+        let toSpeak = 'Question ' + (card.dataset.questionNumber || '') + '. ' + questionText;
+        if (optionEls.length > 0) {
+            toSpeak += '. The choices are. ';
+            optionEls.forEach(function(el, i) {
+                toSpeak += (letters[i] || (i + 1)) + '. ' + (el.textContent || '').trim() + '. ';
+            });
+        }
+        if (window.speechSynthesis) {
+            window.speechSynthesis.cancel();
+            var u = new SpeechSynthesisUtterance(toSpeak);
+            u.rate = 0.95;
+            u.pitch = 1;
+            window.speechSynthesis.speak(u);
+            ttsBtn.querySelector('i').classList.remove('bi-volume-up-fill');
+            ttsBtn.querySelector('i').classList.add('bi-stop-fill');
+            u.onend = function() {
+                if (ttsBtn && ttsBtn.querySelector('i')) {
+                    ttsBtn.querySelector('i').classList.remove('bi-stop-fill');
+                    ttsBtn.querySelector('i').classList.add('bi-volume-up-fill');
+                }
+            };
+        }
+    });
     
     // Add visual feedback for selected options
     document.querySelectorAll('input[type="radio"]').forEach(radio => {
@@ -1044,24 +1102,31 @@ function updateTimerDisplay() {
 
 // Question Navigation Functions
 function navigateQuestion(direction) {
+    if (window.speechSynthesis) { window.speechSynthesis.cancel(); }
     const newQuestion = quizState.currentQuestion + direction;
     if (newQuestion >= 1 && newQuestion <= quizState.totalQuestions) {
-        // Hide current question
-        const currentCard = document.querySelector(`[data-question-number="${quizState.currentQuestion}"]`);
-        if (currentCard) {
-            currentCard.style.display = 'none';
-        }
+        // Hide current question (all cards with this number: section header + question)
+        const currentCards = document.querySelectorAll(`[data-question-number="${quizState.currentQuestion}"]`);
+        currentCards.forEach(card => { card.style.display = 'none'; });
         
-        // Show new question
-        const newCard = document.querySelector(`[data-question-number="${newQuestion}"]`);
-        if (newCard) {
-            newCard.style.display = 'block';
-            newCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // Show new question (all cards with this number: section header + question)
+        const newCards = document.querySelectorAll(`[data-question-number="${newQuestion}"]`);
+        newCards.forEach(card => {
+            card.style.display = 'block';
+        });
+        if (newCards.length > 0) {
+            newCards[newCards.length - 1].scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
         
         quizState.currentQuestion = newQuestion;
         updateNavigationButtons();
         updateQuestionCounter();
+        var navEl = document.getElementById('questionNavigation');
+        if (navEl) { navEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+        document.querySelectorAll('.quiz-tts-btn i').forEach(function(icon) {
+            icon.classList.remove('bi-stop-fill');
+            icon.classList.add('bi-volume-up-fill');
+        });
     }
 }
 
@@ -1097,6 +1162,10 @@ function updateQuestionCounter() {
     const currentNumber = document.getElementById('currentQuestionNumber');
     if (currentNumber) {
         currentNumber.textContent = quizState.currentQuestion;
+    }
+    const submitHint = document.getElementById('submitQuizHint');
+    if (submitHint) {
+        submitHint.style.display = (quizState.currentQuestion === quizState.totalQuestions) ? 'block' : 'none';
     }
 }
 
@@ -1160,7 +1229,9 @@ function generateReviewSummary() {
     let navHTML = '';
     
     for (let i = 1; i <= quizState.totalQuestions; i++) {
-        const questionCard = document.querySelector(`[data-question-number="${i}"]`);
+        // Find the actual question card (has data-question-id), not section header
+        const cardsWithNumber = document.querySelectorAll(`[data-question-number="${i}"]`);
+        const questionCard = Array.from(cardsWithNumber).find(c => c.dataset.questionId);
         const questionId = questionCard ? questionCard.dataset.questionId : null;
         
         // Check if question is answered
@@ -1206,11 +1277,11 @@ function jumpToQuestion(questionNumber) {
             card.style.display = 'none';
         });
         
-        // Show target question
-        const targetCard = document.querySelector(`[data-question-number="${questionNumber}"]`);
-        if (targetCard) {
-            targetCard.style.display = 'block';
-            targetCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // Show target question (all cards with this number: section header + question)
+        const targetCards = document.querySelectorAll(`[data-question-number="${questionNumber}"]`);
+        targetCards.forEach(card => { card.style.display = 'block'; });
+        if (targetCards.length > 0) {
+            targetCards[targetCards.length - 1].scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
         
         updateNavigationButtons();

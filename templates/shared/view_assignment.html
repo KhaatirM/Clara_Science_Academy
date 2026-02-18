@@ -52,33 +52,66 @@
                         {% endif %}
                         
                         <!-- PDF/Document Viewer (for assignments with attachments) -->
-                        {% if assignment.attachment_filename %}
+                        {% if assignment.attachment_list or assignment.attachment_filename %}
                         <div class="col-12">
                             <div class="card border-0 shadow-sm mb-4" style="background: #ffffff;">
                                 <div class="card-header bg-white border-bottom" style="background: #ffffff !important;">
-                                    <div class="d-flex justify-content-between align-items-center">
+                                    <div class="d-flex justify-content-between align-items-center flex-wrap">
                                         <div>
                                             <h6 class="mb-0">
                                                 <i class="bi bi-file-earmark-pdf me-2 text-danger"></i>
+                                                {% if assignment.attachment_list and assignment.attachment_list|length > 1 %}
+                                                Assignment Documents
+                                                {% else %}
                                                 Assignment Document
+                                                {% endif %}
                                             </h6>
-                                            <small class="text-muted">{{ assignment.attachment_original_filename or assignment.attachment_filename }}</small>
+                                            {% if assignment.attachment_list and assignment.attachment_list|length > 1 %}
+                                            <small class="text-muted">{{ assignment.attachment_list|length }} file(s)</small>
+                                            {% else %}
+                                            <small class="text-muted" id="currentDocName">{{ (assignment.attachment_list[0].attachment_original_filename or assignment.attachment_list[0].attachment_filename) if assignment.attachment_list else (assignment.attachment_original_filename or assignment.attachment_filename) }}</small>
+                                            {% endif %}
                                         </div>
                                         <div class="btn-group" role="group">
-                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="downloadDocument()" title="Download">
+                                            <a id="downloadDocumentBtn" href="{{ url_for('download_assignment_file', assignment_id=assignment.id) }}" class="btn btn-sm btn-outline-secondary" download title="Download">
                                                 <i class="bi bi-download"></i>
+                                            </a>
+                                            {% if assignment.attachment_list %}
+                                            {% set first_mime = assignment.attachment_list[0].attachment_mime_type if assignment.attachment_list else '' %}
+                                            {% if first_mime and 'pdf' in first_mime.lower() %}
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="printDocument()" title="Print">
+                                                <i class="bi bi-printer"></i>
                                             </button>
-                                            {% if assignment.attachment_mime_type and 'pdf' in assignment.attachment_mime_type.lower() %}
+                                            {% endif %}
+                                            {% elif assignment.attachment_mime_type and 'pdf' in assignment.attachment_mime_type.lower() %}
                                             <button type="button" class="btn btn-sm btn-outline-secondary" onclick="printDocument()" title="Print">
                                                 <i class="bi bi-printer"></i>
                                             </button>
                                             {% endif %}
                                         </div>
                                     </div>
+                                    {% if assignment.attachment_list and assignment.attachment_list|length > 1 %}
+                                    <div class="mt-2">
+                                        <nav class="nav nav-pills nav-fill gap-1" id="documentTabs" role="tablist">
+                                            {% for att in assignment.attachment_list %}
+                                            <button type="button" class="nav-link document-tab {% if loop.index0 == 0 %}active{% endif %}" 
+                                                    data-index="{{ loop.index0 }}" 
+                                                    data-name="{{ att.attachment_original_filename or att.attachment_filename }}"
+                                                    data-download-url="{{ url_for('download_assignment_file', assignment_id=assignment.id, index=loop.index0) }}">
+                                                Document {{ loop.index }}: {{ (att.attachment_original_filename or att.attachment_filename)[:20] }}{% if (att.attachment_original_filename or att.attachment_filename)|length > 20 %}...{% endif %}
+                                            </button>
+                                            {% endfor %}
+                                        </nav>
+                                    </div>
+                                    {% endif %}
                                 </div>
                                 <div class="card-body p-0">
-                                    {% if assignment.attachment_mime_type and 'pdf' in assignment.attachment_mime_type.lower() %}
-                                        <!-- Interactive PDF Viewer -->
+                                    {% if assignment.attachment_list %}
+                                    {% set first_is_pdf = assignment.attachment_list[0].attachment_mime_type and 'pdf' in (assignment.attachment_list[0].attachment_mime_type or '')|lower %}
+                                    {% else %}
+                                    {% set first_is_pdf = assignment.attachment_mime_type and 'pdf' in (assignment.attachment_mime_type or '')|lower %}
+                                    {% endif %}
+                                    {% if first_is_pdf %}
                                         <div class="document-viewer-wrapper">
                                             <div class="pdf-toolbar">
                                                 <div class="pdf-controls-left">
@@ -112,11 +145,12 @@
                                             </div>
                                             <div class="document-viewer-container" id="pdfViewerContainer">
                                                 <iframe id="pdfViewer" 
-                                                        src="{{ url_for('download_assignment_file', assignment_id=assignment.id, view='true') }}#toolbar=0&navpanes=0&scrollbar=1&zoom=page-width" 
+                                                        src="{{ url_for('download_assignment_file', assignment_id=assignment.id, view='true') }}{% if assignment.attachment_list and assignment.attachment_list|length > 1 %}&index=0{% endif %}#toolbar=0&navpanes=0&scrollbar=1&zoom=page-width" 
                                                         class="document-viewer" 
                                                         title="Assignment PDF"
                                                         style="width: 100%; height: 100%; border: none; display: block; position: absolute; top: 0; left: 0;"
-                                                        allowfullscreen>
+                                                        allowfullscreen
+                                                        data-base-view-url="{{ url_for('download_assignment_file', assignment_id=assignment.id, view='true') }}">
                                                     <p>Your browser does not support PDFs. 
                                                         <a href="{{ url_for('download_assignment_file', assignment_id=assignment.id) }}">Download the PDF</a> instead.
                                                     </p>
@@ -124,14 +158,11 @@
                                             </div>
                                         </div>
                                     {% else %}
-                                        <!-- Generic document viewer or download link -->
                                         <div class="document-preview">
                                             <div class="text-center p-5 bg-light">
                                                 <i class="bi bi-file-earmark-text display-1 text-muted mb-3"></i>
-                                                <p class="text-muted mb-3">{{ assignment.attachment_original_filename or assignment.attachment_filename }}</p>
-                                                <a href="{{ url_for('download_assignment_file', assignment_id=assignment.id) }}" 
-                                                   class="btn btn-primary" 
-                                                   download>
+                                                <p class="text-muted mb-3" id="nonPdfDocName">{{ (assignment.attachment_list[0].attachment_original_filename or assignment.attachment_list[0].attachment_filename) if assignment.attachment_list else (assignment.attachment_original_filename or assignment.attachment_filename) }}</p>
+                                                <a id="downloadDocumentBtnAlt" href="{{ url_for('download_assignment_file', assignment_id=assignment.id) }}" class="btn btn-primary" download>
                                                     <i class="bi bi-download me-2"></i>Download Document
                                                 </a>
                                             </div>
@@ -140,6 +171,28 @@
                                 </div>
                             </div>
                         </div>
+                        <script>
+                        (function() {
+                            var baseViewUrl = "{{ url_for('download_assignment_file', assignment_id=assignment.id, view='true') }}";
+                            document.querySelectorAll('.document-tab').forEach(function(btn) {
+                                btn.addEventListener('click', function() {
+                                    var idx = this.getAttribute('data-index');
+                                    var name = this.getAttribute('data-name');
+                                    var downloadUrl = this.getAttribute('data-download-url');
+                                    document.querySelectorAll('.document-tab').forEach(function(b) { b.classList.remove('active'); });
+                                    this.classList.add('active');
+                                    var iframe = document.getElementById('pdfViewer');
+                                    if (iframe) {
+                                        iframe.src = baseViewUrl + (idx !== '0' ? '&index=' + idx : '') + '#toolbar=0&navpanes=0&scrollbar=1&zoom=page-width';
+                                    }
+                                    var nameEl = document.getElementById('currentDocName');
+                                    if (nameEl) nameEl.textContent = name;
+                                    var dlBtn = document.getElementById('downloadDocumentBtn') || document.getElementById('downloadDocumentBtnAlt');
+                                    if (dlBtn) dlBtn.href = downloadUrl;
+                                });
+                            });
+                        })();
+                        </script>
                         {% endif %}
                         
                         <!-- Details Grid -->

@@ -709,24 +709,31 @@ def admin_manage_group(group_id):
 @login_required
 @management_required
 def admin_delete_group(group_id):
-    """Delete a student group (Administrator access)."""
+    """Delete a student group (Administrator access). Preserves existing grades and submissions by nulling group_id."""
     try:
+        from models import GroupGrade, GroupSubmission, GroupQuizAnswer
         group = StudentGroup.query.get_or_404(group_id)
         class_id = group.class_id
-        
+
+        # Preserve grades and submissions: set group_id to NULL so they remain tied to assignment + student
+        GroupGrade.query.filter_by(group_id=group_id).update({GroupGrade.group_id: None})
+        GroupSubmission.query.filter_by(group_id=group_id).update({GroupSubmission.group_id: None})
+        GroupQuizAnswer.query.filter_by(group_id=group_id).update({GroupQuizAnswer.group_id: None})
+
         # Delete all group members first
         StudentGroupMember.query.filter_by(group_id=group_id).delete()
-        
-        # Delete the group
+
+        # Delete the group (may still fail if other tables with non-nullable group_id have rows)
         db.session.delete(group)
         db.session.commit()
-        
-        flash('Group deleted successfully!', 'success')
+
+        flash('Group deleted successfully. Existing grades for that group were kept and remain associated with each student and assignment.', 'success')
         return redirect(url_for('management.admin_class_groups', class_id=class_id))
-    
+
     except Exception as e:
-        print(f"Error deleting group: {e}")
-        flash('Error deleting group. Please try again.', 'error')
+        db.session.rollback()
+        current_app.logger.exception("Error deleting group")
+        flash('Could not delete group. It may have related data (e.g. contracts, peer evaluations). Try again or contact support.', 'error')
         return redirect(url_for('management.admin_class_groups', class_id=class_id))
 
 # Additional admin group management routes

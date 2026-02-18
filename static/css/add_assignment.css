@@ -1,15 +1,30 @@
 /* ===== ADD ASSIGNMENT PAGE ENHANCED STYLES ===== */
 /* Matches the design system used in other management pages */
 
-/* Main Container */
+/* Main Container - use full width and moderate padding so form + sidebar fill the space */
 .add-assignment-container {
     animation: fadeIn 0.3s ease-in;
     background-color: #f8f9fa;
     min-height: 100vh;
     padding-bottom: 2rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
     width: 100%;
     max-width: 100%;
     overflow-x: hidden;
+    box-sizing: border-box;
+}
+@media (min-width: 768px) {
+    .add-assignment-container {
+        padding-left: 1.5rem;
+        padding-right: 1.5rem;
+    }
+}
+@media (min-width: 1200px) {
+    .add-assignment-container {
+        padding-left: 2rem;
+        padding-right: 2rem;
+    }
 }
 
 /* Header Banner - Match Management Style */
@@ -70,77 +85,102 @@
     border-color: white !important;
 }
 
-/* Form Layout - Ensure form doesn't break Bootstrap grid */
+/* Form Layout - form and wrapper fill the column width */
 .add-assignment-container form#assignmentForm {
     display: block;
     width: 100%;
-    /* Remove any display properties that might interfere */
-}
-
-.add-assignment-container form#assignmentForm > .row.g-4 {
-    display: flex !important;
-    flex-wrap: wrap !important;
-    margin-right: -0.75rem !important;
-    margin-left: -0.75rem !important;
-    width: 100% !important;
-    box-sizing: border-box;
-    /* Force flexbox layout */
-    align-items: flex-start;
+    max-width: 100%;
 }
 
 .assignment-form-wrapper {
     position: relative;
     width: 100%;
+    max-width: 100%;
     height: 100%;
 }
 
-/* Sticky Sidebar */
+.add-assignment-form-col .card,
+.add-assignment-form-col .assignment-section-card {
+    width: 100%;
+    max-width: 100%;
+}
+
+/* Two-column layout: form takes all remaining space, sidebar fixed width. Row fills container. */
+.add-assignment-main-row {
+    display: grid !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    margin-bottom: 0 !important;
+    box-sizing: border-box !important;
+    gap: 1.25rem;
+    align-items: start;
+    grid-template-columns: 1fr 380px !important;
+    grid-template-areas: "form sidebar" !important;
+}
+
+.add-assignment-form-col {
+    grid-area: form;
+    min-width: 0;
+    max-width: none !important; /* Override Bootstrap .col-lg-8 so form uses full grid cell */
+    width: 100% !important;
+    padding-right: 0.5rem;
+}
+
+.add-assignment-sidebar-col {
+    grid-area: sidebar;
+    min-width: 380px;
+    padding-left: 0.5rem;
+}
+
+/* Stack vertically only on small screens */
+@media (max-width: 767px) {
+    .add-assignment-main-row {
+        grid-template-columns: 1fr !important;
+        grid-template-areas: "form" "sidebar" !important;
+    }
+    .add-assignment-sidebar-col {
+        min-width: 0;
+    }
+}
+
+/* Sticky Sidebar - right column */
 .assignment-sidebar {
     position: sticky;
     top: 20px;
     max-height: calc(100vh - 40px);
     overflow-y: auto;
+    overflow-x: visible;
     width: 100%;
+    min-width: 0;
 }
 
-/* Force Bootstrap grid to work - override any conflicting styles */
-.add-assignment-container form#assignmentForm .row.g-4 > [class*="col-"] {
-    padding-right: 0.75rem !important;
-    padding-left: 0.75rem !important;
-    position: relative;
-    box-sizing: border-box;
+/* Sidebar cards: prevent clipping and allow text to wrap */
+.assignment-sidebar .card,
+.assignment-sidebar .preview-card,
+.assignment-sidebar .tips-card {
+    min-width: 0;
+    overflow: visible;
 }
-
-/* Ensure columns display side-by-side on large screens */
-@media (min-width: 992px) {
-    .add-assignment-container form#assignmentForm .row.g-4 {
-        display: flex !important;
-        flex-direction: row !important;
-        align-items: flex-start !important;
-        flex-wrap: nowrap !important;
-        margin-right: -0.75rem !important;
-        margin-left: -0.75rem !important;
-    }
-    
-    .add-assignment-container form#assignmentForm .row.g-4 .col-lg-8 {
-        flex: 0 0 66.66666667% !important;
-        max-width: 66.66666667% !important;
-        width: 66.66666667% !important;
-        float: none !important;
-        display: block !important;
-        padding-right: 0.75rem !important;
-        padding-left: 0.75rem !important;
-    }
-    
-    .add-assignment-container form#assignmentForm .row.g-4 .col-lg-4 {
-        flex: 0 0 33.33333333% !important;
-        max-width: 33.33333333% !important;
-        width: 33.33333333% !important;
-        float: none !important;
-        display: block !important;
-        padding-right: 0.75rem !important;
-        padding-left: 0.75rem !important;
-    }
+.assignment-sidebar .card-header {
+    overflow: visible;
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+}
+.assignment-sidebar .card-body {
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    min-width: 0;
+}
+.assignment-sidebar .tip-content {
+    min-width: 0;
+    flex: 1 1 0%;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+}
+.assignment-sidebar .tip-item {
+    min-width: 0;
 }
 
 

@@ -492,7 +492,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title mb-0" id="updateModalLabel">System Updates</h5>
-                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated February 15, 2026</p>
+                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated February 17, 2026</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -504,13 +504,59 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – February 15, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – February 17, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0">Recent improvements include <strong>Dashboard Notifications & Recent Activity</strong> (working for admins and teachers; teachers notified when students request extensions), <strong>Quiz experience</strong> (Listen button for text-to-speech, Previous/Next at bottom, Submit after questions), <strong>Teacher home</strong> (total students = unique students you teach), <strong>Admin dashboard</strong> (notifications/activity last 7 days, compact layout), plus Extension Requests, Communications closed, sidebar, and quiz tools. Details below.</p>
+                        <p class="updates-intro-text mb-0">This release focuses on <strong>PDF/Paper assignments</strong> (multiple document uploads, tabs when viewing, no more 404s), <strong>Add-assignment layout</strong> (sidebar beside form, wider form, 380px sidebar), <strong>In-class due date</strong> (auto 4 PM EST when you choose In-Class), <strong>Report Cards</strong> (redesigned tab and detail page, PDF download shows saved grades for all quarters, gender/entrance date saved when generating), and <strong>Group assignments</strong> (deleting a group keeps grades; moving a student to another group keeps their grade and avoids duplicates). Details below.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- February 17, 2026 - Assignments, Report Cards, Group logic -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-file-earmark-pdf me-2"></i>PDF/Paper Assignments, Report Cards & Group Assignments – February 17, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>PDF/Paper – Multiple documents:</strong> You can now attach multiple files to a single PDF/Paper assignment when creating or editing it. When viewing an assignment with two or more documents, all files appear in a tabbed viewer so students and teachers can switch between them. Download and open-by-index work for every document.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>PDF/Paper – No more 404s:</strong> Opening previously uploaded assignment documents (from management or teacher-created assignments) now loads correctly. File paths are resolved so the same document works from the assignment view and student view.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Add-assignment page layout:</strong> The Add Assignment form and sidebar sit side-by-side with a consistent gap. The form column uses full width and the sidebar is fixed at 380px so it isn’t squished. Empty space on the right is reduced for a tighter, clearer layout.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>In-class due date:</strong> When you choose PDF/Paper → Individual → In-Class from the assignment type selector, the due date is now automatically set to 4:00 PM EST on that day and the field is read-only, with a short note that it’s set for in-class.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Report Cards – New design:</strong> The Report Cards tab has a refreshed look with a teal theme, clear grade-category cards (K–2, 3rd–5th, 6th–8th), a styled recent-report-cards table, and stat cards. The View Report Card details page matches the same style with a clear header, student hero card, grades table, attendance (when included), and action bar.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Report Cards – PDF download fixed:</strong> When you view a report card and click Download PDF, the PDF now shows the same grades and data that were saved when the report was generated. Saved grades and quarter data (including Q2, Q3, Q4) are used so the downloaded PDF is no longer blank or N/A for those quarters.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Report Cards – Saved confirmation data:</strong> When you generate a report card and enter or confirm gender, entrance date, address, DOB, or expected graduation date, those values are now stored with the report. View Report Card → Download PDF shows the same information you confirmed at generation time.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Group assignments – Deleting a group:</strong> If a School Administrator deletes a student group, existing grades and submissions for that group are preserved. The system sets the group reference to “none” so each student’s grade stays tied to the assignment and still counts in report cards and quarter averages. Teacher “delete” only marks the group inactive, so grades are unchanged.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Group assignments – Student moved to another group:</strong> If a student is moved to a different group after an assignment was graded, their grade is kept. The grade is looked up by student and assignment (not by current group), so there is only one grade per student per group assignment. When you save grades again, the stored group is updated to their current group so you don’t get duplicate grades or double-counting in quarter averages.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> PDF/Paper assignments support multiple files and open reliably. Add-assignment and report cards are easier to use and look consistent. In-class assignments get the correct due time automatically. Report card PDFs reflect what was generated and include all quarters and confirmation data. Group grades are safe when groups are deleted or when students change groups.</p>
+                        </div>
+                    </div>
+
                     <!-- February 15, 2026 - Dashboards, Quiz UX, Teacher stats -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-speedometer2 me-2"></i>Dashboards, Quiz Experience & Teacher Stats – February 15, 2026</h6>
@@ -726,11 +772,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownFeb15_2026')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownFeb17_2026')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownFeb15_2026', 'true');
+            sessionStorage.setItem('updateModalShownFeb17_2026', 'true');
         }, 500);
     }
 });

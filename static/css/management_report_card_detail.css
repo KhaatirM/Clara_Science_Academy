@@ -1,100 +1,354 @@
-/* ===== REPORT_CARD_DETAIL STYLES ===== */
-/* Extracted from: templates\management\report_card_detail.html */
+/* ===== REPORT CARD DETAIL — matches Report Cards list design system ===== */
 
-/* Card Header Gradient */
-.bg-gradient-primary {
-  background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+:root {
+  --rcd-page-bg: #f8f7f4;
+  --rcd-card-bg: #ffffff;
+  --rcd-accent: #1a5f5a;
+  --rcd-accent-soft: rgba(26, 95, 90, 0.08);
+  --rcd-accent-border: rgba(26, 95, 90, 0.2);
+  --rcd-heading: #1c2d2b;
+  --rcd-text: #3d4a48;
+  --rcd-muted: #6b7c7a;
+  --rcd-shadow: 0 2px 8px rgba(28, 45, 43, 0.06);
+  --rcd-shadow-hover: 0 12px 32px rgba(28, 45, 43, 0.12);
+  --rcd-radius: 12px;
+  --rcd-radius-sm: 8px;
+  --rcd-font-heading: 'Georgia', 'Times New Roman', serif;
 }
 
-/* Info Icon */
-.info-icon {
-  width: 45px;
-  height: 45px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #e7f1ff 0%, #cfe2ff 100%);
+.report-card-detail-page {
+  background: var(--rcd-page-bg);
+  min-height: 100%;
+  padding-bottom: 2rem;
+}
+
+/* ----- Header ----- */
+.report-card-detail-page .rc-detail-header {
+  background: var(--rcd-card-bg);
+  border-radius: var(--rcd-radius);
+  box-shadow: var(--rcd-shadow);
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 1.5rem;
+  border-left: 4px solid var(--rcd-accent);
+}
+
+.report-card-detail-page .rc-detail-header h2 {
+  font-family: var(--rcd-font-heading);
+  color: var(--rcd-heading);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.report-card-detail-page .rc-detail-header .rc-detail-subtitle {
+  color: var(--rcd-muted);
+  font-size: 0.95rem;
+  margin-top: 0.25rem;
+}
+
+.report-card-detail-page .rc-detail-header .btn-primary {
+  background: var(--rcd-accent);
+  border-color: var(--rcd-accent);
+}
+
+.report-card-detail-page .rc-detail-header .btn-primary:hover {
+  background: #154a46;
+  border-color: #154a46;
+}
+
+.report-card-detail-page .rc-detail-header .btn-outline-secondary {
+  border-color: var(--rcd-accent-border);
+  color: var(--rcd-accent);
+}
+
+.report-card-detail-page .rc-detail-header .btn-outline-secondary:hover {
+  background: var(--rcd-accent-soft);
+  border-color: var(--rcd-accent);
+  color: var(--rcd-accent);
+}
+
+/* ----- Student hero card ----- */
+.report-card-detail-page .rc-detail-hero {
+  background: var(--rcd-card-bg);
+  border-radius: var(--rcd-radius);
+  box-shadow: var(--rcd-shadow);
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+  border: 1px solid var(--rcd-accent-border);
+}
+
+.report-card-detail-page .rc-detail-hero .rc-hero-header {
+  background: linear-gradient(135deg, rgba(26, 95, 90, 0.12) 0%, rgba(26, 95, 90, 0.06) 100%);
+  border-bottom: 1px solid var(--rcd-accent-border);
+  padding: 1.25rem 1.5rem;
+}
+
+.report-card-detail-page .rc-detail-hero .rc-hero-title {
+  font-family: var(--rcd-font-heading);
+  font-weight: 700;
+  color: var(--rcd-heading);
+  margin-bottom: 0.35rem;
+}
+
+.report-card-detail-page .rc-detail-hero .rc-hero-meta {
+  color: var(--rcd-muted);
+  font-size: 0.9rem;
+}
+
+.report-card-detail-page .rc-detail-hero .rc-hero-generated {
+  font-size: 0.85rem;
+  color: var(--rcd-muted);
+}
+
+.report-card-detail-page .rc-detail-hero .rc-hero-body {
+  padding: 1.25rem 1.5rem;
+}
+
+.report-card-detail-page .rc-detail-hero .rc-hero-section-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--rcd-muted);
+  margin-bottom: 1rem;
+}
+
+.report-card-detail-page .rc-detail-hero .rc-detail-info-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--rcd-radius-sm);
+  background: var(--rcd-accent-soft);
+  color: var(--rcd-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+}
+
+.report-card-detail-page .rc-detail-hero .rc-detail-info-label {
+  font-size: 0.85rem;
+  color: var(--rcd-muted);
+}
+
+.report-card-detail-page .rc-detail-hero .rc-class-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.report-card-detail-page .rc-detail-hero .rc-class-list li {
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--rcd-accent-border);
+  color: var(--rcd-text);
+}
+
+.report-card-detail-page .rc-detail-hero .rc-class-list li:last-child {
+  border-bottom: none;
+}
+
+.report-card-detail-page .rc-detail-hero .rc-class-list .bi {
+  color: var(--rcd-accent);
+  margin-right: 0.5rem;
+}
+
+/* ----- Section cards (grades, attendance, comments) ----- */
+.report-card-detail-page .rc-detail-section {
+  background: var(--rcd-card-bg);
+  border-radius: var(--rcd-radius);
+  box-shadow: var(--rcd-shadow);
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+  border: 1px solid var(--rcd-accent-border);
+}
+
+.report-card-detail-page .rc-detail-section .rc-section-header {
+  background: linear-gradient(180deg, rgba(26, 95, 90, 0.06) 0%, transparent 100%);
+  border-bottom: 1px solid var(--rcd-accent-border);
+  padding: 1rem 1.5rem;
+}
+
+.report-card-detail-page .rc-detail-section .rc-section-title {
+  font-family: var(--rcd-font-heading);
+  font-weight: 700;
+  color: var(--rcd-heading);
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.report-card-detail-page .rc-detail-section .rc-section-title .bi {
+  color: var(--rcd-accent);
+  margin-right: 0.5rem;
+}
+
+.report-card-detail-page .rc-detail-section .card-body {
+  padding: 1.25rem 1.5rem;
+}
+
+/* Grades table */
+.report-card-detail-page .rc-detail-section .table {
+  margin-bottom: 0;
+  color: var(--rcd-text);
+}
+
+.report-card-detail-page .rc-detail-section .table thead th {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--rcd-muted);
+  background: var(--rcd-page-bg);
+  border-bottom: 1px solid var(--rcd-accent-border);
+  padding: 0.85rem 1rem;
+}
+
+.report-card-detail-page .rc-detail-section .table tbody td {
+  padding: 0.9rem 1rem;
+  vertical-align: middle;
+}
+
+.report-card-detail-page .rc-detail-section .table-hover tbody tr:hover {
+  background: var(--rcd-accent-soft);
+}
+
+.report-card-detail-page .rc-detail-section .table .rc-grade-badge {
+  font-weight: 600;
+  padding: 0.4rem 0.75rem;
+  background: var(--rcd-accent-soft);
+  color: var(--rcd-accent);
+  border-radius: var(--rcd-radius-sm);
+}
+
+.report-card-detail-page .rc-detail-section .table .rc-status-excellent { background: rgba(26, 95, 90, 0.12); color: var(--rcd-accent); }
+.report-card-detail-page .rc-detail-section .table .rc-status-good { background: rgba(26, 95, 90, 0.08); color: var(--rcd-heading); }
+.report-card-detail-page .rc-detail-section .table .rc-status-average { background: rgba(255, 193, 7, 0.2); color: #856404; }
+.report-card-detail-page .rc-detail-section .table .rc-status-needs { background: rgba(220, 53, 69, 0.1); color: #721c24; }
+
+/* Attendance stat cards */
+.report-card-detail-page .rc-attendance-stat {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  background: var(--rcd-page-bg);
+  border-radius: var(--rcd-radius-sm);
+  border: 1px solid var(--rcd-accent-border);
+  transition: box-shadow 0.2s ease;
+}
+
+.report-card-detail-page .rc-attendance-stat:hover {
+  box-shadow: var(--rcd-shadow);
+}
+
+.report-card-detail-page .rc-attendance-stat .rc-att-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--rcd-radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.25rem;
-  color: #0d6efd;
+  color: #fff;
+  margin-right: 1rem;
+  flex-shrink: 0;
 }
 
-/* Stat Cards */
-.stat-card {
-  display: flex;
-  align-items: center;
-  padding: 15px;
-  background: white;
-  border-radius: 12px;
-  border: 2px solid #e9ecef;
-  transition: all 0.3s ease;
-}
+.report-card-detail-page .rc-attendance-stat.rc-att-present .rc-att-icon { background: var(--rcd-accent); }
+.report-card-detail-page .rc-attendance-stat.rc-att-unexcused .rc-att-icon { background: #dc3545; }
+.report-card-detail-page .rc-attendance-stat.rc-att-excused .rc-att-icon { background: #fd7e14; }
+.report-card-detail-page .rc-attendance-stat.rc-att-tardy .rc-att-icon { background: #0dcaf0; }
 
-.stat-card:hover {
-  border-color: #0d6efd;
-  box-shadow: 0 4px 15px rgba(13, 110, 253, 0.1);
-  transform: translateY(-2px);
-}
-
-.stat-icon {
-  width: 50px;
-  height: 50px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.report-card-detail-page .rc-attendance-stat .rc-att-value {
+  font-family: var(--rcd-font-heading);
   font-size: 1.5rem;
-  color: white;
-  margin-right: 15px;
-}
-
-.stat-content {
-  flex: 1;
-}
-
-.stat-value {
-  font-size: 1.75rem;
   font-weight: 700;
-  color: #212529;
+  color: var(--rcd-heading);
   line-height: 1;
 }
 
-.stat-label {
-  font-size: 0.875rem;
-  color: #6c757d;
-  margin-top: 4px;
+.report-card-detail-page .rc-attendance-stat .rc-att-label {
+  font-size: 0.8rem;
+  color: var(--rcd-muted);
+  font-weight: 500;
+  margin-top: 0.2rem;
+}
+
+.report-card-detail-page .rc-attendance-class {
+  margin-bottom: 1.5rem;
+}
+
+.report-card-detail-page .rc-attendance-class:last-child {
+  margin-bottom: 0;
+}
+
+.report-card-detail-page .rc-attendance-class .rc-att-class-name {
   font-weight: 600;
+  color: var(--rcd-accent);
+  margin-bottom: 0.75rem;
+  font-size: 0.95rem;
 }
 
-/* Table Enhancements */
-.table th {
-  border-top: none;
-  font-size: 0.875rem;
-  letter-spacing: 0.5px;
+/* Comments section */
+.report-card-detail-page .rc-detail-section .rc-comments-placeholder {
+  color: var(--rcd-muted);
 }
 
-.table td {
-  vertical-align: middle;
-  padding: 1rem;
+/* Action bar */
+.report-card-detail-page .rc-detail-actions {
+  background: var(--rcd-card-bg);
+  border-radius: var(--rcd-radius);
+  padding: 1rem 1.5rem;
+  border: 1px solid var(--rcd-accent-border);
+  box-shadow: var(--rcd-shadow);
 }
 
-.table-hover tbody tr:hover {
-  background-color: #f8f9ff;
+.report-card-detail-page .rc-detail-actions .btn-primary {
+  background: var(--rcd-accent);
+  border-color: var(--rcd-accent);
 }
 
-/* Badge Styles */
-.badge {
-  font-weight: 600;
-  letter-spacing: 0.5px;
+.report-card-detail-page .rc-detail-actions .btn-primary:hover {
+  background: #154a46;
+  border-color: #154a46;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-  .card-header {
-    padding: 1rem !important;
+.report-card-detail-page .rc-detail-actions .btn-outline-secondary {
+  border-color: var(--rcd-accent-border);
+  color: var(--rcd-accent);
+}
+
+.report-card-detail-page .rc-detail-actions .btn-outline-secondary:hover {
+  background: var(--rcd-accent-soft);
+  border-color: var(--rcd-accent);
+  color: var(--rcd-accent);
+}
+
+/* Print */
+@media print {
+  .report-card-detail-page {
+    background: #fff;
   }
-  
-  .stat-card {
-    margin-bottom: 15px;
+  .report-card-detail-page .rc-detail-header,
+  .report-card-detail-page .rc-detail-actions {
+    display: none !important;
+  }
+  .report-card-detail-page .rc-detail-hero,
+  .report-card-detail-page .rc-detail-section {
+    box-shadow: none;
+    border: 1px solid #ddd;
+  }
+}
+
+@media (max-width: 768px) {
+  .report-card-detail-page .rc-detail-header .d-flex {
+    flex-direction: column;
+    align-items: flex-start !important;
+  }
+  .report-card-detail-page .rc-detail-header .btn {
+    width: 100%;
+    margin-bottom: 0.5rem;
+  }
+  .report-card-detail-page .rc-detail-hero .rc-hero-body .border-end {
+    border-end: none !important;
+    border-bottom: 1px solid var(--rcd-accent-border);
+    padding-bottom: 1rem !important;
+    margin-bottom: 1rem;
   }
 }

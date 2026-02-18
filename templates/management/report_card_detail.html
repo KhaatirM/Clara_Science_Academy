@@ -5,19 +5,19 @@
 {% endblock %}
 
 {% block dashboard_content %}
-<div class="container-fluid py-4">
+<div class="container-fluid py-4 report-card-detail-page">
   <!-- Header -->
-  <div class="row mb-4">
+  <div class="row">
     <div class="col-12">
-      <div class="d-flex justify-content-between align-items-center flex-wrap">
+      <div class="rc-detail-header d-flex justify-content-between align-items-center flex-wrap gap-3">
         <div>
-          <h2 class="mb-1 fw-bold">
-            <i class="bi bi-file-earmark-text-fill text-primary me-2"></i>Report Card Details
+          <h2 class="mb-1">
+            <i class="bi bi-file-earmark-text-fill me-2"></i>Report Card Details
           </h2>
-          <p class="text-muted mb-0">Comprehensive academic report for {{ report_card.student.first_name }} {{ report_card.student.last_name }}</p>
+          <p class="rc-detail-subtitle mb-0">Comprehensive academic report for {{ report_card.student.first_name }} {{ report_card.student.last_name }}</p>
         </div>
-        <div>
-          <a href="{{ url_for('management.generate_report_card_pdf', report_card_id=report_card.id) }}" class="btn btn-primary me-2" target="_blank">
+        <div class="d-flex flex-wrap gap-2">
+          <a href="{{ url_for('management.generate_report_card_pdf', report_card_id=report_card.id) }}" class="btn btn-primary" target="_blank">
             <i class="bi bi-download me-1"></i>Download PDF
           </a>
           <a href="{{ url_for('management.report_cards') }}" class="btn btn-outline-secondary">
@@ -28,69 +28,69 @@
     </div>
   </div>
 
-  <!-- Student Information Card -->
-  <div class="row mb-4">
+  <!-- Student info hero card -->
+  <div class="row">
     <div class="col-12">
-      <div class="card shadow-lg border-0">
-        <div class="card-header bg-gradient-primary text-white py-4" style="background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);">
+      <div class="rc-detail-hero card border-0">
+        <div class="rc-hero-header">
           <div class="row align-items-center">
             <div class="col-md-8">
-              <h4 class="mb-1 fw-bold">
+              <h4 class="rc-hero-title mb-0">
                 <i class="bi bi-person-circle me-2"></i>{{ report_card.student.first_name }} {{ report_card.student.last_name }}
               </h4>
-              <p class="mb-0 opacity-75">
-                Student ID: {{ report_card.student.student_id_formatted if report_card.student.student_id else 'N/A' }} | 
-                Grade Level: {{ report_card.student.grade_level }} | 
-                Quarter: {{ report_card.quarter }} | 
-                School Year: {{ report_card.school_year.name }}
+              <p class="rc-hero-meta mb-0 mt-1">
+                Student ID: {{ report_card.student.student_id_formatted if report_card.student.student_id else 'N/A' }} · 
+                Grade {{ report_card.student.grade_level }} · 
+                {{ report_card.quarter }} · 
+                {{ report_card.school_year.name }}
               </p>
             </div>
             <div class="col-md-4 text-md-end mt-3 mt-md-0">
               {% if report_card.generated_at %}
-                <small class="d-block opacity-75">Generated: {{ report_card.generated_at.strftime('%B %d, %Y') }}</small>
+                <span class="rc-hero-generated">Generated {{ report_card.generated_at.strftime('%B %d, %Y') }}</span>
               {% endif %}
             </div>
           </div>
         </div>
-        <div class="card-body p-0">
+        <div class="rc-hero-body">
           <div class="row g-0">
             <div class="col-md-6 p-4 border-end">
-              <h6 class="text-muted mb-3 text-uppercase fw-bold small">Academic Period</h6>
+              <h6 class="rc-hero-section-title">Academic Period</h6>
               <div class="d-flex align-items-center mb-3">
-                <div class="info-icon me-3">
+                <div class="rc-detail-info-icon me-3">
                   <i class="bi bi-calendar3"></i>
                 </div>
                 <div>
                   <div class="fw-bold">{{ report_card.school_year.name }}</div>
-                  <small class="text-muted">School Year</small>
+                  <div class="rc-detail-info-label">School Year</div>
                 </div>
               </div>
               <div class="d-flex align-items-center">
-                <div class="info-icon me-3">
+                <div class="rc-detail-info-icon me-3">
                   <i class="bi bi-calendar4-range"></i>
                 </div>
                 <div>
                   <div class="fw-bold">{{ report_card.quarter }}</div>
-                  <small class="text-muted">Quarter</small>
+                  <div class="rc-detail-info-label">Quarter</div>
                 </div>
               </div>
             </div>
             <div class="col-md-6 p-4">
-              <h6 class="text-muted mb-3 text-uppercase fw-bold small">Selected Classes</h6>
+              <h6 class="rc-hero-section-title">Selected Classes</h6>
               {% if class_objects %}
-                <ul class="list-unstyled mb-0">
+                <ul class="rc-class-list">
                   {% for class_obj in class_objects %}
-                    <li class="mb-2">
-                      <i class="bi bi-book text-primary me-2"></i>
+                    <li>
+                      <i class="bi bi-book"></i>
                       <strong>{{ class_obj.name }}</strong>
                       {% if class_obj.subject %}
-                        <small class="text-muted d-block ms-4">{{ class_obj.subject }}</small>
+                        <small class="rc-detail-info-label d-block ms-4">{{ class_obj.subject }}</small>
                       {% endif %}
                     </li>
                   {% endfor %}
                 </ul>
               {% else %}
-                <p class="text-muted mb-0">All enrolled classes</p>
+                <p class="rc-detail-info-label mb-0">All enrolled classes</p>
               {% endif %}
             </div>
           </div>
@@ -99,26 +99,26 @@
     </div>
   </div>
 
-  <!-- Grades Section -->
+  <!-- Grades -->
   {% if grades %}
-  <div class="row mb-4">
+  <div class="row">
     <div class="col-12">
-      <div class="card shadow border-0">
-        <div class="card-header bg-light py-3">
-          <h5 class="mb-0 fw-bold">
-            <i class="bi bi-graph-up me-2 text-primary"></i>Academic Performance
+      <div class="rc-detail-section card border-0">
+        <div class="rc-section-header">
+          <h5 class="rc-section-title">
+            <i class="bi bi-graph-up"></i>Academic Performance
           </h5>
         </div>
         <div class="card-body">
           {% if grades is mapping %}
             <div class="table-responsive">
               <table class="table table-hover mb-0">
-                <thead class="table-light">
+                <thead>
                   <tr>
-                    <th class="fw-bold">Subject/Class</th>
-                    <th class="text-center fw-bold">Grade</th>
-                    <th class="text-center fw-bold">Percentage</th>
-                    <th class="text-center fw-bold">Status</th>
+                    <th>Subject / Class</th>
+                    <th class="text-center">Grade</th>
+                    <th class="text-center">Percentage</th>
+                    <th class="text-center">Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -130,24 +130,35 @@
                       {% set percentage = grade_info if grade_info is number else 0 %}
                       {% set letter_grade = 'N/A' %}
                     {% endif %}
+                    {% if percentage >= 90 %}
+                      {% set status_class = 'rc-status-excellent' %}
+                    {% elif percentage >= 80 %}
+                      {% set status_class = 'rc-status-good' %}
+                    {% elif percentage >= 70 %}
+                      {% set status_class = 'rc-status-average' %}
+                    {% else %}
+                      {% set status_class = 'rc-status-needs' %}
+                    {% endif %}
                     <tr>
                       <td class="fw-semibold">
-                        <i class="bi bi-bookmark-fill me-2 text-primary"></i>{{ subject }}
+                        <i class="bi bi-bookmark-fill me-2" style="color: var(--rcd-accent);"></i>{{ subject }}
                       </td>
                       <td class="text-center">
-                        <span class="badge bg-primary fs-6 px-3 py-2">{{ letter_grade }}</span>
+                        <span class="badge rc-grade-badge">{{ letter_grade }}</span>
                       </td>
                       <td class="text-center fw-bold">{{ "%.1f"|format(percentage) }}%</td>
                       <td class="text-center">
-                        {% if percentage >= 90 %}
-                          <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Excellent</span>
-                        {% elif percentage >= 80 %}
-                          <span class="badge bg-info"><i class="bi bi-check-circle me-1"></i>Good</span>
-                        {% elif percentage >= 70 %}
-                          <span class="badge bg-warning"><i class="bi bi-exclamation-circle me-1"></i>Average</span>
-                        {% else %}
-                          <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Needs Improvement</span>
-                        {% endif %}
+                        <span class="badge {{ status_class }}">
+                          {% if percentage >= 90 %}
+                            <i class="bi bi-check-circle me-1"></i>Excellent
+                          {% elif percentage >= 80 %}
+                            <i class="bi bi-check-circle me-1"></i>Good
+                          {% elif percentage >= 70 %}
+                            <i class="bi bi-exclamation-circle me-1"></i>Average
+                          {% else %}
+                            <i class="bi bi-x-circle me-1"></i>Needs Improvement
+                          {% endif %}
+                        </span>
                       </td>
                     </tr>
                   {% endfor %}
@@ -155,9 +166,8 @@
               </table>
             </div>
           {% else %}
-            <div class="alert alert-info border-0">
-              <i class="bi bi-info-circle me-2"></i>
-              Grade data is being processed. Please check back later.
+            <div class="alert alert-info border-0 mb-0">
+              <i class="bi bi-info-circle me-2"></i>Grade data is being processed. Please check back later.
             </div>
           {% endif %}
         </div>
@@ -166,64 +176,57 @@
   </div>
   {% endif %}
 
-  <!-- Attendance Section -->
+  <!-- Attendance -->
   {% if include_attendance and attendance %}
-  <div class="row mb-4">
+  <div class="row">
     <div class="col-12">
-      <div class="card shadow border-0">
-        <div class="card-header bg-light py-3">
-          <h5 class="mb-0 fw-bold">
-            <i class="bi bi-calendar-check me-2 text-success"></i>Attendance Summary
+      <div class="rc-detail-section card border-0">
+        <div class="rc-section-header">
+          <h5 class="rc-section-title">
+            <i class="bi bi-calendar-check"></i>Attendance Summary
           </h5>
         </div>
         <div class="card-body">
           {% if attendance is mapping %}
-            {% if attendance.keys() | list | first %}
+            {% set first_val = attendance.values() | list | first %}
+            {% if first_val is mapping %}
               {% for class_name, att_data in attendance.items() %}
-                <div class="mb-4 {% if not loop.last %}border-bottom pb-4{% endif %}">
-                  <h6 class="fw-bold mb-3 text-primary">{{ class_name }}</h6>
+                <div class="rc-attendance-class {% if not loop.last %}border-bottom pb-4 mb-4{% endif %}">
+                  <h6 class="rc-att-class-name">{{ class_name }}</h6>
                   <div class="row g-3">
                     <div class="col-md-3 col-6">
-                      <div class="stat-card">
-                        <div class="stat-icon bg-success">
-                          <i class="bi bi-check-circle"></i>
-                        </div>
-                        <div class="stat-content">
-                          <div class="stat-value">{{ att_data.get('Present', 0) }}</div>
-                          <div class="stat-label">Present</div>
+                      <div class="rc-attendance-stat rc-att-present">
+                        <div class="rc-att-icon"><i class="bi bi-check-circle"></i></div>
+                        <div>
+                          <div class="rc-att-value">{{ att_data.get('Present', 0) }}</div>
+                          <div class="rc-att-label">Present</div>
                         </div>
                       </div>
                     </div>
                     <div class="col-md-3 col-6">
-                      <div class="stat-card">
-                        <div class="stat-icon bg-danger">
-                          <i class="bi bi-x-circle"></i>
-                        </div>
-                        <div class="stat-content">
-                          <div class="stat-value">{{ att_data.get('Unexcused Absence', 0) }}</div>
-                          <div class="stat-label">Unexcused</div>
+                      <div class="rc-attendance-stat rc-att-unexcused">
+                        <div class="rc-att-icon"><i class="bi bi-x-circle"></i></div>
+                        <div>
+                          <div class="rc-att-value">{{ att_data.get('Unexcused Absence', 0) }}</div>
+                          <div class="rc-att-label">Unexcused</div>
                         </div>
                       </div>
                     </div>
                     <div class="col-md-3 col-6">
-                      <div class="stat-card">
-                        <div class="stat-icon bg-warning">
-                          <i class="bi bi-exclamation-circle"></i>
-                        </div>
-                        <div class="stat-content">
-                          <div class="stat-value">{{ att_data.get('Excused Absence', 0) }}</div>
-                          <div class="stat-label">Excused</div>
+                      <div class="rc-attendance-stat rc-att-excused">
+                        <div class="rc-att-icon"><i class="bi bi-exclamation-circle"></i></div>
+                        <div>
+                          <div class="rc-att-value">{{ att_data.get('Excused Absence', 0) }}</div>
+                          <div class="rc-att-label">Excused</div>
                         </div>
                       </div>
                     </div>
                     <div class="col-md-3 col-6">
-                      <div class="stat-card">
-                        <div class="stat-icon bg-info">
-                          <i class="bi bi-clock"></i>
-                        </div>
-                        <div class="stat-content">
-                          <div class="stat-value">{{ att_data.get('Tardy', 0) }}</div>
-                          <div class="stat-label">Tardy</div>
+                      <div class="rc-attendance-stat rc-att-tardy">
+                        <div class="rc-att-icon"><i class="bi bi-clock"></i></div>
+                        <div>
+                          <div class="rc-att-value">{{ att_data.get('Tardy', 0) }}</div>
+                          <div class="rc-att-label">Tardy</div>
                         </div>
                       </div>
                     </div>
@@ -231,10 +234,10 @@
                 </div>
               {% endfor %}
             {% else %}
-              <p class="text-muted mb-0">No attendance data available for this period.</p>
+              <p class="rc-detail-info-label mb-0">No attendance data available for this period.</p>
             {% endif %}
           {% else %}
-            <p class="text-muted mb-0">Attendance data format is being updated.</p>
+            <p class="rc-detail-info-label mb-0">Attendance data format is being updated.</p>
           {% endif %}
         </div>
       </div>
@@ -242,41 +245,39 @@
   </div>
   {% endif %}
 
-  <!-- Comments Section -->
+  <!-- Comments -->
   {% if include_comments %}
-  <div class="row mb-4">
+  <div class="row">
     <div class="col-12">
-      <div class="card shadow border-0">
-        <div class="card-header bg-light py-3">
-          <h5 class="mb-0 fw-bold">
-            <i class="bi bi-chat-text me-2 text-info"></i>Teacher Comments
+      <div class="rc-detail-section card border-0">
+        <div class="rc-section-header">
+          <h5 class="rc-section-title">
+            <i class="bi bi-chat-text"></i>Teacher Comments
           </h5>
         </div>
         <div class="card-body">
-          <p class="text-muted mb-0">Comments will be displayed here when available.</p>
+          <p class="rc-comments-placeholder mb-0">Comments will be displayed here when available.</p>
         </div>
       </div>
     </div>
   </div>
   {% endif %}
 
-  <!-- Action Buttons -->
+  <!-- Actions -->
   <div class="row">
     <div class="col-12">
-      <div class="d-flex gap-2 justify-content-end">
+      <div class="rc-detail-actions d-flex flex-wrap gap-2 justify-content-end">
         <a href="{{ url_for('management.report_cards') }}" class="btn btn-outline-secondary">
           <i class="bi bi-arrow-left me-1"></i>Back to List
         </a>
         <a href="{{ url_for('management.generate_report_card_pdf', report_card_id=report_card.id) }}" class="btn btn-primary" target="_blank">
           <i class="bi bi-file-earmark-pdf-fill me-1"></i>Download PDF
         </a>
-        <button class="btn btn-outline-secondary" onclick="window.print()">
+        <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
           <i class="bi bi-printer me-1"></i>Print
         </button>
       </div>
     </div>
   </div>
 </div>
-
-
 {% endblock %}

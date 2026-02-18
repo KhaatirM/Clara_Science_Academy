@@ -7,13 +7,17 @@ from flask_login import login_required, current_user
 from decorators import teacher_required
 from .utils import get_teacher_or_admin, is_admin, is_authorized_for_class, get_current_quarter
 from models import (
-    db, Class, Assignment, SchoolYear, Enrollment, TeacherStaff, AssignmentExtension,
+    db, Class, Assignment, AssignmentAttachment, SchoolYear, Enrollment, TeacherStaff, AssignmentExtension,
     Grade, GroupAssignment, GroupGrade, GradeHistory, GroupSubmission, StudentGroup,
     class_additional_teachers, class_substitute_teachers, AssignmentReopening, Submission
 )
 from sqlalchemy import or_
-from datetime import datetime
+from datetime import datetime, time
 from utils.quarter_grade_calculator import update_quarter_grade
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    ZoneInfo = None
 from werkzeug.utils import secure_filename
 import os
 
@@ -162,28 +166,42 @@ def add_assignment_for_class(class_id):
             
             db.session.add(new_assignment)
             db.session.flush()
-            
+
             # NOTE: We do NOT automatically create Grade records for enrolled students.
             # Grades are only created when a teacher explicitly enters scores via the grading interface.
-            
-            if 'assignment_file' in request.files:
-                file = request.files['assignment_file']
-                if file and file.filename and allowed_file(file.filename):
-                    filename = secure_filename(file.filename)
-                    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_')
-                    unique_filename = timestamp + filename
-                    
-                    upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'assignments')
-                    os.makedirs(upload_dir, exist_ok=True)
-                    filepath = os.path.join(upload_dir, unique_filename)
-                    file.save(filepath)
-                    
+
+            upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'assignments')
+            os.makedirs(upload_dir, exist_ok=True)
+            files_to_save = request.files.getlist('assignment_files') or []
+            if not files_to_save or not (files_to_save[0] and files_to_save[0].filename):
+                single = request.files.get('assignment_file')
+                if single and single.filename:
+                    files_to_save = [single]
+            for idx, file in enumerate(files_to_save):
+                if not file or not file.filename or not allowed_file(file.filename):
+                    continue
+                filename = secure_filename(file.filename)
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_')
+                unique_filename = timestamp + f"{idx}_{filename}"
+                filepath = os.path.join(upload_dir, unique_filename)
+                file.save(filepath)
+                att = AssignmentAttachment(
+                    assignment_id=new_assignment.id,
+                    attachment_filename=unique_filename,
+                    attachment_original_filename=filename,
+                    attachment_file_path=filepath,
+                    attachment_file_size=os.path.getsize(filepath),
+                    attachment_mime_type=file.content_type or None,
+                    sort_order=idx,
+                )
+                db.session.add(att)
+                if idx == 0:
                     new_assignment.attachment_filename = unique_filename
                     new_assignment.attachment_original_filename = filename
                     new_assignment.attachment_file_path = filepath
                     new_assignment.attachment_file_size = os.path.getsize(filepath)
                     new_assignment.attachment_mime_type = file.content_type
-            
+
             db.session.commit()
             flash('Assignment created successfully!', 'success')
             return redirect(url_for('teacher.dashboard.view_class', class_id=class_id))
@@ -196,6 +214,18 @@ def add_assignment_for_class(class_id):
     
     current_quarter = get_current_quarter()
     context = request.args.get('context', 'homework')
+    # For in-class: default due date = today at 4:00 PM EST
+    default_due_date = None
+    if context == 'in-class' and ZoneInfo:
+        try:
+            est = ZoneInfo('America/New_York')
+            now_est = datetime.now(est)
+            today_est = now_est.date()
+            default_due_date = datetime.combine(today_est, time(16, 0))
+        except Exception:
+            default_due_date = datetime.now().replace(hour=16, minute=0, second=0, microsecond=0)
+    elif context == 'in-class':
+        default_due_date = datetime.now().replace(hour=16, minute=0, second=0, microsecond=0)
     school_years = SchoolYear.query.order_by(SchoolYear.name.desc()).all()
     teacher = get_teacher_or_admin()
     
@@ -205,6 +235,7 @@ def add_assignment_for_class(class_id):
                          school_years=school_years,
                          current_quarter=current_quarter,
                          context=context,
+                         default_due_date=default_due_date,
                          teacher=teacher)
 
 @bp.route('/assignment/edit/<int:assignment_id>', methods=['GET', 'POST'])
@@ -287,30 +318,41 @@ def edit_assignment(assignment_id):
                 # Keep Voided status if explicitly set
                 assignment.status = status
             
-            if 'assignment_file' in request.files:
-                file = request.files['assignment_file']
-                if file and file.filename and allowed_file(file.filename):
-                    if assignment.attachment_file_path and os.path.exists(assignment.attachment_file_path):
-                        try:
-                            os.remove(assignment.attachment_file_path)
-                        except OSError:
-                            pass
-                    
+            upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'assignments')
+            files_to_save = request.files.getlist('assignment_files') or []
+            if not files_to_save or not (files_to_save[0] and files_to_save[0].filename):
+                single = request.files.get('assignment_file')
+                if single and single.filename:
+                    files_to_save = [single]
+            if files_to_save:
+                os.makedirs(upload_dir, exist_ok=True)
+                for old_att in list(assignment.attachment_list or []):
+                    db.session.delete(old_att)
+                for idx, file in enumerate(files_to_save):
+                    if not file or not file.filename or not allowed_file(file.filename):
+                        continue
                     filename = secure_filename(file.filename)
                     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_')
-                    unique_filename = timestamp + filename
-                    
-                    upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'assignments')
-                    os.makedirs(upload_dir, exist_ok=True)
+                    unique_filename = timestamp + f"{idx}_{filename}"
                     filepath = os.path.join(upload_dir, unique_filename)
                     file.save(filepath)
-                    
-                    assignment.attachment_filename = unique_filename
-                    assignment.attachment_original_filename = filename
-                    assignment.attachment_file_path = filepath
-                    assignment.attachment_file_size = os.path.getsize(filepath)
-                    assignment.attachment_mime_type = file.content_type
-            
+                    att = AssignmentAttachment(
+                        assignment_id=assignment.id,
+                        attachment_filename=unique_filename,
+                        attachment_original_filename=filename,
+                        attachment_file_path=filepath,
+                        attachment_file_size=os.path.getsize(filepath),
+                        attachment_mime_type=file.content_type or None,
+                        sort_order=idx,
+                    )
+                    db.session.add(att)
+                    if idx == 0:
+                        assignment.attachment_filename = unique_filename
+                        assignment.attachment_original_filename = filename
+                        assignment.attachment_file_path = filepath
+                        assignment.attachment_file_size = os.path.getsize(filepath)
+                        assignment.attachment_mime_type = file.content_type
+
             db.session.commit()
             flash('Assignment updated successfully!', 'success')
             return redirect(url_for('teacher.assignments.view_assignment', assignment_id=assignment_id))

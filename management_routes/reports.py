@@ -187,7 +187,8 @@ def generate_report_card_form():
             'include_attendance': include_attendance,
             'include_comments': include_comments,
             'grades': calculated_grades,
-            'grades_by_quarter': calculated_grades_by_quarter  # Store all quarter grades
+            'grades_by_quarter': calculated_grades_by_quarter,  # Store all quarter grades
+            'selected_quarters': quarters_to_include,  # Full list so PDF shows Q1–Q4, not just Q1 and Q4 from "Q1-Q4"
         }
         
         # Add attendance if requested
@@ -220,6 +221,38 @@ def generate_report_card_form():
                 attendance_data[class_obj.name if class_obj else f"Class {class_id}"] = attendance_summary
             
             report_card_data['attendance'] = attendance_data
+
+        # Save confirmation form data (gender, entrance date, etc.) so View → Download shows same values
+        def _format_date_for_save(value):
+            if value is None or (isinstance(value, str) and not value.strip()):
+                return None
+            from datetime import date, datetime as _dt
+            if isinstance(value, (date, _dt)):
+                return value.strftime('%m/%d/%Y')
+            if isinstance(value, str):
+                for fmt in ('%Y-%m-%d', '%m/%d/%Y', '%m/%d/%y', '%Y/%m/%d'):
+                    try:
+                        return _dt.strptime(value.strip(), fmt).strftime('%m/%d/%Y')
+                    except Exception:
+                        continue
+            return None
+        confirm_gender = request.form.get('confirm_gender', '').strip()
+        confirm_address = request.form.get('confirm_address', '').strip()
+        confirm_dob = request.form.get('confirm_dob', '').strip()
+        confirm_entrance_date = request.form.get('confirm_entrance_date', '').strip()
+        confirm_first_name = request.form.get('confirm_first_name', '').strip()
+        confirm_last_name = request.form.get('confirm_last_name', '').strip()
+        confirm_expected_grad_date = request.form.get('confirm_expected_grad_date', '').strip()
+        student_name = f"{confirm_first_name} {confirm_last_name}".strip() if (confirm_first_name or confirm_last_name) else f"{student.first_name} {student.last_name}"
+        report_card_data['student_display'] = {
+            'name': student_name,
+            'gender': confirm_gender or getattr(student, 'gender', None),
+            'address': confirm_address or None,
+            'dob': _format_date_for_save(confirm_dob) or _format_date_for_save(getattr(student, 'dob', None)),
+            'entrance_date': _format_date_for_save(confirm_entrance_date) or None,
+            'expected_grad_date': confirm_expected_grad_date or None,
+            'phone': getattr(student, 'phone', None),
+        }
         
         # Update report card (save for record keeping)
         report_card.grades_details = json.dumps(report_card_data)
@@ -484,6 +517,8 @@ def generate_report_card_pdf(report_card_id):
         # Extract data from new structure (backward compatible)
         if isinstance(report_card_data, dict) and 'grades' in report_card_data:
             grades = report_card_data.get('grades', {})
+            # Use saved grades_by_quarter so PDF shows what was generated, not fresh DB
+            grades_by_quarter = report_card_data.get('grades_by_quarter')
             attendance = report_card_data.get('attendance', {})
             selected_classes = report_card_data.get('classes', [])
             report_type = report_card_data.get('report_type', 'official')
@@ -491,19 +526,21 @@ def generate_report_card_pdf(report_card_id):
             include_comments = report_card_data.get('include_comments', False)
         else:
             grades = report_card_data if report_card_data else {}
+            grades_by_quarter = None
             attendance = {}
             selected_classes = []
             report_type = 'official'  # Default for old report cards
             include_attendance = False
             include_comments = False
-        
-        # Get fresh quarter grades from database (respects 3-hour refresh)
-        from utils.quarter_grade_calculator import get_quarter_grades_for_report
-        grades_by_quarter = get_quarter_grades_for_report(
-            student_id=student.id,
-            school_year_id=report_card.school_year_id,
-            class_ids=selected_classes if selected_classes else None
-        )
+
+        # Only fetch fresh quarter grades from DB when we have no saved snapshot
+        if not grades_by_quarter or not isinstance(grades_by_quarter, dict):
+            from utils.quarter_grade_calculator import get_quarter_grades_for_report
+            grades_by_quarter = get_quarter_grades_for_report(
+                student_id=student.id,
+                school_year_id=report_card.school_year_id,
+                class_ids=selected_classes if selected_classes else None
+            )
 
         # Sanitize letter grades: minimum is D, never show F on report cards
         grades = _sanitize_letter_grades_for_report(grades)
@@ -547,9 +584,58 @@ def generate_report_card_pdf(report_card_id):
             'grade': student.grade_level,
             'gender': getattr(student, 'gender', 'N/A'),
             'address': f"{getattr(student, 'street', '')}, {getattr(student, 'city', '')}, {getattr(student, 'state', '')} {getattr(student, 'zip_code', '')}".strip(', '),
-            'phone': getattr(student, 'phone', '')
+            'phone': getattr(student, 'phone', ''),
+            'entrance_date': 'N/A',
+            'expected_grad_date': 'N/A',
         }
-        
+        # Override with saved confirmation data from when report was generated
+        saved_student = report_card_data.get('student_display') if isinstance(report_card_data, dict) else None
+        if saved_student:
+            if saved_student.get('name'):
+                student_data['name'] = saved_student['name']
+            if saved_student.get('gender') not in (None, ''):
+                student_data['gender'] = saved_student['gender']
+            if saved_student.get('address') not in (None, ''):
+                student_data['address'] = saved_student['address']
+            if saved_student.get('dob'):
+                student_data['dob'] = saved_student['dob']
+            if saved_student.get('phone') is not None:
+                student_data['phone'] = saved_student['phone'] or ''
+            if 'entrance_date' in saved_student:
+                student_data['entrance_date'] = saved_student.get('entrance_date') or 'N/A'
+            if 'expected_grad_date' in saved_student:
+                student_data['expected_grad_date'] = saved_student.get('expected_grad_date') or 'N/A'
+
+        # Which quarter(s) this report card is for (PDF template uses this to show grades)
+        # Prefer saved list so Q1+Q2+Q3+Q4 all show; parsing "Q1-Q4" would only give [Q1, Q4]
+        saved_quarters = report_card_data.get('selected_quarters') if isinstance(report_card_data, dict) else None
+        if saved_quarters and isinstance(saved_quarters, list):
+            selected_quarters = [q if isinstance(q, str) and q.startswith('Q') else f'Q{q}' for q in saved_quarters]
+        else:
+            quarter_str = (report_card.quarter or '').strip()
+            if not quarter_str:
+                selected_quarters = []
+            elif '-' in quarter_str:
+                # Range e.g. "Q1-Q4" -> expand to all quarters in range so Q2, Q3 not lost
+                parts = [p.strip() for p in quarter_str.split('-') if p.strip()]
+                if len(parts) == 2:
+                    try:
+                        lo = int(parts[0].replace('Q', '')) if parts[0].startswith('Q') else int(parts[0])
+                        hi = int(parts[1].replace('Q', '')) if parts[1].startswith('Q') else int(parts[1])
+                        selected_quarters = [f'Q{i}' for i in range(lo, hi + 1)]
+                    except (ValueError, TypeError):
+                        selected_quarters = [p if p.startswith('Q') else f'Q{p}' for p in parts]
+                else:
+                    selected_quarters = [p if p.startswith('Q') else f'Q{p}' for p in parts]
+            else:
+                if quarter_str.startswith('Q'):
+                    selected_quarters = [quarter_str]
+                else:
+                    try:
+                        selected_quarters = [f'Q{int(quarter_str)}']
+                    except (ValueError, TypeError):
+                        selected_quarters = [quarter_str]
+
         # Choose template based on grade level and report type
         template_prefix = 'unofficial' if report_type == 'unofficial' else 'official'
         if student.grade_level in [1, 2]:
@@ -566,6 +652,7 @@ def generate_report_card_pdf(report_card_id):
             student=student_data,
             grades=grades,
             grades_by_quarter=grades_by_quarter,  # Cumulative quarter data
+            selected_quarters=selected_quarters,  # So template shows grades for this report's quarter
             attendance=attendance,
             class_objects=class_objects,
             include_attendance=include_attendance,

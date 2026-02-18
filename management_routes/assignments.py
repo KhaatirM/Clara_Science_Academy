@@ -6,17 +6,21 @@ from flask import Blueprint, render_template, request, flash, redirect, url_for,
 from flask_login import login_required, current_user
 from decorators import management_required
 from models import (
-    db, Assignment, Grade, Submission, Student, Class, Enrollment, AssignmentExtension,
+    db, Assignment, AssignmentAttachment, Grade, Submission, Student, Class, Enrollment, AssignmentExtension,
     AssignmentRedo, AssignmentReopening, QuizQuestion, QuizOption, QuizAnswer, DiscussionThread, DiscussionPost,
     GroupAssignment, TeacherStaff, SchoolYear, ExtensionRequest,
     QuestionBank, QuestionBankQuestion, QuestionBankOption
 )
 from werkzeug.utils import secure_filename
 from sqlalchemy import or_, and_, func
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, time
 import os
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    from backports.zoneinfo import ZoneInfo
 import json
-from .utils import allowed_file, update_assignment_statuses, get_current_quarter
+from .utils import allowed_file, ALLOWED_EXTENSIONS, update_assignment_statuses, get_current_quarter
 
 bp = Blueprint('assignments', __name__)
 
@@ -1426,10 +1430,6 @@ def debug_grades(class_id):
 def add_assignment():
     """Add a new assignment"""
     if request.method == 'POST':
-        # Debug logging
-        print(f"DEBUG: POST request to add_assignment")
-        print(f"DEBUG: Form data: {dict(request.form)}")
-        
         title = request.form.get('title')
         description = request.form.get('description')
         class_id = request.form.get('class_id', type=int)
@@ -1532,37 +1532,52 @@ def add_assignment():
         new_assignment.category_weight = category_weight
         new_assignment.created_by = current_user.id
         
-        # Handle file upload
-        if 'assignment_file' in request.files:
-            file = request.files['assignment_file']
-            if file and file.filename != '':
-                if allowed_file(file.filename):
-                    # Type assertion for filename
-                    assert file.filename is not None
-                    filename = secure_filename(file.filename)
-                    # Create a unique filename to avoid collisions
-                    unique_filename = f"assignment_{class_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{filename}"
-                    filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], unique_filename)
-                    
-                    try:
-                        file.save(filepath)
-                        
-                        # Save file information to assignment
-                        new_assignment.attachment_filename = unique_filename
-                        new_assignment.attachment_original_filename = filename
-                        new_assignment.attachment_file_path = filepath
-                        new_assignment.attachment_file_size = os.path.getsize(filepath)
-                        new_assignment.attachment_mime_type = file.content_type
-                        
-                    except Exception as e:
-                        flash(f'Error saving file: {str(e)}', 'danger')
-                        return redirect(request.url)
-                else:
-                    flash(f'File type not allowed. Allowed types are: {", ".join(ALLOWED_EXTENSIONS)}', 'danger')
-                    return redirect(request.url)
-        
+        # Handle file upload(s) - support multiple files via assignment_files or single assignment_file
+        upload_folder = current_app.config['UPLOAD_FOLDER']
+        upload_dir = os.path.join(upload_folder, 'assignments')
+        os.makedirs(upload_dir, exist_ok=True)
+        files_to_save = request.files.getlist('assignment_files') or []
+        if not files_to_save or not (files_to_save[0] and files_to_save[0].filename):
+            single = request.files.get('assignment_file')
+            if single and single.filename:
+                files_to_save = [single]
+        saved_attachments = []  # list of dicts to create AssignmentAttachment after flush
+        for idx, file in enumerate(files_to_save):
+            if not file or not file.filename:
+                continue
+            if not allowed_file(file.filename):
+                flash(f'File type not allowed. Allowed types are: {", ".join(ALLOWED_EXTENSIONS)}', 'danger')
+                return redirect(request.url)
+            assert file.filename is not None
+            filename = secure_filename(file.filename)
+            unique_filename = f"assignment_{class_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{idx}_{filename}"
+            filepath = os.path.join(upload_dir, unique_filename)
+            try:
+                file.save(filepath)
+                saved_attachments.append({
+                    'attachment_filename': unique_filename,
+                    'attachment_original_filename': filename,
+                    'attachment_file_path': filepath,
+                    'attachment_file_size': os.path.getsize(filepath),
+                    'attachment_mime_type': file.content_type or None,
+                    'sort_order': idx,
+                })
+                if idx == 0:
+                    new_assignment.attachment_filename = unique_filename
+                    new_assignment.attachment_original_filename = filename
+                    new_assignment.attachment_file_path = filepath
+                    new_assignment.attachment_file_size = os.path.getsize(filepath)
+                    new_assignment.attachment_mime_type = file.content_type
+            except Exception as e:
+                flash(f'Error saving file: {str(e)}', 'danger')
+                return redirect(request.url)
+
         try:
             db.session.add(new_assignment)
+            db.session.flush()
+            for att_data in saved_attachments:
+                att = AssignmentAttachment(assignment_id=new_assignment.id, **att_data)
+                db.session.add(att)
             db.session.commit()
             print(f"DEBUG: Assignment created successfully with ID: {new_assignment.id}")
             print(f"DEBUG: Assignment details - title={new_assignment.title}, class_id={new_assignment.class_id}, quarter={new_assignment.quarter}")
@@ -1580,7 +1595,17 @@ def add_assignment():
     current_quarter = get_current_quarter()
     # Get assignment context from query parameter (in-class or homework)
     context = request.args.get('context', 'homework')
-    return render_template('shared/add_assignment.html', classes=classes, current_quarter=current_quarter, context=context)
+    # For in-class: default due date = today at 4:00 PM EST
+    default_due_date = None
+    if context == 'in-class':
+        try:
+            est = ZoneInfo('America/New_York')
+            now_est = datetime.now(est)
+            today_est = now_est.date()
+            default_due_date = datetime.combine(today_est, time(16, 0))
+        except Exception:
+            default_due_date = datetime.now().replace(hour=16, minute=0, second=0, microsecond=0)
+    return render_template('shared/add_assignment.html', classes=classes, current_quarter=current_quarter, context=context, default_due_date=default_due_date)
 
 
 
@@ -2426,34 +2451,51 @@ def edit_assignment(assignment_id):
             assignment.assignment_context = assignment_context
             assignment.total_points = total_points
             
-            # Handle file upload (only if a new file is provided)
-            if 'assignment_file' in request.files:
-                file = request.files['assignment_file']
-                if file and file.filename != '':
-                    if allowed_file(file.filename):
-                        filename = secure_filename(file.filename)
-                        unique_filename = f"assignment_{assignment.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{filename}"
-                        filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], unique_filename)
-                        
-                        try:
-                            file.save(filepath)
-                            
-                            # Update file information
+            # Handle file upload(s) - multiple (assignment_files) or single (assignment_file)
+            upload_folder = current_app.config['UPLOAD_FOLDER']
+            upload_dir = os.path.join(upload_folder, 'assignments')
+            files_to_save = request.files.getlist('assignment_files') or []
+            if not files_to_save or not (files_to_save[0] and files_to_save[0].filename):
+                single = request.files.get('assignment_file')
+                if single and single.filename:
+                    files_to_save = [single]
+            if files_to_save:
+                os.makedirs(upload_dir, exist_ok=True)
+                # Replace existing attachments with new uploads
+                AssignmentAttachment.query.filter_by(assignment_id=assignment.id).delete()
+                for idx, file in enumerate(files_to_save):
+                    if not file or not file.filename:
+                        continue
+                    if not allowed_file(file.filename):
+                        flash(f'File type not allowed. Allowed types are: {", ".join(ALLOWED_EXTENSIONS)}', 'danger')
+                        db.session.rollback()
+                        return redirect(request.url)
+                    filename = secure_filename(file.filename)
+                    unique_filename = f"assignment_{assignment.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{idx}_{filename}"
+                    filepath = os.path.join(upload_dir, unique_filename)
+                    try:
+                        file.save(filepath)
+                        att = AssignmentAttachment(
+                            assignment_id=assignment.id,
+                            attachment_filename=unique_filename,
+                            attachment_original_filename=filename,
+                            attachment_file_path=filepath,
+                            attachment_file_size=os.path.getsize(filepath),
+                            attachment_mime_type=file.content_type or None,
+                            sort_order=idx,
+                        )
+                        db.session.add(att)
+                        if idx == 0:
                             assignment.attachment_filename = unique_filename
                             assignment.attachment_original_filename = filename
                             assignment.attachment_file_path = filepath
                             assignment.attachment_file_size = os.path.getsize(filepath)
                             assignment.attachment_mime_type = file.content_type
-                            
-                        except Exception as e:
-                            flash(f'Error saving file: {str(e)}', 'danger')
-                            db.session.rollback()
-                            return redirect(request.url)
-                    else:
-                        flash(f'File type not allowed.', 'danger')
+                    except Exception as e:
+                        flash(f'Error saving file: {str(e)}', 'danger')
                         db.session.rollback()
                         return redirect(request.url)
-            
+
             db.session.commit()
             flash('Assignment updated successfully!', 'success')
             return redirect(url_for('management.view_assignment', assignment_id=assignment_id))
@@ -2593,11 +2635,34 @@ def remove_assignment(assignment_id):
         # 8. Delete extensions (they reference assignments)
         AssignmentExtension.query.filter_by(assignment_id=assignment_id).delete()
         
-        # Delete the assignment file if it exists (using stored value to avoid accessing assignment)
+        # Delete assignment attachment files (multiple and legacy)
+        for att in AssignmentAttachment.query.filter_by(assignment_id=assignment_id).all():
+            if att.attachment_file_path and os.path.exists(att.attachment_file_path):
+                try:
+                    os.remove(att.attachment_file_path)
+                except OSError:
+                    pass
+            elif att.attachment_filename:
+                for p in [os.path.join(current_app.config['UPLOAD_FOLDER'], 'assignments', att.attachment_filename),
+                          os.path.join(current_app.config['UPLOAD_FOLDER'], att.attachment_filename)]:
+                    if os.path.exists(p):
+                        try:
+                            os.remove(p)
+                        except OSError:
+                            pass
+                        break
+        AssignmentAttachment.query.filter_by(assignment_id=assignment_id).delete()
+        
+        # Delete the legacy assignment file if it exists
         if attachment_filename:
-            filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], attachment_filename)
-            if os.path.exists(filepath):
-                os.remove(filepath)
+            for filepath in [os.path.join(current_app.config['UPLOAD_FOLDER'], 'assignments', attachment_filename),
+                             os.path.join(current_app.config['UPLOAD_FOLDER'], attachment_filename)]:
+                if os.path.exists(filepath):
+                    try:
+                        os.remove(filepath)
+                    except OSError:
+                        pass
+                    break
         
         # Delete the assignment using raw SQL to avoid relationship access
         # This prevents SQLAlchemy from trying to lazy-load deadline_reminders relationship
@@ -3022,7 +3087,7 @@ def void_group_assignment(assignment_id):
                         new_grade = GroupGrade(
                             student_id=member.student_id,
                             group_assignment_id=assignment_id,
-                            student_group_id=group.id,
+                            group_id=group.id,
                             grade_data=json.dumps({'score': 'N/A', 'comments': ''}),
                             is_voided=True,
                             voided_by=current_user.id,
@@ -3061,7 +3126,7 @@ def void_group_assignment(assignment_id):
                             new_grade = GroupGrade(
                                 student_id=member.student_id,
                                 group_assignment_id=assignment_id,
-                                student_group_id=group.id,
+                                group_id=group.id,
                                 grade_data=json.dumps({'score': 'N/A', 'comments': ''}),
                                 is_voided=True,
                                 voided_by=current_user.id,
@@ -3112,7 +3177,7 @@ def void_group_assignment(assignment_id):
                         new_grade = GroupGrade(
                             student_id=int(student_id),
                             group_assignment_id=assignment_id,
-                            student_group_id=student_group.id,
+                            group_id=student_group.id,
                             grade_data=json.dumps({'score': 'N/A', 'comments': ''}),
                             is_voided=True,
                             voided_by=current_user.id,
@@ -4114,16 +4179,15 @@ def admin_grade_group_assignment(assignment_id):
                                             if class_obj and class_obj.teacher_id:
                                                 graded_by_id = class_obj.teacher_id
                                         
-                                        # Update or create grade
+                                        # Update or create grade (look up by student + assignment so grade follows student if they changed groups)
                                         existing_grade = GroupGrade.query.filter_by(
                                             group_assignment_id=assignment_id,
-                                            group_id=group.id,
                                             student_id=student_id
                                         ).first()
-                                        
                                         if existing_grade:
                                             existing_grade.grade_data = json.dumps(grade_data)
                                             existing_grade.comments = comments
+                                            existing_grade.group_id = group.id  # update group in case student was moved
                                             if graded_by_id:
                                                 existing_grade.graded_by = graded_by_id
                                         else:

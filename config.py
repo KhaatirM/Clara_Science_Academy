@@ -34,9 +34,9 @@ class Config:
     # PDFKit configuration
     WKHTMLTOPDF_PATH = os.environ.get('WKHTMLTOPDF_PATH') or '/usr/bin/wkhtmltopdf'
     
-    # Max request body size (lower to avoid MemoryError on low-memory systems)
-    # Use 4MB; increase if you need larger file uploads (e.g. 16 * 1024 * 1024)
-    MAX_CONTENT_LENGTH = 4 * 1024 * 1024
+    # Max request body size for file uploads (e.g. assignment PDFs).
+    # Allow multiple 16MB files: 100MB total per request.
+    MAX_CONTENT_LENGTH = 100 * 1024 * 1024
     
     # Google OAuth 2.0 Configuration
     # IMPORTANT: Set these environment variables in production

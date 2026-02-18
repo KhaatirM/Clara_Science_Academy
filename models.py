@@ -627,9 +627,30 @@ class Assignment(db.Model):
     school_year = db.relationship('SchoolYear', backref='assignments', lazy=True)
     academic_period = db.relationship('AcademicPeriod', backref='assignments', lazy=True)
     creator = db.relationship('User', backref='created_assignments', lazy=True)
+    # Multiple file attachments (in addition to legacy single attachment fields above)
+    attachment_list = db.relationship('AssignmentAttachment', backref='assignment', lazy=True, order_by='AssignmentAttachment.sort_order')
 
     def __repr__(self):
         return f"Assignment('{self.title}', Class: {self.class_id})"
+
+
+class AssignmentAttachment(db.Model):
+    """
+    Extra file attachments for an assignment (PDF/paper). Allows multiple documents per assignment.
+    The legacy single file is still on Assignment.attachment_*; this table holds additional (or all) files.
+    """
+    __tablename__ = 'assignment_attachment'
+    id = db.Column(db.Integer, primary_key=True)
+    assignment_id = db.Column(db.Integer, db.ForeignKey('assignment.id'), nullable=False)
+    attachment_filename = db.Column(db.String(255), nullable=False)
+    attachment_original_filename = db.Column(db.String(255), nullable=True)
+    attachment_file_path = db.Column(db.String(500), nullable=True)
+    attachment_file_size = db.Column(db.Integer, nullable=True)
+    attachment_mime_type = db.Column(db.String(100), nullable=True)
+    sort_order = db.Column(db.Integer, default=0, nullable=False)
+
+    def __repr__(self):
+        return f"AssignmentAttachment(assignment_id={self.assignment_id}, filename={self.attachment_original_filename})"
 
 
 class Submission(db.Model):

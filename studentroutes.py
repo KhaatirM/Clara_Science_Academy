@@ -16,7 +16,7 @@ from models import (
     # Academic structure
     Class, SchoolYear, AcademicPeriod, Enrollment, ClassSchedule,
     # Assignment system
-    Assignment, AssignmentRedo, Submission, Grade, StudentGoal, ExtensionRequest,
+    Assignment, AssignmentAttachment, AssignmentRedo, Submission, Grade, StudentGoal, ExtensionRequest,
     # Group assignment system
     GroupAssignment, GroupGrade, StudentGroup, GroupSubmission, StudentGroupMember,
     # Quiz system
@@ -2870,13 +2870,28 @@ def submit_group_assignment(assignment_id):
     else:
         return jsonify({'success': False, 'message': f'File type not allowed. Allowed types are: {", ".join(ALLOWED_EXTENSIONS)}'}), 400
 
+def _resolve_assignment_file_path(upload_folder, filename, file_path_stored=None):
+    """Resolve actual file path: try stored path, then assignments subfolder, then root."""
+    if file_path_stored and os.path.exists(file_path_stored):
+        return file_path_stored
+    if not filename:
+        return None
+    for candidate in [
+        os.path.join(upload_folder, 'assignments', filename),
+        os.path.join(upload_folder, filename),
+    ]:
+        if os.path.exists(candidate):
+            return candidate
+    return None
+
+
 @student_blueprint.route('/download-assignment-file/<int:assignment_id>')
 @login_required
 @student_required
 def download_assignment_file(assignment_id):
-    """Download assignment attachment file"""
+    """Download assignment attachment file. Use ?index=N for Nth document when multiple are attached."""
     assignment = Assignment.query.get_or_404(assignment_id)
-    
+
     # Check if student is enrolled in this class
     student = Student.query.get_or_404(current_user.student_id)
     enrollment = Enrollment.query.filter_by(
@@ -2884,25 +2899,53 @@ def download_assignment_file(assignment_id):
         class_id=assignment.class_id,
         is_active=True
     ).first()
-    
+
     if not enrollment:
         abort(403, description="You are not enrolled in this class")
-    
-    if not assignment.attachment_filename:
+
+    upload_folder = current_app.config['UPLOAD_FOLDER']
+    docs = []
+    attachment_list = list(assignment.attachment_list or [])
+
+    if attachment_list:
+        for att in attachment_list:
+            path = _resolve_assignment_file_path(
+                upload_folder,
+                att.attachment_filename,
+                att.attachment_file_path
+            )
+            if path:
+                docs.append({
+                    'path': path,
+                    'original_filename': att.attachment_original_filename or att.attachment_filename,
+                })
+    elif assignment.attachment_filename:
+        path = _resolve_assignment_file_path(
+            upload_folder,
+            assignment.attachment_filename,
+            assignment.attachment_file_path
+        )
+        if path:
+            docs.append({
+                'path': path,
+                'original_filename': assignment.attachment_original_filename or assignment.attachment_filename,
+            })
+
+    if not docs:
         abort(404, description="No attachment found for this assignment")
-    
-    file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], assignment.attachment_filename)
-    
+
+    index = request.args.get('index', type=int, default=0)
+    if index < 0 or index >= len(docs):
+        index = 0
+    doc = docs[index]
+    file_path = doc['path']
     if not os.path.exists(file_path):
         abort(404, description="File not found")
-    
-    # Get the original filename for download
-    original_filename = assignment.attachment_original_filename or assignment.attachment_filename
-    
+
     return send_file(
         file_path,
         as_attachment=True,
-        download_name=original_filename
+        download_name=doc['original_filename']
     )
 
 @student_blueprint.route('/notifications/mark-read/<int:notification_id>', methods=['POST'])

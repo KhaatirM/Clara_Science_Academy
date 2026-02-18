@@ -270,17 +270,32 @@ def create_app(config_class=None):
         
         return render_template('shared/home.html')
 
+    def _resolve_assignment_file_path(upload_folder, filename, file_path_stored=None):
+        """Resolve actual file path: try stored path, then assignments subfolder, then root."""
+        import os
+        if file_path_stored and os.path.exists(file_path_stored):
+            return file_path_stored
+        if not filename:
+            return None
+        for candidate in [
+            os.path.join(upload_folder, 'assignments', filename),
+            os.path.join(upload_folder, filename),
+        ]:
+            if os.path.exists(candidate):
+                return candidate
+        return None
+
     @app.route('/assignment/file/<int:assignment_id>')
     @login_required
     def download_assignment_file(assignment_id):
-        """Download or view assignment file"""
+        """Download or view assignment file. Use ?index=N for Nth document when multiple are attached."""
         from flask import send_file, abort, request
-        from models import Assignment, Enrollment
+        from models import Assignment, Enrollment, AssignmentAttachment
         import os
-        
+
         assignment = Assignment.query.get_or_404(assignment_id)
         class_obj = assignment.class_info
-        
+
         # Check authorization - teachers/admins can view files for their classes
         if class_obj:
             # Directors and School Administrators have access
@@ -298,14 +313,14 @@ def create_app(config_class=None):
             else:
                 # For teachers, check if they're assigned to the class
                 from models import TeacherStaff, class_additional_teachers, class_substitute_teachers
-                
+
                 teacher = None
                 if current_user.teacher_staff_id:
                     teacher = TeacherStaff.query.get(current_user.teacher_staff_id)
-                
+
                 if not teacher:
                     abort(403, description="You are not authorized to access this file")
-                
+
                 # Check if teacher is primary, additional, or substitute
                 is_authorized = (
                     class_obj.teacher_id == teacher.id or
@@ -318,39 +333,68 @@ def create_app(config_class=None):
                         class_substitute_teachers.c.teacher_id == teacher.id
                     ).count() > 0
                 )
-                
+
                 if not is_authorized:
                     abort(403, description="You are not authorized to access this file")
-        
-        if not assignment.attachment_filename:
+
+        # Build list of documents: use attachment_list if any, else legacy single attachment
+        docs = []
+        upload_folder = current_app.config['UPLOAD_FOLDER']
+        attachment_list = list(assignment.attachment_list or [])
+
+        if attachment_list:
+            for att in attachment_list:
+                path = _resolve_assignment_file_path(
+                    upload_folder,
+                    att.attachment_filename,
+                    att.attachment_file_path
+                )
+                if path:
+                    docs.append({
+                        'path': path,
+                        'original_filename': att.attachment_original_filename or att.attachment_filename,
+                        'mime_type': att.attachment_mime_type,
+                    })
+        elif assignment.attachment_filename:
+            path = _resolve_assignment_file_path(
+                upload_folder,
+                assignment.attachment_filename,
+                assignment.attachment_file_path
+            )
+            if path:
+                docs.append({
+                    'path': path,
+                    'original_filename': assignment.attachment_original_filename or assignment.attachment_filename,
+                    'mime_type': assignment.attachment_mime_type,
+                })
+
+        if not docs:
             abort(404, description="No attachment found for this assignment")
-        
-        # Check if file is in assignments subfolder or root upload folder
-        file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], 'assignments', assignment.attachment_filename)
-        if not os.path.exists(file_path):
-            file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], assignment.attachment_filename)
-        
+
+        index = request.args.get('index', type=int, default=0)
+        if index < 0 or index >= len(docs):
+            index = 0
+        doc = docs[index]
+
+        file_path = doc['path']
         if not os.path.exists(file_path):
             abort(404, description="File not found")
-        
-        # Check if this is a view request (for iframe) or download request
+
         view_mode = request.args.get('view', 'false').lower() == 'true'
-        is_pdf = assignment.attachment_mime_type and 'pdf' in assignment.attachment_mime_type.lower()
-        
+        is_pdf = doc['mime_type'] and 'pdf' in (doc['mime_type'] or '').lower()
+
         try:
-            # For PDFs in view mode, serve without attachment flag to allow inline viewing
             if view_mode and is_pdf:
                 return send_file(
                     file_path,
                     as_attachment=False,
-                    mimetype=assignment.attachment_mime_type or 'application/pdf'
+                    mimetype=doc['mime_type'] or 'application/pdf'
                 )
             else:
-                # Download mode
                 return send_file(
                     file_path,
                     as_attachment=True,
-                    download_name=assignment.attachment_original_filename or assignment.attachment_filename
+                    download_name=doc['original_filename']
                 )
         except Exception as e:
             current_app.logger.error(f"Error serving assignment file: {e}")

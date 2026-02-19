@@ -247,7 +247,7 @@
                 </div>
             </div>
             <div class="post-content">
-                {{ thread.content[:200] }}{% if thread.content|length > 200 %}...{% endif %}
+                {{ thread.content | discussion_preview(200) }}
             </div>
         </div>
         {% endfor %}
@@ -285,9 +285,40 @@
                     </div>
                     <div class="mb-3">
                         <label for="thread_content" class="form-label fw-semibold">Your Post <span class="text-danger">*</span></label>
-                        <textarea class="form-control" id="thread_content" name="thread_content" rows="8" 
-                                  placeholder="Share your thoughts, ideas, or questions about the discussion topic..." required></textarea>
-                        <div class="form-text">Be thoughtful and respectful in your response.</div>
+                        <div class="discussion-editor-mode-toggle">
+                            <button type="button" class="btn btn-sm btn-outline-secondary btn-mode active" data-mode="text">
+                                <i class="bi bi-chat-text me-1"></i>Text
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary btn-mode" data-mode="code">
+                                <i class="bi bi-code-slash me-1"></i>Code
+                            </button>
+                        </div>
+                        <div class="discussion-editor-code-options" id="threadCodeOptions">
+                            <label for="thread_code_lang">Language:</label>
+                            <select class="form-select form-select-sm" id="thread_code_lang" name="thread_code_lang" style="width: auto;">
+                                <option value="python">Python</option>
+                                <option value="javascript">JavaScript</option>
+                                <option value="java">Java</option>
+                                <option value="cpp">C++</option>
+                                <option value="c">C</option>
+                                <option value="html">HTML</option>
+                                <option value="css">CSS</option>
+                                <option value="sql">SQL</option>
+                                <option value="text">Plain Text</option>
+                            </select>
+                        </div>
+                        <div class="discussion-editor-text-area" id="threadTextArea">
+                            <textarea class="form-control" id="thread_content" name="thread_content" rows="8" 
+                                      placeholder="Share your thoughts, ideas, or questions about the discussion topic..." required></textarea>
+                        </div>
+                        <div class="discussion-editor-code-area" id="threadCodeArea">
+                            <div class="code-editor-wrapper">
+                                <pre class="line-numbers-display" id="threadLineNumbers">1</pre>
+                                <textarea class="form-control code-textarea" id="thread_code_content" rows="12" 
+                                          placeholder="Paste or type your code here..."></textarea>
+                            </div>
+                        </div>
+                        <div class="form-text">Be thoughtful and respectful. Use <strong>Code</strong> mode for sharing code snippets with line numbers.</div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -305,6 +336,59 @@
 function viewThread(threadId) {
     window.location.href = "{{ url_for('student.view_discussion_thread', thread_id=0) }}".replace('0', threadId);
 }
+
+(function() {
+    var isCodeMode = false;
+    var textArea = document.getElementById('thread_content');
+    var codeArea = document.getElementById('threadCodeArea');
+    var codeTextarea = document.getElementById('thread_code_content');
+    var lineNumbers = document.getElementById('threadLineNumbers');
+    var textAreaWrap = document.getElementById('threadTextArea');
+    var codeOptions = document.getElementById('threadCodeOptions');
+    var createForm = document.getElementById('createThreadForm');
+
+    function updateLineNumbers(val) {
+        var lines = (val || '').split('\n').length;
+        lineNumbers.textContent = lines ? Array.from({length: lines}, (_, i) => i + 1).join('\n') : '1';
+    }
+
+    document.querySelectorAll('.discussion-editor-mode-toggle .btn-mode').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            isCodeMode = this.dataset.mode === 'code';
+            document.querySelectorAll('.discussion-editor-mode-toggle .btn-mode').forEach(function(b) { b.classList.remove('active'); });
+            this.classList.add('active');
+            textAreaWrap.classList.toggle('hide', isCodeMode);
+            codeArea.classList.toggle('show', isCodeMode);
+            codeOptions.classList.toggle('show', isCodeMode);
+            textArea.removeAttribute('required');
+            codeTextarea.removeAttribute('required');
+            if (isCodeMode) {
+                codeTextarea.setAttribute('required', 'required');
+                updateLineNumbers(codeTextarea.value);
+            } else {
+                textArea.setAttribute('required', 'required');
+            }
+        });
+    });
+
+    if (codeTextarea) {
+        codeTextarea.addEventListener('input', function() { updateLineNumbers(this.value); });
+    }
+
+    if (createForm) {
+        createForm.addEventListener('submit', function(e) {
+            if (isCodeMode) {
+                var lang = document.getElementById('thread_code_lang').value || 'text';
+                var code = codeTextarea.value;
+                if (!code.trim()) {
+                    e.preventDefault();
+                    return;
+                }
+                textArea.value = '[DISCUSSION_CODE:' + lang + ']\n' + code;
+            }
+        });
+    }
+})();
 </script>
 {% endblock %}
 

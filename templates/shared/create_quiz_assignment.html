@@ -10,7 +10,7 @@
                     <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
                         <div>
                             <h2 class="mb-2 mb-md-0 fw-bold">
-                                <i class="bi bi-quiz me-3"></i>Create Quiz Assignment
+                                <i class="bi bi-quiz me-3"></i>{{ 'Edit Quiz Assignment' if assignment else 'Create Quiz Assignment' }}
                             </h2>
                             <p class="mb-0 opacity-75">Design engaging quizzes with multiple question types and smart features</p>
                         </div>
@@ -34,6 +34,9 @@
     <form id="quizAssignmentForm" method="POST" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         <input type="hidden" name="assignment_type" value="quiz">
+        {% if assignment %}
+        <input type="hidden" name="assignment_id" value="{{ assignment.id }}">
+        {% endif %}
         
         <div class="row">
             <!-- Main Form Column -->
@@ -50,6 +53,7 @@
                                     <i class="bi bi-pencil-square me-1 text-primary"></i>Quiz Title <span class="text-danger">*</span>
                                 </label>
                                 <input type="text" class="form-control form-control-lg" id="title" name="title" 
+                                       value="{{ assignment.title if assignment else '' }}"
                                        placeholder="Enter an engaging quiz title..." required>
                                 <div class="form-text">Make it descriptive and engaging for students</div>
                             </div>
@@ -60,7 +64,7 @@
                                 <select class="form-select form-select-lg" id="class_id" name="class_id" required>
                                     <option value="">Choose a class...</option>
                                     {% for class in classes %}
-                                        <option value="{{ class.id }}">{{ class.name }} - {{ class.subject }}</option>
+                                        <option value="{{ class.id }}" {% if assignment and assignment.class_id == class.id %}selected{% endif %}>{{ class.name }} - {{ class.subject }}</option>
                                     {% endfor %}
                                 </select>
                             </div>
@@ -71,7 +75,7 @@
                                 <i class="bi bi-card-text me-1 text-primary"></i>Quiz Description
                             </label>
                             <textarea class="form-control" id="description" name="description" rows="3" 
-                                      placeholder="Describe what this quiz covers, learning objectives, and any special instructions for students..."></textarea>
+                                      placeholder="Describe what this quiz covers, learning objectives, and any special instructions for students...">{{ assignment.description or '' if assignment else '' }}</textarea>
                             <div class="form-text">Help students understand what they'll be tested on</div>
                         </div>
                         
@@ -80,17 +84,18 @@
                                 <label for="due_date" class="form-label fw-semibold">
                                     <i class="bi bi-calendar-event me-1 text-primary"></i>Due Date <span class="text-danger">*</span>
                                 </label>
-                                <input type="datetime-local" class="form-control form-control-lg" id="due_date" name="due_date" min="2020-01-01T00:00" required>
+                                <input type="datetime-local" class="form-control form-control-lg" id="due_date" name="due_date" min="2020-01-01T00:00"
+                                       value="{{ assignment.due_date.strftime('%Y-%m-%dT%H:%M') if assignment and assignment.due_date else '' }}" required>
                             </div>
                             <div class="col-md-6">
                                 <label for="quarter" class="form-label fw-semibold">
                                     <i class="bi bi-calendar3 me-1 text-primary"></i>Quarter <span class="text-danger">*</span>
                                 </label>
                                 <select class="form-select form-select-lg" id="quarter" name="quarter" required>
-                                    <option value="1" {% if current_quarter == "1" %}selected{% endif %}>Quarter 1</option>
-                                    <option value="2" {% if current_quarter == "2" %}selected{% endif %}>Quarter 2</option>
-                                    <option value="3" {% if current_quarter == "3" %}selected{% endif %}>Quarter 3</option>
-                                    <option value="4" {% if current_quarter == "4" %}selected{% endif %}>Quarter 4</option>
+                                    <option value="1" {% if (assignment and assignment.quarter == "1") or (not assignment and current_quarter == "1") %}selected{% endif %}>Quarter 1</option>
+                                    <option value="2" {% if (assignment and assignment.quarter == "2") or (not assignment and current_quarter == "2") %}selected{% endif %}>Quarter 2</option>
+                                    <option value="3" {% if (assignment and assignment.quarter == "3") or (not assignment and current_quarter == "3") %}selected{% endif %}>Quarter 3</option>
+                                    <option value="4" {% if (assignment and assignment.quarter == "4") or (not assignment and current_quarter == "4") %}selected{% endif %}>Quarter 4</option>
                                 </select>
                             </div>
                         </div>
@@ -106,14 +111,16 @@
                                 <label for="open_date" class="form-label fw-semibold">
                                     <i class="bi bi-unlock me-1 text-success"></i>Open Date & Time
                                 </label>
-                                <input type="datetime-local" class="form-control form-control-lg" id="open_date" name="open_date" min="2020-01-01T00:00">
+                                <input type="datetime-local" class="form-control form-control-lg" id="open_date" name="open_date" min="2020-01-01T00:00"
+                                       value="{{ assignment.open_date.strftime('%Y-%m-%dT%H:%M') if assignment and assignment.open_date else '' }}">
                                 <div class="form-text">When students can start this quiz (leave empty for immediate availability)</div>
                             </div>
                             <div class="col-md-6">
                                 <label for="close_date" class="form-label fw-semibold">
                                     <i class="bi bi-lock me-1 text-danger"></i>Close Date & Time
                                 </label>
-                                <input type="datetime-local" class="form-control form-control-lg" id="close_date" name="close_date" min="2020-01-01T00:00">
+                                <input type="datetime-local" class="form-control form-control-lg" id="close_date" name="close_date" min="2020-01-01T00:00"
+                                       value="{{ assignment.close_date.strftime('%Y-%m-%dT%H:%M') if assignment and assignment.close_date else '' }}">
                                 <div class="form-text">When this quiz closes (leave empty to close at due date)</div>
                             </div>
                         </div>
@@ -134,7 +141,8 @@
                                 </label>
                                 <div class="input-group">
                                     <input type="number" class="form-control" id="time_limit" name="time_limit" 
-                                           min="1" max="300" placeholder="No limit">
+                                           min="1" max="300" placeholder="No limit"
+                                           value="{{ assignment.time_limit_minutes or '' if assignment else '' }}">
                                     <span class="input-group-text">minutes</span>
                                 </div>
                                 <div class="form-text">Leave empty for unlimited time</div>
@@ -144,7 +152,7 @@
                                     <i class="bi bi-arrow-repeat me-1 text-success"></i>Max Attempts
                                 </label>
                                 <input type="number" class="form-control" id="attempts" name="attempts" 
-                                       min="1" max="10" value="1">
+                                       min="1" max="10" value="{{ assignment.max_attempts if assignment and assignment.max_attempts else 1 }}">
                                 <div class="form-text">How many times students can take this quiz</div>
                             </div>
                             <div class="col-md-4">
@@ -167,7 +175,7 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="shuffle_questions" name="shuffle_questions">
+                                    <input class="form-check-input" type="checkbox" id="shuffle_questions" name="shuffle_questions" {% if assignment and assignment.shuffle_questions %}checked{% endif %}>
                                     <label class="form-check-label fw-semibold" for="shuffle_questions">
                                         <i class="bi bi-shuffle me-2 text-info"></i>Shuffle Questions
                                     </label>
@@ -176,7 +184,7 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="show_correct_answers" name="show_correct_answers" checked>
+                                    <input class="form-check-input" type="checkbox" id="show_correct_answers" name="show_correct_answers" {% if not assignment or assignment.show_correct_answers %}checked{% endif %}>
                                     <label class="form-check-label fw-semibold" for="show_correct_answers">
                                         <i class="bi bi-eye me-2 text-info"></i>Show Correct Answers
                                     </label>
@@ -694,6 +702,9 @@
     </div>
 </template>
 
+<script type="application/json" id="quizDataForEdit">
+{{ (quiz_data|tojson) if quiz_data else 'null' }}
+</script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     let questionCounter = 0;
@@ -981,7 +992,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    function addSection() {
+    function addSection(optionalTitle) {
         sectionCounter++;
         const sectionEl = sectionTemplate.content.cloneNode(true);
         const sectionBlock = sectionEl.querySelector('.section-block');
@@ -990,6 +1001,10 @@ document.addEventListener('DOMContentLoaded', function() {
         sectionBlock.dataset.blockId = 'section_' + sectionCounter;
         if (titleInput) {
             titleInput.name = 'section_title_' + sectionCounter;
+            if (optionalTitle) {
+                titleInput.value = optionalTitle;
+                if (titlePreview) titlePreview.textContent = optionalTitle;
+            }
             titleInput.addEventListener('input', function() {
                 if (titlePreview) titlePreview.textContent = this.value || 'New Section';
             });
@@ -1519,6 +1534,36 @@ document.addEventListener('DOMContentLoaded', function() {
                 this.focus();
             }
         });
+    }
+    
+    // Load existing quiz data when editing
+    let quizDataForEdit = null;
+    try {
+        const scriptEl = document.getElementById('quizDataForEdit');
+        if (scriptEl && scriptEl.textContent && scriptEl.textContent.trim()) {
+            quizDataForEdit = JSON.parse(scriptEl.textContent);
+        }
+    } catch (e) {
+        console.warn('Could not parse quiz data for edit:', e);
+    }
+    if (quizDataForEdit && quizDataForEdit.blocks && quizDataForEdit.blocks.length) {
+        const blocks = quizDataForEdit.blocks;
+        const noQuestionsMsg = questionsContainer.querySelector('.text-center');
+        if (noQuestionsMsg) noQuestionsMsg.remove();
+        blocks.forEach(function(block) {
+            if (block.type === 'section') {
+                addSection(block.title || 'New Section');
+            } else if (block.type === 'question') {
+                addQuestionFromBank({
+                    question_text: block.question_text || '',
+                    question_type: block.question_type || 'multiple_choice',
+                    points: block.points !== undefined ? block.points : 1,
+                    options: block.options || []
+                });
+            }
+        });
+        if (typeof buildBlockOrder === 'function') buildBlockOrder();
+        updateQuizPreview();
     }
     
     // Form submission

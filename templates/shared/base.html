@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='modal-styles.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/shared_base.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/navbar_and_updates.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/themes.css') }}">
     {% block extra_css %}{% endblock %}
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
@@ -20,7 +21,7 @@
     
 </head>
 <!-- ADDED: A block to allow child templates to add attributes to the body tag -->
-<body {% block body_attributes %}{% endblock %}>
+<body class="theme-{{ effective_theme | default('default') }}" {% block body_attributes %}{% endblock %}>
     <!-- Enhanced Modern Navbar -->
     <nav class="navbar navbar-expand-lg navbar-modern">
         <div class="container-fluid">

@@ -29,6 +29,10 @@ class User(db.Model, UserMixin):
     # Login tracking
     login_count = db.Column(db.Integer, default=0, nullable=False)
     
+    # Theme preference: default, light, dark, snowy, autumn, spring, summer, ocean, forest, holiday, etc.
+    # When tech sets site_theme_override (SystemConfig), that overrides this for everyone.
+    theme_preference = db.Column(db.String(50), nullable=True, default='default')
+    
     # Google OAuth tokens (encrypted)
     _google_refresh_token = db.Column(db.String(512), nullable=True)
     

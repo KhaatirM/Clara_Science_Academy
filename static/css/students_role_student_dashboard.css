@@ -1246,27 +1246,56 @@
     border-bottom: 2px solid #e2e8f0;
 }
 
+.student-assignment-type-icon,
+.student-assignment-type-badge {
+    padding: 0.4rem 0.75rem;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    color: white;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.student-assignment-type-badge .bi {
+    font-size: 1rem;
+}
+
 .student-assignment-type-icon {
     width: 45px;
     height: 45px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
+    padding: 0;
     justify-content: center;
-    color: white;
     font-size: 1.5rem;
 }
 
+.student-assignment-type-badge.type-pdf,
 .student-assignment-type-icon.type-pdf {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
+.student-assignment-type-badge.type-quiz,
 .student-assignment-type-icon.type-quiz {
     background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
 }
 
+.student-assignment-type-badge.type-discussion,
 .student-assignment-type-icon.type-discussion {
     background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.student-assignment-badges {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.badge-group {
+    background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%) !important;
+    color: white !important;
+    font-size: 0.75rem;
+    font-weight: 600;
 }
 
 .student-assignment-card-body {

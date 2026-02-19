@@ -288,11 +288,19 @@
                     {% endif %}
                     <div class="compact-action-grid">
                         {% if current_user.role in ['Director', 'School Administrator'] %}
+                            {% if assignment.assignment_type == 'quiz' %}
+                            <a href="{{ url_for('management.create_quiz_assignment') }}?edit={{ assignment.id }}" 
+                               class="btn btn-compact btn-compact-edit">
+                                <i class="bi bi-pencil-square"></i>
+                                <span>Edit</span>
+                            </a>
+                            {% else %}
                             <a href="{{ url_for('management.edit_assignment', assignment_id=assignment.id) }}" 
                                class="btn btn-compact btn-compact-edit">
                                 <i class="bi bi-pencil-square"></i>
                                 <span>Edit</span>
                             </a>
+                            {% endif %}
                             <a href="{{ url_for('teacher.assignments.view_assignment_submissions', assignment_id=assignment.id) }}" 
                                class="btn btn-compact btn-compact-submissions">
                                 <i class="bi bi-file-earmark-arrow-up"></i>
@@ -313,11 +321,19 @@
                                 </a>
                             {% endif %}
                         {% else %}
+                            {% if assignment.assignment_type == 'quiz' %}
+                            <a href="{{ url_for('teacher.create_quiz_assignment') }}?edit={{ assignment.id }}" 
+                               class="btn btn-compact btn-compact-edit">
+                                <i class="bi bi-pencil-square"></i>
+                                <span>Edit</span>
+                            </a>
+                            {% else %}
                             <a href="{{ url_for('teacher.assignments.edit_assignment', assignment_id=assignment.id) }}" 
                                class="btn btn-compact btn-compact-edit">
                                 <i class="bi bi-pencil-square"></i>
                                 <span>Edit</span>
                             </a>
+                            {% endif %}
                             <a href="{{ url_for('teacher.assignments.view_assignment_submissions', assignment_id=assignment.id) }}" 
                                class="btn btn-compact btn-compact-submissions">
                                 <i class="bi bi-file-earmark-arrow-up"></i>

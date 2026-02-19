@@ -350,7 +350,7 @@
                                     <i class="bi bi-chat-dots me-1"></i>{{ thread.posts|length }} {{ 'replies' if thread.posts|length != 1 else 'reply' }}
                                 </span>
                             </div>
-                            <p class="mb-2">{{ thread.content[:200] }}{% if thread.content|length > 200 %}...{% endif %}</p>
+                            <p class="mb-2">{{ thread.content | discussion_preview(200) }}</p>
                             <div class="mt-2">
                                 <button class="btn btn-sm btn-outline-primary" onclick="viewThread({{ thread.id }})">
                                     <i class="bi bi-eye me-1"></i>View Thread
@@ -508,7 +508,11 @@ function goBack() {
 }
 
 function viewThread(threadId) {
-    window.location.href = "{{ url_for('student.view_discussion_thread', thread_id=0) }}".replace('0', threadId);
+    {% if current_user.role in ['Director', 'School Administrator'] %}
+    window.location.href = "{{ url_for('management.assignments.view_discussion_thread', thread_id=0) }}".replace('0', threadId);
+    {% else %}
+    window.location.href = "{{ url_for('teacher.assignments.view_discussion_thread', thread_id=0) }}".replace('0', threadId);
+    {% endif %}
 }
 
 let currentAssignmentId = null;

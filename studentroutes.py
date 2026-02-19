@@ -149,6 +149,26 @@ def get_student_assignment_status(assignment, submission, grade, student_id=None
     # Default status for active assignments
     return 'Un-Submitted'
 
+
+def get_student_group_assignment_status(group_assignment, group_submission, group_grade, student_id=None):
+    """Determine the student-facing status for a group assignment."""
+    from datetime import datetime
+    if group_assignment.status == 'Voided':
+        return 'Voided'
+    if group_grade and group_grade.is_voided:
+        return 'Voided'
+    if group_grade and group_grade.graded_at:
+        return 'completed'
+    if group_submission:
+        return 'Submitted or Awaiting Grade'
+    if group_assignment.due_date:
+        due_date = group_assignment.due_date.date() if hasattr(group_assignment.due_date, 'date') else group_assignment.due_date
+        today = datetime.now().date()
+        if due_date < today:
+            return 'Past Due'
+    return 'Un-Submitted'
+
+
 def get_grade_trends(student_id, class_id, limit=10):
     """Get grade trends for a specific class."""
     # Get grades directly from the Grade model, excluding Voided assignments and voided grades
@@ -707,9 +727,12 @@ def student_assignments():
     submissions = Submission.query.filter_by(student_id=student.id).all()
     submissions_dict = {sub.assignment_id: sub for sub in submissions}
     
-    # Get all grades for this student
+    # Get all grades for this student (regular + group)
     grades = Grade.query.filter_by(student_id=student.id).all()
     grades_dict = {g.assignment_id: g for g in grades}
+    group_grades = GroupGrade.query.filter_by(student_id=student.id).all()
+    for g in group_grades:
+        grades_dict[g.group_assignment_id] = g  # key by group_assignment_id for template lookup
     
     # Get redo opportunities for this student
     redo_opportunities = AssignmentRedo.query.filter_by(
@@ -751,7 +774,7 @@ def student_assignments():
             ).count()
             attempts_remaining = max(0, assignment.max_attempts - submissions_count)
         
-        assignment_data = (assignment, submission, student_status, attempts_remaining)
+        assignment_data = (assignment, submission, student_status, attempts_remaining, False)  # False = individual
         
         # Skip voided assignments
         if assignment.status == 'Voided' or student_status == 'Voided':
@@ -785,6 +808,93 @@ def student_assignments():
             inactive_assignments.append(assignment_data)
         elif assignment.status == 'Active':
             # Active assignments - students can submit
+            active_assignments.append(assignment_data)
+    
+    # Fetch group assignments for the same classes and apply same filters
+    group_assignments_query = GroupAssignment.query.filter(
+        GroupAssignment.class_id.in_(class_ids),
+        GroupAssignment.school_year_id == current_school_year.id,
+        GroupAssignment.status.in_(['Active', 'Inactive', 'Upcoming', 'Voided'])
+    )
+    if filter_class_id:
+        group_assignments_query = group_assignments_query.filter(GroupAssignment.class_id == filter_class_id)
+    if filter_status and filter_status in ['Active', 'Inactive', 'Upcoming', 'Voided']:
+        group_assignments_query = group_assignments_query.filter(GroupAssignment.status == filter_status)
+    if filter_start_date:
+        try:
+            start_date = datetime.strptime(filter_start_date, '%Y-%m-%d')
+            group_assignments_query = group_assignments_query.filter(GroupAssignment.due_date >= start_date)
+        except ValueError:
+            pass
+    if filter_end_date:
+        try:
+            end_date = datetime.strptime(filter_end_date, '%Y-%m-%d').replace(hour=23, minute=59, second=59)
+            group_assignments_query = group_assignments_query.filter(GroupAssignment.due_date <= end_date)
+        except ValueError:
+            pass
+    group_assignments_list = group_assignments_query.order_by(GroupAssignment.due_date.asc()).all()
+    
+    # Group submissions keyed by (group_assignment_id, group_id) - we need student's group submission per assignment
+    group_submissions_by_assignment = {}
+    for gs in GroupSubmission.query.filter(
+        GroupSubmission.group_assignment_id.in_([ga.id for ga in group_assignments_list])
+    ).all():
+        key = gs.group_assignment_id
+        if key not in group_submissions_by_assignment:
+            group_submissions_by_assignment[key] = []
+        group_submissions_by_assignment[key].append(gs)
+    
+    for group_assignment in group_assignments_list:
+        if group_assignment.status == 'Voided':
+            continue
+        # Find student's group for this assignment
+        student_group = None
+        if group_assignment.selected_group_ids:
+            try:
+                selected_ids = json.loads(group_assignment.selected_group_ids)
+                for gid in selected_ids:
+                    if StudentGroupMember.query.filter_by(student_id=student.id, group_id=gid).first():
+                        student_group = StudentGroup.query.get(gid)
+                        break
+            except (json.JSONDecodeError, TypeError):
+                pass
+        else:
+            m = StudentGroupMember.query.join(StudentGroup).filter(
+                StudentGroupMember.student_id == student.id,
+                StudentGroup.class_id == group_assignment.class_id,
+                StudentGroup.is_active == True
+            ).first()
+            if m:
+                student_group = StudentGroup.query.get(m.group_id)
+        group_submission = None
+        if student_group:
+            for gs in group_submissions_by_assignment.get(group_assignment.id) or []:
+                if gs.group_id == student_group.id:
+                    group_submission = gs
+                    break
+        group_grade = grades_dict.get(group_assignment.id)  # already merged above
+        student_status = get_student_group_assignment_status(
+            group_assignment, group_submission, group_grade, student.id
+        )
+        if student_status == 'Voided':
+            continue
+        assignment_data = (group_assignment, group_submission, student_status, None, True)
+        is_upcoming = False
+        if hasattr(group_assignment, 'open_date') and group_assignment.open_date:
+            raw_open = group_assignment.open_date
+            if isinstance(raw_open, datetime):
+                open_dt = ensure_aware(raw_open)
+            else:
+                from datetime import date as date_type
+                open_dt = datetime.combine(raw_open, datetime.min.time()).replace(tzinfo=timezone.utc) if isinstance(raw_open, date_type) else ensure_aware(raw_open)
+            now_aware = now if (hasattr(now, 'tzinfo') and now.tzinfo) else datetime.now(timezone.utc)
+            if open_dt > now_aware:
+                is_upcoming = True
+        if is_upcoming or group_assignment.status == 'Upcoming':
+            upcoming_assignments.append(assignment_data)
+        elif group_assignment.status == 'Inactive':
+            inactive_assignments.append(assignment_data)
+        elif group_assignment.status == 'Active':
             active_assignments.append(assignment_data)
     
     return render_template('students/role_student_dashboard.html', 
@@ -1862,6 +1972,7 @@ def get_class_assignments_api(class_id):
             'due_date_formatted': assignment.due_date.strftime('%B %d, %Y at %I:%M %p') if assignment.due_date else 'No due date',
             'quarter': assignment.quarter,
             'assignment_type': assignment.assignment_type,
+            'is_group': False,
             'status': assignment.status,
             'is_active': is_active,
             'has_attachment': bool(assignment.attachment_filename),
@@ -2947,6 +3058,38 @@ def download_assignment_file(assignment_id):
         as_attachment=True,
         download_name=doc['original_filename']
     )
+
+
+@student_blueprint.route('/download-group-assignment-file/<int:assignment_id>')
+@login_required
+@student_required
+def download_group_assignment_file(assignment_id):
+    """Download group assignment attachment file."""
+    group_assignment = GroupAssignment.query.get_or_404(assignment_id)
+    student = Student.query.get_or_404(current_user.student_id)
+    enrollment = Enrollment.query.filter_by(
+        student_id=student.id,
+        class_id=group_assignment.class_id,
+        is_active=True
+    ).first()
+    if not enrollment:
+        abort(403, description="You are not enrolled in this class")
+    if not group_assignment.attachment_filename:
+        abort(404, description="No attachment found for this assignment")
+    upload_folder = current_app.config['UPLOAD_FOLDER']
+    path = _resolve_assignment_file_path(
+        upload_folder,
+        group_assignment.attachment_filename,
+        group_assignment.attachment_file_path
+    )
+    if not path or not os.path.exists(path):
+        abort(404, description="File not found")
+    return send_file(
+        path,
+        as_attachment=True,
+        download_name=group_assignment.attachment_original_filename or group_assignment.attachment_filename
+    )
+
 
 @student_blueprint.route('/notifications/mark-read/<int:notification_id>', methods=['POST'])
 @login_required

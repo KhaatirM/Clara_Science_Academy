@@ -92,7 +92,7 @@
     <div class="thread-header-section">
         <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
             <div>
-                <a href="{{ url_for('student.view_discussion', assignment_id=assignment.id) }}" class="btn btn-light btn-sm mb-3">
+                <a href="{{ back_url }}" class="btn btn-light btn-sm mb-3">
                     <i class="bi bi-arrow-left me-2"></i>Back to Discussion
                 </a>
                 <h2 class="mb-2">
@@ -169,18 +169,18 @@
         {% else %}
             <div class="text-center py-4">
                 <i class="bi bi-chat-dots display-4 text-muted mb-3"></i>
-                <p class="text-muted">No replies yet. Be the first to respond!</p>
+                <p class="text-muted">No replies yet.</p>
             </div>
         {% endif %}
     </div>
 
-    <!-- Reply Form -->
-    {% if not thread.is_locked and assignment.status == 'Active' %}
+    <!-- Reply Form (only for students) -->
+    {% if show_reply_form and not thread.is_locked and assignment.status == 'Active' %}
     <div class="reply-form">
         <h5 class="mb-3">
             <i class="bi bi-reply me-2"></i>Post a Reply
         </h5>
-        <form method="POST" action="{{ url_for('student.reply_to_discussion_thread', thread_id=thread.id) }}" id="replyForm">
+        <form method="POST" action="{{ url_for('student.reply_to_discussion_thread', thread_id=thread.id) }}" id="replyFormShared">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="mb-3">
                 <div class="discussion-editor-mode-toggle">
@@ -191,9 +191,9 @@
                         <i class="bi bi-code-slash me-1"></i>Code
                     </button>
                 </div>
-                <div class="discussion-editor-code-options" id="replyCodeOptions">
-                    <label for="reply_code_lang">Language:</label>
-                    <select class="form-select form-select-sm" id="reply_code_lang" style="width: auto;">
+                <div class="discussion-editor-code-options" id="replyCodeOptionsShared">
+                    <label for="reply_code_lang_shared">Language:</label>
+                    <select class="form-select form-select-sm" id="reply_code_lang_shared" style="width: auto;">
                         <option value="python">Python</option>
                         <option value="javascript">JavaScript</option>
                         <option value="java">Java</option>
@@ -205,14 +205,14 @@
                         <option value="text">Plain Text</option>
                     </select>
                 </div>
-                <div class="discussion-editor-text-area" id="replyTextArea">
-                    <textarea class="form-control" id="reply_content" name="reply_content" rows="6" 
+                <div class="discussion-editor-text-area" id="replyTextAreaShared">
+                    <textarea class="form-control" id="reply_content_shared" name="reply_content" rows="6" 
                               placeholder="Share your thoughts, ask questions, or respond to others..." required></textarea>
                 </div>
-                <div class="discussion-editor-code-area" id="replyCodeArea">
+                <div class="discussion-editor-code-area" id="replyCodeAreaShared">
                     <div class="code-editor-wrapper">
-                        <pre class="line-numbers-display" id="replyLineNumbers">1</pre>
-                        <textarea class="form-control code-textarea" id="reply_code_content" rows="8" 
+                        <pre class="line-numbers-display" id="replyLineNumbersShared">1</pre>
+                        <textarea class="form-control code-textarea" id="reply_code_content_shared" rows="8" 
                                   placeholder="Paste or type your code here..."></textarea>
                     </div>
                 </div>
@@ -223,6 +223,8 @@
             </button>
         </form>
     </div>
+    {% elif not show_reply_form %}
+    {# Teachers/admins viewing - no reply form #}
     {% elif thread.is_locked %}
     <div class="alert alert-warning">
         <i class="bi bi-lock-fill me-2"></i>This thread is locked and no longer accepts replies.
@@ -238,25 +240,25 @@
 {% block scripts %}
 <script>
 (function() {
-    var replyForm = document.getElementById('replyForm');
-    if (!replyForm) return;
+    var f = document.getElementById('replyFormShared');
+    if (!f) return;
     var isCodeMode = false;
-    var textArea = document.getElementById('reply_content');
-    var codeTextarea = document.getElementById('reply_code_content');
-    var lineNumbers = document.getElementById('replyLineNumbers');
-    var textAreaWrap = document.getElementById('replyTextArea');
-    var codeArea = document.getElementById('replyCodeArea');
-    var codeOptions = document.getElementById('replyCodeOptions');
+    var textArea = document.getElementById('reply_content_shared');
+    var codeTextarea = document.getElementById('reply_code_content_shared');
+    var lineNumbers = document.getElementById('replyLineNumbersShared');
+    var textAreaWrap = document.getElementById('replyTextAreaShared');
+    var codeArea = document.getElementById('replyCodeAreaShared');
+    var codeOptions = document.getElementById('replyCodeOptionsShared');
 
     function updateLineNumbers(val) {
         var lines = (val || '').split('\n').length;
         lineNumbers.textContent = lines ? Array.from({length: lines}, (_, i) => i + 1).join('\n') : '1';
     }
 
-    replyForm.querySelectorAll('.discussion-editor-mode-toggle .btn-mode').forEach(function(btn) {
+    f.querySelectorAll('.discussion-editor-mode-toggle .btn-mode').forEach(function(btn) {
         btn.addEventListener('click', function() {
             isCodeMode = this.dataset.mode === 'code';
-            replyForm.querySelectorAll('.discussion-editor-mode-toggle .btn-mode').forEach(function(b) { b.classList.remove('active'); });
+            f.querySelectorAll('.discussion-editor-mode-toggle .btn-mode').forEach(function(b) { b.classList.remove('active'); });
             this.classList.add('active');
             textAreaWrap.classList.toggle('hide', isCodeMode);
             codeArea.classList.toggle('show', isCodeMode);
@@ -274,9 +276,9 @@
 
     if (codeTextarea) codeTextarea.addEventListener('input', function() { updateLineNumbers(this.value); });
 
-    replyForm.addEventListener('submit', function(e) {
+    f.addEventListener('submit', function(e) {
         if (isCodeMode) {
-            var lang = document.getElementById('reply_code_lang').value || 'text';
+            var lang = document.getElementById('reply_code_lang_shared').value || 'text';
             var code = codeTextarea.value;
             if (!code.trim()) { e.preventDefault(); return; }
             textArea.value = '[DISCUSSION_CODE:' + lang + ']\n' + code;
@@ -285,8 +287,3 @@
 })();
 </script>
 {% endblock %}
-
-
-
-
-

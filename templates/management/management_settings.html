@@ -125,6 +125,29 @@
                     </div>
                     
                     <div class="preference-section">
+                        <label for="theme_preference" class="label-modern">
+                            <i class="bi bi-palette me-2"></i>Theme
+                        </label>
+                        <select class="select-modern" id="theme_preference" name="theme">
+                            <option value="default" {% if current_user.theme_preference == 'default' or not current_user.theme_preference %}selected{% endif %}>Default</option>
+                            <option value="light" {% if current_user.theme_preference == 'light' %}selected{% endif %}>Light</option>
+                            <option value="dark" {% if current_user.theme_preference == 'dark' %}selected{% endif %}>Dark</option>
+                            <optgroup label="Seasonal">
+                                <option value="snowy" {% if current_user.theme_preference == 'snowy' %}selected{% endif %}>Snowy (Winter)</option>
+                                <option value="autumn" {% if current_user.theme_preference == 'autumn' %}selected{% endif %}>Autumn</option>
+                                <option value="spring" {% if current_user.theme_preference == 'spring' %}selected{% endif %}>Spring</option>
+                                <option value="summer" {% if current_user.theme_preference == 'summer' %}selected{% endif %}>Summer</option>
+                                <option value="holiday" {% if current_user.theme_preference == 'holiday' %}selected{% endif %}>Holiday</option>
+                            </optgroup>
+                            <optgroup label="Color">
+                                <option value="ocean" {% if current_user.theme_preference == 'ocean' %}selected{% endif %}>Ocean</option>
+                                <option value="forest" {% if current_user.theme_preference == 'forest' %}selected{% endif %}>Forest</option>
+                            </optgroup>
+                        </select>
+                        <small class="text-muted d-block mt-1">Applies across the site when you're logged in.</small>
+                    </div>
+                    
+                    <div class="preference-section">
                         <label for="timezone" class="label-modern">
                             <i class="bi bi-clock me-2"></i>Timezone
                         </label>
@@ -299,25 +322,27 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Save preferences button
+    // Save preferences button (includes theme)
     const savePrefsBtn = document.querySelectorAll('.btn-save-settings')[1];
     if (savePrefsBtn) {
         savePrefsBtn.addEventListener('click', function(e) {
             e.preventDefault();
-            
-            // Show loading state
             const originalText = this.innerHTML;
             this.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Saving...';
             this.disabled = true;
-            
-            // Simulate API call
-            setTimeout(() => {
-                this.innerHTML = '<i class="bi bi-check-circle me-2"></i>Preferences Saved!';
-                setTimeout(() => {
-                    this.innerHTML = originalText;
-                    this.disabled = false;
-                }, 1500);
-            }, 1000);
+            const themeEl = document.getElementById('theme_preference');
+            const theme = themeEl ? themeEl.value : 'default';
+            const csrfToken = document.querySelector('meta[name="csrf-token"]') && document.querySelector('meta[name="csrf-token"]').content;
+            const formData = new FormData();
+            formData.append('theme', theme);
+            if (csrfToken) formData.append('csrf_token', csrfToken);
+            fetch("{{ url_for('auth.update_theme') }}", { method: 'POST', body: formData, headers: { 'X-CSRFToken': csrfToken || '' } })
+                .finally(() => {
+                    setTimeout(() => {
+                        savePrefsBtn.innerHTML = '<i class="bi bi-check-circle me-2"></i>Preferences Saved!';
+                        setTimeout(() => { savePrefsBtn.innerHTML = originalText; savePrefsBtn.disabled = false; }, 1500);
+                    }, 500);
+                });
         });
     }
     

@@ -91,6 +91,150 @@
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
 
+/* ===== Discussion Code Block (displaying code with line numbers) ===== */
+.discussion-code-block {
+    margin: 0.75rem 0;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #dee2e6;
+    background: #1e1e1e;
+}
+
+.discussion-code-block .code-lang-badge {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: #333;
+    color: #aaa;
+    border-radius: 0 0 6px 0;
+}
+
+.discussion-code-block .code-block-wrapper {
+    display: flex;
+    overflow-x: auto;
+}
+
+.discussion-code-block .line-numbers {
+    flex-shrink: 0;
+    padding: 1rem 0.75rem 1rem 1rem;
+    margin: 0;
+    background: #252526;
+    color: #858585;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    text-align: right;
+    user-select: none;
+}
+
+.discussion-code-block .code-content {
+    flex: 1;
+    margin: 0;
+    padding: 1rem 1rem 1rem 0.5rem;
+    background: #1e1e1e;
+    color: #d4d4d4;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    overflow-x: auto;
+}
+
+.discussion-code-block .code-content code {
+    background: transparent;
+    padding: 0;
+}
+
+/* ===== Discussion Post Editor (Text vs Code mode) ===== */
+.discussion-editor-mode-toggle {
+    display: flex;
+    gap: 0.25rem;
+    margin-bottom: 0.5rem;
+}
+
+.discussion-editor-mode-toggle .btn-mode {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.9rem;
+    border: 1px solid #dee2e6;
+}
+
+.discussion-editor-mode-toggle .btn-mode.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-color: transparent;
+}
+
+.discussion-editor-code-options {
+    display: none;
+    margin-bottom: 0.5rem;
+}
+
+.discussion-editor-code-options.show {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.discussion-editor-code-options label {
+    font-size: 0.9rem;
+    color: #6c757d;
+    margin: 0;
+}
+
+.discussion-editor-code-area {
+    display: none;
+}
+
+.discussion-editor-code-area.show {
+    display: block;
+}
+
+.discussion-editor-code-area .code-editor-wrapper {
+    display: flex;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #f8f9fa;
+}
+
+.discussion-editor-code-area .line-numbers-display {
+    flex-shrink: 0;
+    padding: 0.75rem 0.5rem;
+    background: #e9ecef;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: #6c757d;
+    text-align: right;
+    user-select: none;
+    min-width: 2.5rem;
+}
+
+.discussion-editor-code-area .code-textarea {
+    flex: 1;
+    border: none;
+    border-radius: 0;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    padding: 0.75rem;
+    resize: vertical;
+    min-height: 200px;
+}
+
+.discussion-editor-code-area .code-textarea:focus {
+    box-shadow: none;
+    outline: none;
+}
+
+.discussion-editor-text-area {
+    display: block;
+}
+
+.discussion-editor-text-area.hide {
+    display: none;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .discussion-container {

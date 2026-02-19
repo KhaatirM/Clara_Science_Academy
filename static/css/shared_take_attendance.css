@@ -1,6 +1,39 @@
 /* ===== TAKE_ATTENDANCE STYLES ===== */
 /* Extracted from: templates\shared\take_attendance.html */
 
+/* Single scrollbar: html and body do not scroll, main-content scrolls */
+html.take-attendance-no-nested-scroll {
+    overflow: hidden;
+}
+body.take-attendance-no-nested-scroll {
+    overflow: hidden;
+}
+body.take-attendance-no-nested-scroll .main-content {
+    overflow-y: auto;
+    overflow-x: hidden;
+    height: 100vh;
+    min-height: 0;
+}
+
+.take-attendance-page {
+    overflow: visible;
+    min-height: 0;
+}
+
+.take-attendance-page form,
+.take-attendance-page .row {
+    overflow: visible;
+}
+
+.take-attendance-page #attendanceForm {
+    display: block;
+}
+
+/* Ensure form and rows don't create scroll context */
+.take-attendance-page .row {
+    min-height: 0;
+}
+
 /* Header Styling */
 .attendance-header {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);

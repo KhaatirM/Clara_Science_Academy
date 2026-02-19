@@ -603,6 +603,8 @@ body {
     padding: 20px;
     width: calc(100% - 250px);
     transition: margin-left 0.3s ease, width 0.3s ease;
+    overflow-y: visible; /* Single page scroll - no nested scrollbar */
+    overflow-x: hidden;
 }
 
 /* --- Collapsed Sidebar Styles --- */

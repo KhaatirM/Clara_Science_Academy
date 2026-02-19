@@ -9,7 +9,7 @@ from flask import Blueprint, render_template, request, flash, redirect, url_for,
 from flask_login import login_required, current_user, login_user, logout_user
 
 # Database and model imports
-from models import db, User, MaintenanceMode, ActivityLog, TeacherStaff, Student, Grade, Assignment
+from models import db, User, MaintenanceMode, ActivityLog, TeacherStaff, Student, Grade, Assignment, SystemConfig
 from scripts.gpa_scheduler import calculate_student_gpa
 from copy import copy
 
@@ -239,6 +239,7 @@ def system():
         'backup_location': SystemConfig.get_value('backup_location', 'backups/'),
         'log_level': SystemConfig.get_value('log_level', 'INFO')
     }
+    site_theme_override = SystemConfig.get_value('site_theme_override') or ''
     
     system_info = {
         'python_version': sys.version.split()[0],
@@ -254,7 +255,34 @@ def system():
                          **system_data,
                          config=config_info,
                          system_info=system_info,
-                         maintenance=maintenance)
+                         maintenance=maintenance,
+                         site_theme_override=site_theme_override)
+
+
+THEME_CHOICES = [
+    'default', 'light', 'dark', 'snowy', 'autumn', 'spring', 'summer',
+    'ocean', 'forest', 'holiday'
+]
+
+
+@tech_blueprint.route('/site-theme', methods=['POST'])
+@login_required
+@tech_required
+def set_site_theme():
+    """Set or clear the site-wide theme override. All users will see this theme until cleared."""
+    action = request.form.get('action', 'set')
+    if action == 'clear':
+        SystemConfig.set_value('site_theme_override', '', description='Site-wide theme override (empty = use each user\'s preference)', category='general', user_id=current_user.id)
+        flash('Site theme override cleared. Everyone will see their own theme again.', 'success')
+    else:
+        theme = (request.form.get('theme') or '').strip().lower()
+        if theme not in THEME_CHOICES:
+            flash('Invalid theme selected.', 'warning')
+        else:
+            SystemConfig.set_value('site_theme_override', theme, description='Site-wide theme override', category='general', user_id=current_user.id)
+            flash(f'Site theme set to "{theme}" for everyone. Users will see this theme until you clear it.', 'success')
+    return redirect(url_for('tech.system'))
+
 
 @tech_blueprint.route('/system/status')
 @login_required

@@ -83,6 +83,29 @@ def create_app(config_class=None):
             print(f"FATAL DATABASE ERROR DURING INITIALIZATION: {e}")
             raise e
         
+        # Add user.theme_preference column if missing (one-off migration for themes feature)
+        try:
+            with db.engine.connect() as conn:
+                dialect = db.engine.dialect.name
+                if dialect == 'sqlite':
+                    r = conn.execute(text("PRAGMA table_info(user)"))
+                    columns = [row[1] for row in r]
+                    if 'theme_preference' not in columns:
+                        conn.execute(text("ALTER TABLE user ADD COLUMN theme_preference VARCHAR(50)"))
+                        conn.commit()
+                        print("Added user.theme_preference column.")
+                elif dialect == 'postgresql':
+                    r = conn.execute(text(
+                        "SELECT 1 FROM information_schema.columns "
+                        "WHERE table_name = 'user' AND column_name = 'theme_preference'"
+                    ))
+                    if r.fetchone() is None:
+                        conn.execute(text('ALTER TABLE "user" ADD COLUMN theme_preference VARCHAR(50)'))
+                        conn.commit()
+                        print("Added user.theme_preference column.")
+        except Exception as e:
+            print(f"Note: theme_preference column check failed (may already exist): {e}")
+
         # Optional: run one-off production DB fix only when explicitly requested.
         # Prefer Flask-Migrate for schema changes: flask db migrate / flask db upgrade
         if os.environ.get('RUN_PRODUCTION_DB_FIX', '').strip() == '1':
@@ -169,6 +192,73 @@ def create_app(config_class=None):
         # Convert newlines to <br> tags and mark as safe HTML
         html = str(value).replace('\r\n', '<br>\n').replace('\n', '<br>\n').replace('\r', '<br>\n')
         return Markup(html)
+
+    @app.template_filter('discussion_content')
+    def discussion_content_filter(value):
+        """Render discussion content: plain text or code block with line numbers.
+        Code content starts with [DISCUSSION_CODE:lang] on the first line."""
+        from markupsafe import Markup, escape
+        if value is None:
+            return Markup('')
+        s = str(value)
+        code_prefix = '[DISCUSSION_CODE:'
+        if s.startswith(code_prefix):
+            try:
+                end = s.index(']')
+                lang = s[len(code_prefix):end].strip() or 'text'
+                body = s[end + 1:].lstrip('\n\r')
+                # Split into lines and escape each for XSS safety
+                lines = body.split('\n')
+                line_nums_html = '\n'.join(str(i + 1) for i in range(len(lines)))
+                code_html = '\n'.join(escape(line) for line in lines)
+                html = (
+                    f'<div class="discussion-code-block" data-lang="{escape(lang)}">'
+                    f'<span class="code-lang-badge">{escape(lang)}</span>'
+                    f'<div class="code-block-wrapper">'
+                    f'<pre class="line-numbers">\n{line_nums_html}\n</pre>'
+                    f'<pre class="code-content"><code>{code_html}</code></pre>'
+                    f'</div></div>'
+                )
+                return Markup(html)
+            except (ValueError, IndexError):
+                pass
+        # Plain text: escape and convert newlines to <br>
+        escaped = escape(s)
+        html = escaped.replace('\r\n', '<br>\n').replace('\n', '<br>\n').replace('\r', '<br>\n')
+        return Markup(html)
+
+    @app.template_filter('discussion_preview')
+    def discussion_preview_filter(value, maxlen=200):
+        """Return plain-text preview for discussion list (strips code prefix if present)."""
+        if value is None:
+            return ''
+        s = str(value).strip()
+        if s.startswith('[DISCUSSION_CODE:'):
+            try:
+                end = s.index(']')
+                lang = s[len('[DISCUSSION_CODE:'):end].strip()
+                body = s[end + 1:].lstrip('\n\r')
+                prefix = f'[{lang} code] '
+                preview = (prefix + body)[:maxlen]
+                return preview + ('...' if len(prefix + body) > maxlen else '')
+            except (ValueError, IndexError):
+                pass
+        return s[:maxlen] + ('...' if len(s) > maxlen else '')
+
+    # Inject effective theme into all templates (site override from tech, or user preference)
+    @app.context_processor
+    def inject_theme():
+        from models import SystemConfig
+        effective = 'default'
+        if current_user.is_authenticated:
+            site_override = SystemConfig.get_value('site_theme_override')
+            if site_override:
+                effective = site_override
+            else:
+                pref = getattr(current_user, 'theme_preference', None)
+                if pref:
+                    effective = pref
+        return {'effective_theme': effective}
 
     # Add CSP headers to allow necessary JavaScript execution
     @app.after_request

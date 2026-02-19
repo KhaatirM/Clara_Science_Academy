@@ -1,5 +1,7 @@
 {% extends "shared/dashboard_layout.html" %}
 
+{% block html_class %}take-attendance-no-nested-scroll{% endblock %}
+{% block body_class %}take-attendance-no-nested-scroll{% endblock %}
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/shared_take_attendance.css') }}">
 {% endblock %}
@@ -22,7 +24,7 @@
             {% endfor %}
         {% endif %}
     {% endwith %}
-<div class="container-fluid px-2 px-md-4 py-4">
+<div class="container-fluid px-2 px-md-4 py-4 take-attendance-page">
     <!-- Header Section -->
     <div class="attendance-header mb-4">
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">

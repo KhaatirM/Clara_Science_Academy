@@ -7,7 +7,7 @@ from flask_login import login_required, current_user
 from decorators import management_required
 from models import (
     db, Message, MessageGroup, MessageGroupMember, Announcement, ScheduledAnnouncement,
-    Notification, User, Class, StudentGroup, StudentGroupMember, Enrollment
+    Notification, User, Class, StudentGroup, StudentGroupMember, Enrollment, GroupAssignment
 )
 from sqlalchemy import or_, and_
 from datetime import datetime, timedelta
@@ -592,6 +592,23 @@ def admin_manage_group(group_id):
                 leader_id = request.form.get('leader_id', type=int)
                 
                 if student_ids:
+                    # Enforce group size from group assignment settings
+                    group_assignments = GroupAssignment.query.filter_by(class_id=class_obj.id).all()
+                    max_allowed = min((ga.group_size_max for ga in group_assignments if ga.group_size_max is not None), default=None)
+                    if max_allowed is not None:
+                        current_count = len(current_members)
+                        new_members_count = sum(
+                            1 for sid in student_ids
+                            if int(sid) not in current_member_ids
+                        )
+                        if current_count + new_members_count > max_allowed:
+                            flash(
+                                f'Group size cannot exceed {max_allowed} students (set by group assignment settings). '
+                                f'Current: {current_count}, trying to add: {new_members_count}.',
+                                'danger'
+                            )
+                            return redirect(url_for('management.admin_manage_group', group_id=group_id))
+                    
                     added_count = 0
                     skipped_count = 0
                     

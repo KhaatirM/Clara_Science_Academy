@@ -105,6 +105,14 @@ def create_group(class_id):
     
     return redirect(url_for('teacher.groups.class_groups', class_id=class_id))
 
+def _get_class_group_size_max(class_id):
+    """Return the smallest group_size_max across all group assignments for this class (most restrictive)."""
+    assignments = GroupAssignment.query.filter_by(class_id=class_id).all()
+    if not assignments:
+        return None
+    return min(ga.group_size_max for ga in assignments if ga.group_size_max is not None)
+
+
 @bp.route('/groups/<int:group_id>/add-member', methods=['POST'])
 @login_required
 @teacher_required
@@ -124,6 +132,22 @@ def add_member(group_id):
     if not student_ids:
         flash("Please select at least one student.", "danger")
         return redirect(url_for('teacher.groups.class_groups', class_id=group.class_id))
+    
+    # Enforce group size from group assignment settings
+    max_allowed = _get_class_group_size_max(group.class_id)
+    if max_allowed is not None:
+        current_count = StudentGroupMember.query.filter_by(group_id=group_id).count()
+        new_members_count = sum(
+            1 for sid in student_ids
+            if not StudentGroupMember.query.filter_by(group_id=group_id, student_id=int(sid)).first()
+        )
+        if current_count + new_members_count > max_allowed:
+            flash(
+                f"Group size cannot exceed {max_allowed} students (set by group assignment settings). "
+                f"Current: {current_count}, trying to add: {new_members_count}.",
+                "danger"
+            )
+            return redirect(url_for('teacher.groups.class_groups', class_id=group.class_id))
     
     added_count = 0
     skipped_count = 0

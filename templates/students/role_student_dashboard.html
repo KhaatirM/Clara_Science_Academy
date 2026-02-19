@@ -1271,7 +1271,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                 <a href="{{ url_for('student.student_assignments') }}?class_id={{ assignment.class_id }}" class="student-notification-link">
                                     <span class="fw-bold">{{ assignment.title }}</span>
                                     <span class="badge bg-warning text-dark ms-2">
-                                        {% set due_d = assignment.due_date.date() if assignment.due_date and hasattr(assignment.due_date, 'date') else (assignment.due_date if assignment.due_date else none) %}
+                                        {% set due_d = assignment.due_date.date() if assignment.due_date else none %}
                                         {% if due_d and today %}{{ (today - due_d).days }} days overdue{% else %}Overdue{% endif %}
                                     </span>
                                 </a>
@@ -2696,6 +2696,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                 {% set submission = assignment_data[1] %}
                 {% set student_status = assignment_data[2] %}
                 {% set attempts_remaining = assignment_data[3] if assignment_data|length > 3 else None %}
+                {% set is_group = assignment_data[4] if assignment_data|length > 4 else False %}
                 <div class="col-12 col-md-6 col-lg-4 assignment-card-wrapper" 
                      data-status="{{ student_status }}" 
                      data-type="{{ assignment.assignment_type or 'pdf' }}" 
@@ -2705,22 +2706,23 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                     <div class="student-assignment-card">
                         <!-- Card Header -->
                         <div class="student-assignment-card-header">
-                            <div class="student-assignment-type-icon
+                            <div class="student-assignment-type-badge
                                 {% if assignment.assignment_type == 'quiz' %}type-quiz
                                 {% elif assignment.assignment_type == 'discussion' %}type-discussion
                                 {% else %}type-pdf{% endif %}">
                                 {% if assignment.assignment_type == 'quiz' %}
-                                    <i class="bi bi-question-circle-fill"></i>
+                                    <i class="bi bi-question-circle-fill me-1"></i><span>Quiz</span>
                                 {% elif assignment.assignment_type == 'discussion' %}
-                                    <i class="bi bi-chat-dots-fill"></i>
+                                    <i class="bi bi-chat-dots-fill me-1"></i><span>Discussion</span>
                                 {% else %}
-                                    <i class="bi bi-file-earmark-text-fill"></i>
+                                    <i class="bi bi-file-earmark-text-fill me-1"></i><span>PDF/Paper</span>
                                 {% endif %}
                             </div>
-                            <div class="student-assignment-status-badge">
-                                <span class="badge bg-info">
-                                    <i class="bi bi-clock me-1"></i>Upcoming
-                                </span>
+                            <div class="student-assignment-badges">
+                                {% if is_group %}
+                                <span class="badge badge-group"><i class="bi bi-people-fill me-1"></i>Group</span>
+                                {% endif %}
+                                <span class="badge bg-info"><i class="bi bi-clock me-1"></i>Upcoming</span>
                             </div>
                         </div>
                         
@@ -2796,6 +2798,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                 {% set submission = assignment_data[1] %}
                 {% set student_status = assignment_data[2] %}
                 {% set attempts_remaining = assignment_data[3] if assignment_data|length > 3 else None %}
+                {% set is_group = assignment_data[4] if assignment_data|length > 4 else False %}
                 <div class="col-12 col-md-6 col-lg-4 assignment-card-wrapper" 
                      data-status="{{ student_status }}" 
                      data-type="{{ assignment.assignment_type or 'pdf' }}" 
@@ -2805,18 +2808,22 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                     <div class="student-assignment-card">
                         <!-- Card Header -->
                         <div class="student-assignment-card-header">
-                            <div class="student-assignment-type-icon
+                            <div class="student-assignment-type-badge
                                 {% if assignment.assignment_type == 'quiz' %}type-quiz
                                 {% elif assignment.assignment_type == 'discussion' %}type-discussion
                                 {% else %}type-pdf{% endif %}">
                                 {% if assignment.assignment_type == 'quiz' %}
-                                    <i class="bi bi-question-circle-fill"></i>
+                                    <i class="bi bi-question-circle-fill me-1"></i><span>Quiz</span>
                                 {% elif assignment.assignment_type == 'discussion' %}
-                                    <i class="bi bi-chat-dots-fill"></i>
+                                    <i class="bi bi-chat-dots-fill me-1"></i><span>Discussion</span>
                                 {% else %}
-                                    <i class="bi bi-file-earmark-text-fill"></i>
+                                    <i class="bi bi-file-earmark-text-fill me-1"></i><span>PDF/Paper</span>
                                 {% endif %}
                             </div>
+                            <div class="student-assignment-badges">
+                                {% if is_group %}
+                                <span class="badge badge-group"><i class="bi bi-people-fill me-1"></i>Group</span>
+                                {% endif %}
                             <div class="student-assignment-status-badge">
                                 {% set grade_obj = grades.get(assignment.id) %}
                                 {% set score = none %}
@@ -2894,6 +2901,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                     <span class="badge bg-primary">Pending</span>
                                 {% endif %}
                             </div>
+                            </div>
                         </div>
 
                         <!-- Card Body -->
@@ -2916,9 +2924,15 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                             {% if assignment.attachment_filename %}
                             <div class="student-assignment-attachment">
                                 <i class="bi bi-paperclip me-1"></i>
+                                {% if is_group %}
+                                <a href="{{ url_for('student.download_group_assignment_file', assignment_id=assignment.id) }}" class="text-decoration-none">
+                                    {{ assignment.attachment_original_filename or assignment.attachment_filename }}
+                                </a>
+                                {% else %}
                                 <a href="{{ url_for('student.download_assignment_file', assignment_id=assignment.id) }}" class="text-decoration-none">
                                     {{ assignment.attachment_original_filename or assignment.attachment_filename }}
                                 </a>
+                                {% endif %}
                             </div>
                             {% endif %}
                         </div>
@@ -2989,6 +3003,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                 {% set submission = assignment_data[1] %}
                 {% set student_status = assignment_data[2] %}
                 {% set attempts_remaining = assignment_data[3] if assignment_data|length > 3 else None %}
+                {% set is_group = assignment_data[4] if assignment_data|length > 4 else False %}
                 <div class="col-12 col-md-6 col-lg-4 assignment-card-wrapper" 
                      data-status="{{ student_status }}" 
                      data-type="{{ assignment.assignment_type or 'pdf' }}" 
@@ -2999,18 +3014,22 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                     <div class="student-assignment-card">
                         <!-- Card Header -->
                         <div class="student-assignment-card-header">
-                            <div class="student-assignment-type-icon
+                            <div class="student-assignment-type-badge
                                 {% if assignment.assignment_type == 'quiz' %}type-quiz
                                 {% elif assignment.assignment_type == 'discussion' %}type-discussion
                                 {% else %}type-pdf{% endif %}">
                                 {% if assignment.assignment_type == 'quiz' %}
-                                    <i class="bi bi-question-circle-fill"></i>
+                                    <i class="bi bi-question-circle-fill me-1"></i><span>Quiz</span>
                                 {% elif assignment.assignment_type == 'discussion' %}
-                                    <i class="bi bi-chat-dots-fill"></i>
+                                    <i class="bi bi-chat-dots-fill me-1"></i><span>Discussion</span>
                                 {% else %}
-                                    <i class="bi bi-file-earmark-text-fill"></i>
+                                    <i class="bi bi-file-earmark-text-fill me-1"></i><span>PDF/Paper</span>
                                 {% endif %}
                             </div>
+                            <div class="student-assignment-badges">
+                                {% if is_group %}
+                                <span class="badge badge-group"><i class="bi bi-people-fill me-1"></i>Group</span>
+                                {% endif %}
                             <div class="student-assignment-status-badge">
                                 {% set grade_obj = grades.get(assignment.id) %}
                                 {% set score = none %}
@@ -3070,6 +3089,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                     <span class="badge bg-secondary">Inactive</span>
                                 {% endif %}
                             </div>
+                            </div>
                         </div>
 
                         <!-- Card Body -->
@@ -3092,9 +3112,15 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                             {% if assignment.attachment_filename %}
                             <div class="student-assignment-attachment">
                                 <i class="bi bi-paperclip me-1"></i>
+                                {% if is_group %}
+                                <a href="{{ url_for('student.download_group_assignment_file', assignment_id=assignment.id) }}" class="text-decoration-none">
+                                    {{ assignment.attachment_original_filename or assignment.attachment_filename }}
+                                </a>
+                                {% else %}
                                 <a href="{{ url_for('student.download_assignment_file', assignment_id=assignment.id) }}" class="text-decoration-none">
                                     {{ assignment.attachment_original_filename or assignment.attachment_filename }}
                                 </a>
+                                {% endif %}
                             </div>
                             {% endif %}
                         </div>
@@ -4148,11 +4174,23 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                 <label for="theme_preference" class="label-modern">
                                     <i class="bi bi-palette me-2"></i>Theme
                                 </label>
-                                <select class="select-modern" id="theme_preference">
-                                    <option value="light">Light Theme</option>
-                                    <option value="dark">Dark Theme</option>
-                                    <option value="auto">Auto (System)</option>
+                                <select class="select-modern" id="theme_preference" name="theme">
+                                    <option value="default" {% if current_user.theme_preference == 'default' or not current_user.theme_preference %}selected{% endif %}>Default</option>
+                                    <option value="light" {% if current_user.theme_preference == 'light' %}selected{% endif %}>Light</option>
+                                    <option value="dark" {% if current_user.theme_preference == 'dark' %}selected{% endif %}>Dark</option>
+                                    <optgroup label="Seasonal">
+                                        <option value="snowy" {% if current_user.theme_preference == 'snowy' %}selected{% endif %}>Snowy (Winter)</option>
+                                        <option value="autumn" {% if current_user.theme_preference == 'autumn' %}selected{% endif %}>Autumn</option>
+                                        <option value="spring" {% if current_user.theme_preference == 'spring' %}selected{% endif %}>Spring</option>
+                                        <option value="summer" {% if current_user.theme_preference == 'summer' %}selected{% endif %}>Summer</option>
+                                        <option value="holiday" {% if current_user.theme_preference == 'holiday' %}selected{% endif %}>Holiday</option>
+                                    </optgroup>
+                                    <optgroup label="Color">
+                                        <option value="ocean" {% if current_user.theme_preference == 'ocean' %}selected{% endif %}>Ocean</option>
+                                        <option value="forest" {% if current_user.theme_preference == 'forest' %}selected{% endif %}>Forest</option>
+                                    </optgroup>
                                 </select>
+                                <small class="text-muted d-block mt-1">Applies across the site when you're logged in.</small>
                             </div>
                             
                             <div class="preference-section">
@@ -4381,28 +4419,37 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
             btn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Saving...';
             btn.disabled = true;
             
-            // Collect preferences
-            const preferences = {
-                notifications: {
-                    assignments: document.getElementById('notifAssignments').checked,
-                    grades: document.getElementById('notifGrades').checked,
-                    announcements: document.getElementById('notifAnnouncements').checked,
-                    dueDates: document.getElementById('notifDueDates').checked
-                },
-                theme: document.getElementById('theme_preference').value,
-                language: document.getElementById('language').value
-            };
+            const theme = document.getElementById('theme_preference').value;
+            const csrfToken = document.querySelector('meta[name="csrf-token"]') && document.querySelector('meta[name="csrf-token"]').content;
+            const formData = new FormData();
+            formData.append('theme', theme);
+            if (csrfToken) formData.append('csrf_token', csrfToken);
             
-            // Save to localStorage (in production, this would be sent to the server)
-            localStorage.setItem('studentPreferences', JSON.stringify(preferences));
-            
-            setTimeout(() => {
-                btn.innerHTML = '<i class="bi bi-check-circle me-2"></i>Preferences Saved!';
+            fetch("{{ url_for('auth.update_theme') }}", {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-CSRFToken': csrfToken || '' }
+            }).then(() => {
+                const preferences = {
+                    notifications: {
+                        assignments: document.getElementById('notifAssignments').checked,
+                        grades: document.getElementById('notifGrades').checked,
+                        announcements: document.getElementById('notifAnnouncements').checked,
+                        dueDates: document.getElementById('notifDueDates').checked
+                    },
+                    theme: theme,
+                    language: document.getElementById('language').value
+                };
+                localStorage.setItem('studentPreferences', JSON.stringify(preferences));
+            }).finally(() => {
                 setTimeout(() => {
-                    btn.innerHTML = originalText;
-                    btn.disabled = false;
-                }, 1500);
-            }, 1000);
+                    btn.innerHTML = '<i class="bi bi-check-circle me-2"></i>Preferences Saved!';
+                    setTimeout(() => {
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
+                    }, 1500);
+                }, 500);
+            });
         }
         
         function exportStudentData() {
@@ -5287,6 +5334,12 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
         const inactiveClass = isInactive ? 'opacity-75' : '';
         const statusBadgeClass = `badge bg-${assignment.status_class}`;
         
+        const typeLabels = { quiz: { icon: 'bi-question-circle-fill', label: 'Quiz', cls: 'type-quiz' },
+            discussion: { icon: 'bi-chat-dots-fill', label: 'Discussion', cls: 'type-discussion' },
+            pdf: { icon: 'bi-file-earmark-text-fill', label: 'PDF/Paper', cls: 'type-pdf' },
+            paper: { icon: 'bi-file-earmark-text-fill', label: 'PDF/Paper', cls: 'type-pdf' } };
+        const typeInfo = typeLabels[(assignment.assignment_type || 'pdf').toLowerCase()] || typeLabels.pdf;
+        
         let daysInfo = '';
         if (assignment.days_remaining !== null && assignment.days_remaining !== undefined) {
             daysInfo = `<span class="badge bg-success ms-2">${assignment.days_remaining} days remaining</span>`;
@@ -5299,10 +5352,15 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
             gradeInfo = `<div class="mt-2"><span class="badge bg-success">Graded: ${assignment.grade_percentage || assignment.grade_score}%</span></div>`;
         }
         
+        const groupBadge = assignment.is_group ? '<span class="badge badge-group ms-1"><i class="bi bi-people-fill me-1"></i>Group</span>' : '';
+        
         return `
             <div class="col-md-6 col-lg-4">
                 <div class="card h-100 shadow-sm ${inactiveClass}">
                     <div class="card-body">
+                        <div class="d-flex flex-wrap gap-1 mb-2">
+                            <span class="student-assignment-type-badge ${typeInfo.cls}"><i class="bi ${typeInfo.icon} me-1"></i>${typeInfo.label}</span>${groupBadge}
+                        </div>
                         <h6 class="card-title">${assignment.title}</h6>
                         <p class="card-text small text-muted">${assignment.description || 'No description provided.'}</p>
                         

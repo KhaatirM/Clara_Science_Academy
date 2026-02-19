@@ -217,7 +217,7 @@
                                     </div>
                                     <small class="text-muted">{{ thread.created_at.strftime('%m/%d/%Y %I:%M %p') }}</small>
                                 </div>
-                                <p class="mb-0">{{ thread.content }}</p>
+                                <div class="mb-0">{{ thread.content | discussion_content | safe }}</div>
                             </div>
                             {% endfor %}
                         {% else %}
@@ -234,7 +234,7 @@
                                     </strong>
                                     <small class="text-muted">{{ post.created_at.strftime('%m/%d/%Y %I:%M %p') }}</small>
                                 </div>
-                                <p class="mb-0">{{ post.content }}</p>
+                                <div class="mb-0">{{ post.content | discussion_content | safe }}</div>
                             </div>
                             {% endfor %}
                         {% else %}

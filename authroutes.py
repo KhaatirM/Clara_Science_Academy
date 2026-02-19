@@ -959,3 +959,35 @@ def google_callback():
             'danger'
         )
         return redirect(url_for('auth.login'))
+
+
+# Allowed theme values (for validation)
+THEME_CHOICES = {
+    'default', 'light', 'dark', 'snowy', 'autumn', 'spring', 'summer',
+    'ocean', 'forest', 'holiday'
+}
+
+
+@auth_blueprint.route('/update-theme', methods=['POST'])
+@login_required
+def update_theme():
+    """Update the current user's theme preference. Used by all roles from Settings."""
+    theme = (request.form.get('theme') or (request.json.get('theme') if request.is_json else None) or '').strip().lower()
+    if not theme or theme not in THEME_CHOICES:
+        if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'message': 'Invalid theme'}), 400
+        flash('Invalid theme selected.', 'warning')
+        return redirect(request.referrer or url_for('auth.dashboard'))
+    try:
+        current_user.theme_preference = theme
+        db.session.commit()
+        if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': True, 'theme': theme})
+        flash('Theme updated. Refresh the page to see the new theme.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error updating theme: {e}")
+        if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'message': str(e)}), 500
+        flash('Failed to update theme.', 'danger')
+    return redirect(request.referrer or url_for('auth.dashboard'))

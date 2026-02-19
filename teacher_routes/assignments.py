@@ -9,7 +9,8 @@ from .utils import get_teacher_or_admin, is_admin, is_authorized_for_class, get_
 from models import (
     db, Class, Assignment, AssignmentAttachment, SchoolYear, Enrollment, TeacherStaff, AssignmentExtension,
     Grade, GroupAssignment, GroupGrade, GradeHistory, GroupSubmission, StudentGroup,
-    class_additional_teachers, class_substitute_teachers, AssignmentReopening, Submission
+    class_additional_teachers, class_substitute_teachers, AssignmentReopening, Submission,
+    DiscussionThread, DiscussionPost
 )
 from sqlalchemy import or_
 from datetime import datetime, time
@@ -750,6 +751,31 @@ def view_assignment(assignment_id):
                          submission_rate=submission_rate,
                          grading_rate=grading_rate,
                          voided_student_ids=voided_student_ids)
+
+
+@bp.route('/discussion/thread/<int:thread_id>')
+@login_required
+@teacher_required
+def view_discussion_thread(thread_id):
+    """View a discussion thread (for teachers)"""
+    thread = DiscussionThread.query.get_or_404(thread_id)
+    assignment = thread.assignment
+    if not assignment or assignment.assignment_type != 'discussion':
+        flash("Discussion thread not found.", "danger")
+        return redirect(url_for('teacher.dashboard.assignments_and_grades'))
+    if not is_authorized_for_class(assignment.class_info):
+        flash("You are not authorized to view this discussion.", "danger")
+        return redirect(url_for('teacher.dashboard.assignments_and_grades'))
+    posts = DiscussionPost.query.filter_by(thread_id=thread_id).order_by(
+        DiscussionPost.created_at.asc()
+    ).all()
+    back_url = url_for('teacher.assignments.view_assignment', assignment_id=assignment.id)
+    return render_template('shared/view_discussion_thread.html',
+                         assignment=assignment,
+                         thread=thread,
+                         posts=posts,
+                         back_url=back_url,
+                         show_reply_form=False)
 
 
 @bp.route('/assignment/<int:assignment_id>/void', methods=['POST'])

@@ -356,6 +356,20 @@
     box-shadow: 0 5px 20px rgba(0,0,0,0.08);
 }
 
+/* Prevent nested scrollbars - use single page scroll */
+.unified-attendance-page .tab-content,
+.unified-attendance-page .tab-pane {
+    overflow: visible;
+}
+
+.unified-attendance-page .unified-form-body .table-responsive,
+.unified-attendance-page #reports .table-responsive {
+    max-height: none;
+    overflow-y: visible;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .unified-attendance-title {

@@ -7,8 +7,8 @@ from flask_login import login_required, current_user
 from decorators import management_required
 from models import (
     db, Assignment, AssignmentAttachment, Grade, Submission, Student, Class, Enrollment, AssignmentExtension,
-    AssignmentRedo, AssignmentReopening, QuizQuestion, QuizOption, QuizAnswer, DiscussionThread, DiscussionPost,
-    GroupAssignment, TeacherStaff, SchoolYear, ExtensionRequest,
+    AssignmentRedo, AssignmentReopening, QuizQuestion, QuizOption, QuizAnswer, QuizSection, DiscussionThread,
+    DiscussionPost, GroupAssignment, TeacherStaff, SchoolYear, ExtensionRequest,
     QuestionBank, QuestionBankQuestion, QuestionBankOption
 )
 from werkzeug.utils import secure_filename
@@ -55,6 +55,29 @@ def group_assignment_type_selector():
 
 
 # ============================================================
+def _build_quiz_data_for_edit(assignment):
+    """Build quiz_data dict (blocks with sections and questions) for template pre-fill."""
+    sections = QuizSection.query.filter_by(assignment_id=assignment.id).order_by(QuizSection.order).all()
+    questions = QuizQuestion.query.filter_by(assignment_id=assignment.id).order_by(QuizQuestion.order).all()
+    sections_by_id = {s.id: s for s in sections}
+    blocks = []
+    prev_section_id = None
+    for q in questions:
+        sec = sections_by_id.get(q.section_id) if q.section_id else None
+        if sec and sec.id != prev_section_id:
+            blocks.append({'type': 'section', 'title': sec.title or 'New Section'})
+            prev_section_id = sec.id
+        opts = QuizOption.query.filter_by(question_id=q.id).order_by(QuizOption.order).all()
+        blocks.append({
+            'type': 'question',
+            'question_text': q.question_text,
+            'question_type': q.question_type or 'multiple_choice',
+            'points': float(q.points) if q.points is not None else 1.0,
+            'options': [{'option_text': o.option_text, 'is_correct': bool(o.is_correct)} for o in opts]
+        })
+    return {'blocks': blocks}
+
+
 # Route: /assignment/create/quiz', methods=['GET', 'POST']
 # Function: create_quiz_assignment
 # ============================================================
@@ -63,9 +86,10 @@ def group_assignment_type_selector():
 @login_required
 @management_required
 def create_quiz_assignment():
-    """Create a quiz assignment - management version"""
+    """Create or edit a quiz assignment - management version"""
     if request.method == 'POST':
-        # Handle quiz assignment creation
+        assignment_id = request.form.get('assignment_id', type=int)
+        is_edit = bool(assignment_id)
         title = request.form.get('title')
         class_id = request.form.get('class_id', type=int)
         description = request.form.get('description', '')
@@ -74,7 +98,10 @@ def create_quiz_assignment():
         
         if not all([title, class_id, due_date_str, quarter]):
             flash("Please fill in all required fields.", "danger")
-            return redirect(url_for('management.create_quiz_assignment'))
+            redirect_target = url_for('management.create_quiz_assignment')
+            if is_edit:
+                redirect_target += f'?edit={assignment_id}'
+            return redirect(redirect_target)
         
         try:
             due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
@@ -149,37 +176,61 @@ def create_quiz_assignment():
             # Get assignment context from form or query parameter
             assignment_context = request.form.get('assignment_context', 'homework')
             
-            # Create the assignment (status already calculated above)
-            new_assignment = Assignment(
-                title=title,
-                description=description,
-                due_date=due_date,
-                open_date=open_date,
-                close_date=close_date,
-                quarter=str(quarter),
-                class_id=class_id,
-                school_year_id=current_school_year.id,
-                status=calculated_status,
-                assignment_type='quiz',
-                allow_save_and_continue=allow_save_and_continue,
-                max_save_attempts=max_save_attempts,
-                save_timeout_minutes=save_timeout_minutes,
-                time_limit_minutes=time_limit_minutes,
-                max_attempts=max_attempts,
-                shuffle_questions=shuffle_questions,
-                show_correct_answers=show_correct_answers,
-                google_form_id=google_form_id,
-                google_form_url=google_form_url if link_google_form else None,
-                google_form_linked=link_google_form,
-                assignment_context=assignment_context,
-                created_by=current_user.id
-            )
-            
-            db.session.add(new_assignment)
-            db.session.flush()  # Get the assignment ID
-
-            # Import QuizSection for section support
-            from models import QuizSection
+            if is_edit:
+                existing = Assignment.query.get(assignment_id)
+                if not existing or existing.assignment_type != 'quiz':
+                    flash("Quiz assignment not found or invalid.", "danger")
+                    return redirect(url_for('management.create_quiz_assignment'))
+                existing.title = title
+                existing.description = description
+                existing.due_date = due_date
+                existing.open_date = open_date
+                existing.close_date = close_date
+                existing.quarter = str(quarter)
+                existing.class_id = class_id
+                existing.status = calculated_status
+                existing.allow_save_and_continue = allow_save_and_continue
+                existing.max_save_attempts = max_save_attempts
+                existing.save_timeout_minutes = save_timeout_minutes
+                existing.time_limit_minutes = time_limit_minutes
+                existing.max_attempts = max_attempts
+                existing.shuffle_questions = shuffle_questions
+                existing.show_correct_answers = show_correct_answers
+                existing.google_form_id = google_form_id
+                existing.google_form_url = google_form_url if link_google_form else None
+                existing.google_form_linked = link_google_form
+                existing.assignment_context = assignment_context
+                new_assignment = existing
+                QuizSection.query.filter_by(assignment_id=assignment_id).delete()
+                QuizQuestion.query.filter_by(assignment_id=assignment_id).delete()
+            else:
+                # Create the assignment (status already calculated above)
+                new_assignment = Assignment(
+                    title=title,
+                    description=description,
+                    due_date=due_date,
+                    open_date=open_date,
+                    close_date=close_date,
+                    quarter=str(quarter),
+                    class_id=class_id,
+                    school_year_id=current_school_year.id,
+                    status=calculated_status,
+                    assignment_type='quiz',
+                    allow_save_and_continue=allow_save_and_continue,
+                    max_save_attempts=max_save_attempts,
+                    save_timeout_minutes=save_timeout_minutes,
+                    time_limit_minutes=time_limit_minutes,
+                    max_attempts=max_attempts,
+                    shuffle_questions=shuffle_questions,
+                    show_correct_answers=show_correct_answers,
+                    google_form_id=google_form_id,
+                    google_form_url=google_form_url if link_google_form else None,
+                    google_form_linked=link_google_form,
+                    assignment_context=assignment_context,
+                    created_by=current_user.id
+                )
+                db.session.add(new_assignment)
+                db.session.flush()  # Get the assignment ID
 
             # Save sections and questions in block order (section_0, question_1, section_1, question_2, ...)
             block_order_str = request.form.get('block_order', '').strip()
@@ -318,19 +369,28 @@ def create_quiz_assignment():
             # Update assignment total_points
             new_assignment.total_points = total_points if total_points > 0 else 100.0
             db.session.commit()
-            flash('Quiz assignment created successfully!', 'success')
+            flash('Quiz assignment updated successfully!' if is_edit else 'Quiz assignment created successfully!', 'success')
             return redirect(url_for('management.assignments_and_grades'))
             
         except Exception as e:
             db.session.rollback()
             flash(f'Error creating quiz assignment: {str(e)}', 'danger')
     
-    # GET request - show form
+    # GET request - show form (create or edit)
     classes = Class.query.all()
     current_quarter = get_current_quarter()
+    assignment = None
+    quiz_data = None
+    edit_id = request.args.get('edit', type=int)
+    if edit_id:
+        assignment = Assignment.query.get(edit_id)
+        if not assignment or assignment.assignment_type != 'quiz':
+            flash("Quiz assignment not found.", "danger")
+            return redirect(url_for('management.create_quiz_assignment'))
+        quiz_data = _build_quiz_data_for_edit(assignment)
     question_banks_url = url_for('management.assignments.question_banks_json')
     save_to_bank_url = url_for('management.assignments.save_to_bank')
-    return render_template('shared/create_quiz_assignment.html', classes=classes, current_quarter=current_quarter, question_banks_url=question_banks_url, save_to_bank_url=save_to_bank_url)
+    return render_template('shared/create_quiz_assignment.html', classes=classes, current_quarter=current_quarter, assignment=assignment, quiz_data=quiz_data, question_banks_url=question_banks_url, save_to_bank_url=save_to_bank_url)
 
 
 @bp.route('/api/question-banks')
@@ -2396,6 +2456,31 @@ def view_assignment(assignment_id):
         return redirect(url_for('management.assignments_and_grades'))
 
 
+# ============================================================
+# Route: /discussion/thread/<int:thread_id>
+# Function: view_discussion_thread (for teachers/admins)
+# ============================================================
+
+@bp.route('/discussion/thread/<int:thread_id>')
+@login_required
+@management_required
+def view_discussion_thread(thread_id):
+    """View a discussion thread (for Directors and School Administrators)"""
+    thread = DiscussionThread.query.get_or_404(thread_id)
+    assignment = thread.assignment
+    if not assignment or assignment.assignment_type != 'discussion':
+        flash("Discussion thread not found.", "danger")
+        return redirect(url_for('management.assignments_and_grades'))
+    posts = DiscussionPost.query.filter_by(thread_id=thread_id).order_by(
+        DiscussionPost.created_at.asc()
+    ).all()
+    back_url = url_for('management.view_assignment', assignment_id=assignment.id)
+    return render_template('shared/view_discussion_thread.html',
+                         assignment=assignment,
+                         thread=thread,
+                         posts=posts,
+                         back_url=back_url,
+                         show_reply_form=False)
 
 
 # ============================================================

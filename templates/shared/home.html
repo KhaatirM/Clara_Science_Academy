@@ -492,7 +492,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title mb-0" id="updateModalLabel">System Updates</h5>
-                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated February 17, 2026</p>
+                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated February 18, 2026</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -504,13 +504,39 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – February 17, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – February 18, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0">This release focuses on <strong>PDF/Paper assignments</strong> (multiple document uploads, tabs when viewing, no more 404s), <strong>Add-assignment layout</strong> (sidebar beside form, wider form, 380px sidebar), <strong>In-class due date</strong> (auto 4 PM EST when you choose In-Class), <strong>Report Cards</strong> (redesigned tab and detail page, PDF download shows saved grades for all quarters, gender/entrance date saved when generating), and <strong>Group assignments</strong> (deleting a group keeps grades; moving a student to another group keeps their grade and avoids duplicates). Details below.</p>
+                        <p class="updates-intro-text mb-0">This release adds <strong>Themes</strong>: choose your look site-wide (Default, Light, Dark, or seasonal themes like Snowy, Autumn, Spring, Summer, Ocean, Forest, and Holiday) in Settings. Tech users can set a <strong>site-wide theme override</strong> so everyone sees the same theme (e.g. Snowy in winter). We also include the recent <strong>PDF/Paper</strong>, <strong>Report Cards</strong>, and <strong>Group assignment</strong> improvements. Details below.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- February 18, 2026 - Themes -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-palette me-2"></i>Themes – February 18, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>User themes in Settings:</strong> Students, teachers, and school administrators can choose a theme in Settings (Account / Preferences). Your choice applies to the whole site when you’re logged in: sidebar, headers, and main content area all use the selected look.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Theme options:</strong> Default (current teal), Light, and Dark, plus seasonal themes: Snowy (winter), Autumn, Spring, Summer, Ocean, Forest, and Holiday. Each theme updates backgrounds and accents so the app feels consistent and easy on the eyes.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Site-wide theme override (Tech):</strong> Tech users can set a theme that applies to everyone. In Tech → System → Configuration, use “Site Theme (Everyone)” to apply a theme (e.g. Snowy for winter) or clear the override so users see their own preference again.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Deployment:</strong> The theme preference is stored per user and works on both local (SQLite) and production (e.g. Render with PostgreSQL). No extra deploy steps are required—just push and the app adds the new column automatically if needed.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> Everyone can pick a theme that fits their preference or the season. Tech can unify the look for the whole school (e.g. holiday or winter theme) without changing code.</p>
+                        </div>
+                    </div>
+
                     <!-- February 17, 2026 - Assignments, Report Cards, Group logic -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-file-earmark-pdf me-2"></i>PDF/Paper Assignments, Report Cards & Group Assignments – February 17, 2026</h6>
@@ -772,11 +798,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownFeb17_2026')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownFeb18_2026')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownFeb17_2026', 'true');
+            sessionStorage.setItem('updateModalShownFeb18_2026', 'true');
         }, 500);
     }
 });

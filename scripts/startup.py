@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 Startup script for Render deployment that automatically fixes database issues.
-This script runs before the main application starts to ensure the database is properly configured.
+- With --migrate-only: run DB fix scripts only and exit (for Render releaseCommand).
+- Without: run DB fix scripts then start the Flask app (legacy) or use for local.
 """
 
 import os
@@ -92,6 +93,13 @@ def run_database_fix():
 
 def main():
     """Main startup function."""
+    # Render release phase: only run DB fixes then exit so the web service can start with gunicorn
+    if '--migrate-only' in sys.argv:
+        print("🚀 Render release: running database fixes only...")
+        run_database_fix()
+        print("✅ Release phase complete.")
+        sys.exit(0)
+
     print("🚀 Starting Clara Science Academy Application...")
     print("=" * 50)
     

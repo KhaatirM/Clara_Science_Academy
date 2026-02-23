@@ -4256,6 +4256,16 @@ def admin_grade_group_assignment(assignment_id):
                             valid_score_keys[f"score_{gid}_{student.id}"] = (gid, student.id)
                 # Also allow any score_GID_SID where student is in our roster (resilient to key format or missing valid_score_keys)
                 valid_student_ids = set(students_by_id.keys())
+                # Debug: log grading context (remove or reduce after fixing live issue)
+                score_form_keys = [k for k in request.form if k.startswith('score_')]
+                try:
+                    current_app.logger.info(
+                        f"[group_grade] assignment_id={assignment_id} groups={len(groups)} "
+                        f"valid_score_keys={len(valid_score_keys)} valid_student_ids={len(valid_student_ids)} "
+                        f"form_score_keys={len(score_form_keys)} sample={score_form_keys[:5]!r}"
+                    )
+                except Exception:
+                    pass
                 graded_by_id = None
                 if current_user.teacher_staff_id:
                     graded_by_id = current_user.teacher_staff_id
@@ -4278,6 +4288,10 @@ def admin_grade_group_assignment(assignment_id):
                                 graded_by_id = c.teacher_id
                     except Exception:
                         pass
+                try:
+                    current_app.logger.info(f"[group_grade] graded_by_id={graded_by_id} total_points={group_assignment.total_points}")
+                except Exception:
+                    pass
                 total_points = group_assignment.total_points if group_assignment.total_points else 100.0
                 saved_count = 0
                 for key in request.form:
@@ -4338,6 +4352,39 @@ def admin_grade_group_assignment(assignment_id):
                         )
                         db.session.add(new_grade)
                     saved_count += 1
+                try:
+                    current_app.logger.info(f"[group_grade] saved_count={saved_count} assignment_id={assignment_id}")
+                    if saved_count == 0 and score_form_keys:
+                        # Diagnose why nothing saved: count skips by reason
+                        no_value = out_of_range = bad_float = student_invalid = 0
+                        for k in score_form_keys:
+                            parts = k.split('_')
+                            if len(parts) != 3:
+                                continue
+                            try:
+                                sid = int(parts[2])
+                            except (ValueError, TypeError):
+                                student_invalid += 1
+                                continue
+                            if sid not in valid_student_ids:
+                                student_invalid += 1
+                                continue
+                            val = request.form.get(k)
+                            if not val:
+                                no_value += 1
+                                continue
+                            try:
+                                p = float(val)
+                                if not (0 <= p <= total_points):
+                                    out_of_range += 1
+                            except ValueError:
+                                bad_float += 1
+                        current_app.logger.warning(
+                            f"[group_grade] saved_count=0 diagnosis: form_score_keys={len(score_form_keys)} "
+                            f"no_value={no_value} out_of_range={out_of_range} bad_float={bad_float} student_invalid={student_invalid}"
+                        )
+                except Exception:
+                    pass
                 db.session.commit()
                 
                 # Check if this is an AJAX request

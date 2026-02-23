@@ -4293,6 +4293,8 @@ def admin_grade_group_assignment(assignment_id):
                 except Exception:
                     pass
                 total_points = group_assignment.total_points if group_assignment.total_points else 100.0
+                # UI sends 0-100 scale; accept up to max(total_points, 100) so percentage-style entry always saves
+                effective_max = max(total_points, 100.0)
                 saved_count = 0
                 for key in request.form:
                     if not key.startswith('score_'):
@@ -4318,15 +4320,22 @@ def admin_grade_group_assignment(assignment_id):
                         points_earned = float(score)
                     except ValueError:
                         continue
-                    if not (0 <= points_earned <= total_points):
+                    if not (0 <= points_earned <= effective_max):
                         continue
-                    percentage = (points_earned / total_points * 100) if total_points > 0 else 0
+                    # UI is 0-100; if assignment total is not 100 and value looks like percentage (e.g. 85 > 10), scale to assignment total
+                    if total_points > 0 and total_points < 100 and points_earned > total_points and points_earned <= 100:
+                        points_earned = round(points_earned / 100.0 * total_points, 2)
+                        display_total = total_points
+                        percentage = (points_earned / display_total * 100) if display_total > 0 else 0
+                    else:
+                        display_total = total_points
+                        percentage = (points_earned / display_total * 100) if display_total > 0 else 0
                     letter_grade = 'A' if percentage >= 90 else ('B' if percentage >= 80 else ('C' if percentage >= 70 else ('D' if percentage >= 60 else 'D')))
                     grade_data = {
                         'score': points_earned,
                         'points_earned': points_earned,
-                        'total_points': total_points,
-                        'max_score': total_points,
+                        'total_points': display_total,
+                        'max_score': display_total,
                         'percentage': round(percentage, 2),
                         'letter_grade': letter_grade
                     }

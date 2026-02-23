@@ -4099,7 +4099,7 @@ def admin_view_group_assignment(assignment_id):
             }
         
         # Determine assignment status badge
-        if group_grades and len(group_grades) > 0:
+        if all_group_grades and len(all_group_grades) > 0:
             assignment_status = 'Graded'
             status_class = 'success'
         elif group_assignment.status == 'Inactive':
@@ -4140,8 +4140,9 @@ def admin_view_group_assignment(assignment_id):
 @login_required
 def admin_grade_group_assignment(assignment_id):
     """Grade a group assignment - Allows teachers and administrators."""
-    from models import GroupAssignment, StudentGroup, GroupGrade, GroupAssignmentExtension, TeacherStaff
+    from models import GroupAssignment, StudentGroup, GroupGrade, GroupAssignmentExtension, TeacherStaff, Student
     from teacher_routes.utils import is_authorized_for_class
+    from types import SimpleNamespace
     import json
     
     try:
@@ -4172,6 +4173,8 @@ def admin_grade_group_assignment(assignment_id):
             # If no specific groups selected, get all groups
             groups = StudentGroup.query.filter_by(class_id=group_assignment.class_id, is_active=True).all()
         
+        groups = list(groups)  # So we can append virtual group
+        
         # Collect all students from all groups
         all_students = []
         students_by_id = {}
@@ -4197,6 +4200,23 @@ def admin_grade_group_assignment(assignment_id):
                         grades_by_student[grade.student_id] = {'score': 0, 'comments': '', 'comment': ''}
         except:
             pass
+        
+        # Include students who have a grade for this assignment but are not in any current group
+        # (e.g. their group was deleted — admin sets group_id to NULL; teacher marks group inactive)
+        orphan_student_ids = [sid for sid in grades_by_student if sid not in students_by_id]
+        if orphan_student_ids:
+            orphan_students = Student.query.filter(Student.id.in_(orphan_student_ids)).all()
+            if orphan_students:
+                virtual_group = SimpleNamespace(
+                    id=0,
+                    name='Students from deleted group',
+                    members=[SimpleNamespace(student=s) for s in orphan_students]
+                )
+                groups.append(virtual_group)
+                for s in orphan_students:
+                    if s.id not in students_by_id:
+                        all_students.append(s)
+                        students_by_id[s.id] = s
         
         # Get active extensions for this group assignment
         extensions = GroupAssignmentExtension.query.filter_by(
@@ -4254,17 +4274,23 @@ def admin_grade_group_assignment(assignment_id):
                                         }
                                         
                                         # Get teacher_staff_id for graded_by field
-                                        # Try to get from current_user, otherwise use class teacher
+                                        # Try current_user, then class teacher, then any teacher at the class's school
                                         graded_by_id = None
                                         if current_user.teacher_staff_id:
                                             graded_by_id = current_user.teacher_staff_id
-                                        else:
-                                            # Use the class teacher as fallback for admin grading
+                                        if not graded_by_id:
                                             class_obj = group_assignment.class_info
                                             if class_obj and class_obj.teacher_id:
                                                 graded_by_id = class_obj.teacher_id
+                                        if not graded_by_id:
+                                            # Fallback: first TeacherStaff (e.g. when admin has no teacher_staff_id and class has no teacher)
+                                            first_teacher = TeacherStaff.query.limit(1).first()
+                                            if first_teacher:
+                                                graded_by_id = first_teacher.id
                                         
                                         # Update or create grade (look up by student + assignment so grade follows student if they changed groups)
+                                        # Virtual group (id=0) = students from deleted group -> store group_id=None
+                                        save_group_id = None if getattr(group, 'id', None) == 0 else group.id
                                         existing_grade = GroupGrade.query.filter_by(
                                             group_assignment_id=assignment_id,
                                             student_id=student_id
@@ -4272,17 +4298,16 @@ def admin_grade_group_assignment(assignment_id):
                                         if existing_grade:
                                             existing_grade.grade_data = json.dumps(grade_data)
                                             existing_grade.comments = comments
-                                            existing_grade.group_id = group.id  # update group in case student was moved
+                                            existing_grade.group_id = save_group_id  # update group in case student was moved (or None for deleted group)
                                             if graded_by_id:
                                                 existing_grade.graded_by = graded_by_id
                                         else:
                                             if not graded_by_id:
-                                                # If we still don't have a teacher_staff_id, we can't create the grade
                                                 flash(f'Cannot create grade: No teacher found for assignment.', 'danger')
                                                 continue
                                             new_grade = GroupGrade(
                                                 group_assignment_id=assignment_id,
-                                                group_id=group.id,
+                                                group_id=save_group_id,
                                                 student_id=student_id,
                                                 grade_data=json.dumps(grade_data),
                                                 graded_by=graded_by_id,

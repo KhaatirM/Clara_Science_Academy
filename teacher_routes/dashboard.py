@@ -24,27 +24,25 @@ from googleapiclient.errors import HttpError
 bp = Blueprint('dashboard', __name__)
 
 def update_assignment_statuses():
-    """Update assignment statuses based on open_date, close_date, and due_date."""
+    """Update assignment statuses (Assignment and GroupAssignment) based on open_date, close_date, and due_date."""
     try:
         from datetime import timezone
-        assignments = Assignment.query.all()
         now = datetime.now(timezone.utc)
         today = now.date()
         
+        def ensure_aware(dt):
+            if dt is None:
+                return None
+            if dt.tzinfo is None:
+                return dt.replace(tzinfo=timezone.utc)
+            return dt
+        
+        assignments = Assignment.query.all()
         for assignment in assignments:
             try:
                 # Skip voided assignments - don't change their status
                 if assignment.status == 'Voided':
                     continue
-                
-                # Check open_date and close_date if they exist
-                # Helper to ensure timezone-aware datetime
-                def ensure_aware(dt):
-                    if dt is None:
-                        return None
-                    if dt.tzinfo is None:
-                        return dt.replace(tzinfo=timezone.utc)
-                    return dt
                 
                 # Get raw dates first
                 raw_open_date = assignment.open_date if hasattr(assignment, 'open_date') and assignment.open_date else None
@@ -111,6 +109,53 @@ def update_assignment_statuses():
                 print(f"Error updating assignment {assignment.id}: {e}")
                 continue
         
+        # --- Group Assignments (due/close date -> Inactive) ---
+        from datetime import date as date_type
+        group_assignments = GroupAssignment.query.all()
+        for ga in group_assignments:
+            try:
+                if ga.status == 'Voided':
+                    continue
+                raw_open_date = getattr(ga, 'open_date', None) and ga.open_date or None
+                raw_close_date = getattr(ga, 'close_date', None) and ga.close_date or None
+                due_date = ga.due_date
+                if due_date:
+                    due_date = due_date.date() if hasattr(due_date, 'date') else due_date
+                if raw_open_date:
+                    if isinstance(raw_open_date, datetime):
+                        open_date_dt = ensure_aware(raw_open_date)
+                    else:
+                        open_date_dt = datetime.combine(raw_open_date, datetime.min.time()).replace(tzinfo=timezone.utc) if isinstance(raw_open_date, date_type) else ensure_aware(raw_open_date)
+                    if open_date_dt > now:
+                        if ga.status != 'Upcoming':
+                            ga.status = 'Upcoming'
+                        continue
+                if raw_close_date:
+                    if isinstance(raw_close_date, datetime):
+                        close_date_dt = ensure_aware(raw_close_date)
+                    else:
+                        close_date_dt = datetime.combine(raw_close_date, datetime.max.time()).replace(tzinfo=timezone.utc) if isinstance(raw_close_date, date_type) else ensure_aware(raw_close_date)
+                    if close_date_dt < now:
+                        if ga.status != 'Inactive':
+                            ga.status = 'Inactive'
+                        continue
+                # When no close_date, treat past due_date as closed -> Inactive
+                if due_date and due_date < today:
+                    if ga.status != 'Inactive':
+                        ga.status = 'Inactive'
+                    continue
+                if due_date and due_date >= today:
+                    if ga.status == 'Overdue':
+                        ga.status = 'Active'
+                    elif ga.status == 'Upcoming' and (not raw_open_date or (raw_open_date and (
+                        (isinstance(raw_open_date, datetime) and ensure_aware(raw_open_date) <= now) or
+                        (not isinstance(raw_open_date, datetime) and datetime.combine(raw_open_date, datetime.min.time()).replace(tzinfo=timezone.utc) <= now)
+                    ))):
+                        ga.status = 'Active'
+            except (AttributeError, TypeError) as e:
+                print(f"Error updating group assignment {ga.id}: {e}")
+                continue
+        
         db.session.commit()
     except Exception as e:
         print(f"Error updating assignment statuses: {e}")
@@ -124,7 +169,12 @@ def teacher_dashboard():
     try:
         # Update assignment statuses before displaying
         update_assignment_statuses()
-        
+        # Apply automatic 0 for students with no grade 7 days after due/close
+        try:
+            from management_routes.utils import apply_auto_zeros_for_past_due_assignments
+            apply_auto_zeros_for_past_due_assignments()
+        except Exception as _e:
+            pass
         # Get teacher object or None for administrators
         teacher = get_teacher_or_admin()
         

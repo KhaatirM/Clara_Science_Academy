@@ -492,7 +492,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title mb-0" id="updateModalLabel">System Updates</h5>
-                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated February 18, 2026</p>
+                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated February 23, 2026</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -504,13 +504,51 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – February 18, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – February 23, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0">This release adds <strong>Themes</strong>: choose your look site-wide (Default, Light, Dark, or seasonal themes like Snowy, Autumn, Spring, Summer, Ocean, Forest, and Holiday) in Settings. Tech users can set a <strong>site-wide theme override</strong> so everyone sees the same theme (e.g. Snowy in winter). We also include the recent <strong>PDF/Paper</strong>, <strong>Report Cards</strong>, and <strong>Group assignment</strong> improvements. Details below.</p>
+                        <p class="updates-intro-text mb-0">This release focuses on <strong>group assignments</strong>: due/close dates now correctly make them inactive, admins and teachers can view and grade without errors, and grades are preserved when groups are deleted or changed. We added a <strong>“What you should know”</strong> popup when creating or editing group assignments, clearer delete/edit confirmations, and <strong>automatic zeros</strong> for any assignment (regular or group) when a student has no grade 7 days after the due/close date. Details below.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- February 23, 2026 - Group assignments, safety nets, auto-zero -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-people-fill me-2"></i>Group Assignments, Safety Nets & Auto-Zero – February 23, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Group assignments – Due/close date behavior:</strong> When a group assignment has a due date or close date, it now correctly becomes <strong>Inactive</strong> after that time (on the School Administrator/teacher side and the student side). Previously it stayed active; now it no longer appears as active and students can’t submit after the close.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Group assignments – View and Grade fixed:</strong> School Administrators and teachers can again open the group assignment view and grade page without errors. View and save grades work correctly; a missing variable and a fallback for “graded by” when admins grade were fixed so you can always view and save grades.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Deleting a group – Grades preserved and visible:</strong> When you delete a group (admin or teacher), existing grades and submissions are still kept. On the assignment’s <strong>Grade</strong> page, students from deleted groups now appear in a <strong>“Students from deleted group”</strong> section so you can still view and edit those grades without re-entering them.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Editing group assignment – Changing selected groups:</strong> If you edit a group assignment and change which groups are selected, existing grades and submissions are <strong>not</strong> removed. Students in groups you remove still have their grades; you can view and edit them under “Students from deleted group” on the Grade page. The edit page now shows a short note and a confirmation when you save after removing groups.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>“What you should know” popup:</strong> When creating or editing a group assignment, a <strong>What you should know</strong> button opens a short guide: how due/close dates make assignments inactive, what happens when you delete a group or change selected groups (grades stay; where to find them), and that students in removed groups can’t submit but keep existing grades. The popup can auto-show once per session when creating a group assignment.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Delete group confirmation:</strong> When you delete a group, the confirmation message now explains that grades and submissions are kept and that you can view and edit them under “Students from deleted group” on each assignment’s Grade page.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Automatic zero 7 days after due/close:</strong> For <strong>all</strong> assignments (regular and group), if a student has <strong>no grade</strong> by 7 days after the assignment’s due or close date, the system automatically assigns a <strong>0</strong>. This gives teachers a 7-day window to enter or correct grades; after that, ungraded students get a 0 so gradebooks and report cards stay complete. Extensions are respected (the 7 days run from the student’s extended due date when they have one). Voided assignments are skipped.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> Group assignments behave correctly with due/close dates and stay viewable and gradable. Deleting or changing groups doesn’t lose grades, and you can still access them from the Grade page. Teachers and admins are guided by the “What you should know” popup and clearer confirmations. Ungraded students get an automatic 0 after 7 days so grades stay consistent without extra manual work.</p>
+                        </div>
+                    </div>
+
                     <!-- February 18, 2026 - Themes -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-palette me-2"></i>Themes – February 18, 2026</h6>
@@ -798,11 +836,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownFeb18_2026')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownFeb23_2026')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownFeb18_2026', 'true');
+            sessionStorage.setItem('updateModalShownFeb23_2026', 'true');
         }, 500);
     }
 });

@@ -38,7 +38,10 @@
                             {% if class_obj.get_grade_levels_display() %}<span class="badge bg-white bg-opacity-25 ms-2">{{ class_obj.get_grade_levels_display() }}</span>{% endif %}
                         </p>
                     </div>
-                    <div class="header-actions">
+                    <div class="header-actions d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#groupAssignmentInfoModalEdit" title="Scenarios and how group assignments behave">
+                            <i class="bi bi-info-circle me-1"></i>What you should know
+                        </button>
                         {% if current_user.role in ['Director', 'School Administrator'] %}
                         <a href="{{ url_for('management.admin_view_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-light btn-sm">
                             <i class="bi bi-arrow-left me-1"></i>Back
@@ -54,9 +57,12 @@
         </div>
     </div>
 
+    {% set modal_id = 'groupAssignmentInfoModalEdit' %}
+    {% include 'shared/group_assignment_info_modal.html' with context %}
+
     <div class="row">
         <div class="col-12 col-lg-8">
-            <form method="POST">
+            <form method="POST" id="editGroupAssignmentForm" data-initial-groups="{{ selected_ids|tojson }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 
                 <!-- Section 1: Assignment Details -->
@@ -340,6 +346,10 @@
 
                         <!-- Select Groups -->
                         <h6 class="text-muted mb-3"><i class="bi bi-people me-1"></i>Select Groups</h6>
+                        <div class="alert alert-info py-2 px-3 mb-3 small" role="alert">
+                            <i class="bi bi-info-circle me-1"></i>
+                            <strong>Changing which groups are selected</strong> does not remove existing grades or submissions. Students in groups you remove will still have their grades; you can view and edit them under <strong>Students from deleted group</strong> on the Grade page.
+                        </div>
                         <div class="group-selection-header mb-3">
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="select_all" onclick="toggleAllGroups(this)">
@@ -437,6 +447,22 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         minSizeInput.addEventListener('change', validateGroupSizes);
         maxSizeInput.addEventListener('change', validateGroupSizes);
+    }
+
+    // Safety: confirm when selected groups have changed (existing grades for removed groups are still kept)
+    var form = document.getElementById('editGroupAssignmentForm');
+    if (form) {
+        var initialJson = form.getAttribute('data-initial-groups');
+        var initialIds = initialJson ? JSON.parse(initialJson) : [];
+        form.addEventListener('submit', function(e) {
+            var checked = Array.from(form.querySelectorAll('input[name="groups"]:checked')).map(function(c) { return parseInt(c.value, 10); });
+            var initialSet = new Set(initialIds);
+            var currentSet = new Set(checked);
+            var removed = initialIds.filter(function(id) { return !currentSet.has(id); });
+            if (removed.length > 0 && !confirm('You removed one or more groups from this assignment. Existing grades and submissions for those students are kept. You can view and edit them under \u201CStudents from deleted group\u201D on the Grade page.\n\nContinue saving?')) {
+                e.preventDefault();
+            }
+        });
     }
 });
 

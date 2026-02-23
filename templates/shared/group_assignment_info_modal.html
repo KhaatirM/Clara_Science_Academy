@@ -1,0 +1,53 @@
+{# Reusable modal: "What you should know about group assignments" — include and give modal_id, optional show_once_session_key for auto-show #}
+<div class="modal fade" id="{{ modal_id }}" tabindex="-1" aria-labelledby="{{ modal_id }}Label" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-light border-0">
+                <h5 class="modal-title d-flex align-items-center" id="{{ modal_id }}Label">
+                    <i class="bi bi-info-circle-fill text-primary me-2"></i>
+                    Group assignments: what to expect
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-3">These scenarios help avoid surprises when using group assignments.</p>
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-3 d-flex align-items-start">
+                        <span class="badge bg-primary rounded-pill me-2 mt-1">1</span>
+                        <div>
+                            <strong>Due date &amp; close date</strong><br>
+                            When the due date or close date passes, the assignment becomes <strong>Inactive</strong>. Students can no longer submit, and it no longer appears as active for you or for students.
+                        </div>
+                    </li>
+                    <li class="mb-3 d-flex align-items-start">
+                        <span class="badge bg-primary rounded-pill me-2 mt-1">2</span>
+                        <div>
+                            <strong>Deleting a group</strong><br>
+                            If you (or an administrator) delete a group, <strong>existing grades and submissions for that group are kept</strong>. You can still view and edit those grades on the assignment’s <strong>Grade</strong> page under <strong>“Students from deleted group”</strong>. You do not need to re-enter grades.
+                        </div>
+                    </li>
+                    <li class="mb-3 d-flex align-items-start">
+                        <span class="badge bg-primary rounded-pill me-2 mt-1">3</span>
+                        <div>
+                            <strong>Changing which groups are selected</strong><br>
+                            When you edit an assignment and change which groups are included, <strong>existing grades and submissions are not removed</strong>. Students in groups you remove will still have their grades; you can view and edit them under <strong>“Students from deleted group”</strong> on the Grade page.
+                        </div>
+                    </li>
+                    <li class="mb-0 d-flex align-items-start">
+                        <span class="badge bg-primary rounded-pill me-2 mt-1">4</span>
+                        <div>
+                            <strong>Students in removed or deleted groups</strong><br>
+                            Those students can no longer submit for this assignment, but they keep any grade already entered and can still see that assignment and grade on their dashboard.
+                        </div>
+                    </li>
+                </ul>
+            </div>
+            <div class="modal-footer border-0 bg-light">
+                <label class="me-auto small text-muted mb-0">
+                    <input type="checkbox" class="form-check-input me-1" id="{{ modal_id }}DontShowAgain"> Don’t show again this session
+                </label>
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Got it</button>
+            </div>
+        </div>
+    </div>
+</div>

@@ -488,7 +488,10 @@
                             {% if class_obj.subject %} - {{ class_obj.subject }}{% endif %}
                         </p>
                     </div>
-                    <div class="header-actions">
+                    <div class="header-actions d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#groupAssignmentInfoModalPdf" title="Scenarios and how group assignments behave">
+                            <i class="bi bi-info-circle me-1"></i>What you should know
+                        </button>
                         {% if admin_view %}
                         <a href="{{ url_for('management.admin_group_assignment_type_selector', class_id=class_obj.id) }}" class="btn btn-light btn-sm">
                             <i class="bi bi-arrow-left me-1"></i>Back
@@ -503,6 +506,9 @@
             </div>
         </div>
     </div>
+
+    {% set modal_id = 'groupAssignmentInfoModalPdf' %}
+    {% include 'shared/group_assignment_info_modal.html' with context %}
 
     <div class="row">
         <div class="col-12 col-lg-8">
@@ -1190,6 +1196,22 @@ document.addEventListener('DOMContentLoaded', function() {
         
         document.getElementById('availableGroups').innerHTML = groupsHTML;
     }
+
+    // Group assignment info modal: show once per session unless "Don't show again" was used
+    (function() {
+        var modalId = 'groupAssignmentInfoModalPdf';
+        var storageKey = 'groupAssignmentInfoSeen';
+        var modalEl = document.getElementById(modalId);
+        if (!modalEl) return;
+        var dontCheckbox = document.getElementById(modalId + 'DontShowAgain');
+        if (!sessionStorage.getItem(storageKey)) {
+            var modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        }
+        modalEl.addEventListener('hidden.bs.modal', function() {
+            if (dontCheckbox && dontCheckbox.checked) sessionStorage.setItem(storageKey, '1');
+        });
+    })();
 });
 </script>
 

@@ -35,7 +35,10 @@
                             {% if class_item.get_grade_levels_display() %}<span class="badge bg-white bg-opacity-25 ms-2">{{ class_item.get_grade_levels_display() }}</span>{% endif %}
                         </p>
                     </div>
-                    <div class="header-actions">
+                    <div class="header-actions d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#groupAssignmentInfoModal" title="Scenarios and how group assignments behave">
+                            <i class="bi bi-info-circle me-1"></i>What you should know
+                        </button>
                         {% if request.args.get('admin_view') == 'true' %}
                         <a href="{{ url_for('management.admin_class_group_assignments', class_id=class_item.id) }}" class="btn btn-light btn-sm">
                             <i class="bi bi-arrow-left me-1"></i>Back
@@ -50,6 +53,9 @@
             </div>
         </div>
     </div>
+
+    {% set modal_id = 'groupAssignmentInfoModal' %}
+    {% include 'shared/group_assignment_info_modal.html' with context %}
 
     <!-- Progress Steps -->
     <div class="row mb-4">
@@ -715,6 +721,22 @@ document.addEventListener('DOMContentLoaded', function() {
             this.querySelector('i').classList.toggle('bi-chevron-up');
         });
     });
+
+    // Group assignment info modal: show once per session unless "Don't show again" was used
+    (function() {
+        var modalId = 'groupAssignmentInfoModal';
+        var storageKey = 'groupAssignmentInfoSeen';
+        var modalEl = document.getElementById(modalId);
+        if (!modalEl) return;
+        var dontCheckbox = document.getElementById(modalId + 'DontShowAgain');
+        if (!sessionStorage.getItem(storageKey)) {
+            var modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        }
+        modalEl.addEventListener('hidden.bs.modal', function() {
+            if (dontCheckbox && dontCheckbox.checked) sessionStorage.setItem(storageKey, '1');
+        });
+    })();
 });
 </script>
 {% endblock %}

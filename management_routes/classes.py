@@ -1407,6 +1407,7 @@ def class_assignments(class_id):
     """View assignments for a specific class"""
     from datetime import datetime
     import json
+    from management_routes.utils import update_assignment_statuses
     
     # Get the class
     class_obj = Class.query.get_or_404(class_id)
@@ -1417,7 +1418,7 @@ def class_assignments(class_id):
     # Get current date for status updates
     today = datetime.now().date()
     
-    # Update assignment statuses
+    # Update assignment statuses (and auto-zeros for past-due ungraded)
     update_assignment_statuses()
     
     # Get teacher_staff_id for template use

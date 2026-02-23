@@ -16,29 +16,28 @@ def allowed_file(filename):
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def update_assignment_statuses():
-    """Update assignment statuses based on open_date, close_date, and due_date."""
+    """Update assignment statuses (Assignment and GroupAssignment) based on open_date, close_date, and due_date."""
     try:
-        from models import Assignment, db
+        from models import Assignment, GroupAssignment, db
         from datetime import timezone
         
-        assignments = Assignment.query.all()
         now = datetime.now(timezone.utc)
         today = now.date()
         
+        def ensure_aware(dt):
+            if dt is None:
+                return None
+            if dt.tzinfo is None:
+                return dt.replace(tzinfo=timezone.utc)
+            return dt
+        
+        # --- Regular Assignments ---
+        assignments = Assignment.query.all()
         for assignment in assignments:
             try:
                 # Skip voided assignments - don't change their status
                 if assignment.status == 'Voided':
                     continue
-                
-                # Check open_date and close_date if they exist
-                # Helper to ensure timezone-aware datetime
-                def ensure_aware(dt):
-                    if dt is None:
-                        return None
-                    if dt.tzinfo is None:
-                        return dt.replace(tzinfo=timezone.utc)
-                    return dt
                 
                 # Get raw dates first
                 raw_open_date = assignment.open_date if hasattr(assignment, 'open_date') and assignment.open_date else None
@@ -105,10 +104,208 @@ def update_assignment_statuses():
                 print(f"Error updating assignment {assignment.id}: {e}")
                 continue
         
+        # --- Group Assignments (same logic: due/close date -> Inactive) ---
+        from datetime import date as date_type
+        group_assignments = GroupAssignment.query.all()
+        for ga in group_assignments:
+            try:
+                if ga.status == 'Voided':
+                    continue
+                raw_open_date = getattr(ga, 'open_date', None) and ga.open_date or None
+                raw_close_date = getattr(ga, 'close_date', None) and ga.close_date or None
+                due_date = ga.due_date
+                if due_date:
+                    due_date = due_date.date() if hasattr(due_date, 'date') else due_date
+                if raw_open_date:
+                    if isinstance(raw_open_date, datetime):
+                        open_date_dt = ensure_aware(raw_open_date)
+                    else:
+                        open_date_dt = datetime.combine(raw_open_date, datetime.min.time()).replace(tzinfo=timezone.utc) if isinstance(raw_open_date, date_type) else ensure_aware(raw_open_date)
+                    if open_date_dt > now:
+                        if ga.status != 'Upcoming':
+                            ga.status = 'Upcoming'
+                        continue
+                if raw_close_date:
+                    if isinstance(raw_close_date, datetime):
+                        close_date_dt = ensure_aware(raw_close_date)
+                    else:
+                        close_date_dt = datetime.combine(raw_close_date, datetime.max.time()).replace(tzinfo=timezone.utc) if isinstance(raw_close_date, date_type) else ensure_aware(raw_close_date)
+                    if close_date_dt < now:
+                        if ga.status != 'Inactive':
+                            ga.status = 'Inactive'
+                        continue
+                # When no close_date, treat past due_date as closed -> Inactive (so they go inactive on admin/student side)
+                if due_date and due_date < today:
+                    if ga.status != 'Inactive':
+                        ga.status = 'Inactive'
+                    continue
+                if due_date and due_date >= today:
+                    if ga.status == 'Overdue':
+                        ga.status = 'Active'
+                    elif ga.status == 'Upcoming' and (not raw_open_date or (raw_open_date and (
+                        (isinstance(raw_open_date, datetime) and ensure_aware(raw_open_date) <= now) or
+                        (not isinstance(raw_open_date, datetime) and datetime.combine(raw_open_date, datetime.min.time()).replace(tzinfo=timezone.utc) <= now)
+                    ))):
+                        ga.status = 'Active'
+            except (AttributeError, TypeError) as e:
+                print(f"Error updating group assignment {ga.id}: {e}")
+                continue
+        
         db.session.commit()
+        # Apply automatic 0 for students with no grade 7 days after due/close
+        apply_auto_zeros_for_past_due_assignments()
     except Exception as e:
         print(f"Error updating assignment statuses: {e}")
         db.session.rollback()
+
+
+def apply_auto_zeros_for_past_due_assignments():
+    """
+    For assignments (regular and group) that are past due/close: if a student has no grade
+    by 7 days after the due/close date, automatically assign a 0. Respects per-student
+    extensions. Voided assignments are skipped. New grades are checked for late-enrollment voiding.
+    """
+    try:
+        from models import (
+            Assignment, GroupAssignment, Grade, GroupGrade,
+            Enrollment, AssignmentExtension, GroupAssignmentExtension,
+            StudentGroup, StudentGroupMember, TeacherStaff, db
+        )
+        from datetime import timezone
+        import json
+
+        now = datetime.now(timezone.utc)
+        auto_zero_grace_days = timedelta(days=7)
+
+        def to_aware_dt(raw):
+            """Return timezone-aware datetime (end of day if date-only)."""
+            if not raw:
+                return None
+            if getattr(raw, 'tzinfo', None):
+                return raw.replace(tzinfo=timezone.utc) if raw.tzinfo is None else raw
+            if hasattr(raw, 'date'):
+                d = raw.date() if callable(getattr(raw, 'date', None)) else raw
+                return datetime.combine(d, datetime.max.time()).replace(tzinfo=timezone.utc)
+            return datetime.combine(raw, datetime.max.time()).replace(tzinfo=timezone.utc)
+
+        def effective_close_dt(assignment):
+            """Return timezone-aware datetime for assignment close (close_date or due_date)."""
+            raw = getattr(assignment, 'close_date', None) and assignment.close_date or assignment.due_date
+            return to_aware_dt(raw)
+
+        # --- Regular assignments ---
+        for assignment in Assignment.query.filter(Assignment.status != 'Voided').all():
+            try:
+                base_close = effective_close_dt(assignment)
+                if not base_close or now <= base_close + auto_zero_grace_days:
+                    continue
+                total_points = getattr(assignment, 'total_points', None) or 100.0
+                enrollments = Enrollment.query.filter_by(class_id=assignment.class_id, is_active=True).all()
+                for enr in enrollments:
+                    if not enr.student_id:
+                        continue
+                    student_id = enr.student_id
+                    # Student's effective close: extension if active, else base
+                    ext = AssignmentExtension.query.filter_by(
+                        assignment_id=assignment.id, student_id=student_id, is_active=True
+                    ).first()
+                    student_close = to_aware_dt(ext.extended_due_date) if ext and getattr(ext, 'extended_due_date', None) else base_close
+                    if not student_close or now <= student_close + auto_zero_grace_days:
+                        continue
+                    existing = Grade.query.filter_by(assignment_id=assignment.id, student_id=student_id).first()
+                    if existing:
+                        continue
+                    grade_data = json.dumps({
+                        'score': 0.0, 'points_earned': 0.0, 'total_points': total_points,
+                        'max_score': total_points, 'percentage': 0.0, 'feedback': '',
+                        'comment': '', 'graded_at': now.isoformat(), 'auto_zero': True
+                    })
+                    g = Grade(
+                        student_id=student_id, assignment_id=assignment.id,
+                        grade_data=grade_data, graded_at=now
+                    )
+                    db.session.add(g)
+                    db.session.flush()
+                    try:
+                        from management_routes.late_enrollment_utils import check_and_void_grade
+                        check_and_void_grade(g)
+                    except Exception:
+                        pass
+            except Exception as e:
+                current_app.logger.warning("apply_auto_zeros assignment %s: %s", getattr(assignment, 'id', '?'), e)
+                continue
+
+        # --- Group assignments ---
+        for ga in GroupAssignment.query.filter(GroupAssignment.status != 'Voided').all():
+            try:
+                base_close = effective_close_dt(ga)
+                if not base_close or now <= base_close + auto_zero_grace_days:
+                    continue
+                total_points = getattr(ga, 'total_points', None) or 100.0
+                # Students in this assignment's groups
+                try:
+                    sel = ga.selected_group_ids
+                    if sel:
+                        ids = json.loads(sel) if isinstance(sel, str) else sel
+                        ids = [int(x) for x in ids]
+                        members = StudentGroupMember.query.join(StudentGroup).filter(
+                            StudentGroup.id.in_(ids),
+                            StudentGroup.class_id == ga.class_id,
+                            StudentGroup.is_active == True
+                        ).all()
+                    else:
+                        members = StudentGroupMember.query.join(StudentGroup).filter(
+                            StudentGroup.class_id == ga.class_id,
+                            StudentGroup.is_active == True
+                        ).all()
+                except Exception:
+                    members = StudentGroupMember.query.join(StudentGroup).filter(
+                        StudentGroup.class_id == ga.class_id,
+                        StudentGroup.is_active == True
+                    ).all()
+                student_ids = list({m.student_id for m in members if m.student_id})
+
+                graded_by_id = None
+                if ga.class_info and getattr(ga.class_info, 'teacher_id', None):
+                    graded_by_id = ga.class_info.teacher_id
+                if not graded_by_id:
+                    t = TeacherStaff.query.limit(1).first()
+                    if t:
+                        graded_by_id = t.id
+                if not graded_by_id:
+                    continue
+
+                for student_id in student_ids:
+                    ext = GroupAssignmentExtension.query.filter_by(
+                        group_assignment_id=ga.id, student_id=student_id, is_active=True
+                    ).first()
+                    student_close = to_aware_dt(ext.extended_due_date) if ext and getattr(ext, 'extended_due_date', None) else base_close
+                    if not student_close or now <= student_close + auto_zero_grace_days:
+                        continue
+                    existing = GroupGrade.query.filter_by(
+                        group_assignment_id=ga.id, student_id=student_id
+                    ).first()
+                    if existing:
+                        continue
+                    grade_data = json.dumps({
+                        'score': 0.0, 'points_earned': 0.0, 'total_points': total_points,
+                        'max_score': total_points, 'percentage': 0.0, 'letter_grade': 'F',
+                        'auto_zero': True
+                    })
+                    gg = GroupGrade(
+                        group_assignment_id=ga.id, group_id=None, student_id=student_id,
+                        grade_data=grade_data, graded_by=graded_by_id, comments=None
+                    )
+                    db.session.add(gg)
+            except Exception as e:
+                current_app.logger.warning("apply_auto_zeros group assignment %s: %s", getattr(ga, 'id', '?'), e)
+                continue
+
+        db.session.commit()
+    except Exception as e:
+        current_app.logger.exception("apply_auto_zeros_for_past_due_assignments failed")
+        db.session.rollback()
+
 
 def get_current_quarter():
     """Get the current quarter based on AcademicPeriod dates"""

@@ -1639,7 +1639,7 @@ class GroupGrade(db.Model):
     group_id = db.Column(db.Integer, db.ForeignKey('student_group.id'), nullable=True)  # Nullable for individual grades
     student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
     grade_data = db.Column(db.Text, nullable=False)  # JSON string with grade details
-    graded_by = db.Column(db.Integer, db.ForeignKey('teacher_staff.id'), nullable=False)
+    graded_by = db.Column(db.Integer, db.ForeignKey('teacher_staff.id'), nullable=True)  # Null when graded by admin with no teacher record
     graded_at = db.Column(db.DateTime, default=datetime.utcnow)
     comments = db.Column(db.Text, nullable=True)
     

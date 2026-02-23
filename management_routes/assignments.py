@@ -4183,6 +4183,19 @@ def admin_grade_group_assignment(assignment_id):
                 if member.student and member.student.id not in students_by_id:
                     all_students.append(member.student)
                     students_by_id[member.student.id] = member.student
+        # If no groups (e.g. selected groups missing), ensure roster from class enrollment so grading still works
+        if not students_by_id and group_assignment.class_id:
+            for enr in Enrollment.query.filter_by(class_id=group_assignment.class_id).all():
+                if getattr(enr, 'student', None) and enr.student.id not in students_by_id:
+                    all_students.append(enr.student)
+                    students_by_id[enr.student.id] = enr.student
+            if all_students:
+                virtual_roster = SimpleNamespace(
+                    id=0,
+                    name='Class roster',
+                    members=[SimpleNamespace(student=s) for s in all_students]
+                )
+                groups.insert(0, virtual_roster)
         
         # Get existing grades
         grades_by_student = {}
@@ -4233,7 +4246,7 @@ def admin_grade_group_assignment(assignment_id):
         
         if request.method == 'POST':
             try:
-                # Build set of valid (group_id, student_id) from current groups so we only process form keys that belong to this assignment
+                # Build set of valid (group_id, student_id) from current groups
                 valid_score_keys = {}
                 for group in groups:
                     gid = getattr(group, 'id', None)
@@ -4241,22 +4254,47 @@ def admin_grade_group_assignment(assignment_id):
                         student = getattr(member, 'student', None)
                         if student and getattr(student, 'id', None):
                             valid_score_keys[f"score_{gid}_{student.id}"] = (gid, student.id)
-                # Process every score_* key in the form so all submitted grades are saved (fixes "only one student saved" bug)
+                # Also allow any score_GID_SID where student is in our roster (resilient to key format or missing valid_score_keys)
+                valid_student_ids = set(students_by_id.keys())
                 graded_by_id = None
                 if current_user.teacher_staff_id:
                     graded_by_id = current_user.teacher_staff_id
-                if not graded_by_id and group_assignment.class_info and getattr(group_assignment.class_info, 'teacher_id', None):
-                    graded_by_id = group_assignment.class_info.teacher_id
+                if not graded_by_id and group_assignment.class_info:
+                    try:
+                        graded_by_id = group_assignment.class_info.teacher_id
+                    except Exception:
+                        pass
                 if not graded_by_id:
                     t = TeacherStaff.query.limit(1).first()
                     if t:
                         graded_by_id = t.id
+                if not graded_by_id:
+                    # Fallback: any teacher for same school year
+                    try:
+                        sy_id = getattr(group_assignment.class_info, 'school_year_id', None) if group_assignment.class_info else None
+                        if sy_id:
+                            c = Class.query.filter_by(school_year_id=sy_id).filter(Class.teacher_id.isnot(None)).limit(1).first()
+                            if c and c.teacher_id:
+                                graded_by_id = c.teacher_id
+                    except Exception:
+                        pass
                 total_points = group_assignment.total_points if group_assignment.total_points else 100.0
                 saved_count = 0
                 for key in request.form:
-                    if not key.startswith('score_') or key not in valid_score_keys:
+                    if not key.startswith('score_'):
                         continue
-                    gid, student_id = valid_score_keys[key]
+                    parts = key.split('_')
+                    if len(parts) != 3:
+                        continue
+                    try:
+                        gid = int(parts[1])
+                        student_id = int(parts[2])
+                    except (ValueError, TypeError):
+                        continue
+                    if student_id not in valid_student_ids:
+                        continue
+                    if key not in valid_score_keys:
+                        valid_score_keys[key] = (gid, student_id)
                     score = request.form.get(key)
                     comments_key = f"comments_{gid}_{student_id}"
                     comments = request.form.get(comments_key, '')
@@ -4287,17 +4325,15 @@ def admin_grade_group_assignment(assignment_id):
                         existing_grade.grade_data = json.dumps(grade_data)
                         existing_grade.comments = comments
                         existing_grade.group_id = save_group_id
-                        if graded_by_id:
+                        if graded_by_id is not None:
                             existing_grade.graded_by = graded_by_id
                     else:
-                        if not graded_by_id:
-                            continue
                         new_grade = GroupGrade(
                             group_assignment_id=assignment_id,
                             group_id=save_group_id,
                             student_id=student_id,
                             grade_data=json.dumps(grade_data),
-                            graded_by=graded_by_id,
+                            graded_by=graded_by_id,  # may be None if no teacher available
                             comments=comments
                         )
                         db.session.add(new_grade)

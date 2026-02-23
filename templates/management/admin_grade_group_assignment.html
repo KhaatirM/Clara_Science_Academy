@@ -212,6 +212,7 @@
                         
                         <div class="group-students-container">
                     {% for member in group.members %}
+                        {% if member.student %}
                         {% set student = member.student %}
                         {% set student_id = student.id %}
                         {% set grade_data = grades.get(student_id, {}) %}
@@ -343,6 +344,7 @@
                                 </div>
                             </div>
                         </div>
+                        {% endif %}
                     {% endfor %}
                         </div>
                     </div>

@@ -382,14 +382,40 @@
                     
                     {% if group_assignments %}
                         {% for group_assignment in group_assignments %}
+                        {% set grade_info = assignment_grades.get('group_' ~ group_assignment.id, {}) %}
+                        {% set has_grades = grade_info.get('graded_count', 0) > 0 %}
+                        {% set current_status = group_assignment.status %}
                         <div class="col-md-6 col-lg-4 mb-4">
                             <div class="card h-100 shadow-sm assignment-card border-info">
                                 <div class="card-header d-flex justify-content-between align-items-center bg-info text-white">
                                     <h6 class="mb-0"><i class="bi bi-people-fill me-2"></i>{{ group_assignment.title }}</h6>
-                                    <span class="badge bg-light text-dark">Group</span>
+                                    <div class="d-flex align-items-center gap-1 flex-wrap justify-content-end">
+                                        {% if current_status == 'Voided' %}
+                                            <span class="badge bg-secondary">
+                                                <i class="bi bi-slash-circle me-1"></i>Voided
+                                            </span>
+                                        {% elif current_status == 'Upcoming' %}
+                                            <span class="badge bg-info bg-opacity-90">
+                                                <i class="bi bi-clock me-1"></i>Upcoming
+                                            </span>
+                                        {% elif has_grades %}
+                                            <span class="badge bg-light text-dark">
+                                                <i class="bi bi-check-circle me-1"></i>Graded
+                                            </span>
+                                        {% elif current_status == 'Inactive' %}
+                                            <span class="badge bg-warning text-dark">
+                                                <i class="bi bi-pause-circle me-1"></i>Inactive
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-check-circle me-1"></i>Active
+                                            </span>
+                                        {% endif %}
+                                        <span class="badge bg-light text-dark">Group</span>
+                                    </div>
                                 </div>
                                 <div class="card-body">
-                                    <div class="mb-2">
+                                    <div class="mb-2 d-flex gap-2 flex-wrap">
                                         {% if group_assignment.assignment_context %}
                                             {% set context_lower = group_assignment.assignment_context.lower() %}
                                             {% if 'in-class' in context_lower or 'in_class' in context_lower or 'inclass' in context_lower or context_lower.startswith('in-') or context_lower.startswith('in_') %}
@@ -433,12 +459,27 @@
                                             {% endif %}
                                         </small>
                                     </div>
+                                    <div class="mb-2">
+                                        <div class="d-flex justify-content-between">
+                                            <small class="text-muted">Submissions:</small>
+                                            <small class="fw-bold">{{ grade_info.get('total_submissions', 0) }}</small>
+                                        </div>
+                                        <div class="d-flex justify-content-between">
+                                            <small class="text-muted">Graded:</small>
+                                            <small class="fw-bold">{{ grade_info.get('graded_count', 0) }}</small>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="card-footer bg-light">
                                     <div class="d-grid gap-2">
                                         <a href="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.admin_view_group_assignment', assignment_id=group_assignment.id) }}{% else %}{{ url_for('teacher.assignments.view_group_assignment', assignment_id=group_assignment.id) }}{% endif %}" class="btn btn-primary btn-sm">
                                             <i class="fas fa-eye me-2"></i>View Assignment
                                         </a>
+                                        {% if current_user.role in ['Director', 'School Administrator'] %}
+                                        <a href="{{ url_for('management.admin_grade_group_assignment', assignment_id=group_assignment.id) }}" class="btn btn-success btn-sm">
+                                            <i class="fas fa-edit me-2"></i>Grade
+                                        </a>
+                                        {% endif %}
                                         <a href="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.view_class', class_id=group_assignment.class_id) }}{% else %}{{ url_for('teacher.dashboard.view_class', class_id=group_assignment.class_id) }}{% endif %}" class="btn btn-outline-primary btn-sm">
                                             <i class="fas fa-users me-2"></i>View Class
                                         </a>

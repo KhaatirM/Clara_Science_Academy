@@ -4233,92 +4233,75 @@ def admin_grade_group_assignment(assignment_id):
         
         if request.method == 'POST':
             try:
-                saved_count = 0
+                # Build set of valid (group_id, student_id) from current groups so we only process form keys that belong to this assignment
+                valid_score_keys = {}
                 for group in groups:
+                    gid = getattr(group, 'id', None)
                     for member in group.members:
-                        student_id = member.student.id
-                        score_key = f"score_{group.id}_{student_id}"
-                        comments_key = f"comments_{group.id}_{student_id}"
-                        
-                        if score_key in request.form:
-                            score = request.form.get(score_key)
-                            comments = request.form.get(comments_key, '')
-                            
-                            if score:
-                                try:
-                                    points_earned = float(score)
-                                    # Get total points from assignment (default to 100 if not set)
-                                    total_points = group_assignment.total_points if group_assignment.total_points else 100.0
-                                    
-                                    if 0 <= points_earned <= total_points:
-                                        # Calculate percentage and letter grade
-                                        percentage = (points_earned / total_points * 100) if total_points > 0 else 0
-                                        if percentage >= 90:
-                                            letter_grade = 'A'
-                                        elif percentage >= 80:
-                                            letter_grade = 'B'
-                                        elif percentage >= 70:
-                                            letter_grade = 'C'
-                                        elif percentage >= 60:
-                                            letter_grade = 'D'
-                                        else:
-                                            letter_grade = 'D'
-                                        
-                                        grade_data = {
-                                            'score': points_earned,
-                                            'points_earned': points_earned,
-                                            'total_points': total_points,
-                                            'max_score': total_points,  # Keep for backward compatibility
-                                            'percentage': round(percentage, 2),
-                                            'letter_grade': letter_grade
-                                        }
-                                        
-                                        # Get teacher_staff_id for graded_by field
-                                        # Try current_user, then class teacher, then any teacher at the class's school
-                                        graded_by_id = None
-                                        if current_user.teacher_staff_id:
-                                            graded_by_id = current_user.teacher_staff_id
-                                        if not graded_by_id:
-                                            class_obj = group_assignment.class_info
-                                            if class_obj and class_obj.teacher_id:
-                                                graded_by_id = class_obj.teacher_id
-                                        if not graded_by_id:
-                                            # Fallback: first TeacherStaff (e.g. when admin has no teacher_staff_id and class has no teacher)
-                                            first_teacher = TeacherStaff.query.limit(1).first()
-                                            if first_teacher:
-                                                graded_by_id = first_teacher.id
-                                        
-                                        # Update or create grade (look up by student + assignment so grade follows student if they changed groups)
-                                        # Virtual group (id=0) = students from deleted group -> store group_id=None
-                                        save_group_id = None if getattr(group, 'id', None) == 0 else group.id
-                                        existing_grade = GroupGrade.query.filter_by(
-                                            group_assignment_id=assignment_id,
-                                            student_id=student_id
-                                        ).first()
-                                        if existing_grade:
-                                            existing_grade.grade_data = json.dumps(grade_data)
-                                            existing_grade.comments = comments
-                                            existing_grade.group_id = save_group_id  # update group in case student was moved (or None for deleted group)
-                                            if graded_by_id:
-                                                existing_grade.graded_by = graded_by_id
-                                        else:
-                                            if not graded_by_id:
-                                                flash(f'Cannot create grade: No teacher found for assignment.', 'danger')
-                                                continue
-                                            new_grade = GroupGrade(
-                                                group_assignment_id=assignment_id,
-                                                group_id=save_group_id,
-                                                student_id=student_id,
-                                                grade_data=json.dumps(grade_data),
-                                                graded_by=graded_by_id,
-                                                comments=comments
-                                            )
-                                            db.session.add(new_grade)
-                                        
-                                        saved_count += 1
-                                except ValueError:
-                                    flash(f'Invalid score for {member.student.first_name} {member.student.last_name}', 'warning')
-                
+                        student = getattr(member, 'student', None)
+                        if student and getattr(student, 'id', None):
+                            valid_score_keys[f"score_{gid}_{student.id}"] = (gid, student.id)
+                # Process every score_* key in the form so all submitted grades are saved (fixes "only one student saved" bug)
+                graded_by_id = None
+                if current_user.teacher_staff_id:
+                    graded_by_id = current_user.teacher_staff_id
+                if not graded_by_id and group_assignment.class_info and getattr(group_assignment.class_info, 'teacher_id', None):
+                    graded_by_id = group_assignment.class_info.teacher_id
+                if not graded_by_id:
+                    t = TeacherStaff.query.limit(1).first()
+                    if t:
+                        graded_by_id = t.id
+                total_points = group_assignment.total_points if group_assignment.total_points else 100.0
+                saved_count = 0
+                for key in request.form:
+                    if not key.startswith('score_') or key not in valid_score_keys:
+                        continue
+                    gid, student_id = valid_score_keys[key]
+                    score = request.form.get(key)
+                    comments_key = f"comments_{gid}_{student_id}"
+                    comments = request.form.get(comments_key, '')
+                    if not score:
+                        continue
+                    try:
+                        points_earned = float(score)
+                    except ValueError:
+                        continue
+                    if not (0 <= points_earned <= total_points):
+                        continue
+                    percentage = (points_earned / total_points * 100) if total_points > 0 else 0
+                    letter_grade = 'A' if percentage >= 90 else ('B' if percentage >= 80 else ('C' if percentage >= 70 else ('D' if percentage >= 60 else 'D')))
+                    grade_data = {
+                        'score': points_earned,
+                        'points_earned': points_earned,
+                        'total_points': total_points,
+                        'max_score': total_points,
+                        'percentage': round(percentage, 2),
+                        'letter_grade': letter_grade
+                    }
+                    save_group_id = None if gid == 0 else gid
+                    existing_grade = GroupGrade.query.filter_by(
+                        group_assignment_id=assignment_id,
+                        student_id=student_id
+                    ).first()
+                    if existing_grade:
+                        existing_grade.grade_data = json.dumps(grade_data)
+                        existing_grade.comments = comments
+                        existing_grade.group_id = save_group_id
+                        if graded_by_id:
+                            existing_grade.graded_by = graded_by_id
+                    else:
+                        if not graded_by_id:
+                            continue
+                        new_grade = GroupGrade(
+                            group_assignment_id=assignment_id,
+                            group_id=save_group_id,
+                            student_id=student_id,
+                            grade_data=json.dumps(grade_data),
+                            graded_by=graded_by_id,
+                            comments=comments
+                        )
+                        db.session.add(new_grade)
+                    saved_count += 1
                 db.session.commit()
                 
                 # Check if this is an AJAX request

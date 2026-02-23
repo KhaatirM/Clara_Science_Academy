@@ -4481,7 +4481,7 @@ def admin_edit_group_assignment(assignment_id):
                     except ValueError:
                         flash('Invalid due date format.', 'error')
                         return render_template('management/admin_edit_group_assignment.html',
-                                             group_assignment=group_assignment, class_obj=class_obj, groups=groups)
+                                             group_assignment=group_assignment, class_obj=class_obj, groups=groups, selected_ids=selected_ids)
                 open_date_str = request.form.get('open_date', '').strip()
                 close_date_str = request.form.get('close_date', '').strip()
                 group_assignment.open_date = datetime.strptime(open_date_str, '%Y-%m-%dT%H:%M') if open_date_str else None
@@ -4531,7 +4531,7 @@ def admin_edit_group_assignment(assignment_id):
                     except ValueError:
                         flash('Invalid group size values.', 'error')
                         return render_template('management/admin_edit_group_assignment.html',
-                                             group_assignment=group_assignment, class_obj=class_obj, groups=groups, selected_group_ids=selected_ids)
+                                             group_assignment=group_assignment, class_obj=class_obj, groups=groups, selected_ids=selected_ids)
 
                 group_assignment.assignment_type = request.form.get('assignment_type', group_assignment.assignment_type)
                 group_assignment.collaboration_type = request.form.get('collaboration_type', group_assignment.collaboration_type)
@@ -4541,7 +4541,7 @@ def admin_edit_group_assignment(assignment_id):
                 if not selected_groups and groups:
                     flash('Please select at least one group for this assignment.', 'warning')
                     return render_template('management/admin_edit_group_assignment.html',
-                                         group_assignment=group_assignment, class_obj=class_obj, groups=groups, selected_group_ids=selected_ids)
+                                         group_assignment=group_assignment, class_obj=class_obj, groups=groups, selected_ids=selected_ids)
                 group_assignment.selected_group_ids = json.dumps(selected_groups) if selected_groups else None
 
                 db.session.commit()
@@ -4557,7 +4557,7 @@ def admin_edit_group_assignment(assignment_id):
                 flash('Error updating assignment. Please try again.', 'error')
 
         return render_template('management/admin_edit_group_assignment.html',
-                             group_assignment=group_assignment, class_obj=class_obj, groups=groups, selected_group_ids=selected_ids)
+                             group_assignment=group_assignment, class_obj=class_obj, groups=groups, selected_ids=selected_ids)
     except Exception as e:
         print(f"Error editing group assignment: {e}")
         flash('Error accessing group assignment editing.', 'error')

@@ -54,6 +54,36 @@
     font-size: 1.1rem;
 }
 
+/* Bulk Void Button - Matches header palette, subtle void accent */
+.btn-bulk-void {
+    background: rgba(255, 255, 255, 0.95);
+    color: #5a4d6e;
+    border: 2px solid rgba(255, 255, 255, 0.9);
+    padding: 0.75rem 1.5rem;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
+}
+
+.btn-bulk-void:hover {
+    background: white;
+    color: #c45c5c;
+    border-color: white;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.18);
+}
+
+.btn-bulk-void i {
+    color: #b85454;
+    transition: color 0.3s ease;
+}
+
+.btn-bulk-void:hover i {
+    color: #c45c5c;
+}
+
 /* Assignment Context Badges - Enhanced with higher specificity */
 .card.assignment-card .card-body .badge.bg-primary,
 .card.assignment-card .card-body .badge.bg-secondary,

@@ -51,6 +51,11 @@
                     <span class="badge bg-warning text-dark ms-2" style="font-size: 0.75rem; padding: 0.25rem 0.5rem; border-radius: 50%; min-width: 1.5rem; display: inline-flex; align-items: center; justify-content: center; font-weight: 700;">{{ extension_request_count }}</span>
                     {% endif %}
                 </a>
+                {% if selected_class and current_user.role in ['Director', 'School Administrator', 'Teacher'] %}
+                <button type="button" class="btn btn-bulk-void" data-bs-toggle="modal" data-bs-target="#bulkVoidModal" title="Void multiple assignments at once">
+                    <i class="bi bi-slash-circle me-2"></i>Bulk Void
+                </button>
+                {% endif %}
                 <button onclick="createAssignment()" class="btn btn-assignments-add">
                     <i class="bi bi-plus-circle me-2"></i>New Assignment
                 </button>
@@ -1069,11 +1074,12 @@ function openVoidModal(assignmentId, assignmentTitle, assignmentType, classId) {
     modal.show();
 }
 
+var enrolledStudentsJsonUrl = '{% if current_user.role in ["Director", "School Administrator"] %}{{ url_for("management.students.get_enrolled_students_json", class_id=0) }}{% else %}{{ url_for("teacher.assignments.get_enrolled_students_json", class_id=0) }}{% endif %}';
 function loadStudentsForVoid(classId) {
     const studentsContainer = document.getElementById('void_students_list');
     studentsContainer.innerHTML = '<div class="text-center"><span class="spinner-border spinner-border-sm"></span> Loading students...</div>';
-    
-    fetch(`/management/class/${classId}/enrolled-students-json`)
+    const url = enrolledStudentsJsonUrl.replace(/\/0(\/|$)/, '/' + classId + '$1');
+    fetch(url)
         .then(response => response.json())
         .then(data => {
             if (data.students && data.students.length > 0) {
@@ -1211,6 +1217,80 @@ function submitVoidAssignment() {
     </div>
 </div>
 
+<!-- Bulk Void Assignments Modal (only when a class is selected) -->
+{% if selected_class %}
+<div class="modal fade" id="bulkVoidModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-slash-circle me-2"></i>Bulk Void Assignments
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Warning:</strong> Voiding will exclude selected assignments from grade calculations. Quarter grades will be recalculated. You can still void individual assignments from each assignment view.
+                </div>
+                <p class="mb-2 fw-bold">Select assignments to void:</p>
+                <div class="border rounded p-3 mb-3" style="max-height: 220px; overflow-y: auto;">
+                    <div class="row g-2" id="bulkVoidAssignmentList">
+                        {% for assignment in class_assignments %}
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input bulk-void-assignment-cb" type="checkbox" value="{{ assignment.id }}" data-type="individual" id="bulk_void_a_{{ assignment.id }}">
+                                <label class="form-check-label" for="bulk_void_a_{{ assignment.id }}">{{ assignment.title }} <span class="badge bg-secondary">Individual</span></label>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% if group_assignments %}
+                        {% for ga in group_assignments %}
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input bulk-void-assignment-cb" type="checkbox" value="{{ ga.id }}" data-type="group" id="bulk_void_ga_{{ ga.id }}">
+                                <label class="form-check-label" for="bulk_void_ga_{{ ga.id }}"><i class="bi bi-people-fill me-1"></i>{{ ga.title }} <span class="badge bg-info">Group</span></label>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% endif %}
+                    </div>
+                    {% if not class_assignments and not group_assignments %}
+                    <p class="text-muted mb-0">No assignments in this class.</p>
+                    {% endif %}
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Void for:</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="bulk_void_scope" id="bulk_void_all" value="all" checked>
+                        <label class="form-check-label" for="bulk_void_all">All students in this class</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="bulk_void_scope" id="bulk_void_specific" value="specific">
+                        <label class="form-check-label" for="bulk_void_specific">Selected students only</label>
+                    </div>
+                </div>
+                <div id="bulkVoidStudentSelection" class="mb-3" style="display: none;">
+                    <label class="form-label fw-bold">Select students:</label>
+                    <div class="border rounded p-3" style="max-height: 180px; overflow-y: auto;" id="bulk_void_students_list">
+                        <div class="text-center text-muted">Loading...</div>
+                    </div>
+                </div>
+                <div class="mb-0">
+                    <label for="bulk_void_reason" class="form-label fw-bold">Reason for voiding:</label>
+                    <textarea class="form-control" id="bulk_void_reason" rows="2" placeholder="e.g. Assignment canceled, Late enrollment"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="bulkVoidSubmitBtn" onclick="submitBulkVoid()">
+                    <i class="bi bi-slash-circle me-1"></i>Void Selected Assignments
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <script>
 // Toggle student selection visibility
@@ -1229,7 +1309,88 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
+    // Bulk void modal: toggle student list and load students when opened
+    const bulkVoidModal = document.getElementById('bulkVoidModal');
+    if (bulkVoidModal) {
+        document.querySelectorAll('input[name="bulk_void_scope"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                const el = document.getElementById('bulkVoidStudentSelection');
+                if (el) el.style.display = this.value === 'specific' ? 'block' : 'none';
+                if (this.value === 'specific') loadStudentsForBulkVoid({{ selected_class.id if selected_class else 'null' }});
+            });
+        });
+        bulkVoidModal.addEventListener('shown.bs.modal', function() {
+            if (document.getElementById('bulk_void_specific') && document.getElementById('bulk_void_specific').checked) {
+                loadStudentsForBulkVoid({{ selected_class.id if selected_class else 'null' }});
+            }
+        });
+    }
 });
+
+function loadStudentsForBulkVoid(classId) {
+    const container = document.getElementById('bulk_void_students_list');
+    if (!container || !classId) return;
+    container.innerHTML = '<div class="text-center"><span class="spinner-border spinner-border-sm"></span> Loading...</div>';
+    const url = (typeof enrolledStudentsJsonUrl !== 'undefined' ? enrolledStudentsJsonUrl : '/management/class/0/enrolled-students-json').replace(/\/0(\/|$)/, '/' + classId + '$1');
+    fetch(url)
+        .then(r => r.json())
+        .then(data => {
+            if (data.students && data.students.length > 0) {
+                container.innerHTML = data.students.map(s =>
+                    `<div class="form-check"><input class="form-check-input bulk-void-student-cb" type="checkbox" value="${s.id}" id="bv_st_${s.id}"><label class="form-check-label" for="bv_st_${s.id}">${s.first_name} ${s.last_name}</label></div>`
+                ).join('');
+            } else {
+                container.innerHTML = '<p class="text-muted mb-0">No students enrolled.</p>';
+            }
+        })
+        .catch(() => { container.innerHTML = '<p class="text-danger mb-0">Error loading students.</p>'; });
+}
+
+function submitBulkVoid() {
+    const checkboxes = document.querySelectorAll('.bulk-void-assignment-cb:checked');
+    if (!checkboxes.length) {
+        alert('Please select at least one assignment to void.');
+        return;
+    }
+    const assignmentSpecs = Array.from(checkboxes).map(cb => ({ id: parseInt(cb.value, 10), type: cb.dataset.type || 'individual' }));
+    const voidAll = document.querySelector('input[name="bulk_void_scope"]:checked').value === 'all';
+    let studentIds = [];
+    if (!voidAll) {
+        studentIds = Array.from(document.querySelectorAll('.bulk-void-student-cb:checked')).map(cb => cb.value);
+        if (!studentIds.length) {
+            alert('Please select at least one student.');
+            return;
+        }
+    }
+    const reason = document.getElementById('bulk_void_reason').value || 'Voided by administrator';
+    const btn = document.getElementById('bulkVoidSubmitBtn');
+    if (!btn) return;
+    const origHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Voiding...';
+    const bulkVoidUrl = '{% if current_user.role in ["Director", "School Administrator"] %}{{ url_for("management.bulk_void_assignments") }}{% else %}{{ url_for("teacher.assignments.bulk_void_assignments") }}{% endif %}';
+    fetch(bulkVoidUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        body: JSON.stringify({ assignment_specs: assignmentSpecs, void_all: voidAll, student_ids: studentIds, reason: reason })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('bulkVoidModal')).hide();
+            location.reload();
+        } else {
+            alert('Error: ' + (data.message || 'Unknown error'));
+        }
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+    })
+    .catch(err => {
+        alert('Error: ' + err);
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+    });
+}
 </script>
 
 {% endblock %}

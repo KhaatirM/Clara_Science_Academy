@@ -7,10 +7,10 @@ from flask_login import login_required, current_user
 from decorators import management_required, teacher_required
 from models import (
     db, Student, User, Enrollment, Class, Grade, Assignment, ReportCard, SchoolYear,
-    Attendance, SchoolDayAttendance, StudentGoal, StudentGroupMember, Submission,
-    GroupSubmission, GroupGrade, AssignmentExtension, MessageGroupMember, Notification,
+    Attendance, SchoolDayAttendance, StudentGoal, StudentGroupMember, StudentGroup, Submission,
+    GroupSubmission, GroupGrade, GroupAssignment, AssignmentExtension, MessageGroupMember, Notification,
     QuizAnswer, QuizProgress, DiscussionPost, GroupQuizAnswer, CleaningTeamMember,
-    CleaningTeam, CleaningInspection
+    CleaningTeam, CleaningInspection, GradeHistory
 )
 from werkzeug.security import generate_password_hash
 from werkzeug.utils import secure_filename
@@ -1006,166 +1006,130 @@ def generate_report_card_for_student(student_id):
 
 
 # ============================================================
-# Route: /void-assignment/<int:assignment_id>', methods=['POST']
-# Function: void_assignment_for_students
+# Helper: _void_one_assignment_impl (no commit; used by single and bulk void)
 # ============================================================
 
-@bp.route('/void-assignment/<int:assignment_id>', methods=['POST'])
-@login_required
-@management_required
-def void_assignment_for_students(assignment_id):
-    """Void an assignment for all students or specific students."""
-    try:
-        assignment_type = request.form.get('assignment_type', 'individual')
-        student_ids = request.form.getlist('student_ids')
-        reason = request.form.get('reason', 'Voided by administrator')
-        void_all = request.form.get('void_all', 'false').lower() == 'true'
-        
-        voided_count = 0
-        
-        if assignment_type == 'group':
-            group_assignment = GroupAssignment.query.get_or_404(assignment_id)
-            
-            if void_all or not student_ids:
-                # Void for all students in groups
-                from models import StudentGroupMember, StudentGroup
-                import json
-                
-                # Get all groups in this class
-                groups = StudentGroup.query.filter_by(class_id=group_assignment.class_id).all()
-                
-                for group in groups:
-                    # Get all members of this group
-                    members = StudentGroupMember.query.filter_by(student_group_id=group.id).all()
-                    
-                    for member in members:
-                        group_grade = GroupGrade.query.filter_by(
-                            group_assignment_id=assignment_id,
-                            student_id=member.student_id
-                        ).first()
-                        
-                        if group_grade:
-                            # Grade exists - void it if not already voided
-                            if not group_grade.is_voided:
-                                # Note: GroupGrade doesn't have GradeHistory, so we'll just void it
-                                # The unvoid will restore from the voided state
-                                group_grade.is_voided = True
-                                group_grade.voided_by = current_user.id
-                                group_grade.voided_at = datetime.utcnow()
-                                group_grade.voided_reason = reason
-                                # Nullify grade data if it exists
-                                if group_grade.grade_data:
-                                    group_grade.grade_data = json.dumps({
-                                        'score': 0,
-                                        'points_earned': 0,
-                                        'total_points': group_assignment.total_points if group_assignment.total_points else 100.0,
-                                        'percentage': 0,
-                                        'comment': '',
-                                        'feedback': '',
-                                        'is_voided': True
-                                    })
-                                voided_count += 1
-                        else:
-                            # No grade exists - create a placeholder voided grade
-                            new_group_grade = GroupGrade(
-                                student_id=member.student_id,
-                                group_assignment_id=assignment_id,
-                                student_group_id=group.id,
-                                grade_data=json.dumps({'score': 'N/A', 'comments': ''}),
-                                is_voided=True,
-                                voided_by=current_user.id,
-                                voided_at=datetime.utcnow(),
-                                voided_reason=reason,
-                                graded_at=None
-                            )
-                            db.session.add(new_group_grade)
+def _void_one_assignment_impl(assignment_id, assignment_type, student_ids, void_all, reason):
+    """
+    Void one assignment for the given students. Does not commit.
+    Returns (voided_count, [(student_id, class_id, school_year_id, quarter), ...]).
+    """
+    voided_count = 0
+    affected = []
+    if assignment_type == 'group':
+        group_assignment = GroupAssignment.query.get_or_404(assignment_id)
+        class_id = group_assignment.class_id
+        school_year_id = group_assignment.school_year_id
+        quarter = group_assignment.quarter
+        if void_all or not student_ids:
+            # Void for all students in groups
+            groups = StudentGroup.query.filter_by(class_id=group_assignment.class_id).all()
+            for group in groups:
+                members = StudentGroupMember.query.filter_by(student_group_id=group.id).all()
+                for member in members:
+                    group_grade = GroupGrade.query.filter_by(
+                        group_assignment_id=assignment_id,
+                        student_id=member.student_id
+                    ).first()
+                    if group_grade:
+                        if not group_grade.is_voided:
+                            group_grade.is_voided = True
+                            group_grade.voided_by = current_user.id
+                            group_grade.voided_at = datetime.utcnow()
+                            group_grade.voided_reason = reason
+                            if group_grade.grade_data:
+                                group_grade.grade_data = json.dumps({
+                                    'score': 0,
+                                    'points_earned': 0,
+                                    'total_points': group_assignment.total_points if group_assignment.total_points else 100.0,
+                                    'percentage': 0,
+                                    'comment': '',
+                                    'feedback': '',
+                                    'is_voided': True
+                                })
                             voided_count += 1
-                
-                message = f'Voided group assignment "{group_assignment.title}" for all students ({voided_count} grades)'
-            else:
-                # Void for specific students
-                from models import StudentGroupMember
-                import json
-                
-                for student_id in student_ids:
-                    # Find student's group for this assignment
-                    member = StudentGroupMember.query.filter_by(student_id=int(student_id)).first()
-                    
-                    if member:
-                        group_grade = GroupGrade.query.filter_by(
+                            affected.append((member.student_id, class_id, school_year_id, quarter))
+                    else:
+                        new_group_grade = GroupGrade(
+                            student_id=member.student_id,
                             group_assignment_id=assignment_id,
-                            student_id=int(student_id)
-                        ).first()
-                        
-                        if group_grade:
-                            # Grade exists - void it if not already voided
-                            if not group_grade.is_voided:
-                                # Note: GroupGrade doesn't have GradeHistory, so we'll just void it
-                                # The unvoid will restore from the voided state
-                                group_grade.is_voided = True
-                                group_grade.voided_by = current_user.id
-                                group_grade.voided_at = datetime.utcnow()
-                                group_grade.voided_reason = reason
-                                # Nullify grade data if it exists
-                                if group_grade.grade_data:
-                                    group_grade.grade_data = json.dumps({
-                                        'score': 0,
-                                        'points_earned': 0,
-                                        'total_points': group_assignment.total_points if group_assignment.total_points else 100.0,
-                                        'percentage': 0,
-                                        'comment': '',
-                                        'feedback': '',
-                                        'is_voided': True
-                                    })
-                                voided_count += 1
-                        else:
-                            # No grade exists - create a placeholder voided grade
-                            new_group_grade = GroupGrade(
-                                student_id=int(student_id),
-                                group_assignment_id=assignment_id,
-                                student_group_id=member.student_group_id,
-                                grade_data=json.dumps({'score': 'N/A', 'comments': ''}),
-                                is_voided=True,
-                                voided_by=current_user.id,
-                                voided_at=datetime.utcnow(),
-                                voided_reason=reason,
-                                graded_at=None
-                            )
-                            db.session.add(new_group_grade)
-                            voided_count += 1
-                
-                message = f'Voided group assignment "{group_assignment.title}" for {voided_count} student(s)'
+                            student_group_id=group.id,
+                            grade_data=json.dumps({'score': 'N/A', 'comments': ''}),
+                            is_voided=True,
+                            voided_by=current_user.id,
+                            voided_at=datetime.utcnow(),
+                            voided_reason=reason,
+                            graded_at=None
+                        )
+                        db.session.add(new_group_grade)
+                        voided_count += 1
+                        affected.append((member.student_id, class_id, school_year_id, quarter))
+            return (voided_count, affected)
         else:
+            # Void for specific students
+            for student_id in student_ids:
+                member = StudentGroupMember.query.filter_by(student_id=int(student_id)).first()
+                if member:
+                    group_grade = GroupGrade.query.filter_by(
+                        group_assignment_id=assignment_id,
+                        student_id=int(student_id)
+                    ).first()
+                    if group_grade:
+                        if not group_grade.is_voided:
+                            group_grade.is_voided = True
+                            group_grade.voided_by = current_user.id
+                            group_grade.voided_at = datetime.utcnow()
+                            group_grade.voided_reason = reason
+                            if group_grade.grade_data:
+                                group_grade.grade_data = json.dumps({
+                                    'score': 0,
+                                    'points_earned': 0,
+                                    'total_points': group_assignment.total_points if group_assignment.total_points else 100.0,
+                                    'percentage': 0,
+                                    'comment': '',
+                                    'feedback': '',
+                                    'is_voided': True
+                                })
+                            voided_count += 1
+                            affected.append((int(student_id), class_id, school_year_id, quarter))
+                    else:
+                        new_group_grade = GroupGrade(
+                            student_id=int(student_id),
+                            group_assignment_id=assignment_id,
+                            student_group_id=member.student_group_id,
+                            grade_data=json.dumps({'score': 'N/A', 'comments': ''}),
+                            is_voided=True,
+                            voided_by=current_user.id,
+                            voided_at=datetime.utcnow(),
+                            voided_reason=reason,
+                            graded_at=None
+                        )
+                        db.session.add(new_group_grade)
+                        voided_count += 1
+                        affected.append((int(student_id), class_id, school_year_id, quarter))
+            return (voided_count, affected)
+    else:
             assignment = Assignment.query.get_or_404(assignment_id)
-            
+            class_id = assignment.class_id
+            school_year_id = assignment.school_year_id
+            quarter = assignment.quarter
             if void_all or not student_ids:
-                # Void for all students - need to get all enrolled students
-                from models import Enrollment
-                import json
-                
                 enrollments = Enrollment.query.filter_by(class_id=assignment.class_id, is_active=True).all()
-                
                 for enrollment in enrollments:
                     grade = Grade.query.filter_by(
                         assignment_id=assignment_id,
                         student_id=enrollment.student_id
                     ).first()
-                    
                     if grade:
-                        # Grade exists - void it if not already voided
                         if not grade.is_voided:
-                            # Save current grade data to history before voiding
-                            from models import GradeHistory
                             original_grade_data = grade.grade_data
-                            
                             if original_grade_data:
                                 try:
-                                    # Create history entry to preserve original grade data
                                     history_entry = GradeHistory(
                                         grade_id=grade.id,
                                         student_id=grade.student_id,
                                         assignment_id=assignment_id,
-                                        previous_grade_data=original_grade_data,  # Save original
+                                        previous_grade_data=original_grade_data,
                                         new_grade_data=json.dumps({
                                             'score': 0,
                                             'points_earned': 0,
@@ -1181,12 +1145,10 @@ def void_assignment_for_students(assignment_id):
                                     db.session.add(history_entry)
                                 except Exception as e:
                                     current_app.logger.warning(f"Could not save grade history for grade {grade.id}: {e}")
-                            
                             grade.is_voided = True
                             grade.voided_by = current_user.id
                             grade.voided_at = datetime.utcnow()
                             grade.voided_reason = reason
-                            # Nullify grade data if it exists
                             if grade.grade_data:
                                 grade.grade_data = json.dumps({
                                     'score': 0,
@@ -1198,8 +1160,8 @@ def void_assignment_for_students(assignment_id):
                                     'is_voided': True
                                 })
                             voided_count += 1
+                            affected.append((enrollment.student_id, class_id, school_year_id, quarter))
                     else:
-                        # No grade exists - create a placeholder voided grade
                         new_grade = Grade(
                             student_id=enrollment.student_id,
                             assignment_id=assignment_id,
@@ -1212,33 +1174,24 @@ def void_assignment_for_students(assignment_id):
                         )
                         db.session.add(new_grade)
                         voided_count += 1
-                
-                message = f'Voided assignment "{assignment.title}" for all students ({voided_count} grades)'
+                        affected.append((enrollment.student_id, class_id, school_year_id, quarter))
+                return (voided_count, affected)
             else:
-                # Void for specific students
-                import json
-                
                 for student_id in student_ids:
                     grade = Grade.query.filter_by(
                         assignment_id=assignment_id,
                         student_id=int(student_id)
                     ).first()
-                    
                     if grade:
-                        # Grade exists - void it if not already voided
                         if not grade.is_voided:
-                            # Save current grade data to history before voiding
-                            from models import GradeHistory
                             original_grade_data = grade.grade_data
-                            
                             if original_grade_data:
                                 try:
-                                    # Create history entry to preserve original grade data
                                     history_entry = GradeHistory(
                                         grade_id=grade.id,
                                         student_id=grade.student_id,
                                         assignment_id=assignment_id,
-                                        previous_grade_data=original_grade_data,  # Save original
+                                        previous_grade_data=original_grade_data,
                                         new_grade_data=json.dumps({
                                             'score': 0,
                                             'points_earned': 0,
@@ -1254,12 +1207,10 @@ def void_assignment_for_students(assignment_id):
                                     db.session.add(history_entry)
                                 except Exception as e:
                                     current_app.logger.warning(f"Could not save grade history for grade {grade.id}: {e}")
-                            
                             grade.is_voided = True
                             grade.voided_by = current_user.id
                             grade.voided_at = datetime.utcnow()
                             grade.voided_reason = reason
-                            # Nullify grade data if it exists
                             if grade.grade_data:
                                 grade.grade_data = json.dumps({
                                     'score': 0,
@@ -1271,8 +1222,8 @@ def void_assignment_for_students(assignment_id):
                                     'is_voided': True
                                 })
                             voided_count += 1
+                            affected.append((int(student_id), class_id, school_year_id, quarter))
                     else:
-                        # No grade exists - create a placeholder voided grade
                         new_grade = Grade(
                             student_id=int(student_id),
                             assignment_id=assignment_id,
@@ -1285,70 +1236,118 @@ def void_assignment_for_students(assignment_id):
                         )
                         db.session.add(new_grade)
                         voided_count += 1
-                
-                message = f'Voided assignment "{assignment.title}" for {voided_count} student(s)'
-        
+                        affected.append((int(student_id), class_id, school_year_id, quarter))
+                return (voided_count, affected)
+
+
+@bp.route('/void-assignment/<int:assignment_id>', methods=['POST'])
+@login_required
+@management_required
+def void_assignment_for_students(assignment_id):
+    """Void an assignment for all students or specific students."""
+    try:
+        assignment_type = request.form.get('assignment_type', 'individual')
+        student_ids = request.form.getlist('student_ids')
+        reason = request.form.get('reason', 'Voided by administrator')
+        void_all = request.form.get('void_all', 'false').lower() == 'true'
+        voided_count, affected = _void_one_assignment_impl(
+            assignment_id, assignment_type, student_ids, void_all, reason
+        )
         db.session.commit()
-        
-        # Update quarter grades for affected students (force recalculation)
         from utils.quarter_grade_calculator import update_quarter_grade
-        if assignment_type == 'individual':
-            quarter = assignment.quarter
-            school_year_id = assignment.school_year_id
-            class_id = assignment.class_id
-        else:
-            quarter = group_assignment.quarter
-            school_year_id = group_assignment.school_year_id
-            class_id = group_assignment.class_id
-        
-        # Refresh quarter grades for affected students
-        students_to_update = []
-        if student_ids:
-            students_to_update = student_ids
-        else:
-            if assignment_type == 'individual':
-                students_to_update = [g.student_id for g in Grade.query.filter_by(assignment_id=assignment_id).all()]
-            else:
-                students_to_update = [g.student_id for g in GroupGrade.query.filter_by(group_assignment_id=assignment_id).all()]
-        
-        for sid in students_to_update:
-            try:
-                update_quarter_grade(
-                    student_id=int(sid),
-                    class_id=class_id,
-                    school_year_id=school_year_id,
-                    quarter=quarter,
-                    force=True
-                )
-            except Exception as e:
-                current_app.logger.warning(f"Could not update quarter grade for student {sid}: {e}")
-        
-        # Check if this is an AJAX request
+        seen = set()
+        for (sid, cid, syid, q) in affected:
+            key = (sid, cid, q)
+            if key not in seen:
+                seen.add(key)
+                try:
+                    update_quarter_grade(student_id=int(sid), class_id=cid, school_year_id=syid, quarter=q, force=True)
+                except Exception as e:
+                    current_app.logger.warning(f"Could not update quarter grade for student {sid}: {e}")
+        message = f'Voided assignment for {voided_count} grade(s).'
         is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or \
                   'application/json' in request.headers.get('Accept', '')
-        
         if is_ajax:
             return jsonify({'success': True, 'message': message, 'voided_count': voided_count})
-        else:
-            # Regular form submission - redirect with flash message
-            flash(message, 'success')
-            return redirect(url_for('management.assignments_and_grades'))
-        
+        flash(message, 'success')
+        return redirect(url_for('management.assignments_and_grades'))
     except Exception as e:
         db.session.rollback()
         error_message = f'Error voiding assignment: {str(e)}'
-        
-        # Check if this is an AJAX request
         is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or \
                   'application/json' in request.headers.get('Accept', '')
-        
         if is_ajax:
             return jsonify({'success': False, 'message': error_message}), 500
+        flash(error_message, 'danger')
+        return redirect(url_for('management.assignments_and_grades'))
+
+
+# ============================================================
+# Route: /bulk-void-assignments', methods=['POST']
+# Function: bulk_void_assignments
+# ============================================================
+
+@bp.route('/bulk-void-assignments', methods=['POST'])
+@login_required
+@management_required
+def bulk_void_assignments():
+    """Void multiple assignments at once for all or selected students."""
+    try:
+        data = request.get_json(force=True, silent=True) or {}
+        assignment_specs = data.get('assignment_specs', [])  # list of {id, type: 'individual'|'group'}
+        if not assignment_specs:
+            assignment_ids = data.get('assignment_ids', [])
+            assignment_types = data.get('assignment_types', [])
+            if not assignment_ids or len(assignment_types) != len(assignment_ids):
+                return jsonify({'success': False, 'message': 'Provide assignment_specs or assignment_ids and assignment_types.'}), 400
+            assignment_specs = [{'id': int(aid), 'type': t} for aid, t in zip(assignment_ids, assignment_types)]
         else:
-            flash(error_message, 'danger')
-            return redirect(url_for('management.assignments_and_grades'))
-
-
+            assignment_specs = [{'id': int(s['id']), 'type': s.get('type', 'individual')} for s in assignment_specs]
+        if not assignment_specs:
+            return jsonify({'success': False, 'message': 'No assignments selected.'}), 400
+        void_all = data.get('void_all', True)
+        student_ids = data.get('student_ids', [])
+        if isinstance(student_ids, str):
+            student_ids = [student_ids] if student_ids else []
+        student_ids = [int(s) for s in student_ids]
+        reason = data.get('reason', 'Voided by administrator')
+        total_voided = 0
+        all_affected = []
+        errors = []
+        for spec in assignment_specs:
+            aid, atype = spec['id'], spec['type']
+            try:
+                voided_count, affected = _void_one_assignment_impl(aid, atype, student_ids, void_all, reason)
+                total_voided += voided_count
+                all_affected.extend(affected)
+            except Exception as e:
+                errors.append(f"Assignment {aid} ({atype}): {str(e)}")
+                current_app.logger.warning(f"Bulk void failed for assignment {aid}: {e}")
+        db.session.commit()
+        from utils.quarter_grade_calculator import update_quarter_grade
+        seen = set()
+        for (sid, cid, syid, q) in all_affected:
+            key = (sid, cid, q)
+            if key not in seen:
+                seen.add(key)
+                try:
+                    update_quarter_grade(student_id=int(sid), class_id=cid, school_year_id=syid, quarter=q, force=True)
+                except Exception as e:
+                    current_app.logger.warning(f"Could not update quarter grade for student {sid}: {e}")
+        message = f'Bulk void complete: {total_voided} grade(s) voided across {len(assignment_specs)} assignment(s).'
+        if errors:
+            message += ' Partial errors: ' + '; '.join(errors[:3])
+        return jsonify({
+            'success': True,
+            'message': message,
+            'voided_count': total_voided,
+            'assignments_processed': len(assignment_specs),
+            'errors': errors
+        })
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception(e)
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 
 # ============================================================

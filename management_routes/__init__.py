@@ -53,7 +53,7 @@ from .calendar import (
     delete_school_break as delete_school_break_func,
     add_calendar_event as add_calendar_event_func,
 )
-from .students import students as students_func, student_jobs as student_jobs_func, add_student as add_student_func, download_students_csv as download_students_csv_func, download_students_template as download_students_template_func, upload_students_csv as upload_students_csv_func, student_report_card_history as student_report_card_history_func, view_student as view_student_func, admin_create_student_group as admin_create_student_group_func, generate_report_card_for_student as generate_report_card_for_student_func, void_assignment_for_students as void_assignment_for_students_func, unvoid_assignment_for_students as unvoid_assignment_for_students_func
+from .students import students as students_func, student_jobs as student_jobs_func, add_student as add_student_func, download_students_csv as download_students_csv_func, download_students_template as download_students_template_func, upload_students_csv as upload_students_csv_func, student_report_card_history as student_report_card_history_func, view_student as view_student_func, admin_create_student_group as admin_create_student_group_func, generate_report_card_for_student as generate_report_card_for_student_func, void_assignment_for_students as void_assignment_for_students_func, unvoid_assignment_for_students as unvoid_assignment_for_students_func, bulk_void_assignments as bulk_void_assignments_func
 from .teachers import (
     teachers as teachers_func, 
     add_teacher_staff as add_teacher_staff_func, 
@@ -900,6 +900,13 @@ def void_assignment_for_students_route(assignment_id):
 def unvoid_assignment_for_students_route(assignment_id):
     """Unvoid assignment for students route - delegates to students module"""
     return unvoid_assignment_for_students_func(assignment_id)
+
+@management_blueprint.route('/bulk-void-assignments', methods=['POST'], endpoint='bulk_void_assignments')
+@login_required
+@management_required
+def bulk_void_assignments_route():
+    """Bulk void assignments for selected students or all - delegates to students module"""
+    return bulk_void_assignments_func()
 
 # Add alias for export quiz to Google Forms route
 @management_blueprint.route('/assignment/<int:assignment_id>/export-to-google-forms', methods=['POST'], endpoint='export_quiz_to_google_forms')

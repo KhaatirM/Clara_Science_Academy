@@ -1012,9 +1012,9 @@ window.switchToSubmissionModal = function(assignmentId, assignmentTitle, isResub
     }
 };
 
-// Global submission modal function
-window.openSubmissionModal = function(assignmentId, assignmentTitle, isResubmit) {
-    console.log('Opening submission modal:', assignmentId, assignmentTitle, isResubmit);
+// Global submission modal function (isGroup = true for group PDF/paper assignments)
+window.openSubmissionModal = function(assignmentId, assignmentTitle, isResubmit, isGroup) {
+    console.log('Opening submission modal:', assignmentId, assignmentTitle, isResubmit, isGroup);
     
     try {
         const modalElement = document.getElementById('submissionModal');
@@ -1028,6 +1028,9 @@ window.openSubmissionModal = function(assignmentId, assignmentTitle, isResubmit)
         // Set assignment data in the submission modal
         document.getElementById('submissionAssignmentId').value = assignmentId;
         document.getElementById('submissionAssignmentTitle').textContent = assignmentTitle;
+        document.getElementById('submissionIsGroup').value = isGroup ? '1' : '0';
+        var groupNote = document.getElementById('submissionGroupNote');
+        if (groupNote) { groupNote.classList.toggle('d-none', !isGroup); }
         document.getElementById('submissionModalLabel').textContent = isResubmit ? 'Resubmit Assignment' : 'Submit Assignment';
         const submitBtn = document.getElementById('submissionSubmitBtn');
         const submitBtnText = document.getElementById('submissionSubmitBtnText');
@@ -1124,8 +1127,12 @@ window.handleAssignmentSubmission = function() {
         }
         submitBtn.disabled = true;
         
-        // Submit the assignment
-        fetch(`/student/submit/${assignmentId.value}`, {
+        // Use group submit endpoint for group assignments
+        const isGroup = document.getElementById('submissionIsGroup');
+        const submitUrl = (isGroup && isGroup.value === '1')
+            ? `/student/submit/group/${assignmentId.value}`
+            : `/student/submit/${assignmentId.value}`;
+        fetch(submitUrl, {
             method: 'POST',
             body: formData
         })
@@ -1175,9 +1182,9 @@ window.handleAssignmentSubmission = function() {
 };
 
 
-// Function to submit assignment directly from the table
-window.submitAssignmentFromTable = function(assignmentId, assignmentTitle, hasSubmission) {
-    console.log('Submit assignment from table:', assignmentId, assignmentTitle, hasSubmission);
+// Function to submit assignment directly from the table (isGroup = true for group assignments)
+window.submitAssignmentFromTable = function(assignmentId, assignmentTitle, hasSubmission, isGroup) {
+    console.log('Submit assignment from table:', assignmentId, assignmentTitle, hasSubmission, isGroup);
     
     try {
         // Check if assignment is already submitted
@@ -1188,9 +1195,9 @@ window.submitAssignmentFromTable = function(assignmentId, assignmentTitle, hasSu
             }
         }
         
-        // Open the submission modal directly
+        // Open the submission modal directly (pass isGroup so form posts to group endpoint when needed)
         if (typeof openSubmissionModal === 'function') {
-            openSubmissionModal(assignmentId, assignmentTitle, hasSubmission);
+            openSubmissionModal(assignmentId, assignmentTitle, hasSubmission, isGroup || false);
         } else {
             console.error('openSubmissionModal function not found');
             alert('Submission modal function not available. Please refresh the page.');
@@ -2967,7 +2974,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                                     <i class="bi bi-chat-fill me-1"></i>Discuss
                                 </button>
                             {% else %}
-                                <button type="button" class="btn btn-sm btn-student-action" onclick="submitAssignmentFromTable({{ assignment.id }}, '{{ assignment.title }}', {{ 'true' if submission else 'false' }})">
+                                <button type="button" class="btn btn-sm btn-student-action" onclick="submitAssignmentFromTable({{ assignment.id }}, '{{ assignment.title }}', {{ 'true' if submission else 'false' }}, {{ 'true' if is_group else 'false' }})">
                                     <i class="bi bi-upload me-1"></i>Submit
                                 </button>
                             {% endif %}
@@ -3156,13 +3163,17 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
         
         <!-- Assignment Modal Functions (moved outside conditional for global access) -->
         <script>
-        // Assignment Submission Modal Functions
-        function openSubmissionModal(assignmentId, assignmentTitle, isResubmit) {
+        // Assignment Submission Modal Functions (isGroup optional - for group PDF/paper assignments)
+        function openSubmissionModal(assignmentId, assignmentTitle, isResubmit, isGroup) {
             const modalElement = document.getElementById('submissionModal');
             
             // Set assignment data
             document.getElementById('submissionAssignmentId').value = assignmentId;
             document.getElementById('submissionAssignmentTitle').textContent = assignmentTitle;
+            var isGroupEl = document.getElementById('submissionIsGroup');
+            if (isGroupEl) isGroupEl.value = isGroup ? '1' : '0';
+            var groupNote = document.getElementById('submissionGroupNote');
+            if (groupNote) groupNote.classList.toggle('d-none', !isGroup);
             document.getElementById('submissionModalLabel').textContent = isResubmit ? 'Resubmit Assignment' : 'Submit Assignment';
             document.getElementById('submissionSubmitBtn').textContent = isResubmit ? 'Resubmit' : 'Submit';
             
@@ -5004,7 +5015,12 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Submitting...';
             
-            fetch('{{ url_for("student.submit_assignment", assignment_id=0) }}'.replace('/0', '/' + document.getElementById('submissionAssignmentId').value), {
+            var assignId = document.getElementById('submissionAssignmentId').value;
+            var isGroupEl = document.getElementById('submissionIsGroup');
+            var submitUrl = (isGroupEl && isGroupEl.value === '1')
+                ? '{{ url_for("student.submit_group_assignment", assignment_id=0) }}'.replace('/0', '/' + assignId)
+                : '{{ url_for("student.submit_assignment", assignment_id=0) }}'.replace('/0', '/' + assignId);
+            fetch(submitUrl, {
                 method: 'POST',
                 body: formData
             })
@@ -5076,6 +5092,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                         <div class="flex-grow-1">
                             <h4 class="modal-title mb-1" id="submissionModalLabel">Submit Assignment</h4>
                             <p class="mb-0 opacity-75 small" id="submissionAssignmentTitle">Assignment Title</p>
+                            <p class="mb-0 opacity-75 small d-none" id="submissionGroupNote"><i class="bi bi-people-fill me-1"></i>Group assignment — your upload will count as the submission for your whole group.</p>
                         </div>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
@@ -5084,6 +5101,7 @@ window.showExtensionRequestMessage = function(assignmentTitle) {
                 <div class="modal-body p-4" style="background-color: #ffffff; color: #212529;">
                     <form id="assignmentSubmissionForm" enctype="multipart/form-data">
                         <input type="hidden" id="submissionAssignmentId" name="assignment_id">
+                        <input type="hidden" id="submissionIsGroup" name="is_group" value="0">
                         
                         <!-- File Upload Section -->
                         <div class="mb-4">

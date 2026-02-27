@@ -492,7 +492,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title mb-0" id="updateModalLabel">System Updates</h5>
-                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated February 23, 2026</p>
+                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated February 25, 2026</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -504,48 +504,78 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – February 23, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – February 25, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0">This release focuses on <strong>group assignments</strong>: due/close dates now correctly make them inactive, admins and teachers can view and grade without errors, and grades are preserved when groups are deleted or changed. We added a <strong>“What you should know”</strong> popup when creating or editing group assignments, clearer delete/edit confirmations, and <strong>automatic zeros</strong> for any assignment (regular or group) when a student has no grade 7 days after the due/close date. Details below.</p>
+                        <p class="updates-intro-text mb-0">This release adds <strong>bulk void</strong> for assignments: School Administrators and Teachers can select multiple assignments and void them in one action for all students or selected students, without opening each assignment. We also updated the <strong>group assignment type selector</strong>: it now offers only PDF/Paper and Discussion (quiz was removed until the group quiz flow is built), with a cleaner two-option design and no success popup after bulk void. Details below.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- February 25, 2026 - Bulk void, group assignment selector -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-slash-circle me-2"></i>Bulk Void & Group Assignment Selector – February 25, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Bulk void assignments:</strong> School Administrators and Teachers can void multiple assignments at once. From Assignments &amp; Grades, select a class, then click <strong>Bulk Void</strong>. Choose which assignments to void (individual and/or group), choose "all students in this class" or "selected students only," enter a reason, and submit. All selected assignments are voided in one action. The existing per-assignment void (from each assignment's view) still works as before.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Bulk void – No success popup:</strong> After a successful bulk void, the modal closes and the page reloads with no alert popup. Errors still show so you know if something failed.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Group assignment type selector – Two options only:</strong> When creating a group assignment, the type selector now shows only <strong>PDF/Paper</strong> and <strong>Discussion</strong>. Quiz was removed because the student "take group quiz" flow is not yet implemented; group quizzes can be re-added when that's built.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Group assignment type selector – Design update:</strong> The Create Group Assignment screen has a refreshed layout: two equal cards (PDF/Paper and Discussion), clear feature lists, and a "Why Choose Group Assignments?" section. The Bulk Void button on Assignments &amp; Grades uses the same visual style as the other header buttons so it fits the page.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Group assignments – Student submission:</strong> For group PDF/Paper assignments, students now submit correctly via the group endpoint (one submission per group). The dashboard shows a short note in the submit modal when submitting for a group assignment.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> You can void many assignments in one go instead of opening each one. The group assignment creator is simpler (two types only) and easier to scan. Bulk void and group submission behave consistently without extra popups.</p>
+                        </div>
+                    </div>
+
                     <!-- February 23, 2026 - Group assignments, safety nets, auto-zero -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-people-fill me-2"></i>Group Assignments, Safety Nets & Auto-Zero – February 23, 2026</h6>
                         <ul class="list-unstyled">
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Group assignments – Due/close date behavior:</strong> When a group assignment has a due date or close date, it now correctly becomes <strong>Inactive</strong> after that time (on the School Administrator/teacher side and the student side). Previously it stayed active; now it no longer appears as active and students can’t submit after the close.
+                                <strong>Group assignments – Due/close date behavior:</strong> When a group assignment has a due date or close date, it now correctly becomes <strong>Inactive</strong> after that time (on the School Administrator/teacher side and the student side). Previously it stayed active; now it no longer appears as active and students can't submit after the close.
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Group assignments – View and Grade fixed:</strong> School Administrators and teachers can again open the group assignment view and grade page without errors. View and save grades work correctly; a missing variable and a fallback for “graded by” when admins grade were fixed so you can always view and save grades.
+                                <strong>Group assignments – View and Grade fixed:</strong> School Administrators and teachers can again open the group assignment view and grade page without errors. View and save grades work correctly; a missing variable and a fallback for "graded by" when admins grade were fixed so you can always view and save grades.
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Deleting a group – Grades preserved and visible:</strong> When you delete a group (admin or teacher), existing grades and submissions are still kept. On the assignment’s <strong>Grade</strong> page, students from deleted groups now appear in a <strong>“Students from deleted group”</strong> section so you can still view and edit those grades without re-entering them.
+                                <strong>Deleting a group – Grades preserved and visible:</strong> When you delete a group (admin or teacher), existing grades and submissions are still kept. On the assignment's <strong>Grade</strong> page, students from deleted groups now appear in a <strong>"Students from deleted group"</strong> section so you can still view and edit those grades without re-entering them.
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Editing group assignment – Changing selected groups:</strong> If you edit a group assignment and change which groups are selected, existing grades and submissions are <strong>not</strong> removed. Students in groups you remove still have their grades; you can view and edit them under “Students from deleted group” on the Grade page. The edit page now shows a short note and a confirmation when you save after removing groups.
+                                <strong>Editing group assignment – Changing selected groups:</strong> If you edit a group assignment and change which groups are selected, existing grades and submissions are <strong>not</strong> removed. Students in groups you remove still have their grades; you can view and edit them under "Students from deleted group" on the Grade page. The edit page now shows a short note and a confirmation when you save after removing groups.
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>“What you should know” popup:</strong> When creating or editing a group assignment, a <strong>What you should know</strong> button opens a short guide: how due/close dates make assignments inactive, what happens when you delete a group or change selected groups (grades stay; where to find them), and that students in removed groups can’t submit but keep existing grades. The popup can auto-show once per session when creating a group assignment.
+                                <strong>"What you should know" popup:</strong> When creating or editing a group assignment, a <strong>What you should know</strong> button opens a short guide: how due/close dates make assignments inactive, what happens when you delete a group or change selected groups (grades stay; where to find them), and that students in removed groups can't submit but keep existing grades. The popup can auto-show once per session when creating a group assignment.
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Delete group confirmation:</strong> When you delete a group, the confirmation message now explains that grades and submissions are kept and that you can view and edit them under “Students from deleted group” on each assignment’s Grade page.
+                                <strong>Delete group confirmation:</strong> When you delete a group, the confirmation message now explains that grades and submissions are kept and that you can view and edit them under "Students from deleted group" on each assignment's Grade page.
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Automatic zero 7 days after due/close:</strong> For <strong>all</strong> assignments (regular and group), if a student has <strong>no grade</strong> by 7 days after the assignment’s due or close date, the system automatically assigns a <strong>0</strong>. This gives teachers a 7-day window to enter or correct grades; after that, ungraded students get a 0 so gradebooks and report cards stay complete. Extensions are respected (the 7 days run from the student’s extended due date when they have one). Voided assignments are skipped.
+                                <strong>Automatic zero 7 days after due/close:</strong> For <strong>all</strong> assignments (regular and group), if a student has <strong>no grade</strong> by 7 days after the assignment's due or close date, the system automatically assigns a <strong>0</strong>. This gives teachers a 7-day window to enter or correct grades; after that, ungraded students get a 0 so gradebooks and report cards stay complete. Extensions are respected (the 7 days run from the student's extended due date when they have one). Voided assignments are skipped.
                             </li>
                         </ul>
                         <div class="alert alert-info mt-3">
-                            <p class="mb-0"><strong>Impact:</strong> Group assignments behave correctly with due/close dates and stay viewable and gradable. Deleting or changing groups doesn’t lose grades, and you can still access them from the Grade page. Teachers and admins are guided by the “What you should know” popup and clearer confirmations. Ungraded students get an automatic 0 after 7 days so grades stay consistent without extra manual work.</p>
+                            <p class="mb-0"><strong>Impact:</strong> Group assignments behave correctly with due/close dates and stay viewable and gradable. Deleting or changing groups doesn't lose grades, and you can still access them from the Grade page. Teachers and admins are guided by the "What you should know" popup and clearer confirmations. Ungraded students get an automatic 0 after 7 days so grades stay consistent without extra manual work.</p>
                         </div>
                     </div>
 
@@ -555,7 +585,7 @@
                         <ul class="list-unstyled">
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>User themes in Settings:</strong> Students, teachers, and school administrators can choose a theme in Settings (Account / Preferences). Your choice applies to the whole site when you’re logged in: sidebar, headers, and main content area all use the selected look.
+                                <strong>User themes in Settings:</strong> Students, teachers, and school administrators can choose a theme in Settings (Account / Preferences). Your choice applies to the whole site when you're logged in: sidebar, headers, and main content area all use the selected look.
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
@@ -563,11 +593,11 @@
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Site-wide theme override (Tech):</strong> Tech users can set a theme that applies to everyone. In Tech → System → Configuration, use “Site Theme (Everyone)” to apply a theme (e.g. Snowy for winter) or clear the override so users see their own preference again.
+                                <strong>Site-wide theme override (Tech):</strong> Tech users can set a theme that applies to everyone. In Tech â†’ System â†’ Configuration, use "Site Theme (Everyone)" to apply a theme (e.g. Snowy for winter) or clear the override so users see their own preference again.
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Deployment:</strong> The theme preference is stored per user and works on both local (SQLite) and production (e.g. Render with PostgreSQL). No extra deploy steps are required—just push and the app adds the new column automatically if needed.
+                                <strong>Deployment:</strong> The theme preference is stored per user and works on both local (SQLite) and production (e.g. Render with PostgreSQL). No extra deploy steps are required"”just push and the app adds the new column automatically if needed.
                             </li>
                         </ul>
                         <div class="alert alert-info mt-3">
@@ -589,11 +619,11 @@
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Add-assignment page layout:</strong> The Add Assignment form and sidebar sit side-by-side with a consistent gap. The form column uses full width and the sidebar is fixed at 380px so it isn’t squished. Empty space on the right is reduced for a tighter, clearer layout.
+                                <strong>Add-assignment page layout:</strong> The Add Assignment form and sidebar sit side-by-side with a consistent gap. The form column uses full width and the sidebar is fixed at 380px so it isn't squished. Empty space on the right is reduced for a tighter, clearer layout.
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>In-class due date:</strong> When you choose PDF/Paper → Individual → In-Class from the assignment type selector, the due date is now automatically set to 4:00 PM EST on that day and the field is read-only, with a short note that it’s set for in-class.
+                                <strong>In-class due date:</strong> When you choose PDF/Paper â†’ Individual â†’ In-Class from the assignment type selector, the due date is now automatically set to 4:00 PM EST on that day and the field is read-only, with a short note that it's set for in-class.
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
@@ -605,15 +635,15 @@
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Report Cards – Saved confirmation data:</strong> When you generate a report card and enter or confirm gender, entrance date, address, DOB, or expected graduation date, those values are now stored with the report. View Report Card → Download PDF shows the same information you confirmed at generation time.
+                                <strong>Report Cards – Saved confirmation data:</strong> When you generate a report card and enter or confirm gender, entrance date, address, DOB, or expected graduation date, those values are now stored with the report. View Report Card â†’ Download PDF shows the same information you confirmed at generation time.
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Group assignments – Deleting a group:</strong> If a School Administrator deletes a student group, existing grades and submissions for that group are preserved. The system sets the group reference to “none” so each student’s grade stays tied to the assignment and still counts in report cards and quarter averages. Teacher “delete” only marks the group inactive, so grades are unchanged.
+                                <strong>Group assignments – Deleting a group:</strong> If a School Administrator deletes a student group, existing grades and submissions for that group are preserved. The system sets the group reference to "none" so each student's grade stays tied to the assignment and still counts in report cards and quarter averages. Teacher "delete" only marks the group inactive, so grades are unchanged.
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Group assignments – Student moved to another group:</strong> If a student is moved to a different group after an assignment was graded, their grade is kept. The grade is looked up by student and assignment (not by current group), so there is only one grade per student per group assignment. When you save grades again, the stored group is updated to their current group so you don’t get duplicate grades or double-counting in quarter averages.
+                                <strong>Group assignments – Student moved to another group:</strong> If a student is moved to a different group after an assignment was graded, their grade is kept. The grade is looked up by student and assignment (not by current group), so there is only one grade per student per group assignment. When you save grades again, the stored group is updated to their current group so you don't get duplicate grades or double-counting in quarter averages.
                             </li>
                         </ul>
                         <div class="alert alert-info mt-3">
@@ -627,7 +657,7 @@
                         <ul class="list-unstyled">
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Notifications & Recent Activity (School Administrators / Directors):</strong> The home dashboard now loads and displays real notifications and recent activity. Notifications show the latest items (e.g. new extension requests); Recent Activity shows extension requests, grades entered, submissions, and new assignments from the last 7 days. The panels are compact and scrollable so they don’t take over the page. Items older than 7 days are no longer shown.
+                                <strong>Notifications & Recent Activity (School Administrators / Directors):</strong> The home dashboard now loads and displays real notifications and recent activity. Notifications show the latest items (e.g. new extension requests); Recent Activity shows extension requests, grades entered, submissions, and new assignments from the last 7 days. The panels are compact and scrollable so they don't take over the page. Items older than 7 days are no longer shown.
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
@@ -635,11 +665,11 @@
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Teacher home – Total students:</strong> The “Total students” stat on the teacher dashboard now counts only the unique students that teacher teaches (across their classes). A student in two of your classes is counted once, so the number reflects how many students you have in total.
+                                <strong>Teacher home – Total students:</strong> The "Total students" stat on the teacher dashboard now counts only the unique students that teacher teaches (across their classes). A student in two of your classes is counted once, so the number reflects how many students you have in total.
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Quiz – Listen (text-to-speech):</strong> When taking a quiz, each question has a <strong>Listen</strong> button. Click it to hear the question and answer choices read aloud using your device’s built-in speech. Available for all students by default; no extra setup required.
+                                <strong>Quiz – Listen (text-to-speech):</strong> When taking a quiz, each question has a <strong>Listen</strong> button. Click it to hear the question and answer choices read aloud using your device's built-in speech. Available for all students by default; no extra setup required.
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
@@ -691,7 +721,7 @@
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Attendance on login:</strong> When a student logs in during the school day, attendance is recorded automatically—Present (login 7–10 AM) or Late (10 AM–3 PM) in the school timezone. No need to mark them manually for that day if they logged in.
+                                <strong>Attendance on login:</strong> When a student logs in during the school day, attendance is recorded automatically"”Present (login 7–10 AM) or Late (10 AM–3 PM) in the school timezone. No need to mark them manually for that day if they logged in.
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
@@ -725,7 +755,7 @@
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Grades view average:</strong> In Assignments & Grades → class → Grades View, the average is now shown as a percentage of each assignment’s total points (e.g. 45/50 → 90%) instead of a raw score out of 100.
+                                <strong>Grades view average:</strong> In Assignments & Grades â†’ class â†’ Grades View, the average is now shown as a percentage of each assignment's total points (e.g. 45/50 â†’ 90%) instead of a raw score out of 100.
                             </li>
                         </ul>
                         <div class="alert alert-info mt-3">
@@ -739,7 +769,7 @@
                         <ul class="list-unstyled">
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Assignment Command Center:</strong> Directors and School Administrators now have a single hub for each assignment. From one page you can jump to View, Grade, Statistics, or History via tabs—no more hunting through separate screens. Open it from "Command Center" on the assignment view or from the Grade Statistics page.
+                                <strong>Assignment Command Center:</strong> Directors and School Administrators now have a single hub for each assignment. From one page you can jump to View, Grade, Statistics, or History via tabs"”no more hunting through separate screens. Open it from "Command Center" on the assignment view or from the Grade Statistics page.
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
@@ -769,7 +799,7 @@
                         <ul class="list-unstyled">
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Unified Schedule Tab:</strong> Teachers and students now share one schedule view. A single shared template shows weekly day cards (Monday–Sunday) with class name, time, and room. Schedules are synced with Classes → Edit class → Schedule. Teachers see student count and a "View Class" link; students see teacher name.
+                                <strong>Unified Schedule Tab:</strong> Teachers and students now share one schedule view. A single shared template shows weekly day cards (Monday–Sunday) with class name, time, and room. Schedules are synced with Classes â†’ Edit class â†’ Schedule. Teachers see student count and a "View Class" link; students see teacher name.
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
@@ -789,7 +819,7 @@
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check-circle-fill me-2"></i>
-                                <strong>Google Login 400 Error Fix:</strong> Sign in with Google was fixed so it works on the live server (e.g. Render). The OAuth redirect URI is now built dynamically from the current request instead of a hardcoded localhost URL, and the app trusts proxy headers so it knows it’s running over HTTPS.
+                                <strong>Google Login 400 Error Fix:</strong> Sign in with Google was fixed so it works on the live server (e.g. Render). The OAuth redirect URI is now built dynamically from the current request instead of a hardcoded localhost URL, and the app trusts proxy headers so it knows it's running over HTTPS.
                             </li>
                         </ul>
                         <div class="alert alert-info mt-3">
@@ -836,11 +866,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownFeb23_2026')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownFeb25_2026')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownFeb23_2026', 'true');
+            sessionStorage.setItem('updateModalShownFeb25_2026', 'true');
         }, 500);
     }
 });

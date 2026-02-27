@@ -1,0 +1,253 @@
+/* ===== GROUP ASSIGNMENT TYPE SELECTOR ===== */
+/* Two-option selector: PDF/Paper and Discussion */
+
+.group-assignment-selector-page .group-selector-header {
+    background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);
+    border-radius: 16px;
+    padding: 1.75rem 2rem;
+    color: white;
+    box-shadow: 0 8px 32px rgba(111, 66, 193, 0.35);
+    border: none;
+}
+
+.group-assignment-selector-page .group-selector-header h2 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 0.35rem;
+    letter-spacing: -0.02em;
+}
+
+.group-assignment-selector-page .group-selector-header .opacity-75 {
+    font-size: 0.95rem;
+}
+
+.group-assignment-selector-page .group-selector-header .btn-light {
+    font-weight: 600;
+    border-radius: 10px;
+    padding: 0.5rem 1rem;
+}
+
+.group-assignment-selector-page .group-selector-header .btn-light:hover {
+    background: rgba(255, 255, 255, 0.95);
+    color: #6f42c1;
+}
+
+/* Card row: centered, max width for two cards */
+.group-assignment-selector-page .group-type-cards-row {
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.group-assignment-selector-page .group-type-card {
+    height: 100%;
+    border-radius: 16px;
+    border: 2px solid #e9ecef;
+    background: #fff;
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+    overflow: hidden;
+    position: relative;
+}
+
+.group-assignment-selector-page .group-type-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: currentColor;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+
+.group-assignment-selector-page .group-type-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
+    border-color: transparent;
+}
+
+.group-assignment-selector-page .group-type-card[data-assignment-type="pdf"] {
+    color: #0d6efd;
+}
+
+.group-assignment-selector-page .group-type-card[data-assignment-type="pdf"]:hover::before {
+    opacity: 1;
+    background: linear-gradient(90deg, #0d6efd, #0a58ca);
+}
+
+.group-assignment-selector-page .group-type-card[data-assignment-type="discussion"] {
+    color: #0dcaf0;
+}
+
+.group-assignment-selector-page .group-type-card[data-assignment-type="discussion"]:hover::before {
+    opacity: 1;
+    background: linear-gradient(90deg, #0dcaf0, #0aa2c0);
+}
+
+.group-assignment-selector-page .group-type-card .card-body {
+    padding: 1.75rem 1.5rem;
+    text-align: center;
+}
+
+.group-assignment-selector-page .group-type-card .group-type-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 1rem;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    transition: transform 0.25s ease;
+}
+
+.group-assignment-selector-page .group-type-card[data-assignment-type="pdf"] .group-type-icon {
+    background: rgba(13, 110, 253, 0.12);
+    color: #0d6efd;
+}
+
+.group-assignment-selector-page .group-type-card[data-assignment-type="discussion"] .group-type-icon {
+    background: rgba(13, 202, 240, 0.15);
+    color: #0aa2c0;
+}
+
+.group-assignment-selector-page .group-type-card:hover .group-type-icon {
+    transform: scale(1.08);
+}
+
+.group-assignment-selector-page .group-type-card .card-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 0.6rem;
+}
+
+.group-assignment-selector-page .group-type-card .card-text {
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin-bottom: 1.25rem;
+    color: #6c757d;
+}
+
+.group-assignment-selector-page .group-type-card .group-type-features {
+    text-align: left;
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.25rem;
+}
+
+.group-assignment-selector-page .group-type-card .group-type-features .feature-item {
+    font-size: 0.85rem;
+    color: #495057;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.4rem;
+}
+
+.group-assignment-selector-page .group-type-card .group-type-features .feature-item:last-child {
+    margin-bottom: 0;
+}
+
+.group-assignment-selector-page .group-type-card .group-type-features .feature-item i {
+    color: #198754;
+    flex-shrink: 0;
+}
+
+.group-assignment-selector-page .group-type-card .card-footer {
+    padding: 0 1.5rem 1.5rem;
+    border: none;
+    background: transparent;
+}
+
+.group-assignment-selector-page .group-type-card .btn-create {
+    font-weight: 600;
+    padding: 0.65rem 1.25rem;
+    border-radius: 10px;
+    border: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.group-assignment-selector-page .group-type-card .btn-create:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.group-assignment-selector-page .group-type-card[data-assignment-type="pdf"] .btn-create {
+    background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+    color: white;
+}
+
+.group-assignment-selector-page .group-type-card[data-assignment-type="pdf"] .btn-create:hover {
+    background: linear-gradient(135deg, #0a58ca 0%, #084298 100%);
+    color: white;
+}
+
+.group-assignment-selector-page .group-type-card[data-assignment-type="discussion"] .btn-create {
+    background: linear-gradient(135deg, #0dcaf0 0%, #0aa2c0 100%);
+    color: white;
+}
+
+.group-assignment-selector-page .group-type-card[data-assignment-type="discussion"] .btn-create:hover {
+    background: linear-gradient(135deg, #0aa2c0 0%, #087990 100%);
+    color: white;
+}
+
+/* Benefits section */
+.group-assignment-selector-page .group-benefits-card {
+    border-radius: 16px;
+    border: 1px solid #e9ecef;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+    overflow: hidden;
+}
+
+.group-assignment-selector-page .group-benefits-card .card-header {
+    background: linear-gradient(135deg, rgba(111, 66, 193, 0.08) 0%, rgba(232, 62, 140, 0.08) 100%);
+    border-bottom: 1px solid #e9ecef;
+    padding: 1rem 1.5rem;
+    font-weight: 700;
+    color: #495057;
+}
+
+.group-assignment-selector-page .group-benefits-card .card-body {
+    padding: 1.5rem;
+}
+
+.group-assignment-selector-page .group-benefits-card .benefit-item {
+    text-align: center;
+    padding: 0.5rem 0;
+}
+
+.group-assignment-selector-page .group-benefits-card .benefit-item i {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.group-assignment-selector-page .group-benefits-card .benefit-item h6 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 0.35rem;
+}
+
+.group-assignment-selector-page .group-benefits-card .benefit-item p {
+    font-size: 0.85rem;
+    color: #6c757d;
+    margin: 0;
+    line-height: 1.45;
+}
+
+@media (max-width: 767.98px) {
+    .group-assignment-selector-page .group-selector-header h2 {
+        font-size: 1.5rem;
+    }
+
+    .group-assignment-selector-page .group-type-card .card-body {
+        padding: 1.5rem 1.25rem;
+    }
+
+    .group-assignment-selector-page .group-type-cards-row {
+        margin-bottom: 0.5rem;
+    }
+}

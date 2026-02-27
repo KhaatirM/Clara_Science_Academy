@@ -1048,6 +1048,106 @@ def unvoid_assignment_for_students(assignment_id):
             else:
                 return redirect(url_for('teacher.dashboard.assignments_and_grades'))
 
+@bp.route('/class/<int:class_id>/enrolled-students-json', methods=['GET'])
+@login_required
+@teacher_required
+def get_enrolled_students_json(class_id):
+    """Get enrolled students for a class as JSON (for void/bulk-void modal). Teacher must be authorized for the class."""
+    from models import Class
+    class_obj = Class.query.get_or_404(class_id)
+    if not is_authorized_for_class(class_obj):
+        return jsonify({'success': False, 'message': 'Not authorized for this class.'}), 403
+    enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
+    students_data = []
+    for enrollment in enrollments:
+        if enrollment.student:
+            students_data.append({
+                'id': enrollment.student.id,
+                'first_name': enrollment.student.first_name,
+                'last_name': enrollment.student.last_name,
+                'grade_level': enrollment.student.grade_level,
+                'student_id': enrollment.student.student_id
+            })
+    return jsonify({'success': True, 'students': students_data})
+
+@bp.route('/bulk-void-assignments', methods=['POST'])
+@login_required
+@teacher_required
+def bulk_void_assignments():
+    """Void multiple assignments at once for all or selected students (teacher-authorized classes only)."""
+    try:
+        from management_routes.students import _void_one_assignment_impl
+        data = request.get_json(force=True, silent=True) or {}
+        assignment_specs = data.get('assignment_specs', [])
+        if not assignment_specs:
+            assignment_ids = data.get('assignment_ids', [])
+            assignment_types = data.get('assignment_types', [])
+            if not assignment_ids or len(assignment_types) != len(assignment_ids):
+                return jsonify({'success': False, 'message': 'Provide assignment_specs or assignment_ids and assignment_types.'}), 400
+            assignment_specs = [{'id': int(aid), 'type': t} for aid, t in zip(assignment_ids, assignment_types)]
+        else:
+            assignment_specs = [{'id': int(s['id']), 'type': s.get('type', 'individual')} for s in assignment_specs]
+        if not assignment_specs:
+            return jsonify({'success': False, 'message': 'No assignments selected.'}), 400
+        void_all = data.get('void_all', True)
+        student_ids = data.get('student_ids', [])
+        if isinstance(student_ids, str):
+            student_ids = [student_ids] if student_ids else []
+        student_ids = [int(s) for s in student_ids]
+        reason = data.get('reason', 'Voided by teacher')
+        total_voided = 0
+        all_affected = []
+        errors = []
+        for spec in assignment_specs:
+            aid, atype = spec['id'], spec['type']
+            try:
+                if atype == 'group':
+                    ga = GroupAssignment.query.get(aid)
+                    if not ga:
+                        errors.append(f"Group assignment {aid} not found.")
+                        continue
+                    if not is_authorized_for_class(ga.class_info):
+                        errors.append(f"Not authorized for class of assignment {aid}.")
+                        continue
+                else:
+                    a = Assignment.query.get(aid)
+                    if not a:
+                        errors.append(f"Assignment {aid} not found.")
+                        continue
+                    if not is_authorized_for_class(a.class_info):
+                        errors.append(f"Not authorized for class of assignment {aid}.")
+                        continue
+                voided_count, affected = _void_one_assignment_impl(aid, atype, student_ids, void_all, reason)
+                total_voided += voided_count
+                all_affected.extend(affected)
+            except Exception as e:
+                errors.append(f"Assignment {aid} ({atype}): {str(e)}")
+                current_app.logger.warning(f"Bulk void failed for assignment {aid}: {e}")
+        db.session.commit()
+        seen = set()
+        for (sid, cid, syid, q) in all_affected:
+            key = (sid, cid, q)
+            if key not in seen:
+                seen.add(key)
+                try:
+                    update_quarter_grade(student_id=int(sid), class_id=cid, school_year_id=syid, quarter=q, force=True)
+                except Exception as e:
+                    current_app.logger.warning(f"Could not update quarter grade for student {sid}: {e}")
+        message = f'Bulk void complete: {total_voided} grade(s) voided across {len(assignment_specs)} assignment(s).'
+        if errors:
+            message += ' Partial errors: ' + '; '.join(errors[:3])
+        return jsonify({
+            'success': True,
+            'message': message,
+            'voided_count': total_voided,
+            'assignments_processed': len(assignment_specs),
+            'errors': errors
+        })
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception(e)
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 @bp.route('/extension-requests')
 @login_required
 @teacher_required

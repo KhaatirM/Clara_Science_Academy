@@ -4,6 +4,19 @@ Utility functions for assignment status and date calculations.
 from datetime import datetime, timezone
 from models import AssignmentExtension
 
+
+def parse_form_datetime_as_school_tz(dt_str, tz_name=None, fmt='%Y-%m-%dT%H:%M'):
+    """
+    Parse datetime string from form as school timezone, return UTC.
+    Form inputs (e.g. datetime-local) are assumed to be in school time (Eastern).
+    """
+    if not dt_str or not dt_str.strip():
+        return None
+    import pytz
+    tz = pytz.timezone(tz_name or 'America/New_York')
+    dt = datetime.strptime(dt_str.strip(), fmt)
+    return tz.localize(dt).astimezone(pytz.UTC)
+
 def calculate_assignment_status(assignment):
     """
     Calculate assignment status based on open_date, close_date, and current date.

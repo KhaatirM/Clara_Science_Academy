@@ -444,26 +444,15 @@ def create_discussion_assignment():
             return render_template('shared/create_discussion_assignment.html', classes=classes, class_obj=None)
         
         try:
-            due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
-            due_date = due_date.replace(tzinfo=timezone.utc)  # Make due_date timezone-aware
-            open_date = None
-            close_date = None
-            
-            if open_date_str:
-                try:
-                    open_date = datetime.strptime(open_date_str, '%Y-%m-%dT%H:%M')
-                    open_date = open_date.replace(tzinfo=timezone.utc)
-                except ValueError:
-                    pass
-            
-            if close_date_str:
-                try:
-                    close_date = datetime.strptime(close_date_str, '%Y-%m-%dT%H:%M')
-                    close_date = close_date.replace(tzinfo=timezone.utc)
-                except ValueError:
-                    pass
-            
-            # If close_date not provided, default to due_date
+            from teacher_routes.assignment_utils import parse_form_datetime_as_school_tz
+            from flask import current_app
+            tz_name = current_app.config.get('SCHOOL_TIMEZONE') or 'America/New_York'
+            due_date = parse_form_datetime_as_school_tz(due_date_str, tz_name)
+            if not due_date:
+                flash("Invalid due date.", "danger")
+                return render_template('shared/create_discussion_assignment.html', classes=classes, class_obj=class_obj)
+            open_date = parse_form_datetime_as_school_tz(open_date_str, tz_name) if open_date_str else None
+            close_date = parse_form_datetime_as_school_tz(close_date_str, tz_name) if close_date_str else None
             if not close_date:
                 close_date = due_date
             

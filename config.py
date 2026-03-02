@@ -57,9 +57,9 @@ class Config:
     # Generate a key using: from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())
     ENCRYPTION_KEY = os.environ.get('ENCRYPTION_KEY')
 
-    # School timezone for login-based attendance (e.g. 'America/New_York'). Used to determine
-    # 7–10 AM = Present, 10 AM–3 PM = Late. Default UTC if not set.
-    SCHOOL_TIMEZONE = os.environ.get('SCHOOL_TIMEZONE') or 'UTC'
+    # School timezone for dates, attendance, open/close times (e.g. 'America/New_York').
+    # Form datetimes (open_date, close_date) are interpreted in this timezone, then stored as UTC.
+    SCHOOL_TIMEZONE = os.environ.get('SCHOOL_TIMEZONE') or 'America/New_York'
 
     # Email (Google Workspace SMTP) - for notifications like "Assignment Graded", "Announcement", etc.
     # Set MAIL_PASSWORD in .env to your Google App Password (never commit it).

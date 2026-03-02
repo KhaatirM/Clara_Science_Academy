@@ -104,25 +104,17 @@ def create_quiz_assignment():
             return redirect(redirect_target)
         
         try:
-            due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
+            from teacher_routes.assignment_utils import parse_form_datetime_as_school_tz
+            tz_name = current_app.config.get('SCHOOL_TIMEZONE') or 'America/New_York'
+            due_date = parse_form_datetime_as_school_tz(due_date_str, tz_name)
+            if not due_date:
+                raise ValueError("Invalid due date")
             
-            # Parse open_date and close_date if provided
+            # Parse open_date and close_date if provided (interpreted as school timezone)
             open_date_str = request.form.get('open_date', '').strip()
             close_date_str = request.form.get('close_date', '').strip()
-            open_date = None
-            close_date = None
-            
-            if open_date_str:
-                try:
-                    open_date = datetime.strptime(open_date_str, '%Y-%m-%dT%H:%M')
-                except ValueError:
-                    pass
-            
-            if close_date_str:
-                try:
-                    close_date = datetime.strptime(close_date_str, '%Y-%m-%dT%H:%M')
-                except ValueError:
-                    pass
+            open_date = parse_form_datetime_as_school_tz(open_date_str, tz_name) if open_date_str else None
+            close_date = parse_form_datetime_as_school_tz(close_date_str, tz_name) if close_date_str else None
             
             # If close_date not provided, default to due_date
             if not close_date:
@@ -515,26 +507,13 @@ def create_discussion_assignment():
             return render_template('shared/create_discussion_assignment.html', classes=classes)
         
         try:
-            due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
-            due_date = due_date.replace(tzinfo=timezone.utc)  # Make due_date timezone-aware
-            open_date = None
-            close_date = None
-            
-            if open_date_str:
-                try:
-                    open_date = datetime.strptime(open_date_str, '%Y-%m-%dT%H:%M')
-                    open_date = open_date.replace(tzinfo=timezone.utc)
-                except ValueError:
-                    pass
-            
-            if close_date_str:
-                try:
-                    close_date = datetime.strptime(close_date_str, '%Y-%m-%dT%H:%M')
-                    close_date = close_date.replace(tzinfo=timezone.utc)
-                except ValueError:
-                    pass
-            
-            # If close_date not provided, default to due_date
+            from teacher_routes.assignment_utils import parse_form_datetime_as_school_tz
+            tz_name = current_app.config.get('SCHOOL_TIMEZONE') or 'America/New_York'
+            due_date = parse_form_datetime_as_school_tz(due_date_str, tz_name)
+            if not due_date:
+                raise ValueError("Invalid due date")
+            open_date = parse_form_datetime_as_school_tz(open_date_str, tz_name) if open_date_str else None
+            close_date = parse_form_datetime_as_school_tz(close_date_str, tz_name) if close_date_str else None
             if not close_date:
                 close_date = due_date
             
@@ -1525,30 +1504,19 @@ def add_assignment():
 
         # Type assertion for due_date_str
         assert due_date_str is not None
-        due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
-        
-        # Parse open_date and close_date if provided
+        from teacher_routes.assignment_utils import parse_form_datetime_as_school_tz
+        tz_name = current_app.config.get('SCHOOL_TIMEZONE') or 'America/New_York'
+        due_date = parse_form_datetime_as_school_tz(due_date_str, tz_name)
+        if not due_date:
+            flash("Invalid due date.", "danger")
+            return redirect(request.url)
         open_date_str = request.form.get('open_date', '').strip()
         close_date_str = request.form.get('close_date', '').strip()
-        open_date = None
-        close_date = None
-        
-        if open_date_str:
-            try:
-                open_date = datetime.strptime(open_date_str, '%Y-%m-%dT%H:%M')
-            except ValueError:
-                pass
-        
-        if close_date_str:
-            try:
-                close_date = datetime.strptime(close_date_str, '%Y-%m-%dT%H:%M')
-            except ValueError:
-                pass
-        
-        # If close_date not provided, default to due_date
+        open_date = parse_form_datetime_as_school_tz(open_date_str, tz_name) if open_date_str else None
+        close_date = parse_form_datetime_as_school_tz(close_date_str, tz_name) if close_date_str else None
         if not close_date:
             close_date = due_date
-        
+
         # Calculate status based on dates if status not explicitly set to Voided
         from teacher_routes.assignment_utils import calculate_assignment_status
         if status != 'Voided':
@@ -2525,8 +2493,13 @@ def edit_assignment(assignment_id):
             return redirect(request.url)
         
         try:
-            due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
-            
+            from teacher_routes.assignment_utils import parse_form_datetime_as_school_tz
+            tz_name = current_app.config.get('SCHOOL_TIMEZONE') or 'America/New_York'
+            due_date = parse_form_datetime_as_school_tz(due_date_str, tz_name)
+            if not due_date:
+                flash("Invalid due date.", "danger")
+                return redirect(request.url)
+
             # Update assignment
             assignment.title = title
             assignment.description = description
@@ -3784,6 +3757,24 @@ def change_assignment_status(assignment_id):
     
     try:
         assignment.status = new_status
+        # When reopening (Inactive -> Active): extend close_date if it's in the past (or set it if missing)
+        # so update_assignment_statuses() won't immediately revert the status
+        if new_status == 'Active':
+            now = datetime.now(timezone.utc)
+            need_extend = False
+            if assignment.close_date:
+                close_dt = assignment.close_date
+                if hasattr(close_dt, 'tzinfo') and close_dt.tzinfo is None:
+                    close_dt = close_dt.replace(tzinfo=timezone.utc)
+                need_extend = close_dt < now
+            else:
+                need_extend = True  # No close_date - set one so it stays open
+            if need_extend:
+                import pytz
+                tz_name = current_app.config.get('SCHOOL_TIMEZONE') or 'America/New_York'
+                school_tz = pytz.timezone(tz_name)
+                end_of_today = datetime.now(school_tz).replace(hour=23, minute=59, second=59, microsecond=999999)
+                assignment.close_date = end_of_today.astimezone(pytz.UTC)
         db.session.commit()
         
         return jsonify({'success': True, 'message': f'Assignment status changed to {new_status} successfully.'})
@@ -4529,19 +4520,22 @@ def admin_edit_group_assignment(assignment_id):
                 group_assignment.status = request.form.get('assignment_status', group_assignment.status)
                 group_assignment.quarter = request.form.get('quarter', group_assignment.quarter)
 
-                # Dates
+                # Dates (interpret form datetimes as school timezone)
+                from teacher_routes.assignment_utils import parse_form_datetime_as_school_tz
+                tz_name = current_app.config.get('SCHOOL_TIMEZONE') or 'America/New_York'
                 due_date_str = request.form.get('due_date')
                 if due_date_str:
-                    try:
-                        group_assignment.due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M')
-                    except ValueError:
+                    parsed = parse_form_datetime_as_school_tz(due_date_str, tz_name)
+                    if parsed:
+                        group_assignment.due_date = parsed
+                    else:
                         flash('Invalid due date format.', 'error')
                         return render_template('management/admin_edit_group_assignment.html',
                                              group_assignment=group_assignment, class_obj=class_obj, groups=groups, selected_ids=selected_ids)
                 open_date_str = request.form.get('open_date', '').strip()
                 close_date_str = request.form.get('close_date', '').strip()
-                group_assignment.open_date = datetime.strptime(open_date_str, '%Y-%m-%dT%H:%M') if open_date_str else None
-                group_assignment.close_date = datetime.strptime(close_date_str, '%Y-%m-%dT%H:%M') if close_date_str else None
+                group_assignment.open_date = parse_form_datetime_as_school_tz(open_date_str, tz_name) if open_date_str else None
+                group_assignment.close_date = parse_form_datetime_as_school_tz(close_date_str, tz_name) if close_date_str else None
 
                 # Category
                 group_assignment.assignment_category = request.form.get('assignment_category') or None

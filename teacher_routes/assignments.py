@@ -1633,6 +1633,25 @@ def change_assignment_status(assignment_id):
     
     try:
         assignment.status = new_status
+        # When reopening (Inactive -> Active): extend close_date if it's in the past (or set if missing)
+        # so update_assignment_statuses() won't immediately revert the status
+        if new_status == 'Active':
+            from datetime import timezone
+            now = datetime.now(timezone.utc)
+            need_extend = False
+            if assignment.close_date:
+                close_dt = assignment.close_date
+                if hasattr(close_dt, 'tzinfo') and close_dt.tzinfo is None:
+                    close_dt = close_dt.replace(tzinfo=timezone.utc)
+                need_extend = close_dt < now
+            else:
+                need_extend = True
+            if need_extend:
+                import pytz
+                tz_name = current_app.config.get('SCHOOL_TIMEZONE') or 'America/New_York'
+                school_tz = pytz.timezone(tz_name)
+                end_of_today = datetime.now(school_tz).replace(hour=23, minute=59, second=59, microsecond=999999)
+                assignment.close_date = end_of_today.astimezone(pytz.UTC)
         db.session.commit()
         flash(f'Assignment status changed to {new_status} successfully!', 'success')
     except Exception as e:

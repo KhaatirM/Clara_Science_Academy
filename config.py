@@ -61,6 +61,15 @@ class Config:
     # 7–10 AM = Present, 10 AM–3 PM = Late. Default UTC if not set.
     SCHOOL_TIMEZONE = os.environ.get('SCHOOL_TIMEZONE') or 'UTC'
 
+    # Email (Google Workspace SMTP) - for notifications like "Assignment Graded", "Announcement", etc.
+    # Set MAIL_PASSWORD in .env to your Google App Password (never commit it).
+    MAIL_SERVER = os.environ.get('MAIL_SERVER') or 'smtp.gmail.com'
+    MAIL_PORT = int(os.environ.get('MAIL_PORT') or 587)
+    MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'true').lower() in ('true', '1', 'yes')
+    MAIL_USERNAME = os.environ.get('MAIL_USERNAME') or 'donotrespond@clarascienceacademy.org'
+    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
+    MAIL_DEFAULT_SENDER = ('Clara Science Academy', os.environ.get('MAIL_USERNAME') or 'donotrespond@clarascienceacademy.org')
+
     # Ensure the upload folder exists
     if not os.path.exists(UPLOAD_FOLDER):
         os.makedirs(UPLOAD_FOLDER)

@@ -37,7 +37,11 @@
                     <span class="text-muted">{{ students|length }} Students Enrolled</span>
                 </p>
             </div>
-            {% if current_user.role in ['Director', 'School Administrator'] %}
+            {% if is_student_assistant %}
+                <a href="{{ url_for('student_assistant.class_hub', class_id=class_item.id) }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i>Back to Assistant Hub
+                </a>
+            {% elif current_user.role in ['Director', 'School Administrator'] %}
                 <a href="{{ url_for('management.unified_attendance') }}" class="btn btn-outline-secondary">
                     <i class="bi bi-arrow-left me-1"></i>Back to Attendance
                 </a>
@@ -58,7 +62,7 @@
                     <h6 class="card-subtitle mb-3 text-muted">
                         <i class="bi bi-calendar-date me-2"></i>Select Date
                     </h6>
-                    <form method="GET" action="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.take_class_attendance', class_id=class_item.id) }}{% else %}{{ url_for('teacher.attendance.take_attendance', class_id=class_item.id) }}{% endif %}">
+                    <form method="GET" action="{% if is_student_assistant %}{{ url_for('student_assistant.take_attendance', class_id=class_item.id) }}{% elif current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.take_class_attendance', class_id=class_item.id) }}{% else %}{{ url_for('teacher.attendance.take_attendance', class_id=class_item.id) }}{% endif %}">
                         <div class="input-group">
                             <input type="date" class="form-control" id="date" name="date" value="{{ attendance_date_str }}" required>
                             <button type="submit" class="btn btn-primary">
@@ -73,11 +77,13 @@
                                 <i class="bi bi-calendar-minus me-1"></i>Yesterday
                             </button>
                         </div>
+                        {% if not is_student_assistant %}
                         <div class="mt-3">
                             <a href="{{ url_for('teacher.attendance.view_attendance_records', class_id=class_item.id) }}" class="btn btn-sm btn-outline-info w-100">
                                 <i class="bi bi-clock-history me-1"></i>View Attendance Records
                             </a>
                         </div>
+                        {% endif %}
                     </form>
                 </div>
             </div>
@@ -135,7 +141,7 @@
     </div>
 
     <!-- Attendance Form -->
-    <form method="POST" action="{% if current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.take_class_attendance', class_id=class_item.id) }}{% else %}{{ url_for('teacher.attendance.take_attendance', class_id=class_item.id) }}{% endif %}" id="attendanceForm">
+    <form method="POST" action="{% if is_student_assistant %}{{ url_for('student_assistant.take_attendance', class_id=class_item.id) }}{% elif current_user.role in ['Director', 'School Administrator'] %}{{ url_for('management.take_class_attendance', class_id=class_item.id) }}{% else %}{{ url_for('teacher.attendance.take_attendance', class_id=class_item.id) }}{% endif %}" id="attendanceForm">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <input type="hidden" name="date" value="{{ attendance_date_str }}">
                 
@@ -164,7 +170,8 @@
                 </div>
             </div>
             
-            <!-- Bulk CSV Upload Card -->
+            <!-- Bulk CSV Upload Card (hidden for student assistants) -->
+            {% if not is_student_assistant %}
             <div class="col-12 col-md-6">
                 <div class="card border-0 shadow-sm h-100 bulk-upload-highlight">
                     <div class="card-body">
@@ -184,6 +191,7 @@
                     </div>
                 </div>
             </div>
+            {% endif %}
                 </div>
 
         <!-- Student Attendance Cards -->

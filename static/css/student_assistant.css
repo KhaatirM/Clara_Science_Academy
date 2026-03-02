@@ -1,0 +1,330 @@
+/* ===== STUDENT ASSISTANT PAGES ===== */
+/* Hub and grade entry – modern cards, hero header, clear hierarchy */
+
+.student-assistant-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 2rem;
+}
+
+/* ----- Hero header ----- */
+.student-assistant-hero {
+    background: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%);
+    border-radius: 1rem;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 8px 32px rgba(15, 118, 110, 0.35);
+    color: white;
+}
+
+.student-assistant-hero-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+}
+
+.student-assistant-hero-content {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+}
+
+.student-assistant-hero-icon {
+    width: 64px;
+    height: 64px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    backdrop-filter: blur(8px);
+}
+
+.student-assistant-hero-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin: 0 0 0.25rem 0;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.student-assistant-hero-subtitle {
+    font-size: 1rem;
+    opacity: 0.95;
+    margin: 0;
+}
+
+.student-assistant-hero-actions .btn {
+    border-radius: 0.75rem;
+    font-weight: 600;
+    padding: 0.6rem 1.25rem;
+}
+
+.student-assistant-hero-actions .btn-light {
+    background: rgba(255, 255, 255, 0.95);
+    color: #0f766e;
+    border: none;
+}
+
+.student-assistant-hero-actions .btn-light:hover {
+    background: white;
+    color: #0d9488;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* ----- Action card (Take Attendance) ----- */
+.student-assistant-action-card {
+    border: none;
+    border-radius: 1rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    height: 100%;
+}
+
+.student-assistant-action-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(15, 118, 110, 0.2);
+}
+
+.student-assistant-action-card .card-body {
+    padding: 2rem;
+    text-align: center;
+}
+
+.student-assistant-action-card .action-icon-wrap {
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 1.25rem;
+    background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%);
+    border-radius: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: white;
+}
+
+.student-assistant-action-card .card-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 0.5rem;
+}
+
+.student-assistant-action-card .card-text {
+    color: #64748b;
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+    line-height: 1.5;
+}
+
+.student-assistant-action-card .btn-primary {
+    background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%);
+    border: none;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    padding: 0.6rem 1.5rem;
+}
+
+.student-assistant-action-card .btn-primary:hover {
+    filter: brightness(1.08);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 14px rgba(13, 148, 136, 0.4);
+}
+
+/* ----- Assignments card ----- */
+.student-assistant-assignments-card {
+    border: none;
+    border-radius: 1rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    height: 100%;
+}
+
+.student-assistant-assignments-card .card-header {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    color: white;
+    border: none;
+    padding: 1.25rem 1.5rem;
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.student-assistant-assignments-card .card-header i {
+    opacity: 0.9;
+    margin-right: 0.5rem;
+}
+
+.student-assistant-assignments-card .card-body {
+    padding: 1.5rem;
+}
+
+.student-assistant-assignments-card .card-intro {
+    color: #64748b;
+    font-size: 0.9rem;
+    margin-bottom: 1.25rem;
+    line-height: 1.5;
+}
+
+.student-assistant-assignment-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    border-radius: 0.75rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    margin-bottom: 0.75rem;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.student-assistant-assignment-item:last-child {
+    margin-bottom: 0;
+}
+
+.student-assistant-assignment-item:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+.student-assistant-assignment-item .assignment-title {
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.student-assistant-assignment-item .btn {
+    border-radius: 0.5rem;
+    font-weight: 500;
+    padding: 0.4rem 1rem;
+}
+
+.student-assistant-assignments-empty {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: #94a3b8;
+    font-size: 0.95rem;
+}
+
+/* ----- Grade assignment page ----- */
+.student-assistant-grade-hero {
+    background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 50%, #3b82f6 100%);
+    border-radius: 1rem;
+    padding: 1.75rem 2rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 8px 32px rgba(37, 99, 235, 0.3);
+    color: white;
+}
+
+.student-assistant-grade-hero-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.student-assistant-grade-hero-content h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0 0 0.25rem 0;
+}
+
+.student-assistant-grade-hero-content .text-opacity-90 {
+    opacity: 0.9;
+    font-size: 0.95rem;
+    margin: 0;
+}
+
+.student-assistant-grade-hero-actions .btn-outline-light {
+    border-radius: 0.75rem;
+    font-weight: 600;
+}
+
+.student-assistant-grade-hero-actions .btn-outline-light:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border-color: white;
+}
+
+.student-assistant-alert {
+    border-radius: 0.75rem;
+    border: none;
+    padding: 1rem 1.25rem;
+}
+
+.student-assistant-grade-card {
+    border: none;
+    border-radius: 1rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+}
+
+.student-assistant-grade-card .card-body {
+    padding: 1.5rem;
+}
+
+.student-assistant-grade-card .table {
+    margin-bottom: 0;
+}
+
+.student-assistant-grade-card thead th {
+    font-weight: 600;
+    color: #475569;
+    border-bottom-width: 2px;
+    padding: 1rem 0.75rem;
+}
+
+.student-assistant-grade-card tbody td {
+    padding: 0.85rem 0.75rem;
+    vertical-align: middle;
+}
+
+.student-assistant-grade-card tbody tr:hover {
+    background: #f8fafc;
+}
+
+.student-assistant-grade-card .form-control {
+    border-radius: 0.5rem;
+    border: 1px solid #e2e8f0;
+}
+
+.student-assistant-grade-card .form-control:focus {
+    border-color: #14b8a6;
+    box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.15);
+}
+
+.student-assistant-grade-card .btn-save {
+    background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%);
+    border: none;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    padding: 0.6rem 1.5rem;
+}
+
+.student-assistant-grade-card .btn-save:hover {
+    filter: brightness(1.08);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 14px rgba(13, 148, 136, 0.4);
+}
+
+@media (max-width: 576px) {
+    .student-assistant-hero,
+    .student-assistant-grade-hero {
+        padding: 1.25rem 1rem;
+    }
+    .student-assistant-hero-title {
+        font-size: 1.4rem;
+    }
+    .student-assistant-assignment-item {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+    }
+    .student-assistant-assignment-item .btn {
+        align-self: flex-start;
+    }
+}

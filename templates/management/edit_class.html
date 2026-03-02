@@ -276,6 +276,38 @@
                     </div>
                 </div>
 
+                {% if current_user.role in ['School Administrator', 'Director'] %}
+                <!-- Student Assistant Card -->
+                <div class="form-card">
+                    <div class="card-header-modern">
+                        <div class="card-icon">
+                            <i class="bi bi-person-badge"></i>
+                        </div>
+                        <h3>Student Assistant</h3>
+                    </div>
+                    <div class="card-body-modern">
+                        <p class="form-hint mb-3">
+                            A student assistant can take attendance and enter grades for this class only. All actions are logged and the teacher plus administrators are alerted when they change existing grades or past attendance.
+                        </p>
+                        <label for="student_assistant_id" class="form-label-modern">
+                            <i class="bi bi-person-plus"></i>
+                            Assign student assistant
+                        </label>
+                        <select class="form-select-modern" id="student_assistant_id" name="student_assistant_id">
+                            <option value="">— None —</option>
+                            {% for s in enrolled_students %}
+                            <option value="{{ s.id }}" {% if current_student_assistant and current_student_assistant.id == s.id %}selected{% endif %}>
+                                {{ s.first_name }} {{ s.last_name }}{% if s.student_id %} ({{ s.student_id }}){% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% if not enrolled_students %}
+                        <small class="text-muted">No students enrolled in this class. Enroll students first to assign an assistant.</small>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
                 <!-- Action Buttons -->
                 <div class="form-actions">
                     <a href="{{ url_for('management.view_class', class_id=class_info.id) }}" class="btn-cancel">

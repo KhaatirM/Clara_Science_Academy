@@ -1,68 +1,269 @@
 /* ===== CLASS_ASSIGNMENTS_DETAIL STYLES ===== */
-/* Extracted from: templates\students\class_assignments_detail.html */
+/* Design: warm academic palette, clear hierarchy, refined components */
 
-.bg-gradient-primary {
-    background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+:root {
+    --cad-header-bg: linear-gradient(135deg, #1e3a5f 0%, #2d4a6f 50%, #1a365d 100%);
+    --cad-header-subtitle: rgba(255,255,255,0.85);
+    --cad-accent: #c17f3a;
+    --cad-accent-soft: rgba(193, 127, 58, 0.15);
+    --cad-total: #2563eb;
+    --cad-total-soft: rgba(37, 99, 235, 0.08);
+    --cad-done: #0d9488;
+    --cad-done-soft: rgba(13, 148, 136, 0.1);
+    --cad-voided: #64748b;
+    --cad-voided-soft: rgba(100, 116, 139, 0.08);
+    --cad-info-header: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);
+    --cad-table-header: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+    --cad-row-hover: rgba(30, 58, 95, 0.04);
+    --cad-card-radius: 12px;
+    --cad-card-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    --cad-card-shadow-hover: 0 12px 28px rgba(0,0,0,0.08);
 }
 
-.bg-gradient-success {
-    background: linear-gradient(135deg, #198754 0%, #146c43 100%);
+/* ----- Hero header ----- */
+.class-assignments-detail .cad-hero {
+    background: var(--cad-header-bg);
+    border-radius: var(--cad-card-radius);
+    border: none;
+    box-shadow: var(--cad-card-shadow);
+    overflow: hidden;
+    position: relative;
+}
+.class-assignments-detail .cad-hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 40%;
+    height: 100%;
+    background: radial-gradient(ellipse at 100% 50%, rgba(193, 127, 58, 0.12) 0%, transparent 70%);
+    pointer-events: none;
+}
+.class-assignments-detail .cad-hero .card-body {
+    position: relative;
+    z-index: 1;
+}
+.class-assignments-detail .cad-hero-title {
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+.class-assignments-detail .cad-hero-subtitle {
+    color: var(--cad-header-subtitle);
+    font-size: 0.95rem;
+    letter-spacing: 0.01em;
+}
+.class-assignments-detail .cad-hero .btn-outline-light {
+    border-width: 1.5px;
+    font-weight: 600;
+    border-radius: 8px;
+}
+.class-assignments-detail .cad-hero .btn-outline-light:hover {
+    background: rgba(255,255,255,0.15);
+    border-color: rgba(255,255,255,0.8);
+    color: #fff;
 }
 
-.bg-gradient-info {
-    background: linear-gradient(135deg, #0dcaf0 0%, #0aa2c0 100%);
+/* ----- Summary stat cards ----- */
+.class-assignments-detail .class-assignments-stat-card {
+    position: relative;
+    border-radius: var(--cad-card-radius);
+    border: 1px solid rgba(0,0,0,0.06);
+    box-shadow: var(--cad-card-shadow);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    overflow: hidden;
 }
-
-.card {
-    transition: all 0.3s ease;
+.class-assignments-detail .class-assignments-stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--cad-card-shadow-hover);
 }
-
-.card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+.class-assignments-detail .class-assignments-stat-card .card-body {
+    position: relative;
+    padding-left: 1.25rem;
+    text-align: center;
 }
-
-.btn {
-    transition: all 0.3s ease;
+.class-assignments-detail .class-assignments-stat-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    z-index: 0;
 }
-
-.btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+.class-assignments-detail .class-assignments-stat-total::before {
+    background: var(--cad-total);
 }
-
-.badge {
+.class-assignments-detail .class-assignments-stat-total .card-body {
+    background: var(--cad-total-soft);
+}
+.class-assignments-detail .class-assignments-stat-total .class-assignments-stat-number {
+    color: var(--cad-total);
+}
+.class-assignments-detail .class-assignments-stat-done::before {
+    background: var(--cad-done);
+}
+.class-assignments-detail .class-assignments-stat-done .card-body {
+    background: var(--cad-done-soft);
+}
+.class-assignments-detail .class-assignments-stat-done .class-assignments-stat-number {
+    color: var(--cad-done);
+}
+.class-assignments-detail .class-assignments-stat-voided::before {
+    background: var(--cad-voided);
+}
+.class-assignments-detail .class-assignments-stat-voided .card-body {
+    background: var(--cad-voided-soft);
+}
+.class-assignments-detail .class-assignments-stat-voided .class-assignments-stat-number {
+    color: var(--cad-voided);
+}
+.class-assignments-detail .class-assignments-stat-number {
+    display: block;
+    font-size: 1.85rem;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+}
+.class-assignments-detail .class-assignments-stat-label {
     font-size: 0.75rem;
-    padding: 0.5rem 0.75rem;
-    border-radius: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #64748b;
+    margin-top: 0.2rem;
+    font-weight: 600;
 }
 
-.border-start {
-    border-width: 4px !important;
+/* ----- Class info card ----- */
+.class-assignments-detail .cad-info-card {
+    border-radius: var(--cad-card-radius);
+    border: 1px solid rgba(0,0,0,0.06);
+    box-shadow: var(--cad-card-shadow);
 }
-
-.class-metadata {
+.class-assignments-detail .cad-info-card .card-header {
+    background: var(--cad-info-header);
+    border: none;
+    padding: 1rem 1.25rem;
+    border-radius: var(--cad-card-radius) var(--cad-card-radius) 0 0;
+}
+.class-assignments-detail .cad-info-card .card-header .rounded-circle {
+    background: rgba(255,255,255,0.2) !important;
+}
+.class-assignments-detail .cad-info-inner {
+    border-radius: 10px;
+    border: 1px solid rgba(0,0,0,0.06);
+    background: #fafbfc;
+    padding: 1rem 1.25rem;
+}
+.class-assignments-detail .cad-info-inner.cad-info-teacher {
+    border-left: 4px solid var(--cad-done);
+}
+.class-assignments-detail .cad-info-inner.cad-info-details {
+    border-left: 4px solid var(--cad-total);
+}
+.class-assignments-detail .cad-info-inner h6 {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 0.75rem;
+}
+.class-assignments-detail .metadata-item {
+    display: flex;
+    align-items: center;
+    color: #475569;
     font-size: 0.9rem;
 }
 
-.metadata-item {
-    display: flex;
+/* ----- Assignments table card ----- */
+.class-assignments-detail .cad-table-card {
+    border-radius: var(--cad-card-radius);
+    border: 1px solid rgba(0,0,0,0.06);
+    box-shadow: var(--cad-card-shadow);
+    overflow: hidden;
+}
+.class-assignments-detail .cad-table-card .card-header {
+    background: var(--cad-table-header);
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+    padding: 1rem 1.25rem;
+}
+.class-assignments-detail .cad-table-card .card-header .btn {
+    border-radius: 8px;
+    font-weight: 500;
+    font-size: 0.875rem;
+}
+.class-assignments-detail #assignmentsTable thead th {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #475569;
+    font-weight: 600;
+    padding: 0.9rem 1rem;
+    border-bottom: 1px solid #e2e8f0;
+    background: #fafbfc;
+}
+.class-assignments-detail #assignmentsTable tbody td {
+    padding: 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #f1f5f9;
+}
+.class-assignments-detail #assignmentsTable tbody tr:hover:not(.table-secondary) td {
+    background: var(--cad-row-hover);
+}
+.class-assignments-detail #assignmentsTable .rounded-circle.p-2.me-3 {
+    width: 42px;
+    height: 42px;
+    display: inline-flex;
     align-items: center;
-    color: #6c757d;
+    justify-content: center;
+}
+.class-assignments-detail #assignmentsTable .btn-group .btn {
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 500;
 }
 
-/* Custom animations */
-@keyframes fadeInUp {
+/* Voided row */
+.class-assignments-detail tr.table-secondary.opacity-75 td {
+    font-style: italic;
+    background: #f8fafc !important;
+}
+.class-assignments-detail tr.table-secondary.opacity-75 .text-dark {
+    color: #64748b !important;
+}
+
+/* Badges in table */
+.class-assignments-detail .cad-table-card .badge {
+    font-size: 0.7rem;
+    padding: 0.35rem 0.6rem;
+    border-radius: 6px;
+    font-weight: 600;
+}
+
+/* Stagger animation for cards */
+@keyframes cad-fadeInUp {
     from {
         opacity: 0;
-        transform: translateY(30px);
+        transform: translateY(16px);
     }
     to {
         opacity: 1;
         transform: translateY(0);
     }
 }
+.class-assignments-detail .cad-hero { animation: cad-fadeInUp 0.45s ease-out; }
+.class-assignments-detail .class-assignments-stat-card { animation: cad-fadeInUp 0.5s ease-out; }
+.class-assignments-detail .cad-info-card { animation: cad-fadeInUp 0.55s ease-out; }
+.class-assignments-detail .cad-table-card { animation: cad-fadeInUp 0.6s ease-out; }
 
-.card {
-    animation: fadeInUp 0.6s ease-out;
+/* Legacy overrides (keep for any non-wrapped content) */
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #1e3a5f 0%, #2d4a6f 100%);
 }
+.bg-gradient-success {
+    background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+}
+.bg-gradient-info {
+    background: var(--cad-info-header);
+}
+.border-start { border-width: 4px !important; }
+.class-metadata { font-size: 0.9rem; }

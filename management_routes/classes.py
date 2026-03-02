@@ -5,7 +5,7 @@ Classes routes for management users.
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app, Response, abort, jsonify
 from flask_login import login_required, current_user
 from decorators import management_required
-from models import db, Class, TeacherStaff, Student, Enrollment, Assignment, Attendance, Grade, Submission, StudentGroup, StudentGroupMember, GroupAssignment, GroupConflict, GroupGrade, SchoolDayAttendance, SchoolYear, AcademicPeriod
+from models import db, Class, TeacherStaff, Student, Enrollment, Assignment, Attendance, Grade, Submission, StudentGroup, StudentGroupMember, GroupAssignment, GroupConflict, GroupGrade, SchoolDayAttendance, SchoolYear, AcademicPeriod, StudentAssistant, StudentAssistantActionLog
 from datetime import datetime
 import json
 
@@ -436,6 +436,28 @@ def edit_class(class_id):
                     if teacher:
                         class_obj.additional_teachers.append(teacher)
             
+            # Student Assistant (School Administrator / Director only)
+            if current_user.role in ['School Administrator', 'Director']:
+                student_assistant_id = request.form.get('student_assistant_id', type=int)
+                existing_sa = StudentAssistant.query.filter_by(class_id=class_id).first()
+                is_enrolled = student_assistant_id and Enrollment.query.filter_by(
+                    class_id=class_id, student_id=student_assistant_id, is_active=True
+                ).first()
+                if student_assistant_id and is_enrolled:
+                    if existing_sa:
+                        if existing_sa.student_id != student_assistant_id:
+                            existing_sa.student_id = student_assistant_id
+                            existing_sa.assigned_by_user_id = current_user.id
+                    else:
+                        db.session.add(StudentAssistant(
+                            class_id=class_id,
+                            student_id=student_assistant_id,
+                            assigned_by_user_id=current_user.id
+                        ))
+                else:
+                    if existing_sa:
+                        db.session.delete(existing_sa)
+            
             db.session.commit()
             flash(f'Class "{class_obj.name}" updated successfully!', 'success')
             return redirect(url_for('management.classes'))
@@ -447,7 +469,19 @@ def edit_class(class_id):
     
     # GET request - show edit form
     teachers = TeacherStaff.query.filter(TeacherStaff.is_deleted == False).all()
-    return render_template('management/edit_class.html', class_info=class_obj, available_teachers=teachers)
+    enrolled_students = []
+    current_student_assistant = None
+    if current_user.role in ['School Administrator', 'Director']:
+        enrollments = Enrollment.query.filter_by(class_id=class_id, is_active=True).all()
+        enrolled_students = [e.student for e in enrollments if e.student]
+        sa = StudentAssistant.query.filter_by(class_id=class_id).first()
+        if sa:
+            current_student_assistant = sa.student
+    return render_template('management/edit_class.html',
+                           class_info=class_obj,
+                           available_teachers=teachers,
+                           enrolled_students=enrolled_students,
+                           current_student_assistant=current_student_assistant)
 
 
 
@@ -1703,8 +1737,19 @@ def view_class(class_id):
     is_current_user_teacher = False
     if teacher and current_user.teacher_staff_id == teacher.id:
         is_current_user_teacher = True
-    
-    return render_template('management/view_class.html', 
+
+    # Student assistant and activity log (teacher and School Admin/Director can view)
+    student_assistant = None
+    assistant_action_logs = []
+    if current_user.role in ['School Administrator', 'Director'] or is_current_user_teacher:
+        sa = StudentAssistant.query.filter_by(class_id=class_id).first()
+        if sa:
+            student_assistant = sa.student
+        assistant_action_logs = StudentAssistantActionLog.query.filter_by(class_id=class_id).order_by(
+            StudentAssistantActionLog.created_at.desc()
+        ).limit(100).all()
+
+    return render_template('management/view_class.html',
                          class_info=class_info,
                          teacher=teacher,
                          enrolled_students=enrolled_students,
@@ -1714,7 +1759,9 @@ def view_class(class_id):
                          recent_attendance=recent_attendance,
                          today=today,
                          is_current_user_teacher=is_current_user_teacher,
-                         role_prefix=None)
+                         role_prefix=None,
+                         student_assistant=student_assistant,
+                         assistant_action_logs=assistant_action_logs)
 
 
 

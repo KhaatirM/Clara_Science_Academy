@@ -1314,6 +1314,51 @@ class Enrollment(db.Model):
         return f"Enrollment(Student: {self.student_id}, Class: {self.class_id})"
 
 
+class StudentAssistant(db.Model):
+    """
+    A student who has partial teacher-like access for a specific class:
+    take attendance and enter grades. Assigned by School Administrator/Director in Edit Class.
+    """
+    __tablename__ = 'student_assistant'
+    id = db.Column(db.Integer, primary_key=True)
+    class_id = db.Column(db.Integer, db.ForeignKey('class.id'), nullable=False)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
+    assigned_by_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    __table_args__ = (db.UniqueConstraint('class_id', 'student_id', name='uq_student_assistant_class_student'),)
+
+    class_info = db.relationship('Class', backref='student_assistants')
+    student = db.relationship('Student', backref='assistant_for_classes')
+    assigned_by = db.relationship('User', foreign_keys=[assigned_by_user_id])
+
+    def __repr__(self):
+        return f"StudentAssistant(Class: {self.class_id}, Student: {self.student_id})"
+
+
+class StudentAssistantActionLog(db.Model):
+    """
+    Log of every action a student assistant performs (attendance, grade entry/change).
+    Teacher and School Administrators can view these logs. Used for alerts when
+    assistant changes existing grades or past attendance.
+    """
+    __tablename__ = 'student_assistant_action_log'
+    id = db.Column(db.Integer, primary_key=True)
+    class_id = db.Column(db.Integer, db.ForeignKey('class.id'), nullable=False)
+    assistant_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Student's user account
+    action_type = db.Column(db.String(32), nullable=False)  # 'attendance', 'grade_entry', 'grade_change', 'past_attendance'
+    assignment_id = db.Column(db.Integer, db.ForeignKey('assignment.id'), nullable=True)  # For grade actions
+    details = db.Column(db.Text, nullable=True)  # JSON: student_ids, old/new values, date, etc.
+    alert_sent = db.Column(db.Boolean, default=False, nullable=False)  # True if teacher/admins were notified
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    class_info = db.relationship('Class', backref='assistant_action_logs')
+    assistant_user = db.relationship('User', foreign_keys=[assistant_user_id])
+    assignment = db.relationship('Assignment', foreign_keys=[assignment_id])
+
+    def __repr__(self):
+        return f"StudentAssistantActionLog({self.action_type}, Class: {self.class_id}, at {self.created_at})"
+
+
 class BugReport(db.Model):
     """
     Model for storing bug reports submitted by users.

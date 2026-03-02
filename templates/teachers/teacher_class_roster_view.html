@@ -385,6 +385,55 @@
           {% endif %}
         </div>
       </div>
+
+      {% if student_assistant or assistant_action_logs %}
+      <div class="teacher-class-card-modern mt-4">
+        <div class="teacher-class-card-header">
+          <div class="teacher-class-card-icon">
+            <i class="bi bi-person-badge"></i>
+          </div>
+          <div class="teacher-class-card-title-section">
+            <h5 class="teacher-class-card-title">Student Assistant Activity</h5>
+            <p class="teacher-class-card-subject">{% if student_assistant %}{{ student_assistant.first_name }} {{ student_assistant.last_name }} can take attendance and enter grades.{% endif %} All actions are logged.</p>
+          </div>
+        </div>
+        <div class="teacher-class-card-body">
+          {% if assistant_action_logs %}
+          <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+              <thead class="table-light">
+                <tr><th>Time</th><th>Action</th><th>Details</th><th>Alert</th></tr>
+              </thead>
+              <tbody>
+                {% for log in assistant_action_logs %}
+                <tr>
+                  <td class="text-nowrap">{{ log.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                  <td>
+                    {% if log.action_type == 'attendance' %}<span class="badge bg-primary">Attendance</span>
+                    {% elif log.action_type == 'past_attendance' %}<span class="badge bg-warning text-dark">Past attendance</span>
+                    {% elif log.action_type == 'grade_entry' %}<span class="badge bg-info">Grade entry</span>
+                    {% elif log.action_type == 'grade_change' %}<span class="badge bg-danger">Grade change</span>
+                    {% else %}<span class="badge bg-secondary">{{ log.action_type }}</span>{% endif %}
+                  </td>
+                  <td class="small">
+                    {% if log.details %}{% set d = log.details|from_json %}
+                    {% if log.assignment_id and d.get('assignment_title') %}{{ d.get('assignment_title', '') }}{% if d.get('changes') %} ({{ d.changes|length }} change(s)){% endif %}
+                    {% elif d.get('date') %}Date: {{ d.date }}{% if d.get('changes') %} ({{ d.changes|length }} change(s)){% endif %}
+                    {% else %}—{% endif %}
+                    {% else %}—{% endif %}
+                  </td>
+                  <td>{% if log.alert_sent %}<span class="badge bg-warning text-dark">Alert sent</span>{% else %}—{% endif %}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <p class="text-muted mb-0">No assistant actions logged yet.</p>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
     </div>
   </div>
 </div>

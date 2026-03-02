@@ -14,7 +14,7 @@ from models import (
     # User models
     Student, User, TeacherStaff,
     # Academic structure
-    Class, SchoolYear, AcademicPeriod, Enrollment, ClassSchedule,
+    Class, SchoolYear, AcademicPeriod, Enrollment, ClassSchedule, StudentAssistant,
     # Assignment system
     Assignment, AssignmentAttachment, AssignmentRedo, Submission, Grade, StudentGoal, ExtensionRequest,
     # Group assignment system
@@ -489,39 +489,51 @@ def student_dashboard():
             Assignment.school_year_id == current_school_year.id
         ).all()
         
-        if class_grades:
-            # Calculate average grade for this class
-            grade_percentages = []
-            for g in class_grades:
-                percentage = None  # Initialize to avoid UnboundLocalError
-                grade_data = json.loads(g.grade_data)
-                # Always use assignment's total_points as source of truth
-                score = grade_data.get('score') or grade_data.get('points_earned')
-                if score is not None:
-                    # Always use assignment's total_points, not stored value in grade_data
-                    total_points = g.assignment.total_points if g.assignment and g.assignment.total_points else 100.0
-                    if total_points and total_points > 0:
-                        try:
-                            # Always recalculate percentage using assignment's actual total_points
-                            percentage = (float(score) / float(total_points) * 100)
-                        except (ValueError, TypeError, ZeroDivisionError):
-                            continue
-                    else:
-                        continue
-                
-                if percentage is not None:
+        # Skip voided grades and voided assignments (match Grades tab and Classes tab)
+        grade_percentages = []
+        for g in class_grades:
+            if g.is_voided or (g.assignment and g.assignment.status == 'Voided'):
+                continue
+            percentage = None
+            grade_data = json.loads(g.grade_data)
+            score = grade_data.get('score') or grade_data.get('points_earned')
+            if score is not None:
+                total_points = g.assignment.total_points if g.assignment and g.assignment.total_points else 100.0
+                if total_points and total_points > 0:
                     try:
-                        grade_percentages.append(float(percentage))
-                    except (ValueError, TypeError):
-                        continue  # Skip invalid percentages
-            
-            if grade_percentages:
-                avg_grade = round(sum(grade_percentages) / len(grade_percentages), 2)
-                grades[c.name] = avg_grade
-                all_grades.append(avg_grade)
-                
-                # Get grade trends for this class
-                grade_trends[c.id] = get_grade_trends(student.id, c.id)
+                        percentage = (float(score) / float(total_points) * 100)
+                    except (ValueError, TypeError, ZeroDivisionError):
+                        continue
+            if percentage is not None:
+                try:
+                    grade_percentages.append(float(percentage))
+                except (ValueError, TypeError):
+                    continue
+        
+        # Include group grades for this class (match Grades tab)
+        group_grades_home = GroupGrade.query.join(GroupAssignment).filter(
+            GroupGrade.student_id == student.id,
+            GroupAssignment.class_id == c.id,
+            GroupAssignment.school_year_id == current_school_year.id
+        ).all()
+        for g in group_grades_home:
+            if g.is_voided or (g.group_assignment and g.group_assignment.status == 'Voided'):
+                continue
+            try:
+                gdata = json.loads(g.grade_data) if isinstance(g.grade_data, str) else g.grade_data
+                score = gdata.get('score') or gdata.get('points_earned')
+                if score is not None:
+                    total_points = g.group_assignment.total_points if (g.group_assignment and g.group_assignment.total_points) else 100.0
+                    if total_points and total_points > 0:
+                        grade_percentages.append(float(score) / float(total_points) * 100)
+            except (ValueError, TypeError, json.JSONDecodeError, AttributeError):
+                continue
+        
+        if grade_percentages:
+            avg_grade = round(sum(grade_percentages) / len(grade_percentages), 2)
+            grades[c.name] = avg_grade
+            all_grades.append(avg_grade)
+            grade_trends[c.id] = get_grade_trends(student.id, c.id)
     
     # Calculate overall GPA
     gpa = calculate_gpa(all_grades)
@@ -637,6 +649,9 @@ def student_dashboard():
         ((Announcement.target_group == 'class') & (Announcement.class_id.in_(class_ids)))
     ).order_by(Announcement.timestamp.desc()).all()
 
+    # Classes where this student is the assigned assistant (take attendance, enter grades)
+    assistant_for_classes = [sa.class_info for sa in StudentAssistant.query.filter_by(student_id=student.id).all() if sa.class_info]
+
     return render_template('students/role_student_dashboard.html', 
                          **create_template_context(student, 'home', 'home',
                             grades=grades, 
@@ -655,7 +670,8 @@ def student_dashboard():
                              my_classes=classes,
                              failing_classes=failing_classes,
                              missing_assignments=missing_assignments,
-                             today=datetime.now().date()))
+                             today=datetime.now().date(),
+                             assistant_for_classes=assistant_for_classes))
 
 @student_blueprint.route('/assignments')
 @login_required
@@ -981,45 +997,69 @@ def student_classes():
     
     classes = [enrollment.class_info for enrollment in enrollments]
 
-    # Get grades for each class and calculate GPA
+    # Get grades for each class and calculate average (same logic as Grades tab)
     grades = {}
     all_grades = []
     
     for c in classes:
-        # Get grades for this class
+        grade_percentages = []
+        
+        # Regular assignment grades (same formula as student_grades: points_earned / total_points * 100)
         class_grades = Grade.query.join(Assignment).filter(
             Grade.student_id == student.id,
             Assignment.class_id == c.id,
             Assignment.school_year_id == current_school_year.id
         ).all()
         
-        if class_grades:
-            # Calculate average grade for this class
-            grade_percentages = []
-            for g in class_grades:
-                # Skip voided grades and voided assignments
-                if g.is_voided or (g.assignment and g.assignment.status == 'Voided'):
-                    continue
-                    
-                try:
-                    grade_data = json.loads(g.grade_data) if isinstance(g.grade_data, str) else g.grade_data
-                    if 'score' in grade_data and grade_data['score'] is not None:
-                        # Convert to float in case it's stored as string
-                        score = float(grade_data['score'])
-                        grade_percentages.append(score)
-                except (ValueError, TypeError, json.JSONDecodeError, AttributeError):
-                    continue  # Skip invalid scores
-            
-            if grade_percentages:
-                avg_grade = round(sum(grade_percentages) / len(grade_percentages), 2)
-                grades[c.name] = avg_grade
-                all_grades.append(avg_grade)
+        for g in class_grades:
+            if g.is_voided or (g.assignment and g.assignment.status == 'Voided'):
+                continue
+            try:
+                grade_data = json.loads(g.grade_data) if isinstance(g.grade_data, str) else g.grade_data
+                points_earned = grade_data.get('points_earned') or grade_data.get('score')
+                if points_earned is not None:
+                    points_earned = float(points_earned)
+                    total_points = g.assignment.total_points if (g.assignment and g.assignment.total_points) else 100.0
+                    if total_points and total_points > 0:
+                        pct = (points_earned / total_points * 100)
+                        grade_percentages.append(pct)
+            except (ValueError, TypeError, json.JSONDecodeError, AttributeError):
+                continue
+        
+        # Group assignment grades (match Grades tab)
+        group_grades = GroupGrade.query.join(GroupAssignment).filter(
+            GroupGrade.student_id == student.id,
+            GroupAssignment.class_id == c.id,
+            GroupAssignment.school_year_id == current_school_year.id
+        ).all()
+        
+        for g in group_grades:
+            if g.is_voided or (g.group_assignment and g.group_assignment.status == 'Voided'):
+                continue
+            try:
+                grade_data = json.loads(g.grade_data) if isinstance(g.grade_data, str) else g.grade_data
+                points_earned = grade_data.get('points_earned') or grade_data.get('score')
+                if points_earned is not None:
+                    points_earned = float(points_earned)
+                    total_points = g.group_assignment.total_points if (g.group_assignment and g.group_assignment.total_points) else 100.0
+                    if total_points and total_points > 0:
+                        pct = (points_earned / total_points * 100)
+                        grade_percentages.append(pct)
+            except (ValueError, TypeError, json.JSONDecodeError, AttributeError):
+                continue
+        
+        if grade_percentages:
+            avg_grade = round(sum(grade_percentages) / len(grade_percentages), 2)
+            grades[c.name] = avg_grade
+            all_grades.append(avg_grade)
     
+    assistant_for_classes = [sa.class_info for sa in StudentAssistant.query.filter_by(student_id=student.id).all() if sa.class_info]
     return render_template('students/role_student_dashboard.html',
                           **create_template_context(student, 'classes', 'classes',
                               classes=classes,
                               my_classes=classes,
-                              grades=grades))
+                              grades=grades,
+                              assistant_for_classes=assistant_for_classes))
 
 @student_blueprint.route('/grades')
 @login_required
@@ -1801,40 +1841,40 @@ def view_class(class_id):
     # Get announcements for this class
     announcements = Announcement.query.filter_by(class_id=class_id).order_by(Announcement.timestamp.desc()).limit(5).all()
     
-    # Calculate student's GPA for this class
-    class_gpa = 0.0
-    if assignments:
-        scores = []
-        for assignment in assignments:
-            # Skip voided assignments
-            if assignment.status == 'Voided':
+    # Build assignment -> letter grade for this student (only completed, non-voided)
+    # Use same formula as Grades tab: percentage = points_earned / total_points * 100
+    assignment_letter_grades = {}
+    class_percentages_for_gpa = []
+    for assignment, submission, status in assignments_with_status:
+        if status == 'Voided':
+            continue
+        if status != 'completed':
+            continue
+        g = grades_dict.get(assignment.id)
+        if not g or not g.grade_data:
+            continue
+        try:
+            gdata = json.loads(g.grade_data) if isinstance(g.grade_data, str) else g.grade_data
+            points_earned = gdata.get('points_earned') or gdata.get('score')
+            if points_earned is None:
                 continue
-                
-            if assignment.id in student_grades:
-                score = student_grades[assignment.id].get('score', 0)
-                if score is not None:
-                    scores.append(score)
-        
-        if scores:
-            # Convert percentage to GPA (90-100 = 4.0, 80-89 = 3.0, etc.)
-            gpa_scores = []
-            for score in scores:
-                if score >= 90:
-                    gpa_scores.append(4.0)
-                elif score >= 80:
-                    gpa_scores.append(3.0)
-                elif score >= 70:
-                    gpa_scores.append(2.0)
-                elif score >= 60:
-                    gpa_scores.append(1.0)
-                else:
-                    gpa_scores.append(0.0)
-            
-            class_gpa = sum(gpa_scores) / len(gpa_scores)
+            points_earned = float(points_earned)
+            total_points = assignment.total_points if (assignment.total_points and assignment.total_points > 0) else 100.0
+            pct = (points_earned / total_points * 100) if total_points > 0 else 0
+            assignment_letter_grades[assignment.id] = get_letter_grade(pct)
+            class_percentages_for_gpa.append(pct)
+        except (ValueError, TypeError, json.JSONDecodeError):
+            continue
+    
+    # Class GPA from percentages (match Grades tab logic)
+    class_gpa = calculate_gpa(class_percentages_for_gpa) if class_percentages_for_gpa else 0.0
     
     # Get current date for assignment status
     from datetime import datetime
     today = datetime.now().date()
+    
+    assistant_for_classes = [sa.class_info for sa in StudentAssistant.query.filter_by(student_id=student.id).all() if sa.class_info]
+    is_assistant_for_this_class = any(c.id == class_id for c in assistant_for_classes)
     
     return render_template('students/role_student_dashboard.html', 
                          **create_template_context(student, 'classes', 'classes', 
@@ -1842,62 +1882,24 @@ def view_class(class_id):
                                                 assignments=assignments,
                                                 assignments_with_status=assignments_with_status,
                                                 submissions=student_submissions,
-                                                announcements=announcements),
+                                                announcements=announcements,
+                                                assignment_letter_grades=assignment_letter_grades),
                          class_obj=class_obj,
                          teacher=teacher,
                          enrolled_students=enrolled_students,
                          class_gpa=class_gpa,
                          today=today,
-                         show_class_details=True)
+                         show_class_details=True,
+                         assistant_for_classes=assistant_for_classes,
+                         is_assistant_for_this_class=is_assistant_for_this_class)
 
 
 @student_blueprint.route('/class/<int:class_id>/assignments')
 @login_required
 @student_required
 def view_class_assignments(class_id):
-    """View all assignments for a specific class"""
-    student = Student.query.get_or_404(current_user.student_id)
-    class_obj = Class.query.get_or_404(class_id)
-    
-    # Get assignments for this class (show Active, Inactive, and Voided assignments)
-    assignments = Assignment.query.filter(
-        Assignment.class_id == class_id,
-        Assignment.status.in_(['Active', 'Inactive', 'Voided'])
-    ).order_by(Assignment.due_date.desc()).all()
-    
-    # Get submissions and grades for this student (excluding voided grades and voided assignments)
-    all_grades = Grade.query.filter_by(student_id=student.id).all()
-    student_grades = {}
-    for g in all_grades:
-        # Skip voided grades and voided assignments
-        # Check if assignment exists and is not voided
-        if g.assignment and not g.is_voided and g.assignment.status != 'Voided':
-            student_grades[g.assignment_id] = g
-    
-    student_submissions = {s.assignment_id: s for s in Submission.query.filter_by(student_id=student.id).all()}
-    
-    # Create assignments with status for template
-    assignments_with_status = []
-    for assignment in assignments:
-        submission = student_submissions.get(assignment.id)
-        grade = student_grades.get(assignment.id)
-        
-        # Determine student-facing status
-        student_status = get_student_assignment_status(assignment, submission, grade, student.id)
-        
-        assignments_with_status.append((assignment, submission, student_status))
-    
-    from datetime import datetime
-    today = datetime.now()
-    
-    return render_template('students/role_student_dashboard.html', 
-                         **create_template_context(student, 'classes', 'classes',
-                                                assignments_with_status=assignments_with_status,
-                                                grades=student_grades,
-                                                submissions=student_submissions),
-                         class_obj=class_obj, 
-                         today=today,
-                         show_assignments=True)
+    """Redirect to the canonical class assignments page (assignments/class/<id>)."""
+    return redirect(url_for('student.class_assignments', class_id=class_id))
 
 
 @student_blueprint.route('/api/class/<int:class_id>/assignments')

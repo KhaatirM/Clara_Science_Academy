@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from decorators import is_teacher_role
 
 # Import extensions to avoid circular imports
-from extensions import db, login_manager, csrf
+from extensions import db, login_manager, csrf, mail
 from flask_migrate import Migrate
 
 # Import models here to avoid circular imports
@@ -73,6 +73,7 @@ def create_app(config_class=None):
     migrate = Migrate(app, db)
     login_manager.init_app(app)
     csrf.init_app(app)
+    mail.init_app(app)
     
     # Initialize database schema (no ALTER TABLE here; use Flask-Migrate for schema changes)
     with app.app_context():
@@ -155,12 +156,14 @@ def create_app(config_class=None):
     from techroutes import tech_blueprint
     from communications_api import api_bp as communications_api_bp
     from shared_communications import bp as shared_communications_bp
-    
+    from management_routes.student_assistant_routes import bp as student_assistant_blueprint
+
     app.register_blueprint(auth_blueprint)
     app.register_blueprint(student_blueprint, url_prefix='/student')
     app.register_blueprint(teacher_blueprint, url_prefix='/teacher')
     app.register_blueprint(management_blueprint, url_prefix='/management')
     app.register_blueprint(tech_blueprint, url_prefix='/tech')
+    app.register_blueprint(student_assistant_blueprint)  # /assistant/... for student assistants
     app.register_blueprint(communications_api_bp)  # Communications API - no prefix, uses absolute paths
     app.register_blueprint(shared_communications_bp)  # Shared communications routes
 

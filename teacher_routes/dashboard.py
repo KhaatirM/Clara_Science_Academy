@@ -9,7 +9,8 @@ from .utils import get_teacher_or_admin, is_admin, is_authorized_for_class
 from models import (
     db, Class, Assignment, Student, Grade, Submission, 
     Notification, Announcement, Enrollment, Attendance, SchoolYear, User, TeacherStaff,
-    class_additional_teachers, class_substitute_teachers, GroupAssignment, GroupGrade, ClassSchedule
+    class_additional_teachers, class_substitute_teachers, GroupAssignment, GroupGrade, ClassSchedule,
+    StudentAssistant, StudentAssistantActionLog
 )
 from sqlalchemy import or_, and_
 import json
@@ -667,13 +668,25 @@ def view_class(class_id):
     # Get recent announcements for this class
     announcements = Announcement.query.filter_by(class_id=class_id).order_by(Announcement.timestamp.desc()).limit(5).all()
 
+    # Student assistant and activity log (teacher can view for their class)
+    student_assistant = None
+    assistant_action_logs = []
+    sa = StudentAssistant.query.filter_by(class_id=class_id).first()
+    if sa:
+        student_assistant = sa.student
+    assistant_action_logs = StudentAssistantActionLog.query.filter_by(class_id=class_id).order_by(
+        StudentAssistantActionLog.created_at.desc()
+    ).limit(50).all()
+
     return render_template(
         'teachers/teacher_class_roster_view.html',
         class_item=class_obj,
         enrolled_students=enrolled_students,
         assignments=assignments,
         recent_attendance=recent_attendance,
-        announcements=announcements
+        announcements=announcements,
+        student_assistant=student_assistant,
+        assistant_action_logs=assistant_action_logs
     )
 
 @bp.route('/classes')

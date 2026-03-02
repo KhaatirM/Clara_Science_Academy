@@ -492,7 +492,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title mb-0" id="updateModalLabel">System Updates</h5>
-                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated February 25, 2026</p>
+                        <p class="home-updates-subtitle mb-0">Latest improvements and enhancements · Last updated March 1, 2026</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -504,13 +504,43 @@
                     </div>
                     <div>
                         <h6 class="home-updates-intro-title mb-2">
-                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – February 25, 2026
+                            <i class="bi bi-calendar3 me-2"></i>Latest System Updates – March 1, 2026
                         </h6>
-                        <p class="updates-intro-text mb-0">This release adds <strong>bulk void</strong> for assignments: School Administrators and Teachers can select multiple assignments and void them in one action for all students or selected students, without opening each assignment. We also updated the <strong>group assignment type selector</strong>: it now offers only PDF/Paper and Discussion (quiz was removed until the group quiz flow is built), with a cleaner two-option design and no success popup after bulk void. Details below.</p>
+                        <p class="updates-intro-text mb-0">This release adds <strong>Student Assistants</strong>: School Administrators can assign a student to help with attendance and grades for a class. All assistant actions are logged, and teachers and admins get alerts when grades or past attendance are changed. Students can now <strong>view grade and feedback</strong> in the assignment view modal when their work is graded. We also set up <strong>email notifications</strong> so the system can send emails (e.g. Assignment Graded, Announcements) from donotrespond@clarascienceacademy.org. Details below.</p>
                     </div>
                 </div>
                 
                 <div class="update-sections">
+                    <!-- March 1, 2026 - Student Assistant, Grade Feedback, Email -->
+                    <div class="update-section mb-4">
+                        <h6 class="mb-3"><i class="bi bi-person-badge me-2"></i>Student Assistant, Grade Feedback & Email – March 1, 2026</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Student Assistant:</strong> School Administrators and Directors can assign a student as "Student Assistant" for a class when editing the class. The assistant can take attendance and enter grades for that class from their own dashboard. All actions are logged; teachers and admins can view the activity log on the class view.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Student Assistant alerts:</strong> When the assistant changes a grade that was already entered, or records/changes past attendance, the teacher and School Administrators receive an in-app notification. This keeps everyone informed of sensitive changes.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Student Assistant dashboard:</strong> Assigned students see an "Assistant" link on their Home and Classes tabs. The assistant hub and grade-entry pages have a modern design with hero headers and clear cards.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>View grade and feedback:</strong> When a teacher or student assistant grades an assignment and adds feedback, students can now see it. In the Assignments tab, click <strong>View</strong> on a graded assignment to open the modal—a new "Grade & Feedback" section shows the score and the teacher's comment.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Email notifications:</strong> The system is now configured to send emails from donotrespond@clarascienceacademy.org via Google Workspace SMTP. Assignment Graded, Announcements, and other notifications can be sent by email when enabled. In-app notifications continue to work as before.
+                            </li>
+                        </ul>
+                        <div class="alert alert-info mt-3">
+                            <p class="mb-0"><strong>Impact:</strong> Classes can use trusted students to help with attendance and grading while keeping full accountability. Students get clear feedback on graded work. The platform is ready to send email notifications for key events.</p>
+                        </div>
+                    </div>
+
                     <!-- February 25, 2026 - Bulk void, group assignment selector -->
                     <div class="update-section mb-4">
                         <h6 class="mb-3"><i class="bi bi-slash-circle me-2"></i>Bulk Void & Group Assignment Selector – February 25, 2026</h6>
@@ -866,11 +896,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show updates modal once per session (bump key when content changes)
     var updateModalEl = document.getElementById('updateModal');
-    if (updateModalEl && !sessionStorage.getItem('updateModalShownFeb25_2026')) {
+    if (updateModalEl && !sessionStorage.getItem('updateModalShownMar01_2026')) {
         setTimeout(function() {
             var modal = bootstrap.Modal.getInstance(updateModalEl) || new bootstrap.Modal(updateModalEl, { backdrop: true, keyboard: true });
             modal.show();
-            sessionStorage.setItem('updateModalShownFeb25_2026', 'true');
+            sessionStorage.setItem('updateModalShownMar01_2026', 'true');
         }, 500);
     }
 });

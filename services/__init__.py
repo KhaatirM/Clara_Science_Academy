@@ -17,6 +17,7 @@ from .notifications import (
 )
 from .activity_log import log_activity, get_user_activity_log
 from .attendance_on_login import record_school_day_attendance_on_login
+from .email_service import send_email, send_notification_email
 
 __all__ = [
     'get_grade_for_student',
@@ -28,6 +29,8 @@ __all__ = [
     'create_notification_for_all_teachers',
     'create_digest_notifications',
     'create_grade_update_digest',
+    'send_email',
+    'send_notification_email',
     'log_activity',
     'get_user_activity_log',
     'record_school_day_attendance_on_login',

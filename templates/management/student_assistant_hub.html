@@ -1,0 +1,78 @@
+{% extends "shared/dashboard_layout.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/student_assistant.css') }}">
+{% endblock %}
+
+{% block title %}Assistant - {{ class_obj.name }}{% endblock %}
+
+{% block dashboard_content %}
+<div class="student-assistant-container">
+    <!-- Hero header -->
+    <div class="student-assistant-hero">
+        <div class="student-assistant-hero-inner">
+            <div class="student-assistant-hero-content">
+                <div class="student-assistant-hero-icon">
+                    <i class="bi bi-person-badge-fill"></i>
+                </div>
+                <div>
+                    <h1 class="student-assistant-hero-title">Student Assistant</h1>
+                    <p class="student-assistant-hero-subtitle">{{ class_obj.name }} · {{ class_obj.subject }}</p>
+                </div>
+            </div>
+            <div class="student-assistant-hero-actions">
+                <a href="{{ url_for('student.student_dashboard') }}" class="btn btn-light">
+                    <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Take Attendance card -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card student-assistant-action-card">
+                <div class="card-body text-center py-4">
+                    <div class="action-icon-wrap">
+                        <i class="bi bi-calendar-check"></i>
+                    </div>
+                    <h5 class="card-title">Take Attendance</h5>
+                    <p class="card-text">Record attendance for this class. Past dates are logged and the teacher is notified.</p>
+                    <a href="{{ url_for('student_assistant.take_attendance', class_id=class_obj.id) }}" class="btn btn-primary">
+                        <i class="bi bi-calendar-check me-1"></i>Take Attendance
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Enter Grades card -->
+        <div class="col-12 col-lg-8">
+            <div class="card student-assistant-assignments-card h-100">
+                <div class="card-header">
+                    <i class="bi bi-journal-text"></i>Enter Grades
+                </div>
+                <div class="card-body">
+                    <p class="card-intro">Select an assignment to enter or update grades. Changing existing grades will notify the teacher and administrators.</p>
+                    {% if assignments %}
+                    <div class="student-assistant-assignments-list">
+                        {% for a in assignments %}
+                        <div class="student-assistant-assignment-item">
+                            <span class="assignment-title">{{ a.title }}</span>
+                            <a href="{{ url_for('student_assistant.grade_assignment', class_id=class_obj.id, assignment_id=a.id) }}" class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-pencil-square me-1"></i>Enter grades
+                            </a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="student-assistant-assignments-empty">
+                        <i class="bi bi-journal-x fs-4 d-block mb-2"></i>
+                        No assignments for this class yet.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
